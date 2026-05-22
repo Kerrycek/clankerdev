@@ -22,11 +22,24 @@ This repository is maintained through human-reviewed AI pull requests.
 - Include tests or smoke-check notes when possible.
 - Do not merge your own PR.
 - Do not deploy.
+- Do not modify the AI issue runner (`deploy/ai-issue-runner/*`) while solving
+  unrelated product issues.
 - PR descriptions must include:
   - the issue being fixed,
   - a short change summary,
   - verification performed,
   - any risks or follow-up needed.
+
+## Build Artifacts
+
+- The `assets/*.js` files in this repository are built/minified UI artifacts.
+- Do not modify minified build assets directly unless the issue explicitly asks
+  for an emergency hotfix and the PR clearly says it is a temporary patch.
+- Prefer fixing source code in the upstream/source UI project, then rebuilding
+  and syncing the generated assets.
+- If the source project is not present in this repository, stop and explain that
+  the fix needs the source tree or build workflow instead of patching minified
+  output.
 
 ## Repo Hygiene
 
