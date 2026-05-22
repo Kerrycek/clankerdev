@@ -1,0 +1,1 @@
+function u(r){const o=String(r??"").trim();if(!o)return null;const t=o.match(/^#?(\d+)$/);if(!t||!t[1])return null;const n=Number(t[1]);return!Number.isFinite(n)||n<=0?null:Math.floor(n)}function e(r){return`#${Math.floor(r)}`}export{e as f,u as p};

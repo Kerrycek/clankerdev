@@ -1,0 +1,1 @@
+function n(t){return{allowed:!1,reason:t}}function a(t,e){return e?.busyLocal?n({titleKey:"gate.busy.local.title",descriptionKey:"gate.busy.local.body"}):e?.busyTransaction?n({titleKey:"gate.busy.transaction.title",descriptionKey:"gate.busy.transaction.body"}):{allowed:!0}}export{a as g};

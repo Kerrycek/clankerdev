@@ -1,0 +1,1 @@
+import{j as t}from"./vendor-react-B6j9w5IJ.js";import{c as n}from"./app-chrome-overlays-DcFd6_Ju.js";function c(a){const e=a.variant??"default";return t.jsx("div",{"data-testid":a.testId,className:n("mx-auto w-full",e==="wide"?"max-w-screen-2xl":e==="narrow"?"max-w-screen-lg":"max-w-screen-xl",a.className),children:a.children})}export{c as P};

@@ -1,0 +1,1 @@
+function t(r){if(r)return r==="black"?"neutral":r}function a(r){if(r)return r==="black"||r==="neutral"?"neutral":r}function n(r){if(r)return r==="muted"||r==="neutral"?"neutral":r}export{n as a,a as d,t};

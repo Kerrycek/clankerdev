@@ -1,0 +1,1 @@
+function i(r){if(typeof r=="number"&&Number.isFinite(r))return Math.floor(r);if(typeof r=="string"){const t=Number(r);if(Number.isFinite(t))return Math.floor(t)}}function n(r){return r===void 0?"—":new Intl.NumberFormat(void 0,{maximumFractionDigits:0}).format(r)}export{n as f,i as s};

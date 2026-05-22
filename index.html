@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f7f8fb" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)" />
+
+    <!--
+      Minimal bootstrap (no flash of wrong theme/language)
+
+      We only support English (default) and Czech (browser Czech → Czech).
+      UI preferences are stored in localStorage as `vpsadmin.uiSettings.v1`.
+    -->
+    <script>
+      (() => {
+        try {
+          const storageKey = 'vpsadmin.uiSettings.v1';
+          const raw = window.localStorage ? window.localStorage.getItem(storageKey) : null;
+          const html = document.documentElement;
+
+          const detectLang = () => {
+            const langs = navigator.languages || [navigator.language];
+            const hasCs = (langs || []).some((l) => String(l).toLowerCase().startsWith('cs'));
+            return hasCs ? 'cs' : 'en';
+          };
+
+          if (raw) {
+            const s = JSON.parse(raw);
+
+            const theme = s && typeof s.theme === 'string' ? s.theme : 'system';
+            if (theme === 'light' || theme === 'dark') {
+              html.setAttribute('data-theme', theme);
+              html.style.colorScheme = '';
+            } else {
+              html.removeAttribute('data-theme');
+              html.style.colorScheme = 'light dark';
+            }
+
+            const prefLang = s && typeof s.language === 'string' ? s.language : 'system';
+            const lang = prefLang === 'cs' || prefLang === 'en' ? prefLang : detectLang();
+            html.lang = lang;
+          } else {
+            html.lang = detectLang();
+            html.style.colorScheme = 'light dark';
+          }
+        } catch {
+          // ignore
+        }
+      })();
+    </script>
+    <title>vpsAdmin</title>
+    <script type="module" crossorigin src="/assets/index-Dfu8vAqV.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-react-B6j9w5IJ.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-query-CtU25kl-.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-icons-2iH9edrX.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-router-SpvdlQHx.js">
+    <link rel="modulepreload" crossorigin href="/assets/locale-cs-bRZfErxq.js">
+    <link rel="modulepreload" crossorigin href="/assets/locale-en-Cj9oxGLL.js">
+    <link rel="modulepreload" crossorigin href="/assets/app-chrome-overlays-DcFd6_Ju.js">
+  </head>
+  <body>
+    <div id="root"></div>
+    <!--
+      Optional runtime bootstrap.
+
+      The module entry loads /config.js before React mounts so legacy/BFF runtime config
+      is available during app startup without keeping a classic script in index.html.
+      On localhost/dev it also tries /config.local.js afterwards for local overrides.
+    -->
+  </body>
+</html>

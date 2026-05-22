@@ -1,0 +1,1 @@
+import{h as t,e as n}from"./app-chrome-overlays-DcFd6_Ju.js";async function m(a){const e={};a?.limit!==void 0&&(e.limit=a.limit),a?.fromId!==void 0&&(e.from_id=a.fromId);const i=await t({method:"GET",path:"/languages",namespace:"language",params:e});return{...i,data:n(i.data,"languages#index")}}export{m as f};

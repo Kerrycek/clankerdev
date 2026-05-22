@@ -1,0 +1,74 @@
+// Optional runtime config for standalone local development.
+//
+// How to use:
+//   1) Copy this file to `public/config.local.js`.
+//   2) Fill in the values you need (API URL, version, and an auth token).
+//
+// The SPA bootstrap loads `/config.js` first and, on localhost/dev, `config.local.js` after it.
+// This file should therefore only fill gaps and must not overwrite integrated runtime values.
+// It should never override values that are already provided by the integrated webui.
+
+(function () {
+  // @ts-ignore - window.vpsAdmin is provided by the legacy webui runtime bootstrap.
+  window.vpsAdmin = window.vpsAdmin || {};
+
+  // @ts-ignore
+  window.vpsAdmin.api = window.vpsAdmin.api || {
+    url: 'https://api.vpsfree.cz',
+    version: '7.0',
+  };
+
+  // @ts-ignore
+  window.vpsAdmin.webui = window.vpsAdmin.webui || {
+    url: 'https://vpsadmin.vpsfree.cz',
+  };
+
+  // Authentication
+  //
+  // WebUI Next uses built-in OAuth2 login in the browser.
+  // You do NOT need to inject any token here.
+  //
+  // If the SPA is embedded into the legacy vpsAdmin webui,
+  // it may provide `window.vpsAdmin.accessToken` automatically.
+
+  // WebUI Next specific configuration.
+  // @ts-ignore
+  window.vpsAdmin.webuiNext = window.vpsAdmin.webuiNext || {};
+
+  // OPTIONAL: OAuth2 client overrides (normally defaults are fine).
+  // @ts-ignore
+  // window.vpsAdmin.webuiNext.oauth2 = {
+  //   authorizeUrl: 'https://auth.vpsfree.cz/_auth/oauth2/authorize',
+  //   tokenUrl: 'https://auth.vpsfree.cz/_auth/oauth2/token',
+  //   clientId: 'clankerdev.vpsfree.cz',
+  //   scope: 'all',
+  //   type: 'web_server',
+  //   flow: 'pkce',
+  //   redirectPath: '/oauth/callback',
+  //   storage: 'session',
+  // };
+
+  // OPTIONAL: router basename for sub-path deployments.
+  // Example: if this SPA is served under https://vpsadmin.example.cz/ui-next/
+  // set:
+  // @ts-ignore
+  // window.vpsAdmin.webuiNext.basePath = '/ui-next';
+
+  // OPTIONAL: standalone HaveAPI client overrides.
+  // Useful when `window.vpsAdmin.description` is not provided by the legacy webui.
+  // @ts-ignore
+  // window.vpsAdmin.webuiNext.haveApi = {
+  //   authHeader: 'X-HaveAPI-Auth-Token',
+  //   metaNamespace: '_meta',
+  // };
+  // @ts-ignore
+  window.vpsAdmin.webuiNext.uiSettings = window.vpsAdmin.webuiNext.uiSettings || {
+    persistence: 'local',
+    // persistence: 'server',
+    // server: {
+    //   path: '/user_sessions/current/ui_setting',
+    //   namespace: 'ui_setting',
+    //   field: 'settings',
+    // },
+  };
+})();
