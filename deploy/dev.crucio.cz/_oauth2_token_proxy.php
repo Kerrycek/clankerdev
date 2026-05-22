@@ -15,6 +15,8 @@ $body = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
 $headers = [
     'Content-Type: application/x-www-form-urlencoded',
     'Accept: application/json',
+    'User-Agent: ' . ($_SERVER['HTTP_USER_AGENT'] ?? 'dev.crucio.cz token proxy'),
+    'Client-IP: ' . ($_SERVER['HTTP_X_REAL_IP'] ?? $_SERVER['REMOTE_ADDR'] ?? ''),
 ];
 
 $context = stream_context_create([

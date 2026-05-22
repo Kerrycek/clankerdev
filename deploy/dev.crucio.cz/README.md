@@ -38,3 +38,8 @@ exchange. The secret must live on the server in:
 
 Use `oauth2-token-proxy.example.php` as the shape of that file. Do not commit
 the real secret.
+
+The test API on `admin.crucio.cz` also needs the patch in
+`../admin.crucio.cz/vpsadmin-api-user-session-label.patch`. Without it, OAuth
+session creation can fail with HTTP 500 when the upstream request does not carry
+a user-agent label.
