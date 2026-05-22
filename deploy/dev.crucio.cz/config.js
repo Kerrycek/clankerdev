@@ -21,6 +21,8 @@
     redirectPath: '/oauth/callback',
     storage: 'session'
   };
+  window.vpsAdmin.webuiNext.loginUrl = '/oauth/login';
+  window.vpsAdmin.webuiNext.logoutUrl = '/oauth/logout';
 
   window.vpsAdmin.webuiNext.uiSettings = window.vpsAdmin.webuiNext.uiSettings || {
     persistence: 'local'
