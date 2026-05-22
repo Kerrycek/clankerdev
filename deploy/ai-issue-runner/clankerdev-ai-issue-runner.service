@@ -1,0 +1,12 @@
+[Unit]
+Description=Clankerdev Codex issue-to-PR runner
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/clankerdev-ai/runner.env
+ExecStart=/usr/local/bin/clankerdev-ai-issue-runner
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
