@@ -2,8 +2,7 @@
 Description=Run Clankerdev Codex issue-to-PR runner periodically
 
 [Timer]
-OnBootSec=5min
-OnUnitActiveSec=15min
+OnCalendar=*:0/15
 RandomizedDelaySec=2min
 Persistent=true
 

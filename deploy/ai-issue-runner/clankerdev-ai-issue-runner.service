@@ -5,6 +5,12 @@ After=network-online.target
 
 [Service]
 Type=oneshot
+User=root
+Group=root
+Environment=HOME=/root
+Environment=XDG_CONFIG_HOME=/root/.config
+Environment=CODEX_HOME=/root/.codex
+Environment="GIT_SSH_COMMAND=ssh -o BatchMode=yes"
 EnvironmentFile=-/etc/clankerdev-ai/runner.env
 ExecStart=/usr/local/bin/clankerdev-ai-issue-runner
 Nice=10
