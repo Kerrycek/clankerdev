@@ -1,0 +1,26 @@
+[Unit]
+Description=WebUI Next OAuth BFF
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=webui-bff
+Group=webui-bff
+EnvironmentFile=/etc/webui-next/oauth.env
+WorkingDirectory=/opt/webui-next/releases/20260314-172752/vpsadmin/webui-next/bff
+ExecStart=/usr/bin/node /opt/webui-next/releases/20260314-172752/vpsadmin/webui-next/bff/server.js
+Restart=on-failure
+RestartSec=3
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+ReadWritePaths=/var/lib/webui-next-bff /etc/webui-next
+LockPersonality=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

@@ -6,9 +6,13 @@
 /var/www/dev.crucio.cz/current
 ```
 
-The public Apache server proxies the test API and OAuth endpoints to
-`admin.crucio.cz`, which proxies `/v7.0` to the local API process on
-`127.0.0.1:9292`.
+The public Apache server mirrors the `clankerdev.vpsfree.cz` layout: static
+assets are served by Apache, while `/config.js`, `/oauth/*`, and `/healthz` are
+served by the WebUI Next BFF on `127.0.0.1:3001`.
+
+Unlike the original production deployment, `dev.crucio.cz` keeps API and OAuth
+traffic on the test stack. Apache proxies `/v7.0` and `/_auth` to
+`admin.crucio.cz`, which proxies the API process on `127.0.0.1:9292`.
 
 Deploy static files from the repo root with:
 
@@ -18,31 +22,30 @@ rsync -az --delete \
   --exclude deploy \
   ./ root@37.205.10.80:/var/www/dev.crucio.cz/current/
 
-rsync -az deploy/dev.crucio.cz/config.js \
-  root@37.205.10.80:/var/www/dev.crucio.cz/current/config.js
+rsync -az deploy/dev.crucio.cz/webui-next-bff.service \
+  root@37.205.10.80:/etc/systemd/system/webui-next-bff.service
 
-rsync -az deploy/dev.crucio.cz/_oauth2_token_proxy.php \
-  root@37.205.10.80:/var/www/dev.crucio.cz/current/_oauth2_token_proxy.php
+rsync -az deploy/dev.crucio.cz/apache-dev.crucio.cz-le-ssl.conf \
+  root@37.205.10.80:/etc/apache2/sites-available/dev.crucio.cz-le-ssl.conf
 ```
 
 The `/v7.0` proxy strips `WWW-Authenticate` from unauthenticated API responses.
 The API still returns `401`, but browsers do not show a native Basic Auth prompt.
 
-Public status endpoints are intentionally routed to `https://api.vpsfree.cz`,
-matching `clankerdev.vpsfree.cz`. The test API on `admin.crucio.cz` has an
-empty test database for public outages/news, while the public overview expects
-production public data.
-
-The OAuth2 token endpoint is handled by `_oauth2_token_proxy.php`, because the
-test backend requires a confidential-client secret for the authorization-code
-exchange. The secret must live on the server in:
+The BFF environment lives on the server in:
 
 ```sh
-/etc/dev.crucio.cz/oauth2-token-proxy.php
+/etc/webui-next/oauth.env
 ```
 
-Use `oauth2-token-proxy.example.php` as the shape of that file. Do not commit
-the real secret.
+Use `oauth.env.example` as the shape of that file. Do not commit the real OAuth
+client secret or session secret.
+
+The BFF code is copied from the original WebUI Next release into:
+
+```sh
+/opt/webui-next/releases/20260314-172752/vpsadmin/webui-next/bff
+```
 
 The test API on `admin.crucio.cz` also needs the patch in
 `../admin.crucio.cz/vpsadmin-api-user-session-label.patch`. Without it, OAuth
