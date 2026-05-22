@@ -60,3 +60,10 @@ The test API on `admin.crucio.cz` also needs the patch in
 `../admin.crucio.cz/vpsadmin-api-user-session-label.patch`. Without it, OAuth
 session creation can fail with HTTP 500 when the upstream request does not carry
 a user-agent label.
+
+## Session expiry troubleshooting
+
+Automatic logout/session expiry behavior is controlled by the WebUI Next source
+and OAuth BFF source, not by the deployment wrapper files in this repository.
+See `session-expiry-investigation.md` for the issue #3 investigation and the
+missing source/build workflow needed before this can be fixed safely.
