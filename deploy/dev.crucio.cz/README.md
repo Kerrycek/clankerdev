@@ -28,6 +28,11 @@ rsync -az deploy/dev.crucio.cz/_oauth2_token_proxy.php \
 The `/v7.0` proxy strips `WWW-Authenticate` from unauthenticated API responses.
 The API still returns `401`, but browsers do not show a native Basic Auth prompt.
 
+Public status endpoints are intentionally routed to `https://api.vpsfree.cz`,
+matching `clankerdev.vpsfree.cz`. The test API on `admin.crucio.cz` has an
+empty test database for public outages/news, while the public overview expects
+production public data.
+
 The OAuth2 token endpoint is handled by `_oauth2_token_proxy.php`, because the
 test backend requires a confidential-client secret for the authorization-code
 exchange. The secret must live on the server in:
