@@ -156,7 +156,7 @@ In your final response, include:
 - Risks or follow-up needed.
 EOF
 
-codex_cmd=(codex exec -C "$WORKDIR" -s "$CODEX_SANDBOX" -a "$CODEX_APPROVAL" -o "$last_message")
+codex_cmd=(codex --ask-for-approval "$CODEX_APPROVAL" exec -C "$WORKDIR" -s "$CODEX_SANDBOX" -o "$last_message")
 if [[ -n "$CODEX_MODEL" ]]; then
   codex_cmd+=(-m "$CODEX_MODEL")
 fi
