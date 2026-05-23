@@ -1,1 +1,0 @@
-function s(n){try{return JSON.stringify(n,null,2)}catch{return String(n)}}function o(n){return n==null?"":typeof n=="string"?n:s(n)}function u(n,r){if(!n||!r)return null;const t=Date.parse(n),i=Date.parse(r);return!Number.isFinite(t)||!Number.isFinite(i)?null:Math.max(0,(i-t)/1e3)}export{u as d,o as f,s};

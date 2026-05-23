@@ -1,0 +1,407 @@
+import React from 'react';
+import { CircleHelp, SlidersHorizontal } from 'lucide-react';
+
+import { useI18n } from '../../../../app/i18n';
+
+import { parseBoolParam, parseNonNegativeInt, parsePositiveInt } from '../../../../lib/parse';
+import type { SmartFilterSuggestion } from '../../../../components/ui/SmartFilterInput';
+
+import { FilterBar } from '../../../../components/layout/FilterBar';
+import { Button } from '../../../../components/ui/Button';
+import { CopyButton } from '../../../../components/ui/CopyButton';
+import { Drawer } from '../../../../components/ui/Drawer';
+import { FilterChip } from '../../../../components/ui/FilterChip';
+import { Input } from '../../../../components/ui/Input';
+import { Select } from '../../../../components/ui/Select';
+import { SmartFilterInput } from '../../../../components/ui/SmartFilterInput';
+import { SmartInputHelp } from '../../../../components/ui/SmartInputHelp';
+import { UserLookupInput } from '../../../../components/ui/UserLookupInput';
+import { VpsLookupInput } from '../../../../components/ui/VpsLookupInput';
+
+type SetTextParam = (key: string, value: string | undefined) => void;
+type SetIntParam = (key: string, value: number | undefined | null) => void;
+type SetBoolParam = (key: string, value: boolean | undefined) => void;
+
+interface IpAddressesFiltersProps {
+  smart: string;
+  setSmart: (value: string) => void;
+  smartErrors: string[];
+  clearSmartErrors: () => void;
+  smartInputRef: React.RefObject<HTMLInputElement | null>;
+  smartNeedle: string;
+  helpOpen: boolean;
+  setHelpOpen: (open: boolean) => void;
+  advancedOpen: boolean;
+  setAdvancedOpen: (open: boolean) => void;
+  activeFilterChips: React.ReactNode[];
+  smartSuggestions: SmartFilterSuggestion[];
+  applySmartText: (raw: string) => void;
+  filtersActive: boolean;
+  shareUrl: string;
+  clearFilters: () => void;
+  qText: string;
+  addr: string;
+  prefixNum: number | undefined;
+  vpsId: number | undefined;
+  userLookup: string;
+  setUserLookup: (value: string) => void;
+  networkId: number | undefined;
+  ifaceId: number | undefined;
+  locationId: number | undefined;
+  versionNum: 4 | 6 | undefined;
+  assignedToInterface: boolean | undefined;
+  order: 'asc' | 'desc' | 'interface';
+  setTextParam: SetTextParam;
+  setIntParam: SetIntParam;
+  setBoolParamInUrl: SetBoolParam;
+}
+
+export function IpAddressesFilters({
+  smart,
+  setSmart,
+  smartErrors,
+  clearSmartErrors,
+  smartInputRef,
+  smartNeedle,
+  helpOpen,
+  setHelpOpen,
+  advancedOpen,
+  setAdvancedOpen,
+  activeFilterChips,
+  smartSuggestions,
+  applySmartText,
+  filtersActive,
+  shareUrl,
+  clearFilters,
+  qText,
+  addr,
+  prefixNum,
+  vpsId,
+  userLookup,
+  setUserLookup,
+  networkId,
+  ifaceId,
+  locationId,
+  versionNum,
+  assignedToInterface,
+  order,
+  setTextParam,
+  setIntParam,
+  setBoolParamInUrl,
+}: IpAddressesFiltersProps) {
+  const { t } = useI18n();
+
+  return (
+    <>
+      <FilterBar testId="admin.ip_addresses.filters">
+        <div className="w-full sm:max-w-xl">
+          <SmartFilterInput
+            ref={smartInputRef}
+            value={smart}
+            onChange={(value) => {
+              setSmart(value);
+              if (smartErrors.length) clearSmartErrors();
+            }}
+            placeholder={t('admin.ip_addresses.search.placeholder')}
+            ariaLabel={t('admin.ip_addresses.search.placeholder')}
+            testId="admin.ip_addresses.smart_filter.input"
+            suggestions={smartSuggestions}
+            onSubmit={() => applySmartText(smart)}
+            suffix={
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 px-0"
+                onClick={() => setHelpOpen(true)}
+                aria-label={t('filters.help.open')}
+                title={t('filters.help.open')}
+              >
+                <CircleHelp className="h-4 w-4" aria-hidden />
+              </Button>
+            }
+          />
+
+          {activeFilterChips.length > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-1" data-testid="admin.ip_addresses.active_filters">
+              {activeFilterChips}
+            </div>
+          ) : null}
+        </div>
+
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setAdvancedOpen(true)}
+          aria-label={t('filters.advanced.open')}
+          title={t('filters.advanced.open')}
+        >
+          <SlidersHorizontal className="h-4 w-4" aria-hidden />
+          <span className="ml-2 hidden sm:inline">{t('filters.advanced.label')}</span>
+        </Button>
+
+        <CopyButton size="sm" variant="secondary" label={t('common.copy_link')} text={shareUrl} testId="admin.ip_addresses.copy_link" />
+
+        {filtersActive ? (
+          <Button variant="secondary" size="sm" onClick={clearFilters} testId="admin.ip_addresses.clear">
+            {t('common.clear_filters')}
+          </Button>
+        ) : null}
+      </FilterBar>
+
+      <SmartInputHelp
+        open={helpOpen}
+        onClose={() => {
+          setHelpOpen(false);
+          if (smartNeedle === '?') setSmart('');
+        }}
+        title={t('filters.help.title')}
+        intro={t('admin.ip_addresses.smart_help.intro')}
+        examples={[
+          { example: '?', description: t('admin.ip_addresses.smart_help.examples.help') },
+          { example: '123', description: t('admin.ip_addresses.smart_help.examples.open_id') },
+          { example: '10.0.0', description: t('admin.ip_addresses.smart_help.examples.search') },
+          { example: 'addr:192.0.2.10', description: t('admin.ip_addresses.smart_help.examples.addr') },
+          { example: 'addr:192.0.2.0/24', description: t('admin.ip_addresses.smart_help.examples.addr_prefix') },
+          { example: 'vps:101', description: t('admin.ip_addresses.smart_help.examples.vps') },
+          { example: 'user:42', description: t('admin.ip_addresses.smart_help.examples.user') },
+          { example: 'version:6', description: t('admin.ip_addresses.smart_help.examples.version') },
+          { example: 'assigned:true', description: t('admin.ip_addresses.smart_help.examples.assigned') },
+        ]}
+        topKeys={[
+          { key: 'q', description: t('admin.ip_addresses.smart_help.keys.q'), example: 'q:10.0.0' },
+          { key: 'addr', description: t('admin.ip_addresses.smart_help.keys.addr'), example: 'addr:192.0.2.10' },
+          { key: 'vps', description: t('admin.ip_addresses.smart_help.keys.vps'), example: 'vps:101' },
+          { key: 'user', description: t('admin.ip_addresses.smart_help.keys.user'), example: 'user:42' },
+          { key: 'network', description: t('admin.ip_addresses.smart_help.keys.network'), example: 'network:12' },
+        ]}
+        moreKeys={[
+          { key: 'iface', description: t('admin.ip_addresses.smart_help.keys.iface'), example: 'iface:501' },
+          { key: 'location', description: t('admin.ip_addresses.smart_help.keys.location'), example: 'location:1' },
+          { key: 'prefix', description: t('admin.ip_addresses.smart_help.keys.prefix'), example: 'prefix:64' },
+          { key: 'version', description: t('admin.ip_addresses.smart_help.keys.version'), example: 'version:4' },
+          { key: 'assigned', description: t('admin.ip_addresses.smart_help.keys.assigned'), example: 'assigned:false' },
+          { key: 'order', description: t('admin.ip_addresses.smart_help.keys.order'), example: 'order:asc' },
+          { key: 'id', description: t('admin.ip_addresses.smart_help.keys.id'), example: 'id:123' },
+        ]}
+        inference={[
+          t('admin.ip_addresses.smart_help.inference.enter_applies'),
+          t('admin.ip_addresses.smart_help.inference.number_opens'),
+          t('admin.ip_addresses.smart_help.inference.key_value'),
+        ]}
+        onInsertKey={(key) => {
+          const current = smartInputRef.current;
+          if (!current) return;
+
+          const next = smart.trim() ? `${smart.trim()} ${key}:` : `${key}:`;
+          setSmart(next);
+          clearSmartErrors();
+
+          window.setTimeout(() => {
+            current.focus();
+            try {
+              current.setSelectionRange(next.length, next.length);
+            } catch {
+              // ignore
+            }
+          }, 0);
+        }}
+        testId="admin.ip_addresses.smart_help"
+        keyRowTestIdPrefix="admin.ip_addresses.smart_help.key"
+      />
+
+      <Drawer
+        open={advancedOpen}
+        onClose={() => setAdvancedOpen(false)}
+        title={t('filters.advanced.title')}
+        width="lg"
+        testId="admin.ip_addresses.advanced.drawer"
+      >
+        <div className="space-y-4">
+          <div className="text-sm text-muted">{t('admin.ip_addresses.advanced.hint')}</div>
+
+          <div>
+            <div className="text-sm font-medium">{t('admin.ip_addresses.advanced.q')}</div>
+            <div className="mt-1">
+              <Input
+                value={qText}
+                onChange={(e) => setTextParam('q', e.target.value.trim() ? e.target.value : undefined)}
+                placeholder={t('admin.ip_addresses.advanced.q.placeholder')}
+                testId="admin.ip_addresses.advanced.q"
+              />
+            </div>
+          </div>
+
+          <div>
+            <div className="text-sm font-medium">{t('admin.ip_addresses.advanced.addr')}</div>
+            <div className="mt-1">
+              <Input
+                value={addr}
+                onChange={(e) => setTextParam('addr', e.target.value.trim() ? e.target.value : undefined)}
+                placeholder={t('admin.ip_addresses.advanced.addr.placeholder')}
+                testId="admin.ip_addresses.advanced.addr"
+              />
+            </div>
+          </div>
+
+          <div>
+            <div className="text-sm font-medium">{t('admin.ip_addresses.advanced.prefix')}</div>
+            <div className="mt-1 max-w-xs">
+              <Input
+                value={prefixNum !== undefined ? String(prefixNum) : ''}
+                onChange={(e) => {
+                  const parsed = parseNonNegativeInt(e.target.value);
+                  if (parsed === undefined || parsed < 0 || parsed > 128) setTextParam('prefix', undefined);
+                  else setTextParam('prefix', String(parsed));
+                }}
+                placeholder={t('admin.ip_addresses.advanced.prefix.placeholder')}
+                testId="admin.ip_addresses.advanced.prefix"
+                inputMode="numeric"
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <div className="text-sm font-medium">{t('admin.ip_addresses.advanced.vps')}</div>
+              <div className="mt-1">
+                <VpsLookupInput
+                  value={vpsId ?? null}
+                  onChange={(id) => setIntParam('vps', id ?? undefined)}
+                  placeholder={t('admin.ip_addresses.advanced.vps.placeholder')}
+                  testId="admin.ip_addresses.advanced.vps"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="text-sm font-medium">{t('admin.ip_addresses.advanced.user')}</div>
+              <div className="mt-1">
+                <UserLookupInput
+                  value={userLookup}
+                  onChange={(value) => {
+                    setUserLookup(value);
+                    const id = parsePositiveInt(value);
+                    if (id !== undefined) setIntParam('user', id);
+                    else setIntParam('user', undefined);
+                  }}
+                  placeholder={t('admin.ip_addresses.advanced.user.placeholder')}
+                  testId="admin.ip_addresses.advanced.user"
+                  loadingLabel={t('common.loading')}
+                  noResultsLabel={t('palette.empty.no_results')}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <div className="text-sm font-medium">{t('admin.ip_addresses.advanced.network')}</div>
+              <div className="mt-1 max-w-xs">
+                <Input
+                  value={networkId !== undefined ? String(networkId) : ''}
+                  onChange={(e) => setIntParam('network', parsePositiveInt(e.target.value))}
+                  placeholder={t('admin.ip_addresses.advanced.network.placeholder')}
+                  testId="admin.ip_addresses.advanced.network"
+                  inputMode="numeric"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="text-sm font-medium">{t('admin.ip_addresses.advanced.iface')}</div>
+              <div className="mt-1 max-w-xs">
+                <Input
+                  value={ifaceId !== undefined ? String(ifaceId) : ''}
+                  onChange={(e) => setIntParam('network_interface', parsePositiveInt(e.target.value))}
+                  placeholder={t('admin.ip_addresses.advanced.iface.placeholder')}
+                  testId="admin.ip_addresses.advanced.iface"
+                  inputMode="numeric"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="text-sm font-medium">{t('admin.ip_addresses.advanced.location')}</div>
+              <div className="mt-1 max-w-xs">
+                <Input
+                  value={locationId !== undefined ? String(locationId) : ''}
+                  onChange={(e) => setIntParam('location', parsePositiveInt(e.target.value))}
+                  placeholder={t('admin.ip_addresses.advanced.location.placeholder')}
+                  testId="admin.ip_addresses.advanced.location"
+                  inputMode="numeric"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="text-sm font-medium">{t('admin.ip_addresses.advanced.version')}</div>
+              <div className="mt-1 max-w-xs">
+                <Select
+                  value={versionNum !== undefined ? String(versionNum) : ''}
+                  onChange={(e) => setTextParam('version', e.target.value || undefined)}
+                  options={[
+                    { value: '', label: t('admin.ip_addresses.advanced.version.any') },
+                    { value: '4', label: 'IPv4' },
+                    { value: '6', label: 'IPv6' },
+                  ]}
+                  testId="admin.ip_addresses.advanced.version"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <div className="text-sm font-medium">{t('admin.ip_addresses.advanced.assigned')}</div>
+              <div className="mt-1 max-w-xs">
+                <Select
+                  value={assignedToInterface === undefined ? '' : assignedToInterface ? '1' : '0'}
+                  onChange={(e) => setBoolParamInUrl('assigned_to_interface', parseBoolParam(e.target.value))}
+                  options={[
+                    { value: '', label: t('admin.ip_addresses.advanced.assigned.any') },
+                    { value: '1', label: t('admin.ip_addresses.advanced.assigned.true') },
+                    { value: '0', label: t('admin.ip_addresses.advanced.assigned.false') },
+                  ]}
+                  testId="admin.ip_addresses.advanced.assigned"
+                />
+              </div>
+              <div className="mt-1 text-xs text-faint">{t('admin.ip_addresses.advanced.assigned.hint')}</div>
+            </div>
+
+            <div>
+              <div className="text-sm font-medium">{t('admin.ip_addresses.advanced.order')}</div>
+              <div className="mt-1 max-w-xs">
+                <Select
+                  value={order}
+                  onChange={(e) => {
+                    const value = e.target.value.trim();
+                    setTextParam('order', value === 'desc' ? undefined : value);
+                  }}
+                  options={[
+                    { value: 'desc', label: t('admin.ip_addresses.advanced.order.desc') },
+                    { value: 'asc', label: t('admin.ip_addresses.advanced.order.asc') },
+                    { value: 'interface', label: t('admin.ip_addresses.advanced.order.interface') },
+                  ]}
+                  testId="admin.ip_addresses.advanced.order"
+                />
+              </div>
+            </div>
+          </div>
+
+          {filtersActive ? (
+            <div className="flex items-center justify-end gap-2">
+              <Button variant="secondary" onClick={clearFilters}>
+                {t('common.clear_filters')}
+              </Button>
+              <Button onClick={() => setAdvancedOpen(false)}>{t('common.done')}</Button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-end gap-2">
+              <Button onClick={() => setAdvancedOpen(false)}>{t('common.done')}</Button>
+            </div>
+          )}
+        </div>
+      </Drawer>
+    </>
+  );
+}

@@ -1,0 +1,23 @@
+// Admin locale chunk: ip_assignments
+export const enAdmin_ip_assignments = {
+  "admin.ip_assignments.badge.reconstructed": "Reconstructed",
+  "admin.ip_assignments.empty": "No IP assignments found.",
+  "admin.ip_assignments.field.assigned_by": "Assigned by",
+  "admin.ip_assignments.field.flags": "Flags",
+  "admin.ip_assignments.field.ip": "IP",
+  "admin.ip_assignments.field.period": "Period",
+  "admin.ip_assignments.field.unassigned_by": "Unassigned by",
+  "admin.ip_assignments.field.user": "User",
+  "admin.ip_assignments.field.vps": "VPS",
+  "admin.ip_assignments.filter.active.all": "Any state",
+  "admin.ip_assignments.filter.active.false": "Ended only",
+  "admin.ip_assignments.filter.active.true": "Active only",
+  "admin.ip_assignments.filter.order.newest": "Newest first",
+  "admin.ip_assignments.filter.order.oldest": "Oldest first",
+  "admin.ip_assignments.filter.q.placeholder": "Search by IP, user or VPS…",
+  "admin.ip_assignments.filter.user.placeholder": "User login or ID…",
+  "admin.ip_assignments.filter.vps.placeholder": "VPS hostname or ID…",
+  "admin.ip_assignments.load_error": "Failed to load IP assignments",
+  "admin.ip_assignments.subtitle": "Audit which user/VPS held an address and when.",
+  "admin.ip_assignments.title": "IP assignment audit",
+} as const;

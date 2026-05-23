@@ -1,0 +1,1392 @@
+{
+  "resources": [
+    {
+      "resource": "ApiServer",
+      "resource_full": "VpsAdmin::API::Resources::ApiServer",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/api_server.rb",
+      "line": 2,
+      "actions_count": 1,
+      "actions": [
+        "UnlockTransactionSigningKey"
+      ]
+    },
+    {
+      "resource": "Cluster",
+      "resource_full": "VpsAdmin::API::Resources::Cluster",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/cluster.rb",
+      "line": 1,
+      "actions_count": 5,
+      "actions": [
+        "FullStats",
+        "GenerateMigrationKeys",
+        "PublicStats",
+        "Search",
+        "Show"
+      ]
+    },
+    {
+      "resource": "ClusterResource",
+      "resource_full": "VpsAdmin::API::Resources::ClusterResource",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/cluster_resource.rb",
+      "line": 2,
+      "actions_count": 4,
+      "actions": [
+        "Create",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "ClusterResourcePackage",
+      "resource_full": "VpsAdmin::API::Resources::ClusterResourcePackage",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/cluster_resource_package.rb",
+      "line": 2,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "ClusterResourcePackage::Item",
+      "resource_full": "VpsAdmin::API::Resources::ClusterResourcePackage::Item",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/cluster_resource_package.rb",
+      "line": 139,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "Component",
+      "resource_full": "VpsAdmin::API::Resources::Component",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/component.rb",
+      "line": 2,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "Dataset",
+      "resource_full": "VpsAdmin::API::Resources::Dataset",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/dataset.rb",
+      "line": 2,
+      "actions_count": 8,
+      "actions": [
+        "Create",
+        "Delete",
+        "FindByName",
+        "Index",
+        "Inherit",
+        "Migrate",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "Dataset::Plan",
+      "resource_full": "VpsAdmin::API::Resources::Dataset::Plan",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/dataset.rb",
+      "line": 677,
+      "actions_count": 4,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "Dataset::PropertyHistory",
+      "resource_full": "VpsAdmin::API::Resources::Dataset::PropertyHistory",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/dataset.rb",
+      "line": 795,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "Dataset::Snapshot",
+      "resource_full": "VpsAdmin::API::Resources::Dataset::Snapshot",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/dataset.rb",
+      "line": 456,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Rollback",
+        "Show"
+      ]
+    },
+    {
+      "resource": "DatasetExpansion",
+      "resource_full": "VpsAdmin::API::Resources::DatasetExpansion",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/dataset_expansion.rb",
+      "line": 2,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Index",
+        "RegisterExpanded",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "DatasetExpansion::History",
+      "resource_full": "VpsAdmin::API::Resources::DatasetExpansion::History",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/dataset_expansion.rb",
+      "line": 203,
+      "actions_count": 3,
+      "actions": [
+        "Create",
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "DatasetPlan",
+      "resource_full": "VpsAdmin::API::Resources::DatasetPlan",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/dataset_plan.rb",
+      "line": 1,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "Debug",
+      "resource_full": "VpsAdmin::API::Resources::Debug",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/debug.rb",
+      "line": 4,
+      "actions_count": 3,
+      "actions": [
+        "ArrayTop",
+        "HashTop",
+        "ListObjectCounts"
+      ]
+    },
+    {
+      "resource": "DefaultObjectClusterResource",
+      "resource_full": "VpsAdmin::API::Resources::DefaultObjectClusterResource",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/default_object_cluster_resource.rb",
+      "line": 2,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "DnsRecord",
+      "resource_full": "VpsAdmin::API::Resources::DnsRecord",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/dns_record.rb",
+      "line": 2,
+      "actions_count": 6,
+      "actions": [
+        "Create",
+        "Delete",
+        "DynamicUpdate",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "DnsRecordLog",
+      "resource_full": "VpsAdmin::API::Resources::DnsRecordLog",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/dns_record_log.rb",
+      "line": 2,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "DnsResolver",
+      "resource_full": "VpsAdmin::API::Resources::DnsResolver",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/dns_resolver.rb",
+      "line": 1,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "DnsServer",
+      "resource_full": "VpsAdmin::API::Resources::DnsServer",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/dns_server.rb",
+      "line": 2,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "DnsServerZone",
+      "resource_full": "VpsAdmin::API::Resources::DnsServerZone",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/dns_server_zone.rb",
+      "line": 2,
+      "actions_count": 4,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "DnsTsigKey",
+      "resource_full": "VpsAdmin::API::Resources::DnsTsigKey",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/dns_tsig_key.rb",
+      "line": 2,
+      "actions_count": 4,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "DnsZone",
+      "resource_full": "VpsAdmin::API::Resources::DnsZone",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/dns_zone.rb",
+      "line": 2,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "DnsZoneTransfer",
+      "resource_full": "VpsAdmin::API::Resources::DnsZoneTransfer",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/dns_zone_transfer.rb",
+      "line": 2,
+      "actions_count": 4,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "DnssecRecord",
+      "resource_full": "VpsAdmin::API::Resources::DnssecRecord",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/dnssec_record.rb",
+      "line": 2,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "Environment",
+      "resource_full": "VpsAdmin::API::Resources::Environment",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/environment.rb",
+      "line": 1,
+      "actions_count": 4,
+      "actions": [
+        "Create",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "Environment::DatasetPlan",
+      "resource_full": "VpsAdmin::API::Resources::Environment::DatasetPlan",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/environment.rb",
+      "line": 221,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "Export",
+      "resource_full": "VpsAdmin::API::Resources::Export",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/export.rb",
+      "line": 1,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "Export::Host",
+      "resource_full": "VpsAdmin::API::Resources::Export::Host",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/export.rb",
+      "line": 227,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "ExportOutage",
+      "resource_full": "VpsAdmin::API::Resources::ExportOutage",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/plugins/outage_reports/api/resources/export_outage.rb",
+      "line": 2,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "HelpBox",
+      "resource_full": "VpsAdmin::API::Resources::HelpBox",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/plugins/webui/api/resources/help_box.rb",
+      "line": 2,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "HostIpAddress",
+      "resource_full": "VpsAdmin::API::Resources::HostIpAddress",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/host_ip_address.rb",
+      "line": 2,
+      "actions_count": 7,
+      "actions": [
+        "Assign",
+        "Create",
+        "Delete",
+        "Free",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "IncidentReport",
+      "resource_full": "VpsAdmin::API::Resources::IncidentReport",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/incident_report.rb",
+      "line": 2,
+      "actions_count": 3,
+      "actions": [
+        "Create",
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "IncomingPayment",
+      "resource_full": "VpsAdmin::API::Resources::IncomingPayment",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/plugins/payments/api/resources/incoming_payment.rb",
+      "line": 2,
+      "actions_count": 3,
+      "actions": [
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "IpAddress",
+      "resource_full": "VpsAdmin::API::Resources::IpAddress",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/ip_address.rb",
+      "line": 1,
+      "actions_count": 7,
+      "actions": [
+        "Assign",
+        "AssignWithHostAddress",
+        "Create",
+        "Free",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "IpAddressAssignment",
+      "resource_full": "VpsAdmin::API::Resources::IpAddressAssignment",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/ip_address_assignment.rb",
+      "line": 2,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "Language",
+      "resource_full": "VpsAdmin::API::Resources::Language",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/language.rb",
+      "line": 2,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "Location",
+      "resource_full": "VpsAdmin::API::Resources::Location",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/location.rb",
+      "line": 1,
+      "actions_count": 4,
+      "actions": [
+        "Create",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "LocationNetwork",
+      "resource_full": "VpsAdmin::API::Resources::LocationNetwork",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/location_network.rb",
+      "line": 2,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "MailLog",
+      "resource_full": "VpsAdmin::API::Resources::MailLog",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/mail_log.rb",
+      "line": 2,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "MailRecipient",
+      "resource_full": "VpsAdmin::API::Resources::MailRecipient",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/mail_recipient.rb",
+      "line": 2,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "MailTemplate",
+      "resource_full": "VpsAdmin::API::Resources::MailTemplate",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/mail_template.rb",
+      "line": 2,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "MailTemplate::Recipient",
+      "resource_full": "VpsAdmin::API::Resources::MailTemplate::Recipient",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/mail_template.rb",
+      "line": 131,
+      "actions_count": 4,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "MailTemplate::Translation",
+      "resource_full": "VpsAdmin::API::Resources::MailTemplate::Translation",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/mail_template.rb",
+      "line": 242,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "Mailbox",
+      "resource_full": "VpsAdmin::API::Resources::Mailbox",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/mailbox.rb",
+      "line": 2,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "Mailbox::Handler",
+      "resource_full": "VpsAdmin::API::Resources::Mailbox::Handler",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/mailbox.rb",
+      "line": 125,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "MetricsAccessToken",
+      "resource_full": "VpsAdmin::API::Resources::MetricsAccessToken",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/metrics_access_token.rb",
+      "line": 2,
+      "actions_count": 4,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "MigrationPlan",
+      "resource_full": "VpsAdmin::API::Resources::MigrationPlan",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/migration_plan.rb",
+      "line": 2,
+      "actions_count": 6,
+      "actions": [
+        "Cancel",
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Start"
+      ]
+    },
+    {
+      "resource": "MigrationPlan::VpsMigration",
+      "resource_full": "VpsAdmin::API::Resources::MigrationPlan::VpsMigration",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/migration_plan.rb",
+      "line": 162,
+      "actions_count": 3,
+      "actions": [
+        "Create",
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "MonitoredEvent",
+      "resource_full": "VpsAdmin::API::Resources::MonitoredEvent",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/plugins/monitoring/api/resources/monitored_event.rb",
+      "line": 2,
+      "actions_count": 4,
+      "actions": [
+        "Acknowledge",
+        "Ignore",
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "MonitoredEvent::Log",
+      "resource_full": "VpsAdmin::API::Resources::MonitoredEvent::Log",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/plugins/monitoring/api/resources/monitored_event.rb",
+      "line": 187,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "Network",
+      "resource_full": "VpsAdmin::API::Resources::Network",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/network.rb",
+      "line": 2,
+      "actions_count": 5,
+      "actions": [
+        "AddAddresses",
+        "Create",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "NetworkInterface",
+      "resource_full": "VpsAdmin::API::Resources::NetworkInterface",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/network_interface.rb",
+      "line": 2,
+      "actions_count": 3,
+      "actions": [
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "NetworkInterfaceAccounting",
+      "resource_full": "VpsAdmin::API::Resources::NetworkInterfaceAccounting",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/network_interface_accounting.rb",
+      "line": 2,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "UserTop"
+      ]
+    },
+    {
+      "resource": "NetworkInterfaceMonitor",
+      "resource_full": "VpsAdmin::API::Resources::NetworkInterfaceMonitor",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/network_interface_monitor.rb",
+      "line": 2,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "NewsLog",
+      "resource_full": "VpsAdmin::API::Resources::NewsLog",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/plugins/newslog/api/resources/news_log.rb",
+      "line": 2,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "Node",
+      "resource_full": "VpsAdmin::API::Resources::Node",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/node.rb",
+      "line": 1,
+      "actions_count": 7,
+      "actions": [
+        "Create",
+        "Evacuate",
+        "Index",
+        "OverviewList",
+        "PublicStatus",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "Node::Status",
+      "resource_full": "VpsAdmin::API::Resources::Node::Status",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/node.rb",
+      "line": 438,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "Oauth2Client",
+      "resource_full": "VpsAdmin::API::Resources::Oauth2Client",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/oauth2_client.rb",
+      "line": 2,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "ObjectHistory",
+      "resource_full": "VpsAdmin::API::Resources::ObjectHistory",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/object_history.rb",
+      "line": 2,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "OomReport",
+      "resource_full": "VpsAdmin::API::Resources::OomReport",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/oom_report.rb",
+      "line": 2,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "OomReport::Stat",
+      "resource_full": "VpsAdmin::API::Resources::OomReport::Stat",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/oom_report.rb",
+      "line": 180,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "OomReport::Task",
+      "resource_full": "VpsAdmin::API::Resources::OomReport::Task",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/oom_report.rb",
+      "line": 245,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "OomReport::Usage",
+      "resource_full": "VpsAdmin::API::Resources::OomReport::Usage",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/oom_report.rb",
+      "line": 113,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "OomReportRule",
+      "resource_full": "VpsAdmin::API::Resources::OomReportRule",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/oom_report_rule.rb",
+      "line": 2,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "OsFamily",
+      "resource_full": "VpsAdmin::API::Resources::OsFamily",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/os_family.rb",
+      "line": 2,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "OsTemplate",
+      "resource_full": "VpsAdmin::API::Resources::OsTemplate",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/os_template.rb",
+      "line": 1,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "Outage",
+      "resource_full": "VpsAdmin::API::Resources::Outage",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/plugins/outage_reports/api/resources/outage.rb",
+      "line": 2,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Index",
+        "RebuildAffectedVps",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "Outage::Entity",
+      "resource_full": "VpsAdmin::API::Resources::Outage::Entity",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/plugins/outage_reports/api/resources/outage.rb",
+      "line": 309,
+      "actions_count": 4,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "Outage::Handler",
+      "resource_full": "VpsAdmin::API::Resources::Outage::Handler",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/plugins/outage_reports/api/resources/outage.rb",
+      "line": 419,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "OutageUpdate",
+      "resource_full": "VpsAdmin::API::Resources::OutageUpdate",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/plugins/outage_reports/api/resources/outage_update.rb",
+      "line": 4,
+      "actions_count": 3,
+      "actions": [
+        "Create",
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "PaymentStats",
+      "resource_full": "VpsAdmin::API::Resources::PaymentStats",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/plugins/payments/api/resources/payment_stats.rb",
+      "line": 2,
+      "actions_count": 1,
+      "actions": [
+        "EstimateIncome"
+      ]
+    },
+    {
+      "resource": "Pool",
+      "resource_full": "VpsAdmin::API::Resources::Pool",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/pool.rb",
+      "line": 2,
+      "actions_count": 3,
+      "actions": [
+        "Create",
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "SnapshotDownload",
+      "resource_full": "VpsAdmin::API::Resources::SnapshotDownload",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/snapshot_download.rb",
+      "line": 2,
+      "actions_count": 4,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "SystemConfig",
+      "resource_full": "VpsAdmin::API::Resources::SystemConfig",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/system_config.rb",
+      "line": 2,
+      "actions_count": 3,
+      "actions": [
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "Transaction",
+      "resource_full": "VpsAdmin::API::Resources::Transaction",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/transaction.rb",
+      "line": 2,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "TransactionChain",
+      "resource_full": "VpsAdmin::API::Resources::TransactionChain",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/transaction_chain.rb",
+      "line": 1,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "User",
+      "resource_full": "VpsAdmin::API::Resources::User",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/user.rb",
+      "line": 1,
+      "actions_count": 8,
+      "actions": [
+        "Create",
+        "Current",
+        "Delete",
+        "GetPaymentInstructions",
+        "Index",
+        "Show",
+        "Touch",
+        "Update"
+      ]
+    },
+    {
+      "resource": "User::ClusterResource",
+      "resource_full": "VpsAdmin::API::Resources::User::ClusterResource",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/user.rb",
+      "line": 462,
+      "actions_count": 3,
+      "actions": [
+        "Create",
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "User::EnvironmentConfig",
+      "resource_full": "VpsAdmin::API::Resources::User::EnvironmentConfig",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/user.rb",
+      "line": 350,
+      "actions_count": 3,
+      "actions": [
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "User::KnownDevice",
+      "resource_full": "VpsAdmin::API::Resources::User::KnownDevice",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/user.rb",
+      "line": 575,
+      "actions_count": 3,
+      "actions": [
+        "Delete",
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "User::MailRoleRecipient",
+      "resource_full": "VpsAdmin::API::Resources::User::MailRoleRecipient",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/user.rb",
+      "line": 1159,
+      "actions_count": 3,
+      "actions": [
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "User::MailTemplateRecipient",
+      "resource_full": "VpsAdmin::API::Resources::User::MailTemplateRecipient",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/user.rb",
+      "line": 1251,
+      "actions_count": 3,
+      "actions": [
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "User::PublicKey",
+      "resource_full": "VpsAdmin::API::Resources::User::PublicKey",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/user.rb",
+      "line": 1008,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "User::TotpDevice",
+      "resource_full": "VpsAdmin::API::Resources::User::TotpDevice",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/user.rb",
+      "line": 666,
+      "actions_count": 6,
+      "actions": [
+        "Confirm",
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "User::WebauthnCredential",
+      "resource_full": "VpsAdmin::API::Resources::User::WebauthnCredential",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/user.rb",
+      "line": 882,
+      "actions_count": 4,
+      "actions": [
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "UserAccount",
+      "resource_full": "VpsAdmin::API::Resources::UserAccount",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/plugins/payments/api/resources/user_account.rb",
+      "line": 2,
+      "actions_count": 3,
+      "actions": [
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "UserClusterResourcePackage",
+      "resource_full": "VpsAdmin::API::Resources::UserClusterResourcePackage",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/user_cluster_resource_package.rb",
+      "line": 1,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "UserClusterResourcePackage::Item",
+      "resource_full": "VpsAdmin::API::Resources::UserClusterResourcePackage::Item",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/user_cluster_resource_package.rb",
+      "line": 163,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "UserNamespace",
+      "resource_full": "VpsAdmin::API::Resources::UserNamespace",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/user_namespace.rb",
+      "line": 1,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "UserNamespaceMap",
+      "resource_full": "VpsAdmin::API::Resources::UserNamespaceMap",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/user_namespace_map.rb",
+      "line": 1,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "UserNamespaceMap::Entry",
+      "resource_full": "VpsAdmin::API::Resources::UserNamespaceMap::Entry",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/user_namespace_map.rb",
+      "line": 158,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "UserOutage",
+      "resource_full": "VpsAdmin::API::Resources::UserOutage",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/plugins/outage_reports/api/resources/user_outage.rb",
+      "line": 2,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "UserPayment",
+      "resource_full": "VpsAdmin::API::Resources::UserPayment",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/plugins/payments/api/resources/user_payment.rb",
+      "line": 2,
+      "actions_count": 3,
+      "actions": [
+        "Create",
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "UserRequest",
+      "resource_full": "VpsAdmin::API::Resources::UserRequest",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/plugins/requests/api/resources/user_request.rb",
+      "line": 2,
+      "actions_count": 0,
+      "actions": []
+    },
+    {
+      "resource": "UserRequest::Change",
+      "resource_full": "VpsAdmin::API::Resources::UserRequest::Change",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/plugins/requests/api/resources/change.rb",
+      "line": 3,
+      "actions_count": 0,
+      "actions": []
+    },
+    {
+      "resource": "UserRequest::Registration",
+      "resource_full": "VpsAdmin::API::Resources::UserRequest::Registration",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/plugins/requests/api/resources/registration.rb",
+      "line": 3,
+      "actions_count": 2,
+      "actions": [
+        "Preview",
+        "Update"
+      ]
+    },
+    {
+      "resource": "UserSession",
+      "resource_full": "VpsAdmin::API::Resources::UserSession",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/user_session.rb",
+      "line": 2,
+      "actions_count": 5,
+      "actions": [
+        "Close",
+        "Create",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "VPS",
+      "resource_full": "VpsAdmin::API::Resources::VPS",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/vps.rb",
+      "line": 1,
+      "actions_count": 16,
+      "actions": [
+        "Boot",
+        "Clone",
+        "Create",
+        "Delete",
+        "DeployPublicKey",
+        "Index",
+        "Migrate",
+        "Passwd",
+        "Reinstall",
+        "Replace",
+        "Restart",
+        "Show",
+        "Start",
+        "Stop",
+        "SwapWith",
+        "Update"
+      ]
+    },
+    {
+      "resource": "VPS::ConsoleToken",
+      "resource_full": "VpsAdmin::API::Resources::VPS::ConsoleToken",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/vps.rb",
+      "line": 1563,
+      "actions_count": 3,
+      "actions": [
+        "Create",
+        "Delete",
+        "Show"
+      ]
+    },
+    {
+      "resource": "VPS::Feature",
+      "resource_full": "VpsAdmin::API::Resources::VPS::Feature",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/vps.rb",
+      "line": 1074,
+      "actions_count": 4,
+      "actions": [
+        "Index",
+        "Show",
+        "Update",
+        "UpdateAll"
+      ]
+    },
+    {
+      "resource": "VPS::MaintenanceWindow",
+      "resource_full": "VpsAdmin::API::Resources::VPS::MaintenanceWindow",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/vps.rb",
+      "line": 1401,
+      "actions_count": 4,
+      "actions": [
+        "Index",
+        "Show",
+        "Update",
+        "UpdateAll"
+      ]
+    },
+    {
+      "resource": "VPS::Mount",
+      "resource_full": "VpsAdmin::API::Resources::VPS::Mount",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/vps.rb",
+      "line": 1215,
+      "actions_count": 5,
+      "actions": [
+        "Create",
+        "Delete",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "VPS::SshHostKey",
+      "resource_full": "VpsAdmin::API::Resources::VPS::SshHostKey",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/vps.rb",
+      "line": 1634,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "VPS::Status",
+      "resource_full": "VpsAdmin::API::Resources::VPS::Status",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/vps.rb",
+      "line": 1697,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "VpsOutage",
+      "resource_full": "VpsAdmin::API::Resources::VpsOutage",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/plugins/outage_reports/api/resources/vps_outage.rb",
+      "line": 2,
+      "actions_count": 2,
+      "actions": [
+        "Index",
+        "Show"
+      ]
+    },
+    {
+      "resource": "VpsUserData",
+      "resource_full": "VpsAdmin::API::Resources::VpsUserData",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/vps_user_data.rb",
+      "line": 2,
+      "actions_count": 6,
+      "actions": [
+        "Create",
+        "Delete",
+        "Deploy",
+        "Index",
+        "Show",
+        "Update"
+      ]
+    },
+    {
+      "resource": "Webauthn",
+      "resource_full": "VpsAdmin::API::Resources::Webauthn",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/webauthn.rb",
+      "line": 3,
+      "actions_count": 0,
+      "actions": []
+    },
+    {
+      "resource": "Webauthn::Authentication",
+      "resource_full": "VpsAdmin::API::Resources::Webauthn::Authentication",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/webauthn.rb",
+      "line": 112,
+      "actions_count": 2,
+      "actions": [
+        "Begin",
+        "Finish"
+      ]
+    },
+    {
+      "resource": "Webauthn::Registration",
+      "resource_full": "VpsAdmin::API::Resources::Webauthn::Registration",
+      "file": "/mnt/data/vpsadmin_src2/vpsadmin/api/lib/vpsadmin/api/resources/webauthn.rb",
+      "line": 37,
+      "actions_count": 2,
+      "actions": [
+        "Begin",
+        "Finish"
+      ]
+    }
+  ]
+}

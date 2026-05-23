@@ -8,8 +8,8 @@ Type=simple
 User=webui-bff
 Group=webui-bff
 EnvironmentFile=/etc/webui-next/oauth.env
-WorkingDirectory=/opt/webui-next/releases/20260314-172752/vpsadmin/webui-next/bff
-ExecStart=/usr/bin/node /opt/webui-next/releases/20260314-172752/vpsadmin/webui-next/bff/server.js
+WorkingDirectory=/srv/clankerdev-deploy/repo/bff
+ExecStart=/usr/bin/node /srv/clankerdev-deploy/repo/bff/server.js
 Restart=on-failure
 RestartSec=3
 

@@ -1,0 +1,1318 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { CircleHelp, SlidersHorizontal } from 'lucide-react';
+
+import { useAppMode } from '../../../app/appMode';
+import { useI18n } from '../../../app/i18n';
+import { useToasts } from '../../../app/toasts';
+
+import { searchUsers } from '../../../lib/api/users';
+import {
+  fetchChangeRequest,
+  fetchChangeRequests,
+  fetchRegistrationRequest,
+  fetchRegistrationRequests,
+  type ChangeRequest,
+  type RegistrationRequest,
+} from '../../../lib/api/requests';
+import { formatDateTime } from '../../../lib/format';
+import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
+import { useDebouncedValue } from '../../../lib/hooks/useDebouncedValue';
+import { cursorFromDescendingPage } from '../../../lib/lockIndex';
+import { useTierSlowIntervalMs } from '../../../lib/refreshTiers';
+import {
+  parseNumericToken,
+  splitKeyValueToken,
+  tokenizeSmartInput,
+  unquoteSmartValue,
+} from '../../../lib/smartFilter';
+import {
+  fraudRiskBadge,
+  requestRowVariant,
+  requestStateBadgeVariant,
+  requestStateLabelKey,
+  requestTypeBadgeVariant,
+  requestTypeLabelKey,
+} from '../../../lib/requestsBadges';
+import { dotVariantFromBadgeVariant, tableVariantFromBadgeVariant } from '../../../lib/variantMap';
+
+import { FilterBar } from '../../../components/layout/FilterBar';
+import { ListShell } from '../../../components/layout/ListShell';
+import { PageHeader } from '../../../components/layout/PageHeader';
+
+import { Badge } from '../../../components/ui/Badge';
+import { Button } from '../../../components/ui/Button';
+import { Card } from '../../../components/ui/Card';
+import { CopyButton } from '../../../components/ui/CopyButton';
+import { Drawer } from '../../../components/ui/Drawer';
+import { EmptyState } from '../../../components/ui/EmptyState';
+import { ErrorState } from '../../../components/ui/ErrorState';
+import { FilterChip } from '../../../components/ui/FilterChip';
+import { Input } from '../../../components/ui/Input';
+import { KeysetPagination } from '../../../components/ui/KeysetPagination';
+import { LoadingState } from '../../../components/ui/LoadingState';
+import { Select } from '../../../components/ui/Select';
+import { SmartFilterInput, type SmartFilterSuggestion } from '../../../components/ui/SmartFilterInput';
+import { SmartInputHelp } from '../../../components/ui/SmartInputHelp';
+import { StatusDot } from '../../../components/ui/StatusDot';
+import { TableCard } from '../../../components/ui/TableCard';
+import { TableRowLink } from '../../../components/ui/TableRowLink';
+import { UserLookupInput } from '../../../components/ui/UserLookupInput';
+
+type RequestTypeFilter = 'all' | 'registration' | 'change';
+
+type UnifiedRequestRow =
+  | (RegistrationRequest & { _type: 'registration' })
+  | (ChangeRequest & { _type: 'change' });
+
+function safeNumber(value: string): number | undefined {
+  const t = value.trim();
+  if (!t) return undefined;
+  const n = Number(t);
+  if (!Number.isFinite(n)) return undefined;
+  const i = Math.floor(n);
+  if (i <= 0) return undefined;
+  return i;
+}
+
+function mergeByIdDesc(reg: RegistrationRequest[], ch: ChangeRequest[], limit: number): UnifiedRequestRow[] {
+  const out: UnifiedRequestRow[] = [];
+
+  let i = 0;
+  let j = 0;
+
+  const r = reg.map((x) => ({ ...x, _type: 'registration' as const }));
+  const c = ch.map((x) => ({ ...x, _type: 'change' as const }));
+
+  while (out.length < limit && (i < r.length || j < c.length)) {
+    const a = i < r.length ? Number(r[i]?.id) : -1;
+    const b = j < c.length ? Number(c[j]?.id) : -1;
+
+    if (a >= b) {
+      const item = r[i];
+      if (item) out.push(item);
+      i++;
+    } else {
+      const item = c[j];
+      if (item) out.push(item);
+      j++;
+    }
+  }
+
+  return out;
+}
+
+function defaultStateOptions(): string[] {
+  return ['', 'awaiting', 'pending_correction', 'approved', 'denied', 'ignored'];
+}
+
+function canonicalKey(rawKey: string):
+  | 'q'
+  | 'type'
+  | 'state'
+  | 'user'
+  | 'admin'
+  | 'api_ip'
+  | 'client_ip'
+  | 'client_ptr'
+  | 'id'
+  | null {
+  const k = rawKey.trim().toLowerCase();
+  if (!k) return null;
+  if (k === 'q' || k === 'search' || k === 'text' || k === 'query') return 'q';
+  if (k === 'type' || k === 't' || k === 'kind') return 'type';
+  if (k === 'state' || k === 's' || k === 'status') return 'state';
+  if (k === 'user' || k === 'u' || k === 'owner') return 'user';
+  if (k === 'admin' || k === 'a' || k === 'operator' || k === 'op') return 'admin';
+  if (k === 'api' || k === 'api_ip' || k === 'api_ip_addr' || k === 'apiip') return 'api_ip';
+  if (k === 'client' || k === 'client_ip' || k === 'client_ip_addr' || k === 'clientip') return 'client_ip';
+  if (k === 'ptr' || k === 'client_ptr' || k === 'client_ip_ptr' || k === 'clientptr') return 'client_ptr';
+  if (k === 'id' || k === '#') return 'id';
+  return null;
+}
+
+function parseTypeValue(value: string): RequestTypeFilter | null {
+  const v = value.trim().toLowerCase();
+  if (!v) return null;
+  if (v === 'all' || v === '*') return 'all';
+  if (v === 'registration' || v === 'registrations' || v === 'reg' || v === 'r') return 'registration';
+  if (v === 'change' || v === 'changes' || v === 'c') return 'change';
+  return null;
+}
+
+function resolveStateValue(value: string): string | null {
+  const v = value.trim().toLowerCase();
+  if (!v) return null;
+
+  const known = defaultStateOptions().filter((x) => x);
+  const exact = known.find((s) => s.toLowerCase() === v);
+  if (exact) return exact;
+
+  const pref = known.filter((s) => s.toLowerCase().startsWith(v));
+  if (pref.length === 1) return pref[0] ?? null;
+  return null;
+}
+
+export function RequestsPage() {
+  const { basePath, mode } = useAppMode();
+  const isAdmin = mode === 'admin';
+  const { t } = useI18n();
+  const toasts = useToasts();
+  const navigate = useNavigate();
+
+  const tierSlowRefetchMs = useTierSlowIntervalMs();
+  const [sp, setSp] = useSearchParams();
+
+  const [type, setType] = useState<RequestTypeFilter>(() => (sp.get('type') as any) || 'all');
+  const [state, setState] = useState(() => sp.get('state') ?? '');
+  const [qText, setQText] = useState(() => sp.get('q') ?? '');
+  const [userId, setUserId] = useState(() => sp.get('user') ?? '');
+  const [adminId, setAdminId] = useState(() => sp.get('admin') ?? '');
+  const [apiIp, setApiIp] = useState(() => sp.get('api_ip') ?? '');
+  const [clientIp, setClientIp] = useState(() => sp.get('client_ip') ?? '');
+  const [clientPtr, setClientPtr] = useState(() => sp.get('client_ptr') ?? '');
+
+  const [smart, setSmart] = useState('');
+  const [smartErrors, setSmartErrors] = useState<string[]>([]);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const smartInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync from URL on navigation.
+  useEffect(() => {
+    setType(((sp.get('type') as any) || 'all') as RequestTypeFilter);
+    setState(sp.get('state') ?? '');
+    setQText(sp.get('q') ?? '');
+    setUserId(isAdmin ? sp.get('user') ?? '' : '');
+    setAdminId(isAdmin ? sp.get('admin') ?? '' : '');
+    setApiIp(sp.get('api_ip') ?? '');
+    setClientIp(sp.get('client_ip') ?? '');
+    setClientPtr(sp.get('client_ptr') ?? '');
+  }, [isAdmin, sp]);
+
+  // Keep filters in the URL.
+  useEffect(() => {
+    const next = new URLSearchParams(sp);
+
+    if (type && type !== 'all') next.set('type', type);
+    else next.delete('type');
+
+    const st = state.trim();
+    if (st && defaultStateOptions().includes(st)) next.set('state', st);
+    else next.delete('state');
+
+    const q = qText.trim();
+    if (q) next.set('q', q);
+    else next.delete('q');
+
+    if (isAdmin && userId.trim()) next.set('user', userId.trim());
+    else next.delete('user');
+
+    if (isAdmin && adminId.trim()) next.set('admin', adminId.trim());
+    else next.delete('admin');
+
+    if (apiIp.trim()) next.set('api_ip', apiIp.trim());
+    else next.delete('api_ip');
+
+    if (clientIp.trim()) next.set('client_ip', clientIp.trim());
+    else next.delete('client_ip');
+
+    if (clientPtr.trim()) next.set('client_ptr', clientPtr.trim());
+    else next.delete('client_ptr');
+
+    if (next.toString() !== sp.toString()) setSp(next, { replace: true });
+  }, [adminId, apiIp, clientIp, clientPtr, isAdmin, qText, setSp, sp, state, type, userId]);
+
+  const stateTrim = state.trim() || undefined;
+  const qTrim = qText.trim() || undefined;
+  const userIdNum = safeNumber(userId);
+  const adminIdNum = safeNumber(adminId);
+
+  const filtersActive = Boolean(
+    qTrim ||
+      (type && type !== 'all') ||
+      stateTrim ||
+      (isAdmin && userIdNum !== undefined) ||
+      (isAdmin && adminIdNum !== undefined) ||
+      apiIp.trim() ||
+      clientIp.trim() ||
+      clientPtr.trim()
+  );
+
+  function clearFilters() {
+    setType('all');
+    setState('');
+    setQText('');
+    setUserId('');
+    setAdminId('');
+    setApiIp('');
+    setClientIp('');
+    setClientPtr('');
+    setSmart('');
+    setSmartErrors([]);
+  }
+
+  const pagination = useKeysetPagination({
+    id: 'admin.requests.list',
+    filterKey: JSON.stringify({
+      scope: basePath,
+      type,
+      state: stateTrim,
+      q: qTrim,
+      user: isAdmin ? userIdNum : undefined,
+      admin: isAdmin ? adminIdNum : undefined,
+      api_ip: apiIp.trim() || undefined,
+      client_ip: clientIp.trim() || undefined,
+      client_ptr: clientPtr.trim() || undefined,
+    }),
+    searchParams: sp,
+    setSearchParams: setSp,
+    defaultLimit: 50,
+    allowedLimits: [25, 50, 100, 200],
+  });
+
+  const needRegs = type === 'all' || type === 'registration';
+  const needChanges = type === 'all' || type === 'change';
+
+  const regQ = useQuery({
+    queryKey: [
+      'user_request',
+      'registrations',
+      'index',
+      {
+        enabled: needRegs,
+        limit: pagination.limit,
+        fromId: pagination.fromId,
+        state: stateTrim,
+        q: qTrim,
+        userId: isAdmin ? userIdNum : undefined,
+        adminId: isAdmin ? adminIdNum : undefined,
+        apiIp: apiIp.trim(),
+        clientIp: clientIp.trim(),
+        clientPtr: clientPtr.trim(),
+      },
+    ],
+    enabled: needRegs,
+    queryFn: async () =>
+      await fetchRegistrationRequests({
+        limit: pagination.limit,
+        fromId: pagination.fromId,
+        state: stateTrim,
+        q: qTrim,
+        userId: isAdmin ? userIdNum : undefined,
+        adminId: isAdmin ? adminIdNum : undefined,
+        apiIpAddr: apiIp.trim() || undefined,
+        clientIpAddr: clientIp.trim() || undefined,
+        clientIpPtr: clientPtr.trim() || undefined,
+      }),
+    staleTime: 15000,
+    refetchInterval: tierSlowRefetchMs,
+  });
+
+  const changeQ = useQuery({
+    queryKey: [
+      'user_request',
+      'changes',
+      'index',
+      {
+        enabled: needChanges,
+        limit: pagination.limit,
+        fromId: pagination.fromId,
+        state: stateTrim,
+        q: qTrim,
+        userId: isAdmin ? userIdNum : undefined,
+        adminId: isAdmin ? adminIdNum : undefined,
+        apiIp: apiIp.trim(),
+        clientIp: clientIp.trim(),
+        clientPtr: clientPtr.trim(),
+      },
+    ],
+    enabled: needChanges,
+    queryFn: async () =>
+      await fetchChangeRequests({
+        limit: pagination.limit,
+        fromId: pagination.fromId,
+        state: stateTrim,
+        q: qTrim,
+        userId: isAdmin ? userIdNum : undefined,
+        adminId: isAdmin ? adminIdNum : undefined,
+        apiIpAddr: apiIp.trim() || undefined,
+        clientIpAddr: clientIp.trim() || undefined,
+        clientIpPtr: clientPtr.trim() || undefined,
+      }),
+    staleTime: 15000,
+    refetchInterval: tierSlowRefetchMs,
+  });
+
+  const reg = regQ.data?.data ?? [];
+  const ch = changeQ.data?.data ?? [];
+
+  const rows = useMemo(() => {
+    if (type === 'registration') return reg.map((x) => ({ ...x, _type: 'registration' as const })) as UnifiedRequestRow[];
+    if (type === 'change') return ch.map((x) => ({ ...x, _type: 'change' as const })) as UnifiedRequestRow[];
+    return mergeByIdDesc(reg, ch, pagination.limit);
+  }, [ch, pagination.limit, reg, type]);
+
+  const pageCursor = useMemo(() => cursorFromDescendingPage(rows as any), [rows]);
+
+  const fetchedCount = reg.length + ch.length;
+  const canNext = useMemo(() => {
+    if (type === 'registration') return reg.length === pagination.limit;
+    if (type === 'change') return ch.length === pagination.limit;
+
+    // Unified: if we fetched more than we display, we definitely have a next page.
+    if (fetchedCount > rows.length) return true;
+    // Otherwise, if any source hit its limit, there might be more beyond.
+    if (reg.length === pagination.limit) return true;
+    if (ch.length === pagination.limit) return true;
+    return false;
+  }, [ch.length, fetchedCount, pagination.limit, reg.length, rows.length, type]);
+
+  const isLoading = (needRegs && regQ.isLoading) || (needChanges && changeQ.isLoading);
+  const error = (needRegs && regQ.isError ? regQ.error : null) || (needChanges && changeQ.isError ? changeQ.error : null);
+
+  const smartNeedle = useMemo(() => smart.trim(), [smart]);
+  const debouncedNeedle = useDebouncedValue(smartNeedle, 200);
+
+  const userSuggestEnabled =
+    isAdmin && smartNeedle.length >= 2 && debouncedNeedle === smartNeedle && !smartNeedle.includes(':') && parseNumericToken(smartNeedle) === null;
+
+  const userSuggestQuery = useQuery({
+    queryKey: ['users', 'search', { q: debouncedNeedle, limit: 8 }],
+    enabled: userSuggestEnabled,
+    queryFn: async () => (await searchUsers({ q: debouncedNeedle, limit: 8 })).data,
+    staleTime: 10_000,
+  });
+
+  const openRequestById = useCallback(
+    async (id: number) => {
+      // If the id is already on the page, we know the type and can open directly.
+      const onPage = rows.find((r) => Number((r as any).id) === id);
+      if (onPage) {
+        navigate(`${basePath}/requests/${(onPage as any)._type}/${id}`);
+        return;
+      }
+
+      try {
+        await fetchRegistrationRequest(id);
+        navigate(`${basePath}/requests/registration/${id}`);
+        return;
+      } catch {
+        // ignore and try change
+      }
+
+      try {
+        await fetchChangeRequest(id);
+        navigate(`${basePath}/requests/change/${id}`);
+        return;
+      } catch {
+        // ignore
+      }
+
+      toasts.pushToast({ variant: 'danger', title: t('requests.smart.error.not_found', { id: String(id) }) });
+    },
+    [basePath, navigate, rows, t, toasts]
+  );
+
+  async function applySmartText(raw: string) {
+    const input = raw.trim();
+    if (!input) return;
+
+    if (input === '?') {
+      setHelpOpen(true);
+      return;
+    }
+
+    const tokens = tokenizeSmartInput(input).map((x) => x.trim()).filter(Boolean);
+
+    // Pure numeric → open request by id.
+    const firstToken = tokens[0];
+    const numericOnly = tokens.length === 1 && firstToken ? parseNumericToken(firstToken) : null;
+    if (numericOnly !== null) {
+      setSmart('');
+      setSmartErrors([]);
+      void openRequestById(numericOnly);
+      return;
+    }
+
+    let nextType = type;
+    let nextState = state;
+    let nextQ = qText;
+    let nextUser = userId;
+    let nextAdmin = adminId;
+    let nextApiIp = apiIp;
+    let nextClientIp = clientIp;
+    let nextClientPtr = clientPtr;
+
+    const free: string[] = [];
+    const errors: string[] = [];
+
+    for (const token of tokens) {
+      const kv = splitKeyValueToken(token);
+      if (kv) {
+        const key = canonicalKey(kv.rawKey);
+        const value = unquoteSmartValue(kv.rawValue);
+
+        if (!key) {
+          errors.push(t('filters.smart.error.unknown_key', { key: kv.rawKey }));
+          continue;
+        }
+
+        if (!value.trim()) {
+          errors.push(t('filters.smart.error.missing_value', { key: kv.rawKey }));
+          continue;
+        }
+
+        if (key === 'q') {
+          nextQ = value;
+          continue;
+        }
+
+        if (key === 'type') {
+          const tv = parseTypeValue(value);
+          if (!tv) {
+            errors.push(t('requests.smart.error.type_unresolved', { value }));
+            continue;
+          }
+          nextType = tv;
+          continue;
+        }
+
+        if (key === 'state') {
+          const sv = resolveStateValue(value);
+          if (!sv) {
+            errors.push(t('requests.smart.error.state_unresolved', { value }));
+            continue;
+          }
+          nextState = sv;
+          continue;
+        }
+
+        if (key === 'user') {
+          if (!isAdmin) {
+            errors.push(t('filters.smart.error.admin_only', { key: kv.rawKey }));
+            continue;
+          }
+          const n = parseNumericToken(value);
+          if (n !== null) {
+            nextUser = String(n);
+            continue;
+          }
+
+          const users = (await searchUsers({ q: value, limit: 10 })).data;
+          const exact = users.filter((u) => u.login.toLowerCase() === value.toLowerCase());
+          const [resolvedUser] = exact;
+          if (resolvedUser) {
+            nextUser = String(resolvedUser.id);
+            continue;
+          }
+
+          errors.push(t('filters.smart.error.user_unresolved', { value }));
+          continue;
+        }
+
+        if (key === 'admin') {
+          if (!isAdmin) {
+            errors.push(t('filters.smart.error.admin_only', { key: kv.rawKey }));
+            continue;
+          }
+          const n = parseNumericToken(value);
+          if (n !== null) {
+            nextAdmin = String(n);
+            continue;
+          }
+
+          const users = (await searchUsers({ q: value, limit: 10 })).data;
+          const exact = users.filter((u) => u.login.toLowerCase() === value.toLowerCase());
+          const [resolvedAdmin] = exact;
+          if (resolvedAdmin) {
+            nextAdmin = String(resolvedAdmin.id);
+            continue;
+          }
+
+          errors.push(t('requests.smart.error.admin_unresolved', { value }));
+          continue;
+        }
+
+        if (key === 'api_ip') {
+          nextApiIp = value;
+          continue;
+        }
+
+        if (key === 'client_ip') {
+          nextClientIp = value;
+          continue;
+        }
+
+        if (key === 'client_ptr') {
+          nextClientPtr = value;
+          continue;
+        }
+
+        if (key === 'id') {
+          const n = parseNumericToken(value);
+          if (n !== null) {
+            setSmart('');
+            setSmartErrors([]);
+            void openRequestById(n);
+            return;
+          }
+
+          errors.push(t('requests.smart.error.id_numeric_only', { value }));
+          continue;
+        }
+
+        errors.push(t('filters.smart.error.unknown_key', { key: kv.rawKey }));
+      } else {
+        free.push(unquoteSmartValue(token));
+      }
+    }
+
+    if (free.length > 0) {
+      nextQ = free.join(' ');
+    }
+
+    if (errors.length > 0) {
+      setSmartErrors(errors);
+      toasts.pushToast({ variant: 'danger', title: errors[0] ?? t('common.unknown_error') });
+      return;
+    }
+
+    setType(nextType);
+    setState(nextState);
+    setQText(nextQ);
+    setUserId(nextUser);
+    setAdminId(nextAdmin);
+    setApiIp(nextApiIp);
+    setClientIp(nextClientIp);
+    setClientPtr(nextClientPtr);
+    setSmart('');
+    setSmartErrors([]);
+  }
+
+  const smartSuggestions = useMemo((): SmartFilterSuggestion[] => {
+    const needle = smartNeedle;
+    if (!needle) return [];
+
+    if (needle === '?') {
+      return [
+        {
+          id: 'help',
+          primary: t('filters.help.title'),
+          secondary: t('filters.help.suggestion.secondary'),
+          onPick: () => setHelpOpen(true),
+          testId: 'admin.requests.smart.suggest.help',
+        },
+      ];
+    }
+
+    const suggestions: SmartFilterSuggestion[] = [];
+
+    const numeric = parseNumericToken(needle);
+    if (numeric !== null) {
+      const id = String(numeric);
+
+      suggestions.push({
+        id: 'open',
+        primary: t('requests.smart.suggest.open', { id }),
+        secondary: t('requests.smart.suggest.open.secondary'),
+        onPick: () => {
+          setSmart('');
+          setSmartErrors([]);
+          void openRequestById(numeric);
+        },
+        testId: 'admin.requests.smart.suggest.open',
+      });
+
+      suggestions.push({
+        id: 'q',
+        primary: t('requests.smart.suggest.q', { value: id }),
+        secondary: t('requests.smart.suggest.q.secondary'),
+        onPick: () => {
+          setQText(id);
+          setSmart('');
+          setSmartErrors([]);
+        },
+        testId: 'admin.requests.smart.suggest.q',
+      });
+
+      if (isAdmin) suggestions.push({
+        id: 'user',
+        primary: t('requests.smart.suggest.user_id', { id }),
+        secondary: t('requests.smart.suggest.user_id.secondary'),
+        onPick: () => {
+          setUserId(id);
+          setSmart('');
+          setSmartErrors([]);
+        },
+        testId: 'admin.requests.smart.suggest.user',
+      });
+
+      if (isAdmin) suggestions.push({
+        id: 'admin',
+        primary: t('requests.smart.suggest.admin_id', { id }),
+        secondary: t('requests.smart.suggest.admin_id.secondary'),
+        onPick: () => {
+          setAdminId(id);
+          setSmart('');
+          setSmartErrors([]);
+        },
+        testId: 'admin.requests.smart.suggest.admin',
+      });
+
+      return suggestions;
+    }
+
+    if (needle.includes(':')) {
+      suggestions.push({
+        id: 'apply',
+        primary: t('filters.smart.suggest.apply.primary'),
+        secondary: t('filters.smart.suggest.apply.secondary'),
+        onPick: () => void applySmartText(needle),
+        testId: 'admin.requests.smart.suggest.apply',
+      });
+      return suggestions;
+    }
+
+    // Default free text: server-side search.
+    suggestions.push({
+      id: 'q',
+      primary: t('requests.smart.suggest.q', { value: needle }),
+      secondary: t('requests.smart.suggest.q.secondary'),
+      onPick: () => {
+        setQText(needle);
+        setSmart('');
+        setSmartErrors([]);
+      },
+      testId: 'admin.requests.smart.suggest.q',
+    });
+
+    // State quick pick.
+    const st = resolveStateValue(needle);
+    if (st) {
+      suggestions.push({
+        id: `state.${st}`,
+        primary: t('requests.smart.suggest.state', { state: t(requestStateLabelKey(st)) }),
+        secondary: `state:${st}`,
+        onPick: () => {
+          setState(st);
+          setSmart('');
+          setSmartErrors([]);
+        },
+        testId: `admin.requests.smart.suggest.state.${st}`,
+      });
+    }
+
+    // Type quick pick.
+    const tv = parseTypeValue(needle);
+    if (tv && tv !== 'all') {
+      suggestions.push({
+        id: `type.${tv}`,
+        primary: t('requests.smart.suggest.type', { type: t(requestTypeLabelKey(tv)) }),
+        secondary: `type:${tv}`,
+        onPick: () => {
+          setType(tv);
+          setSmart('');
+          setSmartErrors([]);
+        },
+        testId: `admin.requests.smart.suggest.type.${tv}`,
+      });
+    }
+
+    // User login suggestions (admin only).
+    if (isAdmin) {
+      const users = userSuggestQuery.data ?? [];
+      for (const u of users.slice(0, 5)) {
+        suggestions.push({
+          id: `user.${u.id}`,
+          primary: t('requests.smart.suggest.user_login', { login: u.login }),
+          secondary: `#${u.id}`,
+          onPick: () => {
+            setUserId(String(u.id));
+            setSmart('');
+            setSmartErrors([]);
+          },
+          testId: `admin.requests.smart.suggest.user.${u.id}`,
+        });
+      }
+    }
+
+    return suggestions;
+  }, [applySmartText, isAdmin, openRequestById, smartNeedle, t, userSuggestQuery.data]);
+
+  const activeFilterChips = useMemo(() => {
+    const chips: React.ReactNode[] = [];
+
+    if (type && type !== 'all') {
+      chips.push(
+        <FilterChip
+          key="type"
+          label={`type:${t(requestTypeLabelKey(type))}`}
+          onRemove={() => setType('all')}
+          testId="admin.requests.chip.type"
+        />
+      );
+    }
+
+    if (stateTrim) {
+      const tone = (tableVariantFromBadgeVariant(requestStateBadgeVariant(stateTrim)) ?? 'neutral') as any;
+
+      chips.push(
+        <FilterChip
+          key="state"
+          label={`state:${t(requestStateLabelKey(stateTrim))}`}
+          tone={tone}
+          onRemove={() => setState('')}
+          testId="admin.requests.chip.state"
+        />
+      );
+    }
+
+    if (qTrim) {
+      chips.push(
+        <FilterChip
+          key="q"
+          label={`q:${qTrim}`}
+          onRemove={() => setQText('')}
+          testId="admin.requests.chip.q"
+        />
+      );
+    }
+
+    if (isAdmin && userIdNum !== undefined) {
+      chips.push(
+        <FilterChip
+          key="user"
+          label={`user:#${userIdNum}`}
+          onRemove={() => setUserId('')}
+          testId="admin.requests.chip.user"
+        />
+      );
+    }
+
+    if (isAdmin && adminIdNum !== undefined) {
+      chips.push(
+        <FilterChip
+          key="admin"
+          label={`admin:#${adminIdNum}`}
+          onRemove={() => setAdminId('')}
+          testId="admin.requests.chip.admin"
+        />
+      );
+    }
+
+    if (apiIp.trim()) {
+      chips.push(
+        <FilterChip
+          key="api_ip"
+          label={`api_ip:${apiIp.trim()}`}
+          onRemove={() => setApiIp('')}
+          testId="admin.requests.chip.api_ip"
+        />
+      );
+    }
+
+    if (clientIp.trim()) {
+      chips.push(
+        <FilterChip
+          key="client_ip"
+          label={`client_ip:${clientIp.trim()}`}
+          onRemove={() => setClientIp('')}
+          testId="admin.requests.chip.client_ip"
+        />
+      );
+    }
+
+    if (clientPtr.trim()) {
+      chips.push(
+        <FilterChip
+          key="client_ptr"
+          label={`client_ptr:${clientPtr.trim()}`}
+          onRemove={() => setClientPtr('')}
+          testId="admin.requests.chip.client_ptr"
+        />
+      );
+    }
+
+    smartErrors.forEach((e, idx) => {
+      chips.push(
+        <FilterChip
+          key={`err.${idx}`}
+          label={e}
+          tone="danger"
+          onRemove={() => setSmartErrors([])}
+          testId={`admin.requests.chip.error.${idx}`}
+        />
+      );
+    });
+
+    return chips;
+  }, [adminIdNum, apiIp, clientIp, clientPtr, isAdmin, qTrim, smartErrors, stateTrim, t, type, userIdNum]);
+
+  const shareUrl = useMemo(() => (typeof window !== 'undefined' ? window.location.href : ''), [sp]);
+
+  const helpExamples = isAdmin
+    ? [
+        { example: '?', description: t('requests.list.smart_help.examples.help') },
+        { example: '123', description: t('requests.list.smart_help.examples.open_id') },
+        { example: 'alice', description: t('requests.list.smart_help.examples.search') },
+        { example: 'state:awaiting', description: t('requests.list.smart_help.examples.state') },
+        { example: 'type:registration', description: t('requests.list.smart_help.examples.type') },
+        { example: 'user:alice', description: t('requests.list.smart_help.examples.user') },
+      ]
+    : [
+        { example: '?', description: t('requests.list.smart_help.examples.help') },
+        { example: '123', description: t('requests.list.smart_help.examples.open_id') },
+        { example: 'address change', description: t('requests.list.smart_help.examples.search') },
+        { example: 'state:awaiting', description: t('requests.list.smart_help.examples.state') },
+        { example: 'type:change', description: t('requests.list.smart_help.examples.type') },
+      ];
+
+  const helpTopKeys = isAdmin
+    ? [
+        { key: 'q', description: t('requests.list.smart_help.keys.q'), example: 'q:alice' },
+        { key: 'state', description: t('requests.list.smart_help.keys.state'), example: 'state:awaiting' },
+        { key: 'type', description: t('requests.list.smart_help.keys.type'), example: 'type:change' },
+        { key: 'user', description: t('requests.list.smart_help.keys.user'), example: 'user:alice' },
+        { key: 'admin', description: t('requests.list.smart_help.keys.admin'), example: 'admin:root' },
+      ]
+    : [
+        { key: 'q', description: t('requests.list.smart_help.keys.q'), example: 'q:address change' },
+        { key: 'state', description: t('requests.list.smart_help.keys.state'), example: 'state:awaiting' },
+        { key: 'type', description: t('requests.list.smart_help.keys.type'), example: 'type:change' },
+      ];
+
+  const helpMoreKeys = [
+    { key: 'api_ip', description: t('requests.list.smart_help.keys.api_ip'), example: 'api_ip:203.0.113.10' },
+    { key: 'client_ip', description: t('requests.list.smart_help.keys.client_ip'), example: 'client_ip:198.51.100.20' },
+    { key: 'client_ptr', description: t('requests.list.smart_help.keys.client_ptr'), example: 'client_ptr:example.net' },
+    { key: 'id', description: t('requests.list.smart_help.keys.id'), example: 'id:123' },
+  ];
+
+  return (
+    <ListShell
+      testId="admin.requests.list"
+      header={<PageHeader title={isAdmin ? t('requests.list.title') : t('requests.my.title')} description={isAdmin ? t('requests.list.description') : t('requests.my.description')} />}
+      filters={
+        <>
+          <FilterBar testId="admin.requests.filters">
+            <div className="w-full sm:max-w-xl">
+              <SmartFilterInput
+                ref={smartInputRef}
+                value={smart}
+                onChange={(v) => {
+                  setSmart(v);
+                  if (smartErrors.length) setSmartErrors([]);
+                }}
+                placeholder={t('requests.list.search.placeholder')}
+                ariaLabel={t('requests.list.search.placeholder')}
+                testId="admin.requests.smart_filter.input"
+                suggestions={smartSuggestions}
+                onSubmit={() => void applySmartText(smart)}
+                suffix={
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 px-0"
+                    onClick={() => setHelpOpen(true)}
+                    aria-label={t('filters.help.open')}
+                    title={t('filters.help.open')}
+                  >
+                    <CircleHelp className="h-4 w-4" aria-hidden />
+                  </Button>
+                }
+              />
+
+              {activeFilterChips.length > 0 ? (
+                <div className="mt-2 flex flex-wrap gap-1" data-testid="admin.requests.active_filters">
+                  {activeFilterChips}
+                </div>
+              ) : null}
+            </div>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setAdvancedOpen(true)}
+              aria-label={t('filters.advanced.open')}
+              title={t('filters.advanced.open')}
+            >
+              <SlidersHorizontal className="h-4 w-4" aria-hidden />
+              <span className="ml-2 hidden sm:inline">{t('filters.advanced.label')}</span>
+            </Button>
+
+            <CopyButton
+              size="sm"
+              variant="secondary"
+              label={t('common.copy_link')}
+              text={shareUrl}
+              testId="admin.requests.copy_link"
+            />
+
+            {filtersActive ? (
+              <Button variant="secondary" size="sm" onClick={clearFilters}>
+                {t('common.clear_filters')}
+              </Button>
+            ) : null}
+          </FilterBar>
+
+          <SmartInputHelp
+            open={helpOpen}
+            onClose={() => {
+              setHelpOpen(false);
+              if (smartNeedle === '?') setSmart('');
+            }}
+            title={t('filters.help.title')}
+            intro={t('requests.list.smart_help.intro')}
+            examples={helpExamples}
+            topKeys={helpTopKeys}
+            moreKeys={helpMoreKeys}
+            inference={[
+              t('requests.list.smart_help.inference.enter_applies'),
+              t('requests.list.smart_help.inference.number_opens'),
+              t('requests.list.smart_help.inference.key_value'),
+            ]}
+            onInsertKey={(key) => {
+              setHelpOpen(false);
+              setSmart(`${key}:`);
+              window.requestAnimationFrame(() => smartInputRef.current?.focus());
+            }}
+            actions={[
+              {
+                label: t('filters.help.open_advanced'),
+                onClick: () => {
+                  setHelpOpen(false);
+                  setAdvancedOpen(true);
+                },
+              },
+              {
+                label: t('common.copy_link'),
+                onClick: async () => {
+                  const url = typeof window !== 'undefined' ? window.location.href : '';
+                  if (!url) return;
+                  try {
+                    await navigator.clipboard.writeText(url);
+                    toasts.pushToast({ variant: 'ok', title: t('toast.copied.title') });
+                  } catch {
+                    toasts.pushToast({ variant: 'warn', title: t('toast.copied_failed.title') });
+                  }
+                },
+              },
+            ]}
+            testId="admin.requests.smart_filter.help"
+            keyRowTestIdPrefix="admin.requests.smart_filter.help.key"
+          />
+
+          <Drawer
+            open={advancedOpen}
+            onClose={() => setAdvancedOpen(false)}
+            title={t('filters.advanced.title')}
+            width="lg"
+            testId="admin.requests.advanced_filters"
+            footer={
+              <div className="flex items-center justify-end gap-2">
+                {filtersActive ? (
+                  <Button variant="secondary" size="sm" onClick={clearFilters}>
+                    {t('common.clear_filters')}
+                  </Button>
+                ) : null}
+                <Button variant="primary" size="sm" onClick={() => setAdvancedOpen(false)}>
+                  {t('common.done')}
+                </Button>
+              </div>
+            }
+          >
+            <div className="space-y-4">
+              <div>
+                <div className="text-sm font-medium">{t('requests.list.filter.type.label')}</div>
+                <div className="mt-1">
+                  <Select
+                    value={type}
+                    onChange={(e) => setType((e.target.value as RequestTypeFilter) || 'all')}
+                    aria-label={t('requests.list.filter.type.aria')}
+                  >
+                    <option value="all">{t('requests.list.filter.type.all')}</option>
+                    <option value="registration">{t('requests.type.registration')}</option>
+                    <option value="change">{t('requests.type.change')}</option>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-sm font-medium">{t('requests.list.filter.state.label')}</div>
+                <div className="mt-1">
+                  <Select value={state} onChange={(e) => setState(e.target.value)} aria-label={t('requests.list.filter.state.aria')}>
+                    <option value="">{t('common.all')}</option>
+                    {defaultStateOptions()
+                      .filter((x) => x)
+                      .map((s) => (
+                        <option key={s} value={s}>
+                          {t(requestStateLabelKey(s))}
+                        </option>
+                      ))}
+                  </Select>
+                </div>
+              </div>
+
+              {isAdmin ? (
+                <>
+                  <div>
+                    <div className="text-sm font-medium">{t('requests.list.filter.user.label')}</div>
+                    <div className="mt-1">
+                      <UserLookupInput
+                        value={userId}
+                        onChange={setUserId}
+                        placeholder={t('requests.list.filter.user.placeholder')}
+                        testId="admin.requests.filter.user.lookup"
+                        loadingLabel={t('common.loading')}
+                        noResultsLabel={t('palette.empty.no_results')}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-sm font-medium">{t('requests.list.filter.admin.label')}</div>
+                    <div className="mt-1">
+                      <UserLookupInput
+                        value={adminId}
+                        onChange={setAdminId}
+                        placeholder={t('requests.list.filter.admin.placeholder')}
+                        testId="admin.requests.filter.admin.lookup"
+                        loadingLabel={t('common.loading')}
+                        noResultsLabel={t('palette.empty.no_results')}
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : null}
+
+              <div>
+                <div className="text-sm font-medium">{t('requests.list.filter.api_ip.label')}</div>
+                <div className="mt-1">
+                  <Input
+                    value={apiIp}
+                    onChange={(e) => setApiIp(e.target.value)}
+                    placeholder={t('requests.list.filter.api_ip.placeholder')}
+                    testId="admin.requests.filter.api_ip"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="text-sm font-medium">{t('requests.list.filter.client_ip.label')}</div>
+                <div className="mt-1">
+                  <Input
+                    value={clientIp}
+                    onChange={(e) => setClientIp(e.target.value)}
+                    placeholder={t('requests.list.filter.client_ip.placeholder')}
+                    testId="admin.requests.filter.client_ip"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="text-sm font-medium">{t('requests.list.filter.client_ptr.label')}</div>
+                <div className="mt-1">
+                  <Input
+                    value={clientPtr}
+                    onChange={(e) => setClientPtr(e.target.value)}
+                    placeholder={t('requests.list.filter.client_ptr.placeholder')}
+                    testId="admin.requests.filter.client_ptr"
+                  />
+                </div>
+              </div>
+            </div>
+          </Drawer>
+        </>
+      }
+    >
+      {isLoading ? (
+        <LoadingState />
+      ) : error ? (
+        <ErrorState title={t('requests.list.load_error.title')} error={error as any} />
+      ) : rows.length === 0 ? (
+        <EmptyState title={t('requests.list.empty')} />
+      ) : (
+        <>
+          {/* Mobile: cards */}
+          <div className="space-y-2 md:hidden">
+            {rows.map((r) => {
+              const id = Number((r as any).id);
+              const reqType = (r as any)._type as 'registration' | 'change';
+              const st = String((r as any).state ?? '').trim();
+              const stateVar = requestStateBadgeVariant(st);
+              const dotVar = dotVariantFromBadgeVariant(stateVar);
+              const userLabel =
+                typeof (r as any).user?.login === 'string'
+                  ? String((r as any).user.login)
+                  : typeof (r as any).user?.label === 'string'
+                    ? String((r as any).user.label)
+                    : (r as any).user
+                      ? `#${String((r as any).user.id)}`
+                      : '—';
+              const label = String((r as any).label ?? '').trim() || '—';
+              const risk = reqType === 'registration' ? fraudRiskBadge(r as any) : null;
+
+              return (
+                <Card key={`${reqType}-${id}`} className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <StatusDot variant={dotVar} testId={`admin.requests.row.${reqType}.${id}.dot`} />
+                        <div className="text-sm font-semibold">#{id}</div>
+                        <Badge variant={requestTypeBadgeVariant(reqType)}>{t(requestTypeLabelKey(reqType))}</Badge>
+                      </div>
+                      <div className="mt-1 truncate text-xs text-muted">{label}</div>
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <Badge variant={stateVar}>{t(requestStateLabelKey(st))}</Badge>
+                        {isAdmin && risk ? (
+                          <Badge variant={risk.variant} title={t('requests.risk.tooltip', { score: risk.score })}>
+                            {t(risk.labelKey)} {risk.score}
+                          </Badge>
+                        ) : null}
+                      </div>
+                      {isAdmin ? (
+                        <div className="mt-2 text-xs text-muted">
+                          <span className="text-faint">{t('common.user')}:</span> {userLabel}
+                        </div>
+                      ) : null}
+                      <div className="mt-1 text-xs text-muted">
+                        <span className="text-faint">{t('common.created')}:</span>{' '}
+                        {(r as any).created_at ? formatDateTime(String((r as any).created_at)) : '—'}
+                      </div>
+                    </div>
+                    <Link
+                      className="text-xs font-medium text-accent hover:underline"
+                      to={`${basePath}/requests/${reqType}/${id}`}
+                    >
+                      {t('common.open')}
+                    </Link>
+                  </div>
+                </Card>
+              );
+            })}
+
+            <Card>
+              <KeysetPagination
+                page={pagination.page}
+                pageCount={pagination.stack.length}
+                canPrev={pagination.canPrev}
+                canNext={canNext}
+                onPrev={pagination.goPrev}
+                onNext={() => pagination.goNext(pageCursor)}
+                onGoToPage={pagination.goToPage}
+                limit={pagination.limit}
+                allowedLimits={pagination.allowedLimits}
+                onLimitChange={pagination.setLimit}
+                testId="admin.requests.pagination.mobile"
+              />
+            </Card>
+          </div>
+
+          {/* Desktop: table */}
+          <TableCard
+            className="hidden md:block"
+            minWidth="lg"
+            tableTestId="admin.requests.table"
+            footer={
+              <KeysetPagination
+                page={pagination.page}
+                pageCount={pagination.stack.length}
+                canPrev={pagination.canPrev}
+                canNext={canNext}
+                onPrev={pagination.goPrev}
+                onNext={() => pagination.goNext(pageCursor)}
+                onGoToPage={pagination.goToPage}
+                limit={pagination.limit}
+                allowedLimits={pagination.allowedLimits}
+                onLimitChange={pagination.setLimit}
+                testId="admin.requests.pagination.desktop"
+              />
+            }
+          >
+            <thead>
+              <tr className="border-b border-border text-left text-xs text-muted">
+                <th className="px-4 py-2">{t('common.id')}</th>
+                <th className="px-4 py-2">{t('common.type')}</th>
+                <th className="px-4 py-2">{t('common.label')}</th>
+                {isAdmin ? <th className="px-4 py-2">{t('common.user')}</th> : null}
+                <th className="px-4 py-2">{t('common.state')}</th>
+                <th className="px-4 py-2">{t('common.created')}</th>
+                <th className="px-4 py-2">{t('requests.list.col.api_ip')}</th>
+                <th className="px-4 py-2">{t('requests.list.col.client_ip')}</th>
+                {isAdmin ? <th className="px-4 py-2">{t('requests.list.col.risk')}</th> : null}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => {
+                const id = Number((r as any).id);
+                const reqType = (r as any)._type as 'registration' | 'change';
+                const st = String((r as any).state ?? '').trim();
+                const rowVar = requestRowVariant(st);
+                const stateVar = requestStateBadgeVariant(st);
+                const dotVar = dotVariantFromBadgeVariant(stateVar);
+                const label = String((r as any).label ?? '').trim() || '—';
+                const userLabel =
+                  typeof (r as any).user?.login === 'string'
+                    ? String((r as any).user.login)
+                    : typeof (r as any).user?.label === 'string'
+                      ? String((r as any).user.label)
+                      : (r as any).user
+                        ? `#${String((r as any).user.id)}`
+                        : '—';
+
+                const apiIpStr = typeof (r as any).api_ip_addr === 'string' ? String((r as any).api_ip_addr) : '—';
+                const clientIpStr =
+                  typeof (r as any).client_ip_addr === 'string' ? String((r as any).client_ip_addr) : '—';
+
+                const risk = reqType === 'registration' ? fraudRiskBadge(r as any) : null;
+
+                return (
+                  <TableRowLink
+                    key={`${reqType}-${id}`}
+                    testId={`admin.requests.row.${reqType}.${id}`}
+                    to={`${basePath}/requests/${reqType}/${id}`}
+                    variant={rowVar}
+                    className="border-b border-border/60 last:border-b-0"
+                  >
+                    <td className="px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        <StatusDot variant={dotVar} testId={`admin.requests.row.${reqType}.${id}.dot`} />
+                        <span className="font-medium text-accent">#{id}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-2">
+                      <Badge variant={requestTypeBadgeVariant(reqType)}>{t(requestTypeLabelKey(reqType))}</Badge>
+                    </td>
+                    <td className="px-4 py-2 text-xs text-muted">{label}</td>
+                    {isAdmin ? <td className="px-4 py-2 text-xs text-muted">{userLabel}</td> : null}
+                    <td className="px-4 py-2">
+                      <Badge variant={stateVar}>{t(requestStateLabelKey(st))}</Badge>
+                    </td>
+                    <td className="px-4 py-2 text-xs text-muted">
+                      {(r as any).created_at ? formatDateTime(String((r as any).created_at)) : '—'}
+                    </td>
+                    <td className="px-4 py-2 text-xs text-muted">{apiIpStr}</td>
+                    <td className="px-4 py-2 text-xs text-muted">{clientIpStr}</td>
+                    {isAdmin ? (
+                      <td className="px-4 py-2">
+                        {risk ? (
+                          <Badge variant={risk.variant} title={t('requests.risk.tooltip', { score: risk.score })}>
+                            {t(risk.labelKey)} {risk.score}
+                          </Badge>
+                        ) : (
+                          <span className="text-faint">—</span>
+                        )}
+                      </td>
+                    ) : null}
+                  </TableRowLink>
+                );
+              })}
+            </tbody>
+          </TableCard>
+        </>
+      )}
+    </ListShell>
+  );
+}

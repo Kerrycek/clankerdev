@@ -1,0 +1,511 @@
+@import "tailwindcss";
+@config "../../tailwind.config.js";
+
+@layer base {
+  /*
+    Design tokens
+
+    - Colors are stored as RGB triplets to support Tailwind alpha modifiers:
+      `bg-surface/80`, `text-fg/70`, ...
+
+    - Canonical spec (single source of truth):
+      vpsadmin/UI_REDESIGN.md
+        - §3.2.10 vpsFree brand palette + theme palettes (dark canonical)
+        - §4.6.8 Chart style system (locked)
+
+    Overlay rule:
+    - Overlay surfaces (modals/drawers/popovers/tooltips) MUST be opaque.
+      Do NOT use alpha backgrounds on overlay containers.
+  */
+
+  :root {
+    /* Radii */
+    --radius-lg: 12px;
+    --radius-md: 10px;
+    --radius-sm: 8px;
+
+    /* Size tokens */
+    --drawer-w-sm: 18rem;
+    --drawer-w-md: 22rem;
+    --drawer-w-lg: 28rem;
+
+    --table-min-w-sm: 40rem; /* 640px */
+    --table-min-w-md: 45rem; /* 720px */
+    --table-min-w-lg: 52.5rem; /* 840px */
+
+    --content-max-w-sm: 34rem;
+    --content-max-w-lg: 48rem;
+
+    --textarea-min-h: 120px;
+
+    /* Console iframe height token (responsive via media queries below) */
+    --console-h: 70vh;
+
+    /* Shadows */
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.06);
+    --shadow-panel: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+    /* === Light theme (derived) — §3.2.10.3 === */
+
+    /* Surfaces */
+    --c-bg: 255 255 255; /* surface.page */
+    --c-surface: 243 246 251; /* surface.card */
+    --c-surface-2: 232 238 247; /* surface.tableHeader */
+    --c-overlay-surface: 255 255 255; /* surface.overlay */
+    --c-backdrop: 232 238 247; /* surface.backdrop (opaque separation) */
+    --c-code: 241 245 251; /* surface.code */
+
+    /* Borders */
+    --c-border: 200 211 227; /* border.subtle */
+    --c-border-strong: 148 163 184; /* border.strong */
+
+    /* Text */
+    --c-fg: 22 39 63; /* text.primary */
+    --c-fg-muted: 51 65 85; /* text.secondary */
+    --c-fg-faint: 100 116 139; /* text.muted */
+    --c-fg-disabled: 148 163 184; /* text.disabled */
+
+    /* Links */
+    --c-link: 183 92 19; /* link.fg (contrast-safe orange on white) */
+    --c-link-hover: 146 64 14; /* link.hover */
+
+    /* Accent (brand orange) */
+    --c-accent: 236 140 53; /* brand.orange */
+    --c-accent-hover: 215 122 44; /* derived hover */
+    --c-accent-fg: 22 39 63; /* text.onAccent */
+
+    /* Semantics — §3.2.10.5 (locked) */
+    --c-ok: 22 101 52;
+    --c-ok-bg: 234 247 239;
+    --c-ok-border: 134 239 172;
+    --c-ok-row: 240 253 244;
+
+    --c-warn: 146 64 14;
+    --c-warn-bg: 255 244 229;
+    --c-warn-border: 253 186 116;
+    --c-warn-row: 255 247 237;
+
+    --c-danger: 185 28 28;
+    --c-danger-bg: 255 236 236;
+    --c-danger-border: 252 165 165;
+    --c-danger-row: 254 242 242;
+
+    --c-info: 29 78 216;
+    --c-info-bg: 234 242 255;
+    --c-info-border: 147 197 253;
+    --c-info-row: 239 246 255;
+
+    --c-neutral: 51 65 85;
+    --c-neutral-bg: 241 245 249;
+    --c-neutral-border: 203 213 225;
+    --c-neutral-row: 248 250 252;
+
+    /* Overlay + focus */
+    --c-overlay: var(--c-backdrop);
+    --c-focus: 29 78 216; /* focus.ring */
+
+    /* Charts — §4.6.8 (locked) */
+    --c-chart-orange: 236 140 53;
+    --c-chart-blue: 96 165 250;
+    --c-chart-green: 34 197 94;
+    --c-chart-purple: 167 139 250;
+    --c-chart-teal: 45 212 191;
+    --c-chart-pink: 244 114 182;
+    --c-chart-amber: 245 158 11;
+    --c-chart-red: 239 68 68;
+
+    --c-chart-grid: 200 211 227; /* light: border.subtle */
+    --c-chart-axis: 100 116 139; /* text.muted */
+    --c-chart-axis-strong: 51 65 85; /* text.secondary */
+    --c-chart-crosshair: 148 163 184; /* border.strong */
+    --c-chart-selection: 239 246 255; /* semantic.info.rowBg */
+  }
+
+  @media (min-width: 768px) {
+    :root {
+      --console-h: 75vh;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    :root {
+      --console-h: calc(100vh - 18rem);
+    }
+  }
+
+  /* System dark mode (canonical palette) */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35);
+      --shadow-panel: 0 8px 24px rgba(0, 0, 0, 0.60);
+
+      /* Surfaces */
+      --c-bg: 22 39 63; /* surface.page */
+      --c-surface: 31 57 89; /* surface.card */
+      --c-surface-2: 42 68 99; /* surface.tableHeader */
+      --c-overlay-surface: 31 57 89; /* surface.overlay */
+      --c-backdrop: 20 35 57; /* surface.backdrop */
+      --c-code: 20 35 57; /* surface.code */
+
+      /* Borders */
+      --c-border: 42 68 99; /* border.subtle */
+      --c-border-strong: 64 106 149; /* border.strong */
+
+      /* Text */
+      --c-fg: 255 255 255; /* text.primary */
+      --c-fg-muted: 220 231 245; /* text.secondary */
+      --c-fg-faint: 176 192 214; /* text.muted */
+      --c-fg-disabled: 127 147 171; /* text.disabled */
+
+      /* Links */
+      --c-link: 236 140 53; /* link.fg */
+      --c-link-hover: 242 163 90; /* link.hover */
+
+      /* Accent */
+      --c-accent: 236 140 53; /* brand.orange */
+      --c-accent-hover: 242 163 90; /* slightly lighter */
+      --c-accent-fg: 22 39 63; /* text.onAccent */
+
+      /* Semantics — §3.2.10.5 */
+      --c-ok: 34 197 94;
+      --c-ok-bg: 11 42 26;
+      --c-ok-border: 26 122 65;
+      --c-ok-row: 32 88 90;
+
+      --c-warn: 245 158 11;
+      --c-warn-bg: 43 29 8;
+      --c-warn-border: 146 64 14;
+      --c-warn-row: 78 79 72;
+
+      --c-danger: 239 68 68;
+      --c-danger-bg: 43 15 20;
+      --c-danger-border: 153 27 27;
+      --c-danger-row: 93 60 83;
+
+      --c-info: 96 165 250;
+      --c-info-bg: 15 31 52;
+      --c-info-border: 29 78 216;
+      --c-info-row: 45 81 124;
+
+      --c-neutral: 148 163 184;
+      --c-neutral-bg: 28 44 68;
+      --c-neutral-border: 42 68 99;
+      --c-neutral-row: 57 80 110;
+
+      /* Overlay + focus */
+      --c-overlay: var(--c-backdrop);
+      --c-focus: 96 165 250; /* focus.ring */
+
+      /* Charts */
+      --c-chart-grid: 64 106 149; /* dark: #406a95 */
+      --c-chart-axis: 176 192 214; /* text.muted */
+      --c-chart-axis-strong: 220 231 245; /* text.secondary */
+      --c-chart-crosshair: 64 106 149; /* border.strong */
+      --c-chart-selection: 45 81 124; /* semantic.info.rowBg */
+    }
+  }
+
+  /* Explicit theme override: light */
+  html[data-theme="light"] {
+    color-scheme: light;
+
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.06);
+    --shadow-panel: 0 8px 24px rgba(0, 0, 0, 0.12);
+
+    /* Surfaces */
+    --c-bg: 255 255 255;
+    --c-surface: 243 246 251;
+    --c-surface-2: 232 238 247;
+    --c-overlay-surface: 255 255 255;
+    --c-backdrop: 232 238 247;
+    --c-code: 241 245 251;
+
+    /* Borders */
+    --c-border: 200 211 227;
+    --c-border-strong: 148 163 184;
+
+    /* Text */
+    --c-fg: 22 39 63;
+    --c-fg-muted: 51 65 85;
+    --c-fg-faint: 100 116 139;
+    --c-fg-disabled: 148 163 184;
+
+    /* Links */
+    --c-link: 183 92 19;
+    --c-link-hover: 146 64 14;
+
+    /* Accent */
+    --c-accent: 236 140 53;
+    --c-accent-hover: 215 122 44;
+    --c-accent-fg: 22 39 63;
+
+    /* Semantics */
+    --c-ok: 22 101 52;
+    --c-ok-bg: 234 247 239;
+    --c-ok-border: 134 239 172;
+    --c-ok-row: 240 253 244;
+
+    --c-warn: 146 64 14;
+    --c-warn-bg: 255 244 229;
+    --c-warn-border: 253 186 116;
+    --c-warn-row: 255 247 237;
+
+    --c-danger: 185 28 28;
+    --c-danger-bg: 255 236 236;
+    --c-danger-border: 252 165 165;
+    --c-danger-row: 254 242 242;
+
+    --c-info: 29 78 216;
+    --c-info-bg: 234 242 255;
+    --c-info-border: 147 197 253;
+    --c-info-row: 239 246 255;
+
+    --c-neutral: 51 65 85;
+    --c-neutral-bg: 241 245 249;
+    --c-neutral-border: 203 213 225;
+    --c-neutral-row: 248 250 252;
+
+    /* Overlay + focus */
+    --c-overlay: var(--c-backdrop);
+    --c-focus: 29 78 216;
+
+    /* Charts */
+    --c-chart-grid: 200 211 227;
+    --c-chart-axis: 100 116 139;
+    --c-chart-axis-strong: 51 65 85;
+    --c-chart-crosshair: 148 163 184;
+    --c-chart-selection: 239 246 255;
+  }
+
+  /* Explicit theme override: dark */
+  html[data-theme="dark"] {
+    color-scheme: dark;
+
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow-panel: 0 8px 24px rgba(0, 0, 0, 0.60);
+
+    /* Surfaces */
+    --c-bg: 22 39 63;
+    --c-surface: 31 57 89;
+    --c-surface-2: 42 68 99;
+    --c-overlay-surface: 31 57 89;
+    --c-backdrop: 20 35 57;
+    --c-code: 20 35 57;
+
+    /* Borders */
+    --c-border: 42 68 99;
+    --c-border-strong: 64 106 149;
+
+    /* Text */
+    --c-fg: 255 255 255;
+    --c-fg-muted: 220 231 245;
+    --c-fg-faint: 176 192 214;
+    --c-fg-disabled: 127 147 171;
+
+    /* Links */
+    --c-link: 236 140 53;
+    --c-link-hover: 242 163 90;
+
+    /* Accent */
+    --c-accent: 236 140 53;
+    --c-accent-hover: 242 163 90;
+    --c-accent-fg: 22 39 63;
+
+    /* Semantics */
+    --c-ok: 34 197 94;
+    --c-ok-bg: 11 42 26;
+    --c-ok-border: 26 122 65;
+    --c-ok-row: 32 88 90;
+
+    --c-warn: 245 158 11;
+    --c-warn-bg: 43 29 8;
+    --c-warn-border: 146 64 14;
+    --c-warn-row: 78 79 72;
+
+    --c-danger: 239 68 68;
+    --c-danger-bg: 43 15 20;
+    --c-danger-border: 153 27 27;
+    --c-danger-row: 93 60 83;
+
+    --c-info: 96 165 250;
+    --c-info-bg: 15 31 52;
+    --c-info-border: 29 78 216;
+    --c-info-row: 45 81 124;
+
+    --c-neutral: 148 163 184;
+    --c-neutral-bg: 28 44 68;
+    --c-neutral-border: 42 68 99;
+    --c-neutral-row: 57 80 110;
+
+    /* Overlay + focus */
+    --c-overlay: var(--c-backdrop);
+    --c-focus: 96 165 250;
+
+    /* Charts */
+    --c-chart-grid: 64 106 149;
+    --c-chart-axis: 176 192 214;
+    --c-chart-axis-strong: 220 231 245;
+    --c-chart-crosshair: 64 106 149;
+    --c-chart-selection: 45 81 124;
+  }
+
+  html {
+    height: 100%;
+  }
+
+  body {
+    min-height: 100%;
+    margin: 0;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu,
+      Cantarell, Noto Sans, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    background-color: rgb(var(--c-bg) / 1);
+    color: rgb(var(--c-fg) / 1);
+  }
+
+  a {
+    color: rgb(var(--c-link) / 1);
+    text-decoration: none;
+    text-decoration-color: rgb(var(--c-link) / 0.5);
+  }
+
+  a:hover {
+    text-decoration: underline;
+    text-decoration-color: rgb(var(--c-link-hover) / 0.65);
+  }
+}
+
+@layer components {
+  /*
+    Table list styling
+
+    Goals:
+    - consistent zebra striping for scanning
+    - meaningful state tints for rows (stopped/disabled/error/...) with NO opacity hacks
+    - whole-row click affordance (hover + cursor)
+
+    Notes:
+    - row padding remains controlled by each page (keeps density flexible)
+    - state tints are applied via `data-row-variant` on <tr>
+    - for clickable rows, set `data-row-clickable="true"` (provided by TableRowLink)
+  */
+
+  /* List table typography contract: numeric scanability even for raw markup. */
+  .table-list {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Table header has a dedicated surface token (no transparent/sticky header bugs). */
+  .table-list thead {
+    background-color: rgb(var(--c-surface-2) / 1);
+  }
+
+  .table-list tbody tr {
+    transition: background-color 120ms ease;
+  }
+
+  /* Zebra striping (only when no explicit row variant is set). */
+  .table-list tbody tr:nth-child(even):not([data-row-variant]) {
+    background-color: rgb(var(--c-surface-2) / 1);
+  }
+
+  /* Row variants (override zebra). */
+  .table-list tbody tr[data-row-variant='ok'] {
+    background-color: rgb(var(--c-ok-row) / 1);
+  }
+
+  .table-list tbody tr[data-row-variant='warn'] {
+    background-color: rgb(var(--c-warn-row) / 1);
+  }
+
+  .table-list tbody tr[data-row-variant='danger'] {
+    background-color: rgb(var(--c-danger-row) / 1);
+  }
+
+  .table-list tbody tr[data-row-variant='info'] {
+    background-color: rgb(var(--c-info-row) / 1);
+  }
+
+  .table-list tbody tr[data-row-variant='neutral'] {
+    background-color: rgb(var(--c-neutral-row) / 1);
+  }
+
+  .table-list tbody tr[data-row-variant='muted'] {
+    background-color: rgb(var(--c-surface-2) / 1);
+  }
+
+  /* Left accent stripe for variant rows. */
+  .table-list tbody tr[data-row-variant='ok'] td:first-child {
+    box-shadow: inset 3px 0 0 rgb(var(--c-ok) / 1);
+  }
+
+  .table-list tbody tr[data-row-variant='warn'] td:first-child {
+    box-shadow: inset 3px 0 0 rgb(var(--c-warn) / 1);
+  }
+
+  .table-list tbody tr[data-row-variant='danger'] td:first-child {
+    box-shadow: inset 3px 0 0 rgb(var(--c-danger) / 1);
+  }
+
+  .table-list tbody tr[data-row-variant='info'] td:first-child {
+    box-shadow: inset 3px 0 0 rgb(var(--c-info) / 1);
+  }
+
+  .table-list tbody tr[data-row-variant='neutral'] td:first-child {
+    box-shadow: inset 3px 0 0 rgb(var(--c-neutral) / 1);
+  }
+
+  .table-list tbody tr[data-row-variant='muted'] td:first-child {
+    box-shadow: inset 3px 0 0 rgb(var(--c-border) / 1);
+  }
+
+  /* Whole-row click affordance */
+  .table-list tbody tr[data-row-clickable='true'] td {
+    cursor: pointer;
+  }
+
+  /* Hover for non-variant rows swaps zebra tone (no opacity hacks). */
+  .table-list tbody tr[data-row-clickable='true']:hover:not([data-row-variant]) {
+    background-color: rgb(var(--c-surface-2) / 1);
+  }
+
+  .table-list tbody tr[data-row-clickable='true']:hover:nth-child(even):not([data-row-variant]) {
+    background-color: rgb(var(--c-surface) / 1);
+  }
+
+  /* Hover for variant rows: keep the RowTone background, add a clear outline. */
+  .table-list tbody tr[data-row-clickable='true'][data-row-variant='ok']:hover {
+    outline: 1px solid rgb(var(--c-ok-border) / 1);
+    outline-offset: -1px;
+  }
+
+  .table-list tbody tr[data-row-clickable='true'][data-row-variant='warn']:hover {
+    outline: 1px solid rgb(var(--c-warn-border) / 1);
+    outline-offset: -1px;
+  }
+
+  .table-list tbody tr[data-row-clickable='true'][data-row-variant='danger']:hover {
+    outline: 1px solid rgb(var(--c-danger-border) / 1);
+    outline-offset: -1px;
+  }
+
+  .table-list tbody tr[data-row-clickable='true'][data-row-variant='info']:hover {
+    outline: 1px solid rgb(var(--c-info-border) / 1);
+    outline-offset: -1px;
+  }
+
+  .table-list tbody tr[data-row-clickable='true'][data-row-variant='neutral']:hover {
+    outline: 1px solid rgb(var(--c-neutral-border) / 1);
+    outline-offset: -1px;
+  }
+
+  .table-list tbody tr[data-row-clickable='true'][data-row-variant='muted']:hover {
+    outline: 1px solid rgb(var(--c-border-strong) / 1);
+    outline-offset: -1px;
+  }
+
+  /* Keyboard focus outline when rows are focusable (TableRowLink adds tabIndex). */
+  .table-list tbody tr[data-row-clickable='true']:focus-visible {
+    outline: 2px solid rgb(var(--c-focus) / 1);
+    outline-offset: -2px;
+  }
+}

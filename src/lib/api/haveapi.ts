@@ -1,0 +1,393 @@
+import { getRuntimeConfig } from '../../app/config';
+
+export type JsonValue =
+  | null
+  | boolean
+  | number
+  | string
+  | JsonValue[]
+  | { [k: string]: JsonValue };
+
+export interface HaveApiEnvelope {
+  status: boolean;
+  message?: string;
+  errors?: unknown;
+  response?: Record<string, unknown> | null;
+}
+
+export interface HaveApiRequestInfo {
+  method: string;
+  /** HaveAPI path (relative to apiBaseUrl), e.g. "/vpses" */
+  path: string;
+  /** Full URL used for the request (best-effort, may be omitted) */
+  url?: string;
+}
+
+export class HaveApiError extends Error {
+  public readonly envelope: HaveApiEnvelope;
+  /**
+   * HTTP status code (when the transport returned non-2xx).
+   *
+   * Note: HaveAPI may also return `status: false` with HTTP 200; in that case
+   * `httpStatus` is undefined.
+   */
+  public readonly httpStatus?: number;
+
+  /** Best-effort request metadata for debugging/support. */
+  public request?: HaveApiRequestInfo;
+
+  constructor(envelope: HaveApiEnvelope, fallbackMessage = 'Request failed', httpStatus?: number, request?: HaveApiRequestInfo) {
+    super(envelope.message || fallbackMessage);
+    this.name = 'HaveApiError';
+    this.envelope = envelope;
+    this.httpStatus = httpStatus;
+    this.request = request;
+  }
+}
+
+export interface CallOpts {
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS';
+  path: string;
+  // Input params are sent namespaced as query parameters for GET/OPTIONS and namespaced JSON for others.
+  namespace?: string;
+  params?: Record<string, unknown>;
+  // Meta params are sent under the meta namespace.
+  meta?: Record<string, unknown>;
+
+  /**
+   * Optional abort signal.
+   *
+   * Used by UI surfaces like the command palette to cancel in-flight requests
+   * when the query changes.
+   */
+  signal?: AbortSignal;
+}
+
+function getHaveApiDescriptionFromWindow(): any | undefined {
+  // Legacy vpsAdmin webui exposes the API description on window.vpsAdmin.description.
+  // This is very useful for reading dynamic bits like authentication header name
+  // and meta namespace.
+  if (typeof window === 'undefined') return undefined;
+  return (window as any).vpsAdmin?.description;
+}
+
+let cachedDescription: any | undefined;
+let descriptionPromise: Promise<any | undefined> | null = null;
+
+async function fetchHaveApiDescriptionFromApi(): Promise<any | undefined> {
+  const cfg = getRuntimeConfig();
+
+  // In most HaveAPI deployments, the version base URL returns the JSON description.
+  // Example: https://api.example.tld/v7.0
+  // We try a few safe candidates.
+  const candidates = [
+    cfg.apiBaseUrl,
+    `${cfg.apiBaseUrl}/`,
+    cfg.apiUrl,
+    `${cfg.apiUrl}/`,
+  ];
+
+  for (const url of candidates) {
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      });
+
+      const ct = res.headers.get('content-type') ?? '';
+      if (!res.ok) continue;
+
+      // Some servers return JSON without a strict content-type.
+      if (ct.includes('application/json') || ct.includes('application/vnd') || ct.includes('+json') || ct === '') {
+        const data = await res.json().catch(() => undefined);
+        if (data && typeof data === 'object') {
+          return data;
+        }
+      }
+    } catch {
+      // ignore and try next candidate
+    }
+  }
+
+  return undefined;
+}
+
+async function getHaveApiDescription(): Promise<any | undefined> {
+  const winDesc = getHaveApiDescriptionFromWindow();
+  if (winDesc) return winDesc;
+  if (cachedDescription) return cachedDescription;
+
+  if (!descriptionPromise) {
+    descriptionPromise = fetchHaveApiDescriptionFromApi()
+      .then((d) => {
+        cachedDescription = d;
+        return d;
+      })
+      .catch(() => undefined);
+  }
+
+  return descriptionPromise;
+}
+
+function getMetaNamespace(desc: any): string {
+  return (desc && desc.meta && typeof desc.meta.namespace === 'string' && desc.meta.namespace) || '_meta';
+}
+
+function buildQuery(namespace: string, params: Record<string, unknown>): URLSearchParams {
+  const qs = new URLSearchParams();
+
+  for (const [k, v] of Object.entries(params)) {
+    if (v === undefined) continue;
+    if (v === null) {
+      qs.append(`${namespace}[${k}]`, '');
+      continue;
+    }
+
+    const t = typeof v;
+    if (t === 'string' || t === 'number' || t === 'boolean') {
+      qs.append(`${namespace}[${k}]`, String(v));
+      continue;
+    }
+
+    // HaveAPI query-string encoding is scalar. If you need structured data,
+    // send it as JSON body (POST/PUT/PATCH/DELETE) instead.
+    throw new HaveApiError(
+      {
+        status: false,
+        message: `Invalid query parameter ${namespace}[${k}] (must be string/number/boolean/null)`,
+        response: { key: k, value: v },
+      },
+      'Invalid query parameter'
+    );
+  }
+
+  return qs;
+}
+
+export function unwrapSingleResponse<T>(
+  envelope: HaveApiEnvelope,
+  metaNamespace: string = '_meta'
+): { data: T; meta?: Record<string, unknown> } {
+  if (!envelope.status) {
+    throw new HaveApiError(envelope);
+  }
+
+  const resp: any = envelope.response;
+  if (!resp) {
+    // Some actions return no response body beyond status.
+    return { data: null as unknown as T };
+  }
+
+  // HaveAPI uses a configurable meta namespace (usually "_meta"). When the SPA runs
+  // without the legacy vpsAdmin bootstrap, we may not know it. Be tolerant and
+  // treat both "_meta" and "meta" as meta keys.
+  const metaCandidates = new Set<string>([
+    metaNamespace,
+    metaNamespace === '_meta' ? 'meta' : '_meta',
+  ]);
+
+  const metaValue = resp[metaNamespace] ?? resp['_meta'] ?? resp['meta'];
+  const meta = metaValue && typeof metaValue === 'object' && !Array.isArray(metaValue) ? (metaValue as Record<string, unknown>) : undefined;
+  const keys = Object.keys(resp).filter((k) => !metaCandidates.has(k));
+
+  if (keys.length === 1) {
+    const k = keys[0];
+
+    // With `noUncheckedIndexedAccess`, keys[0] is `string | undefined`.
+    // This guard keeps the function type-safe.
+    if (!k) return { data: resp as unknown as T, meta };
+
+    return { data: resp[k] as T, meta };
+  }
+
+  // When there are multiple namespaces (or response is not an object), return the whole response.
+  return { data: resp as unknown as T, meta };
+}
+
+/**
+ * Convenience helper: many vpsAdmin actions queue async tasks and return
+ * `action_state_id` in the meta block.
+ */
+export function getMetaActionStateId(meta: unknown): number | undefined {
+  if (!meta || typeof meta !== 'object') return undefined;
+  const raw = (meta as any)['action_state_id'] ?? (meta as any)['state_id'];
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+  if (typeof raw === 'string') {
+    const n = Number(raw);
+    if (Number.isFinite(n)) return n;
+  }
+  return undefined;
+}
+
+/**
+ * Many HaveAPI Index actions return pagination metadata in `_meta`, including `total_count`.
+ */
+export function getMetaTotalCount(meta: unknown): number | undefined {
+  if (!meta || typeof meta !== 'object') return undefined;
+  const raw = (meta as any)['total_count'];
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+  if (typeof raw === 'string') {
+    const n = Number(raw);
+    if (Number.isFinite(n)) return n;
+  }
+  return undefined;
+}
+
+function describeValue(value: unknown): string {
+  if (Array.isArray(value)) return `array(${value.length})`;
+  if (value === null) return 'null';
+  if (value === undefined) return 'undefined';
+  if (typeof value === 'object') {
+    const keys = Object.keys(value as Record<string, unknown>);
+    const head = keys.slice(0, 5).join(', ');
+    const tail = keys.length > 5 ? ', …' : '';
+    return `object(${head}${tail})`;
+  }
+  return typeof value;
+}
+
+/**
+ * Runtime guard for endpoints that are expected to return lists.
+ *
+ * Use this close to the API boundary so React Query can surface a meaningful error
+ * instead of crashing the render with "... is not iterable".
+ */
+export function expectArray<T>(value: unknown, context: string): T[] {
+  if (Array.isArray(value)) return value as T[];
+  throw new Error(`${context}: expected array, got ${describeValue(value)}`);
+}
+
+function authHeaders(desc: any): Record<string, string> {
+  const cfg = getRuntimeConfig();
+
+  if (cfg.auth.kind === 'none') return {};
+
+  // Standalone deployments may not have the HaveAPI description bootstrap
+  // on window.vpsAdmin.description. Allow forcing the auth header name.
+  const forcedHeader = cfg.haveApi?.authHeader;
+  if (forcedHeader) {
+    const token = cfg.auth.kind === 'oauth2' ? cfg.auth.accessToken : cfg.auth.sessionToken;
+    return { [forcedHeader]: token };
+  }
+
+  // HaveAPI uses a provider-specific HTTP header announced in the API description.
+  // (The legacy client avoids the standard Authorization header due to CORS policy.)
+  const httpHeader: string | undefined = desc?.authentication?.[cfg.auth.kind]?.http_header;
+
+  if (cfg.auth.kind === 'oauth2') {
+    if (httpHeader) return { [httpHeader]: cfg.auth.accessToken };
+
+    // Dev fallback. Note: may not work against api.vpsfree.cz due to CORS policy.
+    return { Authorization: `Bearer ${cfg.auth.accessToken}` };
+  }
+
+  if (cfg.auth.kind === 'token') {
+    const token = cfg.auth.sessionToken;
+
+    if (httpHeader) return { [httpHeader]: token };
+
+    // Dev fallback.
+    return { 'X-HaveAPI-Auth-Token': token };
+  }
+
+  return {};
+}
+
+async function safeJson(res: Response): Promise<HaveApiEnvelope> {
+  try {
+    return (await res.json()) as HaveApiEnvelope;
+  } catch {
+    return {
+      status: false,
+      message: `Invalid JSON response (HTTP ${res.status})`,
+      response: null,
+    };
+  }
+}
+
+export async function haveApiCall<T>(opts: CallOpts): Promise<{ data: T; meta?: Record<string, unknown>; envelope: HaveApiEnvelope }> {
+  const cfg = getRuntimeConfig();
+  const desc = await getHaveApiDescription();
+  const metaNs = cfg.haveApi?.metaNamespace ?? getMetaNamespace(desc);
+
+  const method = opts.method ?? 'GET';
+
+  let url = `${cfg.apiBaseUrl}${opts.path.startsWith('/') ? '' : '/'}${opts.path}`;
+
+  const ns = opts.namespace;
+  const qs = new URLSearchParams();
+
+  const paramsInQuery = method === 'GET' || method === 'OPTIONS';
+
+  if (paramsInQuery && ns && opts.params) {
+    for (const [k, v] of buildQuery(ns, opts.params).entries()) qs.append(k, v);
+  }
+
+  if (paramsInQuery && opts.meta) {
+    for (const [k, v] of buildQuery(metaNs, opts.meta).entries()) {
+      qs.append(k, v);
+    }
+  }
+
+  if ([...qs.keys()].length > 0) {
+    url += (url.includes('?') ? '&' : '?') + qs.toString();
+  }
+
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    ...authHeaders(desc),
+  };
+
+  const init: RequestInit = {
+    method,
+    headers,
+    // Match the legacy XHR client default: do not send cookies cross-origin.
+    credentials: 'same-origin',
+    signal: opts.signal,
+  };
+
+  if (!paramsInQuery) {
+    headers['Content-Type'] = 'application/json';
+
+    const body: Record<string, unknown> = {};
+
+    if (ns && opts.params) {
+      body[ns] = opts.params;
+    }
+
+    if (opts.meta) {
+      body[metaNs] = opts.meta;
+    }
+
+    init.body = JSON.stringify(body);
+  }
+
+  const reqInfo: HaveApiRequestInfo = {
+    method,
+    path: opts.path,
+    url,
+  };
+
+
+  const res = await fetch(url, init);
+  const envelope = await safeJson(res);
+
+  if (!res.ok) {
+    // Some failures (e.g. 500) may still return JSON.
+    throw new HaveApiError(envelope, `HTTP ${res.status}`, res.status, reqInfo);
+  }
+
+  let unwrapped: { data: T; meta?: Record<string, unknown> };
+  try {
+    unwrapped = unwrapSingleResponse<T>(envelope, metaNs);
+  } catch (err: any) {
+    if (err instanceof HaveApiError) {
+      // HaveAPI can return {status:false} with HTTP 200.
+      // Attach request info to help support/debug without screenshots.
+      if (!err.request) err.request = reqInfo;
+    }
+    throw err;
+  }
+
+  return { ...unwrapped, envelope };
+}

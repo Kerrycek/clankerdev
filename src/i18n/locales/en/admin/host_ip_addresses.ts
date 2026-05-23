@@ -1,0 +1,20 @@
+// Admin locale chunk: host_ip_addresses
+export const enAdmin_host_ip_addresses = {
+  "admin.host_ip_addresses.empty": "No host IP addresses found.",
+  "admin.host_ip_addresses.field.address": "Host IP",
+  "admin.host_ip_addresses.field.flags": "Flags",
+  "admin.host_ip_addresses.field.interface": "Interface",
+  "admin.host_ip_addresses.field.ptr": "PTR",
+  "admin.host_ip_addresses.field.route": "Route IP",
+  "admin.host_ip_addresses.field.user": "User",
+  "admin.host_ip_addresses.field.vps": "VPS",
+  "admin.host_ip_addresses.filter.assigned.all": "Any assignment",
+  "admin.host_ip_addresses.filter.assigned.false": "Unassigned only",
+  "admin.host_ip_addresses.filter.assigned.true": "Assigned only",
+  "admin.host_ip_addresses.filter.q.placeholder": "Search by address, VPS or user…",
+  "admin.host_ip_addresses.filter.user.placeholder": "User login or ID…",
+  "admin.host_ip_addresses.filter.vps.placeholder": "VPS hostname or ID…",
+  "admin.host_ip_addresses.load_error": "Failed to load host IP addresses",
+  "admin.host_ip_addresses.subtitle": "Browse host-facing IPs used for routing, PTRs and transfer peers.",
+  "admin.host_ip_addresses.title": "Host IP addresses",
+} as const;

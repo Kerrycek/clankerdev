@@ -1,1 +1,0 @@
-import{r as e,j as n}from"./vendor-react-B6j9w5IJ.js";const r=e.createContext(null);function s(t){return n.jsx(r.Provider,{value:t.value,children:t.children})}function a(){const t=e.useContext(r);if(!t)throw new Error("useDatasetContext must be used within DatasetContextProvider");return t}export{s as D,a as u};

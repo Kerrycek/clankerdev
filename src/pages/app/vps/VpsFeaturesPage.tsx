@@ -1,0 +1,226 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
+import { useI18n } from '../../../app/i18n';
+import { useChrome } from '../../../components/layout/ChromeContext';
+import { ActionButton } from '../../../components/ui/ActionButton';
+import { Alert } from '../../../components/ui/Alert';
+import { Button } from '../../../components/ui/Button';
+import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
+import { Checkbox } from '../../../components/ui/Checkbox';
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
+import { Spinner } from '../../../components/ui/Spinner';
+import { fetchVpsFeatures, updateVpsFeaturesAll, type VpsFeature } from '../../../lib/api/vpsFeatures';
+import { getMetaActionStateId } from '../../../lib/api/haveapi';
+import { gateVpsMutation } from '../../../lib/gates/vps';
+import { preflightVpsNotBusy } from './vpsPreflight';
+import { useVps } from './VpsContext';
+
+function featureLabel(f: VpsFeature): string {
+  return (f.label as any) ?? f.name;
+}
+
+function mapFeatures(list: VpsFeature[] | undefined): Record<string, boolean> {
+  const out: Record<string, boolean> = {};
+  for (const f of list ?? []) {
+    if (!f?.name) continue;
+    if (typeof f.enabled !== 'boolean') continue;
+    out[String(f.name)] = f.enabled;
+  }
+  return out;
+}
+
+function equalBoolMaps(a: Record<string, boolean>, b: Record<string, boolean>): boolean {
+  const keys = new Set<string>([...Object.keys(a), ...Object.keys(b)]);
+  for (const k of keys) {
+    if (a[k] !== b[k]) return false;
+  }
+  return true;
+}
+
+export function VpsFeaturesPage() {
+  const chrome = useChrome();
+  const qc = useQueryClient();
+  const { t } = useI18n();
+
+  const { vps, refetchChains, vpsRef, busyTransaction, busyLocalLock } = useVps();
+  const vpsId = vps.id;
+  const objectLabel = String((vps as any).hostname ?? '') || `#${vpsId}`;
+
+  const q = useQuery({
+    queryKey: ['vps_feature', 'list', { vpsId }],
+    queryFn: async () => (await fetchVpsFeatures(vpsId)).data,
+    refetchOnWindowFocus: false,
+  });
+
+  const baseline = useMemo(() => mapFeatures(q.data), [q.data]);
+  const [draft, setDraft] = useState<Record<string, boolean> | null>(null);
+  const effective = draft ?? baseline;
+
+  // Initialize draft from baseline on first load (or when switching VPS).
+  useEffect(() => {
+    setDraft(null);
+  }, [vpsId]);
+
+  useEffect(() => {
+    if (!q.data) return;
+    if (draft !== null) return;
+    setDraft(baseline);
+  }, [baseline, draft, q.data]);
+
+  const dirty = draft !== null && !equalBoolMaps(effective, baseline);
+  const dirtyCount = useMemo(() => {
+    if (!dirty) return 0;
+    const keys = new Set<string>([...Object.keys(effective), ...Object.keys(baseline)]);
+    let n = 0;
+    for (const k of keys) if (effective[k] !== baseline[k]) n += 1;
+    return n;
+  }, [baseline, dirty, effective]);
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const m = useMutation({
+    mutationFn: async () => {
+      await preflightVpsNotBusy({ vpsId, t, knownBusy: busyTransaction || busyLocalLock });
+      return updateVpsFeaturesAll(vpsId, effective);
+    },
+    onMutate: () => {
+      chrome.acquireLocalLock(vpsRef);
+    },
+    onSuccess: (r) => {
+      setConfirmOpen(false);
+      setDraft(null);
+      qc.invalidateQueries({ queryKey: ['vps_feature', 'list', { vpsId }] });
+
+      const asId = getMetaActionStateId(r.meta);
+      if (asId !== undefined) {
+        chrome.trackActionState(asId, {
+          actionLabelKey: 'action.vps.features.apply.label',
+          objectLabel,
+          object: vpsRef,
+        });
+      }
+
+      refetchChains();
+    },
+    onError: (e: any) => {
+      if (e?.code === 'BUSY') chrome.openTasks();
+    },
+    onSettled: () => {
+      chrome.releaseLocalLock(vpsRef);
+    },
+  });
+
+  const busyLocal = busyLocalLock || m.isPending;
+  const gate = gateVpsMutation({ vps, busyLocal, busyTransaction });
+
+  const list = q.data ?? [];
+
+  return (
+    <div data-testid="vps.features.page" className="space-y-4">
+      <Card testId="vps.features.card">
+        <CardHeader
+          title={t('vps.features.title')}
+          subtitle={t('vps.features.subtitle_basic')}
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                testId="vps.features.reset"
+                variant="secondary"
+                size="sm"
+                disabled={!dirty || m.isPending}
+                onClick={() => setDraft(null)}
+              >
+                {t('common.reset')}
+              </Button>
+              <ActionButton
+                testId="vps.features.save"
+                size="sm"
+                disabled={!dirty || !gate.allowed}
+                disabledReason={!gate.allowed ? gate.reason : undefined}
+                loading={m.isPending}
+                onClick={() => setConfirmOpen(true)}
+              >
+                {dirty ? t('vps.features.save_changes', { n: dirtyCount }) : t('vps.features.save_changes_empty')}
+              </ActionButton>
+            </div>
+          }
+        />
+
+        <CardBody>
+          {!gate.allowed ? (
+            <Alert title={t(gate.reason.titleKey)} variant="warn">
+              <div className="space-y-2">
+                {gate.reason.descriptionKey ? <div>{t(gate.reason.descriptionKey)}</div> : null}
+                <div>
+                  <Button variant="secondary" size="sm" onClick={chrome.openTasks}>
+                    {t('common.open_tasks')}
+                  </Button>
+                </div>
+              </div>
+            </Alert>
+          ) : null}
+
+          {q.isLoading ? (
+            <div className={!gate.allowed ? 'mt-4' : ''}>
+              <Spinner label={t('common.loading')} />
+            </div>
+          ) : q.error ? (
+            <Alert title={t('vps.features.load_error')} variant="danger" className={!gate.allowed ? 'mt-4' : ''}>
+              {String((q.error as any)?.message ?? q.error)}
+            </Alert>
+          ) : list.length === 0 ? (
+            <div className={!gate.allowed ? 'mt-4' : ''}>
+              <div className="text-sm text-muted">{t('vps.features.empty')}</div>
+            </div>
+          ) : (
+            <div className={"mt-3 grid gap-2 sm:grid-cols-2"}>
+              {list.map((f) => {
+                const name = String(f.name ?? '');
+                const enabled = Boolean(effective[name]);
+                return (
+                  <Checkbox
+                    key={f.id}
+                    testId={`vps.features.item.${f.id}`}
+                    checked={enabled}
+                    disabled={m.isPending || !gate.allowed}
+                    onChange={(checked) => {
+                      setDraft((prev) => ({ ...(prev ?? baseline), [name]: checked }));
+                    }}
+                    label={featureLabel(f)}
+                    description={name}
+                  />
+                );
+              })}
+            </div>
+          )}
+
+          {dirty ? <div className="mt-3 text-xs text-muted">{t('vps.features.unsaved', { n: dirtyCount })}</div> : null}
+          {m.error ? (
+            <Alert title={t('vps.features.apply_error')} variant="danger" className="mt-3">
+              {String((m.error as any)?.message ?? m.error)}
+            </Alert>
+          ) : null}
+        </CardBody>
+      </Card>
+
+      <ConfirmDialog
+        testId="vps.features.confirm"
+        open={confirmOpen}
+        title={t('vps.features.confirm.title')}
+        description={t('vps.features.confirm.desc_basic')}
+        confirmLabel={t('vps.features.confirm.apply')}
+        confirmLoading={m.isPending}
+        confirmDisabled={!gate.allowed}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={() => m.mutate()}
+      >
+        {dirty ? (
+          <div className="text-xs text-muted">
+            {t('vps.features.confirm.summary', { n: dirtyCount })}
+          </div>
+        ) : null}
+      </ConfirmDialog>
+    </div>
+  );
+}

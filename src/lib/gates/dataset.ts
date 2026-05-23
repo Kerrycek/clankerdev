@@ -1,0 +1,76 @@
+import type { Dataset } from '../api/datasets';
+import type { GateDecision, GateReason } from './types';
+
+export type DatasetAction =
+  | 'snapshot.create'
+  | 'snapshot.rollback'
+  | 'snapshot.delete'
+  | 'download.create'
+  | 'download.delete';
+
+type DatasetLife = 'active' | 'inactive' | 'deleted' | 'unknown';
+
+function lifeState(ds: Dataset): DatasetLife {
+  const st = String((ds as any).object_state ?? '').trim();
+  if (st === 'active') return 'active';
+  if (st === 'deleted') return 'deleted';
+  if (st === 'inactive') return 'inactive';
+  if (st) return 'unknown';
+
+  const active = (ds as any).active;
+  if (active === true) return 'active';
+  if (active === false) return 'inactive';
+  return 'unknown';
+}
+
+function blocksWhenInactive(action: DatasetAction): boolean {
+  // Download deletion is independent and remains useful even if the dataset is deleted.
+  return action !== 'download.delete';
+}
+
+function deny(reason: GateReason): GateDecision {
+  return { allowed: false, reason };
+}
+
+export function gateDatasetAction(
+  action: DatasetAction,
+  ctx: {
+    dataset: Dataset;
+    busyTransaction?: boolean;
+    busyLocal?: boolean;
+  }
+): GateDecision {
+  if (ctx.busyTransaction) {
+    return deny({ titleKey: 'gate.busy.transaction.title', descriptionKey: 'gate.busy.transaction.body' });
+  }
+
+  if (ctx.busyLocal) {
+    return deny({ titleKey: 'gate.busy.local.title', descriptionKey: 'gate.busy.local.body' });
+  }
+
+  const life = lifeState(ctx.dataset);
+  if (blocksWhenInactive(action)) {
+    if (life === 'deleted') {
+      return deny({
+        titleKey: 'gate.blocked.dataset.deleted.title',
+        descriptionKey: 'gate.blocked.dataset.deleted.body',
+      });
+    }
+
+    if (life === 'inactive') {
+      return deny({
+        titleKey: 'gate.blocked.dataset.inactive.title',
+        descriptionKey: 'gate.blocked.dataset.inactive.body',
+      });
+    }
+
+    if (life !== 'active') {
+      return deny({
+        titleKey: 'gate.blocked.dataset.unknown_state.title',
+        descriptionKey: 'gate.blocked.dataset.unknown_state.body',
+      });
+    }
+  }
+
+  return { allowed: true };
+}

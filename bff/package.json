@@ -1,0 +1,15 @@
+{
+  "name": "webui-next-bff",
+  "private": true,
+  "version": "0.1.0",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "express-session": "^1.17.3",
+    "session-file-store": "^1.5.0"
+  }
+}

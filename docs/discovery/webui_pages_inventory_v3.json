@@ -1,0 +1,486 @@
+{
+  "pages": [
+    {
+      "page": "page_about.php",
+      "actions": [],
+      "count": 0
+    },
+    {
+      "page": "page_adminm.php",
+      "actions": [
+        "approval_requests",
+        "approve",
+        "auth_settings",
+        "cluster_resources",
+        "delete",
+        "delete2",
+        "delete3",
+        "deny",
+        "edit",
+        "edit_member",
+        "edit_mfa",
+        "edit_personal",
+        "env_cfg",
+        "env_cfg_edit",
+        "env_cfg_reset",
+        "estimate_income",
+        "ignore",
+        "incoming_payment",
+        "incoming_payment_assign",
+        "incoming_payment_state",
+        "incoming_payments",
+        "known_device_del",
+        "known_devices",
+        "metrics",
+        "metrics_delete",
+        "metrics_new",
+        "metrics_show",
+        "new",
+        "new2",
+        "passwd",
+        "payment_instructions",
+        "payments_history",
+        "payments_overview",
+        "payset",
+        "payset2",
+        "pubkey_add",
+        "pubkey_del",
+        "pubkey_edit",
+        "pubkeys",
+        "request_correction",
+        "request_details",
+        "request_process",
+        "resource_packages",
+        "resource_packages_add",
+        "resource_packages_delete",
+        "resource_packages_edit",
+        "role_recipients",
+        "session_control",
+        "template_recipients",
+        "totp_device_add",
+        "totp_device_confirm",
+        "totp_device_del",
+        "totp_device_edit",
+        "totp_device_toggle",
+        "totp_devices",
+        "user_session_close",
+        "user_session_edit",
+        "user_sessions",
+        "webauthn_del",
+        "webauthn_edit",
+        "webauthn_list",
+        "webauthn_register",
+        "webauthn_toggle"
+      ],
+      "count": 63
+    },
+    {
+      "page": "page_adminvps.php",
+      "actions": [
+        "autostart",
+        "boot",
+        "chown",
+        "chown_confirm",
+        "clone-step-0",
+        "clone-step-1",
+        "clone-step-2",
+        "clone-submit",
+        "custom",
+        "delete",
+        "delete2",
+        "disable_network",
+        "enable_network",
+        "features",
+        "hostaddr_add",
+        "hostaddr_del",
+        "hostname",
+        "info",
+        "ipjoined_add",
+        "iproute_add",
+        "iproute_del",
+        "iproute_select",
+        "list",
+        "maintenance_windows",
+        "map_mode",
+        "migrate-step-1",
+        "migrate-step-2",
+        "migrate-step-3",
+        "migrate-submit",
+        "nameserver",
+        "netif",
+        "new-step-0",
+        "new-step-1",
+        "new-step-2",
+        "new-step-3",
+        "new-step-4",
+        "new-submit",
+        "os_template",
+        "passwd",
+        "pubkey",
+        "reinstall",
+        "replace",
+        "resources",
+        "saved",
+        "setcgroup",
+        "setmodifications",
+        "startmenu",
+        "swap",
+        "swap_preview",
+        "toggle_os_template_auto_update",
+        "userns_map"
+      ],
+      "count": 51
+    },
+    {
+      "page": "page_backup.php",
+      "actions": [
+        "download",
+        "download_destroy",
+        "download_link",
+        "downloads",
+        "nas",
+        "restore",
+        "snapshot",
+        "snapshot_create",
+        "snapshot_destroy",
+        "vps"
+      ],
+      "count": 10
+    },
+    {
+      "page": "page_cluster.php",
+      "actions": [
+        "cluster",
+        "dns",
+        "dns_delete",
+        "dns_edit",
+        "dns_edit_save",
+        "dns_new",
+        "dns_new_save",
+        "env_edit",
+        "env_save",
+        "environment",
+        "environments",
+        "eventlog",
+        "helpboxes",
+        "helpboxes_add",
+        "helpboxes_del",
+        "helpboxes_edit",
+        "helpboxes_edit_save",
+        "host_ip_addresses",
+        "ip_addresses",
+        "ipaddr_add",
+        "ipaddr_add2",
+        "location",
+        "location_delete",
+        "location_edit",
+        "location_edit_save",
+        "location_network_add_loctonet",
+        "location_network_add_nettoloc",
+        "location_network_del",
+        "location_network_edit",
+        "location_networks",
+        "location_new",
+        "location_new_save",
+        "locations",
+        "log_add",
+        "log_del",
+        "log_edit",
+        "log_edit_save",
+        "maintenance_lock",
+        "network_locations",
+        "networks",
+        "newnode",
+        "newnode_save",
+        "node",
+        "node_edit",
+        "node_edit_save",
+        "resource_packages",
+        "resource_packages_delete",
+        "resource_packages_edit",
+        "resource_packages_item_add",
+        "resource_packages_item_delete",
+        "resource_packages_item_edit",
+        "resource_packages_new",
+        "set_maintenance_lock",
+        "sysconfig",
+        "sysconfig_save",
+        "template_register",
+        "templates",
+        "templates_delete",
+        "templates_edit",
+        "vps"
+      ],
+      "count": 60
+    },
+    {
+      "page": "page_console.php",
+      "actions": [],
+      "count": 0
+    },
+    {
+      "page": "page_dataset.php",
+      "actions": [
+        "add_expansion",
+        "destroy",
+        "edit",
+        "edit_expansion",
+        "expand_add_space",
+        "mount",
+        "mount_destroy",
+        "mount_edit",
+        "mount_toggle",
+        "new",
+        "plan_add",
+        "plan_delete",
+        "register_expansion"
+      ],
+      "count": 13
+    },
+    {
+      "page": "page_dns.php",
+      "actions": [
+        "dnssec_records",
+        "primary_zone_list",
+        "primary_zone_new",
+        "primary_zone_new2",
+        "ptr_list",
+        "record_delete",
+        "record_edit",
+        "record_edit2",
+        "record_log",
+        "record_new",
+        "record_toggle_ddns",
+        "record_toggle_enable",
+        "resolver_list",
+        "secondary_zone_list",
+        "secondary_zone_new",
+        "secondary_zone_new2",
+        "server_list",
+        "server_zone_delete",
+        "server_zone_new",
+        "server_zone_new2",
+        "tsig_key_delete",
+        "tsig_key_delete2",
+        "tsig_key_list",
+        "tsig_key_new",
+        "tsig_key_new2",
+        "zone_delete",
+        "zone_delete2",
+        "zone_list",
+        "zone_show",
+        "zone_transfer_delete",
+        "zone_transfer_new",
+        "zone_transfer_new2",
+        "zone_update"
+      ],
+      "count": 33
+    },
+    {
+      "page": "page_export.php",
+      "actions": [
+        "add_host",
+        "create",
+        "del_host",
+        "destroy",
+        "disable",
+        "edit",
+        "edit_host",
+        "enable",
+        "export_dataset",
+        "list"
+      ],
+      "count": 10
+    },
+    {
+      "page": "page_history.php",
+      "actions": [],
+      "count": 0
+    },
+    {
+      "page": "page_incidents.php",
+      "actions": [
+        "list",
+        "new",
+        "show"
+      ],
+      "count": 3
+    },
+    {
+      "page": "page_index.php",
+      "actions": [],
+      "count": 0
+    },
+    {
+      "page": "page_jumpto.php",
+      "actions": [
+        "Export",
+        "IpAddress",
+        "Network",
+        "TransactionChain",
+        "User",
+        "Vps"
+      ],
+      "count": 6
+    },
+    {
+      "page": "page_lifetimes.php",
+      "actions": [
+        "changelog",
+        "set_state"
+      ],
+      "count": 2
+    },
+    {
+      "page": "page_log.php",
+      "actions": [],
+      "count": 0
+    },
+    {
+      "page": "page_login.php",
+      "actions": [
+        "callback",
+        "drop_admin",
+        "login",
+        "logout",
+        "regain_admin",
+        "switch_context",
+        "switch_user"
+      ],
+      "count": 7
+    },
+    {
+      "page": "page_monitoring.php",
+      "actions": [
+        "ack",
+        "ignore",
+        "list",
+        "show"
+      ],
+      "count": 4
+    },
+    {
+      "page": "page_nas.php",
+      "actions": [],
+      "count": 0
+    },
+    {
+      "page": "page_networking.php",
+      "actions": [
+        "assignments",
+        "host_ip_addresses",
+        "hostaddr_assign",
+        "hostaddr_assign2",
+        "hostaddr_delete",
+        "hostaddr_delete2",
+        "hostaddr_new",
+        "hostaddr_new2",
+        "hostaddr_ptr",
+        "hostaddr_ptr2",
+        "hostaddr_unassign",
+        "hostaddr_unassign2",
+        "ip_addresses",
+        "live",
+        "route_assign",
+        "route_assign2",
+        "route_edit",
+        "route_edit_user",
+        "route_unassign",
+        "route_unassign2",
+        "traffic",
+        "user_top"
+      ],
+      "count": 22
+    },
+    {
+      "page": "page_node.php",
+      "actions": [],
+      "count": 0
+    },
+    {
+      "page": "page_oom_reports.php",
+      "actions": [
+        "list",
+        "rule_delete",
+        "rule_edit",
+        "rule_list",
+        "rule_new",
+        "show"
+      ],
+      "count": 6
+    },
+    {
+      "page": "page_outage.php",
+      "actions": [
+        "edit_attrs",
+        "edit_systems",
+        "exports",
+        "list",
+        "report",
+        "set_state",
+        "show",
+        "update",
+        "users",
+        "vps"
+      ],
+      "count": 10
+    },
+    {
+      "page": "page_redirect.php",
+      "actions": [
+        "host_ip_address",
+        "ip_address",
+        "payment",
+        "payset"
+      ],
+      "count": 4
+    },
+    {
+      "page": "page_reminder.php",
+      "actions": [
+        "1w",
+        "2w",
+        "date",
+        "never",
+        "set"
+      ],
+      "count": 5
+    },
+    {
+      "page": "page_transactions.php",
+      "actions": [
+        "done",
+        "failed",
+        "queued",
+        "rollbacking"
+      ],
+      "count": 4
+    },
+    {
+      "page": "page_userdata.php",
+      "actions": [
+        "delete",
+        "deploy",
+        "edit",
+        "list",
+        "new"
+      ],
+      "count": 5
+    },
+    {
+      "page": "page_userns.php",
+      "actions": [
+        "list",
+        "map_del",
+        "map_edit",
+        "map_entries_edit",
+        "map_entry_del",
+        "map_new",
+        "map_show",
+        "maps",
+        "show"
+      ],
+      "count": 9
+    }
+  ]
+}

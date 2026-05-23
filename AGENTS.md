@@ -30,16 +30,17 @@ This repository is maintained through human-reviewed AI pull requests.
   - verification performed,
   - any risks or follow-up needed.
 
-## Build Artifacts
+## Source and Build
 
-- The `assets/*.js` files in this repository are built/minified UI artifacts.
-- Do not modify minified build assets directly unless the issue explicitly asks
-  for an emergency hotfix and the PR clearly says it is a temporary patch.
-- Prefer fixing source code in the upstream/source UI project, then rebuilding
-  and syncing the generated assets.
-- If the source project is not present in this repository, stop and explain that
-  the fix needs the source tree or build workflow instead of patching minified
-  output.
+- This repository contains the WebUI Next source project.
+- Make product fixes in `src/`, `bff/`, tests, docs, or deployment files as
+  appropriate for the issue.
+- Do not commit generated build output from `dist/`, `assets/`, `.vite/`, or
+  `node_modules/`.
+- Use `npm ci`, `npm run typecheck`, `npm test`, and `npm run build` when
+  relevant. For BFF-only changes, also consider `cd bff && npm ci`.
+- Deployment still happens only after human review. The dev deployment builds
+  `dist/` from source and syncs that output to the webroot.
 
 ## Repo Hygiene
 

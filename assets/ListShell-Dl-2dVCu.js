@@ -1,1 +1,0 @@
-import{j as a}from"./vendor-react-B6j9w5IJ.js";import{P as t}from"./PageContainer-Blc2Yobt.js";import{c as i}from"./app-chrome-overlays-DcFd6_Ju.js";function c(e){return a.jsx(t,{variant:e.variant,testId:e.testId,children:a.jsxs("div",{className:i("space-y-6",e.className),children:[e.banner,e.header,e.filters,e.children]})})}export{c as L};

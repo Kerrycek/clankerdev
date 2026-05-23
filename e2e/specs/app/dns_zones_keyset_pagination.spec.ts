@@ -1,0 +1,57 @@
+import { expect, test } from '@playwright/test';
+
+import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
+
+test.describe('DNS zones keyset pagination', () => {
+  test.beforeEach(async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, {
+      sessionToken: 'TEST',
+    });
+
+    const makeZone = (id: number) => ({
+      id,
+      name: `zone${id}.example`,
+      role: id % 3 === 0 ? 'secondary' : 'primary',
+      enabled: id % 2 === 0,
+      dnssec_enabled: id % 4 === 0,
+      serial: 2026012600 + (300 - id),
+      default_ttl: id % 2 === 0 ? 3600 : 600,
+    });
+
+    const page1 = Array.from({ length: 50 }, (_, i) => 300 - i).map(makeZone);
+    const page2 = Array.from({ length: 50 }, (_, i) => 250 - i).map(makeZone);
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'test', level: 1 },
+      handlers: {
+        'GET dns_zones': ({ searchParams }) => {
+          const fromId = searchParams.get('dns_zone[from_id]');
+          return { dns_zones: fromId ? page2 : page1, _meta: { total_count: 100 } };
+        },
+      },
+    });
+  });
+
+  test('navigates to next and previous pages via from_id', async ({ page }) => {
+    await page.goto('/app/dns');
+
+    await expect(page.getByTestId('dns.zones.list')).toBeVisible();
+    await expect(page.getByTestId('dns.zones.row.300')).toBeVisible();
+    await expect(page.getByTestId('dns.zones.row.300.dot')).toBeVisible();
+    await expect(page.getByTestId('dns.zones.row.299')).toHaveAttribute('data-row-variant', 'warn');
+    await expect(page.getByTestId('dns.zones.row.299.dot')).toBeVisible();
+
+    await page.getByTestId('dns.zones.pagination.desktop.next').click();
+    await expect(page).toHaveURL(/from_id=251/);
+    await expect(page).toHaveURL(/page=2/);
+    await expect(page.getByTestId('dns.zones.row.250')).toBeVisible();
+
+    await page.getByTestId('dns.zones.pagination.desktop.prev').click();
+    await expect(page).not.toHaveURL(/from_id=/);
+    await expect(page).toHaveURL(/page=1/);
+    await expect(page.getByTestId('dns.zones.row.300')).toBeVisible();
+    await expect(page.getByTestId('dns.zones.row.300.dot')).toBeVisible();
+    await expect(page.getByTestId('dns.zones.row.299')).toHaveAttribute('data-row-variant', 'warn');
+    await expect(page.getByTestId('dns.zones.row.299.dot')).toBeVisible();
+  });
+});

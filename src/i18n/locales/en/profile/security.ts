@@ -1,0 +1,18 @@
+// Profile locale chunk: security
+export const enProfile_security = {
+  "profile.security.known_devices.action.forget": "Forget",
+  "profile.security.known_devices.empty": "No known devices.",
+  "profile.security.known_devices.field.api_ip": "API IP",
+  "profile.security.known_devices.field.client_ip": "Client IP",
+  "profile.security.known_devices.field.last_seen": "Last seen",
+  "profile.security.known_devices.field.skip_mfa_until": "Skip MFA until",
+  "profile.security.known_devices.field.user_agent": "User agent",
+  "profile.security.known_devices.forget.body": "This device will no longer be trusted. If multi-factor authentication is enabled, you may be asked for an extra verification step again.",
+  "profile.security.known_devices.forget.title": "Forget this device?",
+  "profile.security.known_devices.load_failed": "Failed to load known devices.",
+  "profile.security.known_devices.search.hint": "Local filtering (does not query the API).",
+  "profile.security.known_devices.search.placeholder": "Filter by IP / hostname / user agent…",
+  "profile.security.known_devices.subtitle": "Devices you have used to sign in. Trusted devices can temporarily skip multi-factor authentication.",
+  "profile.security.known_devices.title": "Known devices",
+  "profile.security.subtitle": "Password and authentication settings.",
+} as const;

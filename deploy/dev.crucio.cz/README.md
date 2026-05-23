@@ -16,13 +16,15 @@ Unlike the original production deployment, `dev.crucio.cz` keeps API and OAuth
 traffic on the test stack. nginx proxies `/v7.0` and `/_auth` directly to the
 same local API process used by `admin.crucio.cz`, on `127.0.0.1:9292`.
 
-Deploy static files from the original UI VPS with:
+Deploy the source checkout to `dev.crucio.cz` with:
 
 ```sh
-rsync -az --delete \
-  root@37.205.15.4:/var/www/clankerdev.vpsfree.cz/current/ \
-  root@admin.crucio.cz:/var/www/dev.crucio.cz/current/
+deploy-dev
 ```
+
+`deploy-dev` updates `/srv/clankerdev-deploy/repo` from GitHub, installs
+frontend and BFF dependencies, builds the SPA with `npm run build`, syncs
+`dist/` to `/var/www/dev.crucio.cz/current`, and restarts the BFF service.
 
 Deploy nginx and BFF units with:
 
@@ -46,10 +48,10 @@ The BFF environment lives on the server in:
 Use `oauth.env.example` as the shape of that file. Do not commit the real OAuth
 client secret or session secret.
 
-The BFF code is copied from the original WebUI Next release into:
+The BFF code is served from the source checkout:
 
 ```sh
-/opt/webui-next/releases/20260314-172752/vpsadmin/webui-next/bff
+/srv/clankerdev-deploy/repo/bff
 ```
 
 `dev.crucio.cz` currently uses the local Debian snakeoil certificate because
@@ -61,9 +63,7 @@ The test API on `admin.crucio.cz` also needs the patch in
 session creation can fail with HTTP 500 when the upstream request does not carry
 a user-agent label.
 
-## Session expiry troubleshooting
+## Build source
 
-Automatic logout/session expiry behavior is controlled by the WebUI Next source
-and OAuth BFF source, not by the deployment wrapper files in this repository.
-See `session-expiry-investigation.md` for the issue #3 investigation and the
-missing source/build workflow needed before this can be fixed safely.
+This repository now contains the WebUI Next source project. Product fixes
+should be made in source, reviewed in PRs, then deployed with `deploy-dev`.

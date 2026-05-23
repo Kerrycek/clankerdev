@@ -1,0 +1,20 @@
+// Admin locale chunk: host_ip_addresses
+export const csAdmin_host_ip_addresses = {
+  "admin.host_ip_addresses.empty": "Nebyly nalezeny žádné host IP adresy.",
+  "admin.host_ip_addresses.field.address": "IP hosta",
+  "admin.host_ip_addresses.field.flags": "Příznaky",
+  "admin.host_ip_addresses.field.interface": "Rozhraní",
+  "admin.host_ip_addresses.field.ptr": "PTR",
+  "admin.host_ip_addresses.field.route": "Routovaná IP",
+  "admin.host_ip_addresses.field.user": "Uživatel",
+  "admin.host_ip_addresses.field.vps": "VPS",
+  "admin.host_ip_addresses.filter.assigned.all": "Libovolné přiřazení",
+  "admin.host_ip_addresses.filter.assigned.false": "Jen nepřiřazené",
+  "admin.host_ip_addresses.filter.assigned.true": "Jen přiřazené",
+  "admin.host_ip_addresses.filter.q.placeholder": "Hledejte podle adresy, VPS nebo uživatele…",
+  "admin.host_ip_addresses.filter.user.placeholder": "Přihlašovací jméno nebo ID uživatele…",
+  "admin.host_ip_addresses.filter.vps.placeholder": "Název hostitele nebo ID VPS…",
+  "admin.host_ip_addresses.load_error": "Host IP adresy se nepodařilo načíst",
+  "admin.host_ip_addresses.subtitle": "Procházejte host IP adresy používané pro routování, PTR a přenosové peery.",
+  "admin.host_ip_addresses.title": "Host IP adresy",
+} as const;

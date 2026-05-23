@@ -1,3 +1,10 @@
+node_modules/
+dist/
+.vite/
 .DS_Store
-config.local.js
-*.log
+.env
+.env.*
+!.env.example
+
+# Local runtime config (may contain secrets)
+public/config.local.js

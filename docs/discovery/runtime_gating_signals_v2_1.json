@@ -1,0 +1,4664 @@
+[
+  {
+    "action_const": "VpsAdmin::API::Resources::ApiServer::UnlockTransactionSigningKey",
+    "resource_const": "VpsAdmin::API::Resources::ApiServer",
+    "action_class": "UnlockTransactionSigningKey",
+    "file": "api/lib/vpsadmin/api/resources/api_server.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Cluster::FullStats",
+    "resource_const": "VpsAdmin::API::Resources::Cluster",
+    "action_class": "FullStats",
+    "file": "api/lib/vpsadmin/api/resources/cluster.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Cluster::GenerateMigrationKeys",
+    "resource_const": "VpsAdmin::API::Resources::Cluster",
+    "action_class": "GenerateMigrationKeys",
+    "file": "api/lib/vpsadmin/api/resources/cluster.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Cluster::PublicStats",
+    "resource_const": "VpsAdmin::API::Resources::Cluster",
+    "action_class": "PublicStats",
+    "file": "api/lib/vpsadmin/api/resources/cluster.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Cluster::Search",
+    "resource_const": "VpsAdmin::API::Resources::Cluster",
+    "action_class": "Search",
+    "file": "api/lib/vpsadmin/api/resources/cluster.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Cluster::Show",
+    "resource_const": "VpsAdmin::API::Resources::Cluster",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/cluster.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::ClusterResource::Create",
+    "resource_const": "VpsAdmin::API::Resources::ClusterResource",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/cluster_resource.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::ClusterResource::Index",
+    "resource_const": "VpsAdmin::API::Resources::ClusterResource",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/cluster_resource.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::ClusterResource::Show",
+    "resource_const": "VpsAdmin::API::Resources::ClusterResource",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/cluster_resource.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::ClusterResource::Update",
+    "resource_const": "VpsAdmin::API::Resources::ClusterResource",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/cluster_resource.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::ClusterResourcePackage::Create",
+    "resource_const": "VpsAdmin::API::Resources::ClusterResourcePackage",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/cluster_resource_package.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::ClusterResourcePackage::Delete",
+    "resource_const": "VpsAdmin::API::Resources::ClusterResourcePackage",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/cluster_resource_package.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::ClusterResourcePackage::Index",
+    "resource_const": "VpsAdmin::API::Resources::ClusterResourcePackage",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/cluster_resource_package.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::ClusterResourcePackage::Show",
+    "resource_const": "VpsAdmin::API::Resources::ClusterResourcePackage",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/cluster_resource_package.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::ClusterResourcePackage::Update",
+    "resource_const": "VpsAdmin::API::Resources::ClusterResourcePackage",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/cluster_resource_package.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::ClusterResourcePackage::Item::Create",
+    "resource_const": "VpsAdmin::API::Resources::ClusterResourcePackage::Item",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/cluster_resource_package.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::ClusterResourcePackage::Item::Delete",
+    "resource_const": "VpsAdmin::API::Resources::ClusterResourcePackage::Item",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/cluster_resource_package.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::ClusterResourcePackage::Item::Index",
+    "resource_const": "VpsAdmin::API::Resources::ClusterResourcePackage::Item",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/cluster_resource_package.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::ClusterResourcePackage::Item::Show",
+    "resource_const": "VpsAdmin::API::Resources::ClusterResourcePackage::Item",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/cluster_resource_package.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::ClusterResourcePackage::Item::Update",
+    "resource_const": "VpsAdmin::API::Resources::ClusterResourcePackage::Item",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/cluster_resource_package.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Component::Index",
+    "resource_const": "VpsAdmin::API::Resources::Component",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/component.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Component::Show",
+    "resource_const": "VpsAdmin::API::Resources::Component",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/component.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Dataset::Create",
+    "resource_const": "VpsAdmin::API::Resources::Dataset",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/dataset.rb",
+    "signals": [
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('insufficient permission to create a dataset')",
+        "line": 190
+      },
+      {
+        "code": "error!('access denied')",
+        "line": 193
+      },
+      {
+        "code": "error!('insufficient permission to create a dataset')",
+        "line": 208
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Dataset::Delete",
+    "resource_const": "VpsAdmin::API::Resources::Dataset",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/dataset.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('insufficient permission to destroy this dataset')",
+        "line": 284
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Dataset::FindByName",
+    "resource_const": "VpsAdmin::API::Resources::Dataset",
+    "action_class": "FindByName",
+    "file": "api/lib/vpsadmin/api/resources/dataset.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Dataset::Index",
+    "resource_const": "VpsAdmin::API::Resources::Dataset",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/dataset.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Dataset::Inherit",
+    "resource_const": "VpsAdmin::API::Resources::Dataset",
+    "action_class": "Inherit",
+    "file": "api/lib/vpsadmin/api/resources/dataset.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('insufficient permission to inherit this property') if current_user.role != :admin && !ds.user_editable",
+        "line": 324
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Dataset::Migrate",
+    "resource_const": "VpsAdmin::API::Resources::Dataset",
+    "action_class": "Migrate",
+    "file": "api/lib/vpsadmin/api/resources/dataset.rb",
+    "signals": [
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied to maintenance window VPS')",
+        "line": 417
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Dataset::Show",
+    "resource_const": "VpsAdmin::API::Resources::Dataset",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/dataset.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Dataset::Update",
+    "resource_const": "VpsAdmin::API::Resources::Dataset",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/dataset.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Dataset::Plan::Create",
+    "resource_const": "VpsAdmin::API::Resources::Dataset::Plan",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/dataset.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('Insufficient permission') if !input[:environment_dataset_plan].user_add && current_user.role != :admin",
+        "line": 764
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Dataset::Plan::Delete",
+    "resource_const": "VpsAdmin::API::Resources::Dataset::Plan",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/dataset.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('Insufficient permission')",
+        "line": 786
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Dataset::Plan::Index",
+    "resource_const": "VpsAdmin::API::Resources::Dataset::Plan",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/dataset.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Dataset::Plan::Show",
+    "resource_const": "VpsAdmin::API::Resources::Dataset::Plan",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/dataset.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Dataset::PropertyHistory::Index",
+    "resource_const": "VpsAdmin::API::Resources::Dataset::PropertyHistory",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/dataset.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Dataset::PropertyHistory::Show",
+    "resource_const": "VpsAdmin::API::Resources::Dataset::PropertyHistory",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/dataset.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Dataset::Snapshot::Create",
+    "resource_const": "VpsAdmin::API::Resources::Dataset::Snapshot",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/dataset.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Dataset::Snapshot::Delete",
+    "resource_const": "VpsAdmin::API::Resources::Dataset::Snapshot",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/dataset.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Dataset::Snapshot::Index",
+    "resource_const": "VpsAdmin::API::Resources::Dataset::Snapshot",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/dataset.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Dataset::Snapshot::Rollback",
+    "resource_const": "VpsAdmin::API::Resources::Dataset::Snapshot",
+    "action_class": "Rollback",
+    "file": "api/lib/vpsadmin/api/resources/dataset.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Dataset::Snapshot::Show",
+    "resource_const": "VpsAdmin::API::Resources::Dataset::Snapshot",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/dataset.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DatasetExpansion::Create",
+    "resource_const": "VpsAdmin::API::Resources::DatasetExpansion",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/dataset_expansion.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DatasetExpansion::Index",
+    "resource_const": "VpsAdmin::API::Resources::DatasetExpansion",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/dataset_expansion.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DatasetExpansion::RegisterExpanded",
+    "resource_const": "VpsAdmin::API::Resources::DatasetExpansion",
+    "action_class": "RegisterExpanded",
+    "file": "api/lib/vpsadmin/api/resources/dataset_expansion.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DatasetExpansion::Show",
+    "resource_const": "VpsAdmin::API::Resources::DatasetExpansion",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/dataset_expansion.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DatasetExpansion::Update",
+    "resource_const": "VpsAdmin::API::Resources::DatasetExpansion",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/dataset_expansion.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DatasetExpansion::History::Create",
+    "resource_const": "VpsAdmin::API::Resources::DatasetExpansion::History",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/dataset_expansion.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DatasetExpansion::History::Index",
+    "resource_const": "VpsAdmin::API::Resources::DatasetExpansion::History",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/dataset_expansion.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DatasetExpansion::History::Show",
+    "resource_const": "VpsAdmin::API::Resources::DatasetExpansion::History",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/dataset_expansion.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DatasetPlan::Index",
+    "resource_const": "VpsAdmin::API::Resources::DatasetPlan",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/dataset_plan.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DatasetPlan::Show",
+    "resource_const": "VpsAdmin::API::Resources::DatasetPlan",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/dataset_plan.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Debug::ArrayTop",
+    "resource_const": "VpsAdmin::API::Resources::Debug",
+    "action_class": "ArrayTop",
+    "file": "api/lib/vpsadmin/api/resources/debug.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Debug::HashTop",
+    "resource_const": "VpsAdmin::API::Resources::Debug",
+    "action_class": "HashTop",
+    "file": "api/lib/vpsadmin/api/resources/debug.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Debug::ListObjectCounts",
+    "resource_const": "VpsAdmin::API::Resources::Debug",
+    "action_class": "ListObjectCounts",
+    "file": "api/lib/vpsadmin/api/resources/debug.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DefaultObjectClusterResource::Create",
+    "resource_const": "VpsAdmin::API::Resources::DefaultObjectClusterResource",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/default_object_cluster_resource.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DefaultObjectClusterResource::Delete",
+    "resource_const": "VpsAdmin::API::Resources::DefaultObjectClusterResource",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/default_object_cluster_resource.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DefaultObjectClusterResource::Index",
+    "resource_const": "VpsAdmin::API::Resources::DefaultObjectClusterResource",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/default_object_cluster_resource.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DefaultObjectClusterResource::Show",
+    "resource_const": "VpsAdmin::API::Resources::DefaultObjectClusterResource",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/default_object_cluster_resource.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DefaultObjectClusterResource::Update",
+    "resource_const": "VpsAdmin::API::Resources::DefaultObjectClusterResource",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/default_object_cluster_resource.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsRecord::Create",
+    "resource_const": "VpsAdmin::API::Resources::DnsRecord",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/dns_record.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsRecord::Delete",
+    "resource_const": "VpsAdmin::API::Resources::DnsRecord",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/dns_record.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsRecord::DynamicUpdate",
+    "resource_const": "VpsAdmin::API::Resources::DnsRecord",
+    "action_class": "DynamicUpdate",
+    "file": "api/lib/vpsadmin/api/resources/dns_record.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsRecord::Index",
+    "resource_const": "VpsAdmin::API::Resources::DnsRecord",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/dns_record.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsRecord::Show",
+    "resource_const": "VpsAdmin::API::Resources::DnsRecord",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/dns_record.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsRecord::Update",
+    "resource_const": "VpsAdmin::API::Resources::DnsRecord",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/dns_record.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsRecordLog::Index",
+    "resource_const": "VpsAdmin::API::Resources::DnsRecordLog",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/dns_record_log.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsRecordLog::Show",
+    "resource_const": "VpsAdmin::API::Resources::DnsRecordLog",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/dns_record_log.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsResolver::Create",
+    "resource_const": "VpsAdmin::API::Resources::DnsResolver",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/dns_resolver.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsResolver::Delete",
+    "resource_const": "VpsAdmin::API::Resources::DnsResolver",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/dns_resolver.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsResolver::Index",
+    "resource_const": "VpsAdmin::API::Resources::DnsResolver",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/dns_resolver.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsResolver::Show",
+    "resource_const": "VpsAdmin::API::Resources::DnsResolver",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/dns_resolver.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsResolver::Update",
+    "resource_const": "VpsAdmin::API::Resources::DnsResolver",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/dns_resolver.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsServer::Create",
+    "resource_const": "VpsAdmin::API::Resources::DnsServer",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/dns_server.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsServer::Delete",
+    "resource_const": "VpsAdmin::API::Resources::DnsServer",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/dns_server.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsServer::Index",
+    "resource_const": "VpsAdmin::API::Resources::DnsServer",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/dns_server.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsServer::Show",
+    "resource_const": "VpsAdmin::API::Resources::DnsServer",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/dns_server.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsServer::Update",
+    "resource_const": "VpsAdmin::API::Resources::DnsServer",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/dns_server.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsServerZone::Create",
+    "resource_const": "VpsAdmin::API::Resources::DnsServerZone",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/dns_server_zone.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsServerZone::Delete",
+    "resource_const": "VpsAdmin::API::Resources::DnsServerZone",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/dns_server_zone.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsServerZone::Index",
+    "resource_const": "VpsAdmin::API::Resources::DnsServerZone",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/dns_server_zone.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsServerZone::Show",
+    "resource_const": "VpsAdmin::API::Resources::DnsServerZone",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/dns_server_zone.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsTsigKey::Create",
+    "resource_const": "VpsAdmin::API::Resources::DnsTsigKey",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/dns_tsig_key.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsTsigKey::Delete",
+    "resource_const": "VpsAdmin::API::Resources::DnsTsigKey",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/dns_tsig_key.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsTsigKey::Index",
+    "resource_const": "VpsAdmin::API::Resources::DnsTsigKey",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/dns_tsig_key.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsTsigKey::Show",
+    "resource_const": "VpsAdmin::API::Resources::DnsTsigKey",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/dns_tsig_key.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsZone::Create",
+    "resource_const": "VpsAdmin::API::Resources::DnsZone",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/dns_zone.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsZone::Delete",
+    "resource_const": "VpsAdmin::API::Resources::DnsZone",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/dns_zone.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsZone::Index",
+    "resource_const": "VpsAdmin::API::Resources::DnsZone",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/dns_zone.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsZone::Show",
+    "resource_const": "VpsAdmin::API::Resources::DnsZone",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/dns_zone.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsZone::Update",
+    "resource_const": "VpsAdmin::API::Resources::DnsZone",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/dns_zone.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsZoneTransfer::Create",
+    "resource_const": "VpsAdmin::API::Resources::DnsZoneTransfer",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/dns_zone_transfer.rb",
+    "signals": [
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied')",
+        "line": 101
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsZoneTransfer::Delete",
+    "resource_const": "VpsAdmin::API::Resources::DnsZoneTransfer",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/dns_zone_transfer.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsZoneTransfer::Index",
+    "resource_const": "VpsAdmin::API::Resources::DnsZoneTransfer",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/dns_zone_transfer.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnsZoneTransfer::Show",
+    "resource_const": "VpsAdmin::API::Resources::DnsZoneTransfer",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/dns_zone_transfer.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnssecRecord::Index",
+    "resource_const": "VpsAdmin::API::Resources::DnssecRecord",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/dnssec_record.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::DnssecRecord::Show",
+    "resource_const": "VpsAdmin::API::Resources::DnssecRecord",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/dnssec_record.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Environment::Create",
+    "resource_const": "VpsAdmin::API::Resources::Environment",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/environment.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Environment::Index",
+    "resource_const": "VpsAdmin::API::Resources::Environment",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/environment.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Environment::Show",
+    "resource_const": "VpsAdmin::API::Resources::Environment",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/environment.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Environment::Update",
+    "resource_const": "VpsAdmin::API::Resources::Environment",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/environment.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Environment::DatasetPlan::Index",
+    "resource_const": "VpsAdmin::API::Resources::Environment::DatasetPlan",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/environment.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Environment::DatasetPlan::Show",
+    "resource_const": "VpsAdmin::API::Resources::Environment::DatasetPlan",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/environment.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Export::Create",
+    "resource_const": "VpsAdmin::API::Resources::Export",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/export.rb",
+    "signals": [
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied') if !current_user.role == :admin && ds.user_id != current_user.id",
+        "line": 138
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Export::Delete",
+    "resource_const": "VpsAdmin::API::Resources::Export",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/export.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Export::Index",
+    "resource_const": "VpsAdmin::API::Resources::Export",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/export.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Export::Show",
+    "resource_const": "VpsAdmin::API::Resources::Export",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/export.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Export::Update",
+    "resource_const": "VpsAdmin::API::Resources::Export",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/export.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Export::Host::Create",
+    "resource_const": "VpsAdmin::API::Resources::Export::Host",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/export.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Export::Host::Delete",
+    "resource_const": "VpsAdmin::API::Resources::Export::Host",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/export.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Export::Host::Index",
+    "resource_const": "VpsAdmin::API::Resources::Export::Host",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/export.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Export::Host::Show",
+    "resource_const": "VpsAdmin::API::Resources::Export::Host",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/export.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Export::Host::Update",
+    "resource_const": "VpsAdmin::API::Resources::Export::Host",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/export.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::ExportOutage::Index",
+    "resource_const": "VpsAdmin::API::Resources::ExportOutage",
+    "action_class": "Index",
+    "file": "plugins/outage_reports/api/resources/export_outage.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::ExportOutage::Show",
+    "resource_const": "VpsAdmin::API::Resources::ExportOutage",
+    "action_class": "Show",
+    "file": "plugins/outage_reports/api/resources/export_outage.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::HelpBox::Create",
+    "resource_const": "VpsAdmin::API::Resources::HelpBox",
+    "action_class": "Create",
+    "file": "plugins/webui/api/resources/help_box.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::HelpBox::Delete",
+    "resource_const": "VpsAdmin::API::Resources::HelpBox",
+    "action_class": "Delete",
+    "file": "plugins/webui/api/resources/help_box.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::HelpBox::Index",
+    "resource_const": "VpsAdmin::API::Resources::HelpBox",
+    "action_class": "Index",
+    "file": "plugins/webui/api/resources/help_box.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::HelpBox::Show",
+    "resource_const": "VpsAdmin::API::Resources::HelpBox",
+    "action_class": "Show",
+    "file": "plugins/webui/api/resources/help_box.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::HelpBox::Update",
+    "resource_const": "VpsAdmin::API::Resources::HelpBox",
+    "action_class": "Update",
+    "file": "plugins/webui/api/resources/help_box.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::HostIpAddress::Assign",
+    "resource_const": "VpsAdmin::API::Resources::HostIpAddress",
+    "action_class": "Assign",
+    "file": "api/lib/vpsadmin/api/resources/host_ip_address.rb",
+    "signals": [
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied')",
+        "line": 340
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::HostIpAddress::Create",
+    "resource_const": "VpsAdmin::API::Resources::HostIpAddress",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/host_ip_address.rb",
+    "signals": [
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied') if current_user.role != :admin && ip.current_owner != current_user",
+        "line": 239
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::HostIpAddress::Delete",
+    "resource_const": "VpsAdmin::API::Resources::HostIpAddress",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/host_ip_address.rb",
+    "signals": [
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied') if current_user.role != :admin && host.current_owner != current_user",
+        "line": 303
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::HostIpAddress::Free",
+    "resource_const": "VpsAdmin::API::Resources::HostIpAddress",
+    "action_class": "Free",
+    "file": "api/lib/vpsadmin/api/resources/host_ip_address.rb",
+    "signals": [
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied')",
+        "line": 382
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::HostIpAddress::Index",
+    "resource_const": "VpsAdmin::API::Resources::HostIpAddress",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/host_ip_address.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::HostIpAddress::Show",
+    "resource_const": "VpsAdmin::API::Resources::HostIpAddress",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/host_ip_address.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::HostIpAddress::Update",
+    "resource_const": "VpsAdmin::API::Resources::HostIpAddress",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/host_ip_address.rb",
+    "signals": [
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied') if current_user.role != :admin && host.current_owner != current_user",
+        "line": 266
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::IncidentReport::Create",
+    "resource_const": "VpsAdmin::API::Resources::IncidentReport",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/incident_report.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::IncidentReport::Index",
+    "resource_const": "VpsAdmin::API::Resources::IncidentReport",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/incident_report.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::IncidentReport::Show",
+    "resource_const": "VpsAdmin::API::Resources::IncidentReport",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/incident_report.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::IncomingPayment::Index",
+    "resource_const": "VpsAdmin::API::Resources::IncomingPayment",
+    "action_class": "Index",
+    "file": "plugins/payments/api/resources/incoming_payment.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::IncomingPayment::Show",
+    "resource_const": "VpsAdmin::API::Resources::IncomingPayment",
+    "action_class": "Show",
+    "file": "plugins/payments/api/resources/incoming_payment.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::IncomingPayment::Update",
+    "resource_const": "VpsAdmin::API::Resources::IncomingPayment",
+    "action_class": "Update",
+    "file": "plugins/payments/api/resources/incoming_payment.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::IpAddress::Assign",
+    "resource_const": "VpsAdmin::API::Resources::IpAddress",
+    "action_class": "Assign",
+    "file": "api/lib/vpsadmin/api/resources/ip_address.rb",
+    "signals": [
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied')",
+        "line": 325
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::IpAddress::AssignWithHostAddress",
+    "resource_const": "VpsAdmin::API::Resources::IpAddress",
+    "action_class": "AssignWithHostAddress",
+    "file": "api/lib/vpsadmin/api/resources/ip_address.rb",
+    "signals": [
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied')",
+        "line": 382
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::IpAddress::Create",
+    "resource_const": "VpsAdmin::API::Resources::IpAddress",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/ip_address.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::IpAddress::Free",
+    "resource_const": "VpsAdmin::API::Resources::IpAddress",
+    "action_class": "Free",
+    "file": "api/lib/vpsadmin/api/resources/ip_address.rb",
+    "signals": [
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied')",
+        "line": 434
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::IpAddress::Index",
+    "resource_const": "VpsAdmin::API::Resources::IpAddress",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/ip_address.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::IpAddress::Show",
+    "resource_const": "VpsAdmin::API::Resources::IpAddress",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/ip_address.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::IpAddress::Update",
+    "resource_const": "VpsAdmin::API::Resources::IpAddress",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/ip_address.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::IpAddressAssignment::Index",
+    "resource_const": "VpsAdmin::API::Resources::IpAddressAssignment",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/ip_address_assignment.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::IpAddressAssignment::Show",
+    "resource_const": "VpsAdmin::API::Resources::IpAddressAssignment",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/ip_address_assignment.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Language::Index",
+    "resource_const": "VpsAdmin::API::Resources::Language",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/language.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Language::Show",
+    "resource_const": "VpsAdmin::API::Resources::Language",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/language.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Location::Create",
+    "resource_const": "VpsAdmin::API::Resources::Location",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/location.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Location::Index",
+    "resource_const": "VpsAdmin::API::Resources::Location",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/location.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Location::Show",
+    "resource_const": "VpsAdmin::API::Resources::Location",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/location.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Location::Update",
+    "resource_const": "VpsAdmin::API::Resources::Location",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/location.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::LocationNetwork::Create",
+    "resource_const": "VpsAdmin::API::Resources::LocationNetwork",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/location_network.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::LocationNetwork::Delete",
+    "resource_const": "VpsAdmin::API::Resources::LocationNetwork",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/location_network.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::LocationNetwork::Index",
+    "resource_const": "VpsAdmin::API::Resources::LocationNetwork",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/location_network.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::LocationNetwork::Show",
+    "resource_const": "VpsAdmin::API::Resources::LocationNetwork",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/location_network.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::LocationNetwork::Update",
+    "resource_const": "VpsAdmin::API::Resources::LocationNetwork",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/location_network.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MailLog::Index",
+    "resource_const": "VpsAdmin::API::Resources::MailLog",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/mail_log.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MailLog::Show",
+    "resource_const": "VpsAdmin::API::Resources::MailLog",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/mail_log.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MailRecipient::Create",
+    "resource_const": "VpsAdmin::API::Resources::MailRecipient",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/mail_recipient.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MailRecipient::Delete",
+    "resource_const": "VpsAdmin::API::Resources::MailRecipient",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/mail_recipient.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MailRecipient::Index",
+    "resource_const": "VpsAdmin::API::Resources::MailRecipient",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/mail_recipient.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MailRecipient::Show",
+    "resource_const": "VpsAdmin::API::Resources::MailRecipient",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/mail_recipient.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MailRecipient::Update",
+    "resource_const": "VpsAdmin::API::Resources::MailRecipient",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/mail_recipient.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MailTemplate::Create",
+    "resource_const": "VpsAdmin::API::Resources::MailTemplate",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/mail_template.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MailTemplate::Delete",
+    "resource_const": "VpsAdmin::API::Resources::MailTemplate",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/mail_template.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MailTemplate::Index",
+    "resource_const": "VpsAdmin::API::Resources::MailTemplate",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/mail_template.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MailTemplate::Show",
+    "resource_const": "VpsAdmin::API::Resources::MailTemplate",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/mail_template.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MailTemplate::Update",
+    "resource_const": "VpsAdmin::API::Resources::MailTemplate",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/mail_template.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MailTemplate::Recipient::Create",
+    "resource_const": "VpsAdmin::API::Resources::MailTemplate::Recipient",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/mail_template.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MailTemplate::Recipient::Delete",
+    "resource_const": "VpsAdmin::API::Resources::MailTemplate::Recipient",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/mail_template.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MailTemplate::Recipient::Index",
+    "resource_const": "VpsAdmin::API::Resources::MailTemplate::Recipient",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/mail_template.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MailTemplate::Recipient::Show",
+    "resource_const": "VpsAdmin::API::Resources::MailTemplate::Recipient",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/mail_template.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MailTemplate::Translation::Create",
+    "resource_const": "VpsAdmin::API::Resources::MailTemplate::Translation",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/mail_template.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MailTemplate::Translation::Delete",
+    "resource_const": "VpsAdmin::API::Resources::MailTemplate::Translation",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/mail_template.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MailTemplate::Translation::Index",
+    "resource_const": "VpsAdmin::API::Resources::MailTemplate::Translation",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/mail_template.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MailTemplate::Translation::Show",
+    "resource_const": "VpsAdmin::API::Resources::MailTemplate::Translation",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/mail_template.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MailTemplate::Translation::Update",
+    "resource_const": "VpsAdmin::API::Resources::MailTemplate::Translation",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/mail_template.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Mailbox::Create",
+    "resource_const": "VpsAdmin::API::Resources::Mailbox",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/mailbox.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Mailbox::Delete",
+    "resource_const": "VpsAdmin::API::Resources::Mailbox",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/mailbox.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Mailbox::Index",
+    "resource_const": "VpsAdmin::API::Resources::Mailbox",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/mailbox.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Mailbox::Show",
+    "resource_const": "VpsAdmin::API::Resources::Mailbox",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/mailbox.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Mailbox::Update",
+    "resource_const": "VpsAdmin::API::Resources::Mailbox",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/mailbox.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Mailbox::Handler::Create",
+    "resource_const": "VpsAdmin::API::Resources::Mailbox::Handler",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/mailbox.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Mailbox::Handler::Delete",
+    "resource_const": "VpsAdmin::API::Resources::Mailbox::Handler",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/mailbox.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Mailbox::Handler::Index",
+    "resource_const": "VpsAdmin::API::Resources::Mailbox::Handler",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/mailbox.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Mailbox::Handler::Show",
+    "resource_const": "VpsAdmin::API::Resources::Mailbox::Handler",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/mailbox.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Mailbox::Handler::Update",
+    "resource_const": "VpsAdmin::API::Resources::Mailbox::Handler",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/mailbox.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MetricsAccessToken::Create",
+    "resource_const": "VpsAdmin::API::Resources::MetricsAccessToken",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/metrics_access_token.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MetricsAccessToken::Delete",
+    "resource_const": "VpsAdmin::API::Resources::MetricsAccessToken",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/metrics_access_token.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MetricsAccessToken::Index",
+    "resource_const": "VpsAdmin::API::Resources::MetricsAccessToken",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/metrics_access_token.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MetricsAccessToken::Show",
+    "resource_const": "VpsAdmin::API::Resources::MetricsAccessToken",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/metrics_access_token.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MigrationPlan::Cancel",
+    "resource_const": "VpsAdmin::API::Resources::MigrationPlan",
+    "action_class": "Cancel",
+    "file": "api/lib/vpsadmin/api/resources/migration_plan.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MigrationPlan::Create",
+    "resource_const": "VpsAdmin::API::Resources::MigrationPlan",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/migration_plan.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MigrationPlan::Delete",
+    "resource_const": "VpsAdmin::API::Resources::MigrationPlan",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/migration_plan.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MigrationPlan::Index",
+    "resource_const": "VpsAdmin::API::Resources::MigrationPlan",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/migration_plan.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MigrationPlan::Show",
+    "resource_const": "VpsAdmin::API::Resources::MigrationPlan",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/migration_plan.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MigrationPlan::Start",
+    "resource_const": "VpsAdmin::API::Resources::MigrationPlan",
+    "action_class": "Start",
+    "file": "api/lib/vpsadmin/api/resources/migration_plan.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MigrationPlan::VpsMigration::Create",
+    "resource_const": "VpsAdmin::API::Resources::MigrationPlan::VpsMigration",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/migration_plan.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MigrationPlan::VpsMigration::Index",
+    "resource_const": "VpsAdmin::API::Resources::MigrationPlan::VpsMigration",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/migration_plan.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MigrationPlan::VpsMigration::Show",
+    "resource_const": "VpsAdmin::API::Resources::MigrationPlan::VpsMigration",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/migration_plan.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MonitoredEvent::Acknowledge",
+    "resource_const": "VpsAdmin::API::Resources::MonitoredEvent",
+    "action_class": "Acknowledge",
+    "file": "plugins/monitoring/api/resources/monitored_event.rb",
+    "signals": [
+      "level_related",
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MonitoredEvent::Ignore",
+    "resource_const": "VpsAdmin::API::Resources::MonitoredEvent",
+    "action_class": "Ignore",
+    "file": "plugins/monitoring/api/resources/monitored_event.rb",
+    "signals": [
+      "level_related",
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MonitoredEvent::Index",
+    "resource_const": "VpsAdmin::API::Resources::MonitoredEvent",
+    "action_class": "Index",
+    "file": "plugins/monitoring/api/resources/monitored_event.rb",
+    "signals": [
+      "level_related",
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MonitoredEvent::Show",
+    "resource_const": "VpsAdmin::API::Resources::MonitoredEvent",
+    "action_class": "Show",
+    "file": "plugins/monitoring/api/resources/monitored_event.rb",
+    "signals": [
+      "level_related",
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MonitoredEvent::Log::Index",
+    "resource_const": "VpsAdmin::API::Resources::MonitoredEvent::Log",
+    "action_class": "Index",
+    "file": "plugins/monitoring/api/resources/monitored_event.rb",
+    "signals": [
+      "level_related",
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::MonitoredEvent::Log::Show",
+    "resource_const": "VpsAdmin::API::Resources::MonitoredEvent::Log",
+    "action_class": "Show",
+    "file": "plugins/monitoring/api/resources/monitored_event.rb",
+    "signals": [
+      "level_related",
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Network::AddAddresses",
+    "resource_const": "VpsAdmin::API::Resources::Network",
+    "action_class": "AddAddresses",
+    "file": "api/lib/vpsadmin/api/resources/network.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Network::Create",
+    "resource_const": "VpsAdmin::API::Resources::Network",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/network.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Network::Index",
+    "resource_const": "VpsAdmin::API::Resources::Network",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/network.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Network::Show",
+    "resource_const": "VpsAdmin::API::Resources::Network",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/network.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Network::Update",
+    "resource_const": "VpsAdmin::API::Resources::Network",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/network.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::NetworkInterface::Index",
+    "resource_const": "VpsAdmin::API::Resources::NetworkInterface",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/network_interface.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::NetworkInterface::Show",
+    "resource_const": "VpsAdmin::API::Resources::NetworkInterface",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/network_interface.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::NetworkInterface::Update",
+    "resource_const": "VpsAdmin::API::Resources::NetworkInterface",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/network_interface.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::NetworkInterfaceAccounting::Index",
+    "resource_const": "VpsAdmin::API::Resources::NetworkInterfaceAccounting",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/network_interface_accounting.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::NetworkInterfaceAccounting::UserTop",
+    "resource_const": "VpsAdmin::API::Resources::NetworkInterfaceAccounting",
+    "action_class": "UserTop",
+    "file": "api/lib/vpsadmin/api/resources/network_interface_accounting.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::NetworkInterfaceMonitor::Index",
+    "resource_const": "VpsAdmin::API::Resources::NetworkInterfaceMonitor",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/network_interface_monitor.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::NetworkInterfaceMonitor::Show",
+    "resource_const": "VpsAdmin::API::Resources::NetworkInterfaceMonitor",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/network_interface_monitor.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::NewsLog::Create",
+    "resource_const": "VpsAdmin::API::Resources::NewsLog",
+    "action_class": "Create",
+    "file": "plugins/newslog/api/resources/news_log.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::NewsLog::Delete",
+    "resource_const": "VpsAdmin::API::Resources::NewsLog",
+    "action_class": "Delete",
+    "file": "plugins/newslog/api/resources/news_log.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::NewsLog::Index",
+    "resource_const": "VpsAdmin::API::Resources::NewsLog",
+    "action_class": "Index",
+    "file": "plugins/newslog/api/resources/news_log.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::NewsLog::Show",
+    "resource_const": "VpsAdmin::API::Resources::NewsLog",
+    "action_class": "Show",
+    "file": "plugins/newslog/api/resources/news_log.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::NewsLog::Update",
+    "resource_const": "VpsAdmin::API::Resources::NewsLog",
+    "action_class": "Update",
+    "file": "plugins/newslog/api/resources/news_log.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Node::Create",
+    "resource_const": "VpsAdmin::API::Resources::Node",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/node.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Node::Evacuate",
+    "resource_const": "VpsAdmin::API::Resources::Node",
+    "action_class": "Evacuate",
+    "file": "api/lib/vpsadmin/api/resources/node.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Node::Index",
+    "resource_const": "VpsAdmin::API::Resources::Node",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/node.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Node::OverviewList",
+    "resource_const": "VpsAdmin::API::Resources::Node",
+    "action_class": "OverviewList",
+    "file": "api/lib/vpsadmin/api/resources/node.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Node::PublicStatus",
+    "resource_const": "VpsAdmin::API::Resources::Node",
+    "action_class": "PublicStatus",
+    "file": "api/lib/vpsadmin/api/resources/node.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Node::Show",
+    "resource_const": "VpsAdmin::API::Resources::Node",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/node.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Node::Update",
+    "resource_const": "VpsAdmin::API::Resources::Node",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/node.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Node::Status::Index",
+    "resource_const": "VpsAdmin::API::Resources::Node::Status",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/node.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Node::Status::Show",
+    "resource_const": "VpsAdmin::API::Resources::Node::Status",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/node.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Oauth2Client::Create",
+    "resource_const": "VpsAdmin::API::Resources::Oauth2Client",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/oauth2_client.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Oauth2Client::Delete",
+    "resource_const": "VpsAdmin::API::Resources::Oauth2Client",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/oauth2_client.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Oauth2Client::Index",
+    "resource_const": "VpsAdmin::API::Resources::Oauth2Client",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/oauth2_client.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Oauth2Client::Show",
+    "resource_const": "VpsAdmin::API::Resources::Oauth2Client",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/oauth2_client.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Oauth2Client::Update",
+    "resource_const": "VpsAdmin::API::Resources::Oauth2Client",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/oauth2_client.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::ObjectHistory::Index",
+    "resource_const": "VpsAdmin::API::Resources::ObjectHistory",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/object_history.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::ObjectHistory::Show",
+    "resource_const": "VpsAdmin::API::Resources::ObjectHistory",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/object_history.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OomReport::Index",
+    "resource_const": "VpsAdmin::API::Resources::OomReport",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/oom_report.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OomReport::Show",
+    "resource_const": "VpsAdmin::API::Resources::OomReport",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/oom_report.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OomReport::Stat::Index",
+    "resource_const": "VpsAdmin::API::Resources::OomReport::Stat",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/oom_report.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OomReport::Stat::Show",
+    "resource_const": "VpsAdmin::API::Resources::OomReport::Stat",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/oom_report.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OomReport::Task::Index",
+    "resource_const": "VpsAdmin::API::Resources::OomReport::Task",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/oom_report.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OomReport::Task::Show",
+    "resource_const": "VpsAdmin::API::Resources::OomReport::Task",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/oom_report.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OomReport::Usage::Index",
+    "resource_const": "VpsAdmin::API::Resources::OomReport::Usage",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/oom_report.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OomReport::Usage::Show",
+    "resource_const": "VpsAdmin::API::Resources::OomReport::Usage",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/oom_report.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OomReportRule::Create",
+    "resource_const": "VpsAdmin::API::Resources::OomReportRule",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/oom_report_rule.rb",
+    "signals": [
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied')",
+        "line": 90
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OomReportRule::Delete",
+    "resource_const": "VpsAdmin::API::Resources::OomReportRule",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/oom_report_rule.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OomReportRule::Index",
+    "resource_const": "VpsAdmin::API::Resources::OomReportRule",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/oom_report_rule.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OomReportRule::Show",
+    "resource_const": "VpsAdmin::API::Resources::OomReportRule",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/oom_report_rule.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OomReportRule::Update",
+    "resource_const": "VpsAdmin::API::Resources::OomReportRule",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/oom_report_rule.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OsFamily::Create",
+    "resource_const": "VpsAdmin::API::Resources::OsFamily",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/os_family.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OsFamily::Delete",
+    "resource_const": "VpsAdmin::API::Resources::OsFamily",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/os_family.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OsFamily::Index",
+    "resource_const": "VpsAdmin::API::Resources::OsFamily",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/os_family.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OsFamily::Show",
+    "resource_const": "VpsAdmin::API::Resources::OsFamily",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/os_family.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OsFamily::Update",
+    "resource_const": "VpsAdmin::API::Resources::OsFamily",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/os_family.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OsTemplate::Create",
+    "resource_const": "VpsAdmin::API::Resources::OsTemplate",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/os_template.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OsTemplate::Delete",
+    "resource_const": "VpsAdmin::API::Resources::OsTemplate",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/os_template.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OsTemplate::Index",
+    "resource_const": "VpsAdmin::API::Resources::OsTemplate",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/os_template.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OsTemplate::Show",
+    "resource_const": "VpsAdmin::API::Resources::OsTemplate",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/os_template.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OsTemplate::Update",
+    "resource_const": "VpsAdmin::API::Resources::OsTemplate",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/os_template.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Outage::Create",
+    "resource_const": "VpsAdmin::API::Resources::Outage",
+    "action_class": "Create",
+    "file": "plugins/outage_reports/api/resources/outage.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Outage::Index",
+    "resource_const": "VpsAdmin::API::Resources::Outage",
+    "action_class": "Index",
+    "file": "plugins/outage_reports/api/resources/outage.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Outage::RebuildAffectedVps",
+    "resource_const": "VpsAdmin::API::Resources::Outage",
+    "action_class": "RebuildAffectedVps",
+    "file": "plugins/outage_reports/api/resources/outage.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Outage::Show",
+    "resource_const": "VpsAdmin::API::Resources::Outage",
+    "action_class": "Show",
+    "file": "plugins/outage_reports/api/resources/outage.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Outage::Update",
+    "resource_const": "VpsAdmin::API::Resources::Outage",
+    "action_class": "Update",
+    "file": "plugins/outage_reports/api/resources/outage.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Outage::Entity::Create",
+    "resource_const": "VpsAdmin::API::Resources::Outage::Entity",
+    "action_class": "Create",
+    "file": "plugins/outage_reports/api/resources/outage.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Outage::Entity::Delete",
+    "resource_const": "VpsAdmin::API::Resources::Outage::Entity",
+    "action_class": "Delete",
+    "file": "plugins/outage_reports/api/resources/outage.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Outage::Entity::Index",
+    "resource_const": "VpsAdmin::API::Resources::Outage::Entity",
+    "action_class": "Index",
+    "file": "plugins/outage_reports/api/resources/outage.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Outage::Entity::Show",
+    "resource_const": "VpsAdmin::API::Resources::Outage::Entity",
+    "action_class": "Show",
+    "file": "plugins/outage_reports/api/resources/outage.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Outage::Handler::Create",
+    "resource_const": "VpsAdmin::API::Resources::Outage::Handler",
+    "action_class": "Create",
+    "file": "plugins/outage_reports/api/resources/outage.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Outage::Handler::Delete",
+    "resource_const": "VpsAdmin::API::Resources::Outage::Handler",
+    "action_class": "Delete",
+    "file": "plugins/outage_reports/api/resources/outage.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Outage::Handler::Index",
+    "resource_const": "VpsAdmin::API::Resources::Outage::Handler",
+    "action_class": "Index",
+    "file": "plugins/outage_reports/api/resources/outage.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Outage::Handler::Show",
+    "resource_const": "VpsAdmin::API::Resources::Outage::Handler",
+    "action_class": "Show",
+    "file": "plugins/outage_reports/api/resources/outage.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Outage::Handler::Update",
+    "resource_const": "VpsAdmin::API::Resources::Outage::Handler",
+    "action_class": "Update",
+    "file": "plugins/outage_reports/api/resources/outage.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OutageUpdate::Create",
+    "resource_const": "VpsAdmin::API::Resources::OutageUpdate",
+    "action_class": "Create",
+    "file": "plugins/outage_reports/api/resources/outage_update.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OutageUpdate::Index",
+    "resource_const": "VpsAdmin::API::Resources::OutageUpdate",
+    "action_class": "Index",
+    "file": "plugins/outage_reports/api/resources/outage_update.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::OutageUpdate::Show",
+    "resource_const": "VpsAdmin::API::Resources::OutageUpdate",
+    "action_class": "Show",
+    "file": "plugins/outage_reports/api/resources/outage_update.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::PaymentStats::EstimateIncome",
+    "resource_const": "VpsAdmin::API::Resources::PaymentStats",
+    "action_class": "EstimateIncome",
+    "file": "plugins/payments/api/resources/payment_stats.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Pool::Create",
+    "resource_const": "VpsAdmin::API::Resources::Pool",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/pool.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Pool::Index",
+    "resource_const": "VpsAdmin::API::Resources::Pool",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/pool.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Pool::Show",
+    "resource_const": "VpsAdmin::API::Resources::Pool",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/pool.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::SnapshotDownload::Create",
+    "resource_const": "VpsAdmin::API::Resources::SnapshotDownload",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/snapshot_download.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::SnapshotDownload::Delete",
+    "resource_const": "VpsAdmin::API::Resources::SnapshotDownload",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/snapshot_download.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::SnapshotDownload::Index",
+    "resource_const": "VpsAdmin::API::Resources::SnapshotDownload",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/snapshot_download.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::SnapshotDownload::Show",
+    "resource_const": "VpsAdmin::API::Resources::SnapshotDownload",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/snapshot_download.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::SystemConfig::Index",
+    "resource_const": "VpsAdmin::API::Resources::SystemConfig",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/system_config.rb",
+    "signals": [
+      "level_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::SystemConfig::Show",
+    "resource_const": "VpsAdmin::API::Resources::SystemConfig",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/system_config.rb",
+    "signals": [
+      "level_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::SystemConfig::Update",
+    "resource_const": "VpsAdmin::API::Resources::SystemConfig",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/system_config.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Transaction::Index",
+    "resource_const": "VpsAdmin::API::Resources::Transaction",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/transaction.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Transaction::Show",
+    "resource_const": "VpsAdmin::API::Resources::Transaction",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/transaction.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::TransactionChain::Index",
+    "resource_const": "VpsAdmin::API::Resources::TransactionChain",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/transaction_chain.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::TransactionChain::Show",
+    "resource_const": "VpsAdmin::API::Resources::TransactionChain",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/transaction_chain.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::Create",
+    "resource_const": "VpsAdmin::API::Resources::User",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::Current",
+    "resource_const": "VpsAdmin::API::Resources::User",
+    "action_class": "Current",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::Delete",
+    "resource_const": "VpsAdmin::API::Resources::User",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::GetPaymentInstructions",
+    "resource_const": "VpsAdmin::API::Resources::User",
+    "action_class": "GetPaymentInstructions",
+    "file": "plugins/payments/api/resources/override.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 39
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::Index",
+    "resource_const": "VpsAdmin::API::Resources::User",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::Show",
+    "resource_const": "VpsAdmin::API::Resources::User",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 231
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::Touch",
+    "resource_const": "VpsAdmin::API::Resources::User",
+    "action_class": "Touch",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 210
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::Update",
+    "resource_const": "VpsAdmin::API::Resources::User",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 271
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::ClusterResource::Create",
+    "resource_const": "VpsAdmin::API::Resources::User::ClusterResource",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::ClusterResource::Index",
+    "resource_const": "VpsAdmin::API::Resources::User::ClusterResource",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::ClusterResource::Show",
+    "resource_const": "VpsAdmin::API::Resources::User::ClusterResource",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::EnvironmentConfig::Index",
+    "resource_const": "VpsAdmin::API::Resources::User::EnvironmentConfig",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied') if current_user.role != :admin && params[:user_id].to_i != current_user.id",
+        "line": 391
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::EnvironmentConfig::Show",
+    "resource_const": "VpsAdmin::API::Resources::User::EnvironmentConfig",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied') if current_user.role != :admin && params[:user_id].to_i != current_user.id",
+        "line": 423
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::EnvironmentConfig::Update",
+    "resource_const": "VpsAdmin::API::Resources::User::EnvironmentConfig",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::KnownDevice::Delete",
+    "resource_const": "VpsAdmin::API::Resources::User::KnownDevice",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 653
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::KnownDevice::Index",
+    "resource_const": "VpsAdmin::API::Resources::User::KnownDevice",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 605
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::KnownDevice::Show",
+    "resource_const": "VpsAdmin::API::Resources::User::KnownDevice",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 632
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::MailRoleRecipient::Index",
+    "resource_const": "VpsAdmin::API::Resources::User::MailRoleRecipient",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('Access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 1183
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::MailRoleRecipient::Show",
+    "resource_const": "VpsAdmin::API::Resources::User::MailRoleRecipient",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('Access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 1209
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::MailRoleRecipient::Update",
+    "resource_const": "VpsAdmin::API::Resources::User::MailRoleRecipient",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('Access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 1238
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::MailTemplateRecipient::Index",
+    "resource_const": "VpsAdmin::API::Resources::User::MailTemplateRecipient",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('Access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 1276
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::MailTemplateRecipient::Show",
+    "resource_const": "VpsAdmin::API::Resources::User::MailTemplateRecipient",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('Access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 1302
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::MailTemplateRecipient::Update",
+    "resource_const": "VpsAdmin::API::Resources::User::MailTemplateRecipient",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('Access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 1331
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::PublicKey::Create",
+    "resource_const": "VpsAdmin::API::Resources::User::PublicKey",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('Access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 1100
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::PublicKey::Delete",
+    "resource_const": "VpsAdmin::API::Resources::User::PublicKey",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('Access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 1150
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::PublicKey::Index",
+    "resource_const": "VpsAdmin::API::Resources::User::PublicKey",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('Access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 1045
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::PublicKey::Show",
+    "resource_const": "VpsAdmin::API::Resources::User::PublicKey",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('Access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 1071
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::PublicKey::Update",
+    "resource_const": "VpsAdmin::API::Resources::User::PublicKey",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('Access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 1127
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::TotpDevice::Confirm",
+    "resource_const": "VpsAdmin::API::Resources::User::TotpDevice",
+    "action_class": "Confirm",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 789
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::TotpDevice::Create",
+    "resource_const": "VpsAdmin::API::Resources::User::TotpDevice",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 762
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::TotpDevice::Delete",
+    "resource_const": "VpsAdmin::API::Resources::User::TotpDevice",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 867
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::TotpDevice::Index",
+    "resource_const": "VpsAdmin::API::Resources::User::TotpDevice",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 698
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::TotpDevice::Show",
+    "resource_const": "VpsAdmin::API::Resources::User::TotpDevice",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 731
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::TotpDevice::Update",
+    "resource_const": "VpsAdmin::API::Resources::User::TotpDevice",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied')",
+        "line": 825
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::WebauthnCredential::Delete",
+    "resource_const": "VpsAdmin::API::Resources::User::WebauthnCredential",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 994
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::WebauthnCredential::Index",
+    "resource_const": "VpsAdmin::API::Resources::User::WebauthnCredential",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 913
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::WebauthnCredential::Show",
+    "resource_const": "VpsAdmin::API::Resources::User::WebauthnCredential",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied') if current_user.role != :admin && current_user.id != params[:user_id].to_i",
+        "line": 942
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::User::WebauthnCredential::Update",
+    "resource_const": "VpsAdmin::API::Resources::User::WebauthnCredential",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/user.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied')",
+        "line": 972
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserAccount::Index",
+    "resource_const": "VpsAdmin::API::Resources::UserAccount",
+    "action_class": "Index",
+    "file": "plugins/payments/api/resources/user_account.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserAccount::Show",
+    "resource_const": "VpsAdmin::API::Resources::UserAccount",
+    "action_class": "Show",
+    "file": "plugins/payments/api/resources/user_account.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserAccount::Update",
+    "resource_const": "VpsAdmin::API::Resources::UserAccount",
+    "action_class": "Update",
+    "file": "plugins/payments/api/resources/user_account.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserClusterResourcePackage::Create",
+    "resource_const": "VpsAdmin::API::Resources::UserClusterResourcePackage",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/user_cluster_resource_package.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserClusterResourcePackage::Delete",
+    "resource_const": "VpsAdmin::API::Resources::UserClusterResourcePackage",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/user_cluster_resource_package.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserClusterResourcePackage::Index",
+    "resource_const": "VpsAdmin::API::Resources::UserClusterResourcePackage",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/user_cluster_resource_package.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserClusterResourcePackage::Show",
+    "resource_const": "VpsAdmin::API::Resources::UserClusterResourcePackage",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/user_cluster_resource_package.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserClusterResourcePackage::Update",
+    "resource_const": "VpsAdmin::API::Resources::UserClusterResourcePackage",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/user_cluster_resource_package.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserClusterResourcePackage::Item::Index",
+    "resource_const": "VpsAdmin::API::Resources::UserClusterResourcePackage::Item",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/user_cluster_resource_package.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserClusterResourcePackage::Item::Show",
+    "resource_const": "VpsAdmin::API::Resources::UserClusterResourcePackage::Item",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/user_cluster_resource_package.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserNamespace::Index",
+    "resource_const": "VpsAdmin::API::Resources::UserNamespace",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/user_namespace.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserNamespace::Show",
+    "resource_const": "VpsAdmin::API::Resources::UserNamespace",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/user_namespace.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserNamespaceMap::Create",
+    "resource_const": "VpsAdmin::API::Resources::UserNamespaceMap",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/user_namespace_map.rb",
+    "signals": [
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied') if !current_user.role == :admin && input[:user_namespace].user_id != current_user.id",
+        "line": 99
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserNamespaceMap::Delete",
+    "resource_const": "VpsAdmin::API::Resources::UserNamespaceMap",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/user_namespace_map.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserNamespaceMap::Index",
+    "resource_const": "VpsAdmin::API::Resources::UserNamespaceMap",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/user_namespace_map.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserNamespaceMap::Show",
+    "resource_const": "VpsAdmin::API::Resources::UserNamespaceMap",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/user_namespace_map.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserNamespaceMap::Update",
+    "resource_const": "VpsAdmin::API::Resources::UserNamespaceMap",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/user_namespace_map.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserNamespaceMap::Entry::Create",
+    "resource_const": "VpsAdmin::API::Resources::UserNamespaceMap::Entry",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/user_namespace_map.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied')",
+        "line": 255
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserNamespaceMap::Entry::Delete",
+    "resource_const": "VpsAdmin::API::Resources::UserNamespaceMap::Entry",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/user_namespace_map.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserNamespaceMap::Entry::Index",
+    "resource_const": "VpsAdmin::API::Resources::UserNamespaceMap::Entry",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/user_namespace_map.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserNamespaceMap::Entry::Show",
+    "resource_const": "VpsAdmin::API::Resources::UserNamespaceMap::Entry",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/user_namespace_map.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserNamespaceMap::Entry::Update",
+    "resource_const": "VpsAdmin::API::Resources::UserNamespaceMap::Entry",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/user_namespace_map.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserOutage::Index",
+    "resource_const": "VpsAdmin::API::Resources::UserOutage",
+    "action_class": "Index",
+    "file": "plugins/outage_reports/api/resources/user_outage.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserOutage::Show",
+    "resource_const": "VpsAdmin::API::Resources::UserOutage",
+    "action_class": "Show",
+    "file": "plugins/outage_reports/api/resources/user_outage.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserPayment::Create",
+    "resource_const": "VpsAdmin::API::Resources::UserPayment",
+    "action_class": "Create",
+    "file": "plugins/payments/api/resources/user_payment.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserPayment::Index",
+    "resource_const": "VpsAdmin::API::Resources::UserPayment",
+    "action_class": "Index",
+    "file": "plugins/payments/api/resources/user_payment.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserPayment::Show",
+    "resource_const": "VpsAdmin::API::Resources::UserPayment",
+    "action_class": "Show",
+    "file": "plugins/payments/api/resources/user_payment.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserRequest::Change::Create",
+    "resource_const": "VpsAdmin::API::Resources::UserRequest::Change",
+    "action_class": "Create",
+    "file": "plugins/requests/api/resources/base.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserRequest::Change::Index",
+    "resource_const": "VpsAdmin::API::Resources::UserRequest::Change",
+    "action_class": "Index",
+    "file": "plugins/requests/api/resources/base.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserRequest::Change::Resolve",
+    "resource_const": "VpsAdmin::API::Resources::UserRequest::Change",
+    "action_class": "Resolve",
+    "file": "plugins/requests/api/resources/base.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserRequest::Change::Show",
+    "resource_const": "VpsAdmin::API::Resources::UserRequest::Change",
+    "action_class": "Show",
+    "file": "plugins/requests/api/resources/base.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserRequest::Registration::Create",
+    "resource_const": "VpsAdmin::API::Resources::UserRequest::Registration",
+    "action_class": "Create",
+    "file": "plugins/requests/api/resources/base.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserRequest::Registration::Index",
+    "resource_const": "VpsAdmin::API::Resources::UserRequest::Registration",
+    "action_class": "Index",
+    "file": "plugins/requests/api/resources/base.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserRequest::Registration::Preview",
+    "resource_const": "VpsAdmin::API::Resources::UserRequest::Registration",
+    "action_class": "Preview",
+    "file": "plugins/requests/api/resources/registration.rb",
+    "signals": [
+      "owner_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserRequest::Registration::Resolve",
+    "resource_const": "VpsAdmin::API::Resources::UserRequest::Registration",
+    "action_class": "Resolve",
+    "file": "plugins/requests/api/resources/base.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserRequest::Registration::Show",
+    "resource_const": "VpsAdmin::API::Resources::UserRequest::Registration",
+    "action_class": "Show",
+    "file": "plugins/requests/api/resources/base.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserRequest::Registration::Update",
+    "resource_const": "VpsAdmin::API::Resources::UserRequest::Registration",
+    "action_class": "Update",
+    "file": "plugins/requests/api/resources/registration.rb",
+    "signals": [
+      "owner_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserSession::Close",
+    "resource_const": "VpsAdmin::API::Resources::UserSession",
+    "action_class": "Close",
+    "file": "api/lib/vpsadmin/api/resources/user_session.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserSession::Create",
+    "resource_const": "VpsAdmin::API::Resources::UserSession",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/user_session.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserSession::Index",
+    "resource_const": "VpsAdmin::API::Resources::UserSession",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/user_session.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserSession::Show",
+    "resource_const": "VpsAdmin::API::Resources::UserSession",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/user_session.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::UserSession::Update",
+    "resource_const": "VpsAdmin::API::Resources::UserSession",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/user_session.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Boot",
+    "resource_const": "VpsAdmin::API::Resources::VPS",
+    "action_class": "Boot",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Clone",
+    "resource_const": "VpsAdmin::API::Resources::VPS",
+    "action_class": "Clone",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('insufficient permission to clone into this VPS')",
+        "line": 891
+      },
+      {
+        "code": "error!('insufficient permission to create a VPS in this environment')",
+        "line": 915
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Create",
+    "resource_const": "VpsAdmin::API::Resources::VPS",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('insufficient permission to create a VPS in this environment')",
+        "line": 293
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Delete",
+    "resource_const": "VpsAdmin::API::Resources::VPS",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::DeployPublicKey",
+    "resource_const": "VpsAdmin::API::Resources::VPS",
+    "action_class": "DeployPublicKey",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Index",
+    "resource_const": "VpsAdmin::API::Resources::VPS",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Migrate",
+    "resource_const": "VpsAdmin::API::Resources::VPS",
+    "action_class": "Migrate",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Passwd",
+    "resource_const": "VpsAdmin::API::Resources::VPS",
+    "action_class": "Passwd",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Reinstall",
+    "resource_const": "VpsAdmin::API::Resources::VPS",
+    "action_class": "Reinstall",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Replace",
+    "resource_const": "VpsAdmin::API::Resources::VPS",
+    "action_class": "Replace",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Restart",
+    "resource_const": "VpsAdmin::API::Resources::VPS",
+    "action_class": "Restart",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Show",
+    "resource_const": "VpsAdmin::API::Resources::VPS",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Start",
+    "resource_const": "VpsAdmin::API::Resources::VPS",
+    "action_class": "Start",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Stop",
+    "resource_const": "VpsAdmin::API::Resources::VPS",
+    "action_class": "Stop",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::SwapWith",
+    "resource_const": "VpsAdmin::API::Resources::VPS",
+    "action_class": "SwapWith",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied')",
+        "line": 980
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Update",
+    "resource_const": "VpsAdmin::API::Resources::VPS",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::ConsoleToken::Create",
+    "resource_const": "VpsAdmin::API::Resources::VPS::ConsoleToken",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::ConsoleToken::Delete",
+    "resource_const": "VpsAdmin::API::Resources::VPS::ConsoleToken",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::ConsoleToken::Show",
+    "resource_const": "VpsAdmin::API::Resources::VPS::ConsoleToken",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Feature::Index",
+    "resource_const": "VpsAdmin::API::Resources::VPS::Feature",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Feature::Show",
+    "resource_const": "VpsAdmin::API::Resources::VPS::Feature",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Feature::Update",
+    "resource_const": "VpsAdmin::API::Resources::VPS::Feature",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Feature::UpdateAll",
+    "resource_const": "VpsAdmin::API::Resources::VPS::Feature",
+    "action_class": "UpdateAll",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::MaintenanceWindow::Index",
+    "resource_const": "VpsAdmin::API::Resources::VPS::MaintenanceWindow",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::MaintenanceWindow::Show",
+    "resource_const": "VpsAdmin::API::Resources::VPS::MaintenanceWindow",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::MaintenanceWindow::Update",
+    "resource_const": "VpsAdmin::API::Resources::VPS::MaintenanceWindow",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::MaintenanceWindow::UpdateAll",
+    "resource_const": "VpsAdmin::API::Resources::VPS::MaintenanceWindow",
+    "action_class": "UpdateAll",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Mount::Create",
+    "resource_const": "VpsAdmin::API::Resources::VPS::Mount",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('insufficient permission to mount selected snapshot')",
+        "line": 1319
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Mount::Delete",
+    "resource_const": "VpsAdmin::API::Resources::VPS::Mount",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Mount::Index",
+    "resource_const": "VpsAdmin::API::Resources::VPS::Mount",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Mount::Show",
+    "resource_const": "VpsAdmin::API::Resources::VPS::Mount",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Mount::Update",
+    "resource_const": "VpsAdmin::API::Resources::VPS::Mount",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::SshHostKey::Index",
+    "resource_const": "VpsAdmin::API::Resources::VPS::SshHostKey",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::SshHostKey::Show",
+    "resource_const": "VpsAdmin::API::Resources::VPS::SshHostKey",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Status::Index",
+    "resource_const": "VpsAdmin::API::Resources::VPS::Status",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VPS::Status::Show",
+    "resource_const": "VpsAdmin::API::Resources::VPS::Status",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/vps.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VpsOutage::Index",
+    "resource_const": "VpsAdmin::API::Resources::VpsOutage",
+    "action_class": "Index",
+    "file": "plugins/outage_reports/api/resources/vps_outage.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VpsOutage::Show",
+    "resource_const": "VpsAdmin::API::Resources::VpsOutage",
+    "action_class": "Show",
+    "file": "plugins/outage_reports/api/resources/vps_outage.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VpsUserData::Create",
+    "resource_const": "VpsAdmin::API::Resources::VpsUserData",
+    "action_class": "Create",
+    "file": "api/lib/vpsadmin/api/resources/vps_user_data.rb",
+    "signals": [
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VpsUserData::Delete",
+    "resource_const": "VpsAdmin::API::Resources::VpsUserData",
+    "action_class": "Delete",
+    "file": "api/lib/vpsadmin/api/resources/vps_user_data.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VpsUserData::Deploy",
+    "resource_const": "VpsAdmin::API::Resources::VpsUserData",
+    "action_class": "Deploy",
+    "file": "api/lib/vpsadmin/api/resources/vps_user_data.rb",
+    "signals": [
+      "owner_related",
+      "role_related",
+      "runtime_checks"
+    ],
+    "runtime_checks": [
+      {
+        "code": "error!('access denied') if input[:vps].user_id != data.user_id",
+        "line": 157
+      }
+    ]
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VpsUserData::Index",
+    "resource_const": "VpsAdmin::API::Resources::VpsUserData",
+    "action_class": "Index",
+    "file": "api/lib/vpsadmin/api/resources/vps_user_data.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VpsUserData::Show",
+    "resource_const": "VpsAdmin::API::Resources::VpsUserData",
+    "action_class": "Show",
+    "file": "api/lib/vpsadmin/api/resources/vps_user_data.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::VpsUserData::Update",
+    "resource_const": "VpsAdmin::API::Resources::VpsUserData",
+    "action_class": "Update",
+    "file": "api/lib/vpsadmin/api/resources/vps_user_data.rb",
+    "signals": [
+      "owner_related",
+      "role_related"
+    ],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Webauthn::Authentication::Begin",
+    "resource_const": "VpsAdmin::API::Resources::Webauthn::Authentication",
+    "action_class": "Begin",
+    "file": "api/lib/vpsadmin/api/resources/webauthn.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Webauthn::Authentication::Finish",
+    "resource_const": "VpsAdmin::API::Resources::Webauthn::Authentication",
+    "action_class": "Finish",
+    "file": "api/lib/vpsadmin/api/resources/webauthn.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Webauthn::Registration::Begin",
+    "resource_const": "VpsAdmin::API::Resources::Webauthn::Registration",
+    "action_class": "Begin",
+    "file": "api/lib/vpsadmin/api/resources/webauthn.rb",
+    "signals": [],
+    "runtime_checks": []
+  },
+  {
+    "action_const": "VpsAdmin::API::Resources::Webauthn::Registration::Finish",
+    "resource_const": "VpsAdmin::API::Resources::Webauthn::Registration",
+    "action_class": "Finish",
+    "file": "api/lib/vpsadmin/api/resources/webauthn.rb",
+    "signals": [],
+    "runtime_checks": []
+  }
+]

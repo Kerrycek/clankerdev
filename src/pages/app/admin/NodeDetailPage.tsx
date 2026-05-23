@@ -1,0 +1,602 @@
+import React, { useMemo, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { useMutation, useQuery } from '@tanstack/react-query';
+
+import {
+  evacuateNode,
+  fetchNode,
+  fetchNodes,
+  fetchNodeStatuses,
+  setNodeMaintenance,
+  type NodeEvacuateResult,
+} from '../../../lib/api/nodes';
+import { fetchActiveTransactionChains, fetchTransactions } from '../../../lib/api/transactions';
+import { fetchPublicNodeStatus } from '../../../lib/api/public';
+import { getMetaActionStateId } from '../../../lib/api/haveapi';
+import { useAppMode } from '../../../app/appMode';
+import { useI18n } from '../../../app/i18n';
+import { DetailShell } from '../../../components/layout/DetailShell';
+import { useChrome } from '../../../components/layout/ChromeContext';
+import { useNetworkStatus } from '../../../lib/useNetworkStatus';
+import { objectRef } from '../../../lib/objectRef';
+import { gateNodeAction } from '../../../lib/gates/node';
+import { deriveChainLockState } from '../../../lib/lockState';
+import { cursorFromDescendingPage } from '../../../lib/lockIndex';
+import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
+import { useTierBIntervalMs, useTierCIntervalMs, useTierSlowIntervalMs } from '../../../lib/refreshTiers';
+import { preflightNodeNotBusy } from './adminPreflight';
+
+import { Alert } from '../../../components/ui/Alert';
+import { Badge } from '../../../components/ui/Badge';
+import { LockBadge } from '../../../components/ui/LockBadge';
+import { Button } from '../../../components/ui/Button';
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
+import { CopyButton } from '../../../components/ui/CopyButton';
+import { ErrorState } from '../../../components/ui/ErrorState';
+import { LinkButton } from '../../../components/ui/LinkButton';
+import { LoadingState } from '../../../components/ui/LoadingState';
+import { LockStateStaleAlert } from '../../../components/ui/LockStateStaleAlert';
+import { ObjectHeader } from '../../../components/ui/ObjectHeader';
+
+import { NodeEvacuationCard } from './nodeDetail/NodeEvacuationCard';
+import { NodeMaintenanceCard } from './nodeDetail/NodeMaintenanceCard';
+import { NodeMetricsCard } from './nodeDetail/NodeMetricsCard';
+import { NodeOverviewCards } from './nodeDetail/NodeOverviewCards';
+import { NodeStatusSamplesCard } from './nodeDetail/NodeStatusSamplesCard';
+import { NodeTransactionsCard } from './nodeDetail/NodeTransactionsCard';
+import {
+  buildNodeStatusKeys,
+  buildStatusIndex,
+  isMaintenanceLocked,
+  locationLabel,
+  metricsLimitForWindow,
+  metricsWindowMs,
+  nodeLocation,
+  nodeLockReason,
+  nodeTitle,
+  parseMetricsWindow,
+  safePercent,
+  sortStatusesByTimeAsc,
+  statusBadge,
+} from './nodeDetail/nodeDetailSemantics';
+
+export function NodeDetailPage() {
+  const { mode, basePath } = useAppMode();
+  const { t } = useI18n();
+  const chrome = useChrome();
+  const online = useNetworkStatus();
+  const params = useParams();
+  const nodeId = Number(params['nodeId']);
+
+  const nodeRef = useMemo(() => {
+    const id = Number(nodeId);
+    if (!Number.isFinite(id) || id <= 0) return null;
+    return objectRef('Node', id);
+  }, [nodeId]);
+  const busyLocalLock = nodeRef ? chrome.isLocallyLocked(nodeRef) : false;
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const metricsWindow = parseMetricsWindow(searchParams.get('metrics_window'));
+  const metricsLimit = metricsLimitForWindow(metricsWindow);
+  const setMetricsWindow = (w: '6h' | '24h' | '7d') => {
+    const next = new URLSearchParams(searchParams);
+    next.set('metrics_window', w);
+    setSearchParams(next, { replace: true });
+  };
+
+  const [notice, setNotice] = useState<string | null>(null);
+  const [maintReason, setMaintReason] = useState('');
+  const [evDst, setEvDst] = useState('');
+  const [evConcurrency, setEvConcurrency] = useState('1');
+  const [evStopOnError, setEvStopOnError] = useState(true);
+  const [evMaintenanceWindow, setEvMaintenanceWindow] = useState(true);
+  const [evCleanupData, setEvCleanupData] = useState(true);
+  const [evSendMail, setEvSendMail] = useState(true);
+  const [evReason, setEvReason] = useState('');
+  const [evResult, setEvResult] = useState<NodeEvacuateResult | null>(null);
+  const [confirm, setConfirm] = useState<null | { kind: 'lock' } | { kind: 'unlock' } | { kind: 'evacuate' }>(null);
+
+  const tierBRefetchMs = useTierBIntervalMs();
+  const tierCRefetchMs = useTierCIntervalMs();
+  const tierSlowRefetchMs = useTierSlowIntervalMs();
+
+  const statusPg = useKeysetPagination({
+    id: 'admin.node.statuses',
+    filterKey: `node=${nodeId}`,
+    searchParams,
+    setSearchParams,
+    paramPrefix: 'status_',
+    defaultLimit: 50,
+  });
+
+  const txPg = useKeysetPagination({
+    id: 'admin.node.transactions',
+    filterKey: `node=${nodeId}`,
+    searchParams,
+    setSearchParams,
+    paramPrefix: 'tx_',
+    defaultLimit: 50,
+  });
+
+  const nodeQ = useQuery({
+    queryKey: ['nodes', 'show', { id: nodeId }],
+    queryFn: async () => (await fetchNode(nodeId)).data,
+    enabled: Number.isFinite(nodeId) && nodeId > 0,
+    refetchInterval: tierBRefetchMs,
+  });
+
+  const publicStatusQ = useQuery({
+    queryKey: ['nodes', 'public_status'],
+    queryFn: async () => (await fetchPublicNodeStatus()).data,
+    staleTime: 15000,
+    refetchInterval: tierSlowRefetchMs,
+  });
+
+  const statusRow = useMemo(() => {
+    if (!nodeQ.data || !publicStatusQ.data) return null;
+    const idx = buildStatusIndex(publicStatusQ.data);
+    for (const k of buildNodeStatusKeys(nodeQ.data)) {
+      const st = idx.get(k);
+      if (st) return st;
+    }
+    return null;
+  }, [nodeQ.data, publicStatusQ.data]);
+
+  const statusesQ = useQuery({
+    queryKey: ['nodes', 'statuses', { nodeId, limit: statusPg.limit, fromId: statusPg.fromId ?? null }],
+    queryFn: async () => (await fetchNodeStatuses(nodeId, { limit: statusPg.limit, fromId: statusPg.fromId })).data,
+    enabled: Number.isFinite(nodeId) && nodeId > 0,
+    refetchInterval: tierCRefetchMs,
+  });
+
+  const metricsQ = useQuery({
+    queryKey: ['nodes', 'metrics', { nodeId, window: metricsWindow, limit: metricsLimit }],
+    queryFn: async () => {
+      const now = Date.now();
+      const from = new Date(now - metricsWindowMs(metricsWindow)).toISOString();
+      const to = new Date(now).toISOString();
+      try {
+        return (await fetchNodeStatuses(nodeId, { limit: metricsLimit, from, to })).data;
+      } catch {
+        return (await fetchNodeStatuses(nodeId, { limit: metricsLimit })).data;
+      }
+    },
+    enabled: Number.isFinite(nodeId) && nodeId > 0,
+    refetchInterval: tierSlowRefetchMs,
+  });
+
+  const txQ = useQuery({
+    queryKey: ['transactions', 'list', { nodeId, limit: txPg.limit, fromId: txPg.fromId ?? null }],
+    queryFn: async () => (await fetchTransactions({ nodeId, limit: txPg.limit, fromId: txPg.fromId })).data,
+    enabled: Number.isFinite(nodeId) && nodeId > 0,
+    refetchInterval: tierBRefetchMs,
+  });
+
+  const chainsQ = useQuery({
+    queryKey: ['transaction_chain', 'list', { className: 'Node', rowId: nodeId, state: 'active', limit: 10 }],
+    queryFn: async () => fetchActiveTransactionChains({ className: 'Node', rowId: nodeId, limit: 10 }),
+    enabled: Number.isFinite(nodeId) && nodeId > 0,
+    refetchInterval: tierBRefetchMs,
+  });
+
+  const chainLock = deriveChainLockState({
+    chains: chainsQ.data,
+    updatedAt: chainsQ.dataUpdatedAt,
+    unreliable: !online || chainsQ.isError,
+  });
+  const busyTransaction = chainLock.busy;
+  const activeChainIds = chainLock.activeChainIds;
+  const chainsStale = chainLock.stale;
+
+  const nodesQ = useQuery({
+    queryKey: ['nodes', 'index', { limit: 500 }],
+    queryFn: async () => (await fetchNodes({ limit: 500 })).data,
+    staleTime: 60000,
+  });
+
+  const node = nodeQ.data;
+  const title = node ? nodeTitle(node, nodeId) : `Node #${nodeId}`;
+
+  const maintenanceM = useMutation({
+    mutationFn: async (lock: boolean) => {
+      await preflightNodeNotBusy({ nodeId, t, knownBusy: busyLocalLock || busyTransaction });
+      return setNodeMaintenance(nodeId, {
+        lock,
+        reason: lock ? maintReason.trim() || undefined : undefined,
+      });
+    },
+    onMutate: async () => {
+      if (nodeRef) chrome.acquireLocalLock(nodeRef);
+    },
+    onSuccess: (res, lock) => {
+      const asId = getMetaActionStateId(res.meta);
+      if (asId !== undefined) {
+        chrome.trackActionState(asId, {
+          object: nodeRef ?? undefined,
+          actionLabelKey: lock ? 'action.node.maintenance_lock.label' : 'action.node.maintenance_unlock.label',
+          objectLabel: title,
+        });
+      }
+      setNotice(lock ? t('admin.node.notice.maintenance_lock_requested') : t('admin.node.notice.maintenance_unlock_requested'));
+      setConfirm(null);
+      void nodeQ.refetch();
+      void chainsQ.refetch();
+      void txQ.refetch();
+      void publicStatusQ.refetch();
+    },
+    onError: (err: unknown) => {
+      if (typeof err === 'object' && err && 'code' in err && (err as { code?: unknown }).code === 'BUSY') {
+        chrome.openTasks();
+      }
+    },
+    onSettled: () => {
+      if (nodeRef) chrome.releaseLocalLock(nodeRef);
+    },
+  });
+
+  const evacuateM = useMutation({
+    mutationFn: async () => {
+      await preflightNodeNotBusy({ nodeId, t, knownBusy: busyLocalLock || busyTransaction });
+      const dst = Number(evDst);
+      const concurrency = Number(evConcurrency);
+      return evacuateNode(nodeId, {
+        dst_node: dst,
+        concurrency: Number.isFinite(concurrency) ? concurrency : undefined,
+        stop_on_error: evStopOnError,
+        maintenance_window: evMaintenanceWindow,
+        cleanup_data: evCleanupData,
+        send_mail: evSendMail,
+        reason: evReason.trim() || undefined,
+      });
+    },
+    onMutate: async () => {
+      if (nodeRef) chrome.acquireLocalLock(nodeRef);
+    },
+    onSuccess: (res) => {
+      const asId = getMetaActionStateId(res.meta);
+      if (asId !== undefined) {
+        chrome.trackActionState(asId, {
+          object: nodeRef ?? undefined,
+          actionLabelKey: 'action.node.evacuate.label',
+          objectLabel: title,
+        });
+      }
+      setEvResult(res.data ?? null);
+      setNotice(t('admin.node.notice.evacuation_started'));
+      setConfirm(null);
+      void nodeQ.refetch();
+      void chainsQ.refetch();
+      void txQ.refetch();
+      void publicStatusQ.refetch();
+    },
+    onError: (err: unknown) => {
+      if (typeof err === 'object' && err && 'code' in err && (err as { code?: unknown }).code === 'BUSY') {
+        chrome.openTasks();
+      }
+    },
+    onSettled: () => {
+      if (nodeRef) chrome.releaseLocalLock(nodeRef);
+    },
+  });
+
+  const metricsRows = useMemo(() => sortStatusesByTimeAsc(metricsQ.data ?? []), [metricsQ.data]);
+  const metricsLast = metricsRows.length > 0 ? metricsRows[metricsRows.length - 1] : undefined;
+  const load1Points = useMemo(() => {
+    const out: { x: string; y: number }[] = [];
+    for (const sample of metricsRows) {
+      if (typeof sample.created_at !== 'string' || !sample.created_at) continue;
+      if (typeof sample.loadavg1 !== 'number' || !Number.isFinite(sample.loadavg1)) continue;
+      out.push({ x: sample.created_at, y: sample.loadavg1 });
+    }
+    return out;
+  }, [metricsRows]);
+  const cpuIdlePoints = useMemo(() => {
+    const out: { x: string; y: number }[] = [];
+    for (const sample of metricsRows) {
+      if (typeof sample.created_at !== 'string' || !sample.created_at) continue;
+      if (typeof sample.cpu_idle !== 'number' || !Number.isFinite(sample.cpu_idle)) continue;
+      out.push({ x: sample.created_at, y: sample.cpu_idle });
+    }
+    return out;
+  }, [metricsRows]);
+  const memUsedPercentPoints = useMemo(() => {
+    const fallbackTotal = typeof node?.total_memory === 'number' ? node.total_memory : undefined;
+    const out: { x: string; y: number }[] = [];
+    for (const sample of metricsRows) {
+      if (typeof sample.created_at !== 'string' || !sample.created_at) continue;
+      const pct = safePercent(sample.used_memory, sample.total_memory ?? fallbackTotal);
+      if (pct == null || !Number.isFinite(pct)) continue;
+      out.push({ x: sample.created_at, y: pct });
+    }
+    return out;
+  }, [metricsRows, node?.total_memory]);
+
+  const lock = isMaintenanceLocked(node?.maintenance_lock);
+  const lockReason = nodeLockReason(node);
+  const loc = nodeLocation(node);
+
+  const busyLocalAny = busyLocalLock || maintenanceM.isPending || evacuateM.isPending;
+  const maintenanceLockGate = gateNodeAction('maintenance.lock', { busyLocal: busyLocalAny, busyTransaction });
+  const maintenanceUnlockGate = gateNodeAction('maintenance.unlock', { busyLocal: busyLocalAny, busyTransaction });
+  const evacuateGate = gateNodeAction('evacuate', { busyLocal: busyLocalAny, busyTransaction });
+
+  const destOptions = useMemo(
+    () =>
+      (nodesQ.data ?? [])
+        .filter((n) => typeof n.id === 'number' && n.id !== nodeId)
+        .map((n) => ({
+          id: n.id,
+          label: String(n.domain_name ?? n.name ?? n.fqdn ?? `#${n.id}`),
+          location: locationLabel(n.location),
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    [nodeId, nodesQ.data]
+  );
+
+  const canEvacuate = Number.isFinite(Number(evDst)) && Number(evDst) > 0;
+
+  const statusRows = statusesQ.data ?? [];
+  const statusCursor = useMemo(() => cursorFromDescendingPage(statusRows), [statusRows]);
+  const statusCanNext = statusPg.hasForward || (statusRows.length >= statusPg.limit && statusCursor !== null);
+
+  const txRows = txQ.data ?? [];
+  const txCursor = useMemo(() => cursorFromDescendingPage(txRows), [txRows]);
+  const txCanNext = txPg.hasForward || (txRows.length >= txPg.limit && txCursor !== null);
+
+  const headerStatus = statusBadge(t, node ? node.status : statusRow?.status);
+
+  return (
+    <DetailShell testId="admin.node.page" variant="wide">
+      <ObjectHeader
+        testId="admin.node.header"
+        title={title}
+        titleAfter={<Badge variant={headerStatus.variant}>{headerStatus.label}</Badge>}
+        kicker={
+          <>
+            <Link className="underline" to={`${basePath}/nodes`}>
+              {t('nav.nodes')}
+            </Link>
+            <span className="text-faint"> · </span>
+            <span>#{Number.isFinite(nodeId) ? nodeId : '—'}</span>
+          </>
+        }
+        badges={
+          lock || busyTransaction || busyLocalAny ? (
+            <>
+              {lock ? <LockBadge kind="maintenance" t={t} maintenanceReason={lockReason} /> : null}
+              {busyTransaction ? <LockBadge kind="transaction" t={t} chainIds={activeChainIds} showDetails /> : null}
+              {busyLocalAny ? <LockBadge kind="local" t={t} /> : null}
+            </>
+          ) : null
+        }
+        meta={loc ? t('admin.node.meta.location', { location: loc }) : ' '}
+        actions={
+          <>
+            {node ? <CopyButton text={title} /> : null}
+            {typeof nodeId === 'number' && Number.isFinite(nodeId) && nodeId > 0 ? (
+              <LinkButton to={`${basePath}/vps?node=${nodeId}`} variant="secondary" title={t('admin.node.action.show_vps.title')}>
+                {t('nav.vps')}
+              </LinkButton>
+            ) : null}
+            <Button
+              testId="admin.node.refresh"
+              variant="secondary"
+              disabled={!Number.isFinite(nodeId) || nodeId <= 0}
+              onClick={() => {
+                void nodeQ.refetch();
+                void chainsQ.refetch();
+                void statusesQ.refetch();
+                void metricsQ.refetch();
+                void txQ.refetch();
+                void publicStatusQ.refetch();
+              }}
+            >
+              {t('common.refresh')}
+            </Button>
+          </>
+        }
+      />
+
+      {chainsStale ? (
+        <LockStateStaleAlert
+          chainIds={activeChainIds}
+          error={chainsQ.error}
+          onRetry={() => {
+            void chainsQ.refetch();
+          }}
+        />
+      ) : null}
+
+      {mode !== 'admin' ? (
+        <Alert title={t('admin.node.workspace_warning.title')} variant="warn">
+          {t('admin.node.workspace_warning.body')}
+        </Alert>
+      ) : null}
+
+      {notice ? (
+        <Alert title={t('common.info')} variant="neutral">
+          {notice}
+        </Alert>
+      ) : null}
+
+      {!Number.isFinite(nodeId) || nodeId <= 0 ? (
+        <ErrorState
+          testId="admin.node.invalid_id"
+          kindOverride="not_found"
+          title={t('admin.node.invalid_id.title')}
+          body={t('admin.node.invalid_id.body')}
+          backTo={`${basePath}/nodes`}
+          showStatusLink={false}
+          showDetails={false}
+          detailsExtra={{ page: 'admin.node.detail', nodeId: null, scope: mode }}
+        />
+      ) : nodeQ.isLoading ? (
+        <LoadingState testId="admin.node.loading" />
+      ) : nodeQ.isError ? (
+        <ErrorState
+          testId="admin.node.error"
+          title={t('admin.node.load_error.title')}
+          error={nodeQ.error}
+          onRetry={() => void nodeQ.refetch()}
+          backTo={`${basePath}/nodes`}
+          detailsExtra={{ page: 'admin.node.detail', nodeId, scope: mode }}
+        />
+      ) : !node ? (
+        <ErrorState
+          testId="admin.node.not_found"
+          kindOverride="not_found"
+          title={t('admin.node.not_found.title')}
+          body={t('admin.node.not_found.body')}
+          backTo={`${basePath}/nodes`}
+          showStatusLink={false}
+          showDetails={false}
+          detailsExtra={{ page: 'admin.node.detail', nodeId, scope: mode }}
+        />
+      ) : (
+        <>
+          <NodeOverviewCards node={node} loc={loc} statusRow={statusRow ?? undefined} t={t} />
+
+          <NodeMetricsCard
+            t={t}
+            metricsWindow={metricsWindow}
+            setMetricsWindow={setMetricsWindow}
+            metricsRows={metricsRows}
+            metricsLast={metricsLast}
+            node={node}
+            metricsLoading={metricsQ.isLoading}
+            metricsError={metricsQ.error}
+            load1Points={load1Points}
+            cpuIdlePoints={cpuIdlePoints}
+            memUsedPercentPoints={memUsedPercentPoints}
+          />
+
+          <NodeMaintenanceCard
+            t={t}
+            lock={lock}
+            lockReason={lockReason}
+            maintReason={maintReason}
+            onMaintReasonChange={setMaintReason}
+            maintenanceError={maintenanceM.error}
+            maintenanceLockGate={maintenanceLockGate}
+            maintenanceUnlockGate={maintenanceUnlockGate}
+            onRequestLock={() => setConfirm({ kind: 'lock' })}
+            onRequestUnlock={() => setConfirm({ kind: 'unlock' })}
+          />
+
+          <NodeEvacuationCard
+            t={t}
+            basePath={basePath}
+            nodesLoading={nodesQ.isLoading}
+            nodesError={nodesQ.isError}
+            destOptions={destOptions}
+            evDst={evDst}
+            onEvDstChange={setEvDst}
+            evConcurrency={evConcurrency}
+            onEvConcurrencyChange={setEvConcurrency}
+            evReason={evReason}
+            onEvReasonChange={setEvReason}
+            evStopOnError={evStopOnError}
+            onEvStopOnErrorChange={setEvStopOnError}
+            evMaintenanceWindow={evMaintenanceWindow}
+            onEvMaintenanceWindowChange={setEvMaintenanceWindow}
+            evCleanupData={evCleanupData}
+            onEvCleanupDataChange={setEvCleanupData}
+            evSendMail={evSendMail}
+            onEvSendMailChange={setEvSendMail}
+            evResult={evResult}
+            evacuateError={evacuateM.error}
+            canEvacuate={canEvacuate}
+            evacuateGate={evacuateGate}
+            onRequestEvacuate={() => setConfirm({ kind: 'evacuate' })}
+          />
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <NodeStatusSamplesCard
+              t={t}
+              nodeId={nodeId}
+              statusRows={statusRows}
+              loading={statusesQ.isLoading}
+              error={statusesQ.error}
+              fetching={statusesQ.isFetching}
+              onRefresh={() => {
+                void statusesQ.refetch();
+              }}
+              page={statusPg.page}
+              pageCount={statusPg.stack.length}
+              canPrev={statusPg.canPrev}
+              canNext={statusCanNext}
+              onPrev={statusPg.goPrev}
+              onNext={() => statusPg.goNext(statusCursor)}
+              onGoToPage={statusPg.goToPage}
+              limit={statusPg.limit}
+              allowedLimits={statusPg.allowedLimits}
+              onLimitChange={statusPg.setLimit}
+            />
+
+            <NodeTransactionsCard
+              t={t}
+              basePath={basePath}
+              nodeId={nodeId}
+              txRows={txRows}
+              loading={txQ.isLoading}
+              error={txQ.error}
+              fetching={txQ.isFetching}
+              onRefresh={() => {
+                void txQ.refetch();
+              }}
+              page={txPg.page}
+              pageCount={txPg.stack.length}
+              canPrev={txPg.canPrev}
+              canNext={txCanNext}
+              onPrev={txPg.goPrev}
+              onNext={() => txPg.goNext(txCursor)}
+              onGoToPage={txPg.goToPage}
+              limit={txPg.limit}
+              allowedLimits={txPg.allowedLimits}
+              onLimitChange={txPg.setLimit}
+            />
+          </div>
+        </>
+      )}
+
+      <ConfirmDialog
+        open={confirm?.kind === 'lock'}
+        title={t('admin.node.maintenance.confirm_lock.title')}
+        description={t('admin.node.maintenance.confirm_lock.description')}
+        danger
+        confirmLabel={t('common.lock')}
+        confirmDisabled={!maintenanceLockGate.allowed}
+        confirmLoading={maintenanceM.isPending}
+        onConfirm={() => maintenanceM.mutate(true)}
+        onCancel={() => setConfirm(null)}
+      />
+
+      <ConfirmDialog
+        open={confirm?.kind === 'unlock'}
+        title={t('admin.node.maintenance.confirm_unlock.title')}
+        description={t('admin.node.maintenance.confirm_unlock.description')}
+        confirmLabel={t('common.unlock')}
+        confirmDisabled={!maintenanceUnlockGate.allowed}
+        confirmLoading={maintenanceM.isPending}
+        onConfirm={() => maintenanceM.mutate(false)}
+        onCancel={() => setConfirm(null)}
+      />
+
+      <ConfirmDialog
+        open={confirm?.kind === 'evacuate'}
+        title={t('admin.node.evacuation.confirm.title')}
+        description={t('admin.node.evacuation.confirm.description')}
+        danger
+        confirmLabel={t('common.start')}
+        confirmDisabled={!canEvacuate || !evacuateGate.allowed}
+        confirmLoading={evacuateM.isPending}
+        onConfirm={() => evacuateM.mutate()}
+        onCancel={() => setConfirm(null)}
+      >
+        <div className="text-sm text-muted">
+          {t('admin.node.evacuation.confirm.destination')} <span className="font-medium">{evDst ? `#${evDst}` : '—'}</span>
+        </div>
+      </ConfirmDialog>
+    </DetailShell>
+  );
+}

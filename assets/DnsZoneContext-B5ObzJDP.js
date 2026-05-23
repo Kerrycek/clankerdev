@@ -1,1 +1,0 @@
-import{r as n,j as o}from"./vendor-react-B6j9w5IJ.js";const t=n.createContext(null);function s(e){return o.jsx(t.Provider,{value:e.value,children:e.children})}function u(){const e=n.useContext(t);if(!e)throw new Error("useDnsZoneContext must be used within DnsZoneContextProvider");return e}export{s as D,u};

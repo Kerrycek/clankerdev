@@ -1,0 +1,23 @@
+// Admin locale chunk: ip_assignments
+export const csAdmin_ip_assignments = {
+  "admin.ip_assignments.badge.reconstructed": "Zrekonstruováno",
+  "admin.ip_assignments.empty": "Nebyla nalezena žádná přiřazení IP.",
+  "admin.ip_assignments.field.assigned_by": "Přiřadil řetězec",
+  "admin.ip_assignments.field.flags": "Příznaky",
+  "admin.ip_assignments.field.ip": "IP",
+  "admin.ip_assignments.field.period": "Období",
+  "admin.ip_assignments.field.unassigned_by": "Odebral řetězec",
+  "admin.ip_assignments.field.user": "Uživatel",
+  "admin.ip_assignments.field.vps": "VPS",
+  "admin.ip_assignments.filter.active.all": "Libovolný stav",
+  "admin.ip_assignments.filter.active.false": "Jen ukončené",
+  "admin.ip_assignments.filter.active.true": "Jen aktivní",
+  "admin.ip_assignments.filter.order.newest": "Nejnovější první",
+  "admin.ip_assignments.filter.order.oldest": "Nejstarší první",
+  "admin.ip_assignments.filter.q.placeholder": "Hledejte podle IP, uživatele nebo VPS…",
+  "admin.ip_assignments.filter.user.placeholder": "Přihlašovací jméno nebo ID uživatele…",
+  "admin.ip_assignments.filter.vps.placeholder": "Název hostitele nebo ID VPS…",
+  "admin.ip_assignments.load_error": "Přiřazení IP se nepodařilo načíst",
+  "admin.ip_assignments.subtitle": "Auditujte, který uživatel/VPS držel adresu a kdy.",
+  "admin.ip_assignments.title": "Audit přiřazení IP",
+} as const;

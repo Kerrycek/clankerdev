@@ -1,0 +1,5541 @@
+{
+  "generated_at": "2026-01-20T15:19:01.875087+00:00",
+  "source": "capabilities_matrix_v3_2.json",
+  "resources_count": 109,
+  "actions_count": 428,
+  "resources": [
+    {
+      "resource_const": "VpsAdmin::API::Resources::ApiServer",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 1,
+      "actions_by_classification": {
+        "admin_only": 1
+      },
+      "actions": [
+        {
+          "action_class": "UnlockTransactionSigningKey",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Cluster",
+      "module": "cluster_admin",
+      "workspace_default": "both",
+      "actions_total": 6,
+      "actions_by_classification": {
+        "admin_only": 4,
+        "public": 1,
+        "authenticated": 1
+      },
+      "actions": [
+        {
+          "action_class": "FullStats",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "GenerateMigrationKeys",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": "post",
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "PublicStats",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Search",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "post",
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "SetMaintenance",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "post",
+          "route": "set_maintenance",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::ClusterResource",
+      "module": "cluster_admin",
+      "workspace_default": "admin",
+      "actions_total": 4,
+      "actions_by_classification": {
+        "admin_only": 2,
+        "authenticated": 2
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::ClusterResourcePackage",
+      "module": "cluster_admin",
+      "workspace_default": "admin",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "admin_only": 5
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::ClusterResourcePackage::Item",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "admin_only": 5
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Component",
+      "module": "cluster_admin",
+      "workspace_default": "admin",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "authenticated": 1,
+        "public": 1
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Dataset",
+      "module": "storage",
+      "workspace_default": "both",
+      "actions_total": 8,
+      "actions_by_classification": {
+        "owner_or_admin": 6,
+        "authenticated": 1,
+        "admin_only": 1
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 3
+        },
+        {
+          "action_class": "Delete",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "FindByName",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "get",
+          "route": "find_by_name",
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Inherit",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": "post",
+          "route": "{%{resource}_id}/inherit",
+          "severity": "write",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Migrate",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": "post",
+          "route": "{%{resource}_id}/migrate",
+          "severity": "write",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Dataset::Plan",
+      "module": "storage",
+      "workspace_default": "both",
+      "actions_total": 4,
+      "actions_by_classification": {
+        "authenticated": 4
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Delete",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Dataset::PropertyHistory",
+      "module": "storage",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "authenticated": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Dataset::Snapshot",
+      "module": "storage",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "owner_or_admin": 5
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Rollback",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": "post",
+          "route": "{%{resource}_id}/rollback",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::DatasetExpansion",
+      "module": "storage",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "admin_only": 3,
+        "owner_or_admin": 2
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "RegisterExpanded",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "post",
+          "route": "register_expanded",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::DatasetExpansion::History",
+      "module": "storage",
+      "workspace_default": "both",
+      "actions_total": 3,
+      "actions_by_classification": {
+        "admin_only": 1,
+        "owner_or_admin": 2
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::DatasetPlan",
+      "module": "storage",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "authenticated": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Debug",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 3,
+      "actions_by_classification": {
+        "admin_only": 3
+      },
+      "actions": [
+        {
+          "action_class": "ArrayTop",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "HashTop",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "ListObjectCounts",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::DefaultObjectClusterResource",
+      "module": "cluster_admin",
+      "workspace_default": "admin",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "admin_only": 3,
+        "authenticated": 2
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::DnsRecord",
+      "module": "dns",
+      "workspace_default": "both",
+      "actions_total": 6,
+      "actions_by_classification": {
+        "authenticated": 1,
+        "owner_or_admin": 4,
+        "public": 1
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "DynamicUpdate",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": true,
+          "http_method": "get",
+          "route": "dynamic_update/{access_token}",
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::DnsRecordLog",
+      "module": "dns",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "owner_or_admin": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::DnsResolver",
+      "module": "dns",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "admin_only": 3,
+        "authenticated": 2
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::DnsServer",
+      "module": "dns",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "admin_only": 3,
+        "authenticated": 2
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::DnsServerZone",
+      "module": "dns",
+      "workspace_default": "both",
+      "actions_total": 4,
+      "actions_by_classification": {
+        "admin_only": 2,
+        "owner_or_admin": 2
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::DnsTsigKey",
+      "module": "dns",
+      "workspace_default": "both",
+      "actions_total": 4,
+      "actions_by_classification": {
+        "owner_or_admin": 4
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::DnsZone",
+      "module": "dns",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "authenticated": 1,
+        "owner_or_admin": 4
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::DnsZoneTransfer",
+      "module": "dns",
+      "workspace_default": "both",
+      "actions_total": 4,
+      "actions_by_classification": {
+        "owner_or_admin": 4
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Delete",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::DnssecRecord",
+      "module": "dns",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "owner_or_admin": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Environment",
+      "module": "cluster_admin",
+      "workspace_default": "admin",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "admin_only": 3,
+        "authenticated": 2
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "SetMaintenance",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "post",
+          "route": "{%{resource}_id}/set_maintenance",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Environment::DatasetPlan",
+      "module": "storage",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "authenticated": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Export",
+      "module": "storage",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "authenticated": 1,
+        "owner_or_admin": 4
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Delete",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Export::Host",
+      "module": "storage",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "owner_or_admin": 5
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::ExportOutage",
+      "module": "storage",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "owner_or_admin": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::HelpBox",
+      "module": "cluster_admin",
+      "workspace_default": "admin",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "admin_only": 3,
+        "public": 2
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::HostIpAddress",
+      "module": "networking",
+      "workspace_default": "both",
+      "actions_total": 7,
+      "actions_by_classification": {
+        "authenticated": 7
+      },
+      "actions": [
+        {
+          "action_class": "Assign",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": "post",
+          "route": "{%{resource}_id}/assign",
+          "severity": "write",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Create",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Delete",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Free",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": "post",
+          "route": "{%{resource}_id}/free",
+          "severity": "write",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 1
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::IncidentReport",
+      "module": "ops",
+      "workspace_default": "admin",
+      "actions_total": 3,
+      "actions_by_classification": {
+        "admin_only": 1,
+        "owner_or_admin": 2
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::IncomingPayment",
+      "module": "payments",
+      "workspace_default": "both",
+      "actions_total": 3,
+      "actions_by_classification": {
+        "admin_only": 3
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::IpAddress",
+      "module": "networking",
+      "workspace_default": "both",
+      "actions_total": 7,
+      "actions_by_classification": {
+        "authenticated": 5,
+        "admin_only": 2
+      },
+      "actions": [
+        {
+          "action_class": "Assign",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": "post",
+          "route": "{%{resource}_id}/assign",
+          "severity": "write",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "AssignWithHostAddress",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": "post",
+          "route": "{%{resource}_id}/assign_with_host_address",
+          "severity": "write",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Free",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": "post",
+          "route": "{%{resource}_id}/free",
+          "severity": "write",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::IpAddressAssignment",
+      "module": "networking",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "owner_or_admin": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Language",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "public": 1,
+        "authenticated": 1
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Location",
+      "module": "cluster_admin",
+      "workspace_default": "admin",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "admin_only": 3,
+        "public": 1,
+        "authenticated": 1
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "SetMaintenance",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "post",
+          "route": "{%{resource}_id}/set_maintenance",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::LocationNetwork",
+      "module": "networking",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "admin_only": 5
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::MailLog",
+      "module": "ops",
+      "workspace_default": "admin",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "admin_only": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::MailRecipient",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "admin_only": 5
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::MailTemplate",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "admin_only": 5
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::MailTemplate::Recipient",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 4,
+      "actions_by_classification": {
+        "admin_only": 4
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::MailTemplate::Translation",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "admin_only": 5
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Mailbox",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "admin_only": 5
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Mailbox::Handler",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "admin_only": 5
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::MetricsAccessToken",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 4,
+      "actions_by_classification": {
+        "authenticated": 4
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::MigrationPlan",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 6,
+      "actions_by_classification": {
+        "admin_only": 6
+      },
+      "actions": [
+        {
+          "action_class": "Cancel",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "post",
+          "route": "{%{resource}_id}/cancel",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Start",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "post",
+          "route": "{%{resource}_id}/start",
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::MigrationPlan::VpsMigration",
+      "module": "vps",
+      "workspace_default": "both",
+      "actions_total": 3,
+      "actions_by_classification": {
+        "admin_only": 3
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::MonitoredEvent",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 4,
+      "actions_by_classification": {
+        "owner_or_admin": 4
+      },
+      "actions": [
+        {
+          "action_class": "Acknowledge",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "post",
+          "route": "{%{resource}_id}/acknowledge",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Ignore",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "post",
+          "route": "{%{resource}_id}/ignore",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::MonitoredEvent::Log",
+      "module": "ops",
+      "workspace_default": "admin",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "owner_or_admin": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Network",
+      "module": "networking",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "admin_only": 3,
+        "authenticated": 2
+      },
+      "actions": [
+        {
+          "action_class": "AddAddresses",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "post",
+          "route": "{%{resource}_id}/add_addresses",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::NetworkInterface",
+      "module": "networking",
+      "workspace_default": "both",
+      "actions_total": 3,
+      "actions_by_classification": {
+        "owner_or_admin": 3
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::NetworkInterfaceAccounting",
+      "module": "networking",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "owner_or_admin": 1,
+        "admin_only": 1
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "UserTop",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "get",
+          "route": "user_top",
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::NetworkInterfaceMonitor",
+      "module": "networking",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "authenticated": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::NewsLog",
+      "module": "ops",
+      "workspace_default": "admin",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "admin_only": 3,
+        "public": 2
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Node",
+      "module": "cluster_admin",
+      "workspace_default": "admin",
+      "actions_total": 8,
+      "actions_by_classification": {
+        "admin_only": 5,
+        "authenticated": 2,
+        "public": 1
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Evacuate",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "post",
+          "route": "{%{resource}_id}/evacuate",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "OverviewList",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "get",
+          "route": "overview_list",
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "PublicStatus",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "SetMaintenance",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "post",
+          "route": "{%{resource}_id}/set_maintenance",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Node::Status",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "admin_only": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Oauth2Client",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "admin_only": 5
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::ObjectHistory",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "authenticated": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::OomReport",
+      "module": "ops",
+      "workspace_default": "admin",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "owner_or_admin": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::OomReport::Stat",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "owner_or_admin": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::OomReport::Task",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "owner_or_admin": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::OomReport::Usage",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "owner_or_admin": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::OomReportRule",
+      "module": "ops",
+      "workspace_default": "admin",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "authenticated": 1,
+        "owner_or_admin": 4
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Delete",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::OsFamily",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "admin_only": 3,
+        "authenticated": 2
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::OsTemplate",
+      "module": "cluster_admin",
+      "workspace_default": "admin",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "admin_only": 3,
+        "public": 1,
+        "authenticated": 1
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Outage",
+      "module": "ops",
+      "workspace_default": "admin",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "admin_only": 3,
+        "public": 2
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "RebuildAffectedVps",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "post",
+          "route": "{%{resource}_id}/rebuild_affected_vps",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Outage::Entity",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 4,
+      "actions_by_classification": {
+        "admin_only": 2,
+        "public": 2
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Outage::Handler",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "admin_only": 3,
+        "public": 2
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::OutageUpdate",
+      "module": "ops",
+      "workspace_default": "admin",
+      "actions_total": 3,
+      "actions_by_classification": {
+        "admin_only": 1,
+        "public": 2
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::PaymentStats",
+      "module": "payments",
+      "workspace_default": "both",
+      "actions_total": 1,
+      "actions_by_classification": {
+        "admin_only": 1
+      },
+      "actions": [
+        {
+          "action_class": "EstimateIncome",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Pool",
+      "module": "storage",
+      "workspace_default": "both",
+      "actions_total": 4,
+      "actions_by_classification": {
+        "admin_only": 2,
+        "authenticated": 2
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "SetMaintenance",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "post",
+          "route": "{%{resource}_id}/set_maintenance",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::SnapshotDownload",
+      "module": "storage",
+      "workspace_default": "both",
+      "actions_total": 4,
+      "actions_by_classification": {
+        "owner_or_admin": 1,
+        "authenticated": 3
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::SystemConfig",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 3,
+      "actions_by_classification": {
+        "public": 2,
+        "admin_only": 1
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": null,
+          "route": "{category}/{name}",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "put",
+          "route": "{category}/{name}",
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Transaction",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "authenticated": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::TransactionChain",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "authenticated": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::User",
+      "module": "account",
+      "workspace_default": "both",
+      "actions_total": 8,
+      "actions_by_classification": {
+        "admin_only": 2,
+        "authenticated": 5,
+        "owner_or_admin": 1
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Current",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "GetPaymentInstructions",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "get",
+          "route": "{%{resource}_id}/get_payment_instructions",
+          "severity": "read",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Touch",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": "{user_id}/touch",
+          "severity": "write",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Update",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 1
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::User::ClusterResource",
+      "module": "cluster_admin",
+      "workspace_default": "admin",
+      "actions_total": 3,
+      "actions_by_classification": {
+        "admin_only": 1,
+        "authenticated": 2
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::User::EnvironmentConfig",
+      "module": "cluster_admin",
+      "workspace_default": "admin",
+      "actions_total": 3,
+      "actions_by_classification": {
+        "authenticated": 2,
+        "admin_only": 1
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::User::KnownDevice",
+      "module": "account",
+      "workspace_default": "both",
+      "actions_total": 3,
+      "actions_by_classification": {
+        "authenticated": 3
+      },
+      "actions": [
+        {
+          "action_class": "Delete",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 1
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::User::MailRoleRecipient",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 3,
+      "actions_by_classification": {
+        "authenticated": 3
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Update",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 1
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::User::MailTemplateRecipient",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 3,
+      "actions_by_classification": {
+        "authenticated": 3
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Update",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 1
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::User::PublicKey",
+      "module": "account",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "authenticated": 5
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Delete",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Update",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 1
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::User::StateLog",
+      "module": "ops",
+      "workspace_default": "admin",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "admin_only": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "get",
+          "route": "{user_id}/state_logs",
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "get",
+          "route": "{user_id}/state_logs",
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::User::TotpDevice",
+      "module": "account",
+      "workspace_default": "both",
+      "actions_total": 6,
+      "actions_by_classification": {
+        "authenticated": 6
+      },
+      "actions": [
+        {
+          "action_class": "Confirm",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "post",
+          "route": "{totp_device_id}/confirm",
+          "severity": "write",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Create",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Delete",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Update",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 1
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::User::WebauthnCredential",
+      "module": "account",
+      "workspace_default": "both",
+      "actions_total": 4,
+      "actions_by_classification": {
+        "authenticated": 4
+      },
+      "actions": [
+        {
+          "action_class": "Delete",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Index",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Show",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Update",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 1
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::UserAccount",
+      "module": "account",
+      "workspace_default": "both",
+      "actions_total": 3,
+      "actions_by_classification": {
+        "admin_only": 3
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::UserClusterResourcePackage",
+      "module": "account",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "admin_only": 3,
+        "owner_or_admin": 2
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::UserClusterResourcePackage::Item",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "owner_or_admin": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::UserNamespace",
+      "module": "account",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "owner_or_admin": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::UserNamespaceMap",
+      "module": "account",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "authenticated": 1,
+        "owner_or_admin": 4
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Delete",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::UserNamespaceMap::Entry",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "owner_or_admin": 5
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Delete",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::UserOutage",
+      "module": "account",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "owner_or_admin": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::UserPayment",
+      "module": "account",
+      "workspace_default": "both",
+      "actions_total": 3,
+      "actions_by_classification": {
+        "admin_only": 1,
+        "owner_or_admin": 2
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::UserRequest::Change",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 4,
+      "actions_by_classification": {
+        "authenticated": 1,
+        "owner_or_admin": 2,
+        "admin_only": 1
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Resolve",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "post",
+          "route": "{%{resource}_id}/resolve",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::UserRequest::Registration",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 6,
+      "actions_by_classification": {
+        "public": 3,
+        "owner_or_admin": 2,
+        "admin_only": 1
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Preview",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": "get",
+          "route": "{%{resource}_id}/{token}",
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Resolve",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "post",
+          "route": "{%{resource}_id}/resolve",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": null,
+          "route": "{%{resource}_id}/{token}",
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::UserSession",
+      "module": "account",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "owner_or_admin": 4,
+        "admin_only": 1
+      },
+      "actions": [
+        {
+          "action_class": "Close",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "post",
+          "route": "{%{resource}_id}",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Create",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::VPS",
+      "module": "vps",
+      "workspace_default": "both",
+      "actions_total": 17,
+      "actions_by_classification": {
+        "owner_or_admin": 13,
+        "authenticated": 1,
+        "admin_only": 3
+      },
+      "actions": [
+        {
+          "action_class": "Boot",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": "post",
+          "route": "{%{resource}_id}/boot",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Clone",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": "post",
+          "route": "{%{resource}_id}/clone",
+          "severity": "write",
+          "runtime_checks_count": 2
+        },
+        {
+          "action_class": "Create",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Delete",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "DeployPublicKey",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": "post",
+          "route": "{%{resource}_id}/deploy_public_key",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Migrate",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": "post",
+          "route": "{%{resource}_id}/migrate",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Passwd",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": "post",
+          "route": "{%{resource}_id}/passwd",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Reinstall",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": "post",
+          "route": "{%{resource}_id}/reinstall",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Replace",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": "post",
+          "route": "{%{resource}_id}/replace",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Restart",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": "post",
+          "route": "{%{resource}_id}/restart",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "SetMaintenance",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "post",
+          "route": "set_maintenance",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Start",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": "post",
+          "route": "{%{resource}_id}/start",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Stop",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": "post",
+          "route": "{%{resource}_id}/stop",
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "SwapWith",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": "post",
+          "route": "{%{resource}_id}/swap_with",
+          "severity": "write",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Update",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::VPS::ConsoleToken",
+      "module": "vps",
+      "workspace_default": "both",
+      "actions_total": 3,
+      "actions_by_classification": {
+        "owner_or_admin": 3
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::VPS::Feature",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 4,
+      "actions_by_classification": {
+        "owner_or_admin": 4
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "UpdateAll",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": "post",
+          "route": "update_all",
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::VPS::MaintenanceWindow",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 4,
+      "actions_by_classification": {
+        "owner_or_admin": 4
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "UpdateAll",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "put",
+          "route": "",
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::VPS::Mount",
+      "module": "vps",
+      "workspace_default": "both",
+      "actions_total": 5,
+      "actions_by_classification": {
+        "owner_or_admin": 5
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Delete",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::VPS::SshHostKey",
+      "module": "vps",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "owner_or_admin": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::VPS::StateLog",
+      "module": "ops",
+      "workspace_default": "admin",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "admin_only": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "get",
+          "route": "{v_p_s_id}/state_logs",
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "admin_only",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "get",
+          "route": "{v_p_s_id}/state_logs",
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::VPS::Status",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "owner_or_admin": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::VpsOutage",
+      "module": "vps",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "owner_or_admin": 2
+      },
+      "actions": [
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::VpsUserData",
+      "module": "storage",
+      "workspace_default": "both",
+      "actions_total": 6,
+      "actions_by_classification": {
+        "authenticated": 1,
+        "owner_or_admin": 5
+      },
+      "actions": [
+        {
+          "action_class": "Create",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Delete",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "destructive",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Deploy",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": true,
+          "http_method": "post",
+          "route": "{%{resource}_id}/deploy",
+          "severity": "write",
+          "runtime_checks_count": 1
+        },
+        {
+          "action_class": "Index",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Show",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "read",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Update",
+          "classification": "owner_or_admin",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": null,
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Webauthn::Authentication",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "public": 2
+      },
+      "actions": [
+        {
+          "action_class": "Begin",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": "post",
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Finish",
+          "classification": "public",
+          "auth_effective": false,
+          "blocking": false,
+          "http_method": "post",
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    },
+    {
+      "resource_const": "VpsAdmin::API::Resources::Webauthn::Registration",
+      "module": "misc",
+      "workspace_default": "both",
+      "actions_total": 2,
+      "actions_by_classification": {
+        "authenticated": 2
+      },
+      "actions": [
+        {
+          "action_class": "Begin",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "post",
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        },
+        {
+          "action_class": "Finish",
+          "classification": "authenticated",
+          "auth_effective": true,
+          "blocking": false,
+          "http_method": "post",
+          "route": null,
+          "severity": "write",
+          "runtime_checks_count": 0
+        }
+      ]
+    }
+  ]
+}
