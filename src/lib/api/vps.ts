@@ -69,8 +69,6 @@ export interface VpsPasswdReply {
 }
 
 interface CreateVpsCommonPayload {
-  environment?: number;
-  location?: number;
   hostname: string;
   os_template?: number;
   start?: boolean;
@@ -92,14 +90,14 @@ export interface CreateVpsAdminPayload extends CreateVpsCommonPayload {
 
 export interface CreateVpsUserPayload extends CreateVpsCommonPayload {
   mode: 'user';
+  environment?: number;
+  location?: number;
 }
 
 export type CreateVpsPayload = CreateVpsAdminPayload | CreateVpsUserPayload;
 
 export function buildCreateVpsParams(payload: CreateVpsPayload): Record<string, unknown> {
-  const common = {
-    environment: payload.environment,
-    location: payload.location,
+  const common: Record<string, unknown> = {
     hostname: payload.hostname,
     os_template: payload.os_template,
     start: payload.start,
@@ -121,7 +119,11 @@ export function buildCreateVpsParams(payload: CreateVpsPayload): Record<string, 
     };
   }
 
-  return common;
+  return {
+    ...common,
+    environment: payload.environment,
+    location: payload.location,
+  };
 }
 
 export async function fetchVpsList(opts?: {

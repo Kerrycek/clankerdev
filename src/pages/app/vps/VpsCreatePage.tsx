@@ -188,8 +188,6 @@ export function VpsCreatePage() {
       const commonPayload = {
         hostname: form.hostname.trim(),
         os_template: optionalResource(form.osTemplateId),
-        environment: optionalResource(form.environmentId),
-        location: optionalResource(form.locationId),
         start: form.start,
         cpu: toPositiveInt(form.cpu),
         memory: toPositiveInt(form.memory),
@@ -211,6 +209,8 @@ export function VpsCreatePage() {
         : {
             ...commonPayload,
             mode: 'user',
+            environment: optionalResource(form.environmentId),
+            location: optionalResource(form.locationId),
           };
 
       return createVps(payload);
