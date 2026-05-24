@@ -129,6 +129,22 @@ comment_issue_failure() {
   gh issue edit "$issue_number" --repo "$REPO" --remove-label "$IN_PROGRESS_LABEL" --add-label "$FAILED_LABEL" >/dev/null || true
 }
 
+store_current_review_context() {
+  local state_path="$1"
+  local fresh_issue="$run_dir/issue-$issue_number-current.json"
+  local fresh_pr="$run_dir/pr-$pr_number-current.json"
+  local fresh_review_comments="$run_dir/pr-$pr_number-review-comments-current.json"
+
+  gh issue view "$issue_number" \
+    --repo "$REPO" \
+    --json number,title,body,url,comments,labels > "$fresh_issue"
+  gh pr view "$pr_number" \
+    --repo "$REPO" \
+    --json number,title,body,url,comments,reviews,headRefName,baseRefName,labels,state,reviewDecision > "$fresh_pr"
+  gh api "repos/$REPO/pulls/$pr_number/comments" > "$fresh_review_comments" || echo "[]" > "$fresh_review_comments"
+  cat "$fresh_issue" "$fresh_pr" "$fresh_review_comments" | sha256sum | awk '{print $1}' > "$state_path"
+}
+
 gh issue edit "$issue_number" --repo "$REPO" --add-label "$IN_PROGRESS_LABEL" --remove-label "$FAILED_LABEL" >/dev/null || true
 
 if [[ ! -d "$WORKDIR/.git" ]]; then
@@ -297,9 +313,9 @@ if [[ -z "$(git status --porcelain)" ]]; then
     fi
   } > "$no_change_body"
   if [[ "$mode" == "revise" ]]; then
-    printf '%s\n' "$review_context_hash" > "$review_context_state"
     gh pr comment "$pr_number" --repo "$REPO" --body-file "$no_change_body" >/dev/null || true
     gh issue edit "$issue_number" --repo "$REPO" --remove-label "$IN_PROGRESS_LABEL" --add-label "$DONE_LABEL" >/dev/null || true
+    store_current_review_context "$review_context_state"
     exit 0
   else
     gh issue comment "$issue_number" --repo "$REPO" --body-file "$no_change_body" >/dev/null || true
@@ -315,7 +331,6 @@ git config user.email "${GIT_AUTHOR_EMAIL:-clanker-codex@users.noreply.github.co
 if [[ "$mode" == "revise" ]]; then
   git commit -m "Revise issue #$issue_number: $issue_title"
   git push origin "$branch"
-  printf '%s\n' "$review_context_hash" > "$review_context_state"
 
   revision_comment="$run_dir/revision-comment.md"
   {
@@ -335,6 +350,7 @@ if [[ "$mode" == "revise" ]]; then
 
   gh pr comment "$pr_number" --repo "$REPO" --body-file "$revision_comment" >/dev/null || true
   gh issue edit "$issue_number" --repo "$REPO" --remove-label "$IN_PROGRESS_LABEL" --add-label "$DONE_LABEL" >/dev/null || true
+  store_current_review_context "$review_context_state"
   echo "Updated PR: $pr_url"
 else
   git commit -m "Resolve issue #$issue_number: $issue_title"
@@ -363,14 +379,6 @@ else
     --body-file "$pr_body")"
 
   pr_number="$(gh pr view "$pr_url" --repo "$REPO" --json number --jq '.number')"
-  pr_detail="$run_dir/pr-$pr_number.json"
-  pr_review_comments="$run_dir/pr-$pr_number-review-comments.json"
-  gh pr view "$pr_number" \
-    --repo "$REPO" \
-    --json number,title,body,url,comments,reviews,headRefName,baseRefName,labels,state,reviewDecision > "$pr_detail"
-  gh api "repos/$REPO/pulls/$pr_number/comments" > "$pr_review_comments" || echo "[]" > "$pr_review_comments"
-  review_context_hash="$(cat "$issue_detail" "$pr_detail" "$pr_review_comments" | sha256sum | awk '{print $1}')"
-  printf '%s\n' "$review_context_hash" > "$STATE_DIR/issue-$issue_number-pr-$pr_number.review-context.sha"
 
   issue_comment="$run_dir/issue-comment.md"
   {
@@ -384,6 +392,7 @@ else
 
   gh issue comment "$issue_number" --repo "$REPO" --body-file "$issue_comment" >/dev/null || true
   gh issue edit "$issue_number" --repo "$REPO" --remove-label "$IN_PROGRESS_LABEL" --add-label "$DONE_LABEL" >/dev/null || true
+  store_current_review_context "$STATE_DIR/issue-$issue_number-pr-$pr_number.review-context.sha"
 
   echo "Opened PR: $pr_url"
 fi
