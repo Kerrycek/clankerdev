@@ -72,7 +72,7 @@ describe('vps API wrappers', () => {
     expect(u.searchParams.get('_meta[includes]')).toBe('user,node,dataset');
   });
 
-  test('createVps posts admin create payload with explicit node', async () => {
+  test('createVps posts admin create payload with explicit node and no auto-pick fields', async () => {
     globalThis.fetch = mockFetchOk({ vps: { id: 150 } }) as any;
 
     await createVps({
@@ -103,8 +103,6 @@ describe('vps API wrappers', () => {
     expect(body).toEqual({
       vps: {
         user: 1,
-        environment: 2,
-        location: 3,
         node: 5,
         hostname: 'my-vps',
         os_template: 6,
@@ -119,6 +117,8 @@ describe('vps API wrappers', () => {
         ipv4_private: 0,
       },
     });
+    expect(body.vps).not.toHaveProperty('environment');
+    expect(body.vps).not.toHaveProperty('location');
     expect(body.vps).not.toHaveProperty('address_location');
   });
 
