@@ -71,7 +71,6 @@ export interface VpsPasswdReply {
 interface CreateVpsCommonPayload {
   environment?: number;
   location?: number;
-  address_location?: number;
   hostname: string;
   os_template?: number;
   start?: boolean;
@@ -101,7 +100,6 @@ export function buildCreateVpsParams(payload: CreateVpsPayload): Record<string, 
   const common = {
     environment: payload.environment,
     location: payload.location,
-    address_location: payload.address_location,
     hostname: payload.hostname,
     os_template: payload.os_template,
     start: payload.start,

@@ -93,7 +93,7 @@ describe('vps API wrappers', () => {
       ipv4: 1,
       ipv6: 1,
       ipv4_private: 0,
-    });
+    } as any);
 
     const [url, init] = lastFetchCall();
     const body = JSON.parse(String(init?.body));
@@ -105,7 +105,6 @@ describe('vps API wrappers', () => {
         user: 1,
         environment: 2,
         location: 3,
-        address_location: 4,
         node: 5,
         hostname: 'my-vps',
         os_template: 6,
@@ -120,6 +119,7 @@ describe('vps API wrappers', () => {
         ipv4_private: 0,
       },
     });
+    expect(body.vps).not.toHaveProperty('address_location');
   });
 
   test('createVps posts user create payload without admin-only fields', async () => {
@@ -154,7 +154,6 @@ describe('vps API wrappers', () => {
       vps: {
         environment: 2,
         location: 3,
-        address_location: 4,
         hostname: 'user-vps',
         os_template: 6,
         start: true,
@@ -167,5 +166,6 @@ describe('vps API wrappers', () => {
         ipv4_private: 0,
       },
     });
+    expect(body.vps).not.toHaveProperty('address_location');
   });
 });
