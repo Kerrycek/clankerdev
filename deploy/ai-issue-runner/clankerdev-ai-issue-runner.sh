@@ -68,9 +68,8 @@ gh issue list \
   --limit 20 > "$issue_json"
 
 issue_number="$(
-  jq -r --arg in_progress "$IN_PROGRESS_LABEL" --arg done "$DONE_LABEL" '
-    map(select((.labels // [] | map(.name) | index($in_progress) | not)
-      and (.labels // [] | map(.name) | index($done) | not)))
+  jq -r --arg in_progress "$IN_PROGRESS_LABEL" '
+    map(select((.labels // [] | map(.name) | index($in_progress) | not)))
     | first.number // empty
   ' "$issue_json"
 )"
@@ -94,11 +93,41 @@ if [[ -z "$slug" ]]; then
 fi
 branch="ai/issue-$issue_number-$slug"
 
-if gh pr list --repo "$REPO" --state open --head "$branch" --json number --jq 'length' | grep -qx '[1-9][0-9]*'; then
-  echo "An open PR already exists for $branch; marking issue as done."
-  gh issue edit "$issue_number" --repo "$REPO" --remove-label "$IN_PROGRESS_LABEL" --add-label "$DONE_LABEL" >/dev/null || true
-  exit 0
+open_pr_list="$run_dir/open-pr-list.json"
+gh pr list \
+  --repo "$REPO" \
+  --state open \
+  --head "$branch" \
+  --json number,title,url,headRefName,baseRefName > "$open_pr_list"
+
+pr_number="$(jq -r '.[0].number // empty' "$open_pr_list")"
+pr_url="$(jq -r '.[0].url // empty' "$open_pr_list")"
+mode="create"
+if [[ -n "$pr_number" ]]; then
+  mode="revise"
+  echo "Found open PR #$pr_number for $branch; checking review context."
 fi
+
+comment_issue_failure() {
+  local body_file="$run_dir/failure-comment.md"
+  {
+    echo "Codex runner failed while working on this issue."
+    echo
+    echo "Run ID: \`$run_id\`"
+    echo "Log file on runner: \`$log_file\`"
+    if [[ -s "$last_message" ]]; then
+      echo
+      echo "Last Codex message:"
+      echo
+      sed -n '1,120p' "$last_message"
+    fi
+  } > "$body_file"
+  gh issue comment "$issue_number" --repo "$REPO" --body-file "$body_file" >/dev/null || true
+  if [[ -n "${pr_number:-}" ]]; then
+    gh pr comment "$pr_number" --repo "$REPO" --body-file "$body_file" >/dev/null || true
+  fi
+  gh issue edit "$issue_number" --repo "$REPO" --remove-label "$IN_PROGRESS_LABEL" --add-label "$FAILED_LABEL" >/dev/null || true
+}
 
 gh issue edit "$issue_number" --repo "$REPO" --add-label "$IN_PROGRESS_LABEL" --remove-label "$FAILED_LABEL" >/dev/null || true
 
@@ -113,16 +142,92 @@ if [[ "$WORKDIR" != /srv/clankerdev-ai/* ]]; then
   exit 2
 fi
 
-git fetch origin "$BASE_BRANCH" --prune
-git checkout "$BASE_BRANCH"
-git reset --hard "origin/$BASE_BRANCH"
-git clean -fdx
-git checkout -B "$branch"
-
 prompt_file="$run_dir/prompt.md"
 last_message="$run_dir/codex-final.md"
 
-cat > "$prompt_file" <<EOF
+if [[ "$mode" == "revise" ]]; then
+  pr_detail="$run_dir/pr-$pr_number.json"
+  pr_review_comments="$run_dir/pr-$pr_number-review-comments.json"
+
+  gh pr view "$pr_number" \
+    --repo "$REPO" \
+    --json number,title,body,url,comments,reviews,headRefName,baseRefName,labels,state,reviewDecision > "$pr_detail"
+
+  gh api "repos/$REPO/pulls/$pr_number/comments" > "$pr_review_comments" || echo "[]" > "$pr_review_comments"
+
+  review_context_hash="$(cat "$issue_detail" "$pr_detail" "$pr_review_comments" | sha256sum | awk '{print $1}')"
+  review_context_state="$STATE_DIR/issue-$issue_number-pr-$pr_number.review-context.sha"
+  if [[ -f "$review_context_state" && "$(cat "$review_context_state")" == "$review_context_hash" ]]; then
+    echo "No new issue or PR review context for issue #$issue_number / PR #$pr_number."
+    gh issue edit "$issue_number" --repo "$REPO" --remove-label "$IN_PROGRESS_LABEL" --add-label "$DONE_LABEL" >/dev/null || true
+    exit 0
+  fi
+
+  git fetch origin "$BASE_BRANCH" "$branch" --prune
+  git checkout -B "$branch" "origin/$branch"
+  git reset --hard "origin/$branch"
+  git clean -fdx
+
+  context_dir="$WORKDIR/.codex-run-context"
+  rm -rf "$context_dir"
+  mkdir -p "$context_dir"
+  cp "$issue_detail" "$context_dir/issue.json"
+  cp "$pr_detail" "$context_dir/pr.json"
+  cp "$pr_review_comments" "$context_dir/pr-review-comments.json"
+  git diff --stat "origin/$BASE_BRANCH...HEAD" > "$context_dir/pr-diff-stat.txt" || true
+  git diff --name-status "origin/$BASE_BRANCH...HEAD" > "$context_dir/pr-diff-files.txt" || true
+  git diff --color=never "origin/$BASE_BRANCH...HEAD" > "$context_dir/pr-diff.patch" || true
+
+  cat > "$prompt_file" <<EOF
+You are the automated Codex maintainer for $REPO.
+
+Revise the existing GitHub pull request for issue #$issue_number.
+
+Issue URL:
+$issue_url
+
+Pull request URL:
+$pr_url
+
+Issue title:
+$issue_title
+
+Context files are available inside the repository checkout:
+- .codex-run-context/issue.json
+- .codex-run-context/pr.json
+- .codex-run-context/pr-review-comments.json
+- .codex-run-context/pr-diff-stat.txt
+- .codex-run-context/pr-diff-files.txt
+- .codex-run-context/pr-diff.patch
+
+Read AGENTS.md first and obey it strictly.
+
+Hard rules:
+- Read the issue comments, PR comments, PR reviews, and inline review comments.
+- Revise the existing branch according to that feedback.
+- Keep useful existing PR work where possible.
+- Do not deploy.
+- Do not change anything on remote servers.
+- Do not modify secrets or credentials.
+- Do not push, merge, or create a pull request; the runner handles git and PR updates.
+- Keep the change scoped to the issue and review feedback.
+- Run relevant tests or lightweight verification when possible.
+- Leave the working tree changed with the revision.
+
+In your final response, include:
+- Summary of changes.
+- Verification performed.
+- Which feedback was addressed.
+- Risks or follow-up needed.
+EOF
+else
+  git fetch origin "$BASE_BRANCH" --prune
+  git checkout -B "$BASE_BRANCH" "origin/$BASE_BRANCH"
+  git reset --hard "origin/$BASE_BRANCH"
+  git clean -fdx
+  git checkout -B "$branch"
+
+  cat > "$prompt_file" <<EOF
 You are the automated Codex maintainer for $REPO.
 
 Resolve GitHub issue #$issue_number.
@@ -155,6 +260,7 @@ In your final response, include:
 - Verification performed.
 - Risks or follow-up needed.
 EOF
+fi
 
 codex_cmd=(codex --ask-for-approval "$CODEX_APPROVAL" exec -C "$WORKDIR" -s "$CODEX_SANDBOX" -o "$last_message")
 if [[ -n "$CODEX_MODEL" ]]; then
@@ -162,31 +268,24 @@ if [[ -n "$CODEX_MODEL" ]]; then
 fi
 codex_cmd+=(-)
 
-echo "Running Codex for issue #$issue_number on branch $branch"
+echo "Running Codex in $mode mode for issue #$issue_number on branch $branch"
 if ! "${codex_cmd[@]}" < "$prompt_file"; then
   echo "Codex failed for issue #$issue_number"
-  failure_body="$run_dir/failure-comment.md"
-  {
-    echo "Codex runner failed while working on this issue."
-    echo
-    echo "Run ID: \`$run_id\`"
-    echo "Log file on runner: \`$log_file\`"
-    if [[ -s "$last_message" ]]; then
-      echo
-      echo "Last Codex message:"
-      echo
-      sed -n '1,120p' "$last_message"
-    fi
-  } > "$failure_body"
-  gh issue comment "$issue_number" --repo "$REPO" --body-file "$failure_body" >/dev/null || true
-  gh issue edit "$issue_number" --repo "$REPO" --remove-label "$IN_PROGRESS_LABEL" --add-label "$FAILED_LABEL" >/dev/null || true
+  rm -rf "$WORKDIR/.codex-run-context"
+  comment_issue_failure
   exit 1
 fi
+
+rm -rf "$WORKDIR/.codex-run-context"
 
 if [[ -z "$(git status --porcelain)" ]]; then
   no_change_body="$run_dir/no-change-comment.md"
   {
-    echo "Codex completed but did not leave any repository changes."
+    if [[ "$mode" == "revise" ]]; then
+      echo "Codex checked the latest issue/PR feedback but did not leave any repository changes."
+    else
+      echo "Codex completed but did not leave any repository changes."
+    fi
     echo
     echo "Run ID: \`$run_id\`"
     echo "Log file on runner: \`$log_file\`"
@@ -197,51 +296,96 @@ if [[ -z "$(git status --porcelain)" ]]; then
       sed -n '1,160p' "$last_message"
     fi
   } > "$no_change_body"
-  gh issue comment "$issue_number" --repo "$REPO" --body-file "$no_change_body" >/dev/null || true
-  gh issue edit "$issue_number" --repo "$REPO" --remove-label "$IN_PROGRESS_LABEL" --add-label "$FAILED_LABEL" >/dev/null || true
-  exit 1
+  if [[ "$mode" == "revise" ]]; then
+    printf '%s\n' "$review_context_hash" > "$review_context_state"
+    gh pr comment "$pr_number" --repo "$REPO" --body-file "$no_change_body" >/dev/null || true
+    gh issue edit "$issue_number" --repo "$REPO" --remove-label "$IN_PROGRESS_LABEL" --add-label "$DONE_LABEL" >/dev/null || true
+    exit 0
+  else
+    gh issue comment "$issue_number" --repo "$REPO" --body-file "$no_change_body" >/dev/null || true
+    gh issue edit "$issue_number" --repo "$REPO" --remove-label "$IN_PROGRESS_LABEL" --add-label "$FAILED_LABEL" >/dev/null || true
+    exit 1
+  fi
 fi
 
 git add -A
 git config user.name "${GIT_AUTHOR_NAME:-clanker-codex}"
 git config user.email "${GIT_AUTHOR_EMAIL:-clanker-codex@users.noreply.github.com}"
-git commit -m "Resolve issue #$issue_number: $issue_title"
-git push -u origin "$branch"
 
-pr_body="$run_dir/pr-body.md"
-{
-  echo "Fixes #$issue_number"
-  echo
-  echo "Automated Codex run: \`$run_id\`"
-  echo
-  echo "Important: this PR was prepared only for human review. It was not deployed and must not be merged without review."
-  echo
-  if [[ -s "$last_message" ]]; then
-    sed -n "1,240p" "$last_message"
-  else
-    echo "Codex did not produce a final summary."
-  fi
-} > "$pr_body"
+if [[ "$mode" == "revise" ]]; then
+  git commit -m "Revise issue #$issue_number: $issue_title"
+  git push origin "$branch"
+  printf '%s\n' "$review_context_hash" > "$review_context_state"
 
-pr_url="$(gh pr create \
-  --repo "$REPO" \
-  --base "$BASE_BRANCH" \
-  --head "$branch" \
-  --title "Resolve #$issue_number: $issue_title" \
-  --body-file "$pr_body")"
+  revision_comment="$run_dir/revision-comment.md"
+  {
+    echo "Codex pushed a revision to the existing PR after reading the latest issue/PR feedback."
+    echo
+    echo "PR: $pr_url"
+    echo
+    echo "Run ID: \`$run_id\`"
+    echo "No deployment was performed."
+    echo
+    if [[ -s "$last_message" ]]; then
+      sed -n "1,240p" "$last_message"
+    else
+      echo "Codex did not produce a final summary."
+    fi
+  } > "$revision_comment"
 
-issue_comment="$run_dir/issue-comment.md"
-{
-  echo "Codex opened a pull request for this issue:"
-  echo
-  echo "$pr_url"
-  echo
-  echo "Run ID: \`$run_id\`"
-  echo "No deployment was performed."
-} > "$issue_comment"
+  gh pr comment "$pr_number" --repo "$REPO" --body-file "$revision_comment" >/dev/null || true
+  gh issue edit "$issue_number" --repo "$REPO" --remove-label "$IN_PROGRESS_LABEL" --add-label "$DONE_LABEL" >/dev/null || true
+  echo "Updated PR: $pr_url"
+else
+  git commit -m "Resolve issue #$issue_number: $issue_title"
+  git push -u origin "$branch"
 
-gh issue comment "$issue_number" --repo "$REPO" --body-file "$issue_comment" >/dev/null || true
-gh issue edit "$issue_number" --repo "$REPO" --remove-label "$IN_PROGRESS_LABEL" --add-label "$DONE_LABEL" >/dev/null || true
+  pr_body="$run_dir/pr-body.md"
+  {
+    echo "Fixes #$issue_number"
+    echo
+    echo "Automated Codex run: \`$run_id\`"
+    echo
+    echo "Important: this PR was prepared only for human review. It was not deployed and must not be merged without review."
+    echo
+    if [[ -s "$last_message" ]]; then
+      sed -n "1,240p" "$last_message"
+    else
+      echo "Codex did not produce a final summary."
+    fi
+  } > "$pr_body"
 
-echo "Opened PR: $pr_url"
+  pr_url="$(gh pr create \
+    --repo "$REPO" \
+    --base "$BASE_BRANCH" \
+    --head "$branch" \
+    --title "Resolve #$issue_number: $issue_title" \
+    --body-file "$pr_body")"
+
+  pr_number="$(gh pr view "$pr_url" --repo "$REPO" --json number --jq '.number')"
+  pr_detail="$run_dir/pr-$pr_number.json"
+  pr_review_comments="$run_dir/pr-$pr_number-review-comments.json"
+  gh pr view "$pr_number" \
+    --repo "$REPO" \
+    --json number,title,body,url,comments,reviews,headRefName,baseRefName,labels,state,reviewDecision > "$pr_detail"
+  gh api "repos/$REPO/pulls/$pr_number/comments" > "$pr_review_comments" || echo "[]" > "$pr_review_comments"
+  review_context_hash="$(cat "$issue_detail" "$pr_detail" "$pr_review_comments" | sha256sum | awk '{print $1}')"
+  printf '%s\n' "$review_context_hash" > "$STATE_DIR/issue-$issue_number-pr-$pr_number.review-context.sha"
+
+  issue_comment="$run_dir/issue-comment.md"
+  {
+    echo "Codex opened a pull request for this issue:"
+    echo
+    echo "$pr_url"
+    echo
+    echo "Run ID: \`$run_id\`"
+    echo "No deployment was performed."
+  } > "$issue_comment"
+
+  gh issue comment "$issue_number" --repo "$REPO" --body-file "$issue_comment" >/dev/null || true
+  gh issue edit "$issue_number" --repo "$REPO" --remove-label "$IN_PROGRESS_LABEL" --add-label "$DONE_LABEL" >/dev/null || true
+
+  echo "Opened PR: $pr_url"
+fi
+
 echo "[$(date -Is)] clankerdev AI issue runner finished"
