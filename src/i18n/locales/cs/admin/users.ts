@@ -1,6 +1,6 @@
 // Admin locale chunk: users
 export const csAdmin_users = {
-  "admin.users.advanced.hint": "Tip: pro textové vyhledávání použijte pole nahoře.",
+  "admin.users.advanced.hint": "Tip: pro textové vyhledávání použij pole nahoře.",
   "admin.users.advanced.level": "Úroveň",
   "admin.users.advanced.level.placeholder": "např. 90",
   "admin.users.advanced.lockout": "Uzamčení",
@@ -23,7 +23,7 @@ export const csAdmin_users = {
   "admin.users.field.login": "Přihlašovací jméno",
   "admin.users.field.name": "Jméno",
   "admin.users.field.role": "Role",
-  "admin.users.filter_hint": "Filtry zůstávají v URL a přizpůsobují se aktuálnímu upstream API. Napište ? pro nápovědu.",
+  "admin.users.filter_hint": "Filtry zůstávají v URL a přizpůsobují se aktuálnímu upstream API. Napiš ? pro nápovědu.",
   "admin.users.load_error": "Nepodařilo se načíst uživatele",
   "admin.users.role.admin": "Administrátor",
   "admin.users.role.support": "Podpora",
@@ -38,9 +38,9 @@ export const csAdmin_users = {
   "admin.users.smart_help.examples.role": "Filtrovat podle role",
   "admin.users.smart_help.examples.search": "Vyhledat přihlašovací jméno/jméno/e-mail/adresu/info",
   "admin.users.smart_help.inference.advanced": "Pokročilé filtry: lockout/MFA apod.",
-  "admin.users.smart_help.inference.enter_search": "Napište slovo (nebo \"frázi\") a stiskněte Enter pro vyhledání.",
+  "admin.users.smart_help.inference.enter_search": "Napiš slovo (nebo \"frázi\") a stiskni Enter pro vyhledání.",
   "admin.users.smart_help.inference.numeric_open": "Číslo otevře detail uživatele (např. 123).",
-  "admin.users.smart_help.intro": "Pište volný text pro vyhledávání. Pro přesné filtry použijte klíč:hodnota. Enter použije.",
+  "admin.users.smart_help.intro": "Piš volný text pro vyhledávání. Pro přesné filtry použij klíč:hodnota. Enter použije.",
   "admin.users.smart_help.keys.id": "Otevřít detail uživatele podle ID",
   "admin.users.smart_help.keys.level": "Přesná numerická úroveň",
   "admin.users.smart_help.keys.lockout": "Účet je zablokovaný",

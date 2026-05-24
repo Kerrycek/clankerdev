@@ -14,10 +14,10 @@ export const csAdmin_ip_assignments = {
   "admin.ip_assignments.filter.active.true": "Jen aktivní",
   "admin.ip_assignments.filter.order.newest": "Nejnovější první",
   "admin.ip_assignments.filter.order.oldest": "Nejstarší první",
-  "admin.ip_assignments.filter.q.placeholder": "Hledejte podle IP, uživatele nebo VPS…",
+  "admin.ip_assignments.filter.q.placeholder": "Hledej podle IP, uživatele nebo VPS…",
   "admin.ip_assignments.filter.user.placeholder": "Přihlašovací jméno nebo ID uživatele…",
   "admin.ip_assignments.filter.vps.placeholder": "Název hostitele nebo ID VPS…",
   "admin.ip_assignments.load_error": "Přiřazení IP se nepodařilo načíst",
-  "admin.ip_assignments.subtitle": "Auditujte, který uživatel/VPS držel adresu a kdy.",
+  "admin.ip_assignments.subtitle": "Audituj, který uživatel/VPS držel adresu a kdy.",
   "admin.ip_assignments.title": "Audit přiřazení IP",
 } as const;
