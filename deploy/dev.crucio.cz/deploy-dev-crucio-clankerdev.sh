@@ -3,6 +3,8 @@ set -euo pipefail
 
 src="${1:-/srv/clankerdev-deploy/repo}"
 dst="/var/www/dev.crucio.cz/current"
+nginx_conf_src="deploy/dev.crucio.cz/nginx-dev.crucio.cz.conf"
+nginx_conf_dst="/etc/nginx/sites-available/dev.crucio.cz"
 
 if [[ ! -d "$src/.git" ]]; then
   echo "Source is not a git checkout: $src" >&2
@@ -27,6 +29,13 @@ fi
 
 install -d -m 0755 "$dst"
 rsync -a --delete dist/ "$dst"/
+
+if [[ -f "$nginx_conf_src" ]]; then
+  install -m 0644 "$nginx_conf_src" "$nginx_conf_dst"
+  ln -sfn "$nginx_conf_dst" /etc/nginx/sites-enabled/dev.crucio.cz
+  nginx -t
+  systemctl reload nginx
+fi
 
 systemctl daemon-reload
 systemctl restart webui-next-bff.service

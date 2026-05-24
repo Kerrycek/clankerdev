@@ -104,6 +104,10 @@ function relPathFor(base: string, pathname: string): string | null {
   return trimmed || null;
 }
 
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /**
  * Installs a network interceptor that emulates a minimal subset of HaveAPI.
  *
@@ -137,13 +141,17 @@ export async function installHaveApiMock(page: Page, opts?: HaveApiMockOptions) 
     },
   };
 
-  // Route pattern: match requests to the API base on same-origin.
-  await page.route(`**${apiBase}*`, async (route: Route) => {
+  // Match the API base and all nested HaveAPI action paths. A glob like
+  // `**/api*` misses `/api/v7.0/...` because `*` does not cross slashes.
+  await page.route(new RegExp(`${escapeRegExp(apiBase)}(?:/|$)`), async (route: Route) => {
     const req = route.request();
     const url = new URL(req.url());
     const method = req.method();
 
     const pathname = url.pathname;
+    if (pathname !== apiBase && !pathname.startsWith(`${apiBase}/`)) {
+      return route.fallback();
+    }
 
     // HaveAPI description fetch (not an action envelope).
     if (

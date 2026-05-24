@@ -47,7 +47,7 @@ function collectTitleSnapshot(doc: Document): {
   let headingTitle = '';
 
   if (titleRoot) {
-    headingKind = titleRoot.dataset.documentTitleKind === 'object' ? 'object' : 'page';
+    headingKind = titleRoot.dataset['documentTitleKind'] === 'object' ? 'object' : 'page';
     headingTitle = normalizeDocumentTitleText(titleRoot.querySelector<HTMLElement>('[data-document-title-heading]')?.textContent);
   } else {
     const headings = Array.from(region.querySelectorAll<HTMLElement>('h1'));

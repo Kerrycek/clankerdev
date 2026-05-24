@@ -70,16 +70,16 @@ function localizeKnownErrorMessage(raw: string): string | null {
   if (exact) return staticT(exact);
 
   let match = message.match(/^invalid\s+(.+)$/i);
-  if (match) return staticT('errors.internal.invalid', { item: itemLabel(match[1]) });
+  if (match?.[1]) return staticT('errors.internal.invalid', { item: itemLabel(match[1]) });
 
   match = message.match(/^missing\s+(.+)$/i);
-  if (match) return staticT('errors.internal.missing', { item: itemLabel(match[1]) });
+  if (match?.[1]) return staticT('errors.internal.missing', { item: itemLabel(match[1]) });
 
   match = message.match(/^no\s+(.+)$/i);
-  if (match) return staticT('errors.internal.none', { item: itemLabel(match[1]) });
+  if (match?.[1]) return staticT('errors.internal.none', { item: itemLabel(match[1]) });
 
   match = message.match(/^(.+)\s+missing$/i);
-  if (match) return staticT('errors.internal.missing', { item: itemLabel(match[1]) });
+  if (match?.[1]) return staticT('errors.internal.missing', { item: itemLabel(match[1]) });
 
   return null;
 }

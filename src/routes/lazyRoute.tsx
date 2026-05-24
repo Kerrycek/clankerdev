@@ -4,13 +4,35 @@ import { LoadingState } from '../components/ui/LoadingState';
 
 type LazyableComponent = React.ComponentType<any>;
 
+function isChunkLoadError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = `${err.name} ${err.message}`.toLowerCase();
+  return (
+    msg.includes('dynamically imported module') ||
+    msg.includes('importing a module script failed') ||
+    msg.includes('failed to fetch dynamically imported module') ||
+    msg.includes('not a valid javascript mime type') ||
+    msg.includes('loading chunk') ||
+    msg.includes('chunkloaderror')
+  );
+}
+
 export function lazyRoute(
   loader: () => Promise<any>,
   exportName: string,
   fallbackTestId?: string
 ): LazyableComponent {
   const LazyComponent = React.lazy(async () => {
-    const mod = await loader();
+    let mod: any;
+    try {
+      mod = await loader();
+    } catch (err) {
+      if (isChunkLoadError(err)) {
+        throw new Error('The application was updated while this tab was open. Reload the page to load the newest version.');
+      }
+      throw err;
+    }
+
     const resolved = mod?.[exportName];
 
     if (!resolved) {

@@ -149,6 +149,7 @@ export function VpsCreatePage() {
   const { basePath, mode } = useAppMode();
   const auth = useAuth();
   const isAdmin = mode === 'admin' || auth.role === 'admin';
+  const effectiveBasePath = isAdmin ? '/admin' : basePath;
   const { t } = useI18n();
   const navigate = useNavigate();
   const chrome = useChrome();
@@ -230,6 +231,12 @@ export function VpsCreatePage() {
   const validationKeys = useMemo(() => validateForm(form, isAdmin), [form, isAdmin]);
   const canSubmit = validationKeys.length === 0;
 
+  useEffect(() => {
+    if (mode === 'user' && auth.role === 'admin') {
+      navigate('/admin/vps/new', { replace: true });
+    }
+  }, [auth.role, mode, navigate]);
+
   const createM = useMutation({
     mutationFn: async () => {
       const errors = validateForm(form, isAdmin);
@@ -280,12 +287,12 @@ export function VpsCreatePage() {
           objectLabel: form.hostname.trim() || (Number.isFinite(vpsId) ? t('common.vps_ref', { id: vpsId }) : t('vps.create.title')),
           object: Number.isFinite(vpsId) ? objectRef('Vps', vpsId) : undefined,
         });
-        navigate(`${basePath}/action-states/${actionStateId}`);
+        navigate(`${effectiveBasePath}/action-states/${actionStateId}`);
         return;
       }
 
-      if (Number.isFinite(vpsId)) navigate(`${basePath}/vps/${vpsId}`);
-      else navigate(`${basePath}/vps`);
+      if (Number.isFinite(vpsId)) navigate(`${effectiveBasePath}/vps/${vpsId}`);
+      else navigate(`${effectiveBasePath}/vps`);
     },
   });
 
@@ -311,7 +318,7 @@ export function VpsCreatePage() {
           title={t('vps.create.title')}
           description={t('vps.create.description')}
           actions={
-            <Button variant="secondary" to={`${basePath}/vps`} testId="vps.create.back">
+            <Button variant="secondary" to={`${effectiveBasePath}/vps`} testId="vps.create.back">
               <ArrowLeft className="h-4 w-4" />
               {t('common.back')}
             </Button>
