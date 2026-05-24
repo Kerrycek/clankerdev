@@ -85,7 +85,6 @@ interface CreateVpsCommonPayload {
 
 export interface CreateVpsAdminPayload extends CreateVpsCommonPayload {
   mode: 'admin';
-  address_location?: number;
   node: number;
   user?: number;
   onstartall?: boolean;
@@ -117,7 +116,6 @@ export function buildCreateVpsParams(payload: CreateVpsPayload): Record<string, 
     return {
       ...common,
       user: payload.user,
-      address_location: payload.address_location,
       node: payload.node,
       onstartall: payload.onstartall,
     };

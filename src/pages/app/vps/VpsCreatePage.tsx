@@ -29,7 +29,6 @@ import { objectRef } from '../../../lib/objectRef';
 type FormState = {
   environmentId: string;
   locationId: string;
-  addressLocationId: string;
   nodeId: string;
   osTemplateId: string;
   userId: string;
@@ -51,7 +50,6 @@ function defaultForm(): FormState {
   return {
     environmentId: '',
     locationId: '',
-    addressLocationId: '',
     nodeId: '',
     osTemplateId: '',
     userId: '',
@@ -206,7 +204,6 @@ export function VpsCreatePage() {
         ? {
             ...commonPayload,
             mode: 'admin',
-            address_location: optionalResource(form.addressLocationId),
             node: optionalResource(form.nodeId) as number,
             user: optionalResource(form.userId),
             onstartall: form.onstartall,
@@ -302,12 +299,6 @@ export function VpsCreatePage() {
                   <div>
                     {label(t('vps.create.field.node'))}
                     <Select value={form.nodeId} onChange={(e) => update('nodeId', e.target.value)} testId="vps.create.node" options={[{ value: '', label: t('common.select') }, ...nodes.map((n) => ({ value: String(n.id), label: nodeLabel(n) }))]} />
-                  </div>
-                ) : null}
-                {isAdmin ? (
-                  <div>
-                    {label(t('vps.create.field.address_location'))}
-                    <Select value={form.addressLocationId} onChange={(e) => update('addressLocationId', e.target.value)} testId="vps.create.address_location" options={[{ value: '', label: t('vps.create.option.same_location') }, ...locations.map((l: Location) => ({ value: String(l.id), label: labelOf(l) }))]} />
                   </div>
                 ) : null}
                 {isAdmin ? (
