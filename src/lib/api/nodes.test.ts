@@ -6,6 +6,11 @@ function mockFetchOk(response: any) {
   return vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: true, response }) });
 }
 
+function lastFetchCall() {
+  const calls = (globalThis.fetch as any).mock.calls;
+  return calls[calls.length - 1] as [string, RequestInit?];
+}
+
 describe('nodes API wrappers', () => {
   test('fetchNodes forwards q, state, limit, and from_id', async () => {
     globalThis.fetch = mockFetchOk({ nodes: [{ id: 12, name: 'node12' }], _meta: { total_count: 1 } }) as any;
@@ -14,7 +19,7 @@ describe('nodes API wrappers', () => {
 
     expect(res.data).toEqual([{ id: 12, name: 'node12' }]);
 
-    const [url] = (globalThis.fetch as any).mock.calls[0];
+    const [url] = lastFetchCall();
     const u = new URL(url);
 
     expect(u.pathname).toBe('/v7.0/nodes');
