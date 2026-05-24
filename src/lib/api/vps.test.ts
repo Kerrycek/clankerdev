@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from 'vitest';
 
-import { fetchVps, fetchVpsList, fetchVpsStatuses } from './vps';
+import { createVps, fetchVps, fetchVpsList, fetchVpsStatuses } from './vps';
 
 function mockFetchOk(response: any) {
   return vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: true, response }) });
@@ -70,5 +70,54 @@ describe('vps API wrappers', () => {
 
     expect(u.pathname).toBe('/v7.0/vpses/1');
     expect(u.searchParams.get('_meta[includes]')).toBe('user,node,dataset');
+  });
+
+  test('createVps posts namespaced create payload', async () => {
+    globalThis.fetch = mockFetchOk({ vps: { id: 150 } }) as any;
+
+    await createVps({
+      user: 1,
+      environment: 2,
+      location: 3,
+      address_location: 4,
+      node: 5,
+      hostname: 'my-vps',
+      os_template: 6,
+      onstartall: true,
+      start: true,
+      cpu: 2,
+      memory: 2048,
+      diskspace: 20480,
+      swap: 512,
+      ipv4: 1,
+      ipv6: 1,
+      ipv4_private: 0,
+    });
+
+    const [url, init] = lastFetchCall();
+    const body = JSON.parse(String(init?.body));
+
+    expect(new URL(url).pathname).toBe('/v7.0/vpses');
+    expect(init?.method).toBe('POST');
+    expect(body).toEqual({
+      vps: {
+        user: 1,
+        environment: 2,
+        location: 3,
+        address_location: 4,
+        node: 5,
+        hostname: 'my-vps',
+        os_template: 6,
+        onstartall: true,
+        start: true,
+        cpu: 2,
+        memory: 2048,
+        diskspace: 20480,
+        swap: 512,
+        ipv4: 1,
+        ipv6: 1,
+        ipv4_private: 0,
+      },
+    });
   });
 });

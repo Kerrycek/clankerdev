@@ -37,6 +37,7 @@ const OomReportTasksPage = lazyRoute(() => import('../pages/app/oom/OomReportTas
 const OomReportRulesPage = lazyRoute(() => import('../pages/app/oom/OomReportRulesPage'), 'OomReportRulesPage');
 const MonitoringEventDetailPage = lazyRoute(() => import('../pages/app/MonitoringEventDetailPage'), 'MonitoringEventDetailPage');
 const VpsLayout = lazyRoute(() => import('../pages/app/vps/VpsLayout'), 'VpsLayout');
+const VpsCreatePage = lazyRoute(() => import('../pages/app/vps/VpsCreatePage'), 'VpsCreatePage');
 const VpsOverviewPage = lazyRoute(() => import('../pages/app/vps/VpsOverviewPage'), 'VpsOverviewPage');
 const VpsConsolePage = lazyRoute(() => import('../pages/app/vps/VpsConsolePage'), 'VpsConsolePage');
 const VpsNetworkPage = lazyRoute(() => import('../pages/app/vps/VpsNetworkPage'), 'VpsNetworkPage');
@@ -185,6 +186,7 @@ export const router = createBrowserRouter([
           children: [
             { index: true, element: <DashboardPage /> },
             { path: 'vps', element: <VpsListPage /> },
+            { path: 'vps/new', element: <VpsCreatePage /> },
             {
               path: 'vps/:vpsId',
               element: <VpsLayout />,
@@ -348,6 +350,7 @@ export const router = createBrowserRouter([
             { path: 'ip-addresses', element: <IpAddressesPage /> },
             { path: 'ip-addresses/:ipAddressId', element: <IpAddressDetailPage /> },
             { path: 'vps', element: <VpsListPage /> },
+            { path: 'vps/new', element: <VpsCreatePage /> },
             {
               path: 'vps/:vpsId',
               element: <VpsLayout />,

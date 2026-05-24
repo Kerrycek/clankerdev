@@ -68,6 +68,25 @@ export interface VpsPasswdReply {
   password: string;
 }
 
+export interface CreateVpsPayload {
+  environment?: number;
+  location?: number;
+  address_location?: number;
+  user?: number;
+  hostname: string;
+  os_template?: number;
+  node?: number;
+  onstartall?: boolean;
+  start?: boolean;
+  cpu?: number;
+  memory?: number;
+  diskspace?: number;
+  swap?: number;
+  ipv4?: number;
+  ipv6?: number;
+  ipv4_private?: number;
+}
+
 export async function fetchVpsList(opts?: {
   limit?: number;
   fromId?: number;
@@ -116,6 +135,16 @@ export async function updateVps(vpsId: number, params: Record<string, unknown>) 
   return haveApiCall<Vps>({
     method: 'PUT',
     path: `/vpses/${vpsId}`,
+    namespace: 'vps',
+    params,
+  });
+}
+
+export async function createVps(payload: CreateVpsPayload) {
+  const params: Record<string, unknown> = { ...payload };
+  return haveApiCall<Vps>({
+    method: 'POST',
+    path: '/vpses',
     namespace: 'vps',
     params,
   });
