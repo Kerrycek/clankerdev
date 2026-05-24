@@ -38,6 +38,7 @@ export const enVps = {
   'vps.create.validation.hostname_format': 'Hostname must be 2-64 characters and contain only letters, numbers, dashes, underscores or dots.',
   'vps.create.validation.os_template_required': 'Choose an OS template.',
   'vps.create.validation.target_required': 'Choose a location or node.',
+  'vps.create.validation.node_required': 'Choose a node.',
   'vps.create.validation.user_invalid': 'Owner must be a valid user ID.',
   'vps.create.validation.cpu': 'CPU must be between 1 and 32.',
   'vps.create.validation.memory': 'Memory must be between 512 and 131072 MiB.',

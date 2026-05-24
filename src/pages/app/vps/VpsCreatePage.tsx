@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
 import { useAppMode } from '../../../app/appMode';
-import { useObjectScope } from '../../../app/objectScope';
 import { useI18n } from '../../../app/i18n';
 import { useChrome } from '../../../components/layout/ChromeContext';
 import { ListShell } from '../../../components/layout/ListShell';
@@ -108,7 +107,11 @@ function validateForm(form: FormState, isAdmin: boolean): string[] {
   if (!hostname) errors.push('vps.create.validation.hostname_required');
   else if (hostname.length < 2 || hostname.length > 64 || !HOSTNAME_RE.test(hostname)) errors.push('vps.create.validation.hostname_format');
   if (!optionalResource(form.osTemplateId)) errors.push('vps.create.validation.os_template_required');
-  if (!optionalResource(form.locationId) && !(isAdmin && optionalResource(form.nodeId))) errors.push('vps.create.validation.target_required');
+  if (isAdmin) {
+    if (!optionalResource(form.nodeId)) errors.push('vps.create.validation.node_required');
+  } else if (!optionalResource(form.locationId)) {
+    errors.push('vps.create.validation.target_required');
+  }
   if (isAdmin && form.userId.trim() && !optionalResource(form.userId)) errors.push('vps.create.validation.user_invalid');
 
   const numeric: Array<[keyof FormState, number, number, string]> = [
@@ -132,7 +135,6 @@ function validateForm(form: FormState, isAdmin: boolean): string[] {
 export function VpsCreatePage() {
   const { basePath, mode } = useAppMode();
   const isAdmin = mode === 'admin';
-  const scope = useObjectScope();
   const { t } = useI18n();
   const navigate = useNavigate();
   const chrome = useChrome();
@@ -185,14 +187,12 @@ export function VpsCreatePage() {
         throw err;
       }
 
-      const payload: CreateVpsPayload = {
+      const commonPayload = {
         hostname: form.hostname.trim(),
         os_template: optionalResource(form.osTemplateId),
         environment: optionalResource(form.environmentId),
         location: optionalResource(form.locationId),
         address_location: optionalResource(form.addressLocationId),
-        node: optionalResource(form.nodeId),
-        onstartall: form.onstartall,
         start: form.start,
         cpu: toPositiveInt(form.cpu),
         memory: toPositiveInt(form.memory),
@@ -203,8 +203,18 @@ export function VpsCreatePage() {
         ipv4_private: toNonNegativeInt(form.ipv4Private),
       };
 
-      const explicitUser = isAdmin ? optionalResource(form.userId) : scope.mineUserId;
-      if (explicitUser !== undefined) payload.user = explicitUser;
+      const payload: CreateVpsPayload = isAdmin
+        ? {
+            ...commonPayload,
+            mode: 'admin',
+            node: optionalResource(form.nodeId) as number,
+            user: optionalResource(form.userId),
+            onstartall: form.onstartall,
+          }
+        : {
+            ...commonPayload,
+            mode: 'user',
+          };
 
       return createVps(payload);
     },
@@ -291,7 +301,7 @@ export function VpsCreatePage() {
                 {isAdmin ? (
                   <div>
                     {label(t('vps.create.field.node'))}
-                    <Select value={form.nodeId} onChange={(e) => update('nodeId', e.target.value)} testId="vps.create.node" options={[{ value: '', label: t('vps.create.option.auto') }, ...nodes.map((n) => ({ value: String(n.id), label: nodeLabel(n) }))]} />
+                    <Select value={form.nodeId} onChange={(e) => update('nodeId', e.target.value)} testId="vps.create.node" options={[{ value: '', label: t('common.select') }, ...nodes.map((n) => ({ value: String(n.id), label: nodeLabel(n) }))]} />
                   </div>
                 ) : null}
                 <div>
@@ -340,7 +350,9 @@ export function VpsCreatePage() {
               <CardHeader title={t('vps.create.section.confirm')} />
               <CardBody className="space-y-4">
                 <Checkbox checked={form.start} onChange={(v) => update('start', v)} label={t('vps.create.field.start')} testId="vps.create.start" />
-                <Checkbox checked={form.onstartall} onChange={(v) => update('onstartall', v)} label={t('vps.create.field.onstartall')} testId="vps.create.onstartall" />
+                {isAdmin ? (
+                  <Checkbox checked={form.onstartall} onChange={(v) => update('onstartall', v)} label={t('vps.create.field.onstartall')} testId="vps.create.onstartall" />
+                ) : null}
 
                 {(submitted || createM.isError) && validationKeys.length > 0 ? (
                   <Alert variant="warn" title={t('common.validation_error')} testId="vps.create.validation">

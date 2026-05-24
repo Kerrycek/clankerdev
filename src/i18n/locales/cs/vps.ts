@@ -38,6 +38,7 @@ export const csVps = {
   'vps.create.validation.hostname_format': 'Hostname musí mít 2-64 znaků a obsahovat jen písmena, čísla, pomlčky, podtržítka nebo tečky.',
   'vps.create.validation.os_template_required': 'Vyber OS šablonu.',
   'vps.create.validation.target_required': 'Vyber lokalitu nebo uzel.',
+  'vps.create.validation.node_required': 'Vyber uzel.',
   'vps.create.validation.user_invalid': 'Vlastník musí být platné ID uživatele.',
   'vps.create.validation.cpu': 'CPU musí být mezi 1 a 32.',
   'vps.create.validation.memory': 'Paměť musí být mezi 512 a 131072 MiB.',

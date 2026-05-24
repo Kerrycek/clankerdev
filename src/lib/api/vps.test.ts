@@ -72,10 +72,11 @@ describe('vps API wrappers', () => {
     expect(u.searchParams.get('_meta[includes]')).toBe('user,node,dataset');
   });
 
-  test('createVps posts namespaced create payload', async () => {
+  test('createVps posts admin create payload with explicit node', async () => {
     globalThis.fetch = mockFetchOk({ vps: { id: 150 } }) as any;
 
     await createVps({
+      mode: 'admin',
       user: 1,
       environment: 2,
       location: 3,
@@ -109,6 +110,53 @@ describe('vps API wrappers', () => {
         hostname: 'my-vps',
         os_template: 6,
         onstartall: true,
+        start: true,
+        cpu: 2,
+        memory: 2048,
+        diskspace: 20480,
+        swap: 512,
+        ipv4: 1,
+        ipv6: 1,
+        ipv4_private: 0,
+      },
+    });
+  });
+
+  test('createVps posts user create payload without admin-only fields', async () => {
+    globalThis.fetch = mockFetchOk({ vps: { id: 151 } }) as any;
+
+    await createVps({
+      mode: 'user',
+      environment: 2,
+      location: 3,
+      address_location: 4,
+      hostname: 'user-vps',
+      os_template: 6,
+      start: true,
+      cpu: 2,
+      memory: 2048,
+      diskspace: 20480,
+      swap: 512,
+      ipv4: 1,
+      ipv6: 1,
+      ipv4_private: 0,
+      user: 1,
+      node: 5,
+      onstartall: true,
+    } as any);
+
+    const [url, init] = lastFetchCall();
+    const body = JSON.parse(String(init?.body));
+
+    expect(new URL(url).pathname).toBe('/v7.0/vpses');
+    expect(init?.method).toBe('POST');
+    expect(body).toEqual({
+      vps: {
+        environment: 2,
+        location: 3,
+        address_location: 4,
+        hostname: 'user-vps',
+        os_template: 6,
         start: true,
         cpu: 2,
         memory: 2048,
