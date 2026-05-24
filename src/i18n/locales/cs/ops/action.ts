@@ -31,6 +31,7 @@ export const csOps_action = {
   "action.node.maintenance_unlock.label": "Odemknout node (údržba)",
   "action.user_payment.create.label": "Přidat platbu",
   "action.vps.features.apply.label": "Aplikovat funkce",
+  "action.vps.create.label": "Vytvořit VPS",
   "action.vps.maintenance.save.label": "Uložit okno údržby",
   "action.vps.mount.create.label": "Vytvořit mount",
   "action.vps.mount.delete.label": "Smazat mount",

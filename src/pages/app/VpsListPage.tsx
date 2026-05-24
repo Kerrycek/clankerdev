@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Plus } from 'lucide-react';
 
 import { fetchActiveTransactionChains, fetchTransactionChains } from '../../lib/api/transactions';
 import { fetchNodes } from '../../lib/api/nodes';
@@ -23,6 +24,7 @@ import { ErrorState } from '../../components/ui/ErrorState';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { Checkbox } from '../../components/ui/Checkbox';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
+import { Button } from '../../components/ui/Button';
 import type { SmartFilterSuggestion } from '../../components/ui/SmartFilterInput';
 import { FilterChip } from '../../components/ui/FilterChip';
 import {
@@ -705,6 +707,12 @@ export function VpsListPage() {
           testId="vps.list.header"
           title={t('nav.vps')}
           description={t('vps.list.description')}
+          actions={
+            <Button to={`${basePath}/vps/new`} testId="vps.list.create">
+              <Plus className="h-4 w-4" />
+              {t('vps.create.open')}
+            </Button>
+          }
         />
       }
       filters={

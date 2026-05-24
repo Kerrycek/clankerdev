@@ -31,6 +31,7 @@ export const enOps_action = {
   "action.node.maintenance_unlock.label": "Unlock node (maintenance)",
   "action.user_payment.create.label": "Add payment",
   "action.vps.features.apply.label": "Apply features",
+  "action.vps.create.label": "Create VPS",
   "action.vps.maintenance.save.label": "Save maintenance window",
   "action.vps.mount.create.label": "Create mount",
   "action.vps.mount.delete.label": "Delete mount",

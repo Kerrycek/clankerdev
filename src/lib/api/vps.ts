@@ -68,6 +68,64 @@ export interface VpsPasswdReply {
   password: string;
 }
 
+interface CreateVpsCommonPayload {
+  environment?: number;
+  location?: number;
+  address_location?: number;
+  hostname: string;
+  os_template?: number;
+  start?: boolean;
+  cpu?: number;
+  memory?: number;
+  diskspace?: number;
+  swap?: number;
+  ipv4?: number;
+  ipv6?: number;
+  ipv4_private?: number;
+}
+
+export interface CreateVpsAdminPayload extends CreateVpsCommonPayload {
+  mode: 'admin';
+  node: number;
+  user?: number;
+  onstartall?: boolean;
+}
+
+export interface CreateVpsUserPayload extends CreateVpsCommonPayload {
+  mode: 'user';
+}
+
+export type CreateVpsPayload = CreateVpsAdminPayload | CreateVpsUserPayload;
+
+export function buildCreateVpsParams(payload: CreateVpsPayload): Record<string, unknown> {
+  const common = {
+    environment: payload.environment,
+    location: payload.location,
+    address_location: payload.address_location,
+    hostname: payload.hostname,
+    os_template: payload.os_template,
+    start: payload.start,
+    cpu: payload.cpu,
+    memory: payload.memory,
+    diskspace: payload.diskspace,
+    swap: payload.swap,
+    ipv4: payload.ipv4,
+    ipv6: payload.ipv6,
+    ipv4_private: payload.ipv4_private,
+  };
+
+  if (payload.mode === 'admin') {
+    return {
+      ...common,
+      user: payload.user,
+      node: payload.node,
+      onstartall: payload.onstartall,
+    };
+  }
+
+  return common;
+}
+
 export async function fetchVpsList(opts?: {
   limit?: number;
   fromId?: number;
@@ -118,6 +176,15 @@ export async function updateVps(vpsId: number, params: Record<string, unknown>) 
     path: `/vpses/${vpsId}`,
     namespace: 'vps',
     params,
+  });
+}
+
+export async function createVps(payload: CreateVpsPayload) {
+  return haveApiCall<Vps>({
+    method: 'POST',
+    path: '/vpses',
+    namespace: 'vps',
+    params: buildCreateVpsParams(payload),
   });
 }
 
