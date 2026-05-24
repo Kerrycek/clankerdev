@@ -29,7 +29,7 @@ export const csAdmin_info = {
   "admin.info.session.field.role": "Role",
   "admin.info.session.field.sidebar_collapsed": "Sbaleno menu",
   "admin.info.session.field.user_id": "ID uživatele",
-  "admin.info.session.subtitle": "Kdo jste a co si UI myslí, že můžete dělat",
+  "admin.info.session.subtitle": "Kdo jsi a co si UI myslí, že můžeš dělat",
   "admin.info.session.title": "Relace",
   "admin.info.shortcuts.subtitle": "Rychlé odkazy na nejpoužívanější admin stránky",
   "admin.info.shortcuts.title": "Zkratky",

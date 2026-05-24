@@ -26,7 +26,7 @@ export const csPublic = {
   'public.overview.ipv4_critical.title': 'Dochází IPv4 adresy',
   'public.overview.ipv4_critical.body':
     'Dochází veřejné IPv4 adresy (volných: {count}). Nové VPS nemusí dostat IPv4 adresu.',
-  'public.overview.ipv4_warn.hint': 'IPv4 dochází — preferujte IPv6.',
+  'public.overview.ipv4_warn.hint': 'IPv4 dochází — preferuj IPv6.',
   'public.overview.announcements.loading': 'Načítám oznámení…',
   'public.overview.announcements.error.title': 'Oznámení nejsou dostupná',
   'public.overview.announcements.error.body': 'Oznámení se teď nepodařilo načíst.',
@@ -88,7 +88,7 @@ export const csPublic = {
   'public.outages.section.count.few': '{count} výpadky',
   'public.outages.section.count.other': '{count} výpadků',
   'public.outages.section.none': 'Žádné.',
-  'public.outages.footer.admin_hint': 'Pro pokročilou správu výpadků se přihlaste a použijte administrační rozhraní.',
+  'public.outages.footer.admin_hint': 'Pro pokročilou správu výpadků se přihlas a použij administrační rozhraní.',
   'public.outage_detail.invalid_id.title': 'Neplatné ID výpadku',
   'public.outage_detail.invalid_id.body': 'Identifikátor výpadku chybí nebo není platný.',
   'public.outage_detail.loading': 'Načítám výpadek…',

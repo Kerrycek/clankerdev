@@ -17,7 +17,7 @@ export const csAdmin_network_live = {
   "admin.network_live.filter.order.packets_desc": "Nejvíce paketů",
   "admin.network_live.filter.order.updated_asc": "Nejstarší aktualizace",
   "admin.network_live.filter.order.updated_desc": "Nejnovější aktualizace",
-  "admin.network_live.filter.q.placeholder": "Hledejte podle rozhraní, VPS, uživatele nebo uzlu…",
+  "admin.network_live.filter.q.placeholder": "Hledej podle rozhraní, VPS, uživatele nebo uzlu…",
   "admin.network_live.filter.user.placeholder": "Přihlašovací jméno nebo ID uživatele…",
   "admin.network_live.filter.vps.placeholder": "Název hostitele nebo ID VPS…",
   "admin.network_live.load_error": "Živý provoz se nepodařilo načíst",

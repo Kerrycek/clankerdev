@@ -1,7 +1,7 @@
 // Admin cluster locale chunk: resource_package_detail
 export const csAdminCluster_resource_package_detail = {
   "admin.cluster.resource_package_detail.meta.global": "Globální balíček (bez pevného uživatele/prostředí).",
-  "admin.cluster.resource_package_detail.not_found.body": "Balíček mohl být smazán nebo k němu nemáte přístup.",
+  "admin.cluster.resource_package_detail.not_found.body": "Balíček mohl být smazán nebo k němu nemáš přístup.",
   "admin.cluster.resource_package_detail.not_found.title": "Balíček zdrojů nebyl nalezen",
   "admin.cluster.resource_package_detail.personal.body": "Úpravy ovlivní jen daného uživatele/prostředí.",
   "admin.cluster.resource_package_detail.personal.title": "Osobní balíček",
