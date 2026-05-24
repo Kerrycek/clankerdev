@@ -10,7 +10,7 @@ describe('nodes API wrappers', () => {
   test('fetchNodes forwards q, state, limit, and from_id', async () => {
     globalThis.fetch = mockFetchOk({ nodes: [{ id: 12, name: 'node12' }], _meta: { total_count: 1 } }) as any;
 
-    const res = await fetchNodes({ q: 'node12', state: 'inactive', limit: 25, fromId: 400 });
+    const res = await fetchNodes({ q: 'node12', state: 'inactive', limit: 25, fromId: 400, location: 7 });
 
     expect(res.data).toEqual([{ id: 12, name: 'node12' }]);
 
@@ -22,5 +22,6 @@ describe('nodes API wrappers', () => {
     expect(u.searchParams.get('node[state]')).toBe('inactive');
     expect(u.searchParams.get('node[limit]')).toBe('25');
     expect(u.searchParams.get('node[from_id]')).toBe('400');
+    expect(u.searchParams.get('node[location]')).toBe('7');
   });
 });

@@ -106,6 +106,7 @@ export async function fetchNodes(
     fromId?: number;
     q?: string;
     state?: 'all' | 'active' | 'inactive';
+    location?: number;
   } = {}
 ) {
   const params: Record<string, string | number | boolean> = {};
@@ -113,6 +114,7 @@ export async function fetchNodes(
   if (opts.fromId !== undefined) params['from_id'] = opts.fromId;
   if (opts.q) params['q'] = opts.q;
   if (opts.state) params['state'] = opts.state;
+  if (opts.location !== undefined) params['location'] = opts.location;
 
   const res = await haveApiCall<unknown>({
     method: 'GET',

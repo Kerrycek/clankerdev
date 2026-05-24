@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from 'vitest';
 
-import { createVps, fetchVps, fetchVpsList, fetchVpsStatuses } from './vps';
+import { buildCreateVpsParams, createVps, fetchVps, fetchVpsList, fetchVpsStatuses } from './vps';
 
 function mockFetchOk(response: any) {
   return vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: true, response }) });
@@ -12,6 +12,49 @@ function lastFetchCall() {
 }
 
 describe('vps API wrappers', () => {
+  test('buildCreateVpsParams returns exact legacy admin create params', () => {
+    const params = buildCreateVpsParams({
+      mode: 'admin',
+      user: 1,
+      node: 5,
+      hostname: 'my-vps',
+      os_template: 6,
+      start: true,
+      info: 'admin note',
+      cpu: 2,
+      memory: 2048,
+      diskspace: 20480,
+      swap: 512,
+      ipv4: 1,
+      ipv6: 1,
+      ipv4_private: 0,
+      environment: 2,
+      location: 3,
+      address_location: 4,
+      onstartall: true,
+    } as any);
+
+    expect(params).toEqual({
+      hostname: 'my-vps',
+      os_template: 6,
+      start: true,
+      cpu: 2,
+      memory: 2048,
+      diskspace: 20480,
+      swap: 512,
+      ipv4: 1,
+      ipv6: 1,
+      ipv4_private: 0,
+      info: 'admin note',
+      user: 1,
+      node: 5,
+    });
+    expect(params).not.toHaveProperty('environment');
+    expect(params).not.toHaveProperty('location');
+    expect(params).not.toHaveProperty('address_location');
+    expect(params).not.toHaveProperty('onstartall');
+  });
+
   test('fetchVpsList forwards list filters', async () => {
     globalThis.fetch = mockFetchOk({ vpses: [], _meta: { total_count: 0 } }) as any;
 
@@ -72,7 +115,7 @@ describe('vps API wrappers', () => {
     expect(u.searchParams.get('_meta[includes]')).toBe('user,node,dataset');
   });
 
-  test('createVps posts admin create payload with explicit node and no auto-pick fields', async () => {
+  test('createVps posts admin create payload matching legacy vpsAdmin shape', async () => {
     globalThis.fetch = mockFetchOk({ vps: { id: 150 } }) as any;
 
     await createVps({
@@ -86,6 +129,7 @@ describe('vps API wrappers', () => {
       os_template: 6,
       onstartall: true,
       start: true,
+      info: 'admin note',
       cpu: 2,
       memory: 2048,
       diskspace: 20480,
@@ -104,9 +148,9 @@ describe('vps API wrappers', () => {
       vps: {
         user: 1,
         node: 5,
+        info: 'admin note',
         hostname: 'my-vps',
         os_template: 6,
-        onstartall: true,
         start: true,
         cpu: 2,
         memory: 2048,
@@ -120,6 +164,7 @@ describe('vps API wrappers', () => {
     expect(body.vps).not.toHaveProperty('environment');
     expect(body.vps).not.toHaveProperty('location');
     expect(body.vps).not.toHaveProperty('address_location');
+    expect(body.vps).not.toHaveProperty('onstartall');
   });
 
   test('createVps posts user create payload without admin-only fields', async () => {
@@ -143,6 +188,7 @@ describe('vps API wrappers', () => {
       user: 1,
       node: 5,
       onstartall: true,
+      info: 'not for user mode',
     } as any);
 
     const [url, init] = lastFetchCall();
@@ -167,5 +213,9 @@ describe('vps API wrappers', () => {
       },
     });
     expect(body.vps).not.toHaveProperty('address_location');
+    expect(body.vps).not.toHaveProperty('node');
+    expect(body.vps).not.toHaveProperty('user');
+    expect(body.vps).not.toHaveProperty('onstartall');
+    expect(body.vps).not.toHaveProperty('info');
   });
 });

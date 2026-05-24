@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Plus } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -17,9 +17,11 @@ import { ErrorState } from '../../../components/ui/ErrorState';
 import { Input } from '../../../components/ui/Input';
 import { LoadingState } from '../../../components/ui/LoadingState';
 import { Select } from '../../../components/ui/Select';
+import { Textarea } from '../../../components/ui/Textarea';
 import { UserLookupInput } from '../../../components/ui/UserLookupInput';
+import { fetchDefaultObjectClusterResources } from '../../../lib/api/clusterResources';
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
-import { fetchEnvironments, fetchLocations, type Environment, type Location } from '../../../lib/api/infra';
+import { fetchLocations, type Location } from '../../../lib/api/infra';
 import { fetchNodes, type Node } from '../../../lib/api/nodes';
 import { fetchOsTemplates, type OsTemplate } from '../../../lib/api/osTemplates';
 import { createVps, type CreateVpsPayload } from '../../../lib/api/vps';
@@ -27,7 +29,6 @@ import { formatErrorMessage } from '../../../lib/errors';
 import { objectRef } from '../../../lib/objectRef';
 
 type FormState = {
-  environmentId: string;
   locationId: string;
   nodeId: string;
   osTemplateId: string;
@@ -41,28 +42,27 @@ type FormState = {
   ipv6: string;
   ipv4Private: string;
   start: boolean;
-  onstartall: boolean;
+  info: string;
 };
 
 const HOSTNAME_RE = /^[a-zA-Z0-9][a-zA-Z\-_.0-9]*[a-zA-Z0-9]$/;
 
 function defaultForm(): FormState {
   return {
-    environmentId: '',
     locationId: '',
     nodeId: '',
     osTemplateId: '',
     userId: '',
     hostname: '',
-    cpu: '1',
-    memory: '1024',
-    diskspace: '10240',
+    cpu: '8',
+    memory: '4096',
+    diskspace: '122880',
     swap: '0',
     ipv4: '1',
     ipv6: '1',
     ipv4Private: '0',
     start: true,
-    onstartall: true,
+    info: '',
   };
 }
 
@@ -99,18 +99,32 @@ function nodeLabel(n: Node): string {
   return `${n.name || n.fqdn || `#${n.id}`}${loc ? ` · ${loc}` : ''} (#${n.id})`;
 }
 
+function locationEnvironmentId(loc: Location | undefined): number | undefined {
+  const nested = loc?.environment?.id;
+  if (typeof nested === 'number') return nested;
+
+  const raw = loc ? (loc as any).environment_id : undefined;
+  if (typeof raw === 'number') return raw;
+  if (typeof raw === 'string') {
+    const n = Number(raw);
+    if (Number.isFinite(n)) return n;
+  }
+
+  return undefined;
+}
+
 function validateForm(form: FormState, isAdmin: boolean): string[] {
   const errors: string[] = [];
   const hostname = form.hostname.trim();
   if (!hostname) errors.push('vps.create.validation.hostname_required');
   else if (hostname.length < 2 || hostname.length > 64 || !HOSTNAME_RE.test(hostname)) errors.push('vps.create.validation.hostname_format');
   if (!optionalResource(form.osTemplateId)) errors.push('vps.create.validation.os_template_required');
+  if (!optionalResource(form.locationId)) errors.push('vps.create.validation.target_required');
   if (isAdmin) {
+    if (!form.userId.trim()) errors.push('vps.create.validation.user_required');
+    else if (!optionalResource(form.userId)) errors.push('vps.create.validation.user_invalid');
     if (!optionalResource(form.nodeId)) errors.push('vps.create.validation.node_required');
-  } else if (!optionalResource(form.locationId)) {
-    errors.push('vps.create.validation.target_required');
   }
-  if (isAdmin && form.userId.trim() && !optionalResource(form.userId)) errors.push('vps.create.validation.user_invalid');
 
   const numeric: Array<[keyof FormState, number, number, string]> = [
     ['cpu', 1, 32, 'vps.create.validation.cpu'],
@@ -140,38 +154,76 @@ export function VpsCreatePage() {
   const [form, setForm] = useState<FormState>(() => defaultForm());
   const [submitted, setSubmitted] = useState(false);
 
-  const envQ = useQuery({
-    queryKey: ['environments', { limit: 500, hasHypervisor: true }],
-    queryFn: async () => (await fetchEnvironments({ limit: 500, hasHypervisor: true })).data,
-  });
   const locationQ = useQuery({
-    queryKey: ['locations', { limit: 500, hasHypervisor: true, environment: form.environmentId || null }],
+    queryKey: ['locations', { limit: 500, hasHypervisor: true, includes: 'environment' }],
     queryFn: async () =>
       (
         await fetchLocations({
           limit: 500,
           hasHypervisor: true,
-          environmentId: optionalResource(form.environmentId),
+          includes: 'environment',
         })
       ).data,
   });
-  const nodesQ = useQuery({
-    queryKey: ['nodes', { limit: 500, state: 'active' }],
-    queryFn: async () => (await fetchNodes({ limit: 500, state: 'active' })).data,
-    enabled: isAdmin,
-  });
-  const templatesQ = useQuery({
-    queryKey: ['os_templates', { limit: 500, enabled: true, supported: true }],
-    queryFn: async () => (await fetchOsTemplates({ limit: 500, enabled: true, supported: true })).data,
-  });
-
   const locations = locationQ.data ?? [];
   const selectedLocationId = optionalResource(form.locationId);
-  const nodes = useMemo(() => {
-    const all = isAdmin ? nodesQ.data ?? [] : [];
-    if (!selectedLocationId) return all;
-    return all.filter((n) => Number(n.location?.id) === selectedLocationId);
-  }, [isAdmin, nodesQ.data, selectedLocationId]);
+  const selectedLocation = useMemo(
+    () => locations.find((loc) => Number(loc.id) === selectedLocationId),
+    [locations, selectedLocationId]
+  );
+  const selectedEnvironmentId = locationEnvironmentId(selectedLocation);
+
+  const nodesQ = useQuery({
+    queryKey: ['nodes', { limit: 500, location: selectedLocationId ?? null }],
+    queryFn: async () => (await fetchNodes({ limit: 500, location: selectedLocationId })).data,
+    enabled: isAdmin && selectedLocationId !== undefined,
+  });
+  const templatesQ = useQuery({
+    queryKey: ['os_templates', { limit: 500, enabled: true, hypervisorType: 'vpsadminos' }],
+    queryFn: async () => (await fetchOsTemplates({ limit: 500, enabled: true, hypervisorType: 'vpsadminos' })).data,
+  });
+  const defaultResourcesQ = useQuery({
+    queryKey: ['default_object_cluster_resources', { environment: selectedEnvironmentId ?? null, className: 'Vps' }],
+    queryFn: async () =>
+      (await fetchDefaultObjectClusterResources({ limit: 50, environmentId: selectedEnvironmentId, className: 'Vps' })).data,
+    enabled: selectedEnvironmentId !== undefined,
+  });
+
+  const nodes = isAdmin ? nodesQ.data ?? [] : [];
+  const templatesByFamily = useMemo(() => {
+    const groups = new Map<string, OsTemplate[]>();
+    for (const tpl of templatesQ.data ?? []) {
+      const family = tpl.os_family as any;
+      const label = family?.label || family?.name || (family?.id ? `#${family.id}` : t('vps.create.option.other_templates'));
+      const list = groups.get(label) ?? [];
+      list.push(tpl);
+      groups.set(label, list);
+    }
+
+    return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
+  }, [t, templatesQ.data]);
+
+  useEffect(() => {
+    const defaults = defaultResourcesQ.data;
+    if (!defaults) return;
+
+    const next: Partial<FormState> = {};
+    for (const item of defaults) {
+      const name = item.cluster_resource?.name;
+      const value = typeof item.value === 'number' ? String(item.value) : undefined;
+      if (value === undefined) continue;
+      if (name === 'cpu') next.cpu = value;
+      else if (name === 'memory') next.memory = value;
+      else if (name === 'swap') next.swap = value;
+      else if (name === 'diskspace') next.diskspace = value;
+      else if (name === 'ipv4') next.ipv4 = value;
+      else if (name === 'ipv4_private') next.ipv4Private = value;
+      else if (name === 'ipv6') next.ipv6 = value;
+    }
+
+    if (Object.keys(next).length === 0) return;
+    setForm((prev) => ({ ...prev, ...next }));
+  }, [defaultResourcesQ.data]);
 
   const validationKeys = useMemo(() => validateForm(form, isAdmin), [form, isAdmin]);
   const canSubmit = validationKeys.length === 0;
@@ -203,13 +255,12 @@ export function VpsCreatePage() {
             ...commonPayload,
             mode: 'admin',
             node: optionalResource(form.nodeId) as number,
-            user: optionalResource(form.userId),
-            onstartall: form.onstartall,
+            user: optionalResource(form.userId) as number,
+            info: form.info,
           }
         : {
             ...commonPayload,
             mode: 'user',
-            environment: optionalResource(form.environmentId),
             location: optionalResource(form.locationId),
           };
 
@@ -236,8 +287,8 @@ export function VpsCreatePage() {
     },
   });
 
-  const loading = envQ.isLoading || locationQ.isLoading || (isAdmin && nodesQ.isLoading) || templatesQ.isLoading;
-  const loadError = envQ.error || locationQ.error || (isAdmin ? nodesQ.error : null) || templatesQ.error;
+  const loading = locationQ.isLoading || (isAdmin && nodesQ.isLoading) || templatesQ.isLoading;
+  const loadError = locationQ.error || (isAdmin ? nodesQ.error : null) || templatesQ.error;
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -274,10 +325,10 @@ export function VpsCreatePage() {
           title={t('vps.create.load_error.title')}
           error={loadError}
           onRetry={() => {
-            void envQ.refetch();
             void locationQ.refetch();
             void nodesQ.refetch();
             void templatesQ.refetch();
+            void defaultResourcesQ.refetch();
           }}
           showBack={false}
         />
@@ -287,39 +338,46 @@ export function VpsCreatePage() {
             <Card testId="vps.create.target">
               <CardHeader title={t('vps.create.section.target')} subtitle={t('vps.create.section.target_help')} />
               <CardBody className="grid gap-4 md:grid-cols-2">
-                <div>
-                  {label(t('vps.create.field.environment'))}
-                  <Select value={form.environmentId} onChange={(e) => update('environmentId', e.target.value)} testId="vps.create.environment" options={[{ value: '', label: t('vps.create.option.auto') }, ...(envQ.data ?? []).map((e: Environment) => ({ value: String(e.id), label: labelOf(e) }))]} />
-                </div>
-                <div>
-                  {label(t('vps.create.field.location'))}
-                  <Select value={form.locationId} onChange={(e) => update('locationId', e.target.value)} testId="vps.create.location" options={[{ value: '', label: t('vps.create.option.auto') }, ...locations.map((l: Location) => ({ value: String(l.id), label: labelOf(l) }))]} />
-                </div>
                 {isAdmin ? (
                   <div>
-                    {label(t('vps.create.field.node'))}
-                    <Select value={form.nodeId} onChange={(e) => update('nodeId', e.target.value)} testId="vps.create.node" options={[{ value: '', label: t('common.select') }, ...nodes.map((n) => ({ value: String(n.id), label: nodeLabel(n) }))]} />
-                  </div>
-                ) : null}
-                {isAdmin ? (
-                  <div className="md:col-span-2">
                     {label(t('vps.create.field.user'))}
                     <UserLookupInput value={form.userId} onChange={(v) => update('userId', v)} testId="vps.create.user" placeholder={t('vps.create.placeholder.user')} loadingLabel={t('common.loading')} noResultsLabel={t('palette.empty.no_results')} />
                   </div>
                 ) : null}
+                <div>
+                  {label(t('vps.create.field.location'))}
+                  <Select
+                    value={form.locationId}
+                    onChange={(e) => setForm((prev) => ({ ...prev, locationId: e.target.value, nodeId: '' }))}
+                    testId="vps.create.location"
+                    options={[{ value: '', label: t('common.select') }, ...locations.map((l: Location) => ({ value: String(l.id), label: labelOf(l) }))]}
+                  />
+                  {selectedLocation?.environment ? (
+                    <p className="mt-1 text-xs text-muted">
+                      {t('vps.create.location_environment', { environment: labelOf(selectedLocation.environment) })}
+                    </p>
+                  ) : null}
+                </div>
               </CardBody>
             </Card>
 
             <Card testId="vps.create.system">
               <CardHeader title={t('vps.create.section.system')} subtitle={t('vps.create.section.system_help')} />
-              <CardBody className="grid gap-4 md:grid-cols-2">
-                <div>
-                  {label(t('vps.create.field.hostname'))}
-                  <Input value={form.hostname} onChange={(e) => update('hostname', e.target.value)} testId="vps.create.hostname" placeholder={t('vps.create.placeholder.hostname')} autoComplete="off" />
-                </div>
+              <CardBody>
                 <div>
                   {label(t('vps.create.field.os_template'))}
-                  <Select value={form.osTemplateId} onChange={(e) => update('osTemplateId', e.target.value)} testId="vps.create.os_template" options={[{ value: '', label: t('common.select') }, ...(templatesQ.data ?? []).map((tpl) => ({ value: String(tpl.id), label: templateLabel(tpl) }))]} />
+                  <Select value={form.osTemplateId} onChange={(e) => update('osTemplateId', e.target.value)} testId="vps.create.os_template">
+                    <option value="">{t('common.select')}</option>
+                    {templatesByFamily.map(([family, templates]) => (
+                      <optgroup key={family} label={family}>
+                        {templates.map((tpl) => (
+                          <option key={tpl.id} value={String(tpl.id)}>
+                            {templateLabel(tpl)}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </Select>
                 </div>
               </CardBody>
             </Card>
@@ -342,9 +400,22 @@ export function VpsCreatePage() {
             <Card testId="vps.create.confirm">
               <CardHeader title={t('vps.create.section.confirm')} />
               <CardBody className="space-y-4">
+                {isAdmin ? (
+                  <div>
+                    {label(t('vps.create.field.node'))}
+                    <Select value={form.nodeId} onChange={(e) => update('nodeId', e.target.value)} testId="vps.create.node" disabled={!selectedLocationId} options={[{ value: '', label: t('common.select') }, ...nodes.map((n) => ({ value: String(n.id), label: nodeLabel(n) }))]} />
+                  </div>
+                ) : null}
+                <div>
+                  {label(t('vps.create.field.hostname'))}
+                  <Input value={form.hostname} onChange={(e) => update('hostname', e.target.value)} testId="vps.create.hostname" placeholder={t('vps.create.placeholder.hostname')} autoComplete="off" />
+                </div>
                 <Checkbox checked={form.start} onChange={(v) => update('start', v)} label={t('vps.create.field.start')} testId="vps.create.start" />
                 {isAdmin ? (
-                  <Checkbox checked={form.onstartall} onChange={(v) => update('onstartall', v)} label={t('vps.create.field.onstartall')} testId="vps.create.onstartall" />
+                  <div>
+                    {label(t('vps.create.field.info'))}
+                    <Textarea value={form.info} onChange={(e) => update('info', e.target.value)} testId="vps.create.info" rows={4} />
+                  </div>
                 ) : null}
 
                 {(submitted || createM.isError) && validationKeys.length > 0 ? (
