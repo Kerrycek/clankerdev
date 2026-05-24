@@ -23,6 +23,8 @@ export interface HaveApiRequestInfo {
   url?: string;
 }
 
+export const SESSION_EXPIRED_EVENT = 'webui-next:session-expired';
+
 export class HaveApiError extends Error {
   public readonly envelope: HaveApiEnvelope;
   /**
@@ -43,6 +45,37 @@ export class HaveApiError extends Error {
     this.httpStatus = httpStatus;
     this.request = request;
   }
+}
+
+function messageLooksLikeExpiredSession(message: unknown): boolean {
+  if (typeof message !== 'string') return false;
+  const normalized = message.trim().toLowerCase();
+  if (!normalized) return false;
+
+  return (
+    normalized.includes('unauthorized') ||
+    normalized.includes('not authenticated') ||
+    normalized.includes('authentication required') ||
+    normalized.includes('authentication failed') ||
+    normalized.includes('invalid token') ||
+    normalized.includes('token expired') ||
+    normalized.includes('session expired') ||
+    normalized.includes('invalid session') ||
+    normalized.includes('session not found') ||
+    normalized.includes('unknown session')
+  );
+}
+
+export function isExpiredSessionError(error: unknown): boolean {
+  if (!(error instanceof HaveApiError)) return false;
+  if (error.httpStatus === 401) return true;
+  return messageLooksLikeExpiredSession(error.envelope?.message);
+}
+
+function notifySessionExpired(error: unknown): void {
+  if (!isExpiredSessionError(error)) return;
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT, { detail: { error } }));
 }
 
 export interface CallOpts {
@@ -374,7 +407,9 @@ export async function haveApiCall<T>(opts: CallOpts): Promise<{ data: T; meta?: 
 
   if (!res.ok) {
     // Some failures (e.g. 500) may still return JSON.
-    throw new HaveApiError(envelope, `HTTP ${res.status}`, res.status, reqInfo);
+    const err = new HaveApiError(envelope, `HTTP ${res.status}`, res.status, reqInfo);
+    notifySessionExpired(err);
+    throw err;
   }
 
   let unwrapped: { data: T; meta?: Record<string, unknown> };
@@ -385,6 +420,7 @@ export async function haveApiCall<T>(opts: CallOpts): Promise<{ data: T; meta?: 
       // HaveAPI can return {status:false} with HTTP 200.
       // Attach request info to help support/debug without screenshots.
       if (!err.request) err.request = reqInfo;
+      notifySessionExpired(err);
     }
     throw err;
   }

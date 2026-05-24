@@ -2,6 +2,7 @@
 export const csAuth = {
   'auth.login_required.title': 'Vyžadováno přihlášení',
   'auth.login_required.body': 'Tato část vpsAdmin vyžaduje přihlášení.',
+  'auth.session_expired.body': 'Relace vypršela kvůli nečinnosti. Přihlas se prosím znovu.',
   'auth.session_error.title': 'Nelze načíst relaci',
   'auth.session_error.body': 'vpsAdmin nemohl ověřit stav přihlášení. Obvykle jde o problém se sítí nebo dočasnou chybu backendu.',
   'auth.forbidden.title': 'Přístup odepřen',

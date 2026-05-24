@@ -23,6 +23,7 @@ function LoginRequired() {
   const { t } = useI18n();
 
   const loginHref = auth.loginUrl || `${cfg.routerBasename}/oauth/login`;
+  const body = auth.status === 'expired' ? t('auth.session_expired.body') : t('auth.login_required.body');
 
   return (
     <div className="mx-auto max-w-content-lg p-6" data-testid="auth.login-required">
@@ -30,7 +31,7 @@ function LoginRequired() {
         <CardBody className="space-y-4">
           <div>
             <h1 className="text-xl font-semibold">{t('auth.login_required.title')}</h1>
-            <p className="mt-2 text-sm text-muted">{t('auth.login_required.body')}</p>
+            <p className="mt-2 text-sm text-muted">{body}</p>
           </div>
 
           {auth.error ? <p className="text-sm text-danger">{formatErrorMessage(auth.error)}</p> : null}
@@ -175,7 +176,7 @@ function AuthGate(props: { children: React.ReactNode; mode: AppMode }) {
     );
   }
 
-  if (auth.status === 'anonymous') {
+  if (auth.status === 'anonymous' || auth.status === 'expired') {
     return <LoginRequired />;
   }
 

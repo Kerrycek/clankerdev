@@ -1,12 +1,13 @@
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { getRuntimeConfig } from './config';
 import { fetchCurrentUser, type User } from '../lib/api/users';
 import { canUseAdminUi, roleFromLevel, type UserRole } from '../lib/roles';
-import { HaveApiError } from '../lib/api/haveapi';
+import { clearStoredOAuthToken } from '../lib/auth/tokenStore';
+import { HaveApiError, isExpiredSessionError, SESSION_EXPIRED_EVENT } from '../lib/api/haveapi';
 
-export type AuthStatus = 'anonymous' | 'loading' | 'authenticated' | 'forbidden' | 'error';
+export type AuthStatus = 'anonymous' | 'expired' | 'loading' | 'authenticated' | 'forbidden' | 'error';
 
 export interface AuthContextValue {
   status: AuthStatus;
@@ -58,8 +59,31 @@ function buildEndpointUrl(
 
 export function AuthProvider(props: { children: React.ReactNode; nextPath: string }) {
   const cfg = getRuntimeConfig();
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   const enabled = cfg.auth.kind !== 'none';
+
+  const expireSession = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const currentCfg = getRuntimeConfig();
+    clearStoredOAuthToken(currentCfg.oauth2.storage);
+
+    if ((window as any).vpsAdmin) {
+      (window as any).vpsAdmin.accessToken = undefined;
+      (window as any).vpsAdmin.sessionToken = undefined;
+    }
+
+    setSessionExpired(true);
+  }, []);
+
+  useEffect(() => {
+    if (!enabled) return;
+    if (typeof window === 'undefined') return;
+
+    const onSessionExpired = () => expireSession();
+    window.addEventListener(SESSION_EXPIRED_EVENT, onSessionExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onSessionExpired);
+  }, [enabled, expireSession]);
 
   const q = useQuery({
     queryKey: ['user', 'current'],
@@ -68,6 +92,11 @@ export function AuthProvider(props: { children: React.ReactNode; nextPath: strin
     retry: false,
     staleTime: 60_000,
   });
+
+  useEffect(() => {
+    if (!isExpiredSessionError(q.error)) return;
+    expireSession();
+  }, [expireSession, q.error]);
 
   const baseUrl = cfg.webuiUrl ?? (typeof window !== 'undefined' ? window.location.origin : undefined);
 
@@ -83,6 +112,18 @@ export function AuthProvider(props: { children: React.ReactNode; nextPath: strin
   );
 
   const value: AuthContextValue = useMemo(() => {
+    if (sessionExpired) {
+      return {
+        status: 'expired',
+        user: undefined,
+        role: 'unknown',
+        canUseAdminUi: false,
+        error: undefined,
+        loginUrl,
+        logoutUrl,
+      };
+    }
+
     if (!enabled) {
       return {
         status: 'anonymous',
@@ -108,12 +149,12 @@ export function AuthProvider(props: { children: React.ReactNode; nextPath: strin
     if (q.isError || !q.data) {
       const err = q.error;
 
-      // Most common case: not signed in (or token expired) → treat as anonymous.
+      // Most common case: not signed in (or token expired) -> show a clean re-login state.
       // We rely on HTTP status which is surfaced on HaveApiError.
       if (err instanceof HaveApiError) {
-        if (err.httpStatus === 401) {
+        if (isExpiredSessionError(err)) {
           return {
-            status: 'anonymous',
+            status: 'expired',
             user: undefined,
             role: 'unknown',
             canUseAdminUi: false,
@@ -157,7 +198,7 @@ export function AuthProvider(props: { children: React.ReactNode; nextPath: strin
       loginUrl,
       logoutUrl,
     };
-  }, [enabled, q.isLoading, q.isError, q.data, q.error, loginUrl, logoutUrl]);
+  }, [enabled, q.isLoading, q.isError, q.data, q.error, sessionExpired, loginUrl, logoutUrl]);
 
   return <AuthContext.Provider value={value}>{props.children}</AuthContext.Provider>;
 }

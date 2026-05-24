@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { haveApiCall } from './haveapi';
+import { haveApiCall, isExpiredSessionError, SESSION_EXPIRED_EVENT } from './haveapi';
 
 function makeOkResponse(body: unknown, extraHeaders?: Record<string, string>) {
   return new Response(JSON.stringify(body), {
@@ -116,5 +116,54 @@ describe('haveApiCall', () => {
     await haveApiCall<any>({ method: 'GET', path: '/users/current' });
     const [, init2] = getFetchCall(fetchMock, 1);
     expect(new Headers(init2?.headers).get('X-Auth-Token')).toBe('tok_456');
+  });
+
+  it('emits a session-expired event on HTTP 401 responses', async () => {
+    setMockRuntime();
+    const listener = vi.fn();
+    window.addEventListener(SESSION_EXPIRED_EVENT, listener);
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response(JSON.stringify({ status: false, message: 'Unauthorized', response: null }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+    );
+
+    try {
+      await haveApiCall<any>({ method: 'GET', path: '/action_states' });
+      throw new Error('expected request to fail');
+    } catch (err) {
+      expect(isExpiredSessionError(err)).toBe(true);
+    }
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    window.removeEventListener(SESSION_EXPIRED_EVENT, listener);
+  });
+
+  it('emits a session-expired event on HaveAPI expired-session envelopes', async () => {
+    setMockRuntime();
+    const listener = vi.fn();
+    window.addEventListener(SESSION_EXPIRED_EVENT, listener);
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        makeOkResponse({ status: false, message: 'Session expired', response: null })
+      )
+    );
+
+    try {
+      await haveApiCall<any>({ method: 'GET', path: '/action_states' });
+      throw new Error('expected request to fail');
+    } catch (err) {
+      expect(isExpiredSessionError(err)).toBe(true);
+    }
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    window.removeEventListener(SESSION_EXPIRED_EVENT, listener);
   });
 });
