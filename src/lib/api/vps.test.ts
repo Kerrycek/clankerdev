@@ -154,7 +154,6 @@ describe('vps API wrappers', () => {
       vps: {
         environment: 2,
         location: 3,
-        address_location: 4,
         hostname: 'user-vps',
         os_template: 6,
         start: true,
