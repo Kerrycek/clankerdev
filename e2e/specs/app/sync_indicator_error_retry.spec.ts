@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock } from '../../fixtures';
+import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock, jsonFulfill } from '../../fixtures';
 
 test.describe('@smoke Sync indicator', () => {
   test('shows sync issues when background queries fail and allows manual retry', async ({ page }) => {
@@ -34,5 +34,41 @@ test.describe('@smoke Sync indicator', () => {
 
     await page.getByTestId('shell.sync-panel.retry').click();
     await expect(indicator).toBeHidden();
+  });
+
+  test('treats expired background sessions as logged out instead of sync errors', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        'vpsadmin.uiSettings.v1',
+        JSON.stringify({
+          sidebarCollapsed: false,
+          theme: 'system',
+          language: 'cs',
+        })
+      );
+    });
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    let actionStatesCalls = 0;
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'test', level: 1 },
+      handlers: {
+        'GET vpses': () => ({ vpses: [], _meta: { total_count: 0 } }),
+        'GET action_states': () => {
+          actionStatesCalls += 1;
+          if (actionStatesCalls === 1) {
+            return jsonFulfill({ status: false, message: 'Unauthorized', response: null }, 401);
+          }
+          return { action_states: [] };
+        },
+      },
+    });
+
+    await page.goto('/app/vps');
+
+    await expect(page.getByTestId('auth.login-required')).toBeVisible();
+    await expect(page.getByText('Relace vypršela kvůli nečinnosti. Přihlas se prosím znovu.')).toBeVisible();
+    await expect(page.getByTestId('shell.sync-indicator')).toBeHidden();
   });
 });

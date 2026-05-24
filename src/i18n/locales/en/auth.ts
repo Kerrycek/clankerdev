@@ -2,6 +2,7 @@
 export const enAuth = {
   'auth.login_required.title': 'Sign in required',
   'auth.login_required.body': 'This part of vpsAdmin requires authentication.',
+  'auth.session_expired.body': 'Your session expired due to inactivity. Please sign in again.',
   'auth.session_error.title': 'Can’t load your session',
   'auth.session_error.body': 'vpsAdmin could not verify your login state. This is usually a network issue or a temporary backend error.',
   'auth.forbidden.title': 'Access denied',
