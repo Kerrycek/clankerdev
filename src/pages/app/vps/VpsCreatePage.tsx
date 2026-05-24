@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
 import { useAppMode } from '../../../app/appMode';
+import { useAuth } from '../../../app/auth';
 import { useI18n } from '../../../app/i18n';
 import { useChrome } from '../../../components/layout/ChromeContext';
 import { ListShell } from '../../../components/layout/ListShell';
@@ -146,7 +147,8 @@ function validateForm(form: FormState, isAdmin: boolean): string[] {
 
 export function VpsCreatePage() {
   const { basePath, mode } = useAppMode();
-  const isAdmin = mode === 'admin';
+  const auth = useAuth();
+  const isAdmin = mode === 'admin' || auth.role === 'admin';
   const { t } = useI18n();
   const navigate = useNavigate();
   const chrome = useChrome();
