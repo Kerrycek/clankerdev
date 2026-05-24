@@ -52,6 +52,7 @@ export async function fetchLocations(opts?: {
   hasHypervisor?: boolean;
   hasStorage?: boolean;
   hypervisorType?: string;
+  includes?: string;
   sharesNetworksWithLocationId?: number;
   sharesNetworksWithVersion?: 4 | 6 | 'any';
   sharesNetworksPrimary?: boolean;
@@ -80,6 +81,7 @@ export async function fetchLocations(opts?: {
     path: '/locations',
     namespace: 'location',
     params,
+    meta: opts?.includes ? { includes: opts.includes } : undefined,
   });
 
   return { ...res, data: expectArray<Location>(res.data, 'locations#index') };

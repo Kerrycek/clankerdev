@@ -10,6 +10,15 @@ export interface ClusterResource {
   [k: string]: unknown;
 }
 
+export interface DefaultObjectClusterResource {
+  id: number;
+  class_name?: string;
+  value?: number;
+  environment?: { id: number; label?: string } | null;
+  cluster_resource?: ClusterResource | null;
+  [k: string]: unknown;
+}
+
 export async function fetchClusterResources(opts?: { limit?: number; fromId?: number }) {
   const params: Record<string, unknown> = {};
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
@@ -23,4 +32,28 @@ export async function fetchClusterResources(opts?: { limit?: number; fromId?: nu
   });
 
   return { ...res, data: expectArray<ClusterResource>(res.data, 'cluster_resources#index') };
+}
+
+export async function fetchDefaultObjectClusterResources(opts?: {
+  limit?: number;
+  environmentId?: number;
+  className?: string;
+}) {
+  const params: Record<string, unknown> = {};
+  if (opts?.limit !== undefined) params['limit'] = opts.limit;
+  if (opts?.environmentId !== undefined) params['environment'] = opts.environmentId;
+  if (opts?.className) params['class_name'] = opts.className;
+
+  const res = await haveApiCall<DefaultObjectClusterResource[]>({
+    method: 'GET',
+    path: '/default_object_cluster_resources',
+    namespace: 'default_object_cluster_resource',
+    params,
+    meta: { includes: 'cluster_resource' },
+  });
+
+  return {
+    ...res,
+    data: expectArray<DefaultObjectClusterResource>(res.data, 'default_object_cluster_resources#index'),
+  };
 }

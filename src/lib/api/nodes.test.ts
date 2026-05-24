@@ -6,15 +6,20 @@ function mockFetchOk(response: any) {
   return vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: true, response }) });
 }
 
+function lastFetchCall() {
+  const calls = (globalThis.fetch as any).mock.calls;
+  return calls[calls.length - 1] as [string, RequestInit?];
+}
+
 describe('nodes API wrappers', () => {
   test('fetchNodes forwards q, state, limit, and from_id', async () => {
     globalThis.fetch = mockFetchOk({ nodes: [{ id: 12, name: 'node12' }], _meta: { total_count: 1 } }) as any;
 
-    const res = await fetchNodes({ q: 'node12', state: 'inactive', limit: 25, fromId: 400 });
+    const res = await fetchNodes({ q: 'node12', state: 'inactive', limit: 25, fromId: 400, location: 7 });
 
     expect(res.data).toEqual([{ id: 12, name: 'node12' }]);
 
-    const [url] = (globalThis.fetch as any).mock.calls[0];
+    const [url] = lastFetchCall();
     const u = new URL(url);
 
     expect(u.pathname).toBe('/v7.0/nodes');
@@ -22,5 +27,6 @@ describe('nodes API wrappers', () => {
     expect(u.searchParams.get('node[state]')).toBe('inactive');
     expect(u.searchParams.get('node[limit]')).toBe('25');
     expect(u.searchParams.get('node[from_id]')).toBe('400');
+    expect(u.searchParams.get('node[location]')).toBe('7');
   });
 });
