@@ -59,7 +59,7 @@ export interface ChromeContextValue {
   togglePinnedTransactionChain: (chainId: number) => void;
 
   /**
-   * Track an action_state_id returned by the API (opens the Tasks drawer).
+   * Track an action_state_id returned by the API.
    *
    * Optional metadata helps produce high-quality notifications without relying on backend labels.
    */
@@ -73,7 +73,7 @@ export interface ChromeContextValue {
       /** When provided, binds a local transition lock to this action state. */
       object?: ObjectRef;
 
-      /** Open a dismissible blocking progress modal for this action. */
+      /** Show a dismissible progress popover for this action. */
       blockUi?: boolean;
 
       /** Optional i18n title key for the blocking progress modal. */

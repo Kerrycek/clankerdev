@@ -424,12 +424,8 @@ export function AppLayout(props: { children: React.ReactNode }) {
         acquireLocalLock(meta.object, { actionStateId: id });
       }
 
-      setTasksOpen(true);
       setHighlightActionStateId(id);
-
-      if (meta?.blockUi) {
-        setBlockingActionStateId(id);
-      }
+      setBlockingActionStateId(id);
 
       const safeMeta: Omit<TrackedActionState, 'id' | 'addedAt'> = {
         actionLabelKey: meta?.actionLabelKey,

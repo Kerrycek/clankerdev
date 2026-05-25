@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { X } from 'lucide-react';
 
 import { useI18n } from '../../app/i18n';
 import { fetchActionState } from '../../lib/api/actionStates';
@@ -7,7 +8,6 @@ import { actionStateProgressLabel, actionStateProgressPercent } from '../../lib/
 import { useFastPollIntervalMs } from '../../lib/refreshTiers';
 import type { TrackedActionState } from './ChromeContext';
 import { Button } from '../ui/Button';
-import { Modal } from '../ui/Modal';
 import { Spinner } from '../ui/Spinner';
 
 export function BlockingActionProgressModal(props: {
@@ -38,6 +38,19 @@ export function BlockingActionProgressModal(props: {
     props.onClose();
   }, [actionStateId, q.data, props.onClose]);
 
+  useEffect(() => {
+    if (actionStateId === null) return;
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'Escape') return;
+      e.preventDefault();
+      props.onClose();
+    }
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [actionStateId, props.onClose]);
+
   const title = useMemo(() => {
     const key = props.tracked?.progressTitleKey;
     return key ? t(key) : t('modal.progress.title');
@@ -54,51 +67,54 @@ export function BlockingActionProgressModal(props: {
   const pct = q.data ? actionStateProgressPercent(q.data as any) : null;
   const progressLabel = q.data ? actionStateProgressLabel(q.data as any) : null;
 
-  return (
-    <Modal
-      open={actionStateId !== null}
-      onClose={props.onClose}
-      title={title}
-      size="sm"
-      testId="modal.action_progress"
-      footer={
-        <div className="flex items-center justify-end gap-2">
-          <Button variant="secondary" onClick={props.onOpenTasks} testId="modal.action_progress.open_tasks">
-            {t('common.open_tasks')}
-          </Button>
-          <Button
-            variant="secondary"
-            onClick={props.onClose}
-            testId="modal.action_progress.continue"
-          >
-            {t('common.continue_in_background')}
-          </Button>
-        </div>
-      }
-    >
-      <div className="space-y-3">
-        <p className="text-sm text-muted">{t('modal.progress.body')}</p>
+  if (actionStateId === null) return null;
 
-        <div className="text-sm">
+  return (
+    <div
+      className="fixed right-3 top-16 z-40 w-[calc(100vw-1.5rem)] max-w-sm rounded-lg border border-border bg-overlay-surface shadow-panel sm:right-4 md:top-20"
+      data-testid="modal.action_progress"
+      data-overlay="popover"
+      data-overlay-surface="overlay"
+      role="status"
+      aria-live="polite"
+    >
+      <div className="flex items-start gap-3 border-b border-border px-4 py-3">
+        <div className="min-w-0 flex-1">
+          <div className="text-sm font-semibold text-fg">{title}</div>
+          <p className="mt-0.5 text-xs text-muted">{t('modal.progress.body')}</p>
+        </div>
+        <button
+          type="button"
+          className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-fg"
+          onClick={props.onClose}
+          aria-label={t('common.close')}
+          data-testid="modal.action_progress.close"
+        >
+          <X size={16} />
+        </button>
+      </div>
+
+      <div className="space-y-3">
+        <div className="px-4 pt-3 text-sm">
           <span className="font-medium text-fg">{actionLabel}</span>
           {objectLabel ? <span className="text-faint">{` · ${objectLabel}`}</span> : null}
           {props.tracked?.id ? <span className="text-faint">{` · #${props.tracked.id}`}</span> : null}
         </div>
 
         {q.isLoading ? (
-          <div className="flex items-center gap-2 text-sm text-muted">
+          <div className="flex items-center gap-2 px-4 text-sm text-muted">
             <Spinner /> {t('common.loading')}
           </div>
         ) : null}
 
         {q.isError ? (
-          <div className="rounded-md border border-border bg-surface-2 p-3 text-sm text-muted">
+          <div className="mx-4 rounded-md border border-border bg-surface-2 p-3 text-sm text-muted">
             {t('tasks.error.load_action_states')}
           </div>
         ) : null}
 
         {pct !== null ? (
-          <div className="space-y-1">
+          <div className="space-y-1 px-4">
             <div className="flex items-center justify-between text-xs text-muted">
               <span>{progressLabel ?? t('common.progress')}</span>
               <span>{pct}%</span>
@@ -108,9 +124,31 @@ export function BlockingActionProgressModal(props: {
             </div>
           </div>
         ) : q.data ? (
-          <div className="text-xs text-muted">{progressLabel ?? t('common.loading')}</div>
+          <div className="px-4 text-xs text-muted">{progressLabel ?? t('common.loading')}</div>
         ) : null}
+
+        <div className="flex items-center justify-end gap-2 border-t border-border px-4 py-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              props.onClose();
+              props.onOpenTasks();
+            }}
+            testId="modal.action_progress.open_tasks"
+          >
+            {t('common.open_tasks')}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={props.onClose}
+            testId="modal.action_progress.continue"
+          >
+            {t('common.continue_in_background')}
+          </Button>
+        </div>
       </div>
-    </Modal>
+    </div>
   );
 }
