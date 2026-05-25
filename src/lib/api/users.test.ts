@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { fetchUsers } from './users';
+import { fetchUsers, updateUser } from './users';
 
 function makeOkResponse(body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -136,5 +136,54 @@ describe('fetchUsers', () => {
 
     const url = new URL(String(fetchMock.mock.calls[0]?.[0]));
     expect(url.searchParams.get('user[lockout]')).toBeNull();
+  });
+});
+
+describe('updateUser', () => {
+  function installApiFixture() {
+    (window as any).vpsAdmin = {
+      api: { url: 'https://api.example.test', version: 'v7.0' },
+      sessionToken: 'tok_123',
+      description: {
+        meta: { namespace: '_meta' },
+        authentication: {
+          token: { http_header: 'X-Auth-Token' },
+        },
+      },
+    };
+  }
+
+  it('sends generated password controls through the user namespace', async () => {
+    installApiFixture();
+
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      makeOkResponse({
+        status: true,
+        response: { user: { id: 1, login: 'kerry', level: 99 } },
+      })
+    );
+
+    await updateUser(1, {
+      new_password: 'Abc123abc123abc123ab',
+      logout_sessions: true,
+      password_reset: true,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const parsed = new URL(url);
+
+    expect(parsed.pathname).toBe('/v7.0/users/1');
+    expect(parsed.searchParams.get('user[new_password]')).toBeNull();
+    expect(JSON.parse(String(init.body))).toEqual({
+      user: {
+        new_password: 'Abc123abc123abc123ab',
+        logout_sessions: true,
+        password_reset: true,
+      },
+    });
+    expect(init.method).toBe('PUT');
+    expect(init.headers).toMatchObject({ 'X-Auth-Token': 'tok_123' });
   });
 });
