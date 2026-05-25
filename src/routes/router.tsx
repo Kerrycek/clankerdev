@@ -46,6 +46,7 @@ const VpsNetworkPage = lazyRoute(() => import('../pages/app/vps/VpsNetworkPage')
 const VpsStoragePage = lazyRoute(() => import('../pages/app/vps/VpsStoragePage'), 'VpsStoragePage');
 const VpsFeaturesPage = lazyRoute(() => import('../pages/app/vps/VpsFeaturesPage'), 'VpsFeaturesPage');
 const VpsMaintenancePage = lazyRoute(() => import('../pages/app/vps/VpsMaintenancePage'), 'VpsMaintenancePage');
+const VpsLifecyclePage = lazyRoute(() => import('../pages/app/vps/VpsLifecyclePage'), 'VpsLifecyclePage');
 const DatasetsListPage = lazyRoute(() => import('../pages/app/datasets/DatasetsListPage'), 'DatasetsListPage');
 const DatasetLayout = lazyRoute(() => import('../pages/app/datasets/DatasetLayout'), 'DatasetLayout');
 const DatasetOverviewPage = lazyRoute(() => import('../pages/app/datasets/DatasetOverviewPage'), 'DatasetOverviewPage');
@@ -200,6 +201,7 @@ export const router = createBrowserRouter([
                 { path: 'storage', element: <VpsStoragePage /> },
                 { path: 'features', element: <VpsFeaturesPage /> },
                 { path: 'maintenance', element: <VpsMaintenancePage /> },
+                { path: 'lifecycle', element: <VpsLifecyclePage /> },
                 { path: 'console', element: <VpsConsolePage /> },
               ],
             },
@@ -366,6 +368,7 @@ export const router = createBrowserRouter([
                 { path: 'storage', element: <VpsStoragePage /> },
                 { path: 'features', element: <VpsFeaturesPage /> },
                 { path: 'maintenance', element: <VpsMaintenancePage /> },
+                { path: 'lifecycle', element: <VpsLifecyclePage /> },
                 { path: 'console', element: <VpsConsolePage /> },
               ],
             },

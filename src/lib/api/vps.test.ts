@@ -1,6 +1,15 @@
 import { describe, expect, test, vi } from 'vitest';
 
-import { buildCreateVpsParams, createVps, fetchVps, fetchVpsList, fetchVpsStatuses } from './vps';
+import {
+  buildCreateVpsParams,
+  createVps,
+  fetchVps,
+  fetchVpsList,
+  fetchVpsStatuses,
+  vpsClone,
+  vpsReplace,
+  vpsSwapWith,
+} from './vps';
 
 function mockFetchOk(response: any) {
   return vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: true, response }) });
@@ -217,5 +226,88 @@ describe('vps API wrappers', () => {
     expect(body.vps).not.toHaveProperty('user');
     expect(body.vps).not.toHaveProperty('onstartall');
     expect(body.vps).not.toHaveProperty('info');
+  });
+
+  test('vpsClone posts legacy clone payload', async () => {
+    globalThis.fetch = mockFetchOk({ vps: { id: 160 } }) as any;
+
+    await vpsClone(12, {
+      user: 1,
+      node: 5,
+      hostname: 'source-12-clone',
+      subdatasets: true,
+      dataset_plans: true,
+      resources: true,
+      features: false,
+      stop: true,
+    });
+
+    const [url, init] = lastFetchCall();
+    const body = JSON.parse(String(init?.body));
+
+    expect(new URL(url).pathname).toBe('/v7.0/vpses/12/clone');
+    expect(init?.method).toBe('POST');
+    expect(body).toEqual({
+      vps: {
+        user: 1,
+        node: 5,
+        hostname: 'source-12-clone',
+        subdatasets: true,
+        dataset_plans: true,
+        resources: true,
+        features: false,
+        stop: true,
+      },
+    });
+  });
+
+  test('vpsSwapWith posts legacy swap payload', async () => {
+    globalThis.fetch = mockFetchOk({}) as any;
+
+    await vpsSwapWith(12, {
+      vps: 14,
+      hostname: true,
+      resources: true,
+      expirations: false,
+    });
+
+    const [url, init] = lastFetchCall();
+    const body = JSON.parse(String(init?.body));
+
+    expect(new URL(url).pathname).toBe('/v7.0/vpses/12/swap_with');
+    expect(init?.method).toBe('POST');
+    expect(body).toEqual({
+      vps: {
+        vps: 14,
+        hostname: true,
+        resources: true,
+        expirations: false,
+      },
+    });
+  });
+
+  test('vpsReplace posts legacy admin replace payload', async () => {
+    globalThis.fetch = mockFetchOk({ vps: { id: 12 } }) as any;
+
+    await vpsReplace(12, {
+      node: 5,
+      expiration_date: '2026-07-25T12:00:00.000Z',
+      start: true,
+      reason: 'test replacement',
+    });
+
+    const [url, init] = lastFetchCall();
+    const body = JSON.parse(String(init?.body));
+
+    expect(new URL(url).pathname).toBe('/v7.0/vpses/12/replace');
+    expect(init?.method).toBe('POST');
+    expect(body).toEqual({
+      vps: {
+        node: 5,
+        expiration_date: '2026-07-25T12:00:00.000Z',
+        start: true,
+        reason: 'test replacement',
+      },
+    });
   });
 });

@@ -31,6 +31,7 @@ export const enOps_action = {
   "action.node.maintenance_unlock.label": "Unlock node (maintenance)",
   "action.user_payment.create.label": "Add payment",
   "action.vps.features.apply.label": "Apply features",
+  "action.vps.clone.label": "Clone VPS",
   "action.vps.create.label": "Create VPS",
   "action.vps.maintenance.save.label": "Save maintenance window",
   "action.vps.mount.create.label": "Create mount",
@@ -40,7 +41,9 @@ export const enOps_action = {
   "action.vps.network.enable.label": "Enable network",
   "action.vps.network.interface_update.label": "Update interface",
   "action.vps.restart.label": "Restart",
+  "action.vps.replace.label": "Replace VPS",
   "action.vps.root_password.label": "Generate root password",
   "action.vps.start.label": "Start",
   "action.vps.stop.label": "Stop",
+  "action.vps.swap.label": "Swap VPS",
 } as const;

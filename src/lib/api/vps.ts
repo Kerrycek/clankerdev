@@ -71,6 +71,33 @@ export interface VpsPasswdReply {
   password: string;
 }
 
+export interface VpsClonePayload {
+  user?: number;
+  node?: number;
+  location?: number;
+  environment?: number;
+  hostname?: string;
+  subdatasets?: boolean;
+  dataset_plans?: boolean;
+  resources?: boolean;
+  features?: boolean;
+  stop?: boolean;
+}
+
+export interface VpsSwapWithPayload {
+  vps: number;
+  resources?: boolean;
+  hostname?: boolean;
+  expirations?: boolean;
+}
+
+export interface VpsReplacePayload {
+  node?: number;
+  expiration_date?: string;
+  start?: boolean;
+  reason?: string;
+}
+
 interface CreateVpsCommonPayload {
   hostname: string;
   os_template?: number;
@@ -222,6 +249,33 @@ export async function vpsPasswd(vpsId: number, type: 'simple' | 'secure' = 'secu
     path: `/vpses/${vpsId}/passwd`,
     namespace: 'vps',
     params: { type },
+  });
+}
+
+export async function vpsClone(vpsId: number, params: VpsClonePayload) {
+  return haveApiCall<Vps>({
+    method: 'POST',
+    path: `/vpses/${vpsId}/clone`,
+    namespace: 'vps',
+    params: { ...params },
+  });
+}
+
+export async function vpsSwapWith(vpsId: number, params: VpsSwapWithPayload) {
+  return haveApiCall<null>({
+    method: 'POST',
+    path: `/vpses/${vpsId}/swap_with`,
+    namespace: 'vps',
+    params: { ...params },
+  });
+}
+
+export async function vpsReplace(vpsId: number, params: VpsReplacePayload) {
+  return haveApiCall<Vps>({
+    method: 'POST',
+    path: `/vpses/${vpsId}/replace`,
+    namespace: 'vps',
+    params: { ...params },
   });
 }
 

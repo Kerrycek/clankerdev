@@ -133,6 +133,7 @@ export function VpsOverviewPage() {
   const osLabel = (vps.os_template as any)?.label ?? (vps.os_template as any)?.name;
   const dnsLabel = (vps.dns_resolver as any)?.label ?? (vps.dns_resolver as any)?.name;
   const owner = (vps.user as any)?.login ?? (vps.user as any)?.id;
+  const ownerId = typeof (vps.user as any)?.id === 'number' ? (vps.user as any).id : null;
 
   const chainsQ = useQuery({
     queryKey: ['transaction_chains', 'list', { className: 'Vps', rowId: vps.id, limit: 5 }],
@@ -438,6 +439,61 @@ export function VpsOverviewPage() {
           testId="vps.overview.lifecycle"
         />
       </div>
+
+      {mode === 'admin' ? (
+        <Card className="lg:col-span-2" testId="vps.overview.admin_actions.card">
+          <CardHeader title={t('vps.overview.admin_actions.title')} subtitle={t('vps.overview.admin_actions.subtitle')} />
+          <CardBody>
+            <div className="flex flex-wrap items-center gap-2">
+              <ChipLink to={`${basePath}/vps/${vps.id}/console`} title={t('vps.overview.admin_actions.remote_console_title')}>
+                {t('vps.overview.admin_actions.remote_console')}
+              </ChipLink>
+              <ChipLink to={`${basePath}/vps/${vps.id}/storage`} title={t('vps.overview.admin_actions.backups_title')}>
+                {t('vps.overview.admin_actions.backups')}
+              </ChipLink>
+              <ChipLink to={`${basePath}/migration-plans`} title={t('vps.overview.admin_actions.migrate_title')}>
+                {t('vps.overview.admin_actions.migrate')}
+              </ChipLink>
+              <ChipLink to={`${basePath}/vps/${vps.id}/config`} title={t('vps.overview.admin_actions.change_owner_title')}>
+                {t('vps.overview.admin_actions.change_owner')}
+              </ChipLink>
+              <ChipLink to={`${basePath}/vps/${vps.id}/lifecycle`} title={t('vps.overview.admin_actions.lifecycle_title')}>
+                {t('vps.overview.admin_actions.lifecycle')}
+              </ChipLink>
+              <ChipLink to={`${basePath}/oom-reports?vps=${vps.id}`} title={t('vps.overview.admin_actions.oom_reports_title')}>
+                {t('vps.overview.admin_actions.oom_reports')}
+              </ChipLink>
+              <ChipLink to={`${basePath}/oom-reports/rules/${vps.id}`} title={t('vps.overview.admin_actions.oom_rules_title')}>
+                {t('vps.overview.admin_actions.oom_rules')}
+              </ChipLink>
+              <ChipLink to={`${basePath}/incidents?vps=${vps.id}`} title={t('vps.overview.admin_actions.incidents_title')}>
+                {t('vps.overview.admin_actions.incidents')}
+              </ChipLink>
+              <ChipLink to={`${basePath}/incidents/new?vps=${vps.id}`} title={t('vps.overview.admin_actions.report_incident_title')}>
+                {t('vps.overview.admin_actions.report_incident')}
+              </ChipLink>
+              <ChipLink to={`/outages`} title={t('vps.overview.admin_actions.outages_title')}>
+                {t('vps.overview.admin_actions.outages')}
+              </ChipLink>
+              <ChipLink to={`${basePath}/transactions?class_name=Vps&row_id=${vps.id}`} title={t('vps.overview.admin_actions.transaction_log_title')}>
+                {t('vps.overview.admin_actions.transaction_log')}
+              </ChipLink>
+              {ownerId ? (
+                <ChipLink to={`${basePath}/users/${ownerId}/user-data`} title={t('vps.overview.admin_actions.user_data_title')}>
+                  {t('vps.overview.admin_actions.user_data')}
+                </ChipLink>
+              ) : null}
+              <ChipLink to={`${basePath}/user-namespaces`} title={t('vps.overview.admin_actions.user_namespaces_title')}>
+                {t('vps.overview.admin_actions.user_namespaces')}
+              </ChipLink>
+              <ChipLink to={`${basePath}/vps/${vps.id}/storage`} title={t('vps.overview.admin_actions.create_dataset_title')}>
+                {t('vps.overview.admin_actions.create_dataset')}
+              </ChipLink>
+            </div>
+            <div className="mt-2 text-xs text-faint">{t('vps.overview.admin_actions.hint')}</div>
+          </CardBody>
+        </Card>
+      ) : null}
 
       <Card className="lg:col-span-2" testId="vps.overview.diagnostics.card">
         <CardHeader title={t('vps.overview.diagnostics.title')} subtitle={t('vps.overview.diagnostics.subtitle')} />

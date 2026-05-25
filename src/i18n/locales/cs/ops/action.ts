@@ -31,6 +31,7 @@ export const csOps_action = {
   "action.node.maintenance_unlock.label": "Odemknout node (údržba)",
   "action.user_payment.create.label": "Přidat platbu",
   "action.vps.features.apply.label": "Aplikovat funkce",
+  "action.vps.clone.label": "Clone VPS",
   "action.vps.create.label": "Vytvořit VPS",
   "action.vps.maintenance.save.label": "Uložit okno údržby",
   "action.vps.mount.create.label": "Vytvořit mount",
@@ -40,7 +41,9 @@ export const csOps_action = {
   "action.vps.network.enable.label": "Povolit síť",
   "action.vps.network.interface_update.label": "Aktualizovat rozhraní",
   "action.vps.restart.label": "Restartovat",
+  "action.vps.replace.label": "Replace VPS",
   "action.vps.root_password.label": "Vygenerovat heslo roota",
   "action.vps.start.label": "Spustit",
   "action.vps.stop.label": "Zastavit",
+  "action.vps.swap.label": "Swap VPS",
 } as const;
