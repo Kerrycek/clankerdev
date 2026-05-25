@@ -61,4 +61,33 @@ describe('lockState', () => {
     expect(state.busy).toBe(true);
     expect(state.activeChainIds).toEqual([11, 7]);
   });
+
+  it('understands numeric chain states returned by HaveAPI', () => {
+    const state = deriveChainLockState({
+      chains: [
+        { id: 65, state: 2 },
+        { id: 53, state: 4 },
+        { id: 12, state: 6 },
+      ] as any,
+      updatedAt: 1,
+      unreliable: false,
+    });
+
+    expect(state.busy).toBe(false);
+    expect(state.activeChainIds).toEqual([]);
+  });
+
+  it('keeps numeric queued and rollbacking chain states busy', () => {
+    const state = deriveChainLockState({
+      chains: [
+        { id: 66, state: 1 },
+        { id: 67, state: 3 },
+      ] as any,
+      updatedAt: 1,
+      unreliable: false,
+    });
+
+    expect(state.busy).toBe(true);
+    expect(state.activeChainIds).toEqual([67, 66]);
+  });
 });

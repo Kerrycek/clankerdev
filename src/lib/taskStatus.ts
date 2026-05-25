@@ -88,8 +88,35 @@ export function objectStateBadge(objectState: unknown, t: Translator): BadgeSpec
 // Transaction chains
 // ----------------------
 
+export function normalizeChainState(state: unknown): string {
+  if (typeof state === 'number' && Number.isFinite(state)) {
+    switch (state) {
+      case 0:
+        return 'staged';
+      case 1:
+        return 'queued';
+      case 2:
+        return 'done';
+      case 3:
+        return 'rollbacking';
+      case 4:
+        return 'failed';
+      case 5:
+        return 'fatal';
+      case 6:
+        return 'resolved';
+      default:
+        return String(state);
+    }
+  }
+
+  const raw = String(state ?? '').trim().toLowerCase();
+  if (/^\d+$/.test(raw)) return normalizeChainState(Number(raw));
+  return raw;
+}
+
 export function isFinishedChainState(state: unknown): boolean {
-  const st = String(state ?? '').trim();
+  const st = normalizeChainState(state);
   return ['done', 'failed', 'fatal', 'resolved', 'cancelled', 'canceled'].includes(st);
 }
 
@@ -104,12 +131,12 @@ export function hasActiveChains(chains: Array<{ state?: unknown }> | undefined):
 }
 
 export function isFailedChainState(state: unknown): boolean {
-  return ['failed', 'fatal'].includes(String(state ?? ''));
+  return ['failed', 'fatal'].includes(normalizeChainState(state));
 }
 
 export function chainBadgeFromState(state: unknown, t?: Translator): BadgeSpec {
   const tt = resolveTranslator(t);
-  const st = String(state ?? '').trim() || 'unknown';
+  const st = normalizeChainState(state) || 'unknown';
 
   // Finished
   if (st === 'done' || st === 'resolved') return { variant: 'ok', label: taskStateLabel(st, tt) };
