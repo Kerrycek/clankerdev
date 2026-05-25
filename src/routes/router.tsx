@@ -39,6 +39,8 @@ const MonitoringEventDetailPage = lazyRoute(() => import('../pages/app/Monitorin
 const VpsLayout = lazyRoute(() => import('../pages/app/vps/VpsLayout'), 'VpsLayout');
 const VpsCreatePage = lazyRoute(() => import('../pages/app/vps/VpsCreatePage'), 'VpsCreatePage');
 const VpsOverviewPage = lazyRoute(() => import('../pages/app/vps/VpsOverviewPage'), 'VpsOverviewPage');
+const VpsConfigurationPage = lazyRoute(() => import('../pages/app/vps/VpsConfigurationPage'), 'VpsConfigurationPage');
+const VpsAccessPage = lazyRoute(() => import('../pages/app/vps/VpsAccessPage'), 'VpsAccessPage');
 const VpsConsolePage = lazyRoute(() => import('../pages/app/vps/VpsConsolePage'), 'VpsConsolePage');
 const VpsNetworkPage = lazyRoute(() => import('../pages/app/vps/VpsNetworkPage'), 'VpsNetworkPage');
 const VpsStoragePage = lazyRoute(() => import('../pages/app/vps/VpsStoragePage'), 'VpsStoragePage');
@@ -192,6 +194,8 @@ export const router = createBrowserRouter([
               element: <VpsLayout />,
               children: [
                 { index: true, element: <VpsOverviewPage /> },
+                { path: 'config', element: <VpsConfigurationPage /> },
+                { path: 'access', element: <VpsAccessPage /> },
                 { path: 'network', element: <VpsNetworkPage /> },
                 { path: 'storage', element: <VpsStoragePage /> },
                 { path: 'features', element: <VpsFeaturesPage /> },
@@ -356,6 +360,8 @@ export const router = createBrowserRouter([
               element: <VpsLayout />,
               children: [
                 { index: true, element: <VpsOverviewPage /> },
+                { path: 'config', element: <VpsConfigurationPage /> },
+                { path: 'access', element: <VpsAccessPage /> },
                 { path: 'network', element: <VpsNetworkPage /> },
                 { path: 'storage', element: <VpsStoragePage /> },
                 { path: 'features', element: <VpsFeaturesPage /> },

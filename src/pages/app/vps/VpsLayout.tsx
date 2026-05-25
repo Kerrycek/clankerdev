@@ -123,7 +123,7 @@ export function VpsLayout() {
 
   const vpsQ = useQuery({
     queryKey: ['vps', 'show', { id: vpsId }],
-    queryFn: async () => (await fetchVps(vpsId, { includes: 'node__location,user' })).data,
+    queryFn: async () => (await fetchVps(vpsId, { includes: 'node__location,user,dns_resolver,user_namespace_map,os_template' })).data,
     enabled: Number.isFinite(vpsId) && vpsId > 0,
   });
 
@@ -312,6 +312,8 @@ export function VpsLayout() {
   const nav = useMemo(
     () => [
       { label: t('vps.tabs.overview'), to: `${basePath}/vps/${vpsId}`, end: true },
+      { label: t('vps.tabs.config'), to: `${basePath}/vps/${vpsId}/config`, end: true },
+      { label: t('vps.tabs.access'), to: `${basePath}/vps/${vpsId}/access`, end: true },
       { label: t('vps.tabs.network'), to: `${basePath}/vps/${vpsId}/network`, end: true },
       { label: t('vps.tabs.storage'), to: `${basePath}/vps/${vpsId}/storage`, end: true },
       { label: t('vps.tabs.features'), to: `${basePath}/vps/${vpsId}/features`, end: true },
@@ -640,6 +642,7 @@ export function VpsLayout() {
                   const objectLabel = vpsQ.data?.hostname ? String(vpsQ.data.hostname) : t('common.vps_ref', { id: vpsId });
                   chrome.trackActionState(asId, { actionLabelKey: 'action.vps.root_password.label', objectLabel, object: vpsRef ?? undefined });
                   setLastAction({ actionLabelKey: 'action.vps.root_password.label', objectLabel, id: asId });
+                  setRevealedPassword(pwd);
                   setPasswdFlow({ password: pwd, asId });
                   setPasswdWaitOpen(true);
                 } else if (pwd) {

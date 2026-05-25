@@ -16,6 +16,7 @@ export async function fetchDnsResolvers(opts?: {
   q?: string;
   isUniversal?: boolean;
   locationId?: number;
+  vpsId?: number;
 }) {
   const params: Record<string, unknown> = {};
 
@@ -25,6 +26,7 @@ export async function fetchDnsResolvers(opts?: {
   if (opts?.q) params['q'] = opts.q;
   if (opts?.isUniversal !== undefined) params['is_universal'] = opts.isUniversal;
   if (opts?.locationId !== undefined) params['location'] = opts.locationId;
+  if (opts?.vpsId !== undefined) params['vps'] = opts.vpsId;
 
   const res = await haveApiCall<DnsResolver[]>({
     method: 'GET',

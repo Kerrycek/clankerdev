@@ -19,9 +19,12 @@ export interface Vps {
   dataset?: ResourceRef;
   pool?: ResourceRef;
   manage_hostname?: boolean;
-  cgroup_version?: number;
+  cgroup_version?: number | string;
   allow_admin_modifications?: boolean;
   enable_network?: boolean;
+  autostart_enable?: boolean;
+  autostart_priority?: number;
+  start_menu_timeout?: number;
 
   cpu?: number;
   memory?: number;
