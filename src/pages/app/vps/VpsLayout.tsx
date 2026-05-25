@@ -312,6 +312,7 @@ export function VpsLayout() {
   const nav = useMemo(
     () => [
       { label: t('vps.tabs.overview'), to: `${basePath}/vps/${vpsId}`, end: true },
+      { label: t('vps.tabs.access'), to: `${basePath}/vps/${vpsId}/access`, end: true },
       { label: t('vps.tabs.network'), to: `${basePath}/vps/${vpsId}/network`, end: true },
       { label: t('vps.tabs.storage'), to: `${basePath}/vps/${vpsId}/storage`, end: true },
       { label: t('vps.tabs.features'), to: `${basePath}/vps/${vpsId}/features`, end: true },
