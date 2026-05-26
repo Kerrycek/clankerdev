@@ -86,6 +86,7 @@ export function IpAddressesListTable({ pageData, ipDetailBasePath, basePath, na,
           <th className="px-4 py-2">{t('admin.ip_addresses.field.interface')}</th>
           <th className="px-4 py-2">{t('admin.ip_addresses.field.flags')}</th>
           <th className="px-4 py-2">{t('admin.ip.field.created')}</th>
+          <th className="px-4 py-2 text-right">{t('common.actions')}</th>
         </tr>
       </thead>
       <tbody>
@@ -145,6 +146,19 @@ export function IpAddressesListTable({ pageData, ipDetailBasePath, basePath, na,
                 </div>
               </td>
               <td className="px-4 py-2 text-xs text-muted">{createdAt ? formatDateTime(createdAt) : na}</td>
+              <td className="px-4 py-2 text-right text-xs">
+                <div className="flex flex-wrap justify-end gap-2">
+                  <Link className="text-accent hover:underline" to={`${ipDetailBasePath}/${id}`}>
+                    {t('admin.ip.route.title')}
+                  </Link>
+                  <Link className="text-accent hover:underline" to={`${ipDetailBasePath}/${id}`}>
+                    {t('admin.ip.owner.title')}
+                  </Link>
+                  <Link className="text-accent hover:underline" to={`${ipDetailBasePath}/${id}`}>
+                    {t('admin.ip.hosts.title')}
+                  </Link>
+                </div>
+              </td>
             </TableRowLink>
           );
         })}

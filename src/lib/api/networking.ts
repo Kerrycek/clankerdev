@@ -124,10 +124,12 @@ export async function deleteHostIpAddress(hostIpAddressId: number) {
   });
 }
 
-export async function assignHostIpAddress(hostIpAddressId: number) {
+export async function assignHostIpAddress(hostIpAddressId: number, payload: { network_interface: number }) {
   return haveApiCall<HostIpAddress>({
     method: 'POST',
     path: `/host_ip_addresses/${hostIpAddressId}/assign`,
+    namespace: 'host_ip_address',
+    params: { network_interface: payload.network_interface },
   });
 }
 

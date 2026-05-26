@@ -12,6 +12,7 @@ import {
   updateHostIpAddress,
   type HostIpAddress,
 } from '../../../../lib/api/networking';
+import { fetchNetworkInterfaces } from '../../../../lib/api/networkInterfaces';
 import { useKeysetPagination } from '../../../../lib/hooks/useKeysetPagination';
 import { cursorFromDescendingPage } from '../../../../lib/lockIndex';
 import { parseBoolParam, parsePositiveInt } from '../../../../lib/parse';
@@ -105,6 +106,9 @@ export function HostIpAddressesPage() {
   const [ptrEditor, setPtrEditor] = useState<HostIpAddress | null>(null);
   const [ptrValue, setPtrValue] = useState('');
   const [deleteHost, setDeleteHost] = useState<HostIpAddress | null>(null);
+  const [assignHost, setAssignHost] = useState<HostIpAddress | null>(null);
+  const [assignVps, setAssignVps] = useState<number | null>(null);
+  const [assignInterface, setAssignInterface] = useState('');
 
   const q = String(sp.get('q') ?? '').trim();
   const userId = parsePositiveInt(sp.get('user'));
@@ -126,6 +130,12 @@ export function HostIpAddressesPage() {
     queryFn: async () =>
       (await fetchHostIpAddresses({ q: q || undefined, user: userId, vps: vpsId, assigned, limit: paging.limit, fromId: paging.cursor ?? undefined })).data,
     placeholderData: (prev) => prev,
+  });
+
+  const netifsQ = useQuery({
+    queryKey: ['network_interface', 'host-ip-assign', { vpsId: assignVps, limit: 100 }],
+    queryFn: async () => (await fetchNetworkInterfaces(assignVps as number, { limit: 100 })).data,
+    enabled: Boolean(assignHost && assignVps),
   });
 
   const refresh = async () => {
@@ -151,8 +161,16 @@ export function HostIpAddressesPage() {
   });
 
   const assignM = useMutation({
-    mutationFn: async (hostId: number) => assignHostIpAddress(hostId),
+    mutationFn: async () => {
+      if (!assignHost) throw new Error(t('admin.host_ip_addresses.action.error_missing'));
+      const networkInterface = Number(assignInterface.trim());
+      if (!Number.isInteger(networkInterface) || networkInterface <= 0) throw new Error(t('admin.host_ip_addresses.assign.interface_required'));
+      return assignHostIpAddress(assignHost.id, { network_interface: networkInterface });
+    },
     onSuccess: async () => {
+      setAssignHost(null);
+      setAssignVps(null);
+      setAssignInterface('');
       await refresh();
       pushToast({ variant: 'ok', title: t('admin.host_ip_addresses.toast.assigned') });
     },
@@ -294,7 +312,11 @@ export function HostIpAddressesPage() {
                           size="sm"
                           testId={`admin.host_ip_addresses.row.${id}.assign`}
                           loading={assignM.isPending}
-                          onClick={() => assignM.mutate(id)}
+                          onClick={() => {
+                            setAssignHost(row);
+                            setAssignVps(null);
+                            setAssignInterface('');
+                          }}
                         >
                           {t('admin.host_ip_addresses.action.assign')}
                         </ActionButton>
@@ -356,6 +378,45 @@ export function HostIpAddressesPage() {
           <Input value={ptrValue} onChange={(e) => setPtrValue(e.target.value)} placeholder="host.example.org." />
         </label>
         <div className="mt-1 text-xs text-muted">{t('admin.host_ip_addresses.ptr.help')}</div>
+      </Modal>
+
+      <Modal
+        open={Boolean(assignHost)}
+        title={t('admin.host_ip_addresses.assign.title')}
+        onClose={() => setAssignHost(null)}
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setAssignHost(null)} disabled={assignM.isPending}>
+              {t('common.cancel')}
+            </Button>
+            <ActionButton loading={assignM.isPending} disabled={!assignInterface.trim()} onClick={() => assignM.mutate()}>
+              {t('admin.host_ip_addresses.action.assign')}
+            </ActionButton>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <label className="block">
+            <div className="mb-1 text-sm font-medium">{t('admin.host_ip_addresses.assign.vps')}</div>
+            <VpsLookupInput value={assignVps} onChange={setAssignVps} placeholder={t('admin.host_ip_addresses.assign.vps.placeholder')} />
+          </label>
+          <label className="block">
+            <div className="mb-1 text-sm font-medium">{t('admin.host_ip_addresses.assign.interface')}</div>
+            <Select
+              value={assignInterface}
+              onChange={(e) => setAssignInterface(e.target.value)}
+              disabled={!assignVps || netifsQ.isLoading}
+              options={[
+                { value: '', label: t('admin.host_ip_addresses.assign.interface.placeholder') },
+                ...(netifsQ.data ?? []).map((ni: any) => ({
+                  value: String(ni.id),
+                  label: `${ni.name ?? `#${ni.id}`} (#${ni.id})`,
+                })),
+              ]}
+            />
+          </label>
+          <div className="text-xs text-muted">{t('admin.host_ip_addresses.assign.help')}</div>
+        </div>
       </Modal>
 
       <ConfirmDialog

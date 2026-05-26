@@ -7,7 +7,10 @@ import {
   fetchVpsList,
   fetchVpsStatuses,
   vpsClone,
+  vpsDelete,
+  vpsMigrate,
   vpsReplace,
+  vpsReinstall,
   vpsSwapWith,
 } from './vps';
 
@@ -307,6 +310,75 @@ describe('vps API wrappers', () => {
         expiration_date: '2026-07-25T12:00:00.000Z',
         start: true,
         reason: 'test replacement',
+      },
+    });
+  });
+
+  test('vpsReinstall posts legacy reinstall payload', async () => {
+    globalThis.fetch = mockFetchOk({}) as any;
+
+    await vpsReinstall(12, { os_template: 6 });
+
+    const [url, init] = lastFetchCall();
+    const body = JSON.parse(String(init?.body));
+
+    expect(new URL(url).pathname).toBe('/v7.0/vpses/12/reinstall');
+    expect(init?.method).toBe('POST');
+    expect(body).toEqual({
+      vps: {
+        os_template: 6,
+      },
+    });
+  });
+
+  test('vpsMigrate posts legacy migration payload', async () => {
+    globalThis.fetch = mockFetchOk({}) as any;
+
+    await vpsMigrate(12, {
+      node: 7,
+      transfer_ip_addresses: true,
+      replace_ip_addresses: false,
+      maintenance_window: false,
+      finish_weekday: 1,
+      finish_minutes: 180,
+      stop_on_error: true,
+      cleanup_data: true,
+      send_mail: true,
+    });
+
+    const [url, init] = lastFetchCall();
+    const body = JSON.parse(String(init?.body));
+
+    expect(new URL(url).pathname).toBe('/v7.0/vpses/12/migrate');
+    expect(init?.method).toBe('POST');
+    expect(body).toEqual({
+      vps: {
+        node: 7,
+        transfer_ip_addresses: true,
+        replace_ip_addresses: false,
+        maintenance_window: false,
+        finish_weekday: 1,
+        finish_minutes: 180,
+        stop_on_error: true,
+        cleanup_data: true,
+        send_mail: true,
+      },
+    });
+  });
+
+  test('vpsDelete sends lazy delete payload through vps namespace', async () => {
+    globalThis.fetch = mockFetchOk({}) as any;
+
+    await vpsDelete(12, { lazy: true });
+
+    const [url, init] = lastFetchCall();
+    const body = JSON.parse(String(init?.body));
+
+    expect(new URL(url).pathname).toBe('/v7.0/vpses/12');
+    expect(init?.method).toBe('DELETE');
+    expect(body).toEqual({
+      vps: {
+        lazy: true,
       },
     });
   });

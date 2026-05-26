@@ -9,6 +9,8 @@ export const csAdmin_ip = {
   "admin.ip.field.user_id": "ID uživatele",
   "admin.ip.field.vps_id": "ID VPS",
   "admin.ip.hosts.assign": "Přiřadit",
+  "admin.ip.hosts.assign_help": "Přiřazení host adresy vyžaduje cílové rozhraní VPS stejně jako ve starém networking formuláři.",
+  "admin.ip.hosts.assign_title": "Přiřadit host IP adresu",
   "admin.ip.hosts.create": "Přidat host IP",
   "admin.ip.hosts.create_help": "Jedna adresa na řádek. Pro testovací data používej dokumentační/testovací rozsahy.",
   "admin.ip.hosts.create_placeholder": "192.0.2.10\n192.0.2.11",

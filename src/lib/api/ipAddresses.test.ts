@@ -106,10 +106,15 @@ describe('network address API wrappers', () => {
       },
     });
 
-    await assignHostIpAddress(9);
+    await assignHostIpAddress(9, { network_interface: 501 });
     [url, init] = lastFetchCall();
     expect(new URL(url).pathname).toBe('/v7.0/host_ip_addresses/9/assign');
     expect(init?.method).toBe('POST');
+    expect(JSON.parse(String(init?.body))).toEqual({
+      host_ip_address: {
+        network_interface: 501,
+      },
+    });
 
     await freeHostIpAddress(9);
     [url, init] = lastFetchCall();

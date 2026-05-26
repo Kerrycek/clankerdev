@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
 import { useAppMode } from '../../../app/appMode';
@@ -11,11 +11,25 @@ import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
 import { Checkbox } from '../../../components/ui/Checkbox';
 import { Input } from '../../../components/ui/Input';
 import { NodeLookupInput } from '../../../components/ui/NodeLookupInput';
+import { Select } from '../../../components/ui/Select';
 import { Textarea } from '../../../components/ui/Textarea';
 import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 import { VpsLookupInput } from '../../../components/ui/VpsLookupInput';
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
-import { vpsClone, vpsReplace, vpsSwapWith, type VpsClonePayload, type VpsReplacePayload, type VpsSwapWithPayload } from '../../../lib/api/vps';
+import { fetchOsTemplates, type OsTemplate } from '../../../lib/api/osTemplates';
+import {
+  updateVps,
+  vpsClone,
+  vpsDelete,
+  vpsMigrate,
+  vpsReinstall,
+  vpsReplace,
+  vpsSwapWith,
+  type VpsClonePayload,
+  type VpsMigratePayload,
+  type VpsReplacePayload,
+  type VpsSwapWithPayload,
+} from '../../../lib/api/vps';
 import { formatDateTime } from '../../../lib/format';
 import { gateVpsMutation } from '../../../lib/gates/vps';
 import { preflightVpsNotBusy } from './vpsPreflight';
@@ -49,6 +63,35 @@ type ReplaceForm = {
   confirm: boolean;
 };
 
+type TemplateForm = {
+  osTemplate: string;
+  autoUpdate: boolean;
+  confirm: boolean;
+};
+
+type ReinstallForm = {
+  osTemplate: string;
+  confirm: boolean;
+};
+
+type MigrateForm = {
+  node: string;
+  replaceIpAddresses: boolean;
+  transferIpAddresses: boolean;
+  maintenanceWindow: boolean;
+  finishWeekday: string;
+  finishMinutes: string;
+  stopOnError: boolean;
+  cleanupData: boolean;
+  sendMail: boolean;
+  confirm: boolean;
+};
+
+type DeleteForm = {
+  lazy: boolean;
+  confirm: boolean;
+};
+
 function resourceId(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (typeof value === 'string' && /^\d+$/.test(value.trim())) return Number(value.trim());
@@ -71,6 +114,14 @@ function parseOptionalId(raw: string): number | undefined {
 function parseRequiredId(raw: string): number {
   const n = parseOptionalId(raw);
   if (n === undefined) throw new Error('required-id');
+  return n;
+}
+
+function parseOptionalNonNegativeInt(raw: string): number | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  const n = Number(trimmed);
+  if (!Number.isInteger(n) || n < 0) throw new Error('invalid-id');
   return n;
 }
 
@@ -99,6 +150,10 @@ function Field(props: { label: React.ReactNode; help?: React.ReactNode; children
   );
 }
 
+function templateLabel(tpl: OsTemplate): string {
+  return String(tpl.label ?? tpl.name ?? `#${tpl.id}`);
+}
+
 function mutationErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message && error.message !== 'invalid-id' && error.message !== 'required-id' && error.message !== 'invalid-date') {
     return error.message;
@@ -118,7 +173,15 @@ export function VpsLifecyclePage() {
   const objectLabel = String((vps as any).hostname ?? '') || `#${vpsId}`;
   const ownerId = resourceId((vps as any).user);
   const nodeId = resourceId((vps as any).node);
+  const osTemplateId = resourceId((vps as any).os_template);
   const isAdminMode = mode === 'admin';
+
+  const templatesQ = useQuery({
+    queryKey: ['os_templates', 'vps-lifecycle', { limit: 500, enabled: true, hypervisorType: 'vpsadminos' }],
+    queryFn: async () => (await fetchOsTemplates({ limit: 500, enabled: true, hypervisorType: 'vpsadminos' })).data,
+    enabled: isAdminMode,
+    staleTime: 60_000,
+  });
 
   const [clone, setClone] = useState<CloneForm>(() => ({
     user: ownerId ? String(ownerId) : '',
@@ -147,6 +210,35 @@ export function VpsLifecyclePage() {
     reason: '',
     confirm: false,
   }));
+
+  const [templateForm, setTemplateForm] = useState<TemplateForm>(() => ({
+    osTemplate: osTemplateId ? String(osTemplateId) : '',
+    autoUpdate: Boolean((vps as any).enable_os_template_auto_update),
+    confirm: false,
+  }));
+
+  const [reinstall, setReinstall] = useState<ReinstallForm>(() => ({
+    osTemplate: osTemplateId ? String(osTemplateId) : '',
+    confirm: false,
+  }));
+
+  const [migrate, setMigrate] = useState<MigrateForm>(() => ({
+    node: nodeId ? String(nodeId) : '',
+    replaceIpAddresses: false,
+    transferIpAddresses: true,
+    maintenanceWindow: false,
+    finishWeekday: '',
+    finishMinutes: '',
+    stopOnError: true,
+    cleanupData: true,
+    sendMail: true,
+    confirm: false,
+  }));
+
+  const [deleteForm, setDeleteForm] = useState<DeleteForm>({
+    lazy: true,
+    confirm: false,
+  });
 
   const preflight = async () => {
     await preflightVpsNotBusy({ vpsId, t, knownBusy: busyLocalLock || busyTransaction });
@@ -240,7 +332,99 @@ export function VpsLifecyclePage() {
     onSettled: () => chrome.releaseLocalLock(vpsRef),
   });
 
-  const busyLocal = busyLocalLock || cloneM.isPending || swapM.isPending || replaceM.isPending;
+  const templateM = useMutation({
+    mutationFn: async () => {
+      await preflight();
+      const payload: Record<string, unknown> = {
+        os_template: parseRequiredId(templateForm.osTemplate),
+        enable_os_template_auto_update: templateForm.autoUpdate,
+      };
+      return updateVps(vpsId, payload);
+    },
+    onMutate: () => chrome.acquireLocalLock(vpsRef),
+    onSuccess: (res) => {
+      track(res.meta, 'action.vps.template.label');
+      void qc.invalidateQueries({ queryKey: ['vps', vpsId] });
+      setTemplateForm((p) => ({ ...p, confirm: false }));
+    },
+    onError: (e: any) => {
+      if (e?.code === 'BUSY') chrome.openTasks();
+    },
+    onSettled: () => chrome.releaseLocalLock(vpsRef),
+  });
+
+  const reinstallM = useMutation({
+    mutationFn: async () => {
+      await preflight();
+      return vpsReinstall(vpsId, { os_template: parseRequiredId(reinstall.osTemplate) });
+    },
+    onMutate: () => chrome.acquireLocalLock(vpsRef),
+    onSuccess: (res) => {
+      track(res.meta, 'action.vps.reinstall.label');
+      setReinstall((p) => ({ ...p, confirm: false }));
+    },
+    onError: (e: any) => {
+      if (e?.code === 'BUSY') chrome.openTasks();
+    },
+    onSettled: () => chrome.releaseLocalLock(vpsRef),
+  });
+
+  const migrateM = useMutation({
+    mutationFn: async () => {
+      await preflight();
+      const finishWeekday = parseOptionalNonNegativeInt(migrate.finishWeekday);
+      const finishMinutes = parseOptionalNonNegativeInt(migrate.finishMinutes);
+      if ((finishWeekday === undefined) !== (finishMinutes === undefined)) throw new Error('invalid-id');
+      if (migrate.maintenanceWindow && (finishWeekday !== undefined || finishMinutes !== undefined)) throw new Error('invalid-id');
+      const payload: VpsMigratePayload = {
+        node: parseRequiredId(migrate.node),
+        replace_ip_addresses: migrate.replaceIpAddresses,
+        transfer_ip_addresses: migrate.transferIpAddresses,
+        maintenance_window: migrate.maintenanceWindow,
+        stop_on_error: migrate.stopOnError,
+        cleanup_data: migrate.cleanupData,
+        send_mail: migrate.sendMail,
+      };
+      if (finishWeekday !== undefined) payload.finish_weekday = finishWeekday;
+      if (finishMinutes !== undefined) payload.finish_minutes = finishMinutes;
+      return vpsMigrate(vpsId, payload);
+    },
+    onMutate: () => chrome.acquireLocalLock(vpsRef),
+    onSuccess: (res) => {
+      track(res.meta, 'action.vps.migrate.label');
+      setMigrate((p) => ({ ...p, confirm: false }));
+    },
+    onError: (e: any) => {
+      if (e?.code === 'BUSY') chrome.openTasks();
+    },
+    onSettled: () => chrome.releaseLocalLock(vpsRef),
+  });
+
+  const deleteM = useMutation({
+    mutationFn: async () => {
+      await preflight();
+      return vpsDelete(vpsId, { lazy: deleteForm.lazy });
+    },
+    onMutate: () => chrome.acquireLocalLock(vpsRef),
+    onSuccess: (res) => {
+      track(res.meta, 'action.vps.delete.label');
+      navigate(`${basePath}/vps`);
+    },
+    onError: (e: any) => {
+      if (e?.code === 'BUSY') chrome.openTasks();
+    },
+    onSettled: () => chrome.releaseLocalLock(vpsRef),
+  });
+
+  const busyLocal =
+    busyLocalLock ||
+    cloneM.isPending ||
+    swapM.isPending ||
+    replaceM.isPending ||
+    templateM.isPending ||
+    reinstallM.isPending ||
+    migrateM.isPending ||
+    deleteM.isPending;
   const gate = gateVpsMutation({ vps, busyLocal, busyTransaction });
 
   const adminSummary = useMemo(
@@ -248,6 +432,9 @@ export function VpsLifecyclePage() {
       t('vps.lifecycle.admin.summary.clone'),
       t('vps.lifecycle.admin.summary.swap'),
       t('vps.lifecycle.admin.summary.replace'),
+      t('vps.lifecycle.admin.summary.template'),
+      t('vps.lifecycle.admin.summary.migrate'),
+      t('vps.lifecycle.admin.summary.delete'),
     ],
     [t],
   );
@@ -282,6 +469,115 @@ export function VpsLifecyclePage() {
               owner: ownerId ? `#${ownerId}` : '—',
               expiration: formatDateTime((vps as any).expiration_date),
             })}
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card testId="vps.lifecycle.template">
+        <CardHeader title={t('vps.lifecycle.template.title')} subtitle={t('vps.lifecycle.template.subtitle')} />
+        <CardBody className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-2">
+            <Field label={t('vps.lifecycle.field.os_template')} help={t('vps.lifecycle.template.os_template_help')}>
+              <Select
+                value={templateForm.osTemplate}
+                onChange={(e) => setTemplateForm((prev) => ({ ...prev, osTemplate: e.target.value }))}
+                disabled={templateM.isPending || templatesQ.isLoading}
+                testId="vps.lifecycle.template.os_template"
+              >
+                <option value="">{t('vps.lifecycle.placeholder.os_template')}</option>
+                {templatesQ.data?.map((tpl) => (
+                  <option key={tpl.id} value={tpl.id}>
+                    {templateLabel(tpl)}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <div className="flex items-end">
+              <Checkbox
+                checked={templateForm.autoUpdate}
+                onChange={(v) => setTemplateForm((p) => ({ ...p, autoUpdate: v }))}
+                label={t('vps.lifecycle.template.auto_update')}
+                description={t('vps.lifecycle.template.auto_update_help')}
+                testId="vps.lifecycle.template.auto_update"
+              />
+            </div>
+          </div>
+
+          <Checkbox
+            checked={templateForm.confirm}
+            onChange={(v) => setTemplateForm((p) => ({ ...p, confirm: v }))}
+            label={t('vps.lifecycle.confirm.template')}
+            testId="vps.lifecycle.template.confirm"
+          />
+
+          {templateM.isError ? (
+            <Alert title={t('vps.lifecycle.template.error')} variant="danger">
+              {mutationErrorMessage(templateM.error, t('vps.lifecycle.validation.template'))}
+            </Alert>
+          ) : null}
+
+          <div className="flex justify-end">
+            <ActionButton
+              variant="primary"
+              testId="vps.lifecycle.template.submit"
+              disabled={!templateForm.confirm || !templateForm.osTemplate || !gate.allowed}
+              disabledReason={!gate.allowed ? gate.reason : undefined}
+              loading={templateM.isPending}
+              onClick={() => templateM.mutate()}
+            >
+              {t('vps.lifecycle.template.submit')}
+            </ActionButton>
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card testId="vps.lifecycle.reinstall">
+        <CardHeader title={t('vps.lifecycle.reinstall.title')} subtitle={t('vps.lifecycle.reinstall.subtitle')} />
+        <CardBody className="space-y-4">
+          <Alert variant="warn" title={t('vps.lifecycle.reinstall.warning_title')}>
+            {t('vps.lifecycle.reinstall.warning_body')}
+          </Alert>
+
+          <Field label={t('vps.lifecycle.field.os_template')} help={t('vps.lifecycle.reinstall.os_template_help')}>
+            <Select
+              value={reinstall.osTemplate}
+              onChange={(e) => setReinstall((prev) => ({ ...prev, osTemplate: e.target.value }))}
+              disabled={reinstallM.isPending || templatesQ.isLoading}
+              testId="vps.lifecycle.reinstall.os_template"
+            >
+              <option value="">{t('vps.lifecycle.placeholder.os_template')}</option>
+              {templatesQ.data?.map((tpl) => (
+                <option key={tpl.id} value={tpl.id}>
+                  {templateLabel(tpl)}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          <Checkbox
+            checked={reinstall.confirm}
+            onChange={(v) => setReinstall((p) => ({ ...p, confirm: v }))}
+            label={t('vps.lifecycle.confirm.reinstall')}
+            testId="vps.lifecycle.reinstall.confirm"
+          />
+
+          {reinstallM.isError ? (
+            <Alert title={t('vps.lifecycle.reinstall.error')} variant="danger">
+              {mutationErrorMessage(reinstallM.error, t('vps.lifecycle.validation.reinstall'))}
+            </Alert>
+          ) : null}
+
+          <div className="flex justify-end">
+            <ActionButton
+              variant="danger"
+              testId="vps.lifecycle.reinstall.submit"
+              disabled={!reinstall.confirm || !reinstall.osTemplate || !gate.allowed}
+              disabledReason={!gate.allowed ? gate.reason : undefined}
+              loading={reinstallM.isPending}
+              onClick={() => reinstallM.mutate()}
+            >
+              {t('vps.lifecycle.reinstall.submit')}
+            </ActionButton>
           </div>
         </CardBody>
       </Card>
@@ -474,7 +770,117 @@ export function VpsLifecyclePage() {
           </div>
         </CardBody>
       </Card>
+
+      <Card testId="vps.lifecycle.migrate">
+        <CardHeader title={t('vps.lifecycle.migrate.title')} subtitle={t('vps.lifecycle.migrate.subtitle')} />
+        <CardBody className="space-y-4">
+          <Field label={t('vps.lifecycle.field.node')} help={t('vps.lifecycle.migrate.node_help')}>
+            <NodeLookupInput
+              value={migrate.node}
+              onChange={(node) => setMigrate((prev) => ({ ...prev, node }))}
+              placeholder={t('vps.lifecycle.placeholder.node')}
+              testId="vps.lifecycle.migrate.node"
+              disabled={migrateM.isPending}
+            />
+          </Field>
+
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <Checkbox checked={migrate.transferIpAddresses} onChange={(v) => setMigrate((p) => ({ ...p, transferIpAddresses: v }))} label={t('vps.lifecycle.migrate.option.transfer_ip_addresses')} testId="vps.lifecycle.migrate.transfer_ip_addresses" />
+            <Checkbox checked={migrate.replaceIpAddresses} onChange={(v) => setMigrate((p) => ({ ...p, replaceIpAddresses: v }))} label={t('vps.lifecycle.migrate.option.replace_ip_addresses')} testId="vps.lifecycle.migrate.replace_ip_addresses" />
+            <Checkbox checked={migrate.maintenanceWindow} onChange={(v) => setMigrate((p) => ({ ...p, maintenanceWindow: v }))} label={t('vps.lifecycle.migrate.option.maintenance_window')} testId="vps.lifecycle.migrate.maintenance_window" />
+            <Checkbox checked={migrate.stopOnError} onChange={(v) => setMigrate((p) => ({ ...p, stopOnError: v }))} label={t('vps.lifecycle.migrate.option.stop_on_error')} testId="vps.lifecycle.migrate.stop_on_error" />
+            <Checkbox checked={migrate.cleanupData} onChange={(v) => setMigrate((p) => ({ ...p, cleanupData: v }))} label={t('vps.lifecycle.migrate.option.cleanup_data')} testId="vps.lifecycle.migrate.cleanup_data" />
+            <Checkbox checked={migrate.sendMail} onChange={(v) => setMigrate((p) => ({ ...p, sendMail: v }))} label={t('vps.lifecycle.migrate.option.send_mail')} testId="vps.lifecycle.migrate.send_mail" />
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <Field label={t('vps.lifecycle.migrate.finish_weekday')} help={t('vps.lifecycle.migrate.finish_weekday_help')}>
+              <Input
+                value={migrate.finishWeekday}
+                onChange={(e) => setMigrate((prev) => ({ ...prev, finishWeekday: e.target.value }))}
+                testId="vps.lifecycle.migrate.finish_weekday"
+                disabled={migrateM.isPending || migrate.maintenanceWindow}
+              />
+            </Field>
+            <Field label={t('vps.lifecycle.migrate.finish_minutes')} help={t('vps.lifecycle.migrate.finish_minutes_help')}>
+              <Input
+                value={migrate.finishMinutes}
+                onChange={(e) => setMigrate((prev) => ({ ...prev, finishMinutes: e.target.value }))}
+                testId="vps.lifecycle.migrate.finish_minutes"
+                disabled={migrateM.isPending || migrate.maintenanceWindow}
+              />
+            </Field>
+          </div>
+
+          <Checkbox
+            checked={migrate.confirm}
+            onChange={(v) => setMigrate((p) => ({ ...p, confirm: v }))}
+            label={t('vps.lifecycle.confirm.migrate')}
+            testId="vps.lifecycle.migrate.confirm"
+          />
+
+          {migrateM.isError ? (
+            <Alert title={t('vps.lifecycle.migrate.error')} variant="danger">
+              {mutationErrorMessage(migrateM.error, t('vps.lifecycle.validation.migrate'))}
+            </Alert>
+          ) : null}
+
+          <div className="flex justify-end">
+            <ActionButton
+              variant="danger"
+              testId="vps.lifecycle.migrate.submit"
+              disabled={!migrate.confirm || !migrate.node.trim() || !gate.allowed}
+              disabledReason={!gate.allowed ? gate.reason : undefined}
+              loading={migrateM.isPending}
+              onClick={() => migrateM.mutate()}
+            >
+              {t('vps.lifecycle.migrate.submit')}
+            </ActionButton>
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card testId="vps.lifecycle.delete">
+        <CardHeader title={t('vps.lifecycle.delete.title')} subtitle={t('vps.lifecycle.delete.subtitle')} />
+        <CardBody className="space-y-4">
+          <Alert variant="danger" title={t('vps.lifecycle.delete.warning_title')}>
+            {t('vps.lifecycle.delete.warning_body')}
+          </Alert>
+
+          <Checkbox
+            checked={deleteForm.lazy}
+            onChange={(v) => setDeleteForm((p) => ({ ...p, lazy: v }))}
+            label={t('vps.lifecycle.delete.lazy')}
+            description={t('vps.lifecycle.delete.lazy_help')}
+            testId="vps.lifecycle.delete.lazy"
+          />
+          <Checkbox
+            checked={deleteForm.confirm}
+            onChange={(v) => setDeleteForm((p) => ({ ...p, confirm: v }))}
+            label={t('vps.lifecycle.confirm.delete')}
+            testId="vps.lifecycle.delete.confirm"
+          />
+
+          {deleteM.isError ? (
+            <Alert title={t('vps.lifecycle.delete.error')} variant="danger">
+              {mutationErrorMessage(deleteM.error, t('vps.lifecycle.validation.delete'))}
+            </Alert>
+          ) : null}
+
+          <div className="flex justify-end">
+            <ActionButton
+              variant="danger"
+              testId="vps.lifecycle.delete.submit"
+              disabled={!deleteForm.confirm || !gate.allowed}
+              disabledReason={!gate.allowed ? gate.reason : undefined}
+              loading={deleteM.isPending}
+              onClick={() => deleteM.mutate()}
+            >
+              {t('vps.lifecycle.delete.submit')}
+            </ActionButton>
+          </div>
+        </CardBody>
+      </Card>
     </div>
   );
 }
-

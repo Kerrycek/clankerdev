@@ -9,6 +9,8 @@ export const enAdmin_ip = {
   "admin.ip.field.user_id": "User ID",
   "admin.ip.field.vps_id": "VPS ID",
   "admin.ip.hosts.assign": "Assign",
+  "admin.ip.hosts.assign_help": "Host address assignment requires a target VPS interface, matching the legacy networking form.",
+  "admin.ip.hosts.assign_title": "Assign host IP address",
   "admin.ip.hosts.create": "Add host IPs",
   "admin.ip.hosts.create_help": "One address per line. Use documentation/test ranges when creating sample data.",
   "admin.ip.hosts.create_placeholder": "192.0.2.10\n192.0.2.11",
