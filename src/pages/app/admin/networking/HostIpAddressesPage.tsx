@@ -1,9 +1,17 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 
 import { useI18n } from '../../../../app/i18n';
-import { fetchHostIpAddresses, type HostIpAddress } from '../../../../lib/api/networking';
+import { useToasts } from '../../../../app/toasts';
+import {
+  assignHostIpAddress,
+  deleteHostIpAddress,
+  fetchHostIpAddresses,
+  freeHostIpAddress,
+  updateHostIpAddress,
+  type HostIpAddress,
+} from '../../../../lib/api/networking';
 import { useKeysetPagination } from '../../../../lib/hooks/useKeysetPagination';
 import { cursorFromDescendingPage } from '../../../../lib/lockIndex';
 import { parseBoolParam, parsePositiveInt } from '../../../../lib/parse';
@@ -11,11 +19,14 @@ import { ListShell } from '../../../../components/layout/ListShell';
 import { PageHeader } from '../../../../components/layout/PageHeader';
 import { FilterBar } from '../../../../components/layout/FilterBar';
 import { Button } from '../../../../components/ui/Button';
+import { ActionButton } from '../../../../components/ui/ActionButton';
+import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog';
 import { EmptyState } from '../../../../components/ui/EmptyState';
 import { ErrorState } from '../../../../components/ui/ErrorState';
 import { Input } from '../../../../components/ui/Input';
 import { KeysetPagination } from '../../../../components/ui/KeysetPagination';
 import { LoadingState } from '../../../../components/ui/LoadingState';
+import { Modal } from '../../../../components/ui/Modal';
 import { Select } from '../../../../components/ui/Select';
 import { StatusDot } from '../../../../components/ui/StatusDot';
 import { TableCard } from '../../../../components/ui/TableCard';
@@ -82,9 +93,18 @@ function rowVariant(row: HostIpAddress): 'warn' | undefined {
   return row.assigned === false ? 'warn' : undefined;
 }
 
+function hostAddr(row: HostIpAddress): string {
+  return String((row as any).addr ?? (row as any).ip_addr ?? `#${row.id}`);
+}
+
 export function HostIpAddressesPage() {
   const { t } = useI18n();
+  const { pushToast } = useToasts();
+  const qc = useQueryClient();
   const [sp, setSp] = useSearchParams();
+  const [ptrEditor, setPtrEditor] = useState<HostIpAddress | null>(null);
+  const [ptrValue, setPtrValue] = useState('');
+  const [deleteHost, setDeleteHost] = useState<HostIpAddress | null>(null);
 
   const q = String(sp.get('q') ?? '').trim();
   const userId = parsePositiveInt(sp.get('user'));
@@ -106,6 +126,56 @@ export function HostIpAddressesPage() {
     queryFn: async () =>
       (await fetchHostIpAddresses({ q: q || undefined, user: userId, vps: vpsId, assigned, limit: paging.limit, fromId: paging.cursor ?? undefined })).data,
     placeholderData: (prev) => prev,
+  });
+
+  const refresh = async () => {
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: ['host_ip_addresses'] }),
+      qc.invalidateQueries({ queryKey: ['ip_addresses'] }),
+      qc.invalidateQueries({ queryKey: ['ip_address_assignments'] }),
+      listQ.refetch(),
+    ]);
+  };
+
+  const updatePtrM = useMutation({
+    mutationFn: async () => {
+      if (!ptrEditor) throw new Error(t('admin.host_ip_addresses.action.error_missing'));
+      return updateHostIpAddress(ptrEditor.id, { reverse_record_value: ptrValue.trim() });
+    },
+    onSuccess: async () => {
+      setPtrEditor(null);
+      setPtrValue('');
+      await refresh();
+      pushToast({ variant: 'ok', title: t('admin.host_ip_addresses.toast.ptr_saved') });
+    },
+  });
+
+  const assignM = useMutation({
+    mutationFn: async (hostId: number) => assignHostIpAddress(hostId),
+    onSuccess: async () => {
+      await refresh();
+      pushToast({ variant: 'ok', title: t('admin.host_ip_addresses.toast.assigned') });
+    },
+  });
+
+  const freeM = useMutation({
+    mutationFn: async (hostId: number) => freeHostIpAddress(hostId),
+    onSuccess: async () => {
+      await refresh();
+      pushToast({ variant: 'ok', title: t('admin.host_ip_addresses.toast.freed') });
+    },
+  });
+
+  const deleteM = useMutation({
+    mutationFn: async () => {
+      if (!deleteHost) throw new Error(t('admin.host_ip_addresses.action.error_missing'));
+      return deleteHostIpAddress(deleteHost.id);
+    },
+    onSuccess: async () => {
+      setDeleteHost(null);
+      await refresh();
+      pushToast({ variant: 'ok', title: t('admin.host_ip_addresses.toast.deleted') });
+    },
   });
 
   const rows = listQ.data ?? [];
@@ -184,6 +254,7 @@ export function HostIpAddressesPage() {
               <th>{t('admin.host_ip_addresses.field.user')}</th>
               <th>{t('admin.host_ip_addresses.field.ptr')}</th>
               <th>{t('admin.host_ip_addresses.field.flags')}</th>
+              <th />
             </tr>
           </thead>
           <tbody>
@@ -205,12 +276,98 @@ export function HostIpAddressesPage() {
                       {(row as any).user_created ? <Badge tone="neutral">{t('common.custom')}</Badge> : null}
                     </div>
                   </td>
+                  <td className="text-right">
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        testId={`admin.host_ip_addresses.row.${id}.ptr`}
+                        onClick={() => {
+                          setPtrEditor(row);
+                          setPtrValue(String((row as any).reverse_record_value ?? ''));
+                        }}
+                      >
+                        {t('admin.host_ip_addresses.action.ptr')}
+                      </Button>
+                      {row.assigned === false ? (
+                        <ActionButton
+                          size="sm"
+                          testId={`admin.host_ip_addresses.row.${id}.assign`}
+                          loading={assignM.isPending}
+                          onClick={() => assignM.mutate(id)}
+                        >
+                          {t('admin.host_ip_addresses.action.assign')}
+                        </ActionButton>
+                      ) : (
+                        <ActionButton
+                          size="sm"
+                          variant="danger"
+                          testId={`admin.host_ip_addresses.row.${id}.free`}
+                          loading={freeM.isPending}
+                          onClick={() => freeM.mutate(id)}
+                        >
+                          {t('admin.host_ip_addresses.action.free')}
+                        </ActionButton>
+                      )}
+                      {(row as any).user_created && row.assigned === false ? (
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          testId={`admin.host_ip_addresses.row.${id}.delete`}
+                          onClick={() => setDeleteHost(row)}
+                        >
+                          {t('common.delete')}
+                        </Button>
+                      ) : null}
+                    </div>
+                  </td>
                 </tr>
               );
             })}
           </tbody>
         </TableCard>
       )}
+
+      {(updatePtrM.error || assignM.error || freeM.error || deleteM.error) ? (
+        <ErrorState
+          title={t('admin.host_ip_addresses.action.error')}
+          error={updatePtrM.error || assignM.error || freeM.error || deleteM.error}
+          testId="admin.host_ip_addresses.action.error"
+        />
+      ) : null}
+
+      <Modal
+        open={Boolean(ptrEditor)}
+        title={t('admin.host_ip_addresses.ptr.title')}
+        onClose={() => setPtrEditor(null)}
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setPtrEditor(null)} disabled={updatePtrM.isPending}>
+              {t('common.cancel')}
+            </Button>
+            <ActionButton loading={updatePtrM.isPending} onClick={() => updatePtrM.mutate()}>
+              {t('common.save')}
+            </ActionButton>
+          </div>
+        }
+      >
+        <label className="block">
+          <div className="mb-1 text-sm font-medium">{ptrEditor ? hostAddr(ptrEditor) : ''}</div>
+          <Input value={ptrValue} onChange={(e) => setPtrValue(e.target.value)} placeholder="host.example.org." />
+        </label>
+        <div className="mt-1 text-xs text-muted">{t('admin.host_ip_addresses.ptr.help')}</div>
+      </Modal>
+
+      <ConfirmDialog
+        open={Boolean(deleteHost)}
+        title={t('admin.host_ip_addresses.delete.title')}
+        description={deleteHost ? t('admin.host_ip_addresses.delete.desc', { host: hostAddr(deleteHost) }) : undefined}
+        danger
+        confirmLabel={t('common.delete')}
+        confirmLoading={deleteM.isPending}
+        onCancel={() => setDeleteHost(null)}
+        onConfirm={() => deleteM.mutate()}
+      />
     </ListShell>
   );
 }

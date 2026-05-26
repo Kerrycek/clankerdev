@@ -1,5 +1,12 @@
 // Admin locale chunk: host_ip_addresses
 export const enAdmin_host_ip_addresses = {
+  "admin.host_ip_addresses.action.assign": "Assign",
+  "admin.host_ip_addresses.action.error": "Host IP action failed",
+  "admin.host_ip_addresses.action.error_missing": "Missing host IP address.",
+  "admin.host_ip_addresses.action.free": "Remove",
+  "admin.host_ip_addresses.action.ptr": "PTR",
+  "admin.host_ip_addresses.delete.desc": "Delete host address {{host}} from vpsAdmin.",
+  "admin.host_ip_addresses.delete.title": "Delete host IP address?",
   "admin.host_ip_addresses.empty": "No host IP addresses found.",
   "admin.host_ip_addresses.field.address": "Host IP",
   "admin.host_ip_addresses.field.flags": "Flags",
@@ -15,6 +22,12 @@ export const enAdmin_host_ip_addresses = {
   "admin.host_ip_addresses.filter.user.placeholder": "User login or ID…",
   "admin.host_ip_addresses.filter.vps.placeholder": "VPS hostname or ID…",
   "admin.host_ip_addresses.load_error": "Failed to load host IP addresses",
+  "admin.host_ip_addresses.ptr.help": "Leave empty to clear the reverse record. A trailing dot is added by the API when needed.",
+  "admin.host_ip_addresses.ptr.title": "Set reverse record",
   "admin.host_ip_addresses.subtitle": "Browse host-facing IPs used for routing, PTRs and transfer peers.",
   "admin.host_ip_addresses.title": "Host IP addresses",
+  "admin.host_ip_addresses.toast.assigned": "Host address assigned",
+  "admin.host_ip_addresses.toast.deleted": "Host address deleted",
+  "admin.host_ip_addresses.toast.freed": "Host address removed",
+  "admin.host_ip_addresses.toast.ptr_saved": "Reverse record saved",
 } as const;
