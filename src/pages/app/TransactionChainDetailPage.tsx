@@ -238,7 +238,7 @@ export function TransactionChainDetailPage() {
                     <div className="mt-1 text-sm">
                       <Link
                         className="text-accent hover:underline"
-                        to={`${basePath}/action_states/${resourceId((chainQ.data as any).action_state)}`}
+                        to={`${basePath}/action-states/${resourceId((chainQ.data as any).action_state)}`}
                       >
                         {refLabel((chainQ.data as any).action_state) || `#${resourceId((chainQ.data as any).action_state)}`}
                       </Link>

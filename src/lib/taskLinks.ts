@@ -21,6 +21,14 @@ function coerceInt(v: unknown): number | null {
   return null;
 }
 
+function firstObjectId(...values: unknown[]): number | null {
+  for (const value of values) {
+    const id = coerceInt(value);
+    if (id !== null && id > 0) return id;
+  }
+  return null;
+}
+
 /**
  * Try to extract a related transaction chain ID from an action state object.
  *
@@ -41,9 +49,18 @@ export function extractRelatedTransactionChainIdFromActionState(actionState: unk
     s.transactionChainId,
     s.chain_id,
     s.chainId,
+    s.transaction,
+    s.transactions,
+    s.tx,
   ];
 
   for (const cand of directCandidates) {
+    if (Array.isArray(cand)) {
+      for (const item of cand) {
+        const id = firstObjectId((item as any)?.transaction_chain, (item as any)?.transactionChain, (item as any)?.transaction_chain_id);
+        if (id !== null) return id;
+      }
+    }
     const id = coerceInt(cand);
     if (id !== null && id > 0) return id;
   }

@@ -287,7 +287,9 @@ export function VpsCreatePage() {
           objectLabel: form.hostname.trim() || (Number.isFinite(vpsId) ? t('common.vps_ref', { id: vpsId }) : t('vps.create.title')),
           object: Number.isFinite(vpsId) ? objectRef('Vps', vpsId) : undefined,
         });
-        navigate(`${effectiveBasePath}/action-states/${actionStateId}`);
+        chrome.openTasks();
+        if (Number.isFinite(vpsId)) navigate(`${effectiveBasePath}/vps/${vpsId}`);
+        else navigate(`${effectiveBasePath}/vps`);
         return;
       }
 
