@@ -47,10 +47,10 @@ describe('buildErrorDetails', () => {
 
     const { payload, text } = buildErrorDetails({ error: err, route: '/app/vps' });
 
-    expect(payload['httpStatus']).toBe(403);
+    expect(payload['http_status']).toBe(403);
     expect(payload['request']).toEqual({ method: 'GET', path: '/vpses', url: 'https://example.invalid/api/v7.0/vpses' });
-    expect(payload['haveApiMessage']).toBe('nope');
-    expect(text).toContain('"httpStatus": 403');
-    expect(text).toContain('"haveApiMessage": "nope"');
+    expect(payload['haveapi_message']).toBe('nope');
+    expect(text).toContain('"http_status": 403');
+    expect(text).toContain('"haveapi_message": "nope"');
   });
 });
