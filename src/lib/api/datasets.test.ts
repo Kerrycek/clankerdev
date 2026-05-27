@@ -1,11 +1,14 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import {
+  createDataset,
   createDatasetSnapshot,
   createSnapshotDownload,
+  deleteDataset,
   fetchDatasetSnapshots,
   fetchDatasets,
   fetchSnapshotDownloads,
+  updateDataset,
 } from './datasets';
 
 function setMockRuntime() {
@@ -82,6 +85,48 @@ describe('datasets API wrappers', () => {
 
     const body = JSON.parse(String(init?.body));
     expect(body).toEqual({ snapshot: { label: 'before-upgrade' } });
+  });
+
+  test('createDataset sends dataset namespace with parent and properties', async () => {
+    setMockRuntime();
+    const fetchMock = mockFetchOk({ dataset: { id: 124, name: 'tank/user/app' } });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await createDataset({ dataset: 123, name: 'app', automount: true, refquota: 10240, compression: true });
+
+    const [url, init] = firstFetchCall(fetchMock);
+    expect(String(url)).toContain('/v7.0/datasets');
+    expect(init?.method).toBe('POST');
+    expect(JSON.parse(String(init?.body))).toEqual({
+      dataset: { dataset: 123, name: 'app', automount: true, refquota: 10240, compression: true },
+    });
+  });
+
+  test('updateDataset sends editable properties to dataset namespace', async () => {
+    setMockRuntime();
+    const fetchMock = mockFetchOk(null);
+    vi.stubGlobal('fetch', fetchMock);
+
+    await updateDataset(123, { quota: 20480, sync: 'standard', admin_override: true, admin_lock_type: 'not_more' });
+
+    const [url, init] = firstFetchCall(fetchMock);
+    expect(String(url)).toContain('/v7.0/datasets/123');
+    expect(init?.method).toBe('PUT');
+    expect(JSON.parse(String(init?.body))).toEqual({
+      dataset: { quota: 20480, sync: 'standard', admin_override: true, admin_lock_type: 'not_more' },
+    });
+  });
+
+  test('deleteDataset uses dataset endpoint', async () => {
+    setMockRuntime();
+    const fetchMock = mockFetchOk(null);
+    vi.stubGlobal('fetch', fetchMock);
+
+    await deleteDataset(123);
+
+    const [url, init] = firstFetchCall(fetchMock);
+    expect(String(url)).toContain('/v7.0/datasets/123');
+    expect(init?.method).toBe('DELETE');
   });
 
   test('createSnapshotDownload sends snapshot_download namespace', async () => {

@@ -157,6 +157,50 @@ export async function fetchDataset(datasetId: number, opts?: { includes?: string
   });
 }
 
+export type DatasetEditablePayload = {
+  quota?: number;
+  refquota?: number;
+  compression?: boolean;
+  recordsize?: number;
+  atime?: boolean;
+  relatime?: boolean;
+  sync?: 'standard' | 'disabled';
+  sharenfs?: string;
+  admin_override?: boolean;
+  admin_lock_type?: 'no_lock' | 'absolute' | 'not_less' | 'not_more';
+};
+
+export type DatasetCreatePayload = DatasetEditablePayload & {
+  name: string;
+  dataset?: number;
+  automount?: boolean;
+};
+
+export async function createDataset(payload: DatasetCreatePayload) {
+  return haveApiCall<Dataset>({
+    method: 'POST',
+    path: '/datasets',
+    namespace: 'dataset',
+    params: payload,
+  });
+}
+
+export async function updateDataset(datasetId: number, payload: DatasetEditablePayload) {
+  return haveApiCall<void>({
+    method: 'PUT',
+    path: `/datasets/${datasetId}`,
+    namespace: 'dataset',
+    params: payload,
+  });
+}
+
+export async function deleteDataset(datasetId: number) {
+  return haveApiCall<void>({
+    method: 'DELETE',
+    path: `/datasets/${datasetId}`,
+  });
+}
+
 export async function fetchDatasetSnapshots(datasetId: number, opts?: { fromId?: number; limit?: number; q?: string }) {
   const params: Record<string, unknown> = {};
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
