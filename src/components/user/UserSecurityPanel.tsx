@@ -12,7 +12,6 @@ import { createUserSessionToken } from '../../lib/api/userDossier';
 import { computeOtherModeUrl } from '../../lib/modeSwitch';
 import { clearImpersonationState, isImpersonating, writeImpersonationState } from '../../lib/auth/impersonation';
 import { formatErrorMessage } from '../../lib/errors';
-import { buildMailtoUrl, buildTemporaryPasswordMail, generateTemporaryPassword } from '../../lib/passwords';
 import { withRouterBasename } from '../../lib/routerPaths';
 
 import { Alert } from '../ui/Alert';
@@ -21,7 +20,6 @@ import { Button } from '../ui/Button';
 import { Card, CardBody, CardHeader } from '../ui/Card';
 import { Checkbox } from '../ui/Checkbox';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { CopyButton } from '../ui/CopyButton';
 import { Input } from '../ui/Input';
 import { Modal } from '../ui/Modal';
 import { SwitchRow } from '../ui/SwitchRow';
@@ -81,14 +79,6 @@ export function UserSecurityPanel(props: {
   const [newPassword, setNewPassword] = useState('');
   const [newPassword2, setNewPassword2] = useState('');
   const [logoutSessions, setLogoutSessions] = useState(true);
-  const [generatedLogoutSessions, setGeneratedLogoutSessions] = useState(true);
-  const [generatedRequireReset, setGeneratedRequireReset] = useState(true);
-  const [generatedPasswordMail, setGeneratedPasswordMail] = useState<{
-    password: string;
-    subject: string;
-    body: string;
-    mailtoUrl: string;
-  } | null>(null);
 
   const passwordM = useMutation({
     mutationFn: async () => {
@@ -120,52 +110,6 @@ export function UserSecurityPanel(props: {
     },
     onError: (e) => {
       toasts.pushToast({ variant: 'danger', title: t('security.password.toast.failed.title'), body: formatErrorMessage(e) });
-    },
-  });
-
-  const generatedPasswordM = useMutation({
-    mutationFn: async () => {
-      const email = String(user?.email ?? '').trim();
-
-      if (!email) throw new Error(t('security.password.generated.validation.email_required'));
-
-      const password = generateTemporaryPassword();
-      const appUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
-      const mail = buildTemporaryPasswordMail({
-        login: String(user?.login ?? props.userId),
-        password,
-        appUrl,
-      });
-
-      await updateUser(props.userId, {
-        new_password: password,
-        logout_sessions: generatedLogoutSessions,
-        password_reset: generatedRequireReset,
-      });
-
-      return {
-        password,
-        subject: mail.subject,
-        body: mail.body,
-        mailtoUrl: buildMailtoUrl({ to: email, subject: mail.subject, body: mail.body }),
-      };
-    },
-    onSuccess: async (mail) => {
-      setGeneratedPasswordMail(mail);
-      await qc.invalidateQueries({ queryKey: ['users', props.userId] });
-      await qc.invalidateQueries({ queryKey: ['user', 'current'] });
-      toasts.pushToast({
-        variant: 'ok',
-        title: t('security.password.generated.toast.saved.title'),
-        body: t('security.password.generated.toast.saved.body'),
-      });
-    },
-    onError: (e) => {
-      toasts.pushToast({
-        variant: 'danger',
-        title: t('security.password.generated.toast.failed.title'),
-        body: formatErrorMessage(e),
-      });
     },
   });
 
@@ -437,45 +381,6 @@ export function UserSecurityPanel(props: {
                 {t('common.reset')}
               </Button>
             </div>
-
-            {props.variant === 'admin' ? (
-              <div className="md:col-span-2 border-t border-border pt-3">
-                <div className="rounded-md border border-border bg-surface-2 px-3 py-3">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium text-fg">{t('security.password.generated.title')}</div>
-                      <div className="mt-1 text-xs text-muted">{t('security.password.generated.body')}</div>
-                      {user?.email ? (
-                        <div className="mt-1 text-xs text-faint">{t('security.password.generated.recipient', { email: user.email })}</div>
-                      ) : (
-                        <div className="mt-1 text-xs text-warn">{t('security.password.generated.no_email')}</div>
-                      )}
-                    </div>
-
-                    <Button
-                      variant="warn"
-                      onClick={() => generatedPasswordM.mutate()}
-                      loading={generatedPasswordM.isPending}
-                      disabled={generatedPasswordM.isPending || !user?.email}
-                      testId={`${prefix}.password.generated.submit`}
-                    >
-                      {t('security.password.generated.submit')}
-                    </Button>
-                  </div>
-
-                  <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <label className="flex items-center gap-2 text-sm" data-testid={`${prefix}.password.generated.logout_sessions`}>
-                      <Checkbox checked={generatedLogoutSessions} onCheckedChange={(v) => setGeneratedLogoutSessions(Boolean(v))} />
-                      <span>{t('security.password.logout_sessions')}</span>
-                    </label>
-                    <label className="flex items-center gap-2 text-sm" data-testid={`${prefix}.password.generated.require_reset`}>
-                      <Checkbox checked={generatedRequireReset} onCheckedChange={(v) => setGeneratedRequireReset(Boolean(v))} />
-                      <span>{t('security.password.generated.require_reset')}</span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            ) : null}
           </div>
         </CardBody>
       </Card>
@@ -707,61 +612,6 @@ export function UserSecurityPanel(props: {
         }}
         testId={`${prefix}.flags.lockout.confirm`}
       />
-
-      <Modal
-        open={generatedPasswordMail !== null}
-        title={t('security.password.generated.modal.title')}
-        onClose={() => setGeneratedPasswordMail(null)}
-        testId={`${prefix}.password.generated.modal`}
-      >
-        {generatedPasswordMail ? (
-          <div className="space-y-3">
-            <Alert variant="warn" title={t('security.password.generated.modal.warning.title')}>
-              {t('security.password.generated.modal.warning.body')}
-            </Alert>
-
-            <div>
-              <div className="text-xs font-medium text-muted">{t('security.password.generated.modal.password')}</div>
-              <div className="mt-1 flex items-center gap-2">
-                <code className="min-w-0 flex-1 overflow-auto rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-fg">
-                  {generatedPasswordMail.password}
-                </code>
-                <CopyButton
-                  text={generatedPasswordMail.password}
-                  label={t('common.copy')}
-                  testId={`${prefix}.password.generated.copy_password`}
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="text-xs font-medium text-muted">{t('security.password.generated.modal.mail_body')}</div>
-              <pre className="mt-1 max-h-64 overflow-auto rounded-md border border-border bg-surface-2 p-3 text-xs whitespace-pre-wrap text-fg">
-                {generatedPasswordMail.body}
-              </pre>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                onClick={() => {
-                  window.location.href = generatedPasswordMail.mailtoUrl;
-                }}
-                testId={`${prefix}.password.generated.open_mail`}
-              >
-                {t('security.password.generated.modal.open_mail')}
-              </Button>
-              <CopyButton
-                text={generatedPasswordMail.body}
-                label={t('security.password.generated.modal.copy_mail')}
-                testId={`${prefix}.password.generated.copy_mail`}
-              />
-              <Button variant="secondary" onClick={() => setGeneratedPasswordMail(null)} testId={`${prefix}.password.generated.close`}>
-                {t('common.close')}
-              </Button>
-            </div>
-          </div>
-        ) : null}
-      </Modal>
 
       <Modal
         open={impOpen}
