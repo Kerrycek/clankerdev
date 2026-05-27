@@ -11,7 +11,7 @@ import { formatDateTime } from '../../lib/format';
 import { formatErrorMessage } from '../../lib/errors';
 import { useActionStatePollIntervalMs, useTierAIntervalMs } from '../../lib/refreshTiers';
 import { extractRelatedTransactionChainIdFromActionState } from '../../lib/taskLinks';
-import { formatPayload, safeJson } from '../../lib/txFormat';
+import { durationSec, formatPayload, safeJson } from '../../lib/txFormat';
 import {
   actionStateBadge,
   actionStateProgressLabel,
@@ -20,6 +20,7 @@ import {
   isFinishedActionState,
   transactionBadge,
 } from '../../lib/taskStatus';
+import { resourceId, refLabel } from '../../lib/resources';
 import { clsx } from '../ui/clsx';
 import { toneProgressFillClass, toneSurfaceClass, type ToneVariant } from '../ui/tone';
 import { Alert } from '../ui/Alert';
@@ -28,6 +29,8 @@ import { StatusDot } from '../ui/StatusDot';
 import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Spinner } from '../ui/Spinner';
+import { Table } from '../ui/Table';
+import { TransactionPayloadPanels } from '../ui/TransactionPayloadPanels';
 import { useChrome } from './ChromeContext';
 
 function parseIds(input: unknown, limit: number): number[] {
@@ -63,6 +66,7 @@ function ActionStateInspect(props: {
   const i18n = useI18n();
   const actionPollMs = useActionStatePollIntervalMs();
   const tierARefetchMs = useTierAIntervalMs();
+  const [expandedTx, setExpandedTx] = useState<Set<number>>(() => new Set());
 
   const actionQ = useQuery({
     queryKey: ['action_state', 'show', { id: props.actionStateId }],
@@ -82,11 +86,28 @@ function ActionStateInspect(props: {
   });
 
   const txQ = useQuery({
-    queryKey: ['transactions', 'list', { transactionChainId: relatedChainId ?? -1, limit: 20 }],
-    queryFn: async () => (await fetchTransactions({ transactionChainId: relatedChainId!, limit: 20 })).data,
+    queryKey: ['transactions', 'list', { transactionChainId: relatedChainId ?? -1, limit: 100 }],
+    queryFn: async () => (await fetchTransactions({ transactionChainId: relatedChainId!, limit: 100 })).data,
     enabled: Boolean(relatedChainId && relatedChainId > 0),
     refetchInterval: relatedChainId ? tierARefetchMs : false,
   });
+
+  const transactionRows = txQ.data ?? [];
+  const transactionIds = transactionRows
+    .map((tx) => Number((tx as any).id))
+    .filter((txId) => Number.isFinite(txId) && txId > 0);
+
+  const toggleTx = (txId: number) => {
+    setExpandedTx((prev) => {
+      const next = new Set(prev);
+      if (next.has(txId)) next.delete(txId);
+      else next.add(txId);
+      return next;
+    });
+  };
+
+  const expandAllTx = () => setExpandedTx(new Set(transactionIds));
+  const collapseAllTx = () => setExpandedTx(new Set());
 
   if (actionQ.isLoading && !s) {
     return (
@@ -125,24 +146,74 @@ function ActionStateInspect(props: {
     const name = tx.name ? String(tx.name) : `#${tx.id}`;
     const input = formatPayload((tx as any).input);
     const output = formatPayload((tx as any).output);
+    const txId = Number((tx as any).id);
+    const hasTxId = Number.isFinite(txId) && txId > 0;
+    const expanded = hasTxId && expandedTx.has(txId);
+    const nodeId = resourceId((tx as any).node);
+    const vpsId = resourceId((tx as any).vps);
+    const type = typeof (tx as any).type === 'number' ? Number((tx as any).type) : null;
+    const priority = typeof (tx as any).priority === 'number' ? Number((tx as any).priority) : null;
+    const started = (tx as any).started_at as string | null | undefined;
+    const finished = (tx as any).finished_at as string | null | undefined;
+    const sec = durationSec(started, finished);
 
     return (
-      <div key={tx.id} className="rounded-md border border-border bg-surface-2 p-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <Link className="text-sm font-medium underline" to={`${basePath}/transactions/items/${tx.id}`}>{name}</Link>
-            <div className="mt-1 text-xs text-faint">#{tx.id}</div>
-          </div>
-          <Badge variant={b.variant}>{b.label}</Badge>
-        </div>
-        {input || output ? (
-          <details className="mt-2">
-            <summary className="cursor-pointer select-none text-xs font-medium text-muted">{i18n.t('tasks.inspect.payload')}</summary>
-            {input ? <pre className="mt-2 max-h-48 overflow-auto rounded-md border border-border bg-surface p-2 text-xs text-muted">{input}</pre> : null}
-            {output ? <pre className="mt-2 max-h-48 overflow-auto rounded-md border border-border bg-surface p-2 text-xs text-muted">{output}</pre> : null}
-          </details>
+      <React.Fragment key={(tx as any).id ?? name}>
+        <tr className="border-b border-border last:border-b-0">
+          <td className="px-3 py-2 text-xs">
+            {hasTxId ? (
+              <Link className="text-accent underline" to={`${basePath}/transactions/items/${txId}`}>
+                {txId}
+              </Link>
+            ) : (
+              <span className="text-faint">{i18n.t('common.na')}</span>
+            )}
+          </td>
+          <td className="px-3 py-2">
+            <Badge variant={b.variant}>{b.label}</Badge>
+          </td>
+          <td className="px-3 py-2">
+            <div className="text-sm font-medium">{name}</div>
+            <div className="mt-1 text-xs text-faint">
+              {type !== null ? i18n.t('transactions.items.row.type_chip', { type }) : null}
+              {priority !== null ? ` · ${i18n.t('transactions.tx.prio', { prio: priority })}` : null}
+            </div>
+          </td>
+          <td className="px-3 py-2 text-xs text-muted">
+            {nodeId ? refLabel((tx as any).node) || `#${nodeId}` : i18n.t('common.na')}
+          </td>
+          <td className="px-3 py-2 text-xs">
+            {vpsId ? (
+              <Link className="text-accent underline" to={`${basePath}/vps/${vpsId}`}>
+                #{vpsId}
+              </Link>
+            ) : (
+              <span className="text-faint">{i18n.t('common.na')}</span>
+            )}
+          </td>
+          <td className="px-3 py-2 text-xs text-muted">{formatDateTime(started)}</td>
+          <td className="px-3 py-2 text-xs text-muted">{sec !== null ? i18n.t('transactions.tx.duration', { sec }) : i18n.t('common.na')}</td>
+          <td className="px-3 py-2 text-right">
+            {hasTxId ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => toggleTx(txId)}
+                testId={`tasks.inspect.tx.toggle.${txId}`}
+              >
+                {expanded ? i18n.t('common.collapse') : i18n.t('common.expand')}
+              </Button>
+            ) : null}
+          </td>
+        </tr>
+        {expanded ? (
+          <tr className="border-b border-border bg-surface-2">
+            <td colSpan={8} className="px-3 py-3">
+              <TransactionPayloadPanels t={i18n.t} input={input} output={output} maxHeightClass="max-h-80" />
+            </td>
+          </tr>
         ) : null}
-      </div>
+      </React.Fragment>
     );
   };
 
@@ -218,13 +289,30 @@ function ActionStateInspect(props: {
       </div>
 
       <div className="mt-4">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="text-xs font-medium text-muted">{i18n.t('tasks.inspect.transactions')}</div>
-          {relatedChainId ? (
-            <Link className="text-xs underline" to={`${basePath}/transactions/items?transaction_chain=${relatedChainId}`}>
-              {i18n.t('tasks.action.view_all')}
-            </Link>
-          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {transactionIds.length > 0 ? (
+              <>
+                <Button size="sm" variant="secondary" onClick={expandAllTx}>
+                  {i18n.t('tasks.inspect.expand_all')}
+                </Button>
+                <Button size="sm" variant="secondary" onClick={collapseAllTx}>
+                  {i18n.t('tasks.inspect.collapse_all')}
+                </Button>
+              </>
+            ) : null}
+            {relatedChainId ? (
+              <>
+                <Link className="text-xs underline" to={`${basePath}/transactions/${relatedChainId}`}>
+                  {i18n.t('tasks.inspect.open_chain')}
+                </Link>
+                <Link className="text-xs underline" to={`${basePath}/transactions/items?transaction_chain=${relatedChainId}`}>
+                  {i18n.t('tasks.action.view_all')}
+                </Link>
+              </>
+            ) : null}
+          </div>
         </div>
         {!relatedChainId ? (
           <div className="mt-2 text-sm text-muted">{i18n.t('tasks.inspect.no_chain')}</div>
@@ -232,8 +320,24 @@ function ActionStateInspect(props: {
           <div className="flex items-center justify-center py-6"><Spinner /></div>
         ) : txQ.isError ? (
           <Alert variant="danger" title={i18n.t('tasks.error.load_items')}>{formatErrorMessage(txQ.error)}</Alert>
-        ) : (txQ.data ?? []).length > 0 ? (
-          <div className="mt-2 space-y-2">{(txQ.data ?? []).map(renderTx)}</div>
+        ) : transactionRows.length > 0 ? (
+          <div className="mt-2 overflow-x-auto rounded-md border border-border">
+            <Table minWidth="lg" variant="list">
+              <thead>
+                <tr className="border-b border-border text-left text-xs text-muted">
+                  <th className="px-3 py-2">{i18n.t('common.id')}</th>
+                  <th className="px-3 py-2">{i18n.t('common.state')}</th>
+                  <th className="px-3 py-2">{i18n.t('common.name')}</th>
+                  <th className="px-3 py-2">{i18n.t('common.node')}</th>
+                  <th className="px-3 py-2">{i18n.t('common.vps')}</th>
+                  <th className="px-3 py-2">{i18n.t('common.started')}</th>
+                  <th className="px-3 py-2">{i18n.t('transactions.tx.duration_label')}</th>
+                  <th className="px-3 py-2 text-right">{i18n.t('transactions.tx.details')}</th>
+                </tr>
+              </thead>
+              <tbody>{transactionRows.map(renderTx)}</tbody>
+            </Table>
+          </div>
         ) : (
           <div className="mt-2 text-sm text-muted">{i18n.t('tasks.empty.no_items')}</div>
         )}

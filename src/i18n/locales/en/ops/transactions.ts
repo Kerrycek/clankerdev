@@ -2,6 +2,8 @@
 export const enOps_transactions = {
   "transactions.chain.detail.empty.body": "Each chain consists of individual transactions.",
   "transactions.chain.detail.empty.title": "No transactions in this chain",
+  "transactions.chain.detail.collapse_all": "Collapse all",
+  "transactions.chain.detail.expand_all": "Expand all",
   "transactions.chain.detail.fallback_title": "Transaction chain #{id}",
   "transactions.chain.detail.invalid_body": "The chain ID must be a number.",
   "transactions.chain.detail.invalid_title": "Invalid chain ID",
