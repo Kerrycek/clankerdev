@@ -302,7 +302,7 @@ export function UsersPage() {
       setCreateDraft(initialCreateUserDraft);
       setCreateError(null);
       void listQ.refetch();
-      toasts.pushToast({ variant: 'success', title: t('admin.users.create.toast.created') });
+      toasts.pushToast({ variant: 'ok', title: t('admin.users.create.toast.created') });
       if (Number.isFinite(id) && id > 0) navigate(`${basePath}/users/${id}`);
     },
     onError: (err: any) => {

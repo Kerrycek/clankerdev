@@ -301,7 +301,7 @@ export async function fetchUser(userId: number) {
   });
 }
 
-export interface CreateUserPayload {
+export interface CreateUserPayload extends Record<string, unknown> {
   login: string;
   password: string;
   full_name?: string;
