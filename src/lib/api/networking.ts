@@ -61,6 +61,8 @@ export async function fetchHostIpAddresses(opts?: {
   limit?: number;
   fromId?: number;
   q?: string;
+  ipAddress?: number;
+  networkInterface?: number;
   user?: number;
   vps?: number;
   assigned?: boolean;
@@ -75,6 +77,8 @@ export async function fetchHostIpAddresses(opts?: {
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
   if (opts?.q) params['q'] = opts.q;
+  if (opts?.ipAddress !== undefined) params['ip_address'] = opts.ipAddress;
+  if (opts?.networkInterface !== undefined) params['network_interface'] = opts.networkInterface;
   if (opts?.user !== undefined) params['user'] = opts.user;
   if (opts?.vps !== undefined) params['vps'] = opts.vps;
   if (opts?.assigned !== undefined) params['assigned'] = opts.assigned;
@@ -93,6 +97,47 @@ export async function fetchHostIpAddresses(opts?: {
     meta: { includes: 'ip_address,ip_address.user,ip_address.network_interface,ip_address.network_interface.vps' },
   });
   return { ...res, data: expectArray<HostIpAddress>(res.data, 'host_ip_addresses#index') };
+}
+
+export async function createHostIpAddress(payload: { ip_address: number; addr: string }) {
+  return haveApiCall<HostIpAddress>({
+    method: 'POST',
+    path: '/host_ip_addresses',
+    namespace: 'host_ip_address',
+    params: payload,
+  });
+}
+
+export async function updateHostIpAddress(hostIpAddressId: number, params: Record<string, unknown>) {
+  return haveApiCall<HostIpAddress>({
+    method: 'PUT',
+    path: `/host_ip_addresses/${hostIpAddressId}`,
+    namespace: 'host_ip_address',
+    params,
+  });
+}
+
+export async function deleteHostIpAddress(hostIpAddressId: number) {
+  return haveApiCall<null>({
+    method: 'DELETE',
+    path: `/host_ip_addresses/${hostIpAddressId}`,
+  });
+}
+
+export async function assignHostIpAddress(hostIpAddressId: number, payload: { network_interface: number }) {
+  return haveApiCall<HostIpAddress>({
+    method: 'POST',
+    path: `/host_ip_addresses/${hostIpAddressId}/assign`,
+    namespace: 'host_ip_address',
+    params: { network_interface: payload.network_interface },
+  });
+}
+
+export async function freeHostIpAddress(hostIpAddressId: number) {
+  return haveApiCall<HostIpAddress>({
+    method: 'POST',
+    path: `/host_ip_addresses/${hostIpAddressId}/free`,
+  });
 }
 
 export async function fetchIpAddressAssignments(opts?: {

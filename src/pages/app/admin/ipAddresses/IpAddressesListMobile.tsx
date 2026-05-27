@@ -123,6 +123,15 @@ export function IpAddressesListMobile({ pageData, ipDetailBasePath, basePath, na
                       {t('admin.user.heading')} #{userId}
                     </Link>
                   ) : null}
+                  <Link className="text-xs text-accent hover:underline" to={`${ipDetailBasePath}/${id}`}>
+                    {t('admin.ip.route.title')}
+                  </Link>
+                  <Link className="text-xs text-accent hover:underline" to={`${ipDetailBasePath}/${id}`}>
+                    {t('admin.ip.owner.title')}
+                  </Link>
+                  <Link className="text-xs text-accent hover:underline" to={`${ipDetailBasePath}/${id}`}>
+                    {t('admin.ip.hosts.title')}
+                  </Link>
                 </div>
               </div>
             </Card>

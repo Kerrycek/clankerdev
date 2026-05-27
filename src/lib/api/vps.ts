@@ -98,6 +98,25 @@ export interface VpsReplacePayload {
   reason?: string;
 }
 
+export interface VpsReinstallPayload {
+  os_template?: number;
+  vps_user_data?: number;
+  user_data_format?: string;
+  user_data_content?: string;
+}
+
+export interface VpsMigratePayload {
+  node: number;
+  replace_ip_addresses?: boolean;
+  transfer_ip_addresses?: boolean;
+  maintenance_window?: boolean;
+  finish_weekday?: number;
+  finish_minutes?: number;
+  stop_on_error?: boolean;
+  cleanup_data?: boolean;
+  send_mail?: boolean;
+}
+
 interface CreateVpsCommonPayload {
   hostname: string;
   os_template?: number;
@@ -276,6 +295,33 @@ export async function vpsReplace(vpsId: number, params: VpsReplacePayload) {
     path: `/vpses/${vpsId}/replace`,
     namespace: 'vps',
     params: { ...params },
+  });
+}
+
+export async function vpsReinstall(vpsId: number, params: VpsReinstallPayload) {
+  return haveApiCall<null>({
+    method: 'POST',
+    path: `/vpses/${vpsId}/reinstall`,
+    namespace: 'vps',
+    params: { ...params },
+  });
+}
+
+export async function vpsMigrate(vpsId: number, params: VpsMigratePayload) {
+  return haveApiCall<null>({
+    method: 'POST',
+    path: `/vpses/${vpsId}/migrate`,
+    namespace: 'vps',
+    params: { ...params },
+  });
+}
+
+export async function vpsDelete(vpsId: number, params?: { lazy?: boolean }) {
+  return haveApiCall<null>({
+    method: 'DELETE',
+    path: `/vpses/${vpsId}`,
+    namespace: 'vps',
+    params,
   });
 }
 

@@ -89,6 +89,58 @@ export async function fetchIpAddress(ipAddressId: number, opts?: { includes?: st
   });
 }
 
+export async function updateIpAddress(ipAddressId: number, params: Record<string, unknown>) {
+  return haveApiCall<IpAddress>({
+    method: 'PUT',
+    path: `/ip_addresses/${ipAddressId}`,
+    namespace: 'ip_address',
+    params,
+  });
+}
+
+export async function assignIpAddressRoute(
+  ipAddressId: number,
+  payload: { network_interface: number; route_via?: number | null }
+) {
+  const params: Record<string, unknown> = {
+    network_interface: payload.network_interface,
+  };
+  if (payload.route_via !== undefined && payload.route_via !== null) params['route_via'] = payload.route_via;
+
+  return haveApiCall<IpAddress>({
+    method: 'POST',
+    path: `/ip_addresses/${ipAddressId}/assign`,
+    namespace: 'ip_address',
+    params,
+  });
+}
+
+export async function assignIpAddressRouteWithHostAddress(
+  ipAddressId: number,
+  payload: { network_interface: number; host_ip_address?: number | null }
+) {
+  const params: Record<string, unknown> = {
+    network_interface: payload.network_interface,
+  };
+  if (payload.host_ip_address !== undefined && payload.host_ip_address !== null) {
+    params['host_ip_address'] = payload.host_ip_address;
+  }
+
+  return haveApiCall<IpAddress>({
+    method: 'POST',
+    path: `/ip_addresses/${ipAddressId}/assign_with_host_address`,
+    namespace: 'ip_address',
+    params,
+  });
+}
+
+export async function freeIpAddressRoute(ipAddressId: number) {
+  return haveApiCall<IpAddress>({
+    method: 'POST',
+    path: `/ip_addresses/${ipAddressId}/free`,
+  });
+}
+
 export async function fetchIpAddressesForVps(vpsId: number, opts?: { limit?: number }) {
   const res = await haveApiCall<IpAddress[]>({
     method: 'GET',

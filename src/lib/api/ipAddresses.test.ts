@@ -1,0 +1,129 @@
+import { describe, expect, test, vi } from 'vitest';
+
+import {
+  assignIpAddressRoute,
+  assignIpAddressRouteWithHostAddress,
+  freeIpAddressRoute,
+  updateIpAddress,
+} from './ipAddresses';
+import {
+  assignHostIpAddress,
+  createHostIpAddress,
+  deleteHostIpAddress,
+  freeHostIpAddress,
+  updateHostIpAddress,
+} from './networking';
+
+function mockFetchOk(response: any) {
+  return vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: true, response }) });
+}
+
+function lastFetchCall() {
+  const calls = (globalThis.fetch as any).mock.calls;
+  return calls[calls.length - 1] as [string, RequestInit?];
+}
+
+describe('network address API wrappers', () => {
+  test('assignIpAddressRoute posts the legacy route assign payload', async () => {
+    globalThis.fetch = mockFetchOk({ ip_address: { id: 42 } }) as any;
+
+    await assignIpAddressRoute(42, { network_interface: 501, route_via: 700 });
+
+    const [url, init] = lastFetchCall();
+    expect(new URL(url).pathname).toBe('/v7.0/ip_addresses/42/assign');
+    expect(init?.method).toBe('POST');
+    expect(JSON.parse(String(init?.body))).toEqual({
+      ip_address: {
+        network_interface: 501,
+        route_via: 700,
+      },
+    });
+  });
+
+  test('assignIpAddressRouteWithHostAddress posts the combined route and host action', async () => {
+    globalThis.fetch = mockFetchOk({ ip_address: { id: 42 } }) as any;
+
+    await assignIpAddressRouteWithHostAddress(42, { network_interface: 501 });
+
+    const [url, init] = lastFetchCall();
+    expect(new URL(url).pathname).toBe('/v7.0/ip_addresses/42/assign_with_host_address');
+    expect(init?.method).toBe('POST');
+    expect(JSON.parse(String(init?.body))).toEqual({
+      ip_address: {
+        network_interface: 501,
+      },
+    });
+  });
+
+  test('freeIpAddressRoute posts route free without a namespaced payload', async () => {
+    globalThis.fetch = mockFetchOk({ ip_address: { id: 42 } }) as any;
+
+    await freeIpAddressRoute(42);
+
+    const [url, init] = lastFetchCall();
+    expect(new URL(url).pathname).toBe('/v7.0/ip_addresses/42/free');
+    expect(init?.method).toBe('POST');
+    expect(init?.body).toBe('{}');
+  });
+
+  test('updateIpAddress sends owner changes through the ip_address namespace', async () => {
+    globalThis.fetch = mockFetchOk({ ip_address: { id: 42 } }) as any;
+
+    await updateIpAddress(42, { user: 7, environment: 2 });
+
+    const [url, init] = lastFetchCall();
+    expect(new URL(url).pathname).toBe('/v7.0/ip_addresses/42');
+    expect(init?.method).toBe('PUT');
+    expect(JSON.parse(String(init?.body))).toEqual({
+      ip_address: {
+        user: 7,
+        environment: 2,
+      },
+    });
+  });
+
+  test('host IP wrappers cover create, PTR update, assign, free and delete endpoints', async () => {
+    globalThis.fetch = mockFetchOk({ host_ip_address: { id: 9 } }) as any;
+
+    await createHostIpAddress({ ip_address: 42, addr: '192.0.2.10' });
+    let [url, init] = lastFetchCall();
+    expect(new URL(url).pathname).toBe('/v7.0/host_ip_addresses');
+    expect(init?.method).toBe('POST');
+    expect(JSON.parse(String(init?.body))).toEqual({
+      host_ip_address: {
+        ip_address: 42,
+        addr: '192.0.2.10',
+      },
+    });
+
+    await updateHostIpAddress(9, { reverse_record_value: 'host.example.org.' });
+    [url, init] = lastFetchCall();
+    expect(new URL(url).pathname).toBe('/v7.0/host_ip_addresses/9');
+    expect(init?.method).toBe('PUT');
+    expect(JSON.parse(String(init?.body))).toEqual({
+      host_ip_address: {
+        reverse_record_value: 'host.example.org.',
+      },
+    });
+
+    await assignHostIpAddress(9, { network_interface: 501 });
+    [url, init] = lastFetchCall();
+    expect(new URL(url).pathname).toBe('/v7.0/host_ip_addresses/9/assign');
+    expect(init?.method).toBe('POST');
+    expect(JSON.parse(String(init?.body))).toEqual({
+      host_ip_address: {
+        network_interface: 501,
+      },
+    });
+
+    await freeHostIpAddress(9);
+    [url, init] = lastFetchCall();
+    expect(new URL(url).pathname).toBe('/v7.0/host_ip_addresses/9/free');
+    expect(init?.method).toBe('POST');
+
+    await deleteHostIpAddress(9);
+    [url, init] = lastFetchCall();
+    expect(new URL(url).pathname).toBe('/v7.0/host_ip_addresses/9');
+    expect(init?.method).toBe('DELETE');
+  });
+});
