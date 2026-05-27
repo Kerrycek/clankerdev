@@ -98,6 +98,13 @@ export function TransactionChainDetailPage() {
   }, [chainQ.data]);
 
   const progress = useMemo(() => (chainQ.data ? chainProgressLabel(chainQ.data) : { label: '—', pct: null }), [chainQ.data]);
+  const transactionIds = useMemo(
+    () =>
+      (txQ.data ?? [])
+        .map((tx) => Number((tx as any).id))
+        .filter((txId) => Number.isFinite(txId) && txId > 0),
+    [txQ.data]
+  );
 
   const toggleExpanded = (txId: number) => {
     setExpandedTx((prev) => {
@@ -107,6 +114,9 @@ export function TransactionChainDetailPage() {
       return next;
     });
   };
+
+  const expandAllTransactions = () => setExpandedTx(new Set(transactionIds));
+  const collapseAllTransactions = () => setExpandedTx(new Set());
 
   return (
     <DetailShell testId="transactions.chain.detail" variant="wide">
@@ -256,6 +266,18 @@ export function TransactionChainDetailPage() {
                 chainDone
                   ? t('transactions.chain.detail.section.transactions_subtitle_done')
                   : t('transactions.chain.detail.section.transactions_subtitle_live')
+              }
+              actions={
+                transactionIds.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="secondary" onClick={expandAllTransactions}>
+                      {t('transactions.chain.detail.expand_all')}
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={collapseAllTransactions}>
+                      {t('transactions.chain.detail.collapse_all')}
+                    </Button>
+                  </div>
+                ) : null
               }
             />
             <CardBody>

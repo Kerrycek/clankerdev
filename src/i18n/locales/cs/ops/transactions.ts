@@ -2,6 +2,8 @@
 export const csOps_transactions = {
   "transactions.chain.detail.empty.body": "Každý řetězec se skládá z jednotlivých transakcí.",
   "transactions.chain.detail.empty.title": "V tomto řetězci nejsou žádné transakce",
+  "transactions.chain.detail.collapse_all": "Sbalit vše",
+  "transactions.chain.detail.expand_all": "Rozbalit vše",
   "transactions.chain.detail.fallback_title": "Řetězec transakcí #{id}",
   "transactions.chain.detail.invalid_body": "ID řetězce musí být číslo.",
   "transactions.chain.detail.invalid_title": "Neplatné ID řetězce",
