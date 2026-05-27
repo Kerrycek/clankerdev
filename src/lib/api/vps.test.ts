@@ -6,11 +6,12 @@ import {
   fetchVps,
   fetchVpsList,
   fetchVpsStatuses,
+  vpsBoot,
   vpsClone,
   vpsDelete,
   vpsMigrate,
-  vpsReplace,
   vpsReinstall,
+  vpsReplace,
   vpsSwapWith,
 } from './vps';
 
@@ -310,6 +311,27 @@ describe('vps API wrappers', () => {
         expiration_date: '2026-07-25T12:00:00.000Z',
         start: true,
         reason: 'test replacement',
+      },
+    });
+  });
+
+  test('vpsBoot posts legacy rescue boot payload', async () => {
+    globalThis.fetch = mockFetchOk({}) as any;
+
+    await vpsBoot(12, {
+      os_template: 6,
+      mount_root_dataset: '/mnt/vps',
+    });
+
+    const [url, init] = lastFetchCall();
+    const body = JSON.parse(String(init?.body));
+
+    expect(new URL(url).pathname).toBe('/v7.0/vpses/12/boot');
+    expect(init?.method).toBe('POST');
+    expect(body).toEqual({
+      vps: {
+        os_template: 6,
+        mount_root_dataset: '/mnt/vps',
       },
     });
   });

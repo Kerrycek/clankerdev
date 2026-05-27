@@ -19,12 +19,14 @@ import { getMetaActionStateId } from '../../../lib/api/haveapi';
 import { fetchOsTemplates, type OsTemplate } from '../../../lib/api/osTemplates';
 import {
   updateVps,
+  vpsBoot,
   vpsClone,
   vpsDelete,
   vpsMigrate,
   vpsReinstall,
   vpsReplace,
   vpsSwapWith,
+  type VpsBootPayload,
   type VpsClonePayload,
   type VpsMigratePayload,
   type VpsReplacePayload,
@@ -66,6 +68,13 @@ type ReplaceForm = {
 type TemplateForm = {
   osTemplate: string;
   autoUpdate: boolean;
+  confirm: boolean;
+};
+
+type BootForm = {
+  osTemplate: string;
+  mountRootDataset: boolean;
+  mountpoint: string;
   confirm: boolean;
 };
 
@@ -217,6 +226,13 @@ export function VpsLifecyclePage() {
     confirm: false,
   }));
 
+  const [boot, setBoot] = useState<BootForm>(() => ({
+    osTemplate: osTemplateId ? String(osTemplateId) : '',
+    mountRootDataset: true,
+    mountpoint: '/mnt/vps',
+    confirm: false,
+  }));
+
   const [reinstall, setReinstall] = useState<ReinstallForm>(() => ({
     osTemplate: osTemplateId ? String(osTemplateId) : '',
     confirm: false,
@@ -353,6 +369,30 @@ export function VpsLifecyclePage() {
     onSettled: () => chrome.releaseLocalLock(vpsRef),
   });
 
+  const bootM = useMutation({
+    mutationFn: async () => {
+      await preflight();
+      const payload: VpsBootPayload = {
+        os_template: parseRequiredId(boot.osTemplate),
+      };
+      if (boot.mountRootDataset) {
+        const mountpoint = boot.mountpoint.trim();
+        if (!mountpoint || !mountpoint.startsWith('/')) throw new Error('invalid-id');
+        payload.mount_root_dataset = mountpoint;
+      }
+      return vpsBoot(vpsId, payload);
+    },
+    onMutate: () => chrome.acquireLocalLock(vpsRef),
+    onSuccess: (res) => {
+      track(res.meta, 'action.vps.boot.label');
+      setBoot((p) => ({ ...p, confirm: false }));
+    },
+    onError: (e: any) => {
+      if (e?.code === 'BUSY') chrome.openTasks();
+    },
+    onSettled: () => chrome.releaseLocalLock(vpsRef),
+  });
+
   const reinstallM = useMutation({
     mutationFn: async () => {
       await preflight();
@@ -422,6 +462,7 @@ export function VpsLifecyclePage() {
     swapM.isPending ||
     replaceM.isPending ||
     templateM.isPending ||
+    bootM.isPending ||
     reinstallM.isPending ||
     migrateM.isPending ||
     deleteM.isPending;
@@ -433,6 +474,7 @@ export function VpsLifecyclePage() {
       t('vps.lifecycle.admin.summary.swap'),
       t('vps.lifecycle.admin.summary.replace'),
       t('vps.lifecycle.admin.summary.template'),
+      t('vps.lifecycle.admin.summary.boot'),
       t('vps.lifecycle.admin.summary.migrate'),
       t('vps.lifecycle.admin.summary.delete'),
     ],
@@ -526,6 +568,75 @@ export function VpsLifecyclePage() {
               onClick={() => templateM.mutate()}
             >
               {t('vps.lifecycle.template.submit')}
+            </ActionButton>
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card testId="vps.lifecycle.boot">
+        <CardHeader title={t('vps.lifecycle.boot.title')} subtitle={t('vps.lifecycle.boot.subtitle')} />
+        <CardBody className="space-y-4">
+          <Alert variant="warn" title={t('vps.lifecycle.boot.warning_title')}>
+            {t('vps.lifecycle.boot.warning_body')}
+          </Alert>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <Field label={t('vps.lifecycle.field.os_template')} help={t('vps.lifecycle.boot.os_template_help')}>
+              <Select
+                value={boot.osTemplate}
+                onChange={(e) => setBoot((prev) => ({ ...prev, osTemplate: e.target.value }))}
+                disabled={bootM.isPending || templatesQ.isLoading}
+                testId="vps.lifecycle.boot.os_template"
+              >
+                <option value="">{t('vps.lifecycle.placeholder.os_template')}</option>
+                {templatesQ.data?.map((tpl) => (
+                  <option key={tpl.id} value={tpl.id}>
+                    {templateLabel(tpl)}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label={t('vps.lifecycle.boot.mountpoint')} help={t('vps.lifecycle.boot.mountpoint_help')}>
+              <Input
+                value={boot.mountpoint}
+                onChange={(e) => setBoot((prev) => ({ ...prev, mountpoint: e.target.value }))}
+                disabled={bootM.isPending || !boot.mountRootDataset}
+                testId="vps.lifecycle.boot.mountpoint"
+              />
+            </Field>
+          </div>
+
+          <Checkbox
+            checked={boot.mountRootDataset}
+            onChange={(v) => setBoot((p) => ({ ...p, mountRootDataset: v }))}
+            label={t('vps.lifecycle.boot.mount_root_dataset')}
+            description={t('vps.lifecycle.boot.mount_root_dataset_help')}
+            testId="vps.lifecycle.boot.mount_root_dataset"
+          />
+
+          <Checkbox
+            checked={boot.confirm}
+            onChange={(v) => setBoot((p) => ({ ...p, confirm: v }))}
+            label={t('vps.lifecycle.confirm.boot')}
+            testId="vps.lifecycle.boot.confirm"
+          />
+
+          {bootM.isError ? (
+            <Alert title={t('vps.lifecycle.boot.error')} variant="danger">
+              {mutationErrorMessage(bootM.error, t('vps.lifecycle.validation.boot'))}
+            </Alert>
+          ) : null}
+
+          <div className="flex justify-end">
+            <ActionButton
+              variant="danger"
+              testId="vps.lifecycle.boot.submit"
+              disabled={!boot.confirm || !boot.osTemplate || !gate.allowed}
+              disabledReason={!gate.allowed ? gate.reason : undefined}
+              loading={bootM.isPending}
+              onClick={() => bootM.mutate()}
+            >
+              {t('vps.lifecycle.boot.submit')}
             </ActionButton>
           </div>
         </CardBody>
