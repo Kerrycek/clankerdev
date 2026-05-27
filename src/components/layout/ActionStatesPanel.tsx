@@ -4,17 +4,21 @@ import { useMutation, useQueries, useQuery } from '@tanstack/react-query';
 import { Pin, PinOff } from 'lucide-react';
 
 import { cancelActionState, fetchActionState, fetchActionStates, type ActionState } from '../../lib/api/actionStates';
+import { fetchTransactionChain, fetchTransactions, type Transaction } from '../../lib/api/transactions';
 import { useAppMode } from '../../app/appMode';
 import { useI18n } from '../../app/i18n';
 import { formatDateTime } from '../../lib/format';
+import { formatErrorMessage } from '../../lib/errors';
 import { useActionStatePollIntervalMs, useTierAIntervalMs } from '../../lib/refreshTiers';
 import { extractRelatedTransactionChainIdFromActionState } from '../../lib/taskLinks';
+import { formatPayload, safeJson } from '../../lib/txFormat';
 import {
   actionStateBadge,
   actionStateProgressLabel,
   actionStateProgressPercent,
   isFailingActionState,
   isFinishedActionState,
+  transactionBadge,
 } from '../../lib/taskStatus';
 import { clsx } from '../ui/clsx';
 import { toneProgressFillClass, toneSurfaceClass, type ToneVariant } from '../ui/tone';
@@ -36,6 +40,206 @@ function parseIds(input: unknown, limit: number): number[] {
     if (ids.length >= limit) break;
   }
   return ids;
+}
+
+function backendDetailPayload(s: ActionState): string {
+  const keys = ['error', 'errors', 'exception', 'message', 'output', 'result', 'response', 'stderr', 'stdout', 'backtrace'];
+  const picked: Record<string, unknown> = {};
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(s as any, key)) picked[key] = (s as any)[key];
+  }
+  return Object.keys(picked).length > 0 ? safeJson(picked) : safeJson(s);
+}
+
+function ActionStateInspect(props: {
+  actionStateId: number;
+  fallback?: ActionState;
+  pinned: boolean;
+  onBack: () => void;
+  onTogglePin?: (actionStateId: number) => void;
+}) {
+  const { basePath } = useAppMode();
+  const chrome = useChrome();
+  const i18n = useI18n();
+  const actionPollMs = useActionStatePollIntervalMs();
+  const tierARefetchMs = useTierAIntervalMs();
+
+  const actionQ = useQuery({
+    queryKey: ['action_state', 'show', { id: props.actionStateId }],
+    queryFn: async () => (await fetchActionState(props.actionStateId)).data,
+    initialData: props.fallback,
+    refetchInterval: (data) => (data && isFinishedActionState(data as any) ? false : actionPollMs),
+  });
+
+  const s = actionQ.data;
+  const relatedChainId = s ? extractRelatedTransactionChainIdFromActionState(s) : null;
+
+  const chainQ = useQuery({
+    queryKey: ['transaction_chains', 'show', { id: relatedChainId ?? -1 }],
+    queryFn: async () => (await fetchTransactionChain(relatedChainId!)).data,
+    enabled: Boolean(relatedChainId && relatedChainId > 0),
+    refetchInterval: relatedChainId ? tierARefetchMs : false,
+  });
+
+  const txQ = useQuery({
+    queryKey: ['transactions', 'list', { transactionChainId: relatedChainId ?? -1, limit: 20 }],
+    queryFn: async () => (await fetchTransactions({ transactionChainId: relatedChainId!, limit: 20 })).data,
+    enabled: Boolean(relatedChainId && relatedChainId > 0),
+    refetchInterval: relatedChainId ? tierARefetchMs : false,
+  });
+
+  if (actionQ.isLoading && !s) {
+    return (
+      <div>
+        <Button size="sm" variant="secondary" onClick={props.onBack}>{i18n.t('common.back')}</Button>
+        <div className="flex items-center justify-center py-8"><Spinner /></div>
+      </div>
+    );
+  }
+
+  if (actionQ.isError || !s) {
+    return (
+      <div>
+        <Button size="sm" variant="secondary" onClick={props.onBack}>{i18n.t('common.back')}</Button>
+        <div className="mt-3">
+          <Alert variant="danger" title={i18n.t('action_state.load_error.title')}>
+            {actionQ.isError ? formatErrorMessage(actionQ.error) : i18n.t('action_state.not_found.body')}
+          </Alert>
+        </div>
+      </div>
+    );
+  }
+
+  const id = Number((s as any).id ?? props.actionStateId);
+  const label = (s as any).label ? String((s as any).label) : i18n.t('action_state.title_fallback', { id });
+  const badge = actionStateBadge(s);
+  const pct = actionStateProgressPercent(s);
+  const pLabel = actionStateProgressLabel(s);
+  const createdAt = (s as any).created_at ? formatDateTime(String((s as any).created_at)) : null;
+  const updatedAt = (s as any).updated_at ? formatDateTime(String((s as any).updated_at)) : null;
+  const tracked = chrome.trackedActionStates.some((x) => x.id === id);
+  const chain = chainQ.data;
+
+  const renderTx = (tx: Transaction) => {
+    const b = transactionBadge(tx);
+    const name = tx.name ? String(tx.name) : `#${tx.id}`;
+    const input = formatPayload((tx as any).input);
+    const output = formatPayload((tx as any).output);
+
+    return (
+      <div key={tx.id} className="rounded-md border border-border bg-surface-2 p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <Link className="text-sm font-medium underline" to={`${basePath}/transactions/items/${tx.id}`}>{name}</Link>
+            <div className="mt-1 text-xs text-faint">#{tx.id}</div>
+          </div>
+          <Badge variant={b.variant}>{b.label}</Badge>
+        </div>
+        {input || output ? (
+          <details className="mt-2">
+            <summary className="cursor-pointer select-none text-xs font-medium text-muted">{i18n.t('tasks.inspect.payload')}</summary>
+            {input ? <pre className="mt-2 max-h-48 overflow-auto rounded-md border border-border bg-surface p-2 text-xs text-muted">{input}</pre> : null}
+            {output ? <pre className="mt-2 max-h-48 overflow-auto rounded-md border border-border bg-surface p-2 text-xs text-muted">{output}</pre> : null}
+          </details>
+        ) : null}
+      </div>
+    );
+  };
+
+  return (
+    <div data-testid={`tasks.inspect.action_state.${id}`}>
+      <div className="flex items-center justify-between gap-2">
+        <Button size="sm" variant="secondary" onClick={props.onBack} testId="tasks.inspect.back">
+          {i18n.t('common.back')}
+        </Button>
+        <Link className="text-xs font-medium underline" to={`${basePath}/action-states/${id}`}>
+          {i18n.t('tasks.inspect.open_full')}
+        </Link>
+      </div>
+
+      <div className="mt-3 rounded-md border border-border bg-surface p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-xs text-muted">{i18n.t('tasks.inspect.action_state_id')}</div>
+            <h3 className="mt-1 text-base font-semibold">#{id}</h3>
+            <div className="mt-1 break-words text-sm">{label}</div>
+          </div>
+          <Badge variant={badge.variant}>{badge.label}</Badge>
+        </div>
+
+        <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+          <div><div className="text-xs text-muted">{i18n.t('common.state')}</div><div>{badge.label}</div></div>
+          <div>
+            <div className="text-xs text-muted">{i18n.t('tasks.inspect.success')}</div>
+            <div>{isFailingActionState(s) ? i18n.t('common.no') : isFinishedActionState(s) ? i18n.t('common.yes') : i18n.t('state.running')}</div>
+          </div>
+          {pLabel ? <div><div className="text-xs text-muted">{i18n.t('common.progress')}</div><div>{pct !== null ? `${pLabel} · ${pct}%` : pLabel}</div></div> : null}
+          {createdAt ? <div><div className="text-xs text-muted">{i18n.t('common.created')}</div><div>{createdAt}</div></div> : null}
+          {updatedAt ? <div><div className="text-xs text-muted">{i18n.t('common.updated')}</div><div>{updatedAt}</div></div> : null}
+          {relatedChainId ? (
+            <div>
+              <div className="text-xs text-muted">{i18n.t('action_state.field.transaction_chain')}</div>
+              <Link className="underline" to={`${basePath}/transactions/${relatedChainId}`}>
+                {chain?.label ? String(chain.label) : `#${relatedChainId}`}
+              </Link>
+            </div>
+          ) : null}
+        </div>
+
+        {pct !== null ? (
+          <div className="mt-3 h-2 rounded-full bg-surface-2">
+            <div className="h-2 rounded-full bg-fg/60" style={{ width: `${pct}%` }} />
+          </div>
+        ) : null}
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          {props.onTogglePin ? (
+            <Button size="sm" variant="secondary" onClick={() => props.onTogglePin?.(id)}>
+              {props.pinned ? i18n.t('tasks.action.unpin') : i18n.t('tasks.action.pin')}
+            </Button>
+          ) : null}
+          {tracked ? (
+            <Button size="sm" variant="secondary" onClick={() => chrome.dismissActionState(id)}>
+              {i18n.t('tasks.action.dismiss')}
+            </Button>
+          ) : (
+            <Button size="sm" variant="secondary" onClick={() => chrome.trackActionState(id)}>
+              {i18n.t('tasks.action.track')}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4">
+        <div className="text-xs font-medium text-muted">{i18n.t('tasks.inspect.backend_details')}</div>
+        <pre className="mt-2 max-h-64 overflow-auto rounded-md border border-border bg-surface p-3 text-xs text-muted">
+          {backendDetailPayload(s)}
+        </pre>
+      </div>
+
+      <div className="mt-4">
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-xs font-medium text-muted">{i18n.t('tasks.inspect.transactions')}</div>
+          {relatedChainId ? (
+            <Link className="text-xs underline" to={`${basePath}/transactions/items?transaction_chain=${relatedChainId}`}>
+              {i18n.t('tasks.action.view_all')}
+            </Link>
+          ) : null}
+        </div>
+        {!relatedChainId ? (
+          <div className="mt-2 text-sm text-muted">{i18n.t('tasks.inspect.no_chain')}</div>
+        ) : txQ.isLoading ? (
+          <div className="flex items-center justify-center py-6"><Spinner /></div>
+        ) : txQ.isError ? (
+          <Alert variant="danger" title={i18n.t('tasks.error.load_items')}>{formatErrorMessage(txQ.error)}</Alert>
+        ) : (txQ.data ?? []).length > 0 ? (
+          <div className="mt-2 space-y-2">{(txQ.data ?? []).map(renderTx)}</div>
+        ) : (
+          <div className="mt-2 text-sm text-muted">{i18n.t('tasks.empty.no_items')}</div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export function ActionStatesPanel(props: {
@@ -143,6 +347,7 @@ export function ActionStatesPanel(props: {
 
   const [cancelTarget, setCancelTarget] = useState<ActionState | null>(null);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [selectedActionStateId, setSelectedActionStateId] = useState<number | null>(null);
 
   const cancelM = useMutation({
     mutationFn: async (id: number) => cancelActionState(id),
@@ -157,6 +362,22 @@ export function ActionStatesPanel(props: {
       setCancelError(String(err?.message ?? err));
     },
   });
+
+  const selectedRow = selectedActionStateId !== null
+    ? merged.find((x) => Number((x.s as any).id) === selectedActionStateId)
+    : undefined;
+
+  if (selectedActionStateId !== null) {
+    return (
+      <ActionStateInspect
+        actionStateId={selectedActionStateId}
+        fallback={selectedRow?.s}
+        pinned={pinnedSet.has(selectedActionStateId)}
+        onTogglePin={props.onTogglePin}
+        onBack={() => setSelectedActionStateId(null)}
+      />
+    );
+  }
 
   const renderRow = (x: { s: ActionState; tracked: boolean; pinned: boolean }) => {
     const s = x.s;
@@ -195,9 +416,13 @@ export function ActionStatesPanel(props: {
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-sm font-medium">
               <StatusDot variant={dotVariant} title={badge.label} />
-              <Link className="underline" to={`${basePath}/action-states/${id}`}>
-                  {label}
-                </Link>
+              <button
+                type="button"
+                className="min-w-0 truncate text-left underline"
+                onClick={() => setSelectedActionStateId(id)}
+              >
+                {label}
+              </button>
             </div>
 
             {meta.length > 0 || relatedChainId ? (
@@ -227,6 +452,10 @@ export function ActionStatesPanel(props: {
             <Badge variant={badge.variant}>{badge.label}</Badge>
 
             <div className="flex items-center gap-2">
+              <Button size="sm" variant="secondary" onClick={() => setSelectedActionStateId(id)} testId={`tasks.inspect.open.${id}`}>
+                {i18n.t('tasks.inspect.open')}
+              </Button>
+
               {props.onTogglePin ? (
                 <Button
                   size="sm"
