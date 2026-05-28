@@ -2,6 +2,9 @@ import type { Dataset } from '../api/datasets';
 import type { GateDecision, GateReason } from './types';
 
 export type DatasetAction =
+  | 'dataset.create'
+  | 'dataset.update'
+  | 'dataset.delete'
   | 'snapshot.create'
   | 'snapshot.rollback'
   | 'snapshot.delete'

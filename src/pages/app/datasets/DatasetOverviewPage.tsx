@@ -1,18 +1,37 @@
-import React, { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useMutation } from '@tanstack/react-query';
 
 import { useAppMode } from '../../../app/appMode';
+import { useAuth } from '../../../app/auth';
 import { useI18n } from '../../../app/i18n';
+import { useChrome } from '../../../components/layout/ChromeContext';
 
 import { Alert } from '../../../components/ui/Alert';
+import { ActionButton } from '../../../components/ui/ActionButton';
 import { Badge } from '../../../components/ui/Badge';
+import { Button } from '../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
+import { Checkbox } from '../../../components/ui/Checkbox';
 import { ChipLink } from '../../../components/ui/ChipLink';
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
+import { Input } from '../../../components/ui/Input';
+import { Modal } from '../../../components/ui/Modal';
+import { Select } from '../../../components/ui/Select';
 import { Spinner } from '../../../components/ui/Spinner';
 import { StackedBar } from '../../../components/ui/StackedBar';
 
+import {
+  createDataset,
+  deleteDataset,
+  updateDataset,
+  type Dataset,
+  type DatasetEditablePayload,
+} from '../../../lib/api/datasets';
+import { getMetaActionStateId } from '../../../lib/api/haveapi';
 import { type TransactionChain } from '../../../lib/api/transactions';
 import { formatDateTime, formatMiB } from '../../../lib/format';
+import { gateDatasetAction } from '../../../lib/gates/dataset';
 import { usageSeverityFromRatio } from '../../../lib/usage';
 import { objectStateBadge } from '../../../lib/taskStatus';
 
@@ -29,6 +48,40 @@ function positive(v: unknown): number | undefined {
 
 function datasetLabel(ds: any): string {
   return String(ds?.full_name ?? ds?.name ?? ds?.label ?? `#${ds?.id ?? '?'}`);
+}
+
+function datasetShortName(ds: any): string {
+  const full = datasetLabel(ds);
+  const parts = full.split('/');
+  return parts[parts.length - 1] || full;
+}
+
+function mibToGiBInput(value: unknown): string {
+  const n = asNumber(value);
+  if (n === undefined || n <= 0) return '';
+  return String(Number((n / 1024).toFixed(2)));
+}
+
+function parseGiBToMiB(raw: string): number | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  const n = Number(trimmed.replace(',', '.'));
+  if (!Number.isFinite(n) || n < 0) throw new Error('invalid-size');
+  return Math.round(n * 1024);
+}
+
+function parseRecordsizeKiB(raw: string): number | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  const n = Number(trimmed);
+  if (!Number.isInteger(n) || n < 4 || n > 128 || (n & (n - 1)) !== 0) throw new Error('invalid-recordsize');
+  return n * 1024;
+}
+
+function recordsizeToKiBInput(value: unknown): string {
+  const n = asNumber(value);
+  if (n === undefined || n <= 0) return '';
+  return String(Math.round(n / 1024));
 }
 
 function chainBadgeFromState(
@@ -287,6 +340,365 @@ function TipsCard() {
   );
 }
 
+type DatasetEditForm = {
+  quotaGiB: string;
+  refquotaGiB: string;
+  compression: boolean;
+  atime: boolean;
+  relatime: boolean;
+  recordsizeKiB: string;
+  sync: 'standard' | 'disabled';
+  sharenfs: string;
+  adminOverride: boolean;
+  adminLockType: 'no_lock' | 'absolute' | 'not_less' | 'not_more';
+};
+
+function buildEditablePayload(form: DatasetEditForm, isAdmin: boolean): DatasetEditablePayload {
+  const payload: DatasetEditablePayload = {
+    compression: form.compression,
+    atime: form.atime,
+    relatime: form.relatime,
+    sync: form.sync,
+  };
+
+  const quota = parseGiBToMiB(form.quotaGiB);
+  const refquota = parseGiBToMiB(form.refquotaGiB);
+  const recordsize = parseRecordsizeKiB(form.recordsizeKiB);
+
+  if (quota !== undefined) payload.quota = quota;
+  if (refquota !== undefined) payload.refquota = refquota;
+  if (recordsize !== undefined) payload.recordsize = recordsize;
+  if (isAdmin) {
+    payload.sharenfs = form.sharenfs.trim();
+    payload.admin_override = form.adminOverride;
+    payload.admin_lock_type = form.adminLockType;
+  }
+
+  return payload;
+}
+
+function DatasetManagementCard() {
+  const { t } = useI18n();
+  const { role } = useAuth();
+  const { basePath } = useAppMode();
+  const chrome = useChrome();
+  const navigate = useNavigate();
+  const { dataset, refetch, refetchChains, datasetRef, busyLocalLock, busyTransaction } = useDatasetContext();
+  const isAdmin = role === 'admin';
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [childName, setChildName] = useState('');
+  const [automount, setAutomount] = useState(true);
+
+  const [edit, setEdit] = useState<DatasetEditForm>(() => ({
+    quotaGiB: mibToGiBInput((dataset as any).quota),
+    refquotaGiB: mibToGiBInput((dataset as any).refquota),
+    compression: (dataset as any).compression !== false,
+    atime: Boolean((dataset as any).atime),
+    relatime: Boolean((dataset as any).relatime),
+    recordsizeKiB: recordsizeToKiBInput((dataset as any).recordsize),
+    sync: String((dataset as any).sync ?? 'standard') === 'disabled' ? 'disabled' : 'standard',
+    sharenfs: String((dataset as any).sharenfs ?? ''),
+    adminOverride: false,
+    adminLockType: 'no_lock',
+  }));
+
+  const objectLabel = datasetLabel(dataset);
+
+  const track = (meta: unknown, labelKey: string) => {
+    const asId = getMetaActionStateId(meta);
+    if (asId !== undefined) {
+      chrome.trackActionState(asId, { actionLabelKey: labelKey, objectLabel, object: datasetRef });
+    }
+    refetch();
+    refetchChains();
+  };
+
+  const createM = useMutation({
+    mutationFn: async () => {
+      const name = childName.trim();
+      if (!name) throw new Error('name-required');
+      const payload = buildEditablePayload(edit, isAdmin);
+      return createDataset({
+        ...payload,
+        dataset: Number(dataset.id),
+        name,
+        automount,
+      });
+    },
+    onMutate: () => chrome.acquireLocalLock(datasetRef),
+    onSuccess: (res) => {
+      track(res.meta, 'action.dataset.create.label');
+      setCreateOpen(false);
+      setChildName('');
+      const newId = Number((res.data as Dataset | undefined)?.id);
+      if (Number.isInteger(newId) && newId > 0) navigate(`${basePath}/datasets/${newId}`);
+    },
+    onError: (e: any) => {
+      if (e?.code === 'BUSY') chrome.openTasks();
+    },
+    onSettled: () => chrome.releaseLocalLock(datasetRef),
+  });
+
+  const updateM = useMutation({
+    mutationFn: async () => updateDataset(dataset.id, buildEditablePayload(edit, isAdmin)),
+    onMutate: () => chrome.acquireLocalLock(datasetRef),
+    onSuccess: (res) => {
+      track(res.meta, 'action.dataset.update.label');
+      setEditOpen(false);
+    },
+    onError: (e: any) => {
+      if (e?.code === 'BUSY') chrome.openTasks();
+    },
+    onSettled: () => chrome.releaseLocalLock(datasetRef),
+  });
+
+  const deleteM = useMutation({
+    mutationFn: async () => deleteDataset(dataset.id),
+    onMutate: () => chrome.acquireLocalLock(datasetRef),
+    onSuccess: (res) => {
+      track(res.meta, 'action.dataset.delete.label');
+      setDeleteOpen(false);
+      navigate(`${basePath}/datasets`);
+    },
+    onError: (e: any) => {
+      if (e?.code === 'BUSY') chrome.openTasks();
+    },
+    onSettled: () => chrome.releaseLocalLock(datasetRef),
+  });
+
+  const busyLocal = busyLocalLock || createM.isPending || updateM.isPending || deleteM.isPending;
+  const createGate = gateDatasetAction('dataset.create', { dataset, busyLocal, busyTransaction });
+  const updateGate = gateDatasetAction('dataset.update', { dataset, busyLocal, busyTransaction });
+  const deleteGate = gateDatasetAction('dataset.delete', { dataset, busyLocal, busyTransaction });
+
+  const submitCreate = () => {
+    setFormError(null);
+    try {
+      buildEditablePayload(edit, isAdmin);
+      createM.mutate();
+    } catch {
+      setFormError(t('dataset.manage.validation.properties'));
+    }
+  };
+
+  const submitUpdate = () => {
+    setFormError(null);
+    try {
+      buildEditablePayload(edit, isAdmin);
+      updateM.mutate();
+    } catch {
+      setFormError(t('dataset.manage.validation.properties'));
+    }
+  };
+
+  const fields = (
+    <div className="space-y-4">
+      {formError ? (
+        <Alert title={t('dataset.manage.validation.title')} variant="danger">
+          {formError}
+        </Alert>
+      ) : null}
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block">
+          <div className="text-xs font-medium text-muted">{t('dataset.manage.field.quota')}</div>
+          <Input
+            value={edit.quotaGiB}
+            onChange={(e) => setEdit((p) => ({ ...p, quotaGiB: e.target.value }))}
+            placeholder="10"
+            testId="dataset.manage.quota"
+          />
+        </label>
+        <label className="block">
+          <div className="text-xs font-medium text-muted">{t('dataset.manage.field.refquota')}</div>
+          <Input
+            value={edit.refquotaGiB}
+            onChange={(e) => setEdit((p) => ({ ...p, refquotaGiB: e.target.value }))}
+            placeholder="10"
+            testId="dataset.manage.refquota"
+          />
+        </label>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block">
+          <div className="text-xs font-medium text-muted">{t('dataset.manage.field.recordsize')}</div>
+          <Input
+            value={edit.recordsizeKiB}
+            onChange={(e) => setEdit((p) => ({ ...p, recordsizeKiB: e.target.value }))}
+            placeholder="128"
+            testId="dataset.manage.recordsize"
+          />
+        </label>
+        <label className="block">
+          <div className="text-xs font-medium text-muted">{t('dataset.manage.field.sync')}</div>
+          <Select
+            value={edit.sync}
+            onChange={(e) => setEdit((p) => ({ ...p, sync: e.target.value as any }))}
+            testId="dataset.manage.sync"
+            options={[
+              { value: 'standard', label: t('dataset.manage.sync.standard') },
+              { value: 'disabled', label: t('dataset.manage.sync.disabled') },
+            ]}
+          />
+        </label>
+      </div>
+
+      <div className="grid gap-2 sm:grid-cols-3">
+        <Checkbox checked={edit.compression} onChange={(v) => setEdit((p) => ({ ...p, compression: v }))} label={t('dataset.manage.field.compression')} testId="dataset.manage.compression" />
+        <Checkbox checked={edit.atime} onChange={(v) => setEdit((p) => ({ ...p, atime: v }))} label={t('dataset.manage.field.atime')} testId="dataset.manage.atime" />
+        <Checkbox checked={edit.relatime} onChange={(v) => setEdit((p) => ({ ...p, relatime: v }))} label={t('dataset.manage.field.relatime')} testId="dataset.manage.relatime" />
+      </div>
+
+      {isAdmin ? (
+        <div className="grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
+          <label className="block">
+            <div className="text-xs font-medium text-muted">{t('dataset.manage.field.sharenfs')}</div>
+            <Input
+              value={edit.sharenfs}
+              onChange={(e) => setEdit((p) => ({ ...p, sharenfs: e.target.value }))}
+              placeholder="off"
+              testId="dataset.manage.sharenfs"
+            />
+          </label>
+          <label className="block">
+            <div className="text-xs font-medium text-muted">{t('dataset.manage.field.admin_lock_type')}</div>
+            <Select
+              value={edit.adminLockType}
+              onChange={(e) => setEdit((p) => ({ ...p, adminLockType: e.target.value as any }))}
+              testId="dataset.manage.admin_lock_type"
+              options={[
+                { value: 'no_lock', label: t('dataset.manage.admin_lock.no_lock') },
+                { value: 'absolute', label: t('dataset.manage.admin_lock.absolute') },
+                { value: 'not_less', label: t('dataset.manage.admin_lock.not_less') },
+                { value: 'not_more', label: t('dataset.manage.admin_lock.not_more') },
+              ]}
+            />
+          </label>
+          <Checkbox checked={edit.adminOverride} onChange={(v) => setEdit((p) => ({ ...p, adminOverride: v }))} label={t('dataset.manage.field.admin_override')} testId="dataset.manage.admin_override" />
+        </div>
+      ) : null}
+    </div>
+  );
+
+  return (
+    <Card testId="dataset.manage">
+      <CardHeader title={t('dataset.manage.title')} subtitle={t('dataset.manage.subtitle')} />
+      <CardBody>
+        <div className="flex flex-wrap gap-2">
+          <ActionButton
+            variant="primary"
+            size="sm"
+            testId="dataset.manage.create.open"
+            disabled={!createGate.allowed}
+            disabledReason={!createGate.allowed ? createGate.reason : undefined}
+            onClick={() => {
+              setFormError(null);
+              setCreateOpen(true);
+            }}
+          >
+            {t('dataset.manage.create.open')}
+          </ActionButton>
+          <ActionButton
+            variant="secondary"
+            size="sm"
+            testId="dataset.manage.edit.open"
+            disabled={!updateGate.allowed}
+            disabledReason={!updateGate.allowed ? updateGate.reason : undefined}
+            onClick={() => {
+              setFormError(null);
+              setEditOpen(true);
+            }}
+          >
+            {t('common.edit')}
+          </ActionButton>
+          <ActionButton
+            variant="danger"
+            size="sm"
+            testId="dataset.manage.delete.open"
+            disabled={!deleteGate.allowed}
+            disabledReason={!deleteGate.allowed ? deleteGate.reason : undefined}
+            onClick={() => setDeleteOpen(true)}
+          >
+            {t('common.delete')}
+          </ActionButton>
+        </div>
+
+        <div className="mt-3 text-xs text-muted">
+          {t('dataset.manage.current', { dataset: datasetShortName(dataset), id: dataset.id })}
+        </div>
+      </CardBody>
+
+      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title={t('dataset.manage.create.title')}>
+        <div className="space-y-4" data-testid="dataset.manage.create.modal">
+          <label className="block">
+            <div className="text-xs font-medium text-muted">{t('dataset.manage.field.child_name')}</div>
+            <Input
+              value={childName}
+              onChange={(e) => setChildName(e.target.value)}
+              placeholder="data"
+              testId="dataset.manage.create.name"
+            />
+          </label>
+          <Checkbox checked={automount} onChange={setAutomount} label={t('dataset.manage.field.automount')} testId="dataset.manage.create.automount" />
+          {fields}
+          {createM.isError ? (
+            <Alert title={t('dataset.manage.create.error')} variant="danger">
+              {String((createM.error as any)?.message ?? createM.error)}
+            </Alert>
+          ) : null}
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setCreateOpen(false)}>{t('common.cancel')}</Button>
+            <ActionButton loading={createM.isPending} disabled={!childName.trim() || !createGate.allowed} onClick={submitCreate} testId="dataset.manage.create.submit">
+              {t('common.create')}
+            </ActionButton>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal open={editOpen} onClose={() => setEditOpen(false)} title={t('dataset.manage.edit.title')}>
+        <div className="space-y-4" data-testid="dataset.manage.edit.modal">
+          {fields}
+          {updateM.isError ? (
+            <Alert title={t('dataset.manage.edit.error')} variant="danger">
+              {String((updateM.error as any)?.message ?? updateM.error)}
+            </Alert>
+          ) : null}
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setEditOpen(false)}>{t('common.cancel')}</Button>
+            <ActionButton loading={updateM.isPending} disabled={!updateGate.allowed} onClick={submitUpdate} testId="dataset.manage.edit.submit">
+              {t('common.save')}
+            </ActionButton>
+          </div>
+        </div>
+      </Modal>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        testId="dataset.manage.delete.confirm"
+        danger
+        title={t('dataset.manage.delete.title')}
+        description={t('dataset.manage.delete.description', { dataset: objectLabel })}
+        confirmLabel={t('common.delete')}
+        confirmLoading={deleteM.isPending}
+        confirmDisabled={!deleteGate.allowed}
+        onCancel={() => setDeleteOpen(false)}
+        onConfirm={() => deleteM.mutate()}
+      >
+        {deleteM.isError ? (
+          <Alert title={t('dataset.manage.delete.error')} variant="danger">
+            {String((deleteM.error as any)?.message ?? deleteM.error)}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
+    </Card>
+  );
+}
+
 function TransactionsCard(props: {
   chainsLoading: boolean;
   chainsError: unknown | null;
@@ -378,6 +790,7 @@ export function DatasetOverviewPage() {
           <SpaceCard dataset={dataset as any} />
           <CountsCard dataset={dataset as any} />
           <QuickActionsCard dataset={dataset as any} />
+          <DatasetManagementCard />
         </div>
         <div className="space-y-6">
           <DetailsCard dataset={dataset as any} />

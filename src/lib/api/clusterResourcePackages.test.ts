@@ -24,7 +24,7 @@ describe('cluster resource packages API wrappers', () => {
 
     expect(res.data).toEqual([{ id: 77, label: 'Personal package', is_personal: true }]);
 
-    const [url] = (globalThis.fetch as any).mock.calls[0];
+    const [url] = (globalThis.fetch as any).mock.calls.find(([u]: [string]) => new URL(u).pathname.endsWith('/cluster_resource_packages'));
     const u = new URL(url);
 
     expect(u.pathname).toBe('/v7.0/cluster_resource_packages');

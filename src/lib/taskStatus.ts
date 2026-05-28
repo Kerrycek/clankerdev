@@ -204,7 +204,7 @@ export function transactionBadge(
 ): BadgeSpec {
   const isObj = Boolean(txOrDone) && typeof txOrDone === 'object';
   const doneRaw = isObj ? (txOrDone as any).done : txOrDone;
-  const successRaw = isTranslator(successOrTranslator) ? undefined : successOrTranslator;
+  const successRaw = isObj ? (txOrDone as any).success : isTranslator(successOrTranslator) ? undefined : successOrTranslator;
   const tt = resolveTranslator(isTranslator(successOrTranslator) ? successOrTranslator : maybeTranslator);
 
   const done = String(doneRaw ?? '').trim() || 'unknown';

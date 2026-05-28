@@ -21,7 +21,7 @@ import { StatCard } from '../../../components/ui/StatCard';
 import { Table } from '../../../components/ui/Table';
 import { Textarea } from '../../../components/ui/Textarea';
 import { toneSurfaceClass } from '../../../components/ui/tone';
-import { fetchIpAddressesForVps, type IpAddress } from '../../../lib/api/ipAddresses';
+import { fetchIpAddressesForVps, freeIpAddressRoute, type IpAddress } from '../../../lib/api/ipAddresses';
 import {
   createHostIpAddress,
   deleteHostIpAddress,
@@ -158,6 +158,7 @@ export function VpsNetworkPage() {
   const [createHostForIp, setCreateHostForIp] = useState<IpAddress | null>(null);
   const [createHostValue, setCreateHostValue] = useState('');
   const [deleteHost, setDeleteHost] = useState<HostIpAddress | null>(null);
+  const [freeRouteIp, setFreeRouteIp] = useState<IpAddress | null>(null);
 
   const openEdit = (ni: NetworkInterface) => {
     setEditNetif(ni);
@@ -417,6 +418,25 @@ export function VpsNetworkPage() {
     onSettled: () => chrome.releaseLocalLock(vpsRef),
   });
 
+  const freeRouteM = useMutation({
+    mutationFn: async () => {
+      if (!freeRouteIp) throw new Error(t('vps.network.ip_addresses.validation.missing'));
+      await preflightVpsNotBusy({ vpsId, t, knownBusy: busyTransaction || busyLocalLock });
+      return freeIpAddressRoute(freeRouteIp.id);
+    },
+    onMutate: () => chrome.acquireLocalLock(vpsRef),
+    onSuccess: async (res) => {
+      setFreeRouteIp(null);
+      trackNetworkAction(res.meta, 'action.vps.network.route_free.label');
+      await refreshNetworkData();
+      pushToast({ variant: 'ok', title: t('vps.network.ip_addresses.toast.route_freed') });
+    },
+    onError: (e: any) => {
+      if (e?.code === 'BUSY') chrome.openTasks();
+    },
+    onSettled: () => chrome.releaseLocalLock(vpsRef),
+  });
+
   const busyLocal =
     busyLocalLock ||
     updateNetifM.isPending ||
@@ -424,7 +444,8 @@ export function VpsNetworkPage() {
     updatePtrM.isPending ||
     createHostM.isPending ||
     freeHostM.isPending ||
-    deleteHostM.isPending;
+    deleteHostM.isPending ||
+    freeRouteM.isPending;
   const gate = gateVpsMutation({ vps, busyLocal, busyTransaction });
 
   const netifs = netifsQ.data ?? [];
@@ -782,6 +803,17 @@ export function VpsNetworkPage() {
                                       >
                                         {t('vps.network.ip_addresses.action.host_create')}
                                       </ActionButton>
+                                      <ActionButton
+                                        variant="danger"
+                                        size="sm"
+                                        testId={`vps.network.ip_addresses.item.${ip.id}.free_route`}
+                                        disabled={!gate.allowed}
+                                        disabledReason={!gate.allowed ? gate.reason : undefined}
+                                        loading={freeRouteM.isPending}
+                                        onClick={() => setFreeRouteIp(ip)}
+                                      >
+                                        {t('vps.network.ip_addresses.action.free_route')}
+                                      </ActionButton>
                                     </>
                                   ) : null}
                                 </div>
@@ -919,13 +951,14 @@ export function VpsNetworkPage() {
               </div>
             )}
 
-            {(updatePtrM.error || createHostM.error || freeHostM.error || deleteHostM.error) ? (
+            {(updatePtrM.error || createHostM.error || freeHostM.error || deleteHostM.error || freeRouteM.error) ? (
               <Alert title={t('vps.network.host_addresses.action_error')} variant="danger" className="mt-3">
                 {String(
                   (updatePtrM.error as any)?.message ??
                     (createHostM.error as any)?.message ??
                     (freeHostM.error as any)?.message ??
                     (deleteHostM.error as any)?.message ??
+                    (freeRouteM.error as any)?.message ??
                     t('common.unknown_error')
                 )}
               </Alert>
@@ -1146,6 +1179,25 @@ export function VpsNetworkPage() {
         confirmDisabled={!gate.allowed}
         onCancel={() => setDeleteHost(null)}
         onConfirm={() => deleteHostM.mutate()}
+      />
+
+      <ConfirmDialog
+        testId="vps.network.ip_addresses.free_route_confirm"
+        open={!!freeRouteIp}
+        title={t('vps.network.ip_addresses.free_route.title')}
+        description={
+          freeRouteIp
+            ? t('vps.network.ip_addresses.free_route.description', {
+                address: String((freeRouteIp as any).addr ?? (freeRouteIp as any).address ?? `#${freeRouteIp.id}`),
+              })
+            : ''
+        }
+        danger
+        confirmLabel={t('vps.network.ip_addresses.action.free_route')}
+        confirmLoading={freeRouteM.isPending}
+        confirmDisabled={!gate.allowed}
+        onCancel={() => setFreeRouteIp(null)}
+        onConfirm={() => freeRouteM.mutate()}
       />
 
       <ConfirmDialog

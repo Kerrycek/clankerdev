@@ -1,5 +1,7 @@
 // Ops locale chunk: action
 export const enOps_action = {
+  "action.dataset.create.label": "Create dataset",
+  "action.dataset.delete.label": "Delete dataset",
   "action.dataset.download.create.label": "Create snapshot download",
   "action.dataset.download.delete.label": "Delete snapshot download",
   "action.dataset.expansion.add_space.label": "Add dataset expansion space",
@@ -10,6 +12,7 @@ export const enOps_action = {
   "action.dataset.snapshot.create.label": "Create snapshot",
   "action.dataset.snapshot.delete.label": "Delete snapshot",
   "action.dataset.snapshot.rollback.label": "Rollback snapshot",
+  "action.dataset.update.label": "Update dataset",
   "action.dns.record.create.label": "Add DNS record",
   "action.dns.record.delete.label": "Delete DNS record",
   "action.dns.record.update.label": "Update DNS record",

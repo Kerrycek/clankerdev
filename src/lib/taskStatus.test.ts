@@ -63,7 +63,7 @@ describe('objectStateBadge', () => {
     expect(objectStateBadge('inactive', t)).toEqual({ variant: 'warn', label: 'state.inactive' });
     expect(objectStateBadge('stopped', t)).toEqual({ variant: 'danger', label: 'state.stopped' });
     expect(objectStateBadge('suspended', t)).toEqual({ variant: 'warn', label: 'state.suspended' });
-    expect(objectStateBadge('deleted', t)).toEqual({ variant: 'danger', label: 'state.deleted' });
+    expect(objectStateBadge('deleted', t)).toEqual({ variant: 'neutral', label: 'state.deleted' });
     expect(objectStateBadge(undefined, t)).toEqual({ variant: 'neutral', label: 'state.unknown' });
   });
 });

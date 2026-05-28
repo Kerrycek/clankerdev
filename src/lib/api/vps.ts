@@ -105,6 +105,11 @@ export interface VpsReinstallPayload {
   user_data_content?: string;
 }
 
+export interface VpsBootPayload {
+  os_template?: number;
+  mount_root_dataset?: string;
+}
+
 export interface VpsMigratePayload {
   node: number;
   replace_ip_addresses?: boolean;
@@ -293,6 +298,15 @@ export async function vpsReplace(vpsId: number, params: VpsReplacePayload) {
   return haveApiCall<Vps>({
     method: 'POST',
     path: `/vpses/${vpsId}/replace`,
+    namespace: 'vps',
+    params: { ...params },
+  });
+}
+
+export async function vpsBoot(vpsId: number, params: VpsBootPayload) {
+  return haveApiCall<null>({
+    method: 'POST',
+    path: `/vpses/${vpsId}/boot`,
     namespace: 'vps',
     params: { ...params },
   });

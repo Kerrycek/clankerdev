@@ -92,6 +92,20 @@ function renderRoute(pathname: string) {
   );
 }
 
+async function findVisibleText(text: string) {
+  const els = await screen.findAllByText(text);
+  const visible = els.find((el) => {
+    try {
+      expect(el).toBeVisible();
+      return true;
+    } catch {
+      return false;
+    }
+  });
+  expect(visible).toBeTruthy();
+  return visible as HTMLElement;
+}
+
 describe('OAuth auth flow pages', () => {
   beforeEach(() => {
     vi.mocked(getRuntimeConfig).mockReturnValue(createRuntimeConfig());
@@ -119,7 +133,7 @@ describe('OAuth auth flow pages', () => {
 
     renderRoute('/oauth/login?next=/ui-next/admin/users');
 
-    expect(await screen.findByText('oauth.login.error.title')).toBeVisible();
+    expect(await findVisibleText('oauth.login.error.title')).toBeVisible();
     expect(startOAuth2Login).toHaveBeenCalledWith(createRuntimeConfig(), '/ui-next/admin/users');
     expect(screen.getByRole('link', { name: /nav.status/i })).toHaveAttribute('href', '/ui-next');
   });
@@ -145,7 +159,7 @@ describe('OAuth auth flow pages', () => {
 
     renderRoute('/oauth/callback?code=abc&state=def');
 
-    expect(await screen.findByText('oauth.callback.error.title')).toBeVisible();
+    expect(await findVisibleText('oauth.callback.error.title')).toBeVisible();
     expect(screen.getByRole('link', { name: /oauth.callback.action.sign_in_again/i })).toHaveAttribute(
       'href',
       '/ui-next/oauth/login?next=%2Fui-next%2Fapp',
@@ -170,7 +184,7 @@ describe('OAuth auth flow pages', () => {
 
     renderRoute('/oauth/logout');
 
-    expect(await screen.findByText('oauth.logout.error.title')).toBeVisible();
+    expect(await findVisibleText('oauth.logout.error.title')).toBeVisible();
     expect(clearImpersonationState).not.toHaveBeenCalled();
     expect(hardReplace).not.toHaveBeenCalled();
     expect(screen.getByRole('link', { name: /nav.status/i })).toHaveAttribute('href', '/ui-next');

@@ -1,5 +1,7 @@
 // Ops locale chunk: action
 export const csOps_action = {
+  "action.dataset.create.label": "Vytvořit dataset",
+  "action.dataset.delete.label": "Smazat dataset",
   "action.dataset.download.create.label": "Vytvořit stažení snapshotu",
   "action.dataset.download.delete.label": "Smazat stažení snapshotu",
   "action.dataset.expansion.add_space.label": "Přidat místo do rozšíření datasetu",
@@ -10,6 +12,7 @@ export const csOps_action = {
   "action.dataset.snapshot.create.label": "Vytvořit snapshot",
   "action.dataset.snapshot.delete.label": "Smazat snapshot",
   "action.dataset.snapshot.rollback.label": "Vrátit snapshot",
+  "action.dataset.update.label": "Upravit dataset",
   "action.dns.record.create.label": "Přidat DNS záznam",
   "action.dns.record.delete.label": "Smazat DNS záznam",
   "action.dns.record.update.label": "Upravit DNS záznam",

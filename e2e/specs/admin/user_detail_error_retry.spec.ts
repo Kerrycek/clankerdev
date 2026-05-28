@@ -6,13 +6,14 @@ test('@smoke admin user detail: ErrorState retry recovers after a transient API 
   await bootstrapVpsAdminWindow(page);
 
   let calls = 0;
+  let allowSuccess = false;
 
   await installHaveApiMock(page, {
     user: { id: 1, login: 'admin', level: 100 },
     handlers: {
       'GET users/42': () => {
         calls += 1;
-        if (calls === 1) {
+        if (!allowSuccess) {
           return failEnvelope('Temporary failure');
         }
 
@@ -35,11 +36,13 @@ test('@smoke admin user detail: ErrorState retry recovers after a transient API 
 
   await expect(page.getByTestId('admin.user.page')).toBeVisible();
 
-  await expect(page.getByTestId('admin.user.error')).toBeVisible();
+  await expect(page.getByTestId('admin.user.error')).toBeVisible({ timeout: 20_000 });
   await expect(page.getByTestId('admin.user.error.retry')).toBeVisible();
   await expect(page.getByTestId('admin.user.error.back')).toHaveAttribute('href', '/admin/users');
 
+  allowSuccess = true;
   await page.getByTestId('admin.user.error.retry').click();
 
   await expect(page.getByTestId('admin.user.header')).toBeVisible();
+  expect(calls).toBeGreaterThan(1);
 });

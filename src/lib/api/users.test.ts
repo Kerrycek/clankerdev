@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { fetchUsers, updateUser } from './users';
+import { createUser, deleteUser, fetchUsers, updateUser } from './users';
 
 function makeOkResponse(body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -185,5 +185,83 @@ describe('updateUser', () => {
     });
     expect(init.method).toBe('PUT');
     expect(init.headers).toMatchObject({ 'X-Auth-Token': 'tok_123' });
+  });
+});
+
+describe('admin user mutations', () => {
+  function installApiFixture() {
+    (window as any).vpsAdmin = {
+      api: { url: 'https://api.example.test', version: 'v7.0' },
+      sessionToken: 'tok_123',
+      description: {
+        meta: { namespace: '_meta' },
+        authentication: {
+          token: { http_header: 'X-Auth-Token' },
+        },
+      },
+    };
+  }
+
+  it('creates a user through the user namespace', async () => {
+    installApiFixture();
+
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      makeOkResponse({
+        status: true,
+        response: { user: { id: 42, login: 'newbie', level: 2 } },
+      })
+    );
+
+    await createUser({
+      login: 'newbie',
+      password: 'Secret123456',
+      full_name: 'New User',
+      email: 'newbie@example.test',
+      address: 'Test street',
+      level: 2,
+      info: 'created from webui',
+      monthly_payment: 300,
+      mailer_enabled: true,
+    });
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const parsed = new URL(url);
+
+    expect(parsed.pathname).toBe('/v7.0/users');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(String(init.body))).toEqual({
+      user: {
+        login: 'newbie',
+        password: 'Secret123456',
+        full_name: 'New User',
+        email: 'newbie@example.test',
+        address: 'Test street',
+        level: 2,
+        info: 'created from webui',
+        monthly_payment: 300,
+        mailer_enabled: true,
+      },
+    });
+  });
+
+  it('deletes a user with the selected object state', async () => {
+    installApiFixture();
+
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      makeOkResponse({ status: true, response: {} })
+    );
+
+    await deleteUser(42, { object_state: 'deleted' });
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const parsed = new URL(url);
+
+    expect(parsed.pathname).toBe('/v7.0/users/42');
+    expect(init.method).toBe('DELETE');
+    expect(JSON.parse(String(init.body))).toEqual({
+      user: {
+        object_state: 'deleted',
+      },
+    });
   });
 });

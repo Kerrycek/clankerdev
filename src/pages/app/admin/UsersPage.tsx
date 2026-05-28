@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { CircleHelp, SlidersHorizontal } from 'lucide-react';
 
 import { useAppMode } from '../../../app/appMode';
 import { useI18n } from '../../../app/i18n';
 import { useToasts } from '../../../app/toasts';
 
-import { fetchUsers } from '../../../lib/api/users';
+import { createUser, fetchUsers, type CreateUserPayload } from '../../../lib/api/users';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 import { cursorFromDescendingPage } from '../../../lib/lockIndex';
 import { parseBoolParam, parseNonNegativeInt } from '../../../lib/parse';
@@ -19,6 +19,7 @@ import { PageHeader } from '../../../components/layout/PageHeader';
 
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
+import { Checkbox } from '../../../components/ui/Checkbox';
 import { CopyButton } from '../../../components/ui/CopyButton';
 import { Drawer } from '../../../components/ui/Drawer';
 import { EmptyState } from '../../../components/ui/EmptyState';
@@ -27,6 +28,7 @@ import { FilterChip } from '../../../components/ui/FilterChip';
 import { Input } from '../../../components/ui/Input';
 import { KeysetPagination } from '../../../components/ui/KeysetPagination';
 import { LoadingState } from '../../../components/ui/LoadingState';
+import { Modal } from '../../../components/ui/Modal';
 import { Select } from '../../../components/ui/Select';
 import { SmartFilterInput, type SmartFilterSuggestion } from '../../../components/ui/SmartFilterInput';
 import { SmartInputHelp } from '../../../components/ui/SmartInputHelp';
@@ -36,6 +38,32 @@ import { UsersListTable } from './users/UsersListTable';
 import { type UserListRecord } from './users/userListSemantics';
 
 type RoleFilter = '' | 'user' | 'support' | 'admin';
+
+interface CreateUserDraft {
+  login: string;
+  password: string;
+  password2: string;
+  fullName: string;
+  email: string;
+  address: string;
+  level: string;
+  info: string;
+  monthlyPayment: string;
+  mailerEnabled: boolean;
+}
+
+const initialCreateUserDraft: CreateUserDraft = {
+  login: '',
+  password: '',
+  password2: '',
+  fullName: '',
+  email: '',
+  address: '',
+  level: '2',
+  info: '',
+  monthlyPayment: '300',
+  mailerEnabled: true,
+};
 
 function normalizeRole(raw: string | null | undefined): RoleFilter {
   const v = String(raw ?? '').trim().toLowerCase();
@@ -207,6 +235,81 @@ export function UsersPage() {
 
   const [helpOpen, setHelpOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createDraft, setCreateDraft] = useState<CreateUserDraft>(initialCreateUserDraft);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  const setCreateField = <K extends keyof CreateUserDraft>(key: K, value: CreateUserDraft[K]) => {
+    setCreateDraft((prev) => ({ ...prev, [key]: value }));
+    if (createError) setCreateError(null);
+  };
+
+  const buildCreatePayload = (): CreateUserPayload | null => {
+    const login = createDraft.login.trim();
+    const password = createDraft.password;
+    const password2 = createDraft.password2;
+    const level = Number(createDraft.level);
+    const monthly = createDraft.monthlyPayment.trim() ? Number(createDraft.monthlyPayment) : undefined;
+
+    if (!login) {
+      setCreateError(t('admin.users.create.validation.login'));
+      return null;
+    }
+
+    if (!password) {
+      setCreateError(t('admin.users.create.validation.password'));
+      return null;
+    }
+
+    if (password !== password2) {
+      setCreateError(t('admin.users.create.validation.password_match'));
+      return null;
+    }
+
+    if (!Number.isFinite(level) || level < 0) {
+      setCreateError(t('admin.users.create.validation.level'));
+      return null;
+    }
+
+    if (monthly !== undefined && (!Number.isFinite(monthly) || monthly < 0)) {
+      setCreateError(t('admin.users.create.validation.monthly_payment'));
+      return null;
+    }
+
+    return {
+      login,
+      password,
+      full_name: createDraft.fullName.trim() || undefined,
+      email: createDraft.email.trim() || undefined,
+      address: createDraft.address.trim() || undefined,
+      level,
+      info: createDraft.info.trim() || undefined,
+      monthly_payment: monthly,
+      mailer_enabled: createDraft.mailerEnabled,
+    };
+  };
+
+  const createM = useMutation({
+    mutationFn: async () => {
+      const payload = buildCreatePayload();
+      if (!payload) throw new Error('validation');
+      return createUser(payload);
+    },
+    onSuccess: (res) => {
+      const user = res.data as any;
+      const id = Number(user?.id);
+      setCreateOpen(false);
+      setCreateDraft(initialCreateUserDraft);
+      setCreateError(null);
+      void listQ.refetch();
+      toasts.pushToast({ variant: 'ok', title: t('admin.users.create.toast.created') });
+      if (Number.isFinite(id) && id > 0) navigate(`${basePath}/users/${id}`);
+    },
+    onError: (err: any) => {
+      if (String(err?.message ?? '') === 'validation') return;
+      setCreateError(String(err?.message ?? err));
+    },
+  });
 
   useEffect(() => {
     if (smartNeedle === '?') setHelpOpen(true);
@@ -613,6 +716,10 @@ export function UsersPage() {
               <span className="ml-2 hidden sm:inline">{t('filters.advanced.label')}</span>
             </Button>
 
+            <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)} testId="admin.users.create.open">
+              {t('admin.users.create.open')}
+            </Button>
+
             <CopyButton
               size="sm"
               variant="secondary"
@@ -786,6 +893,147 @@ export function UsersPage() {
               )}
             </div>
           </Drawer>
+
+          <Modal
+            open={createOpen}
+            onClose={() => {
+              if (createM.isPending) return;
+              setCreateOpen(false);
+              setCreateError(null);
+            }}
+            title={t('admin.users.create.title')}
+            size="lg"
+            testId="admin.users.create.modal"
+            footer={
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setCreateOpen(false);
+                    setCreateError(null);
+                  }}
+                  disabled={createM.isPending}
+                >
+                  {t('common.cancel')}
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() => createM.mutate()}
+                  loading={createM.isPending}
+                  testId="admin.users.create.submit"
+                >
+                  {t('admin.users.create.submit')}
+                </Button>
+              </div>
+            }
+          >
+            <div className="space-y-4">
+              {createError ? (
+                <div className="rounded-md border border-danger-border bg-danger-surface px-3 py-2 text-sm text-danger">
+                  {createError}
+                </div>
+              ) : null}
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="text-sm font-medium">{t('admin.users.create.field.login')}</span>
+                  <Input
+                    value={createDraft.login}
+                    onChange={(e) => setCreateField('login', e.target.value)}
+                    autoComplete="off"
+                    testId="admin.users.create.login"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-sm font-medium">{t('admin.users.create.field.level')}</span>
+                  <Input
+                    value={createDraft.level}
+                    onChange={(e) => setCreateField('level', e.target.value)}
+                    inputMode="numeric"
+                    testId="admin.users.create.level"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-sm font-medium">{t('admin.users.create.field.password')}</span>
+                  <Input
+                    type="password"
+                    value={createDraft.password}
+                    onChange={(e) => setCreateField('password', e.target.value)}
+                    autoComplete="new-password"
+                    testId="admin.users.create.password"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-sm font-medium">{t('admin.users.create.field.password2')}</span>
+                  <Input
+                    type="password"
+                    value={createDraft.password2}
+                    onChange={(e) => setCreateField('password2', e.target.value)}
+                    autoComplete="new-password"
+                    testId="admin.users.create.password2"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-sm font-medium">{t('admin.users.create.field.full_name')}</span>
+                  <Input
+                    value={createDraft.fullName}
+                    onChange={(e) => setCreateField('fullName', e.target.value)}
+                    testId="admin.users.create.full_name"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-sm font-medium">{t('admin.users.create.field.email')}</span>
+                  <Input
+                    type="email"
+                    value={createDraft.email}
+                    onChange={(e) => setCreateField('email', e.target.value)}
+                    testId="admin.users.create.email"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="text-sm font-medium">{t('admin.users.create.field.monthly_payment')}</span>
+                  <Input
+                    value={createDraft.monthlyPayment}
+                    onChange={(e) => setCreateField('monthlyPayment', e.target.value)}
+                    inputMode="decimal"
+                    testId="admin.users.create.monthly_payment"
+                  />
+                </label>
+
+                <Checkbox
+                  checked={createDraft.mailerEnabled}
+                  onChange={(checked) => setCreateField('mailerEnabled', checked)}
+                  label={t('admin.users.create.field.mailer_enabled')}
+                  testId="admin.users.create.mailer_enabled"
+                />
+
+                <label className="block sm:col-span-2">
+                  <span className="text-sm font-medium">{t('admin.users.create.field.address')}</span>
+                  <Input
+                    value={createDraft.address}
+                    onChange={(e) => setCreateField('address', e.target.value)}
+                    testId="admin.users.create.address"
+                  />
+                </label>
+
+                <label className="block sm:col-span-2">
+                  <span className="text-sm font-medium">{t('admin.users.create.field.info')}</span>
+                  <textarea
+                    className="mt-1 min-h-24 w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-fg"
+                    value={createDraft.info}
+                    onChange={(e) => setCreateField('info', e.target.value)}
+                    data-testid="admin.users.create.info"
+                  />
+                </label>
+              </div>
+            </div>
+          </Modal>
         </>
       }
     >

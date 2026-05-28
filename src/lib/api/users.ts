@@ -301,12 +301,42 @@ export async function fetchUser(userId: number) {
   });
 }
 
+export interface CreateUserPayload extends Record<string, unknown> {
+  login: string;
+  password: string;
+  full_name?: string;
+  email?: string;
+  address?: string;
+  level: number;
+  info?: string;
+  monthly_payment?: number;
+  mailer_enabled?: boolean;
+}
+
+export async function createUser(payload: CreateUserPayload) {
+  return haveApiCall<User>({
+    method: 'POST',
+    path: '/users',
+    namespace: 'user',
+    params: payload,
+  });
+}
+
 export async function updateUser(userId: number, payload: Record<string, unknown>) {
   return haveApiCall<User>({
     method: 'PUT',
     path: `/users/${userId}`,
     namespace: 'user',
     params: payload,
+  });
+}
+
+export async function deleteUser(userId: number, payload?: { object_state?: string }) {
+  return haveApiCall<void>({
+    method: 'DELETE',
+    path: `/users/${userId}`,
+    namespace: 'user',
+    params: payload ?? {},
   });
 }
 
