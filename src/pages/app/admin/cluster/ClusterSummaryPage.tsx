@@ -223,7 +223,7 @@ export function ClusterSummaryPage() {
           <CardHeader title={t('admin.cluster.summary.shortcuts.ops.title')} subtitle={t('admin.cluster.summary.shortcuts.ops.subtitle')} />
           <CardBody>
             <div className="flex flex-wrap gap-2">
-              <LinkButton to="/outages" variant="secondary" size="sm">
+              <LinkButton to="/admin/outages" variant="secondary" size="sm">
                 {t('admin.cluster.summary.shortcuts.outages')}
               </LinkButton>
               <LinkButton to="/admin/monitoring" variant="secondary" size="sm">

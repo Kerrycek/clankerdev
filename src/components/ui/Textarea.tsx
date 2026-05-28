@@ -13,8 +13,9 @@ export function Textarea(props: {
   onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   disabled?: boolean;
   className?: string;
+  label?: React.ReactNode;
 }) {
-  return (
+  const textarea = (
     <textarea
       data-testid={props.testId}
       aria-label={props.ariaLabel}
@@ -32,5 +33,14 @@ export function Textarea(props: {
         props.className
       )}
     />
+  );
+
+  if (!props.label) return textarea;
+
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-semibold text-muted">{props.label}</span>
+      {textarea}
+    </label>
   );
 }

@@ -14,6 +14,7 @@ import { enAdmin_networking } from './admin/networking';
 import { enAdmin_newslog } from './admin/newslog';
 import { enAdmin_node } from './admin/node';
 import { enAdmin_nodes } from './admin/nodes';
+import { enAdmin_outages } from './admin/outages';
 import { enAdmin_state } from './admin/state';
 import { enAdmin_user } from './admin/user';
 import { enAdmin_userns } from './admin/userns';
@@ -35,6 +36,7 @@ export const enAdmin = {
   ...enAdmin_newslog,
   ...enAdmin_node,
   ...enAdmin_nodes,
+  ...enAdmin_outages,
   ...enAdmin_state,
   ...enAdmin_user,
   ...enAdmin_userns,

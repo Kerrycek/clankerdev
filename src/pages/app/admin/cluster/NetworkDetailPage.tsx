@@ -6,6 +6,7 @@ import { useI18n } from '../../../../app/i18n';
 import { useToasts } from '../../../../app/toasts';
 import { formatErrorMessage } from '../../../../lib/errors';
 
+import { Alert } from '../../../../components/ui/Alert';
 import { Badge } from '../../../../components/ui/Badge';
 import { Button } from '../../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../../components/ui/Card';
@@ -31,7 +32,7 @@ import {
   updateLocationNetwork,
   type LocationNetwork,
 } from '../../../../lib/api/locationNetworks';
-import { fetchNetwork, type Network } from '../../../../lib/api/networks';
+import { addNetworkAddresses, fetchNetwork, type Network } from '../../../../lib/api/networks';
 
 function locLabel(l: Location | null | undefined): string {
   const x: any = l ?? {};
@@ -159,6 +160,8 @@ export function NetworkDetailPage() {
   const [editor, setEditor] = useState<LnEditorState>(null);
   const [form, setForm] = useState<LnFormState>(() => initLnForm());
   const [deleteState, setDeleteState] = useState<{ open: boolean; ln?: LocationNetwork }>(() => ({ open: false }));
+  const [addAddressesOpen, setAddAddressesOpen] = useState(false);
+  const [addAddressesForm, setAddAddressesForm] = useState({ count: '1', user: '', environment: '' });
 
   const openCreate = () => {
     setForm(initLnForm());
@@ -233,6 +236,33 @@ export function NetworkDetailPage() {
       await qc.invalidateQueries({ queryKey: ['networks'] });
       pushToast({ variant: 'ok', title: t('admin.cluster.network_detail.toast.removed') });
       setDeleteState({ open: false });
+    },
+    onError: (e) => pushToast({ variant: 'danger', title: t('common.error'), body: formatErrorMessage(e) }),
+  });
+
+  const addAddressesM = useMutation({
+    mutationFn: async () => {
+      if (!id) throw new Error('Missing id');
+      const count = parsePositiveInt(addAddressesForm.count);
+      if (!count) throw new Error('Missing count');
+      const user = parsePositiveInt(addAddressesForm.user);
+      const environment = parsePositiveInt(addAddressesForm.environment);
+      return addNetworkAddresses({
+        id,
+        count,
+        user: user ?? undefined,
+        environment: environment ?? undefined,
+      });
+    },
+    onSuccess: async (res) => {
+      await qc.invalidateQueries({ queryKey: ['network', id] });
+      await qc.invalidateQueries({ queryKey: ['networks'] });
+      pushToast({
+        variant: 'ok',
+        title: t('admin.cluster.network_detail.add_addresses.toast'),
+        body: t('admin.cluster.network_detail.add_addresses.toast_body', { count: (res.data as any)?.count ?? addAddressesForm.count }),
+      });
+      setAddAddressesOpen(false);
     },
     onError: (e) => pushToast({ variant: 'danger', title: t('common.error'), body: formatErrorMessage(e) }),
   });
@@ -314,6 +344,9 @@ export function NetworkDetailPage() {
           <>
             <Button variant="secondary" onClick={() => lnQ.refetch()}>
               {t('common.refresh')}
+            </Button>
+            <Button variant="secondary" onClick={() => setAddAddressesOpen(true)} testId="admin.cluster.network_detail.add_addresses">
+              {t('admin.cluster.network_detail.add_addresses.action')}
             </Button>
             <Button variant="primary" onClick={openCreate} testId="admin.cluster.network_detail.add_location">
               {t('admin.cluster.network_detail.add_location')}
@@ -540,6 +573,56 @@ export function NetworkDetailPage() {
         loading={deleteM.isPending}
         testId="admin.cluster.network_detail.remove.confirm"
       />
+
+      <Modal
+        open={addAddressesOpen}
+        title={t('admin.cluster.network_detail.add_addresses.title')}
+        onClose={() => (addAddressesM.isPending ? null : setAddAddressesOpen(false))}
+        testId="admin.cluster.network_detail.add_addresses.modal"
+        footer={
+          <div className="flex items-center justify-end gap-2">
+            <Button variant="secondary" onClick={() => setAddAddressesOpen(false)} disabled={addAddressesM.isPending}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="primary"
+              loading={addAddressesM.isPending}
+              onClick={() => addAddressesM.mutate()}
+              disabled={!parsePositiveInt(addAddressesForm.count)}
+              testId="admin.cluster.network_detail.add_addresses.save"
+            >
+              {t('admin.cluster.network_detail.add_addresses.confirm')}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <Alert title={t('admin.cluster.network_detail.add_addresses.notice.title')} variant="warn">
+            {t('admin.cluster.network_detail.add_addresses.notice.body')}
+          </Alert>
+          <Input
+            testId="admin.cluster.network_detail.add_addresses.count"
+            label={t('admin.cluster.network_detail.add_addresses.count')}
+            value={addAddressesForm.count}
+            onChange={(e) => setAddAddressesForm((p) => ({ ...p, count: e.target.value }))}
+            inputMode="numeric"
+          />
+          <Input
+            testId="admin.cluster.network_detail.add_addresses.user"
+            label={t('admin.cluster.network_detail.add_addresses.user')}
+            value={addAddressesForm.user}
+            onChange={(e) => setAddAddressesForm((p) => ({ ...p, user: e.target.value }))}
+            inputMode="numeric"
+          />
+          <Input
+            testId="admin.cluster.network_detail.add_addresses.environment"
+            label={t('admin.cluster.network_detail.add_addresses.environment')}
+            value={addAddressesForm.environment}
+            onChange={(e) => setAddAddressesForm((p) => ({ ...p, environment: e.target.value }))}
+            inputMode="numeric"
+          />
+        </div>
+      </Modal>
     </div>
   );
 }

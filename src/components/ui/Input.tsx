@@ -20,10 +20,11 @@ export interface InputProps {
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   disabled?: boolean;
   className?: string;
+  label?: React.ReactNode;
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Input(props, ref) {
-  return (
+  const input = (
     <input
       ref={ref}
       data-testid={props.testId}
@@ -50,5 +51,14 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Inp
         props.className
       )}
     />
+  );
+
+  if (!props.label) return input;
+
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-semibold text-muted">{props.label}</span>
+      {input}
+    </label>
   );
 });
