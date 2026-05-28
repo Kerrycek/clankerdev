@@ -167,6 +167,7 @@ export const csOps_transactions = {
   "transactions.link.show_items_title_with_label": "{text} · {label} · zobrazit jednotlivé transakce",
   "transactions.search.id_lookup": "Režim vyhledání podle ID",
   "transactions.tx.depends_on": "Závisí na:",
+  "transactions.tx.done_label": "Dokončeno",
   "transactions.tx.details": "Detaily (input/output)",
   "transactions.tx.duration": "{sec} s",
   "transactions.tx.duration_label": "Doba trvání",

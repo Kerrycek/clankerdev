@@ -167,6 +167,7 @@ export const enOps_transactions = {
   "transactions.link.show_items_title_with_label": "{text} · {label} · show individual transactions",
   "transactions.search.id_lookup": "ID lookup mode",
   "transactions.tx.depends_on": "Depends on:",
+  "transactions.tx.done_label": "Done",
   "transactions.tx.details": "Details (input/output)",
   "transactions.tx.duration": "{sec}s",
   "transactions.tx.duration_label": "Duration",

@@ -7,5 +7,10 @@ export const enOps_action_state = {
   "action_state.load_error.title": "Failed to load action state",
   "action_state.not_found.body": "No data returned.",
   "action_state.not_found.title": "Action state not found",
+  "action_state.section.debug": "Backend details",
+  "action_state.section.debug_subtitle": "Raw action-state fields useful for debugging errors and backend output.",
+  "action_state.section.transactions": "Chained transactions",
+  "action_state.section.transactions_subtitle": "Transaction chain #{id}",
+  "action_state.section.transactions_subtitle_empty": "No related transaction chain was reported.",
   "action_state.title_fallback": "Action state #{id}",
 } as const;
