@@ -48,6 +48,11 @@ export interface OutagePayload {
   cs_description?: string;
 }
 
+export interface OutageSystemsPayload {
+  entities: Array<{ name: string; entity_id?: number | null }>;
+  handlers: number[];
+}
+
 export interface OutageUpdatePayload {
   outage: number;
   send_mail?: boolean;
@@ -134,6 +139,13 @@ export async function createOutage(params: OutagePayload) {
   });
 }
 
+export async function createOutageWithSystems(params: OutagePayload, systems: OutageSystemsPayload) {
+  const res = await createOutage(params);
+  const outageId = res.data.id;
+  await applyOutageSystems(outageId, [], [], systems);
+  return res;
+}
+
 export async function updateOutage(outageId: number, params: OutagePayload) {
   return haveApiCall<Outage>({
     method: 'PUT',
@@ -189,6 +201,52 @@ export async function deleteOutageHandler(outageId: number, handlerId: number) {
     method: 'DELETE',
     path: `/outages/${outageId}/handlers/${handlerId}`,
   });
+}
+
+export function outageHandlerUserId(h: OutageHandler): number | null {
+  const raw = (h as any).user_id ?? (h as any).user?.id;
+  return typeof raw === 'number' && Number.isFinite(raw) ? raw : null;
+}
+
+function outageEntityKey(name: string, entityId: number | null | undefined): string {
+  return `${name}:${entityId ?? ''}`;
+}
+
+export async function applyOutageSystems(
+  outageId: number,
+  currentEntities: OutageEntity[],
+  currentHandlers: OutageHandler[],
+  wanted: OutageSystemsPayload
+) {
+  const wantedEntities = wanted.entities;
+  const wantedKeys = new Set(wantedEntities.map((e) => outageEntityKey(e.name, e.entity_id)));
+  const currentKeys = new Set(currentEntities.map((e) => outageEntityKey(e.name, e.entity_id)));
+
+  for (const e of wantedEntities) {
+    if (!currentKeys.has(outageEntityKey(e.name, e.entity_id))) {
+      await createOutageEntity(outageId, { name: e.name, entity_id: e.entity_id ?? null });
+    }
+  }
+
+  for (const e of currentEntities) {
+    if (!wantedKeys.has(outageEntityKey(e.name, e.entity_id))) {
+      await deleteOutageEntity(outageId, e.id);
+    }
+  }
+
+  const wantedHandlers = new Set(wanted.handlers);
+  const currentHandlerIds = new Set(currentHandlers.map(outageHandlerUserId).filter((v): v is number => v !== null));
+
+  for (const user of wantedHandlers) {
+    if (!currentHandlerIds.has(user)) await createOutageHandler(outageId, { user });
+  }
+
+  for (const h of currentHandlers) {
+    const user = outageHandlerUserId(h);
+    if (user !== null && !wantedHandlers.has(user)) await deleteOutageHandler(outageId, h.id);
+  }
+
+  await rebuildOutageAffectedVps(outageId);
 }
 
 export async function fetchUserOutages(outageId: number) {

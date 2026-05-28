@@ -16,30 +16,31 @@ import { KeysetPagination } from '../../../components/ui/KeysetPagination';
 import { LinkButton } from '../../../components/ui/LinkButton';
 import { LoadingState } from '../../../components/ui/LoadingState';
 import { Modal } from '../../../components/ui/Modal';
+import { NodeLookupInput } from '../../../components/ui/NodeLookupInput';
 import { Select } from '../../../components/ui/Select';
 import { Spinner } from '../../../components/ui/Spinner';
 import { TableCard } from '../../../components/ui/TableCard';
 import { Textarea } from '../../../components/ui/Textarea';
+import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 import { formatErrorMessage } from '../../../lib/errors';
 import { formatDateTime } from '../../../lib/format';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 import { parsePositiveInt } from '../../../lib/parse';
 import { formatDurationMinutes } from '../../../lib/time';
+import { fetchEnvironments, fetchLocations } from '../../../lib/api/infra';
 import { outageBadges, outageUpdateBadges } from '../../../lib/outageBadges';
 import { fetchOutage, fetchOutageEntities, fetchOutageHandlers, fetchOutageUpdates } from '../../../lib/api/public';
 import type { Outage, OutageEntity, OutageHandler } from '../../../lib/api/public';
 import {
+  applyOutageSystems,
   createOutage,
-  createOutageEntity,
-  createOutageHandler,
+  createOutageWithSystems,
   createOutageUpdate,
-  deleteOutageEntity,
-  deleteOutageHandler,
   fetchAdminOutages,
   fetchExportOutages,
   fetchUserOutages,
   fetchVpsOutages,
-  rebuildOutageAffectedVps,
+  outageHandlerUserId,
   updateOutage,
   type OutagePayload,
   type OutageUpdatePayload,
@@ -70,6 +71,8 @@ type SystemsFormState = {
   handlers: string;
 };
 
+type OutageFormErrors = Partial<Record<'beginsAt' | 'duration' | 'type' | 'impact' | 'enSummary' | 'csSummary', string>>;
+
 const OUTAGE_TYPES = ['outage', 'maintenance'];
 const IMPACTS = ['tbd', 'performance', 'network', 'system_restart', 'system_reset', 'unavailability', 'export'];
 const STATES = ['staged', 'announced', 'cancelled', 'resolved'];
@@ -95,17 +98,8 @@ function intList(text: string): number[] {
     .filter((v) => Number.isInteger(v) && v > 0);
 }
 
-function entityKey(name: string, entityId: number | null | undefined): string {
-  return `${name}:${entityId ?? ''}`;
-}
-
 function entityLabel(ent: OutageEntity): string {
   return ent.label || `${ent.name}${ent.entity_id ? ` #${ent.entity_id}` : ''}`;
-}
-
-function handlerUserId(h: OutageHandler): number | null {
-  const raw = (h as any).user_id ?? (h as any).user?.id;
-  return typeof raw === 'number' && Number.isFinite(raw) ? raw : null;
 }
 
 function initOutageForm(outage?: Outage): OutageFormState {
@@ -178,7 +172,7 @@ function initSystemsForm(entities: OutageEntity[], handlers: OutageHandler[]): S
     locations: ids('Location'),
     nodes: ids('Node'),
     additional,
-    handlers: handlers.map(handlerUserId).filter(Boolean).join(', '),
+    handlers: handlers.map(outageHandlerUserId).filter(Boolean).join(', '),
   };
 }
 
@@ -193,23 +187,52 @@ function desiredEntities(form: SystemsFormState): Array<{ name: string; entity_i
   return out;
 }
 
+function desiredSystems(form: SystemsFormState) {
+  return {
+    entities: desiredEntities(form),
+    handlers: intList(form.handlers),
+  };
+}
+
+function validateOutageForm(form: OutageFormState, t: (key: any, vars?: any) => string, opts?: { requireType?: boolean }) {
+  const errors: OutageFormErrors = {};
+  if (!form.beginsAt.trim() || !Number.isFinite(new Date(form.beginsAt).getTime())) errors.beginsAt = t('admin.outages.validation.begins_at');
+  const duration = Number(form.duration);
+  if (!form.duration.trim() || !Number.isFinite(duration) || duration <= 0) errors.duration = t('admin.outages.validation.duration');
+  if (opts?.requireType !== false && !OUTAGE_TYPES.includes(form.type)) errors.type = t('admin.outages.validation.type');
+  if (!IMPACTS.includes(form.impact)) errors.impact = t('admin.outages.validation.impact');
+  if (!form.enSummary.trim()) errors.enSummary = t('admin.outages.validation.en_summary');
+  if (!form.csSummary.trim()) errors.csSummary = t('admin.outages.validation.cs_summary');
+  return errors;
+}
+
+function hasErrors(errors: OutageFormErrors) {
+  return Object.keys(errors).length > 0;
+}
+
+function ErrorText({ message }: { message?: string }) {
+  if (!message) return null;
+  return <div className="mt-1 text-xs text-danger">{message}</div>;
+}
+
 function OutageForm(props: {
   form: OutageFormState;
   setForm: React.Dispatch<React.SetStateAction<OutageFormState>>;
+  errors?: OutageFormErrors;
   includeState?: boolean;
   updateMode?: boolean;
 }) {
   const { t } = useI18n();
-  const { form, setForm } = props;
+  const { form, setForm, errors = {} } = props;
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-2">
-        <Input testId="admin.outages.form.begins_at" type="datetime-local" value={form.beginsAt} onChange={(e) => setForm((p) => ({ ...p, beginsAt: e.target.value }))} label={t('admin.outages.field.begins_at')} />
+        <div><Input testId="admin.outages.form.begins_at" type="datetime-local" value={form.beginsAt} onChange={(e) => setForm((p) => ({ ...p, beginsAt: e.target.value }))} label={t('admin.outages.field.begins_at')} /><ErrorText message={errors.beginsAt} /></div>
         <Input testId="admin.outages.form.finished_at" type="datetime-local" value={form.finishedAt} onChange={(e) => setForm((p) => ({ ...p, finishedAt: e.target.value }))} label={t('admin.outages.field.finished_at')} />
-        <Input testId="admin.outages.form.duration" inputMode="numeric" value={form.duration} onChange={(e) => setForm((p) => ({ ...p, duration: e.target.value }))} label={t('admin.outages.field.duration')} />
-        <Select testId="admin.outages.form.impact" value={form.impact} onChange={(e) => setForm((p) => ({ ...p, impact: e.target.value }))} label={t('admin.outages.field.impact')} options={IMPACTS.map((v) => ({ value: v, label: t(`outage.impact.${v}` as any) }))} />
+        <div><Input testId="admin.outages.form.duration" inputMode="numeric" value={form.duration} onChange={(e) => setForm((p) => ({ ...p, duration: e.target.value }))} label={t('admin.outages.field.duration')} /><ErrorText message={errors.duration} /></div>
+        <div><Select testId="admin.outages.form.impact" value={form.impact} onChange={(e) => setForm((p) => ({ ...p, impact: e.target.value }))} label={t('admin.outages.field.impact')} options={IMPACTS.map((v) => ({ value: v, label: t(`outage.impact.${v}` as any) }))} /><ErrorText message={errors.impact} /></div>
         {!props.updateMode ? (
-          <Select testId="admin.outages.form.type" value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))} label={t('admin.outages.field.type')} options={OUTAGE_TYPES.map((v) => ({ value: v, label: t(`outage.type.${v}` as any) }))} />
+          <div><Select testId="admin.outages.form.type" value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))} label={t('admin.outages.field.type')} options={OUTAGE_TYPES.map((v) => ({ value: v, label: t(`outage.type.${v}` as any) }))} /><ErrorText message={errors.type} /></div>
         ) : null}
         {props.includeState ? (
           <Select testId="admin.outages.form.state" value={form.state} onChange={(e) => setForm((p) => ({ ...p, state: e.target.value }))} label={t('admin.outages.field.state')} options={STATES.map((v) => ({ value: v, label: t(`admin.outages.state.${v}`) }))} />
@@ -227,11 +250,105 @@ function OutageForm(props: {
         </label>
       )}
       <div className="grid gap-3 md:grid-cols-2">
-        <Input testId="admin.outages.form.en_summary" value={form.enSummary} onChange={(e) => setForm((p) => ({ ...p, enSummary: e.target.value }))} label={t('admin.outages.field.en_summary')} />
-        <Input testId="admin.outages.form.cs_summary" value={form.csSummary} onChange={(e) => setForm((p) => ({ ...p, csSummary: e.target.value }))} label={t('admin.outages.field.cs_summary')} />
+        <div><Input testId="admin.outages.form.en_summary" value={form.enSummary} onChange={(e) => setForm((p) => ({ ...p, enSummary: e.target.value }))} label={t('admin.outages.field.en_summary')} /><ErrorText message={errors.enSummary} /></div>
+        <div><Input testId="admin.outages.form.cs_summary" value={form.csSummary} onChange={(e) => setForm((p) => ({ ...p, csSummary: e.target.value }))} label={t('admin.outages.field.cs_summary')} /><ErrorText message={errors.csSummary} /></div>
         <Textarea testId="admin.outages.form.en_description" value={form.enDescription} onChange={(e) => setForm((p) => ({ ...p, enDescription: e.target.value }))} label={t('admin.outages.field.en_description')} rows={4} />
         <Textarea testId="admin.outages.form.cs_description" value={form.csDescription} onChange={(e) => setForm((p) => ({ ...p, csDescription: e.target.value }))} label={t('admin.outages.field.cs_description')} rows={4} />
       </div>
+    </div>
+  );
+}
+
+function appendIdList(value: string, id: number) {
+  const ids = intList(value);
+  if (!ids.includes(id)) ids.push(id);
+  return ids.join(', ');
+}
+
+function SystemsEditor(props: {
+  form: SystemsFormState;
+  setForm: React.Dispatch<React.SetStateAction<SystemsFormState>>;
+}) {
+  const { t } = useI18n();
+  const [nodeLookup, setNodeLookup] = useState('');
+  const [handlerLookup, setHandlerLookup] = useState('');
+
+  const environmentsQ = useQuery({
+    queryKey: ['admin_outages', 'lookup', 'environments'],
+    queryFn: async () => (await fetchEnvironments({ limit: 250 })).data,
+    staleTime: 30_000,
+  });
+  const locationsQ = useQuery({
+    queryKey: ['admin_outages', 'lookup', 'locations'],
+    queryFn: async () => (await fetchLocations({ limit: 250 })).data,
+    staleTime: 30_000,
+  });
+
+  const envOptions = [{ value: '', label: t('common.select') }, ...(environmentsQ.data ?? []).map((e) => ({ value: String(e.id), label: `${e.label ?? e.domain ?? `#${e.id}`} (#${e.id})` }))];
+  const locationOptions = [{ value: '', label: t('common.select') }, ...(locationsQ.data ?? []).map((l) => ({ value: String(l.id), label: `${l.label ?? l.domain ?? `#${l.id}`} (#${l.id})` }))];
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 md:grid-cols-2">
+        <div>
+          <Select testId="admin.outages.systems.environments.select" label={t('admin.outages.systems.environments')} value="" onChange={(e) => {
+            const id = parsePositiveInt(e.target.value);
+            if (id) props.setForm((p) => ({ ...p, environments: appendIdList(p.environments, id) }));
+          }} options={envOptions} />
+          <div className="mt-1 text-xs text-muted">{props.form.environments || t('admin.outages.systems.none_selected')}</div>
+        </div>
+        <div>
+          <Select testId="admin.outages.systems.locations.select" label={t('admin.outages.systems.locations')} value="" onChange={(e) => {
+            const id = parsePositiveInt(e.target.value);
+            if (id) props.setForm((p) => ({ ...p, locations: appendIdList(p.locations, id) }));
+          }} options={locationOptions} />
+          <div className="mt-1 text-xs text-muted">{props.form.locations || t('admin.outages.systems.none_selected')}</div>
+        </div>
+        <div>
+          <div className="mb-1 text-xs font-semibold text-muted">{t('admin.outages.systems.nodes')}</div>
+          <div className="flex gap-2">
+            <NodeLookupInput testId="admin.outages.systems.nodes.lookup" value={nodeLookup} onChange={setNodeLookup} onPick={(node) => {
+              props.setForm((p) => ({ ...p, nodes: appendIdList(p.nodes, node.id) }));
+              setNodeLookup('');
+            }} placeholder={t('admin.outages.systems.node_lookup_placeholder')} className="min-w-0 flex-1" />
+            <Button type="button" variant="secondary" testId="admin.outages.systems.nodes.add" onClick={() => {
+              const id = parsePositiveInt(nodeLookup);
+              if (id) {
+                props.setForm((p) => ({ ...p, nodes: appendIdList(p.nodes, id) }));
+                setNodeLookup('');
+              }
+            }}>{t('common.add')}</Button>
+          </div>
+          <div className="mt-1 text-xs text-muted">{props.form.nodes || t('admin.outages.systems.none_selected')}</div>
+        </div>
+        <div>
+          <div className="mb-1 text-xs font-semibold text-muted">{t('admin.outages.systems.handlers')}</div>
+          <div className="flex gap-2">
+            <UserLookupInput testId="admin.outages.systems.handlers.lookup" value={handlerLookup} onChange={setHandlerLookup} onPick={(user) => {
+              props.setForm((p) => ({ ...p, handlers: appendIdList(p.handlers, user.id) }));
+              setHandlerLookup('');
+            }} placeholder={t('admin.outages.systems.handler_lookup_placeholder')} className="min-w-0 flex-1" />
+            <Button type="button" variant="secondary" testId="admin.outages.systems.handlers.add" onClick={() => {
+              const id = parsePositiveInt(handlerLookup);
+              if (id) {
+                props.setForm((p) => ({ ...p, handlers: appendIdList(p.handlers, id) }));
+                setHandlerLookup('');
+              }
+            }}>{t('common.add')}</Button>
+          </div>
+          <div className="mt-1 text-xs text-muted">{props.form.handlers || t('admin.outages.systems.none_selected')}</div>
+        </div>
+        <div>
+          <Input testId="admin.outages.systems.vpsadmin" label={t('admin.outages.systems.vpsadmin')} value={props.form.vpsadmin} onChange={(e) => props.setForm((p) => ({ ...p, vpsadmin: e.target.value }))} />
+          <div className="mt-1 text-xs text-muted">{t('admin.outages.systems.vpsadmin_help')}</div>
+        </div>
+        <div>
+          <Input testId="admin.outages.systems.additional" label={t('admin.outages.systems.additional')} value={props.form.additional} onChange={(e) => props.setForm((p) => ({ ...p, additional: e.target.value }))} />
+          <div className="mt-1 text-xs text-muted">{t('admin.outages.systems.additional_help')}</div>
+        </div>
+      </div>
+      <label className="flex items-center gap-2 text-sm text-fg"><input type="checkbox" checked={props.form.clusterWide} onChange={(e) => props.setForm((p) => ({ ...p, clusterWide: e.target.checked }))} />{t('admin.outages.systems.cluster_wide')}</label>
+      <div className="text-xs text-muted">{t('admin.outages.systems.help')}</div>
     </div>
   );
 }
@@ -254,6 +371,8 @@ function AdminOutageListPage() {
   const vpsFilter = useMemo(() => parsePositiveInt(searchParams.get('vps')), [searchParams]);
   const [newOpen, setNewOpen] = useState(false);
   const [form, setForm] = useState(() => initOutageForm());
+  const [systemsForm, setSystemsForm] = useState<SystemsFormState>(() => initSystemsForm([], []));
+  const [formErrors, setFormErrors] = useState<OutageFormErrors>({});
 
   const pagination = useKeysetPagination({
     id: 'admin.outages',
@@ -269,7 +388,7 @@ function AdminOutageListPage() {
   });
 
   const createM = useMutation({
-    mutationFn: async () => createOutage(formPayload(form)),
+    mutationFn: async () => createOutageWithSystems(formPayload(form), desiredSystems(systemsForm)),
     onSuccess: async (res) => {
       await qc.invalidateQueries({ queryKey: ['admin_outages'] });
       pushToast({ variant: 'ok', title: t('admin.outages.toast.created') });
@@ -279,6 +398,13 @@ function AdminOutageListPage() {
     onError: (e) => pushToast({ variant: 'danger', title: t('common.error'), body: formatErrorMessage(e) }),
   });
 
+  const submitCreate = () => {
+    const errors = validateOutageForm(form, t);
+    setFormErrors(errors);
+    if (hasErrors(errors)) return;
+    createM.mutate();
+  };
+
   const rows = outagesQ.data ?? [];
 
   return (
@@ -286,7 +412,7 @@ function AdminOutageListPage() {
       <PageHeader
         title={t('admin.outages.title')}
         description={t('admin.outages.subtitle')}
-        actions={<Button onClick={() => { setForm(initOutageForm()); setNewOpen(true); }} testId="admin.outages.new">{t('admin.outages.action.new')}</Button>}
+        actions={<Button onClick={() => { setForm(initOutageForm()); setSystemsForm(initSystemsForm([], [])); setFormErrors({}); setNewOpen(true); }} testId="admin.outages.new">{t('admin.outages.action.new')}</Button>}
       />
       <Card>
         <CardBody>
@@ -350,10 +476,17 @@ function AdminOutageListPage() {
       <Modal open={newOpen} title={t('admin.outages.create.title')} onClose={() => setNewOpen(false)} size="lg" testId="admin.outages.create.modal" footer={
         <div className="flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setNewOpen(false)} disabled={createM.isPending}>{t('common.cancel')}</Button>
-          <Button onClick={() => createM.mutate()} loading={createM.isPending} disabled={!form.beginsAt || !form.enSummary.trim()} testId="admin.outages.create.save">{t('common.create')}</Button>
+          <Button onClick={submitCreate} loading={createM.isPending} testId="admin.outages.create.save">{t('common.create')}</Button>
         </div>
       }>
-        <OutageForm form={form} setForm={setForm} />
+        {hasErrors(formErrors) ? <Alert variant="warn" title={t('common.validation_error')} testId="admin.outages.create.validation">{t('admin.outages.validation.body')}</Alert> : null}
+        <div className="mt-4 space-y-6">
+          <OutageForm form={form} setForm={setForm} errors={formErrors} />
+          <div>
+            <div className="mb-3 text-sm font-semibold text-fg">{t('admin.outages.section.systems')}</div>
+            <SystemsEditor form={systemsForm} setForm={setSystemsForm} />
+          </div>
+        </div>
       </Modal>
     </div>
   );
@@ -368,6 +501,8 @@ function AdminOutageDetailPage({ outageId }: { outageId: number | undefined }) {
   const [systemsOpen, setSystemsOpen] = useState(false);
   const [form, setForm] = useState(() => initOutageForm());
   const [systemsForm, setSystemsForm] = useState<SystemsFormState>(() => initSystemsForm([], []));
+  const [formErrors, setFormErrors] = useState<OutageFormErrors>({});
+  const [stateWarning, setStateWarning] = useState('');
   const [confirmState, setConfirmState] = useState<string | null>(null);
 
   const enabled = Boolean(outageId);
@@ -394,6 +529,13 @@ function AdminOutageDetailPage({ outageId }: { outageId: number | undefined }) {
     onError: (e) => pushToast({ variant: 'danger', title: t('common.error'), body: formatErrorMessage(e) }),
   });
 
+  const submitAttrs = () => {
+    const errors = validateOutageForm(form, t);
+    setFormErrors(errors);
+    if (hasErrors(errors)) return;
+    saveAttrsM.mutate();
+  };
+
   const postUpdateM = useMutation({
     mutationFn: async (payload?: OutageUpdatePayload) => createOutageUpdate(payload ?? updatePayload(form, outageId!)),
     onSuccess: async () => {
@@ -406,30 +548,16 @@ function AdminOutageDetailPage({ outageId }: { outageId: number | undefined }) {
     onError: (e) => pushToast({ variant: 'danger', title: t('common.error'), body: formatErrorMessage(e) }),
   });
 
+  const submitUpdate = () => {
+    const errors = validateOutageForm(form, t, { requireType: false });
+    setFormErrors(errors);
+    if (hasErrors(errors)) return;
+    postUpdateM.mutate(undefined);
+  };
+
   const saveSystemsM = useMutation({
     mutationFn: async () => {
-      const currentEntities = entitiesQ.data ?? [];
-      const wanted = desiredEntities(systemsForm);
-      const wantedKeys = new Set(wanted.map((e) => entityKey(e.name, e.entity_id)));
-      const currentKeys = new Set(currentEntities.map((e) => entityKey(e.name, e.entity_id)));
-      for (const e of wanted) {
-        if (!currentKeys.has(entityKey(e.name, e.entity_id))) await createOutageEntity(outageId!, e);
-      }
-      for (const e of currentEntities) {
-        if (!wantedKeys.has(entityKey(e.name, e.entity_id))) await deleteOutageEntity(outageId!, e.id);
-      }
-
-      const currentHandlers = handlersQ.data ?? [];
-      const wantedHandlers = new Set(intList(systemsForm.handlers));
-      const currentHandlerIds = new Set(currentHandlers.map(handlerUserId).filter((v): v is number => v !== null));
-      for (const user of wantedHandlers) {
-        if (!currentHandlerIds.has(user)) await createOutageHandler(outageId!, { user });
-      }
-      for (const h of currentHandlers) {
-        const user = handlerUserId(h);
-        if (user !== null && !wantedHandlers.has(user)) await deleteOutageHandler(outageId!, h.id);
-      }
-      await rebuildOutageAffectedVps(outageId!);
+      await applyOutageSystems(outageId!, entitiesQ.data ?? [], handlersQ.data ?? [], desiredSystems(systemsForm));
     },
     onSuccess: async () => {
       await invalidate();
@@ -452,15 +580,25 @@ function AdminOutageDetailPage({ outageId }: { outageId: number | undefined }) {
 
   const openEdit = () => {
     setForm(initOutageForm(outage));
+    setFormErrors({});
     setEditOpen(true);
   };
   const openUpdate = () => {
     setForm({ ...initOutageForm(outage), enSummary: '', enDescription: '', csSummary: '', csDescription: '', sendMail: true });
+    setFormErrors({});
     setUpdateOpen(true);
   };
   const openSystems = () => {
     setSystemsForm(initSystemsForm(entities, handlers));
     setSystemsOpen(true);
+  };
+  const requestStateChange = (st: string) => {
+    setStateWarning('');
+    if (st === 'announced' && (entities.length === 0 || handlers.length === 0)) {
+      setStateWarning(t('admin.outages.change_state.announce_blocked'));
+      return;
+    }
+    setConfirmState(st);
   };
 
   return (
@@ -489,11 +627,12 @@ function AdminOutageDetailPage({ outageId }: { outageId: number | undefined }) {
           <CardBody>
             <div className="flex flex-wrap gap-2">
               {['announced', 'cancelled', 'resolved'].map((st) => (
-                <Button key={st} variant={st === 'cancelled' ? 'danger' : 'secondary'} onClick={() => setConfirmState(st)}>
+                <Button key={st} variant={st === 'cancelled' ? 'danger' : 'secondary'} onClick={() => requestStateChange(st)}>
                   {t(`admin.outages.change_state.${st}`)}
                 </Button>
               ))}
             </div>
+            {stateWarning ? <div className="mt-3"><Alert variant="warn" title={t('common.validation_error')}>{stateWarning}</Alert></div> : null}
           </CardBody>
         </Card>
       ) : null}
@@ -529,7 +668,7 @@ function AdminOutageDetailPage({ outageId }: { outageId: number | undefined }) {
           {entitiesQ.isLoading ? <Spinner label={t('common.loading')} /> : entities.length ? (
             <div className="flex flex-wrap gap-2">{entities.map((e) => <Badge key={e.id} variant="neutral">{entityLabel(e)}</Badge>)}</div>
           ) : <div className="text-sm text-muted">{t('admin.outages.empty.systems')}</div>}
-          <div className="mt-4 text-sm text-muted">{handlers.length ? handlers.map((h) => h.full_name || h.reporter_name || `#${handlerUserId(h) ?? h.id}`).join(', ') : t('admin.outages.empty.handlers')}</div>
+          <div className="mt-4 text-sm text-muted">{handlers.length ? handlers.map((h) => h.full_name || h.reporter_name || `#${outageHandlerUserId(h) ?? h.id}`).join(', ') : t('admin.outages.empty.handlers')}</div>
         </CardBody>
       </Card>
 
@@ -555,26 +694,19 @@ function AdminOutageDetailPage({ outageId }: { outageId: number | undefined }) {
         </CardBody>
       </Card>
 
-      <Modal open={editOpen} title={t('admin.outages.edit.title')} onClose={() => setEditOpen(false)} size="lg" footer={<div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setEditOpen(false)} disabled={saveAttrsM.isPending}>{t('common.cancel')}</Button><Button onClick={() => saveAttrsM.mutate()} loading={saveAttrsM.isPending}>{t('common.save')}</Button></div>}>
+      <Modal open={editOpen} title={t('admin.outages.edit.title')} onClose={() => setEditOpen(false)} size="lg" footer={<div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setEditOpen(false)} disabled={saveAttrsM.isPending}>{t('common.cancel')}</Button><Button onClick={submitAttrs} loading={saveAttrsM.isPending}>{t('common.save')}</Button></div>}>
         <Alert title={t('admin.outages.edit.notice.title')} variant="info">{t('admin.outages.edit.notice.body')}</Alert>
-        <div className="mt-4"><OutageForm form={form} setForm={setForm} /></div>
+        {hasErrors(formErrors) ? <div className="mt-4"><Alert variant="warn" title={t('common.validation_error')}>{t('admin.outages.validation.body')}</Alert></div> : null}
+        <div className="mt-4"><OutageForm form={form} setForm={setForm} errors={formErrors} /></div>
       </Modal>
 
-      <Modal open={updateOpen} title={t('admin.outages.update.title')} onClose={() => setUpdateOpen(false)} size="lg" footer={<div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setUpdateOpen(false)} disabled={postUpdateM.isPending}>{t('common.cancel')}</Button><Button onClick={() => postUpdateM.mutate(undefined)} loading={postUpdateM.isPending} disabled={!form.enSummary.trim() && !form.csSummary.trim()}>{t('admin.outages.action.post_update')}</Button></div>}>
-        <OutageForm form={form} setForm={setForm} includeState updateMode />
+      <Modal open={updateOpen} title={t('admin.outages.update.title')} onClose={() => setUpdateOpen(false)} size="lg" footer={<div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setUpdateOpen(false)} disabled={postUpdateM.isPending}>{t('common.cancel')}</Button><Button onClick={submitUpdate} loading={postUpdateM.isPending}>{t('admin.outages.action.post_update')}</Button></div>}>
+        {hasErrors(formErrors) ? <Alert variant="warn" title={t('common.validation_error')}>{t('admin.outages.validation.body')}</Alert> : null}
+        <div className="mt-4"><OutageForm form={form} setForm={setForm} errors={formErrors} includeState updateMode /></div>
       </Modal>
 
       <Modal open={systemsOpen} title={t('admin.outages.systems.title')} onClose={() => setSystemsOpen(false)} size="lg" footer={<div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setSystemsOpen(false)} disabled={saveSystemsM.isPending}>{t('common.cancel')}</Button><Button onClick={() => saveSystemsM.mutate()} loading={saveSystemsM.isPending}>{t('common.save')}</Button></div>}>
-        <div className="grid gap-3 md:grid-cols-2">
-          <Input label={t('admin.outages.systems.vpsadmin')} value={systemsForm.vpsadmin} onChange={(e) => setSystemsForm((p) => ({ ...p, vpsadmin: e.target.value }))} />
-          <Input label={t('admin.outages.systems.environments')} value={systemsForm.environments} onChange={(e) => setSystemsForm((p) => ({ ...p, environments: e.target.value }))} />
-          <Input label={t('admin.outages.systems.locations')} value={systemsForm.locations} onChange={(e) => setSystemsForm((p) => ({ ...p, locations: e.target.value }))} />
-          <Input label={t('admin.outages.systems.nodes')} value={systemsForm.nodes} onChange={(e) => setSystemsForm((p) => ({ ...p, nodes: e.target.value }))} />
-          <Input label={t('admin.outages.systems.additional')} value={systemsForm.additional} onChange={(e) => setSystemsForm((p) => ({ ...p, additional: e.target.value }))} />
-          <Input label={t('admin.outages.systems.handlers')} value={systemsForm.handlers} onChange={(e) => setSystemsForm((p) => ({ ...p, handlers: e.target.value }))} />
-        </div>
-        <label className="mt-3 flex items-center gap-2 text-sm text-fg"><input type="checkbox" checked={systemsForm.clusterWide} onChange={(e) => setSystemsForm((p) => ({ ...p, clusterWide: e.target.checked }))} />{t('admin.outages.systems.cluster_wide')}</label>
-        <div className="mt-3 text-xs text-muted">{t('admin.outages.systems.help')}</div>
+        <SystemsEditor form={systemsForm} setForm={setSystemsForm} />
       </Modal>
 
       <ConfirmDialog
@@ -588,6 +720,7 @@ function AdminOutageDetailPage({ outageId }: { outageId: number | undefined }) {
           const f = initOutageForm(outage);
           f.state = confirmState ?? f.state;
           f.enSummary = t('admin.outages.change_state.update_summary', { state: confirmState ? t(`admin.outages.state.${confirmState}`) : '' });
+          f.csSummary = f.enSummary;
           f.sendMail = true;
           setForm(f);
           postUpdateM.mutate(updatePayload(f, outageId));

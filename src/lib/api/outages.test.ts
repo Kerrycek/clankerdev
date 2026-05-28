@@ -1,7 +1,9 @@
 import { describe, expect, test, vi } from 'vitest';
 
 import {
+  applyOutageSystems,
   createOutage,
+  createOutageWithSystems,
   createOutageEntity,
   createOutageHandler,
   createOutageUpdate,
@@ -15,6 +17,14 @@ import { addNetworkAddresses } from './networks';
 
 function mockFetchOk(response: any) {
   return vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: true, response }) });
+}
+
+function mockFetchOkSequence(responses: any[]) {
+  const queue = [...responses];
+  return vi.fn().mockImplementation(async () => {
+    const response = queue.shift() ?? {};
+    return { ok: true, json: async () => ({ status: true, response }) };
+  });
 }
 
 function lastFetchCall() {
@@ -123,6 +133,82 @@ describe('outage admin API wrappers', () => {
     [url, init] = lastFetchCall();
     expect(new URL(url).pathname).toBe('/v7.0/outages/7/rebuild_affected_vps');
     expect(init?.method).toBe('POST');
+  });
+
+  test('createOutageWithSystems creates the report, applies initial entities and handlers, and rebuilds', async () => {
+    globalThis.fetch = mockFetchOkSequence([
+      { outage: { id: 7 } },
+      { entity: { id: 3 } },
+      { entity: { id: 4 } },
+      { handler: { id: 5 } },
+      { outage: { id: 7 } },
+    ]) as any;
+
+    await createOutageWithSystems(
+      {
+        begins_at: '2026-05-28T10:00:00.000Z',
+        duration: 30,
+        type: 'maintenance',
+        impact: 'network',
+        en_summary: 'Maintenance',
+        cs_summary: 'Udrzba',
+      },
+      {
+        entities: [
+          { name: 'Environment', entity_id: 2 },
+          { name: 'Node', entity_id: 12 },
+        ],
+        handlers: [42],
+      }
+    );
+
+    const calls = (globalThis.fetch as any).mock.calls as Array<[string, RequestInit?]>;
+    expect(calls.map(([url]) => new URL(url).pathname)).toEqual([
+      '/v7.0/outages',
+      '/v7.0/outages/7/entities',
+      '/v7.0/outages/7/entities',
+      '/v7.0/outages/7/handlers',
+      '/v7.0/outages/7/rebuild_affected_vps',
+    ]);
+    expect(JSON.parse(String(calls[1]?.[1]?.body))).toEqual({ entity: { name: 'Environment', entity_id: 2 } });
+    expect(JSON.parse(String(calls[2]?.[1]?.body))).toEqual({ entity: { name: 'Node', entity_id: 12 } });
+    expect(JSON.parse(String(calls[3]?.[1]?.body))).toEqual({ handler: { user: 42 } });
+  });
+
+  test('applyOutageSystems diffs current systems and handlers before rebuild', async () => {
+    globalThis.fetch = mockFetchOk({ entity: { id: 9 }, handler: { id: 8 }, outage: { id: 7 } }) as any;
+
+    await applyOutageSystems(
+      7,
+      [
+        { id: 1, name: 'Environment', entity_id: 2 },
+        { id: 2, name: 'Node', entity_id: 10 },
+      ],
+      [
+        { id: 4, user: { id: 42 } } as any,
+        { id: 5, user_id: 99 } as any,
+      ],
+      {
+        entities: [
+          { name: 'Environment', entity_id: 2 },
+          { name: 'Node', entity_id: 12 },
+        ],
+        handlers: [42, 100],
+      }
+    );
+
+    const calls = (globalThis.fetch as any).mock.calls as Array<[string, RequestInit?]>;
+    expect(calls.map(([url]) => new URL(url).pathname)).toEqual([
+      '/v7.0/outages/7/entities',
+      '/v7.0/outages/7/entities/2',
+      '/v7.0/outages/7/handlers',
+      '/v7.0/outages/7/handlers/5',
+      '/v7.0/outages/7/rebuild_affected_vps',
+    ]);
+    expect(JSON.parse(String(calls[0]?.[1]?.body))).toEqual({ entity: { name: 'Node', entity_id: 12 } });
+    expect(calls[1]?.[1]?.method).toBe('DELETE');
+    expect(JSON.parse(String(calls[2]?.[1]?.body))).toEqual({ handler: { user: 100 } });
+    expect(calls[3]?.[1]?.method).toBe('DELETE');
   });
 });
 
