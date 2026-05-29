@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, test, vi } from 'vitest';
@@ -133,7 +133,8 @@ describe('ActionStateDetailPage', () => {
     await userEvent.click(screen.getByTestId('action_state.detail.tx.toggle.501'));
 
     await waitFor(() => expect(screen.getByTestId('action_state.detail.tx.expanded.501')).toBeInTheDocument());
-    expect(screen.getByText(/boom/)).toBeInTheDocument();
-    expect(screen.getByText(/vps_id/)).toBeInTheDocument();
+    const expandedRow = screen.getByTestId('action_state.detail.tx.expanded.501');
+    expect(within(expandedRow).getAllByText(/boom/)).toHaveLength(2);
+    expect(within(expandedRow).getAllByText(/vps_id/)).toHaveLength(2);
   });
 });
