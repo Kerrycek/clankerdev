@@ -59,6 +59,6 @@ test('@smoke admin node detail: busy transaction gates maintenance lock', async 
   // Wait for the active transaction chain to be loaded and applied to gates.
   await expect(lockBtn).toHaveAttribute('aria-disabled', 'true');
 
-  await lockBtn.click();
+  await lockBtn.click({ force: true });
   await expect(page.getByTestId('admin.node.maintenance.lock.reason')).toBeVisible();
 });

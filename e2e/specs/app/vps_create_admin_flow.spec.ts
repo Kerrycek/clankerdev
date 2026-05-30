@@ -57,7 +57,7 @@ function choicesHandlers() {
   };
 }
 
-test.describe('VPS create admin flow', () => {
+test.describe('@pr-smoke VPS create admin flow', () => {
   test('keeps an admin in user-scope create flow on app route', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_ADMIN' });
     const createBodies: unknown[] = [];

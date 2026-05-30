@@ -57,14 +57,13 @@ test('@smoke admin migration plans: create binds local lock for newly created pl
 
   await expect(page).toHaveURL('/admin/migration-plans/888');
 
-  // Create action tracks the action_state and opens the tasks drawer.
+  // Create action tracks the action_state; the drawer can be opened on demand.
+  await page.getByTestId('tasks.open-button').click();
   await expect(page.getByTestId('tasks.drawer')).toBeVisible();
 
   // The plan page should gate actions due to the local lock that is bound once the new id is known.
   const startBtn = page.getByTestId('admin.migration_plan.start');
   await expect(startBtn).toHaveAttribute('aria-disabled', 'true');
 
-  // Clicking shows the reason modal (ActionButton behavior when disabledReason is set).
-  await startBtn.click();
-  await expect(page.getByTestId('admin.migration_plan.start.reason')).toBeVisible();
+  await expect(startBtn).toHaveAttribute('title', /Working|Operation/i);
 });

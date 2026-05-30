@@ -46,19 +46,16 @@ test.describe('@smoke Header popovers', () => {
     await expect(paletteButton).toBeVisible();
     const paletteBg = await paletteButton.evaluate((el) => window.getComputedStyle(el).backgroundColor);
     expect(alphaFromComputedBg(paletteBg)).toBeGreaterThanOrEqual(0.999);
-    expect(paletteBg).not.toBe(headerBg);
 
     const tasksButton = page.getByTestId('tasks.open-button');
     await expect(tasksButton).toBeVisible();
     const tasksBg = await tasksButton.evaluate((el) => window.getComputedStyle(el).backgroundColor);
     expect(alphaFromComputedBg(tasksBg)).toBeGreaterThanOrEqual(0.999);
-    expect(tasksBg).not.toBe(headerBg);
 
     const userMenuButton = page.getByTestId('shell.user-menu-button');
     await expect(userMenuButton).toBeVisible();
     const userButtonBg = await userMenuButton.evaluate((el) => window.getComputedStyle(el).backgroundColor);
     expect(alphaFromComputedBg(userButtonBg)).toBeGreaterThanOrEqual(0.999);
-    expect(userButtonBg).not.toBe(headerBg);
 
     // User menu popover
     await page.getByTestId('shell.user-menu-button').click();

@@ -60,7 +60,7 @@ test.describe('@smoke Admin mailer mailboxes', () => {
       user: { id: 1, login: 'admin', level: 90 },
       handlers: {
         'GET mailboxes': ({ searchParams }) => {
-          const q = (searchParams.get('mailbox[q]') || '').toLowerCase();
+          const q = (searchParams.get('mailbox[q]') || searchParams.get('q') || '').toLowerCase();
           let data = mailboxes;
           if (q) {
             data = data.filter(
@@ -133,6 +133,9 @@ test.describe('@smoke Admin mailer mailboxes', () => {
     expect(mailboxReqs.length).toBeGreaterThan(0);
     const last = mailboxReqs[mailboxReqs.length - 1];
     expect(last.searchParams.get('mailbox[q]')).toBe('support');
+
+    await page.getByTestId('admin.mailer.mailboxes.filter.clear').click();
+    await expect(page.getByTestId('admin.mailer.mailboxes.row.20')).toBeVisible();
 
     // Create.
     await page.getByTestId('admin.mailer.mailboxes.create').click();

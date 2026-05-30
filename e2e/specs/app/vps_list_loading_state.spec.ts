@@ -18,7 +18,7 @@ test.describe('@smoke VPS list loading state', () => {
       handlers: {
         'GET vpses': async () => {
           // simulate latency so the loading state is visible
-          await new Promise((r) => setTimeout(r, 250));
+          await new Promise((r) => setTimeout(r, 1500));
           return { vpses: [], _meta: { total_count: 0 } };
         },
       },

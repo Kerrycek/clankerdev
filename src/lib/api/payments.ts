@@ -134,8 +134,14 @@ export async function fetchUserPayments(opts?: { limit?: number; fromId?: number
 }
 
 export async function fetchPaymentInstructions(userId: number) {
-  return haveApiCall<{ instructions: string }>({
+  const res = await haveApiCall<string | { instructions?: string }>({
     method: 'GET',
     path: `/users/${userId}/get_payment_instructions`,
   });
+
+  if (typeof res.data === 'string') {
+    return { ...res, data: { instructions: res.data } };
+  }
+
+  return { ...res, data: { instructions: String(res.data?.instructions ?? '') } };
 }

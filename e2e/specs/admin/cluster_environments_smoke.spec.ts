@@ -71,6 +71,7 @@ test.describe('@smoke Admin cluster environments', () => {
     await page.getByTestId('admin.cluster.environments.filter.has_hypervisor').selectOption('true');
 
     await expect.poll(() => gets.some((u) => u.searchParams.get('environment[has_hypervisor]') === 'true')).toBeTruthy();
+    await page.getByTestId('admin.cluster.environments.advanced.drawer').getByRole('button', { name: /done/i }).click();
 
     // Create
     await page.getByTestId('admin.cluster.environments.create').click();

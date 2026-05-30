@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 
-test('@smoke-mobile Tasks drawer traps focus and restores focus on close', async ({ page }) => {
+test('@pr-smoke @pr-smoke-mobile @smoke @smoke-mobile Tasks drawer opens as a non-modal side panel', async ({ page }) => {
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
   await installHaveApiMock(page, {
@@ -24,29 +24,18 @@ test('@smoke-mobile Tasks drawer traps focus and restores focus on close', async
 
   const drawer = page.getByTestId('tasks.drawer');
   await expect(drawer).toBeVisible();
+  await expect(drawer).toHaveAttribute('aria-modal', 'false');
+  await expect(page.locator('[data-overlay-backdrop="true"]')).toHaveCount(0);
 
   const closeBtn = page.getByTestId('tasks.close-button');
-  await expect(closeBtn).toBeFocused();
+  await expect(closeBtn).toBeVisible();
 
-  const focusInsideDrawer = async () =>
-    page.evaluate(() => {
-      const d = document.querySelector('[data-testid="tasks.drawer"]');
-      if (!d) return false;
-      return d.contains(document.activeElement);
-    });
+  // The Tasks drawer is intentionally non-modal: the current page remains visible and usable behind it.
+  await expect(page.getByTestId('vps.list')).toBeVisible();
+  await expect(openBtn).toBeVisible();
 
-  // Shift+Tab from the first control should wrap to the last focusable inside the drawer.
-  await page.keyboard.press('Shift+Tab');
-  await expect.poll(focusInsideDrawer).toBe(true);
-
-  // Tab must never escape the drawer.
-  for (let i = 0; i < 25; i++) {
-    await page.keyboard.press('Tab');
-    await expect.poll(focusInsideDrawer).toBe(true);
-  }
-
-  // Close via Escape and ensure focus restores to the opener.
+  // Escape still closes the panel without navigating away from the underlying page.
   await page.keyboard.press('Escape');
   await expect(drawer).toBeHidden();
-  await expect(openBtn).toBeFocused();
+  await expect(page).toHaveURL(/\/app\/vps(?:\?.*)?$/);
 });
