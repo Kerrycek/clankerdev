@@ -55,6 +55,14 @@ for (const a of args) {
     normalizedArgs.push('--grep', '(^|\\s)@smoke-mobile(\\s|$)');
     continue;
   }
+  if (a === '--pr-smoke') {
+    normalizedArgs.push('--grep', '(^|\\s)@pr-smoke(\\s|$)');
+    continue;
+  }
+  if (a === '--pr-smoke-mobile') {
+    normalizedArgs.push('--grep', '(^|\\s)@pr-smoke-mobile(\\s|$)');
+    continue;
+  }
   normalizedArgs.push(a);
 }
 

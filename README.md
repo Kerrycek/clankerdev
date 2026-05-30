@@ -20,6 +20,18 @@ npm run env:check
 npm run dev
 ```
 
+## E2E smoke tests
+
+```bash
+# one-time browser install
+npm run e2e:install
+
+# same Playwright smoke set used for pull-request feedback
+npm run e2e:pr
+```
+
+The default Playwright suite uses deterministic HaveAPI mocks and does not require real login credentials.
+
 ## Docs map
 
 - `SPEC.md` – canonical-spec pointer

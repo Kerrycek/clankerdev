@@ -1,4 +1,5 @@
 import type { Page } from '@playwright/test';
+export { expect, test } from '@playwright/test';
 
 import { defaultHaveApiDescription } from './haveapi';
 

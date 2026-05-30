@@ -21,28 +21,12 @@ test.describe('VPS list row navigation', () => {
     const vps = makeVps(300);
 
     await installHaveApiMock(page, {
-      handlers: [
-        {
-          method: 'GET',
-          path: '/vpses',
-          handler: async () => ({ status: true, response: { vpses: [vps] } }),
-        },
-        {
-          method: 'GET',
-          path: '/vpses/300',
-          handler: async () => ({ status: true, response: { vps } }),
-        },
-        {
-          method: 'GET',
-          path: '/ip_addresses',
-          handler: async () => ({ status: true, response: { ip_addresses: [] } }),
-        },
-        {
-          method: 'GET',
-          path: '/vpses/300/statuses',
-          handler: async () => ({ status: true, response: { statuses: [] } }),
-        },
-      ],
+      handlers: {
+        'GET vpses': () => ({ vpses: [vps] }),
+        'GET vpses/300': () => ({ vps }),
+        'GET ip_addresses': () => ({ ip_addresses: [] }),
+        'GET vpses/300/statuses': () => ({ statuses: [] }),
+      },
     });
 
     await bootstrapVpsAdminWindow(page);
@@ -60,13 +44,9 @@ test.describe('VPS list row navigation', () => {
     const vps = makeVps(300);
 
     await installHaveApiMock(page, {
-      handlers: [
-        {
-          method: 'GET',
-          path: '/vpses',
-          handler: async () => ({ status: true, response: { vpses: [vps] } }),
-        },
-      ],
+      handlers: {
+        'GET vpses': () => ({ vpses: [vps] }),
+      },
     });
 
     await bootstrapVpsAdminWindow(page);

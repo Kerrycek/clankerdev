@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { mockHaveApi } from '../../fixtures/haveapi';
+import { bootstrapVpsAdminWindow, installHaveApiMock, type HaveApiMock } from '../../fixtures';
 import { withAppUrl } from '../../fixtures/url';
 
 type MonitoredEventRow = {
@@ -49,9 +49,16 @@ function makePage(startId: number, startDuration: number, count: number): Monito
 }
 
 test.describe('Monitoring events keyset pagination', () => {
-  mockHaveApi(test);
+  let haveApiMock: HaveApiMock;
 
-  test('uses from_duration cursor for duration-sorted orders', async ({ page, haveApiMock }) => {
+  test.beforeEach(async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_ADMIN' });
+    haveApiMock = await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 100 },
+    });
+  });
+
+  test('uses from_duration cursor for duration-sorted orders', async ({ page }) => {
     // Page 1: durations 1000..951 (50 rows)
     const page1 = makePage(300, 1000, 50);
     // Cursor for next page should be the smallest duration on the page.
