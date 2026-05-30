@@ -7,7 +7,7 @@ async function safeFetchChainsByClassName(params: {
   className: string;
   rowId: number;
   limit: number;
-}): Promise<TransactionChain[]> {
+}): Promise<TransactionChain[] | null> {
   try {
     return (await fetchTransactionChains({
       limit: params.limit,
@@ -15,7 +15,7 @@ async function safeFetchChainsByClassName(params: {
       rowId: params.rowId,
     })).data;
   } catch {
-    return [];
+    return null;
   }
 }
 
@@ -68,6 +68,12 @@ async function fetchChainsByConcern(zoneId: number, classes: string[]): Promise<
   return [...byId.values()];
 }
 
+function throwBusy(message: string): never {
+  const err: any = new Error(message);
+  err.code = 'BUSY';
+  throw err;
+}
+
 export async function preflightDnsZoneNotBusy(args: {
   zoneId: number;
   t: (key: any, vars?: any) => string;
@@ -78,19 +84,16 @@ export async function preflightDnsZoneNotBusy(args: {
   const zoneId = Number(args.zoneId);
   if (!Number.isFinite(zoneId) || zoneId <= 0) return;
 
-  if (args.knownBusy) {
-    const err: any = new Error(args.t('toast.action_blocked.body'));
-    err.code = 'BUSY';
-    throw err;
-  }
-
   // 0) Fast path: attempt a direct transaction chain lookup by the canonical DNS zone class name.
   // This is safe (we swallow lookup errors) and improves accuracy when there are no recent record logs.
   const directChains = await safeFetchChainsByClassName({ className: 'DnsZone', rowId: zoneId, limit: 10 });
+  if (directChains === null) {
+    if (args.knownBusy) throwBusy(args.t('toast.action_blocked.body'));
+    return;
+  }
+
   if (hasActiveChains(directChains)) {
-    const err: any = new Error(args.t('toast.action_blocked.body'));
-    err.code = 'BUSY';
-    throw err;
+    throwBusy(args.t('toast.action_blocked.body'));
   }
 
   // 1) If we already know the zone's concern classes, query by class_name+row_id.
@@ -98,9 +101,7 @@ export async function preflightDnsZoneNotBusy(args: {
   if (knownClasses.length > 0) {
     const chains = await fetchChainsByConcern(zoneId, knownClasses);
     if (hasActiveChains(chains)) {
-      const err: any = new Error(args.t('toast.action_blocked.body'));
-      err.code = 'BUSY';
-      throw err;
+      throwBusy(args.t('toast.action_blocked.body'));
     }
     return;
   }
@@ -117,9 +118,7 @@ export async function preflightDnsZoneNotBusy(args: {
     .filter(Boolean) as TransactionChain[];
 
   if (hasActiveChains(chainsFromLogs)) {
-    const err: any = new Error(args.t('toast.action_blocked.body'));
-    err.code = 'BUSY';
-    throw err;
+    throwBusy(args.t('toast.action_blocked.body'));
   }
 
   const inferred = inferZoneConcernClasses(zoneId, chainsFromLogs);
@@ -127,8 +126,6 @@ export async function preflightDnsZoneNotBusy(args: {
 
   const chainsByConcern = await fetchChainsByConcern(zoneId, inferred);
   if (hasActiveChains(chainsByConcern)) {
-    const err: any = new Error(args.t('toast.action_blocked.body'));
-    err.code = 'BUSY';
-    throw err;
+    throwBusy(args.t('toast.action_blocked.body'));
   }
 }

@@ -5,7 +5,7 @@ async function safeFetchChainsByClassName(params: {
   className: string;
   rowId: number;
   limit: number;
-}): Promise<TransactionChain[]> {
+}): Promise<TransactionChain[] | null> {
   try {
     return (
       await fetchTransactionChains({
@@ -15,7 +15,7 @@ async function safeFetchChainsByClassName(params: {
       })
     ).data;
   } catch {
-    return [];
+    return null;
   }
 }
 
@@ -28,8 +28,8 @@ function busyError(message: string): Error & { code: string } {
 /**
  * Best-effort busy preflight for admin objects.
  *
- * Note: not all backends support class_name+row_id queries for all objects.
- * We swallow lookup errors and treat them as "unknown".
+ * Browser-side lock state can be stale or can be set by the mutation that is
+ * currently starting. Verify fresh backend chain data before refusing an action.
  */
 export async function preflightAdminObjectNotBusy(args: {
   className: string;
@@ -42,15 +42,16 @@ export async function preflightAdminObjectNotBusy(args: {
   const rowId = Number(args.rowId);
   if (!Number.isFinite(rowId) || rowId <= 0) return;
 
-  if (args.knownBusy) {
-    throw busyError(args.t('toast.action_blocked.body'));
-  }
-
   const chains = await safeFetchChainsByClassName({
     className: args.className,
     rowId,
     limit: args.limit ?? 10,
   });
+
+  if (chains === null) {
+    if (args.knownBusy) throw busyError(args.t('toast.action_blocked.body'));
+    return;
+  }
 
   if (hasActiveChains(chains)) {
     throw busyError(args.t('toast.action_blocked.body'));

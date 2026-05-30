@@ -86,7 +86,8 @@ export function computeOtherModeUrl(opts: {
 
   if (opts.mode === 'admin') {
     const targetRest = rewriteAdminPathForUserScope(rest);
-    return `/app${targetRest}${search}${hash}`;
+    const safeSearch = targetRest ? search : '';
+    return `/app${targetRest}${safeSearch}${hash}`;
   }
 
   const targetRest = rewriteUserPathForAdminScope(rest);

@@ -1,9 +1,11 @@
 import { test, expect } from '@playwright/test';
 
-import { installHaveApiMock } from '../../fixtures/haveapi';
+import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 
 test('@smoke profile: ssh keys + sessions flows', async ({ page }) => {
   const user = { id: 1, login: 'e2e', level: 1 };
+
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
   let keys = [
     {
@@ -66,10 +68,10 @@ test('@smoke profile: ssh keys + sessions flows', async ({ page }) => {
   });
 
   await page.goto('/app/profile/keys');
-  await expect(page.getByTestId('profile.header')).toBeVisible();
+  const keysTable = page.getByTestId('profile.keys.table');
 
   // Create key
-  await expect(page.getByTestId('profile.keys.row.1')).toBeVisible();
+  await expect(keysTable.getByTestId('profile.keys.row.1')).toBeVisible();
   await page.getByTestId('profile.keys.add').click();
   await expect(page.getByTestId('profile.keys.modal')).toBeVisible();
   await page.getByTestId('profile.keys.modal.label').fill('Office');
@@ -85,10 +87,10 @@ test('@smoke profile: ssh keys + sessions flows', async ({ page }) => {
   expect(createBody.public_key.key).toContain('ssh-ed25519');
   expect(createBody.public_key.auto_add).toBe(false);
 
-  await expect(page.getByTestId('profile.keys.row.2')).toBeVisible();
+  await expect(keysTable.getByTestId('profile.keys.row.2')).toBeVisible();
 
   // Edit key (rename + enable auto-add)
-  await page.getByTestId('profile.keys.row.2.edit').click();
+  await keysTable.getByTestId('profile.keys.row.2.edit').click();
   await expect(page.getByTestId('profile.keys.modal')).toBeVisible();
   await page.getByTestId('profile.keys.modal.label').fill('Office (renamed)');
   await page.getByTestId('profile.keys.modal.auto_add').click();
@@ -103,7 +105,7 @@ test('@smoke profile: ssh keys + sessions flows', async ({ page }) => {
   expect(updateBody.public_key.key).toBeUndefined();
 
   // Delete key
-  await page.getByTestId('profile.keys.row.2.delete').click();
+  await keysTable.getByTestId('profile.keys.row.2.delete').click();
   await expect(page.getByTestId('profile.keys.delete_dialog')).toBeVisible();
 
   const deleteReqP = page.waitForRequest((r) => r.method() === 'DELETE' && r.url().includes('/users/1/public_keys/2'));
@@ -112,10 +114,11 @@ test('@smoke profile: ssh keys + sessions flows', async ({ page }) => {
 
   // Navigate to Sessions tab
   await page.goto('/app/profile/sessions');
+  const sessionsTable = page.getByTestId('profile.sessions.table');
 
   // Session rename
-  await expect(page.getByTestId('profile.sessions.row.1')).toBeVisible();
-  await page.getByTestId('profile.sessions.row.1.rename').click();
+  await expect(sessionsTable.getByTestId('profile.sessions.row.1')).toBeVisible();
+  await sessionsTable.getByTestId('profile.sessions.row.1.rename').click();
   await expect(page.getByTestId('profile.sessions.rename_modal')).toBeVisible();
   await page.getByTestId('profile.sessions.rename_modal.label').fill('Firefox (renamed)');
 
@@ -126,7 +129,7 @@ test('@smoke profile: ssh keys + sessions flows', async ({ page }) => {
   expect(renameBody.user_session.label).toBe('Firefox (renamed)');
 
   // Close session
-  await page.getByTestId('profile.sessions.row.1.close').click();
+  await sessionsTable.getByTestId('profile.sessions.row.1.close').click();
   await expect(page.getByTestId('profile.sessions.close_dialog')).toBeVisible();
   const closeReqP = page.waitForRequest((r) => r.method() === 'POST' && r.url().includes('/user_sessions/1'));
   await page.getByTestId('profile.sessions.close_dialog.confirm').click();
