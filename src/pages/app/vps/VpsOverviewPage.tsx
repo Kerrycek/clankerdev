@@ -451,7 +451,7 @@ export function VpsOverviewPage() {
               <ChipLink to={`${basePath}/vps/${vps.id}/storage`} title={t('vps.overview.admin_actions.backups_title')}>
                 {t('vps.overview.admin_actions.backups')}
               </ChipLink>
-              <ChipLink to={`${basePath}/migration-plans`} title={t('vps.overview.admin_actions.migrate_title')}>
+              <ChipLink to={`${basePath}/vps/${vps.id}/lifecycle`} title={t('vps.overview.admin_actions.migrate_title')}>
                 {t('vps.overview.admin_actions.migrate')}
               </ChipLink>
               <ChipLink to={`${basePath}/vps/${vps.id}/config`} title={t('vps.overview.admin_actions.change_owner_title')}>
