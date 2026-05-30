@@ -23,6 +23,7 @@ function LoginRequired() {
   const { t } = useI18n();
 
   const loginHref = auth.loginUrl || `${cfg.routerBasename}/oauth/login`;
+  const title = auth.status === 'expired' ? t('auth.session_expired.title') : t('auth.login_required.title');
   const body = auth.status === 'expired' ? t('auth.session_expired.body') : t('auth.login_required.body');
 
   return (
@@ -30,7 +31,7 @@ function LoginRequired() {
       <Card>
         <CardBody className="space-y-4">
           <div>
-            <h1 className="text-xl font-semibold">{t('auth.login_required.title')}</h1>
+            <h1 className="text-xl font-semibold">{title}</h1>
             <p className="mt-2 text-sm text-muted">{body}</p>
           </div>
 

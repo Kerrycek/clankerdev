@@ -6,6 +6,8 @@ import { fetchCurrentUser, type User } from '../lib/api/users';
 import { canUseAdminUi, roleFromLevel, type UserRole } from '../lib/roles';
 import { clearStoredOAuthToken } from '../lib/auth/tokenStore';
 import { HaveApiError, isExpiredSessionError, SESSION_EXPIRED_EVENT } from '../lib/api/haveapi';
+import { hardReplace } from '../lib/browserNavigation';
+import { withRouterBasename } from '../lib/routerPaths';
 
 export type AuthStatus = 'anonymous' | 'expired' | 'loading' | 'authenticated' | 'forbidden' | 'error';
 
@@ -57,6 +59,10 @@ function buildEndpointUrl(
   }
 }
 
+function sessionExpiredRedirectPath(routerBasename: string): string {
+  return withRouterBasename('/?session=expired', routerBasename);
+}
+
 export function AuthProvider(props: { children: React.ReactNode; nextPath: string }) {
   const cfg = getRuntimeConfig();
   const [sessionExpired, setSessionExpired] = useState(false);
@@ -74,6 +80,12 @@ export function AuthProvider(props: { children: React.ReactNode; nextPath: strin
     }
 
     setSessionExpired(true);
+
+    const target = sessionExpiredRedirectPath(currentCfg.routerBasename);
+    const current = window.location.pathname + window.location.search;
+    if (current !== target) {
+      hardReplace(target);
+    }
   }, []);
 
   useEffect(() => {
