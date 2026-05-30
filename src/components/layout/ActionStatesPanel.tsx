@@ -207,7 +207,7 @@ function ActionStateInspect(props: {
           </td>
         </tr>
         {expanded ? (
-          <tr className="border-b border-border bg-surface-2">
+          <tr className="border-b border-border bg-surface-2" data-testid={`tasks.inspect.tx.expanded.${txId}`}>
             <td colSpan={8} className="px-3 py-3">
               <TransactionPayloadPanels t={i18n.t} input={input} output={output} maxHeightClass="max-h-80" />
             </td>
@@ -223,7 +223,11 @@ function ActionStateInspect(props: {
         <Button size="sm" variant="secondary" onClick={props.onBack} testId="tasks.inspect.back">
           {i18n.t('common.back')}
         </Button>
-        <Link className="text-xs font-medium underline" to={`${basePath}/action-states/${id}`}>
+        <Link
+          className="text-xs font-medium underline"
+          to={`${basePath}/action-states/${id}`}
+          data-testid="tasks.inspect.open_full"
+        >
           {i18n.t('tasks.inspect.open_full')}
         </Link>
       </div>
@@ -283,7 +287,10 @@ function ActionStateInspect(props: {
 
       <div className="mt-4">
         <div className="text-xs font-medium text-muted">{i18n.t('tasks.inspect.backend_details')}</div>
-        <pre className="mt-2 max-h-64 overflow-auto rounded-md border border-border bg-surface p-3 text-xs text-muted">
+        <pre
+          className="mt-2 max-h-64 overflow-auto rounded-md border border-border bg-surface p-3 text-xs text-muted"
+          data-testid="tasks.inspect.backend_details"
+        >
           {backendDetailPayload(s)}
         </pre>
       </div>
@@ -304,10 +311,14 @@ function ActionStateInspect(props: {
             ) : null}
             {relatedChainId ? (
               <>
-                <Link className="text-xs underline" to={`${basePath}/transactions/${relatedChainId}`}>
+                <Link className="text-xs underline" to={`${basePath}/transactions/${relatedChainId}`} data-testid="tasks.inspect.open_chain">
                   {i18n.t('tasks.inspect.open_chain')}
                 </Link>
-                <Link className="text-xs underline" to={`${basePath}/transactions/items?transaction_chain=${relatedChainId}`}>
+                <Link
+                  className="text-xs underline"
+                  to={`${basePath}/transactions/items?transaction_chain=${relatedChainId}`}
+                  data-testid="tasks.inspect.view_all"
+                >
                   {i18n.t('tasks.action.view_all')}
                 </Link>
               </>

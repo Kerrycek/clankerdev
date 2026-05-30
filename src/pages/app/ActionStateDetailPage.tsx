@@ -338,7 +338,12 @@ export function ActionStateDetailPage() {
                   <LinkButton to={`${basePath}/transactions/${relatedChainId}`} variant="secondary" size="sm">
                     {t('tasks.inspect.open_chain')}
                   </LinkButton>
-                  <LinkButton to={`${basePath}/transactions/items?transaction_chain=${relatedChainId}`} variant="secondary" size="sm">
+                  <LinkButton
+                    to={`${basePath}/transactions/items?transaction_chain=${relatedChainId}`}
+                    variant="secondary"
+                    size="sm"
+                    testId="action_state.detail.transactions.view_all"
+                  >
                     {t('tasks.action.view_all')}
                   </LinkButton>
                 </>

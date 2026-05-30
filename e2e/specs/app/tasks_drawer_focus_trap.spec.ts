@@ -92,3 +92,89 @@ test('@pr-smoke Tasks drawer cards stay readable in the narrow side panel', asyn
   expect(actionsBox!.x).toBeGreaterThanOrEqual(rowBox!.x);
   expect(actionsBox!.x + actionsBox!.width).toBeLessThanOrEqual(rowBox!.x + rowBox!.width);
 });
+
+test('@pr-smoke Tasks drawer can inspect action state transactions without leaving the page', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'test', level: 1 },
+    handlers: {
+      'GET vpses': () => ({ vpses: [], _meta: { total_count: 0 } }),
+      'GET action_states': () => ({
+        action_states: [
+          {
+            id: 79,
+            label: 'Create VPS',
+            status: true,
+            finished: true,
+            current: 2,
+            total: 2,
+            created_at: '2026-05-31T01:35:27Z',
+            updated_at: '2026-05-31T01:35:27Z',
+            transaction_chain: { id: 79, label: 'Create chain' },
+            result: { vps_id: 12 },
+          },
+        ],
+      }),
+      'GET action_states/79': () => ({
+        action_state: {
+          id: 79,
+          label: 'Create VPS',
+          status: true,
+          finished: true,
+          current: 2,
+          total: 2,
+          created_at: '2026-05-31T01:35:27Z',
+          updated_at: '2026-05-31T01:35:27Z',
+          transaction_chain: { id: 79, label: 'Create chain' },
+          result: { vps_id: 12 },
+        },
+      }),
+      'GET transaction_chains/79': () => ({
+        transaction_chain: {
+          id: 79,
+          label: 'Create chain',
+          state: 'done',
+          progress: 2,
+          size: 2,
+        },
+      }),
+      'GET transactions': ({ searchParams }: { searchParams: URLSearchParams }) => {
+        if (searchParams.get('transaction[transaction_chain]') !== '79') return { transactions: [] };
+        return {
+          transactions: [
+            {
+              id: 9001,
+              name: 'Create dataset',
+              done: 'done',
+              success: 1,
+              type: 3001,
+              priority: 0,
+              started_at: '2026-05-31T01:35:27Z',
+              finished_at: '2026-05-31T01:35:29Z',
+              node: { id: 2, label: 'node2' },
+              vps: { id: 12, label: 'vps12' },
+              transaction_chain: { id: 79 },
+              input: { dataset: 'tank/ct/vps12' },
+              output: { ok: true },
+            },
+          ],
+        };
+      },
+    },
+  });
+
+  await page.goto('/app/vps');
+  await page.getByTestId('tasks.open-button').click();
+  await page.getByTestId('tasks.inspect.open.79').click();
+
+  await expect(page.getByTestId('tasks.inspect.action_state.79')).toBeVisible();
+  await expect(page.getByTestId('tasks.inspect.open_full')).toHaveAttribute('href', '/app/action-states/79');
+  await expect(page.getByTestId('tasks.inspect.open_chain')).toHaveAttribute('href', '/app/transactions/79');
+  await expect(page.getByTestId('tasks.inspect.view_all')).toHaveAttribute('href', '/app/transactions/items?transaction_chain=79');
+  await expect(page.getByTestId('tasks.inspect.backend_details')).toContainText('vps_id');
+
+  await page.getByTestId('tasks.inspect.tx.toggle.9001').click();
+  await expect(page.getByTestId('tasks.inspect.tx.expanded.9001')).toBeVisible();
+  await expect(page.getByTestId('tasks.inspect.tx.expanded.9001')).toContainText('tank/ct/vps12');
+});

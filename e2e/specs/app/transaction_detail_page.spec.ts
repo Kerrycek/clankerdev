@@ -23,8 +23,8 @@ const handlers = {
   }),
 };
 
-test.describe('TransactionDetailPage', () => {
-  test('renders transaction details', async ({ page }) => {
+test.describe('@pr-smoke TransactionDetailPage', () => {
+  test('renders user transaction details without broken admin node link', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_TOKEN' });
     await installHaveApiMock(page, { handlers });
 
@@ -35,8 +35,25 @@ test.describe('TransactionDetailPage', () => {
     await expect(page.getByTestId('transactions.items.detail.info')).toBeVisible();
     await expect(page.getByTestId('transactions.items.detail.payload')).toBeVisible();
     await expect(page.getByTestId('transactions.items.detail.raw')).toBeVisible();
+    await page.getByTestId('transactions.items.detail.raw').getByText(/raw|surov/i).click();
     await expect(page.getByTestId('transactions.items.detail.raw.json')).toBeVisible();
 
     await expect(page.getByTestId('transactions.items.detail.open_chain')).toHaveAttribute('href', '/app/transactions/123');
+    await expect(page.getByTestId('transactions.items.detail.node_value')).toContainText('node2');
+    await expect(page.locator('a[href="/app/admin/nodes/2"]')).toHaveCount(0);
+  });
+
+  test('renders admin transaction details with admin node link', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_TOKEN' });
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
+      handlers,
+    });
+
+    await page.goto('/admin/transactions/items/702');
+
+    await expect(page.getByTestId('transactions.items.detail')).toBeVisible();
+    await expect(page.getByTestId('transactions.items.detail.open_chain')).toHaveAttribute('href', '/admin/transactions/123');
+    await expect(page.getByTestId('transactions.items.detail.node_link')).toHaveAttribute('href', '/admin/nodes/2');
   });
 });

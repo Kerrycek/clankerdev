@@ -6,7 +6,7 @@ import { clsx } from './clsx';
 export type TableRowVariant = 'ok' | 'warn' | 'danger' | 'info' | 'neutral' | 'muted';
 
 function isInteractiveElement(target: EventTarget | null): boolean {
-  if (!target || !(target instanceof HTMLElement)) return false;
+  if (!target || !(target instanceof Element)) return false;
 
   // Elements that should keep their own click behavior (links, buttons, form controls, etc.)
   // Also allow opt-out via `data-row-no-nav`.
