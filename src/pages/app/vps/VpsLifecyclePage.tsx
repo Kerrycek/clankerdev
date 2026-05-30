@@ -481,14 +481,66 @@ export function VpsLifecyclePage() {
     [t],
   );
 
+  const deleteCard = (
+    <Card testId="vps.lifecycle.delete">
+      <CardHeader title={t('vps.lifecycle.delete.title')} subtitle={t('vps.lifecycle.delete.subtitle')} />
+      <CardBody className="space-y-4">
+        {!isAdminMode ? <Alert variant="neutral">{t('vps.lifecycle.user_delete.summary')}</Alert> : null}
+
+        <Alert variant="danger" title={t('vps.lifecycle.delete.warning_title')}>
+          {t('vps.lifecycle.delete.warning_body')}
+        </Alert>
+
+        {isAdminMode ? (
+          <Checkbox
+            checked={deleteForm.lazy}
+            onChange={(v) => setDeleteForm((p) => ({ ...p, lazy: v }))}
+            label={t('vps.lifecycle.delete.lazy')}
+            description={t('vps.lifecycle.delete.lazy_help')}
+            testId="vps.lifecycle.delete.lazy"
+          />
+        ) : null}
+        <Checkbox
+          checked={deleteForm.confirm}
+          onChange={(v) => setDeleteForm((p) => ({ ...p, confirm: v }))}
+          label={t('vps.lifecycle.confirm.delete')}
+          testId="vps.lifecycle.delete.confirm"
+        />
+
+        {deleteM.isError ? (
+          <Alert title={t('vps.lifecycle.delete.error')} variant="danger">
+            {mutationErrorMessage(deleteM.error, t('vps.lifecycle.validation.delete'))}
+          </Alert>
+        ) : null}
+
+        <div className="flex justify-end">
+          <ActionButton
+            variant="danger"
+            testId="vps.lifecycle.delete.submit"
+            disabled={!deleteForm.confirm || !gate.allowed}
+            disabledReason={!gate.allowed ? gate.reason : undefined}
+            loading={deleteM.isPending}
+            onClick={() => deleteM.mutate()}
+          >
+            {t('vps.lifecycle.delete.submit')}
+          </ActionButton>
+        </div>
+      </CardBody>
+    </Card>
+  );
+
   if (!isAdminMode) {
     return (
-      <Card testId="vps.lifecycle.user_blocked">
-        <CardHeader title={t('vps.lifecycle.title')} subtitle={t('vps.lifecycle.user_blocked.subtitle')} />
-        <CardBody>
-          <Alert variant="neutral">{t('vps.lifecycle.user_blocked.body')}</Alert>
-        </CardBody>
-      </Card>
+      <div className="space-y-4" data-testid="vps.lifecycle.page">
+        <Card testId="vps.lifecycle.summary">
+          <CardHeader title={t('vps.lifecycle.title')} subtitle={t('vps.lifecycle.subtitle_user')} />
+          <CardBody>
+            <Alert variant="neutral">{t('vps.lifecycle.user_delete.summary')}</Alert>
+          </CardBody>
+        </Card>
+
+        {deleteCard}
+      </div>
     );
   }
 
@@ -951,47 +1003,7 @@ export function VpsLifecyclePage() {
         </CardBody>
       </Card>
 
-      <Card testId="vps.lifecycle.delete">
-        <CardHeader title={t('vps.lifecycle.delete.title')} subtitle={t('vps.lifecycle.delete.subtitle')} />
-        <CardBody className="space-y-4">
-          <Alert variant="danger" title={t('vps.lifecycle.delete.warning_title')}>
-            {t('vps.lifecycle.delete.warning_body')}
-          </Alert>
-
-          <Checkbox
-            checked={deleteForm.lazy}
-            onChange={(v) => setDeleteForm((p) => ({ ...p, lazy: v }))}
-            label={t('vps.lifecycle.delete.lazy')}
-            description={t('vps.lifecycle.delete.lazy_help')}
-            testId="vps.lifecycle.delete.lazy"
-          />
-          <Checkbox
-            checked={deleteForm.confirm}
-            onChange={(v) => setDeleteForm((p) => ({ ...p, confirm: v }))}
-            label={t('vps.lifecycle.confirm.delete')}
-            testId="vps.lifecycle.delete.confirm"
-          />
-
-          {deleteM.isError ? (
-            <Alert title={t('vps.lifecycle.delete.error')} variant="danger">
-              {mutationErrorMessage(deleteM.error, t('vps.lifecycle.validation.delete'))}
-            </Alert>
-          ) : null}
-
-          <div className="flex justify-end">
-            <ActionButton
-              variant="danger"
-              testId="vps.lifecycle.delete.submit"
-              disabled={!deleteForm.confirm || !gate.allowed}
-              disabledReason={!gate.allowed ? gate.reason : undefined}
-              loading={deleteM.isPending}
-              onClick={() => deleteM.mutate()}
-            >
-              {t('vps.lifecycle.delete.submit')}
-            </ActionButton>
-          </div>
-        </CardBody>
-      </Card>
+      {deleteCard}
     </div>
   );
 }

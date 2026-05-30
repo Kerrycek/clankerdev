@@ -55,9 +55,9 @@ test.describe('VPS list row navigation', () => {
     const row = page.getByTestId('vps.row.300');
     await expect(row).toBeVisible();
 
-    await row.getByLabel('Stop VPS').click();
+    await row.getByTestId('vps.row.300.action.stop').click();
 
-    await expect(page).toHaveURL(/\/app\/vps/);
+    await expect(page).toHaveURL(/\/app\/vps(?:\?|$)/);
     await expect(page.getByTestId('vps.list.power_confirm')).toBeVisible();
   });
 });

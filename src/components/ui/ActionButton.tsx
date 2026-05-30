@@ -65,7 +65,8 @@ export function ActionButton(props: {
         className={cls}
         disabled={nativeDisabled}
         aria-disabled={ariaDisabled}
-        onClick={() => {
+        onClick={(e) => {
+          e.stopPropagation();
           if (nativeDisabled) return;
           if (ariaDisabled) {
             if (reason) setReasonOpen(true);

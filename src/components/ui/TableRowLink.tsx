@@ -70,6 +70,8 @@ export function TableRowLink(props: {
       if (!clickable) return;
       if (!props.to) return;
 
+      if (isInteractiveElement(e.target)) return;
+
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         navigate(props.to);
