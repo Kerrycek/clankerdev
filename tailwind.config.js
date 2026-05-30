@@ -7,12 +7,22 @@ module.exports = {
     extend: {
       // Heights are tokens: avoid arbitrary `h-[...]` / `max-h-[...]` in components.
       maxHeight: {
+        // Standard modal viewport clamp.
+        modal: 'calc(100vh - 2rem)',
         // Used for mail log bodies and other "large pre" scroll areas.
         'scroll-lg': '28rem',
         // Registry / metadata side panels where 420px gives a good balance.
         'scroll-registry': '420px',
       },
+      width: {
+        'drawer-sm': 'var(--drawer-w-sm)',
+        'drawer-md': 'var(--drawer-w-md)',
+        'drawer-lg': 'var(--drawer-w-lg)',
+      },
       minWidth: {
+        'table-sm': 'var(--table-min-w-sm)',
+        'table-md': 'var(--table-min-w-md)',
+        'table-lg': 'var(--table-min-w-lg)',
         'table-xl': '80rem',
       },
       // Radii are tokens (defined in src/styles/index.css)

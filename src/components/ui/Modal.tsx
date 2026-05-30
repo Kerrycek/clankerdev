@@ -90,8 +90,8 @@ export function Modal(props: {
         className={clsx(
           'relative flex w-full flex-col overflow-hidden bg-overlay-surface shadow-panel ring-1 ring-border',
           mobileFullScreen
-            ? 'h-full max-h-full rounded-none sm:h-auto sm:max-h-[calc(100vh-2rem)] sm:rounded-lg'
-            : 'max-h-[calc(100vh-2rem)] rounded-lg',
+            ? 'h-full max-h-full rounded-none sm:h-auto sm:max-h-modal sm:rounded-lg'
+            : 'max-h-modal rounded-lg',
           sizeClass
         )}
       >

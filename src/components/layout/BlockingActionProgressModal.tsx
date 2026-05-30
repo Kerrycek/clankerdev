@@ -71,7 +71,7 @@ export function BlockingActionProgressModal(props: {
 
   return (
     <div
-      className="fixed right-3 top-16 z-40 w-[calc(100vw-1.5rem)] max-w-sm rounded-lg border border-border bg-overlay-surface shadow-panel sm:right-4 md:top-20"
+      className="fixed left-3 right-3 top-16 z-40 rounded-lg border border-border bg-overlay-surface shadow-panel sm:left-auto sm:right-4 sm:w-drawer-md md:top-20"
       data-testid="modal.action_progress"
       data-overlay="popover"
       data-overlay-surface="overlay"
