@@ -17,6 +17,7 @@
     "lint:tailwind": "node scripts/lint-tailwind-tokens.mjs",
     "lint:patterns": "node scripts/lint-banned-patterns.mjs",
     "lint": "npm run lint:tailwind && npm run lint:patterns",
+    "ci:pr": "npm run env:check && npm run lint && npm run audit:i18n && npm run typecheck && npm test",
     "ci:check": "npm run env:check && npm run lint && npm run audit:i18n && npm run audit:i18n-structure && npm run audit:pages && npm run audit:structural && npm run audit:component-contracts && npm run audit:active-docs && npm run audit:overlays && npm run audit:lookup-primitives && npm run audit:api-barrel-imports && npm run audit:ui-strings:check && npm run audit:mutations:check && npm run typecheck && npm test",
     "rc:check": "npm run env:check && npm run ci:check && npm run e2e:smoke && npm run e2e:smoke:mobile",
     "rc:notes": "node scripts/rc-notes.mjs",

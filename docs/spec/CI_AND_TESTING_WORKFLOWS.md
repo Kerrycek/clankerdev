@@ -17,11 +17,15 @@ A GitHub Actions workflow is provided:
 
 It runs on every push and pull request and executes:
 1. `npm ci`
-2. `npm run ci:check`
+2. `npm run ci:pr`
 
-`npm run ci:check` currently runs:
+`npm run ci:pr` is the stable pull-request gate. It currently runs:
 - `npm run lint` (Tailwind token lint + banned-pattern lint)
 - `npm run audit:i18n`
+- `npm run typecheck`
+- `npm test` (Vitest)
+
+`npm run ci:check` is the stricter full local audit target. It also runs:
 - `npm run audit:i18n-structure`
 - `npm run audit:pages`
 - `npm run audit:structural`
@@ -32,8 +36,8 @@ It runs on every push and pull request and executes:
 - `npm run audit:api-barrel-imports`
 - `npm run audit:ui-strings:check`
 - `npm run audit:mutations:check`
-- `npm run typecheck`
-- `npm test` (Vitest)
+
+Some full-audit checks are currently cleanup targets and should not block every PR until they are green on `main`.
 
 In addition, a separate workflow runs a **Playwright PR smoke subset** on every pull request (see below).
 

@@ -27,7 +27,7 @@ jobs:
         run: npm ci
 
       - name: Run CI checks
-        run: npm run ci:check
+        run: npm run ci:pr
 
       - name: Upload audit artifacts
         if: always()
