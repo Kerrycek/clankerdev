@@ -8,7 +8,7 @@ import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
  * This spec is part of the PR smoke suite.
  * Keep it fast and deterministic.
  */
-test('@smoke public overview shows key status surfaces', async ({ page }) => {
+test('@pr-smoke @pr-smoke-mobile @smoke public overview shows key status surfaces', async ({ page }) => {
   await bootstrapVpsAdminWindow(page, {
     apiUrl: '/api',
     apiVersion: '7.0',

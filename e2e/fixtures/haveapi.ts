@@ -51,6 +51,8 @@ export interface HaveApiMockUser {
 
 export interface HaveApiRequestCtx {
   url: URL;
+  /** Compatibility alias used by older specs. */
+  request: URL;
   method: string;
   pathname: string;
   /**
@@ -71,6 +73,7 @@ export type HaveApiHandler = (ctx: HaveApiRequestCtx) => HaveApiHandlerResult | 
 
 export interface HaveApiMock {
   addHandler: (key: string, handler: HaveApiHandler) => void;
+  addHandlers: (handlers: Record<string, HaveApiHandler>) => void;
 }
 
 export interface HaveApiMockOptions {
@@ -122,7 +125,7 @@ export async function installHaveApiMock(page: Page, opts?: HaveApiMockOptions) 
   const versionBase = `${apiBase}/v${apiVersion}`;
 
   const description = opts?.description ?? defaultHaveApiDescription();
-  const user: HaveApiMockUser = opts?.user ?? { id: 1, login: 'e2e', level: 1 };
+  const user: HaveApiMockUser = { id: 1, login: 'e2e', level: 1, ...(opts?.user ?? {}) };
 
   const fallback = opts?.fallbackResponse ?? {};
 
@@ -138,6 +141,11 @@ export async function installHaveApiMock(page: Page, opts?: HaveApiMockOptions) 
   const mock: HaveApiMock = {
     addHandler: (key: string, handler: HaveApiHandler) => {
       handlers[key] = handler;
+    },
+    addHandlers: (nextHandlers: Record<string, HaveApiHandler>) => {
+      for (const [key, handler] of Object.entries(nextHandlers)) {
+        handlers[key] = handler;
+      }
     },
   };
 
@@ -179,6 +187,7 @@ export async function installHaveApiMock(page: Page, opts?: HaveApiMockOptions) 
 
     const ctx: HaveApiRequestCtx = {
       url,
+      request: url,
       method,
       pathname,
       relPath,
@@ -203,4 +212,10 @@ export async function installHaveApiMock(page: Page, opts?: HaveApiMockOptions) 
   });
 
   return mock;
+}
+
+export async function setupHaveApiMock(page: Page, opts?: HaveApiMockOptions) {
+  const { bootstrapVpsAdminWindow } = await import('./bootstrap');
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_SESSION' });
+  return installHaveApiMock(page, opts);
 }

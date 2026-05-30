@@ -12,16 +12,16 @@ Execution workflows:
 - `docs/spec/CI_AND_TESTING_WORKFLOWS.md`
 
 Key rules
-- Tests must use `data-testid` selectors (see `docs/spec/TEST_IDS.md`).
+- Prefer user-facing role/text locators for workflow assertions.
+- Use `data-testid` selectors for stable app shell, route identity, and dense data grids (see `docs/spec/TEST_IDS.md`).
 - Prefer deterministic fixtures + Playwright network interception.
+- Do not store passwords or real tokens in the repo. Use mocked sessions by default; use env variables only for explicit staging runs.
 - Use the Design Sandbox for screenshot regression (`docs/spec/DESIGN_SANDBOX.md`).
 
-## Running locally (without pinning Playwright in package-lock yet)
-
-Until we add `@playwright/test` to `devDependencies`, you can run Playwright via a pinned `npx`.
+## Running locally
 
 ```bash
-cd webui-next
+cd clankerdev
 
 # One-time (downloads browsers)
 npm run e2e:install
@@ -30,6 +30,7 @@ npm run e2e:install
 npm run e2e
 
 # Smoke subset (Tier 0)
+npm run e2e:pr
 npm run e2e:smoke
 npm run e2e:smoke:mobile
 
@@ -37,6 +38,10 @@ npm run e2e:smoke:mobile
 E2E_START_SERVER=1 E2E_SCREENSHOTS=1 node scripts/playwright.mjs test
 ```
 
-## TODO
+## Auth model
 
-- Add `@playwright/test` dependency and pin it in `package-lock.json`.
+Most tests use `bootstrapVpsAdminWindow()` plus `installHaveApiMock()` to emulate an authenticated HaveAPI session.
+This avoids committing credentials and keeps PR tests deterministic.
+
+Real OAuth login against `dev.crucio.cz` is intentionally not part of the default suite. If we add it later, it should
+run as an explicit staging-only job with credentials supplied by CI secrets.
