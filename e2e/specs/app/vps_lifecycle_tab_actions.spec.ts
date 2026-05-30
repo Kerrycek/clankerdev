@@ -117,4 +117,41 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
       },
     });
   });
+
+  test('regular user can request VPS delete without admin-only lifecycle actions', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installHaveApiMock(page, {
+      user: { id: 7, login: 'owner', level: 1 },
+      handlers: {
+        'GET vpses': () => ({ vpses: [] }),
+        'GET vpses/123': () => ({ vps }),
+        'GET ip_addresses': () => ({ ip_addresses: [] }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'DELETE vpses/123': () => ({ _meta: { action_state_id: 503 } }),
+      },
+    });
+
+    await page.goto('/app/vps/123/lifecycle');
+
+    await expect(page.getByTestId('vps.lifecycle.page')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.delete')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.clone')).toHaveCount(0);
+    await expect(page.getByTestId('vps.lifecycle.delete.lazy')).toHaveCount(0);
+
+    await page.getByTestId('vps.lifecycle.delete.confirm').check();
+
+    const reqPromise = page.waitForRequest(
+      (r) => r.method() === 'DELETE' && r.url().includes('/api/v7.0/vpses/123')
+    );
+
+    await page.getByTestId('vps.lifecycle.delete.submit').click();
+
+    const req = await reqPromise;
+    expect(req.postDataJSON()).toEqual({
+      vps: {
+        lazy: true,
+      },
+    });
+    await expect(page).toHaveURL(/\/app\/vps$/);
+  });
 });

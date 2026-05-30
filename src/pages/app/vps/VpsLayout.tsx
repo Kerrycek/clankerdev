@@ -318,12 +318,10 @@ export function VpsLayout() {
       { label: t('vps.tabs.storage'), to: `${basePath}/vps/${vpsId}/storage`, end: true },
       { label: t('vps.tabs.features'), to: `${basePath}/vps/${vpsId}/features`, end: true },
       { label: t('vps.tabs.maintenance'), to: `${basePath}/vps/${vpsId}/maintenance`, end: true },
-      ...(mode === 'admin'
-        ? [{ label: t('vps.tabs.lifecycle'), to: `${basePath}/vps/${vpsId}/lifecycle`, end: true }]
-        : []),
+      { label: t('vps.tabs.lifecycle'), to: `${basePath}/vps/${vpsId}/lifecycle`, end: true },
       { label: t('vps.tabs.console'), to: `${basePath}/vps/${vpsId}/console`, end: true },
     ],
-    [basePath, mode, t, vpsId]
+    [basePath, t, vpsId]
   );
 
   if (vpsQ.isLoading) return <LoadingState testId="vps.detail.loading" />;

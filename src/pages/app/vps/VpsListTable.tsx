@@ -135,6 +135,7 @@ export function VpsListTable({
                   <ActionButton
                     variant="ok"
                     size="sm"
+                    testId={`vps.row.${vps.id}.action.start`}
                     disabled={!row.startGate.allowed}
                     disabledReason={!row.startGate.allowed ? row.startGate.reason : undefined}
                     loading={row.inFlightKind === 'start'}
@@ -147,6 +148,7 @@ export function VpsListTable({
                   <ActionButton
                     variant="warn"
                     size="sm"
+                    testId={`vps.row.${vps.id}.action.restart`}
                     disabled={!row.restartGate.allowed}
                     disabledReason={!row.restartGate.allowed ? row.restartGate.reason : undefined}
                     loading={row.inFlightKind === 'restart'}
@@ -159,6 +161,7 @@ export function VpsListTable({
                   <ActionButton
                     variant="danger"
                     size="sm"
+                    testId={`vps.row.${vps.id}.action.stop`}
                     disabled={!row.stopGate.allowed}
                     disabledReason={!row.stopGate.allowed ? row.stopGate.reason : undefined}
                     loading={row.inFlightKind === 'stop'}
