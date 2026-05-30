@@ -93,6 +93,7 @@ test.describe('@smoke Admin cluster locations', () => {
         )
       )
       .toBeTruthy();
+    await page.getByTestId('admin.cluster.locations.advanced.drawer').getByRole('button', { name: /done/i }).click();
 
     // Create
     await page.getByTestId('admin.cluster.locations.create').click();

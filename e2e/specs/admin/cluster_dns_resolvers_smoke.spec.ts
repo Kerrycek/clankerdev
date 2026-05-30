@@ -21,9 +21,9 @@ test.describe('@smoke Admin cluster DNS resolvers', () => {
       handlers: {
         'GET locations': () => ({ locations, _meta: { total_count: locations.length } }),
         'GET dns_resolvers': ({ searchParams }) => {
-          const q = (searchParams.get('dns_resolver[q]') || '').toLowerCase();
-          const uni = searchParams.get('dns_resolver[is_universal]');
-          const loc = searchParams.get('dns_resolver[location]');
+          const q = (searchParams.get('dns_resolver[q]') || searchParams.get('q') || '').toLowerCase();
+          const uni = searchParams.get('dns_resolver[is_universal]') ?? searchParams.get('is_universal');
+          const loc = searchParams.get('dns_resolver[location]') ?? searchParams.get('location');
 
           let data = resolvers;
           if (q) data = data.filter((r) => String(r.label).toLowerCase().includes(q) || String(r.ip_addr).toLowerCase().includes(q));
@@ -57,7 +57,8 @@ test.describe('@smoke Admin cluster DNS resolvers', () => {
     await expect(page.getByTestId('admin.cluster.dns_resolvers.page')).toBeVisible();
     await expect(page.getByTestId('admin.cluster.dns_resolvers.row.1')).toBeVisible();
 
-    await page.getByTestId('admin.cluster.dns_resolvers.search.input').fill('praha');
+    await page.getByTestId('admin.cluster.dns_resolvers.search.input').fill('q:praha');
+    await page.getByTestId('admin.cluster.dns_resolvers.search.input').press('Escape');
     await page.getByTestId('admin.cluster.dns_resolvers.search.input').press('Enter');
     await expect(page.getByTestId('admin.cluster.dns_resolvers.row.2')).toBeVisible();
 

@@ -65,11 +65,20 @@ describe('payments API wrappers', () => {
   test('fetchPaymentInstructions uses user subresource path', async () => {
     globalThis.fetch = mockFetchOk({ instructions: 'Use VS 123.' }) as any;
 
-    await fetchPaymentInstructions(7);
+    const res = await fetchPaymentInstructions(7);
 
     const [url] = lastFetchCall();
     const u = new URL(url);
 
     expect(u.pathname).toBe('/v7.0/users/7/get_payment_instructions');
+    expect(res.data.instructions).toBe('Use VS 123.');
+  });
+
+  test('fetchPaymentInstructions normalizes legacy string responses', async () => {
+    globalThis.fetch = mockFetchOk('Account: 123456/0100\nVS: 42') as any;
+
+    const res = await fetchPaymentInstructions(42);
+
+    expect(res.data.instructions).toBe('Account: 123456/0100\nVS: 42');
   });
 });

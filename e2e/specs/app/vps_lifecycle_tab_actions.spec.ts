@@ -42,7 +42,7 @@ async function installLifecycleMock(page: Page) {
   });
 }
 
-test.describe('VPS lifecycle tab', () => {
+test.describe('@pr-smoke VPS lifecycle tab', () => {
   test('posts legacy rescue boot payload', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installLifecycleMock(page);

@@ -44,7 +44,7 @@ const ips = [
 
 const acct = [{ id: 1, bytes_in: 1024, bytes_out: 2048 }];
 
-test.describe('VPS network tab', () => {
+test.describe('@pr-smoke VPS network tab', () => {
   test('edits interface and sends PUT', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 

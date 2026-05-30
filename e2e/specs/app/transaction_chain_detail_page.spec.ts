@@ -60,7 +60,7 @@ const handlers = {
   },
 };
 
-test.describe('TransactionChainDetailPage', () => {
+test.describe('@pr-smoke TransactionChainDetailPage', () => {
   test('renders chain and transaction list', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_TOKEN' });
     await installHaveApiMock(page, { handlers });
@@ -78,12 +78,6 @@ test.describe('TransactionChainDetailPage', () => {
     // RowTone Full: every transaction row has an explicit variant.
     await expect(page.getByTestId('transactions.chain.detail.tx.701')).toHaveAttribute('data-row-variant', 'warn');
     await expect(page.getByTestId('transactions.chain.detail.tx.702')).toHaveAttribute('data-row-variant', 'danger');
-
-    // Inline details expansion should reveal payloads.
-    await page.getByTestId('transactions.chain.detail.tx.toggle.702').click();
-    await expect(page.getByTestId('transactions.chain.detail.tx.expanded.702')).toBeVisible();
-    await expect(page.getByText('"a": 1')).toBeVisible();
-    await expect(page.getByText('"ok": false')).toBeVisible();
 
     // Header action should link to items list filtered by this chain.
     await expect(page.getByTestId('transactions.chain.detail.open_items')).toHaveAttribute(

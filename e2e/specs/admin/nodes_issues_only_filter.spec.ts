@@ -10,7 +10,7 @@ test('@smoke admin nodes: issues-only filter hides healthy nodes', async ({ page
     handlers: {
       'GET nodes/public_status': () => [
         { domain_name: 'node125.example.test', status: false },
-        { domain_name: 'node124.example.test', status: true },
+        { domain_name: 'node124.example.test', status: true, maintenance_lock: { reason: 'HW upgrade' } },
         { domain_name: 'node123.example.test', status: true },
       ],
       'GET nodes': () => {
@@ -26,7 +26,6 @@ test('@smoke admin nodes: issues-only filter hides healthy nodes', async ({ page
             domain_name: 'node124.example.test',
             fqdn: 'node124.example.test',
             location: { label: 'dc1' },
-            maintenance_lock: { reason: 'HW upgrade' },
           },
           {
             id: 123,

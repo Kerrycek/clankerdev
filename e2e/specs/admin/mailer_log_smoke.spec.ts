@@ -34,8 +34,8 @@ test.describe('@smoke Admin mailer log', () => {
       handlers: {
         'GET mail_templates': () => ({ mail_templates: templates, _meta: { total_count: templates.length } }),
         'GET mail_logs': ({ searchParams }) => {
-          const q = searchParams.get('mail_log[q]') || '';
-          const tpl = searchParams.get('mail_log[mail_template]') || '';
+          const q = searchParams.get('mail_log[q]') || searchParams.get('q') || '';
+          const tpl = searchParams.get('mail_log[mail_template]') || searchParams.get('mail_template') || '';
 
           let data = all;
           if (tpl) {
@@ -72,7 +72,7 @@ test.describe('@smoke Admin mailer log', () => {
     await page.getByTestId('admin.mailer.log.detail.tab.html').click();
     await expect(page.getByTestId('admin.mailer.log.detail.body.html')).toBeVisible();
 
-    await page.getByTestId('admin.mailer.log.detail.body.raw_toggle').locator('input').click();
+    await page.getByTestId('admin.mailer.log.detail.body.raw_toggle').click();
     await expect(page.getByTestId('admin.mailer.log.detail.body')).toContainText('<p>Hello');
   });
 
@@ -91,12 +91,14 @@ test.describe('@smoke Admin mailer log', () => {
 
     // Filter by template (Smart Filter Input).
     await page.getByTestId('admin.mailer.log.smart_filter.input').fill('template:10');
+    await page.getByTestId('admin.mailer.log.smart_filter.input').press('Escape');
     await page.getByTestId('admin.mailer.log.smart_filter.input').press('Enter');
     await expect(page.getByTestId('admin.mailer.log.row.101')).toBeVisible();
     await expect(page.getByTestId('admin.mailer.log.row.100')).toHaveCount(0);
 
     // Search within results.
-    await page.getByTestId('admin.mailer.log.smart_filter.input').fill('welcome');
+    await page.getByTestId('admin.mailer.log.smart_filter.input').fill('q:welcome');
+    await page.getByTestId('admin.mailer.log.smart_filter.input').press('Escape');
     await page.getByTestId('admin.mailer.log.smart_filter.input').press('Enter');
     await expect(page.getByTestId('admin.mailer.log.row.101')).toBeVisible();
 
