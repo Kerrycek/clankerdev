@@ -16,6 +16,7 @@ import { Textarea } from '../../../components/ui/Textarea';
 import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 import { VpsLookupInput } from '../../../components/ui/VpsLookupInput';
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
+import { fetchLocations, type Location } from '../../../lib/api/infra';
 import { fetchOsTemplates, type OsTemplate } from '../../../lib/api/osTemplates';
 import {
   updateVps,
@@ -40,6 +41,7 @@ import { useVps } from './VpsContext';
 type CloneForm = {
   user: string;
   node: string;
+  location: string;
   hostname: string;
   subdatasets: boolean;
   datasetPlans: boolean;
@@ -163,6 +165,10 @@ function templateLabel(tpl: OsTemplate): string {
   return String(tpl.label ?? tpl.name ?? `#${tpl.id}`);
 }
 
+function locationLabel(location: Location): string {
+  return String(location.label ?? location.description ?? location.domain ?? `#${location.id}`);
+}
+
 function mutationErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message && error.message !== 'invalid-id' && error.message !== 'required-id' && error.message !== 'invalid-date') {
     return error.message;
@@ -182,6 +188,7 @@ export function VpsLifecyclePage() {
   const objectLabel = String((vps as any).hostname ?? '') || `#${vpsId}`;
   const ownerId = resourceId((vps as any).user);
   const nodeId = resourceId((vps as any).node);
+  const locationId = resourceId((vps as any).node?.location ?? (vps as any).location);
   const osTemplateId = resourceId((vps as any).os_template);
   const isAdminMode = mode === 'admin';
 
@@ -192,9 +199,17 @@ export function VpsLifecyclePage() {
     staleTime: 60_000,
   });
 
+  const locationsQ = useQuery({
+    queryKey: ['locations', 'vps-lifecycle', { limit: 500, hasHypervisor: true, hypervisorType: 'vpsadminos' }],
+    queryFn: async () => (await fetchLocations({ limit: 500, hasHypervisor: true, hypervisorType: 'vpsadminos' })).data,
+    enabled: !isAdminMode,
+    staleTime: 60_000,
+  });
+
   const [clone, setClone] = useState<CloneForm>(() => ({
     user: ownerId ? String(ownerId) : '',
     node: nodeId ? String(nodeId) : '',
+    location: locationId ? String(locationId) : '',
     hostname: `${String((vps as any).hostname ?? `vps-${vpsId}`)}-${vpsId}-clone`,
     subdatasets: true,
     datasetPlans: true,
@@ -274,8 +289,6 @@ export function VpsLifecyclePage() {
       await preflight();
 
       const payload: VpsClonePayload = {
-        user: parseRequiredId(clone.user),
-        node: parseRequiredId(clone.node),
         hostname: clone.hostname.trim() || undefined,
         subdatasets: clone.subdatasets,
         dataset_plans: clone.datasetPlans,
@@ -283,6 +296,13 @@ export function VpsLifecyclePage() {
         features: clone.features,
         stop: clone.stop,
       };
+
+      if (isAdminMode) {
+        payload.user = parseRequiredId(clone.user);
+        payload.node = parseRequiredId(clone.node);
+      } else {
+        payload.location = parseRequiredId(clone.location);
+      }
 
       return vpsClone(vpsId, payload);
     },
@@ -303,12 +323,13 @@ export function VpsLifecyclePage() {
       await preflight();
       if (!swap.targetVps) throw new Error('required-id');
 
-      const payload: VpsSwapWithPayload = {
-        vps: swap.targetVps,
-        hostname: swap.hostname,
-        resources: swap.resources,
-        expirations: swap.expirations,
-      };
+      const payload: VpsSwapWithPayload = { vps: swap.targetVps };
+
+      if (isAdminMode) {
+        payload.hostname = swap.hostname;
+        payload.resources = swap.resources;
+        payload.expirations = swap.expirations;
+      }
 
       return vpsSwapWith(vpsId, payload);
     },
@@ -443,7 +464,7 @@ export function VpsLifecyclePage() {
   const deleteM = useMutation({
     mutationFn: async () => {
       await preflight();
-      return vpsDelete(vpsId, { lazy: deleteForm.lazy });
+      return vpsDelete(vpsId, { lazy: isAdminMode ? deleteForm.lazy : false });
     },
     onMutate: () => chrome.acquireLocalLock(vpsRef),
     onSuccess: (res) => {
@@ -479,6 +500,157 @@ export function VpsLifecyclePage() {
       t('vps.lifecycle.admin.summary.delete'),
     ],
     [t],
+  );
+
+  const cloneTargetReady = isAdminMode ? Boolean(clone.user.trim() && clone.node.trim()) : Boolean(clone.location.trim());
+
+  const cloneCard = (
+    <Card testId="vps.lifecycle.clone">
+      <CardHeader
+        title={t('vps.lifecycle.clone.title')}
+        subtitle={isAdminMode ? t('vps.lifecycle.clone.subtitle') : t('vps.lifecycle.clone.subtitle_user')}
+      />
+      <CardBody className="space-y-4">
+        <div className="grid gap-3 md:grid-cols-3">
+          {isAdminMode ? (
+            <>
+              <Field label={t('vps.lifecycle.field.owner')} help={t('vps.lifecycle.clone.owner_help')}>
+                <UserLookupInput
+                  value={clone.user}
+                  onChange={(user) => setClone((prev) => ({ ...prev, user }))}
+                  placeholder={t('vps.lifecycle.placeholder.user')}
+                  testId="vps.lifecycle.clone.user"
+                  disabled={cloneM.isPending}
+                />
+              </Field>
+              <Field label={t('vps.lifecycle.field.node')} help={t('vps.lifecycle.clone.node_help')}>
+                <NodeLookupInput
+                  value={clone.node}
+                  onChange={(node) => setClone((prev) => ({ ...prev, node }))}
+                  placeholder={t('vps.lifecycle.placeholder.node')}
+                  testId="vps.lifecycle.clone.node"
+                  disabled={cloneM.isPending}
+                />
+              </Field>
+            </>
+          ) : (
+            <Field label={t('vps.lifecycle.field.location')} help={t('vps.lifecycle.clone.location_help')}>
+              <Select
+                value={clone.location}
+                onChange={(e) => setClone((prev) => ({ ...prev, location: e.target.value }))}
+                disabled={cloneM.isPending || locationsQ.isLoading}
+                testId="vps.lifecycle.clone.location"
+              >
+                <option value="">{t('vps.lifecycle.placeholder.location')}</option>
+                {locationsQ.data?.map((location) => (
+                  <option key={location.id} value={location.id}>
+                    {locationLabel(location)}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
+          <Field label={t('vps.lifecycle.field.hostname')} help={t('vps.lifecycle.clone.hostname_help')}>
+            <Input
+              value={clone.hostname}
+              onChange={(e) => setClone((prev) => ({ ...prev, hostname: e.target.value }))}
+              testId="vps.lifecycle.clone.hostname"
+              disabled={cloneM.isPending}
+            />
+          </Field>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          <Checkbox checked={clone.subdatasets} onChange={(v) => setClone((p) => ({ ...p, subdatasets: v }))} label={t('vps.lifecycle.clone.option.subdatasets')} testId="vps.lifecycle.clone.subdatasets" />
+          <Checkbox checked={clone.datasetPlans} onChange={(v) => setClone((p) => ({ ...p, datasetPlans: v }))} label={t('vps.lifecycle.clone.option.dataset_plans')} testId="vps.lifecycle.clone.dataset_plans" />
+          <Checkbox checked={clone.resources} onChange={(v) => setClone((p) => ({ ...p, resources: v }))} label={t('vps.lifecycle.clone.option.resources')} testId="vps.lifecycle.clone.resources" />
+          <Checkbox checked={clone.features} onChange={(v) => setClone((p) => ({ ...p, features: v }))} label={t('vps.lifecycle.clone.option.features')} testId="vps.lifecycle.clone.features" />
+          <Checkbox checked={clone.stop} onChange={(v) => setClone((p) => ({ ...p, stop: v }))} label={t('vps.lifecycle.clone.option.stop')} testId="vps.lifecycle.clone.stop" />
+        </div>
+
+        <Checkbox
+          checked={clone.confirm}
+          onChange={(v) => setClone((p) => ({ ...p, confirm: v }))}
+          label={t('vps.lifecycle.confirm.clone')}
+          testId="vps.lifecycle.clone.confirm"
+        />
+
+        {cloneM.isError ? (
+          <Alert title={t('vps.lifecycle.clone.error')} variant="danger">
+            {mutationErrorMessage(cloneM.error, t('vps.lifecycle.validation.clone'))}
+          </Alert>
+        ) : null}
+
+        <div className="flex justify-end">
+          <ActionButton
+            variant="primary"
+            testId="vps.lifecycle.clone.submit"
+            disabled={!clone.confirm || !cloneTargetReady || !gate.allowed}
+            disabledReason={!gate.allowed ? gate.reason : undefined}
+            loading={cloneM.isPending}
+            onClick={() => cloneM.mutate()}
+          >
+            {t('vps.lifecycle.clone.submit')}
+          </ActionButton>
+        </div>
+      </CardBody>
+    </Card>
+  );
+
+  const swapCard = (
+    <Card testId="vps.lifecycle.swap">
+      <CardHeader
+        title={t('vps.lifecycle.swap.title')}
+        subtitle={isAdminMode ? t('vps.lifecycle.swap.subtitle') : t('vps.lifecycle.swap.subtitle_user')}
+      />
+      <CardBody className="space-y-4">
+        <Field label={t('vps.lifecycle.field.target_vps')} help={t('vps.lifecycle.swap.target_help')}>
+          <VpsLookupInput
+            value={swap.targetVps}
+            onChange={(targetVps) => setSwap((prev) => ({ ...prev, targetVps }))}
+            placeholder={t('vps.lifecycle.placeholder.vps')}
+            testId="vps.lifecycle.swap.target"
+            disabled={swapM.isPending}
+          />
+        </Field>
+
+        {isAdminMode ? (
+          <div className="grid gap-2 sm:grid-cols-3">
+            <Checkbox checked={swap.hostname} onChange={(v) => setSwap((p) => ({ ...p, hostname: v }))} label={t('vps.lifecycle.swap.option.hostname')} testId="vps.lifecycle.swap.hostname" />
+            <Checkbox checked={swap.resources} onChange={(v) => setSwap((p) => ({ ...p, resources: v }))} label={t('vps.lifecycle.swap.option.resources')} testId="vps.lifecycle.swap.resources" />
+            <Checkbox checked={swap.expirations} onChange={(v) => setSwap((p) => ({ ...p, expirations: v }))} label={t('vps.lifecycle.swap.option.expirations')} testId="vps.lifecycle.swap.expirations" />
+          </div>
+        ) : (
+          <Alert variant="neutral">{t('vps.lifecycle.swap.user_options_hint')}</Alert>
+        )}
+
+        <Checkbox
+          checked={swap.confirm}
+          onChange={(v) => setSwap((p) => ({ ...p, confirm: v }))}
+          label={t('vps.lifecycle.confirm.swap')}
+          testId="vps.lifecycle.swap.confirm"
+        />
+
+        {swapM.isError ? (
+          <Alert title={t('vps.lifecycle.swap.error')} variant="danger">
+            {mutationErrorMessage(swapM.error, t('vps.lifecycle.validation.swap'))}
+          </Alert>
+        ) : null}
+
+        <div className="flex justify-end">
+          <ActionButton
+            variant="danger"
+            testId="vps.lifecycle.swap.submit"
+            disabled={!swap.confirm || !swap.targetVps || !gate.allowed}
+            disabledReason={!gate.allowed ? gate.reason : undefined}
+            loading={swapM.isPending}
+            onClick={() => swapM.mutate()}
+          >
+            {t('vps.lifecycle.swap.submit')}
+          </ActionButton>
+        </div>
+      </CardBody>
+    </Card>
   );
 
   const deleteCard = (
@@ -535,10 +707,12 @@ export function VpsLifecyclePage() {
         <Card testId="vps.lifecycle.summary">
           <CardHeader title={t('vps.lifecycle.title')} subtitle={t('vps.lifecycle.subtitle_user')} />
           <CardBody>
-            <Alert variant="neutral">{t('vps.lifecycle.user_delete.summary')}</Alert>
+            <Alert variant="neutral">{t('vps.lifecycle.user_lifecycle.summary')}</Alert>
           </CardBody>
         </Card>
 
+        {cloneCard}
+        {swapCard}
         {deleteCard}
       </div>
     );
@@ -745,120 +919,9 @@ export function VpsLifecyclePage() {
         </CardBody>
       </Card>
 
-      <Card testId="vps.lifecycle.clone">
-        <CardHeader title={t('vps.lifecycle.clone.title')} subtitle={t('vps.lifecycle.clone.subtitle')} />
-        <CardBody className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-3">
-            <Field label={t('vps.lifecycle.field.owner')} help={t('vps.lifecycle.clone.owner_help')}>
-              <UserLookupInput
-                value={clone.user}
-                onChange={(user) => setClone((prev) => ({ ...prev, user }))}
-                placeholder={t('vps.lifecycle.placeholder.user')}
-                testId="vps.lifecycle.clone.user"
-                disabled={cloneM.isPending}
-              />
-            </Field>
-            <Field label={t('vps.lifecycle.field.node')} help={t('vps.lifecycle.clone.node_help')}>
-              <NodeLookupInput
-                value={clone.node}
-                onChange={(node) => setClone((prev) => ({ ...prev, node }))}
-                placeholder={t('vps.lifecycle.placeholder.node')}
-                testId="vps.lifecycle.clone.node"
-                disabled={cloneM.isPending}
-              />
-            </Field>
-            <Field label={t('vps.lifecycle.field.hostname')} help={t('vps.lifecycle.clone.hostname_help')}>
-              <Input
-                value={clone.hostname}
-                onChange={(e) => setClone((prev) => ({ ...prev, hostname: e.target.value }))}
-                testId="vps.lifecycle.clone.hostname"
-                disabled={cloneM.isPending}
-              />
-            </Field>
-          </div>
+      {cloneCard}
 
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-            <Checkbox checked={clone.subdatasets} onChange={(v) => setClone((p) => ({ ...p, subdatasets: v }))} label={t('vps.lifecycle.clone.option.subdatasets')} testId="vps.lifecycle.clone.subdatasets" />
-            <Checkbox checked={clone.datasetPlans} onChange={(v) => setClone((p) => ({ ...p, datasetPlans: v }))} label={t('vps.lifecycle.clone.option.dataset_plans')} testId="vps.lifecycle.clone.dataset_plans" />
-            <Checkbox checked={clone.resources} onChange={(v) => setClone((p) => ({ ...p, resources: v }))} label={t('vps.lifecycle.clone.option.resources')} testId="vps.lifecycle.clone.resources" />
-            <Checkbox checked={clone.features} onChange={(v) => setClone((p) => ({ ...p, features: v }))} label={t('vps.lifecycle.clone.option.features')} testId="vps.lifecycle.clone.features" />
-            <Checkbox checked={clone.stop} onChange={(v) => setClone((p) => ({ ...p, stop: v }))} label={t('vps.lifecycle.clone.option.stop')} testId="vps.lifecycle.clone.stop" />
-          </div>
-
-          <Checkbox
-            checked={clone.confirm}
-            onChange={(v) => setClone((p) => ({ ...p, confirm: v }))}
-            label={t('vps.lifecycle.confirm.clone')}
-            testId="vps.lifecycle.clone.confirm"
-          />
-
-          {cloneM.isError ? (
-            <Alert title={t('vps.lifecycle.clone.error')} variant="danger">
-              {mutationErrorMessage(cloneM.error, t('vps.lifecycle.validation.clone'))}
-            </Alert>
-          ) : null}
-
-          <div className="flex justify-end">
-            <ActionButton
-              variant="primary"
-              testId="vps.lifecycle.clone.submit"
-              disabled={!clone.confirm || !gate.allowed}
-              disabledReason={!gate.allowed ? gate.reason : undefined}
-              loading={cloneM.isPending}
-              onClick={() => cloneM.mutate()}
-            >
-              {t('vps.lifecycle.clone.submit')}
-            </ActionButton>
-          </div>
-        </CardBody>
-      </Card>
-
-      <Card testId="vps.lifecycle.swap">
-        <CardHeader title={t('vps.lifecycle.swap.title')} subtitle={t('vps.lifecycle.swap.subtitle')} />
-        <CardBody className="space-y-4">
-          <Field label={t('vps.lifecycle.field.target_vps')} help={t('vps.lifecycle.swap.target_help')}>
-            <VpsLookupInput
-              value={swap.targetVps}
-              onChange={(targetVps) => setSwap((prev) => ({ ...prev, targetVps }))}
-              placeholder={t('vps.lifecycle.placeholder.vps')}
-              testId="vps.lifecycle.swap.target"
-              disabled={swapM.isPending}
-            />
-          </Field>
-
-          <div className="grid gap-2 sm:grid-cols-3">
-            <Checkbox checked={swap.hostname} onChange={(v) => setSwap((p) => ({ ...p, hostname: v }))} label={t('vps.lifecycle.swap.option.hostname')} testId="vps.lifecycle.swap.hostname" />
-            <Checkbox checked={swap.resources} onChange={(v) => setSwap((p) => ({ ...p, resources: v }))} label={t('vps.lifecycle.swap.option.resources')} testId="vps.lifecycle.swap.resources" />
-            <Checkbox checked={swap.expirations} onChange={(v) => setSwap((p) => ({ ...p, expirations: v }))} label={t('vps.lifecycle.swap.option.expirations')} testId="vps.lifecycle.swap.expirations" />
-          </div>
-
-          <Checkbox
-            checked={swap.confirm}
-            onChange={(v) => setSwap((p) => ({ ...p, confirm: v }))}
-            label={t('vps.lifecycle.confirm.swap')}
-            testId="vps.lifecycle.swap.confirm"
-          />
-
-          {swapM.isError ? (
-            <Alert title={t('vps.lifecycle.swap.error')} variant="danger">
-              {mutationErrorMessage(swapM.error, t('vps.lifecycle.validation.swap'))}
-            </Alert>
-          ) : null}
-
-          <div className="flex justify-end">
-            <ActionButton
-              variant="danger"
-              testId="vps.lifecycle.swap.submit"
-              disabled={!swap.confirm || !swap.targetVps || !gate.allowed}
-              disabledReason={!gate.allowed ? gate.reason : undefined}
-              loading={swapM.isPending}
-              onClick={() => swapM.mutate()}
-            >
-              {t('vps.lifecycle.swap.submit')}
-            </ActionButton>
-          </div>
-        </CardBody>
-      </Card>
+      {swapCard}
 
       <Card testId="vps.lifecycle.replace">
         <CardHeader title={t('vps.lifecycle.replace.title')} subtitle={t('vps.lifecycle.replace.subtitle')} />
