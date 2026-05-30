@@ -17,13 +17,17 @@ export function Drawer(props: {
   /** Optional test ids for E2E / integration testing */
   testId?: string;
   closeTestId?: string;
+
+  /** Use false for docked panels that should not dim or block the page. */
+  modal?: boolean;
 }) {
   const side = props.side ?? 'left';
+  const modal = props.modal ?? true;
   const { t } = useI18n();
 
   const titleId = useId();
   const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null);
-  useFocusTrap(props.open, containerEl);
+  useFocusTrap(props.open && modal, containerEl);
 
   useEffect(() => {
     if (!props.open) return;
@@ -51,17 +55,19 @@ export function Drawer(props: {
   const closeTestId = props.closeTestId ?? 'drawer.close';
 
   return createPortal(
-    <div className="fixed inset-0 z-50">
-      <div
-        className="absolute inset-0 bg-backdrop"
-        data-overlay-backdrop="true"
-        onClick={props.onClose}
-        aria-hidden="true"
-      />
+    <div className={clsx('fixed inset-0 z-50', modal ? undefined : 'pointer-events-none')}>
+      {modal ? (
+        <div
+          className="absolute inset-0 bg-backdrop"
+          data-overlay-backdrop="true"
+          onClick={props.onClose}
+          aria-hidden="true"
+        />
+      ) : null}
 
       <div
         role="dialog"
-        aria-modal="true"
+        aria-modal={modal ? 'true' : 'false'}
         aria-labelledby={props.title ? titleId : undefined}
         data-testid={props.testId}
         data-overlay="drawer"
@@ -69,7 +75,7 @@ export function Drawer(props: {
         tabIndex={-1}
         ref={setContainerEl}
         className={clsx(
-          'absolute top-0 h-full bg-overlay-surface shadow-panel ring-1 ring-border flex flex-col',
+          'absolute top-0 h-full bg-overlay-surface shadow-panel ring-1 ring-border flex flex-col pointer-events-auto',
           widthClass,
           side === 'left' ? 'left-0' : 'right-0'
         )}

@@ -645,6 +645,7 @@ export function AppLayout(props: { children: React.ReactNode }) {
           title={i18n.t('tasks.title')}
           onClose={() => setTasksOpen(false)}
           width="md"
+          modal={false}
           testId="tasks.drawer"
           closeTestId="tasks.close-button"
         >
