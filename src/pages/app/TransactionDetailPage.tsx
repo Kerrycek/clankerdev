@@ -214,10 +214,19 @@ export function TransactionDetailPage() {
                 <div>
                   <div className="text-xs text-muted">{t('common.node')}</div>
                   <div className="mt-1 text-sm">
-                    {nodeId ? (
-                      <Link className="text-accent hover:underline" to={`${basePath}/admin/nodes/${nodeId}`} title={t('common.open_node_detail')}>
+                    {nodeId && basePath === '/admin' ? (
+                      <Link
+                        className="text-accent hover:underline"
+                        to={`${basePath}/nodes/${nodeId}`}
+                        title={t('common.open_node_detail')}
+                        data-testid="transactions.items.detail.node_link"
+                      >
                         {refLabel((tx as any)?.node) || `#${nodeId}`}
                       </Link>
+                    ) : nodeId ? (
+                      <span className="text-muted" data-testid="transactions.items.detail.node_value">
+                        {refLabel((tx as any)?.node) || `#${nodeId}`}
+                      </span>
                     ) : (
                       <span className="text-muted">{t('common.na')}</span>
                     )}
@@ -259,9 +268,9 @@ export function TransactionDetailPage() {
                 ) : null}
 
                 <div className="sm:col-span-2 lg:col-span-3">
-                  <details className="rounded-md border border-border bg-surface-2 p-3">
+                  <details className="rounded-md border border-border bg-surface-2 p-3" data-testid="transactions.items.detail.raw">
                     <summary className="cursor-pointer select-none text-sm font-medium">{t('transactions.items.detail.section.raw')}</summary>
-                    <pre className="mt-2 overflow-x-auto text-xs text-muted">{safeJson(txQ.data)}</pre>
+                    <pre className="mt-2 overflow-x-auto text-xs text-muted" data-testid="transactions.items.detail.raw.json">{safeJson(txQ.data)}</pre>
                   </details>
                 </div>
               </div>

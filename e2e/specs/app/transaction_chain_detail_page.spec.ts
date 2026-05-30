@@ -79,6 +79,16 @@ test.describe('@pr-smoke TransactionChainDetailPage', () => {
     await expect(page.getByTestId('transactions.chain.detail.tx.701')).toHaveAttribute('data-row-variant', 'warn');
     await expect(page.getByTestId('transactions.chain.detail.tx.702')).toHaveAttribute('data-row-variant', 'danger');
 
+    await page.getByTestId('transactions.chain.detail.tx.toggle.702').click();
+    await expect(page.getByTestId('transactions.chain.detail.tx.expanded.702')).toBeVisible();
+    await expect(page.getByTestId('transactions.chain.detail.tx.expanded.702')).toContainText('"a": 1');
+    await expect(page.getByTestId('transactions.chain.detail.tx.expanded.702')).toContainText('"ok": false');
+
+    await page.getByRole('button', { name: /collapse all|sbalit vše/i }).click();
+    await expect(page.getByTestId('transactions.chain.detail.tx.expanded.702')).toBeHidden();
+    await page.getByRole('button', { name: /expand all|rozbalit vše/i }).click();
+    await expect(page.getByTestId('transactions.chain.detail.tx.expanded.702')).toBeVisible();
+
     // Header action should link to items list filtered by this chain.
     await expect(page.getByTestId('transactions.chain.detail.open_items')).toHaveAttribute(
       'href',
@@ -90,5 +100,25 @@ test.describe('@pr-smoke TransactionChainDetailPage', () => {
     await expect(pin).toHaveAttribute('aria-label', /Pin transaction chain/i);
     await pin.click();
     await expect(pin).toHaveAttribute('aria-label', /Unpin transaction chain/i);
+  });
+
+  test('renders admin route with admin-scoped links', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_TOKEN' });
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
+      handlers,
+    });
+
+    await page.goto('/admin/transactions/123');
+
+    await expect(page.getByTestId('transactions.chain.detail')).toBeVisible();
+    await expect(page.getByTestId('transactions.chain.detail.open_items')).toHaveAttribute(
+      'href',
+      '/admin/transactions/items?transaction_chain=123'
+    );
+    await expect(page.getByTestId('transactions.chain.detail.tx.open.702')).toHaveAttribute(
+      'href',
+      '/admin/transactions/items/702'
+    );
   });
 });
