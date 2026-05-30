@@ -29,7 +29,7 @@ import { createVps, type CreateVpsPayload } from '../../../lib/api/vps';
 import { formatErrorMessage } from '../../../lib/errors';
 import { objectRef } from '../../../lib/objectRef';
 
-type FormState = {
+export type FormState = {
   locationId: string;
   nodeId: string;
   osTemplateId: string;
@@ -48,7 +48,7 @@ type FormState = {
 
 const HOSTNAME_RE = /^[a-zA-Z0-9][a-zA-Z\-_.0-9]*[a-zA-Z0-9]$/;
 
-function defaultForm(): FormState {
+export function defaultForm(): FormState {
   return {
     locationId: '',
     nodeId: '',
@@ -114,7 +114,7 @@ function locationEnvironmentId(loc: Location | undefined): number | undefined {
   return undefined;
 }
 
-function validateForm(
+export function validateForm(
   form: FormState,
   isAdmin: boolean,
   hiddenAdminTarget?: { userId?: number; nodeId?: number }
@@ -150,6 +150,44 @@ function validateForm(
   }
 
   return errors;
+}
+
+export function buildVpsCreatePayload(
+  form: FormState,
+  opts: {
+    isAdminMode: boolean;
+    needsAdminPayload: boolean;
+    hiddenAdminTarget?: { userId?: number; nodeId?: number };
+  }
+): CreateVpsPayload {
+  const commonPayload = {
+    hostname: form.hostname.trim(),
+    os_template: optionalResource(form.osTemplateId),
+    start: form.start,
+    cpu: toPositiveInt(form.cpu),
+    memory: toPositiveInt(form.memory),
+    diskspace: toPositiveInt(form.diskspace),
+    swap: toNonNegativeInt(form.swap),
+    ipv4: toNonNegativeInt(form.ipv4),
+    ipv6: toNonNegativeInt(form.ipv6),
+    ipv4_private: toNonNegativeInt(form.ipv4Private),
+  };
+
+  if (opts.needsAdminPayload) {
+    return {
+      ...commonPayload,
+      mode: 'admin',
+      node: (opts.isAdminMode ? optionalResource(form.nodeId) : opts.hiddenAdminTarget?.nodeId) as number,
+      user: (opts.isAdminMode ? optionalResource(form.userId) : opts.hiddenAdminTarget?.userId) as number,
+      info: opts.isAdminMode ? form.info : '',
+    };
+  }
+
+  return {
+    ...commonPayload,
+    mode: 'user',
+    location: optionalResource(form.locationId),
+  };
 }
 
 export function VpsCreatePage() {
@@ -255,32 +293,11 @@ export function VpsCreatePage() {
         throw err;
       }
 
-      const commonPayload = {
-        hostname: form.hostname.trim(),
-        os_template: optionalResource(form.osTemplateId),
-        start: form.start,
-        cpu: toPositiveInt(form.cpu),
-        memory: toPositiveInt(form.memory),
-        diskspace: toPositiveInt(form.diskspace),
-        swap: toNonNegativeInt(form.swap),
-        ipv4: toNonNegativeInt(form.ipv4),
-        ipv6: toNonNegativeInt(form.ipv6),
-        ipv4_private: toNonNegativeInt(form.ipv4Private),
-      };
-
-      const payload: CreateVpsPayload = needsAdminPayload
-        ? {
-            ...commonPayload,
-            mode: 'admin',
-            node: (isAdminMode ? optionalResource(form.nodeId) : hiddenAdminTarget?.nodeId) as number,
-            user: (isAdminMode ? optionalResource(form.userId) : hiddenAdminTarget?.userId) as number,
-            info: isAdminMode ? form.info : '',
-          }
-        : {
-            ...commonPayload,
-            mode: 'user',
-            location: optionalResource(form.locationId),
-          };
+      const payload = buildVpsCreatePayload(form, {
+        isAdminMode,
+        needsAdminPayload,
+        hiddenAdminTarget,
+      });
 
       return createVps(payload);
     },
