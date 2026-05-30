@@ -63,6 +63,20 @@ The test API on `admin.crucio.cz` also needs the patch in
 session creation can fail with HTTP 500 when the upstream request does not carry
 a user-agent label.
 
+## Dev smoke data
+
+Networking and lifecycle UI smoke tests need disposable test rows in the local
+test API. The dev-only helper in `seed-networking-smoke-data.sh` prepares RFC
+5737 route and host addresses through the API and is dry-run by default:
+
+```sh
+SMOKE_USER_ID=... SMOKE_ENVIRONMENT_ID=... \
+  deploy/dev.crucio.cz/seed-networking-smoke-data.sh
+```
+
+Review the plan, then rerun with `--apply` against the local test API only. See
+`networking-smoke-data.md` for the expected rows and smoke-test checklist.
+
 ## Build source
 
 This repository now contains the WebUI Next source project. Product fixes

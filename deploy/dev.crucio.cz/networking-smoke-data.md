@@ -5,6 +5,19 @@ Issue: https://github.com/Kerrycek/clankerdev/issues/23
 Use this as a checklist for populating the test vpsAdmin with harmless
 networking data. Do not run this against upstream or production.
 
+The dev-only helper is:
+
+```sh
+SMOKE_USER_ID=... SMOKE_ENVIRONMENT_ID=... \
+  deploy/dev.crucio.cz/seed-networking-smoke-data.sh
+```
+
+It defaults to a dry run and refuses non-local/non-dev API URLs unless
+`ALLOW_NON_DEV_API=1` is set. After reviewing the plan, rerun with `--apply`.
+Set `SMOKE_NETWORK_INTERFACE_ID` to also assign one host IP to a disposable VPS
+network interface; otherwise both host IP rows are left available for manual UI
+action tests.
+
 Recommended documentation/test ranges:
 
 - Public IPv4 examples: `192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`
@@ -29,6 +42,5 @@ UI flows to verify after the data exists:
   assign/free/delete host addresses
 - VPS detail Network tab: assigned addresses and interfaces remain readable
 
-Keep the actual data creation manual for now. The API enforces location,
-environment and node constraints, so blind SQL seed data can easily create rows
-that look valid in the UI but fail backend validations.
+Avoid blind SQL seed data. The helper uses the API so location, environment and
+node constraints are enforced by the same backend validations as the UI.
