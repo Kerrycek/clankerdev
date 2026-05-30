@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useState } from 'react';
 
 /**
  * Keyset pagination helper for HaveAPI Index actions.
@@ -197,9 +197,6 @@ export function useKeysetPagination(opts: {
     initialStateFor({ sig, storageKey, urlCursor, cursorMin, cursorInteger })
   );
 
-  // Keep a stable ref to the last URL we synced to prevent unnecessary replace loops.
-  const lastSyncedRef = useRef<string | null>(null);
-
   const isActiveSig = state.sig === sig;
   const viewStack = isActiveSig ? state.stack : ([null] as KeysetCursorStack);
   const viewIndex = isActiveSig ? state.index : 0;
@@ -227,8 +224,7 @@ export function useKeysetPagination(opts: {
 
     const nextStr = next.toString();
     const curStr = cur.toString();
-    if (nextStr !== curStr && nextStr !== lastSyncedRef.current) {
-      lastSyncedRef.current = nextStr;
+    if (nextStr !== curStr) {
       opts.setSearchParams(next, { replace: mode === 'replace' });
     }
   };
