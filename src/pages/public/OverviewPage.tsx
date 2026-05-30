@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
 import {
   fetchNews,
@@ -58,6 +58,8 @@ function OutageSummary(props: { outage: Outage }) {
 export function OverviewPage() {
   const i18n = useI18n();
   const cfg = useMemo(() => getRuntimeConfig(), []);
+  const [searchParams] = useSearchParams();
+  const showSessionExpired = searchParams.get('session') === 'expired';
 
   const unknownLocationLabel = i18n.t('public.nodes.location_unknown');
 
@@ -176,6 +178,12 @@ export function OverviewPage() {
           <p className="mt-1 text-sm text-muted">{i18n.t('public.overview.subtitle')}</p>
         </div>
       </div>
+
+      {showSessionExpired ? (
+        <Alert title={i18n.t('auth.session_expired.title')} variant="warn" testId="auth.session-expired.notice">
+          {i18n.t('auth.session_expired.body')}
+        </Alert>
+      ) : null}
 
       {outagesByCategory.current.length > 0 ? (
         <Alert title={i18n.tc('public.overview.outage_alert.title', outagesByCategory.current.length)} variant="danger">
