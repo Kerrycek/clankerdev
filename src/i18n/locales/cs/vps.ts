@@ -39,6 +39,7 @@ export const csVps = {
   'vps.create.validation.os_template_required': 'Vyber OS šablonu.',
   'vps.create.validation.target_required': 'Vyber lokalitu.',
   'vps.create.validation.node_required': 'Vyber uzel.',
+  'vps.create.validation.auto_node_required': 'Pro vybranou lokalitu není dostupný žádný uzel.',
   'vps.create.validation.user_required': 'Vyber cílového uživatele.',
   'vps.create.validation.user_invalid': 'Vlastník musí být platné ID uživatele.',
   'vps.create.validation.cpu': 'CPU musí být mezi 1 a 32.',
