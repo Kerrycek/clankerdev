@@ -35,6 +35,7 @@ import {
 } from '../../../lib/api/vps';
 import { formatDateTime } from '../../../lib/format';
 import { gateVpsMutation } from '../../../lib/gates/vps';
+import { parseLookupIdLike } from '../../../lib/lookupInput';
 import { preflightVpsNotBusy } from './vpsPreflight';
 import { useVps } from './VpsContext';
 
@@ -117,8 +118,8 @@ function resourceId(value: unknown): number | null {
 function parseOptionalId(raw: string): number | undefined {
   const trimmed = raw.trim();
   if (!trimmed) return undefined;
-  const n = Number(trimmed);
-  if (!Number.isInteger(n) || n <= 0) throw new Error('invalid-id');
+  const n = parseLookupIdLike(trimmed);
+  if (n === null || !Number.isInteger(n) || n <= 0) throw new Error('invalid-id');
   return n;
 }
 
