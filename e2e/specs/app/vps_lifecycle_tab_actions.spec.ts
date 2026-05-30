@@ -17,7 +17,7 @@ const vps = {
   used_diskspace: 5120,
   uptime: 0,
   loadavg1: 0,
-  node: { id: 1, domain_name: 'node1.example' },
+  node: { id: 1, domain_name: 'node1.example', location: { id: 2, label: 'Praha-2' } },
   user: { id: 7, login: 'owner' },
   os_template: { id: 6, label: 'Debian latest' },
   dns_resolver: 'inherit',
@@ -118,13 +118,14 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     });
   });
 
-  test('regular user can request VPS delete without admin-only lifecycle actions', async ({ page }) => {
+  test('regular user gets legacy clone, swap and delete actions without admin-only lifecycle actions', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installHaveApiMock(page, {
       user: { id: 7, login: 'owner', level: 1 },
       handlers: {
         'GET vpses': () => ({ vpses: [] }),
         'GET vpses/123': () => ({ vps }),
+        'GET locations': () => ({ locations: [{ id: 2, label: 'Praha-2' }] }),
         'GET ip_addresses': () => ({ ip_addresses: [] }),
         'GET transaction_chains': () => ({ transaction_chains: [] }),
         'DELETE vpses/123': () => ({ _meta: { action_state_id: 503 } }),
@@ -134,8 +135,12 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await page.goto('/app/vps/123/lifecycle');
 
     await expect(page.getByTestId('vps.lifecycle.page')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.clone')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.swap')).toBeVisible();
     await expect(page.getByTestId('vps.lifecycle.delete')).toBeVisible();
-    await expect(page.getByTestId('vps.lifecycle.clone')).toHaveCount(0);
+    await expect(page.getByTestId('vps.lifecycle.replace')).toHaveCount(0);
+    await expect(page.getByTestId('vps.lifecycle.migrate')).toHaveCount(0);
+    await expect(page.getByTestId('vps.lifecycle.reinstall')).toHaveCount(0);
     await expect(page.getByTestId('vps.lifecycle.delete.lazy')).toHaveCount(0);
 
     await page.getByTestId('vps.lifecycle.delete.confirm').check();
@@ -149,9 +154,84 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     const req = await reqPromise;
     expect(req.postDataJSON()).toEqual({
       vps: {
-        lazy: true,
+        lazy: false,
       },
     });
     await expect(page).toHaveURL(/\/app\/vps$/);
+  });
+
+  test('regular user clone posts location payload without admin owner or node', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installHaveApiMock(page, {
+      user: { id: 7, login: 'owner', level: 1 },
+      handlers: {
+        'GET vpses': () => ({ vpses: [] }),
+        'GET vpses/123': () => ({ vps }),
+        'GET locations': () => ({ locations: [{ id: 2, label: 'Praha-2' }] }),
+        'GET ip_addresses': () => ({ ip_addresses: [] }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'POST vpses/123/clone': () => ({ vps: { id: 456, hostname: 'vps123-playground' }, _meta: { action_state_id: 504 } }),
+      },
+    });
+
+    await page.goto('/app/vps/123/lifecycle');
+
+    await page.getByTestId('vps.lifecycle.clone.location').selectOption('2');
+    await page.getByTestId('vps.lifecycle.clone.hostname').fill('vps123-playground');
+    await page.getByTestId('vps.lifecycle.clone.confirm').check();
+
+    const reqPromise = page.waitForRequest(
+      (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/vpses/123/clone')
+    );
+
+    await page.getByTestId('vps.lifecycle.clone.submit').click();
+
+    const req = await reqPromise;
+    expect(req.postDataJSON()).toEqual({
+      vps: {
+        hostname: 'vps123-playground',
+        subdatasets: true,
+        dataset_plans: true,
+        resources: true,
+        features: true,
+        stop: true,
+        location: 2,
+      },
+    });
+    await expect(page).toHaveURL(/\/app\/vps\/456$/);
+  });
+
+  test('regular user swap posts only target VPS without admin-only options', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installHaveApiMock(page, {
+      user: { id: 7, login: 'owner', level: 1 },
+      handlers: {
+        'GET vpses': () => ({ vpses: [] }),
+        'GET vpses/123': () => ({ vps }),
+        'GET locations': () => ({ locations: [{ id: 2, label: 'Praha-2' }] }),
+        'GET ip_addresses': () => ({ ip_addresses: [] }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'POST vpses/123/swap_with': () => ({ _meta: { action_state_id: 505 } }),
+      },
+    });
+
+    await page.goto('/app/vps/123/lifecycle');
+
+    await page.getByTestId('vps.lifecycle.swap.target').fill('#321');
+    await page.getByTestId('vps.lifecycle.swap.confirm').check();
+    await expect(page.getByTestId('vps.lifecycle.swap.hostname')).toHaveCount(0);
+
+    const reqPromise = page.waitForRequest(
+      (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/vpses/123/swap_with')
+    );
+
+    await page.getByTestId('vps.lifecycle.swap.submit').click();
+
+    const req = await reqPromise;
+    expect(req.postDataJSON()).toEqual({
+      vps: {
+        vps: 321,
+      },
+    });
   });
 });
