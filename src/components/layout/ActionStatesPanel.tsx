@@ -515,47 +515,44 @@ export function ActionStatesPanel(props: {
       <div
         key={id}
         className={clsx('rounded-md border p-3', toneSurfaceClass(toneVariant), highlight ? 'ring-1 ring-warn-border' : null)}
+        data-testid={`tasks.row.${id}`}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 text-sm font-medium">
+        <div className="space-y-3">
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <div className="flex min-w-0 items-start gap-2 text-sm font-medium">
               <StatusDot variant={dotVariant} title={badge.label} />
               <button
                 type="button"
-                className="min-w-0 truncate text-left underline"
+                className="min-w-0 flex-1 break-words text-left underline"
                 onClick={() => setSelectedActionStateId(id)}
               >
                 {label}
               </button>
             </div>
 
-            {meta.length > 0 || relatedChainId ? (
-              <div className="mt-1 text-xs text-faint">
-                {meta.map((p, i) => (
-                  <React.Fragment key={i}>
-                    {i > 0 ? ' · ' : null}
-                    {p}
-                  </React.Fragment>
-                ))}
-
-                {relatedChainId ? (
-                  <>
-                    {meta.length > 0 ? ' · ' : null}
-                    <Link className="underline" to={`${basePath}/transactions/${relatedChainId}`}>
-                      {i18n.t('tasks.meta.chain', { id: relatedChainId })}
-                    </Link>
-                  </>
-                ) : null}
-              </div>
-            ) : null}
-
-            {pLabel ? <div className="mt-1 text-xs text-faint">{i18n.t('tasks.meta.progress', { progress: pLabel })}</div> : null}
+            <Badge variant={badge.variant}>{badge.label}</Badge>
           </div>
 
-          <div className="flex flex-col items-end gap-2">
-            <Badge variant={badge.variant}>{badge.label}</Badge>
+          {meta.length > 0 || relatedChainId ? (
+            <div className="space-y-1 text-xs text-faint">
+              {meta.map((p, i) => (
+                <div key={i} className="break-words">
+                  {p}
+                </div>
+              ))}
 
-            <div className="flex items-center gap-2">
+              {relatedChainId ? (
+                <Link className="block break-words underline" to={`${basePath}/transactions/${relatedChainId}`}>
+                  {i18n.t('tasks.meta.chain', { id: relatedChainId })}
+                </Link>
+              ) : null}
+            </div>
+          ) : null}
+
+          {pLabel ? <div className="text-xs text-faint">{i18n.t('tasks.meta.progress', { progress: pLabel })}</div> : null}
+
+          <div className="flex items-end justify-between gap-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-2" data-testid={`tasks.row.actions.${id}`}>
               <Button size="sm" variant="secondary" onClick={() => setSelectedActionStateId(id)} testId={`tasks.inspect.open.${id}`}>
                 {i18n.t('tasks.inspect.open')}
               </Button>
