@@ -16,6 +16,7 @@ import { useAppMode } from '../../app/appMode';
 import { useI18n } from '../../app/i18n';
 import { formatDateTime } from '../../lib/format';
 import { useTierAIntervalMs } from '../../lib/refreshTiers';
+import { durationSec, formatPayload } from '../../lib/txFormat';
 import {
   chainBadgeFromState,
   chainProgressLabel,
@@ -24,6 +25,8 @@ import {
   isFinishedChainState,
   transactionBadge,
 } from '../../lib/taskStatus';
+import { resourceId, refLabel } from '../../lib/resources';
+import { TransactionPayloadPanels } from '../ui/TransactionPayloadPanels';
 
 function formatConcerns(chain: TransactionChain): string | null {
   const c = chain.concerns as any;
@@ -62,6 +65,7 @@ export function TransactionChainsPanel(props: {
   const i18n = useI18n();
   const tierARefetchMs = useTierAIntervalMs();
   const [expandedChainId, setExpandedChainId] = useState<number | null>(null);
+  const [expandedTransactionIds, setExpandedTransactionIds] = useState<Set<number>>(() => new Set());
 
   const pinnedIds = useMemo(() => parseIds(props.pinnedIds, 50), [props.pinnedIds]);
   const pinnedSet = useMemo(() => new Set<number>(pinnedIds), [pinnedIds]);
@@ -76,14 +80,28 @@ export function TransactionChainsPanel(props: {
   });
 
   const txQ = useQuery({
-    queryKey: ['transactions', 'list', { transactionChainId: expandedChainId, limit: 5 }],
+    queryKey: ['transactions', 'list', { transactionChainId: expandedChainId, limit: 100 }],
     queryFn: async () => {
       if (expandedChainId === null) return [] as Transaction[];
-      return (await fetchTransactions({ transactionChainId: expandedChainId, limit: 5 })).data;
+      return (await fetchTransactions({ transactionChainId: expandedChainId, limit: 100 })).data;
     },
     enabled: expandedChainId !== null,
     refetchInterval: expandedChainId !== null ? tierARefetchMs : false,
   });
+
+  const toggleChain = (chainId: number, expanded: boolean) => {
+    setExpandedChainId(expanded ? null : chainId);
+    setExpandedTransactionIds(new Set());
+  };
+
+  const toggleTransaction = (txId: number) => {
+    setExpandedTransactionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(txId)) next.delete(txId);
+      else next.add(txId);
+      return next;
+    });
+  };
 
   const q = useQuery({
     queryKey: ['transaction_chains', 'list', { limit: props.limit ?? 10 }],
@@ -262,7 +280,7 @@ export function TransactionChainsPanel(props: {
               <Button
                 size="sm"
                 variant="secondary"
-                onClick={() => setExpandedChainId(expanded ? null : c.id)}
+                onClick={() => toggleChain(c.id, expanded)}
                 title={expanded ? i18n.t('tasks.action.hide_items') : i18n.t('tasks.action.items')}
               >
                 {expanded ? i18n.t('tasks.action.hide_items') : i18n.t('tasks.action.items')}
@@ -287,20 +305,92 @@ export function TransactionChainsPanel(props: {
               <div className="text-xs text-danger">{i18n.t('tasks.error.load_items')}</div>
             ) : (txQ.data ?? []).length > 0 ? (
               <div className="space-y-2">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="text-xs text-muted">
+                    {i18n.t('tasks.inspect.transactions')} · {(txQ.data ?? []).length}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() =>
+                        setExpandedTransactionIds(
+                          new Set(
+                            (txQ.data ?? [])
+                              .map((tx) => Number(tx.id))
+                              .filter((id) => Number.isFinite(id) && id > 0)
+                          )
+                        )
+                      }
+                    >
+                      {i18n.t('tasks.inspect.expand_all')}
+                    </Button>
+                    <Button size="sm" variant="secondary" onClick={() => setExpandedTransactionIds(new Set())}>
+                      {i18n.t('tasks.inspect.collapse_all')}
+                    </Button>
+                  </div>
+                </div>
+
                 {(txQ.data ?? []).map((tx) => {
                   const b = transactionBadge(tx);
                   const name = tx.name ? String(tx.name) : `#${tx.id}`;
+                  const txId = Number(tx.id);
+                  const hasTxId = Number.isFinite(txId) && txId > 0;
+                  const txExpanded = hasTxId && expandedTransactionIds.has(txId);
+                  const nodeId = resourceId((tx as any).node);
+                  const vpsId = resourceId((tx as any).vps);
+                  const type = typeof (tx as any).type === 'number' ? Number((tx as any).type) : null;
+                  const priority = typeof (tx as any).priority === 'number' ? Number((tx as any).priority) : null;
+                  const started = (tx as any).started_at as string | null | undefined;
+                  const finished = (tx as any).finished_at as string | null | undefined;
+                  const sec = durationSec(started, finished);
+                  const input = formatPayload((tx as any).input);
+                  const output = formatPayload((tx as any).output);
+                  const hasPayload = Boolean(input || output);
+
                   return (
-                    <div key={tx.id} className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <Link className="text-xs font-medium underline" to={`${basePath}/transactions/items/${tx.id}`}>
+                    <div key={tx.id} className="rounded-md border border-border bg-surface p-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <Link className="text-xs font-medium underline" to={`${basePath}/transactions/items/${tx.id}`}>
                             {name}
                           </Link>
-                        <div className="mt-0.5 text-xs text-faint">
-                          {`#${tx.id} · `}{i18n.t('tasks.meta.created', { time: formatDateTime(tx.created_at) })}
+                          <div className="mt-0.5 flex flex-wrap gap-x-2 gap-y-1 text-xs text-faint">
+                            <span>#{tx.id}</span>
+                            <span>{i18n.t('tasks.meta.created', { time: formatDateTime(tx.created_at) })}</span>
+                            {type !== null ? <span>{i18n.t('transactions.items.row.type_chip', { type })}</span> : null}
+                            {priority !== null ? <span>{i18n.t('transactions.tx.prio', { prio: priority })}</span> : null}
+                            {nodeId ? <span>{refLabel((tx as any).node) || i18n.t('transactions.tx.node', { id: nodeId })}</span> : null}
+                            {vpsId ? <span>{i18n.t('transactions.tx.vps', { id: vpsId })}</span> : null}
+                            {sec !== null ? <span>{i18n.t('transactions.tx.duration', { sec })}</span> : null}
+                          </div>
+                        </div>
+                        <div className="flex shrink-0 flex-col items-end gap-2">
+                          <Badge variant={b.variant}>{b.label}</Badge>
+                          {hasTxId ? (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => toggleTransaction(txId)}
+                              testId={`tasks.chain.tx.toggle.${txId}`}
+                            >
+                              {txExpanded ? i18n.t('common.collapse') : i18n.t('common.expand')}
+                            </Button>
+                          ) : null}
                         </div>
                       </div>
-                      <Badge variant={b.variant}>{b.label}</Badge>
+
+                      {txExpanded ? (
+                        <div className="mt-2">
+                          {hasPayload ? (
+                            <TransactionPayloadPanels t={i18n.t} input={input} output={output} maxHeightClass="max-h-72" />
+                          ) : (
+                            <div className="rounded-md border border-border bg-surface-2 p-2 text-xs text-muted">
+                              {i18n.t('transactions.tx.no_payload')}
+                            </div>
+                          )}
+                        </div>
+                      ) : null}
                     </div>
                   );
                 })}
