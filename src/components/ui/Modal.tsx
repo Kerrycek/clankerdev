@@ -88,23 +88,25 @@ export function Modal(props: {
         tabIndex={-1}
         ref={setContainerEl}
         className={clsx(
-          'relative w-full bg-overlay-surface shadow-panel ring-1 ring-border',
-          mobileFullScreen ? 'h-full rounded-none sm:h-auto sm:rounded-lg' : 'rounded-lg',
+          'relative flex w-full flex-col overflow-hidden bg-overlay-surface shadow-panel ring-1 ring-border',
+          mobileFullScreen
+            ? 'h-full max-h-full rounded-none sm:h-auto sm:max-h-[calc(100vh-2rem)] sm:rounded-lg'
+            : 'max-h-[calc(100vh-2rem)] rounded-lg',
           sizeClass
         )}
       >
         {props.title ? (
-          <div className="border-b border-border px-4 py-3">
+          <div className="shrink-0 border-b border-border px-4 py-3">
             <div className="text-base font-semibold" id={titleId}>
               {props.title}
             </div>
           </div>
         ) : null}
 
-        <div className="px-4 py-4">{props.children}</div>
+        <div className="min-h-0 overflow-y-auto px-4 py-4">{props.children}</div>
 
         {props.footer ? (
-          <div className="border-t border-border px-4 py-3">{props.footer}</div>
+          <div className="shrink-0 border-t border-border px-4 py-3">{props.footer}</div>
         ) : null}
       </div>
     </div>,

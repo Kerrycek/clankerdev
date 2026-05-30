@@ -27,7 +27,7 @@ test.describe('Action state detail page', () => {
     await installHaveApiMock(page, {
       user: { id: 1, login: 'test', level: 1 },
       handlers: {
-        'GET action_states/123': () => makeAction(123),
+        'GET action_states/123': () => ({ action_state: makeAction(123) }),
         'POST action_states/123/cancel': () => {
           cancelCalled = true;
           return {};
