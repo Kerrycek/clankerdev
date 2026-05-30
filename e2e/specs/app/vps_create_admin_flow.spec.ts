@@ -58,8 +58,16 @@ function choicesHandlers() {
 }
 
 test.describe('VPS create admin flow', () => {
-  test('redirects an admin from app create route to admin route', async ({ page }) => {
+  test('keeps an admin in user-scope create flow on app route', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_ADMIN' });
+    const createBodies: unknown[] = [];
+    page.on('request', (req) => {
+      const url = new URL(req.url());
+      if (req.method() === 'POST' && url.pathname.endsWith('/vpses')) {
+        createBodies.push(JSON.parse(req.postData() ?? '{}'));
+      }
+    });
+
     await installHaveApiMock(page, {
       user: { id: 1, login: 'admin', level: 99 },
       handlers: choicesHandlers(),
@@ -67,12 +75,29 @@ test.describe('VPS create admin flow', () => {
 
     await page.goto('/app/vps/new');
 
-    await expect(page).toHaveURL(/\/admin\/vps\/new$/);
-    await expect(page.getByTestId('vps.create.user')).toBeVisible();
-    await expect(page.getByTestId('vps.create.node')).toBeVisible();
+    await expect(page).toHaveURL(/\/app\/vps\/new$/);
+    await expect(page.getByTestId('vps.create.user')).toBeHidden();
+    await expect(page.getByTestId('vps.create.node')).toBeHidden();
+
+    await page.getByTestId('vps.create.location').selectOption('2');
+    await page.getByTestId('vps.create.os_template').selectOption('6');
+    await page.getByTestId('vps.create.hostname').fill('user-scope-created.example');
+    await page.getByTestId('vps.create.submit').click();
+
+    await expect(page).toHaveURL(/\/app\/vps\/150$/);
+
+    expect(createBodies).toHaveLength(1);
+    const body = createBodies[0] as any;
+    expect(body.vps).toMatchObject({
+      location: 2,
+      hostname: 'user-scope-created.example',
+      os_template: 6,
+    });
+    expect(body.vps).not.toHaveProperty('user');
+    expect(body.vps).not.toHaveProperty('node');
   });
 
-  test('admin create payload does not include location and navigates to admin action state', async ({ page }) => {
+  test('admin create payload does not include location and stays in admin scope', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_ADMIN' });
 
     const createBodies: unknown[] = [];
@@ -127,8 +152,7 @@ test.describe('VPS create admin flow', () => {
     await page.getByTestId('vps.create.hostname').fill('admin-created.example');
     await page.getByTestId('vps.create.submit').click();
 
-    await expect(page).toHaveURL(/\/admin\/action-states\/42$/);
-    await expect(page.getByTestId('action_state.detail')).toBeVisible();
+    await expect(page).toHaveURL(/\/admin\/vps\/150$/);
 
     expect(createBodies).toHaveLength(1);
     const body = createBodies[0] as any;
