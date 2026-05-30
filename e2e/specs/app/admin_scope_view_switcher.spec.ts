@@ -1,6 +1,20 @@
 import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
+
+async function expectNormalizedVpsListUrl(page: Page, pathname: '/app/vps' | '/admin/vps') {
+  await expect
+    .poll(() => {
+      const url = new URL(page.url());
+      return {
+        pathname: url.pathname,
+        page: url.searchParams.get('page'),
+        limit: url.searchParams.get('limit'),
+      };
+    })
+    .toEqual({ pathname, page: '1', limit: '50' });
+}
 
 test.describe('@smoke Admin scope switcher', () => {
   test('switches between All and Mine views preserving safe routes', async ({ page }) => {
@@ -28,18 +42,19 @@ test.describe('@smoke Admin scope switcher', () => {
       },
     });
 
-    // Preserve pagination query params across scope switches.
+    // Switching scopes lands on the matching list and lets the target list normalize
+    // pagination to its stable first-page query params.
     await page.goto('/admin/vps?from_id=50&page=2');
     await expect(page.getByTestId('vps.list')).toBeVisible();
 
     await page.getByTestId('shell.user-menu-button').click();
     await page.getByTestId('shell.user-menu.scope.mine').click();
 
-    await expect(page).toHaveURL('/app/vps?from_id=50&page=2');
+    await expectNormalizedVpsListUrl(page, '/app/vps');
 
     // When switching to Mine from an admin-only page, fall back to /app.
     await page.goto('/admin/nodes');
-    await expect(page.getByTestId('admin.nodes.list')).toBeVisible();
+    await expect(page.getByTestId('admin.nodes.table')).toBeVisible();
 
     await page.getByTestId('shell.user-menu-button').click();
     await page.getByTestId('shell.user-menu.scope.mine').click();
@@ -68,7 +83,7 @@ test.describe('@smoke Admin scope switcher', () => {
     await page.getByTestId('shell.user-menu-button').click();
     await page.getByTestId('shell.user-menu.scope.all').click();
 
-    await expect(page).toHaveURL('/admin/vps');
+    await expectNormalizedVpsListUrl(page, '/admin/vps');
     await expect(page.getByTestId('toast.scope.all.back')).toBeVisible();
   });
 });

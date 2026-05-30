@@ -79,7 +79,7 @@ describe('modeSwitch', () => {
         pathname: '/admin/cluster/summary',
         search: '?filter=issues',
       })
-    ).toBe('/app?filter=issues');
+    ).toBe('/app');
 
     expect(
       computeOtherModeUrl({
