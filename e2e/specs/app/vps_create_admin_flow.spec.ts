@@ -89,8 +89,47 @@ test.describe('VPS create admin flow', () => {
     expect(createBodies).toHaveLength(1);
     const body = createBodies[0] as any;
     expect(body.vps).toMatchObject({
-      location: 2,
+      user: 1,
+      node: 101,
       hostname: 'user-scope-created.example',
+      os_template: 6,
+    });
+    expect(body.vps).not.toHaveProperty('location');
+    expect(body.vps).not.toHaveProperty('environment');
+  });
+
+  test('regular user create flow still sends location for backend node picking', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_USER' });
+    const createBodies: unknown[] = [];
+    page.on('request', (req) => {
+      const url = new URL(req.url());
+      if (req.method() === 'POST' && url.pathname.endsWith('/vpses')) {
+        createBodies.push(JSON.parse(req.postData() ?? '{}'));
+      }
+    });
+
+    await installHaveApiMock(page, {
+      user: { id: 2, login: 'member', level: 1 },
+      handlers: choicesHandlers(),
+    });
+
+    await page.goto('/app/vps/new');
+
+    await expect(page.getByTestId('vps.create.user')).toBeHidden();
+    await expect(page.getByTestId('vps.create.node')).toBeHidden();
+
+    await page.getByTestId('vps.create.location').selectOption('2');
+    await page.getByTestId('vps.create.os_template').selectOption('6');
+    await page.getByTestId('vps.create.hostname').fill('member-created.example');
+    await page.getByTestId('vps.create.submit').click();
+
+    await expect(page).toHaveURL(/\/app\/vps\/150$/);
+
+    expect(createBodies).toHaveLength(1);
+    const body = createBodies[0] as any;
+    expect(body.vps).toMatchObject({
+      location: 2,
+      hostname: 'member-created.example',
       os_template: 6,
     });
     expect(body.vps).not.toHaveProperty('user');

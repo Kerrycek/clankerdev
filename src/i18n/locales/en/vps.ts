@@ -39,6 +39,7 @@ export const enVps = {
   'vps.create.validation.os_template_required': 'Choose an OS template.',
   'vps.create.validation.target_required': 'Choose a location.',
   'vps.create.validation.node_required': 'Choose a node.',
+  'vps.create.validation.auto_node_required': 'No node is available for the selected location.',
   'vps.create.validation.user_required': 'Choose the target user.',
   'vps.create.validation.user_invalid': 'Owner must be a valid user ID.',
   'vps.create.validation.cpu': 'CPU must be between 1 and 32.',

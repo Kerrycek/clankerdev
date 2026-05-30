@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
 import { useAppMode } from '../../../app/appMode';
+import { useAuth } from '../../../app/auth';
 import { useI18n } from '../../../app/i18n';
 import { useChrome } from '../../../components/layout/ChromeContext';
 import { ListShell } from '../../../components/layout/ListShell';
@@ -113,7 +114,11 @@ function locationEnvironmentId(loc: Location | undefined): number | undefined {
   return undefined;
 }
 
-function validateForm(form: FormState, isAdmin: boolean): string[] {
+function validateForm(
+  form: FormState,
+  isAdmin: boolean,
+  hiddenAdminTarget?: { userId?: number; nodeId?: number }
+): string[] {
   const errors: string[] = [];
   const hostname = form.hostname.trim();
   if (!hostname) errors.push('vps.create.validation.hostname_required');
@@ -124,6 +129,9 @@ function validateForm(form: FormState, isAdmin: boolean): string[] {
     if (!form.userId.trim()) errors.push('vps.create.validation.user_required');
     else if (!optionalResource(form.userId)) errors.push('vps.create.validation.user_invalid');
     if (!optionalResource(form.nodeId)) errors.push('vps.create.validation.node_required');
+  } else if (hiddenAdminTarget) {
+    if (!hiddenAdminTarget.userId) errors.push('vps.create.validation.user_required');
+    if (!hiddenAdminTarget.nodeId) errors.push('vps.create.validation.auto_node_required');
   }
 
   const numeric: Array<[keyof FormState, number, number, string]> = [
@@ -148,6 +156,9 @@ export function VpsCreatePage() {
   const { basePath, mode } = useAppMode();
   const isAdminMode = mode === 'admin';
   const effectiveBasePath = isAdminMode ? '/admin' : basePath;
+  const auth = useAuth();
+  const isAdminAccount = auth.role === 'admin';
+  const needsAdminPayload = isAdminMode || isAdminAccount;
   const { t } = useI18n();
   const navigate = useNavigate();
   const chrome = useChrome();
@@ -177,7 +188,7 @@ export function VpsCreatePage() {
   const nodesQ = useQuery({
     queryKey: ['nodes', { limit: 500, location: selectedLocationId ?? null }],
     queryFn: async () => (await fetchNodes({ limit: 500, location: selectedLocationId })).data,
-    enabled: isAdminMode && selectedLocationId !== undefined,
+    enabled: needsAdminPayload && selectedLocationId !== undefined,
   });
   const templatesQ = useQuery({
     queryKey: ['os_templates', { limit: 500, enabled: true, hypervisorType: 'vpsadminos' }],
@@ -190,7 +201,10 @@ export function VpsCreatePage() {
     enabled: selectedEnvironmentId !== undefined,
   });
 
-  const nodes = isAdminMode ? nodesQ.data ?? [] : [];
+  const nodes = needsAdminPayload ? nodesQ.data ?? [] : [];
+  const hiddenAdminTarget = !isAdminMode && isAdminAccount
+    ? { userId: auth.user?.id, nodeId: nodes[0]?.id }
+    : undefined;
   const templatesByFamily = useMemo(() => {
     const groups = new Map<string, OsTemplate[]>();
     for (const tpl of templatesQ.data ?? []) {
@@ -226,12 +240,15 @@ export function VpsCreatePage() {
     setForm((prev) => ({ ...prev, ...next }));
   }, [defaultResourcesQ.data]);
 
-  const validationKeys = useMemo(() => validateForm(form, isAdminMode), [form, isAdminMode]);
+  const validationKeys = useMemo(
+    () => validateForm(form, isAdminMode, hiddenAdminTarget),
+    [form, hiddenAdminTarget, isAdminMode]
+  );
   const canSubmit = validationKeys.length === 0;
 
   const createM = useMutation({
     mutationFn: async () => {
-      const errors = validateForm(form, isAdminMode);
+      const errors = validateForm(form, isAdminMode, hiddenAdminTarget);
       if (errors.length > 0) {
         const err: any = new Error('validation');
         err.validationKeys = errors;
@@ -251,13 +268,13 @@ export function VpsCreatePage() {
         ipv4_private: toNonNegativeInt(form.ipv4Private),
       };
 
-      const payload: CreateVpsPayload = isAdminMode
+      const payload: CreateVpsPayload = needsAdminPayload
         ? {
             ...commonPayload,
             mode: 'admin',
-            node: optionalResource(form.nodeId) as number,
-            user: optionalResource(form.userId) as number,
-            info: form.info,
+            node: (isAdminMode ? optionalResource(form.nodeId) : hiddenAdminTarget?.nodeId) as number,
+            user: (isAdminMode ? optionalResource(form.userId) : hiddenAdminTarget?.userId) as number,
+            info: isAdminMode ? form.info : '',
           }
         : {
             ...commonPayload,
@@ -290,8 +307,8 @@ export function VpsCreatePage() {
     },
   });
 
-  const loading = locationQ.isLoading || (isAdminMode && nodesQ.isLoading) || templatesQ.isLoading;
-  const loadError = locationQ.error || (isAdminMode ? nodesQ.error : null) || templatesQ.error;
+  const loading = locationQ.isLoading || (needsAdminPayload && nodesQ.isLoading) || templatesQ.isLoading;
+  const loadError = locationQ.error || (needsAdminPayload ? nodesQ.error : null) || templatesQ.error;
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
