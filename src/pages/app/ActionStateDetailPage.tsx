@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Pin, PinOff } from 'lucide-react';
+import { ChevronDown, ChevronUp, Pin, PinOff } from 'lucide-react';
 
 import { cancelActionState, fetchActionState, type ActionState } from '../../lib/api/actionStates';
+import { fetchTransactionChain, fetchTransactions, type Transaction } from '../../lib/api/transactions';
 import { useAppMode } from '../../app/appMode';
 import { useI18n } from '../../app/i18n';
 import { DetailShell } from '../../components/layout/DetailShell';
@@ -14,17 +15,33 @@ import { Button } from '../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { ConfirmDialog } from '../../components/ui/ConfirmDialog';
 import { ErrorState } from '../../components/ui/ErrorState';
+import { LinkButton } from '../../components/ui/LinkButton';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { ObjectHeader } from '../../components/ui/ObjectHeader';
+import { Table } from '../../components/ui/Table';
+import { TransactionPayloadPanels } from '../../components/ui/TransactionPayloadPanels';
 import { formatDateTime } from '../../lib/format';
+import { formatErrorMessage } from '../../lib/errors';
+import { resourceId, refLabel } from '../../lib/resources';
+import { durationSec, formatPayload, safeJson } from '../../lib/txFormat';
 import { extractRelatedTransactionChainIdFromActionState } from '../../lib/taskLinks';
 import {
   actionStateBadge,
   actionStateProgressLabel,
   actionStateProgressPercent,
   isFinishedActionState,
+  transactionBadge,
 } from '../../lib/taskStatus';
-import { useActionStatePollIntervalMs } from '../../lib/refreshTiers';
+import { useActionStatePollIntervalMs, useTierAIntervalMs } from '../../lib/refreshTiers';
+
+function pickedActionStateDebugPayload(s: ActionState): string {
+  const keys = ['error', 'errors', 'exception', 'message', 'output', 'result', 'response', 'stderr', 'stdout', 'backtrace'];
+  const picked: Record<string, unknown> = {};
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(s as any, key)) picked[key] = (s as any)[key];
+  }
+  return Object.keys(picked).length > 0 ? safeJson(picked) : safeJson(s);
+}
 
 export function ActionStateDetailPage() {
   const { basePath } = useAppMode();
@@ -32,8 +49,10 @@ export function ActionStateDetailPage() {
   const { t } = useI18n();
 
   const actionPollMs = useActionStatePollIntervalMs();
+  const tierARefetchMs = useTierAIntervalMs();
   const params = useParams();
   const id = Number(params['actionStateId']);
+  const [expandedTx, setExpandedTx] = useState<Set<number>>(() => new Set());
 
   const q = useQuery({
     queryKey: ['action_state', 'show', { id }],
@@ -43,6 +62,21 @@ export function ActionStateDetailPage() {
   });
 
   const s = q.data as any as ActionState | undefined;
+  const relatedChainId = s ? extractRelatedTransactionChainIdFromActionState(s) : null;
+
+  const chainQ = useQuery({
+    queryKey: ['transaction_chains', 'show', { id: relatedChainId ?? -1 }],
+    queryFn: async () => (await fetchTransactionChain(relatedChainId!)).data,
+    enabled: Boolean(relatedChainId && relatedChainId > 0),
+    refetchInterval: relatedChainId ? tierARefetchMs : false,
+  });
+
+  const txQ = useQuery({
+    queryKey: ['transactions', 'list', { transactionChainId: relatedChainId ?? -1, limit: 500 }],
+    queryFn: async () => (await fetchTransactions({ transactionChainId: relatedChainId!, limit: 500 })).data,
+    enabled: Boolean(relatedChainId && relatedChainId > 0),
+    refetchInterval: relatedChainId ? tierARefetchMs : false,
+  });
 
   const tracked = useMemo(
     () => chrome.trackedActionStates.some((x) => x.id === id),
@@ -127,12 +161,25 @@ export function ActionStateDetailPage() {
   const pct = actionStateProgressPercent(s);
   const pLabel = actionStateProgressLabel(s);
 
-  const relatedChainId = extractRelatedTransactionChainIdFromActionState(s);
-
   const pinLabel = pinned ? t('tasks.action.unpin') : t('tasks.action.pin');
 
   const createdAt = (s as any).created_at ? formatDateTime(String((s as any).created_at)) : null;
   const updatedAt = (s as any).updated_at ? formatDateTime(String((s as any).updated_at)) : null;
+  const transactionIds = (txQ.data ?? [])
+    .map((tx) => Number((tx as any).id))
+    .filter((txId) => Number.isFinite(txId) && txId > 0);
+
+  const toggleExpandedTx = (txId: number) => {
+    setExpandedTx((prev) => {
+      const next = new Set(prev);
+      if (next.has(txId)) next.delete(txId);
+      else next.add(txId);
+      return next;
+    });
+  };
+
+  const expandAllTx = () => setExpandedTx(new Set(transactionIds));
+  const collapseAllTx = () => setExpandedTx(new Set());
 
   return (
     <DetailShell testId="action_state.detail">
@@ -198,7 +245,7 @@ export function ActionStateDetailPage() {
               <>
                 {t('action_state.field.transaction_chain')}: {' '}
                 <Link className="underline" to={`${basePath}/transactions/${relatedChainId}`}>
-                  #{relatedChainId}
+                  {chainQ.data?.label ? String(chainQ.data.label) : `#${relatedChainId}`}
                 </Link>
               </>
             ) : undefined
@@ -254,6 +301,189 @@ export function ActionStateDetailPage() {
               </Button>
             </div>
           ) : null}
+        </CardBody>
+      </Card>
+
+      <Card testId="action_state.detail.debug">
+        <CardHeader title={t('action_state.section.debug')} subtitle={t('action_state.section.debug_subtitle')} />
+        <CardBody>
+          <pre className="max-h-80 overflow-auto rounded-md border border-border bg-surface-2 p-3 text-xs text-muted">
+            {pickedActionStateDebugPayload(s)}
+          </pre>
+        </CardBody>
+      </Card>
+
+      <Card testId="action_state.detail.transactions">
+        <CardHeader
+          title={t('action_state.section.transactions')}
+          subtitle={
+            relatedChainId
+              ? t('action_state.section.transactions_subtitle', { id: relatedChainId })
+              : t('action_state.section.transactions_subtitle_empty')
+          }
+          actions={
+            <div className="flex flex-wrap gap-2">
+              {transactionIds.length > 0 ? (
+                <>
+                  <Button size="sm" variant="secondary" onClick={expandAllTx}>
+                    {t('transactions.chain.detail.expand_all')}
+                  </Button>
+                  <Button size="sm" variant="secondary" onClick={collapseAllTx}>
+                    {t('transactions.chain.detail.collapse_all')}
+                  </Button>
+                </>
+              ) : null}
+              {relatedChainId ? (
+                <>
+                  <LinkButton to={`${basePath}/transactions/${relatedChainId}`} variant="secondary" size="sm">
+                    {t('tasks.inspect.open_chain')}
+                  </LinkButton>
+                  <LinkButton to={`${basePath}/transactions/items?transaction_chain=${relatedChainId}`} variant="secondary" size="sm">
+                    {t('tasks.action.view_all')}
+                  </LinkButton>
+                </>
+              ) : null}
+            </div>
+          }
+        />
+        <CardBody>
+          {!relatedChainId ? (
+            <div className="text-sm text-muted">{t('tasks.inspect.no_chain')}</div>
+          ) : txQ.isLoading ? (
+            <LoadingState testId="action_state.detail.transactions.loading" />
+          ) : txQ.isError ? (
+            <Alert variant="danger" title={t('tasks.error.load_items')}>
+              {formatErrorMessage(txQ.error)}
+            </Alert>
+          ) : (txQ.data ?? []).length === 0 ? (
+            <div>
+              <div className="text-sm font-medium">{t('transactions.chain.detail.empty.title')}</div>
+              <div className="mt-1 text-sm text-muted">{t('transactions.chain.detail.empty.body')}</div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table testId="action_state.detail.transactions.table" minWidth="lg" variant="list">
+                <thead>
+                  <tr className="border-b border-border text-left text-xs text-muted">
+                    <th className="px-4 py-2">{t('common.id')}</th>
+                    <th className="px-4 py-2">{t('common.state')}</th>
+                    <th className="px-4 py-2">{t('common.name')}</th>
+                    <th className="px-4 py-2">{t('common.node')}</th>
+                    <th className="px-4 py-2">{t('common.vps')}</th>
+                    <th className="px-4 py-2">{t('common.created')}</th>
+                    <th className="px-4 py-2">{t('common.started')}</th>
+                    <th className="px-4 py-2">{t('common.finished')}</th>
+                    <th className="px-4 py-2">{t('transactions.tx.success_label')}</th>
+                    <th className="px-4 py-2">
+                      <span className="sr-only">{t('transactions.tx.details')}</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(txQ.data ?? []).map((tx: Transaction) => {
+                    const txId = Number((tx as any).id);
+                    const hasTxId = Number.isFinite(txId) && txId > 0;
+                    const badge = transactionBadge(tx);
+                    const name = tx.name ? String(tx.name) : t('transactions.items.row.fallback_name');
+                    const nodeId = resourceId((tx as any).node);
+                    const vpsId = resourceId((tx as any).vps);
+                    const userId = resourceId((tx as any).user);
+                    const started = (tx as any).started_at as string | null | undefined;
+                    const finished = (tx as any).finished_at as string | null | undefined;
+                    const sec = durationSec(started, finished);
+                    const expanded = hasTxId && expandedTx.has(txId);
+                    const input = formatPayload((tx as any).input);
+                    const output = formatPayload((tx as any).output);
+                    const progress = typeof (tx as any).progress === 'number' ? String((tx as any).progress) : null;
+                    const done = (tx as any).done ? String((tx as any).done) : null;
+                    const success = typeof (tx as any).success === 'number' ? String((tx as any).success) : null;
+
+                    return (
+                      <React.Fragment key={hasTxId ? txId : name}>
+                        <tr className="border-b border-border">
+                          <td className="px-4 py-2 text-xs text-muted">
+                            {hasTxId ? (
+                              <Link className="text-accent hover:underline" to={`${basePath}/transactions/items/${txId}`}>
+                                #{txId}
+                              </Link>
+                            ) : (
+                              t('common.na')
+                            )}
+                          </td>
+                          <td className="px-4 py-2"><Badge variant={badge.variant}>{badge.label}</Badge></td>
+                          <td className="px-4 py-2">
+                            <div className="font-medium">{name}</div>
+                            <div className="mt-1 text-xs text-muted">
+                              {typeof (tx as any).type === 'number' ? t('transactions.items.row.type_chip', { type: (tx as any).type }) : null}
+                            </div>
+                          </td>
+                          <td className="px-4 py-2 text-xs">
+                            {nodeId && basePath === '/admin' ? (
+                              <Link className="text-accent hover:underline" to={`${basePath}/nodes/${nodeId}`}>
+                                {refLabel((tx as any).node) || `#${nodeId}`}
+                              </Link>
+                            ) : nodeId ? (
+                              <span className="text-muted">{refLabel((tx as any).node) || `#${nodeId}`}</span>
+                            ) : (
+                              <span className="text-faint">{t('common.na')}</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2 text-xs">
+                            {vpsId ? (
+                              <Link className="text-accent hover:underline" to={`${basePath}/vps/${vpsId}`}>
+                                {refLabel((tx as any).vps) || `#${vpsId}`}
+                              </Link>
+                            ) : (
+                              <span className="text-faint">{t('common.na')}</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2 text-xs text-muted">{formatDateTime((tx as any).created_at)}</td>
+                          <td className="px-4 py-2 text-xs text-muted">{formatDateTime(started)}</td>
+                          <td className="px-4 py-2 text-xs text-muted">{formatDateTime(finished)}</td>
+                          <td className="px-4 py-2 text-xs text-muted">{success ?? t('common.na')}</td>
+                          <td className="px-4 py-2">
+                            {hasTxId ? (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 px-0"
+                                ariaLabel={expanded ? t('common.collapse') : t('common.expand')}
+                                title={t('transactions.tx.details')}
+                                testId={`action_state.detail.tx.toggle.${txId}`}
+                                onClick={() => toggleExpandedTx(txId)}
+                              >
+                                {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                              </Button>
+                            ) : null}
+                          </td>
+                        </tr>
+
+                        {expanded ? (
+                          <tr className="border-b border-border bg-surface-2" data-testid={`action_state.detail.tx.expanded.${txId}`}>
+                            <td colSpan={10} className="px-4 py-4">
+                              <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                                <div><span className="text-muted">{t('common.user')}:</span> {userId ? `#${userId}` : t('common.na')}</div>
+                                <div><span className="text-muted">{t('transactions.tx.duration_label')}:</span> {sec !== null ? t('transactions.tx.duration', { sec }) : t('common.na')}</div>
+                                <div><span className="text-muted">{t('transactions.tx.done_label')}:</span> {done ?? t('common.na')}</div>
+                                <div><span className="text-muted">{t('common.progress')}:</span> {progress ?? t('common.na')}</div>
+                              </div>
+                              <div className="mt-4">
+                                <TransactionPayloadPanels t={t} input={input} output={output} maxHeightClass="max-h-80" />
+                              </div>
+                              <details className="mt-4 rounded-md border border-border bg-surface p-3">
+                                <summary className="cursor-pointer select-none text-sm font-medium">{t('transactions.items.detail.section.raw')}</summary>
+                                <pre className="mt-2 max-h-80 overflow-auto text-xs text-muted">{safeJson(tx)}</pre>
+                              </details>
+                            </td>
+                          </tr>
+                        ) : null}
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+              </Table>
+            </div>
+          )}
         </CardBody>
       </Card>
 
