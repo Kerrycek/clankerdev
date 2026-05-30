@@ -1,6 +1,16 @@
 // Admin cluster locale chunk: network_detail
 export const enAdminCluster_network_detail = {
   "admin.cluster.network_detail.add_location": "Add location",
+  "admin.cluster.network_detail.add_addresses.action": "Add IP addresses",
+  "admin.cluster.network_detail.add_addresses.confirm": "Add addresses",
+  "admin.cluster.network_detail.add_addresses.count": "Count",
+  "admin.cluster.network_detail.add_addresses.environment": "Environment ID",
+  "admin.cluster.network_detail.add_addresses.notice.body": "This calls the backend network#add_addresses action for an existing managed network. Use a small count unless you intentionally need a larger pool.",
+  "admin.cluster.network_detail.add_addresses.notice.title": "Adds routable IP records",
+  "admin.cluster.network_detail.add_addresses.title": "Add IP addresses",
+  "admin.cluster.network_detail.add_addresses.toast": "IP addresses added",
+  "admin.cluster.network_detail.add_addresses.toast_body": "Added {count} address records.",
+  "admin.cluster.network_detail.add_addresses.user": "Owner user ID",
   "admin.cluster.network_detail.availability.empty.body": "This network is not assigned to any location.",
   "admin.cluster.network_detail.availability.empty.title": "No locations",
   "admin.cluster.network_detail.availability.error.body": "Please try again.",

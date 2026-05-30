@@ -1,6 +1,16 @@
 // Admin cluster locale chunk: network_detail
 export const csAdminCluster_network_detail = {
   "admin.cluster.network_detail.add_location": "Přidat lokalitu",
+  "admin.cluster.network_detail.add_addresses.action": "Přidat IP adresy",
+  "admin.cluster.network_detail.add_addresses.confirm": "Přidat adresy",
+  "admin.cluster.network_detail.add_addresses.count": "Počet",
+  "admin.cluster.network_detail.add_addresses.environment": "ID prostředí",
+  "admin.cluster.network_detail.add_addresses.notice.body": "Volá backendovou akci network#add_addresses pro existující spravovanou síť. Použij malý počet, pokud cíleně nepotřebuješ větší pool.",
+  "admin.cluster.network_detail.add_addresses.notice.title": "Přidá routovatelné IP záznamy",
+  "admin.cluster.network_detail.add_addresses.title": "Přidat IP adresy",
+  "admin.cluster.network_detail.add_addresses.toast": "IP adresy přidány",
+  "admin.cluster.network_detail.add_addresses.toast_body": "Přidáno záznamů adres: {count}.",
+  "admin.cluster.network_detail.add_addresses.user": "ID vlastníka",
   "admin.cluster.network_detail.availability.empty.body": "Tato síť není přiřazena k žádné lokalitě.",
   "admin.cluster.network_detail.availability.empty.title": "Žádné lokality",
   "admin.cluster.network_detail.availability.error.body": "Zkus to prosím znovu.",

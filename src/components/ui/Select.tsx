@@ -18,6 +18,7 @@ export function Select(props: {
   className?: string;
   ariaLabel?: string;
   'aria-label'?: string;
+  label?: React.ReactNode;
   options?: SelectOption[];
   children?: React.ReactNode;
 }) {
@@ -29,7 +30,7 @@ export function Select(props: {
     </option>
   ));
 
-  return (
+  const select = (
     <select
       data-testid={props.testId}
       name={props.name}
@@ -47,5 +48,14 @@ export function Select(props: {
     >
       {content}
     </select>
+  );
+
+  if (!props.label) return select;
+
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-semibold text-muted">{props.label}</span>
+      {select}
+    </label>
   );
 }

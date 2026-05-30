@@ -136,3 +136,24 @@ export async function updateNetwork(opts: {
     params,
   });
 }
+
+export async function addNetworkAddresses(opts: {
+  id: number;
+  count: number;
+  user?: number;
+  environment?: number;
+}) {
+  const params: Record<string, unknown> = {
+    count: opts.count,
+  };
+
+  if (opts.user !== undefined) params['user'] = opts.user;
+  if (opts.environment !== undefined) params['environment'] = opts.environment;
+
+  return haveApiCall<{ count?: number }>({
+    method: 'POST',
+    path: `/networks/${opts.id}/add_addresses`,
+    namespace: 'network',
+    params,
+  });
+}

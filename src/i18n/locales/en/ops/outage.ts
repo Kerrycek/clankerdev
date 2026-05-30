@@ -8,4 +8,5 @@ export const enOps_outage = {
   "outage.impact.tbd": "TBD",
   "outage.impact.unavailability": "Unavailable",
   "outage.type.outage": "Outage",
+  "outage.type.maintenance": "Maintenance",
 } as const;

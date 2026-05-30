@@ -14,6 +14,7 @@ import { csAdmin_networking } from './admin/networking';
 import { csAdmin_newslog } from './admin/newslog';
 import { csAdmin_node } from './admin/node';
 import { csAdmin_nodes } from './admin/nodes';
+import { csAdmin_outages } from './admin/outages';
 import { csAdmin_state } from './admin/state';
 import { csAdmin_user } from './admin/user';
 import { csAdmin_userns } from './admin/userns';
@@ -35,6 +36,7 @@ export const csAdmin = {
   ...csAdmin_newslog,
   ...csAdmin_node,
   ...csAdmin_nodes,
+  ...csAdmin_outages,
   ...csAdmin_state,
   ...csAdmin_user,
   ...csAdmin_userns,

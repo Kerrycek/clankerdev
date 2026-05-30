@@ -472,7 +472,7 @@ export function VpsOverviewPage() {
               <ChipLink to={`${basePath}/incidents/new?vps=${vps.id}`} title={t('vps.overview.admin_actions.report_incident_title')}>
                 {t('vps.overview.admin_actions.report_incident')}
               </ChipLink>
-              <ChipLink to={`/outages`} title={t('vps.overview.admin_actions.outages_title')}>
+              <ChipLink to={`${basePath}/outages?vps=${vps.id}`} title={t('vps.overview.admin_actions.outages_title')}>
                 {t('vps.overview.admin_actions.outages')}
               </ChipLink>
               <ChipLink to={`${basePath}/transactions?class_name=Vps&row_id=${vps.id}`} title={t('vps.overview.admin_actions.transaction_log_title')}>

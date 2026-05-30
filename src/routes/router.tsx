@@ -83,6 +83,7 @@ const ProfileUserNamespacesMapDetailPage = lazyRoute(() => import('../pages/app/
 const PaymentsPage = lazyRoute(() => import('../pages/app/payments/PaymentsPage'), 'PaymentsPage');
 const DesignSandboxPage = lazyRoute(() => import('../pages/app/DesignSandboxPage'), 'DesignSandboxPage');
 const AdminInfoPage = lazyRoute(() => import('../pages/app/admin/AdminInfoPage'), 'AdminInfoPage');
+const AdminOutagesPage = lazyRoute(() => import('../pages/app/admin/AdminOutagesPage'), 'AdminOutagesPage');
 const NodesPage = lazyRoute(() => import('../pages/app/admin/NodesPage'), 'NodesPage');
 const NodeDetailPage = lazyRoute(() => import('../pages/app/admin/NodeDetailPage'), 'NodeDetailPage');
 const MigrationPlansPage = lazyRoute(() => import('../pages/app/admin/MigrationPlansPage'), 'MigrationPlansPage');
@@ -289,6 +290,8 @@ export const router = createBrowserRouter([
           errorElement: <ErrorPage />,
           children: [
             { index: true, element: <DashboardPage /> },
+            { path: 'outages', element: <AdminOutagesPage /> },
+            { path: 'outages/:outageId', element: <AdminOutagesPage /> },
             { path: 'nodes', element: <NodesPage /> },
             { path: 'nodes/:nodeId', element: <NodeDetailPage /> },
             { path: 'migration-plans', element: <MigrationPlansPage /> },
