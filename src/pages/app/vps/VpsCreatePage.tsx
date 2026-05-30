@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
 import { useAppMode } from '../../../app/appMode';
-import { useAuth } from '../../../app/auth';
 import { useI18n } from '../../../app/i18n';
 import { useChrome } from '../../../components/layout/ChromeContext';
 import { ListShell } from '../../../components/layout/ListShell';
@@ -147,9 +146,8 @@ function validateForm(form: FormState, isAdmin: boolean): string[] {
 
 export function VpsCreatePage() {
   const { basePath, mode } = useAppMode();
-  const auth = useAuth();
-  const isAdmin = mode === 'admin' || auth.role === 'admin';
-  const effectiveBasePath = isAdmin ? '/admin' : basePath;
+  const isAdminMode = mode === 'admin';
+  const effectiveBasePath = isAdminMode ? '/admin' : basePath;
   const { t } = useI18n();
   const navigate = useNavigate();
   const chrome = useChrome();
@@ -179,7 +177,7 @@ export function VpsCreatePage() {
   const nodesQ = useQuery({
     queryKey: ['nodes', { limit: 500, location: selectedLocationId ?? null }],
     queryFn: async () => (await fetchNodes({ limit: 500, location: selectedLocationId })).data,
-    enabled: isAdmin && selectedLocationId !== undefined,
+    enabled: isAdminMode && selectedLocationId !== undefined,
   });
   const templatesQ = useQuery({
     queryKey: ['os_templates', { limit: 500, enabled: true, hypervisorType: 'vpsadminos' }],
@@ -192,7 +190,7 @@ export function VpsCreatePage() {
     enabled: selectedEnvironmentId !== undefined,
   });
 
-  const nodes = isAdmin ? nodesQ.data ?? [] : [];
+  const nodes = isAdminMode ? nodesQ.data ?? [] : [];
   const templatesByFamily = useMemo(() => {
     const groups = new Map<string, OsTemplate[]>();
     for (const tpl of templatesQ.data ?? []) {
@@ -228,18 +226,12 @@ export function VpsCreatePage() {
     setForm((prev) => ({ ...prev, ...next }));
   }, [defaultResourcesQ.data]);
 
-  const validationKeys = useMemo(() => validateForm(form, isAdmin), [form, isAdmin]);
+  const validationKeys = useMemo(() => validateForm(form, isAdminMode), [form, isAdminMode]);
   const canSubmit = validationKeys.length === 0;
-
-  useEffect(() => {
-    if (mode === 'user' && auth.role === 'admin') {
-      navigate('/admin/vps/new', { replace: true });
-    }
-  }, [auth.role, mode, navigate]);
 
   const createM = useMutation({
     mutationFn: async () => {
-      const errors = validateForm(form, isAdmin);
+      const errors = validateForm(form, isAdminMode);
       if (errors.length > 0) {
         const err: any = new Error('validation');
         err.validationKeys = errors;
@@ -259,7 +251,7 @@ export function VpsCreatePage() {
         ipv4_private: toNonNegativeInt(form.ipv4Private),
       };
 
-      const payload: CreateVpsPayload = isAdmin
+      const payload: CreateVpsPayload = isAdminMode
         ? {
             ...commonPayload,
             mode: 'admin',
@@ -298,8 +290,8 @@ export function VpsCreatePage() {
     },
   });
 
-  const loading = locationQ.isLoading || (isAdmin && nodesQ.isLoading) || templatesQ.isLoading;
-  const loadError = locationQ.error || (isAdmin ? nodesQ.error : null) || templatesQ.error;
+  const loading = locationQ.isLoading || (isAdminMode && nodesQ.isLoading) || templatesQ.isLoading;
+  const loadError = locationQ.error || (isAdminMode ? nodesQ.error : null) || templatesQ.error;
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -349,7 +341,7 @@ export function VpsCreatePage() {
             <Card testId="vps.create.target">
               <CardHeader title={t('vps.create.section.target')} subtitle={t('vps.create.section.target_help')} />
               <CardBody className="grid gap-4 md:grid-cols-2">
-                {isAdmin ? (
+                {isAdminMode ? (
                   <div>
                     {label(t('vps.create.field.user'))}
                     <UserLookupInput value={form.userId} onChange={(v) => update('userId', v)} testId="vps.create.user" placeholder={t('vps.create.placeholder.user')} loadingLabel={t('common.loading')} noResultsLabel={t('palette.empty.no_results')} />
@@ -411,7 +403,7 @@ export function VpsCreatePage() {
             <Card testId="vps.create.confirm">
               <CardHeader title={t('vps.create.section.confirm')} />
               <CardBody className="space-y-4">
-                {isAdmin ? (
+                {isAdminMode ? (
                   <div>
                     {label(t('vps.create.field.node'))}
                     <Select value={form.nodeId} onChange={(e) => update('nodeId', e.target.value)} testId="vps.create.node" disabled={!selectedLocationId} options={[{ value: '', label: t('common.select') }, ...nodes.map((n) => ({ value: String(n.id), label: nodeLabel(n) }))]} />
@@ -422,7 +414,7 @@ export function VpsCreatePage() {
                   <Input value={form.hostname} onChange={(e) => update('hostname', e.target.value)} testId="vps.create.hostname" placeholder={t('vps.create.placeholder.hostname')} autoComplete="off" />
                 </div>
                 <Checkbox checked={form.start} onChange={(v) => update('start', v)} label={t('vps.create.field.start')} testId="vps.create.start" />
-                {isAdmin ? (
+                {isAdminMode ? (
                   <div>
                     {label(t('vps.create.field.info'))}
                     <Textarea value={form.info} onChange={(e) => update('info', e.target.value)} testId="vps.create.info" rows={4} />
