@@ -129,4 +129,55 @@ test.describe('Action state detail page', () => {
       await expect(page.getByTestId('action_state.detail.tx.expanded.7001')).toContainText('tank/ct/vps12');
     });
   }
+
+  test('deep reload keeps action-state detail and chained transactions visible', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, {
+      sessionToken: 'TEST_TOKEN',
+    });
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'test', level: 1 },
+      handlers: {
+        'GET action_states/123': () => ({
+          action_state: {
+            id: 123,
+            label: 'Create VPS',
+            state: 'done',
+            current: 1,
+            total: 1,
+            finished: true,
+            status: true,
+            transaction_chain: { id: 456, label: 'Create chain' },
+          },
+        }),
+        'GET transaction_chains/456': () => ({
+          transaction_chain: { id: 456, label: 'Create chain', state: 'done', progress: 1, size: 1 },
+        }),
+        'GET transactions': ({ searchParams }: { searchParams: URLSearchParams }) => {
+          if (searchParams.get('transaction[transaction_chain]') !== '456') return { transactions: [] };
+          return {
+            transactions: [
+              {
+                id: 7001,
+                name: 'Create dataset',
+                done: 'done',
+                success: 1,
+                transaction_chain: { id: 456 },
+                input: { dataset: 'tank/ct/vps12' },
+              },
+            ],
+          };
+        },
+      },
+    });
+
+    await page.goto('/app/action-states/123');
+    await expect(page.getByTestId('action_state.detail.transactions')).toBeVisible();
+
+    await page.reload();
+
+    await expect(page).toHaveURL(/\/app\/action-states\/123$/);
+    await expect(page.getByTestId('action_state.detail')).toBeVisible();
+    await expect(page.getByTestId('action_state.detail.transactions.table')).toContainText('Create dataset');
+  });
 });

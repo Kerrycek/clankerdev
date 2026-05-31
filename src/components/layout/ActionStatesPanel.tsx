@@ -11,7 +11,7 @@ import { formatDateTime } from '../../lib/format';
 import { formatErrorMessage } from '../../lib/errors';
 import { useActionStatePollIntervalMs, useTierAIntervalMs } from '../../lib/refreshTiers';
 import { extractRelatedTransactionChainIdFromActionState } from '../../lib/taskLinks';
-import { durationSec, formatPayload, safeJson } from '../../lib/txFormat';
+import { durationSec, formatPayload, safeJson, transactionErrorText } from '../../lib/txFormat';
 import {
   actionStateBadge,
   actionStateProgressLabel,
@@ -146,6 +146,7 @@ function ActionStateInspect(props: {
     const name = tx.name ? String(tx.name) : `#${tx.id}`;
     const input = formatPayload((tx as any).input);
     const output = formatPayload((tx as any).output);
+    const errorText = transactionErrorText(tx);
     const txId = Number((tx as any).id);
     const hasTxId = Number.isFinite(txId) && txId > 0;
     const expanded = hasTxId && expandedTx.has(txId);
@@ -209,6 +210,13 @@ function ActionStateInspect(props: {
         {expanded ? (
           <tr className="border-b border-border bg-surface-2" data-testid={`tasks.inspect.tx.expanded.${txId}`}>
             <td colSpan={8} className="px-3 py-3">
+              {errorText ? (
+                <div className="mb-3">
+                  <Alert variant="danger" title={i18n.t('transactions.tx.error_title')}>
+                    <pre className="whitespace-pre-wrap text-xs">{errorText}</pre>
+                  </Alert>
+                </div>
+              ) : null}
               <TransactionPayloadPanels t={i18n.t} input={input} output={output} maxHeightClass="max-h-80" />
             </td>
           </tr>
