@@ -37,7 +37,7 @@ test.describe('@pr-smoke TransactionDetailPage', () => {
     await expect(page.getByTestId('transactions.items.detail.header')).toBeVisible();
     await expect(page.getByTestId('transactions.items.detail.info')).toBeVisible();
     await expect(page.getByTestId('transactions.items.detail.payload')).toBeVisible();
-    await expect(page.getByText('dataset mount failed')).toBeVisible();
+    await expect(page.getByTestId('transactions.items.detail.error')).toContainText('dataset mount failed');
     await expect(page.getByTestId('transactions.items.detail.info')).toContainText('worker');
     await expect(page.getByTestId('transactions.items.detail.info')).toContainText('40');
     await expect(page.getByTestId('transactions.items.detail.payload')).toContainText('zfs mount tank/ct/vps100');
@@ -75,6 +75,6 @@ test.describe('@pr-smoke TransactionDetailPage', () => {
 
     await expect(page).toHaveURL(/\/app\/transactions\/items\/702$/);
     await expect(page.getByTestId('transactions.items.detail')).toBeVisible();
-    await expect(page.getByText('dataset mount failed')).toBeVisible();
+    await expect(page.getByTestId('transactions.items.detail.error')).toContainText('dataset mount failed');
   });
 });

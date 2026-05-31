@@ -164,7 +164,7 @@ export function TransactionDetailPage() {
       ) : tx ? (
         <>
           {errorText ? (
-            <Alert variant="danger" title={t('transactions.tx.error_title')}>
+            <Alert variant="danger" title={t('transactions.tx.error_title')} testId="transactions.items.detail.error">
               <pre className="whitespace-pre-wrap text-xs">{errorText}</pre>
             </Alert>
           ) : null}
