@@ -67,7 +67,9 @@ test.describe('@smoke Sync indicator', () => {
 
     await page.goto('/app/vps');
 
-    await expect(page.getByTestId('auth.login-required')).toBeVisible();
+    await expect(page).toHaveURL(/\/\?session=expired$/);
+    await expect(page.getByTestId('public.overview.page')).toBeVisible();
+    await expect(page.getByTestId('auth.session-expired.notice')).toBeVisible();
     await expect(page.getByText('Relace vypršela kvůli nečinnosti. Přihlas se prosím znovu.')).toBeVisible();
     await expect(page.getByTestId('shell.sync-indicator')).toBeHidden();
   });
