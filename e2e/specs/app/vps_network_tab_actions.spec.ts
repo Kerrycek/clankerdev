@@ -40,6 +40,12 @@ const ips = [
     network_interface: { id: 1 },
     network: { role: 'public', purpose: 'public' },
   },
+  {
+    id: 2,
+    addr: '198.51.100.20',
+    network_interface: null,
+    network: { role: 'public', purpose: 'public' },
+  },
 ];
 
 const acct = [{ id: 1, bytes_in: 1024, bytes_out: 2048 }];
@@ -139,5 +145,123 @@ test.describe('@pr-smoke VPS network tab', () => {
     });
 
     await expect(page.getByTestId('vps.network.disable_confirm')).toBeHidden();
+  });
+
+  test('assigns unassigned route with host address and manages host PTR/create payloads', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    let currentIps = [...ips];
+    let hostAddresses = [
+      {
+        id: 50,
+        addr: '198.51.100.10',
+        assigned: true,
+        reverse_record_value: 'old.example.test.',
+        user_created: true,
+        ip_address: { id: 1, addr: '198.51.100.10' },
+      },
+    ];
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 90 },
+      handlers: {
+        'GET vpses/123': () => ({ vps }),
+        'GET ip_addresses': () => ({ ip_addresses: currentIps }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'GET network_interfaces': () => ({ network_interfaces: netifs }),
+        'GET network_interface_accountings': () => ({ network_interface_accountings: acct }),
+        'GET host_ip_addresses': () => ({ host_ip_addresses: hostAddresses }),
+        'POST ip_addresses/2/assign_with_host_address': () => {
+          currentIps = currentIps.map((ip) => (ip.id === 2 ? { ...ip, network_interface: { id: 1 }, routed: true } : ip));
+          return { ip_address: currentIps.find((ip) => ip.id === 2) };
+        },
+        'POST host_ip_addresses': () => {
+          hostAddresses = [
+            ...hostAddresses,
+            {
+              id: 51,
+              addr: '198.51.100.11',
+              assigned: false,
+              user_created: true,
+              ip_address: { id: 1, addr: '198.51.100.10' },
+            },
+          ];
+          return { host_ip_address: hostAddresses[1] };
+        },
+        'PUT host_ip_addresses/50': () => {
+          hostAddresses = hostAddresses.map((h) =>
+            h.id === 50 ? { ...h, reverse_record_value: 'new.example.test.' } : h
+          );
+          return { host_ip_address: hostAddresses[0] };
+        },
+      },
+    });
+
+    await page.goto('/admin/vps/123/network');
+    await expect(page.getByTestId('vps.network.page')).toBeVisible();
+
+    await page.getByTestId('vps.network.ip_addresses.unassigned.2.assign').click();
+    await expect(page.getByTestId('vps.network.ip_addresses.assign_route')).toBeVisible();
+    await page.getByTestId('vps.network.ip_addresses.assign_route.interface').selectOption('1');
+    await page.getByTestId('vps.network.ip_addresses.assign_route.with_host').check();
+
+    const assignReq = page.waitForRequest(
+      (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/ip_addresses/2/assign_with_host_address')
+    );
+    await page.getByTestId('vps.network.ip_addresses.assign_route.submit').click();
+    expect((await assignReq).postDataJSON()).toEqual({
+      ip_address: {
+        network_interface: 1,
+      },
+    });
+    await expect(page.getByTestId('vps.network.ip_addresses.assign_route')).toBeHidden();
+
+    await page.getByTestId('vps.network.ip_addresses.item.1.host_create').click();
+    await page.getByTestId('vps.network.host_addresses.create.addresses').fill('198.51.100.11');
+
+    const createHostReq = page.waitForRequest(
+      (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/host_ip_addresses')
+    );
+    await page.getByTestId('vps.network.host_addresses.create.submit').click();
+    expect((await createHostReq).postDataJSON()).toEqual({
+      host_ip_address: {
+        ip_address: 1,
+        addr: '198.51.100.11',
+      },
+    });
+
+    await page.getByTestId('vps.network.host_addresses.row.50.ptr').click();
+    await page.getByTestId('vps.network.host_addresses.ptr.value').fill('new.example.test.');
+
+    const ptrReq = page.waitForRequest(
+      (r) => r.method() === 'PUT' && r.url().includes('/api/v7.0/host_ip_addresses/50')
+    );
+    await page.getByTestId('vps.network.host_addresses.ptr.submit').click();
+    expect((await ptrReq).postDataJSON()).toEqual({
+      host_ip_address: {
+        reverse_record_value: 'new.example.test.',
+      },
+    });
+  });
+
+  test('keeps admin-only networking actions hidden for normal users', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    await installHaveApiMock(page, {
+      user: { id: 2, login: 'user', level: 1 },
+      handlers: {
+        'GET vpses/123': () => ({ vps }),
+        'GET ip_addresses': () => ({ ip_addresses: ips }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'GET network_interfaces': () => ({ network_interfaces: netifs }),
+        'GET network_interface_accountings': () => ({ network_interface_accountings: acct }),
+      },
+    });
+
+    await page.goto('/app/vps/123/network');
+    await expect(page.getByTestId('vps.network.page')).toBeVisible();
+    await expect(page.getByTestId('vps.network.host_addresses')).toHaveCount(0);
+    await expect(page.getByTestId('vps.network.ip_addresses.unassigned.2.assign')).toHaveCount(0);
+    await expect(page.getByTestId('vps.network.disable')).toHaveCount(0);
   });
 });
