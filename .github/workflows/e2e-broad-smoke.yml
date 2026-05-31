@@ -1,7 +1,6 @@
 name: Playwright broad smoke
 
 on:
-  pull_request:
   push:
     branches:
       - main
@@ -9,6 +8,10 @@ on:
     # Nightly Prague morning signal, UTC.
     - cron: '20 3 * * *'
   workflow_dispatch:
+
+concurrency:
+  group: playwright-broad-smoke-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   broad-smoke:

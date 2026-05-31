@@ -212,11 +212,13 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
   test('admin replace posts node, expiration, start and reason payload', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installLifecycleMock(page);
+    const expirationInput = '2026-07-01T12:30';
+    const expectedExpirationIso = new Date(expirationInput).toISOString();
 
     await page.goto('/admin/vps/123/lifecycle');
 
     await page.getByTestId('vps.lifecycle.replace.node').fill('#4');
-    await page.getByTestId('vps.lifecycle.replace.expiration').fill('2026-07-01T12:30');
+    await page.getByTestId('vps.lifecycle.replace.expiration').fill(expirationInput);
     await page.getByTestId('vps.lifecycle.replace.start').check();
     await page.getByTestId('vps.lifecycle.replace.reason').fill('staging replacement');
     await page.getByTestId('vps.lifecycle.replace.confirm').check();
@@ -231,7 +233,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     expect(req.postDataJSON()).toEqual({
       vps: {
         node: 4,
-        expiration_date: '2026-07-01T10:30:00.000Z',
+        expiration_date: expectedExpirationIso,
         start: true,
         reason: 'staging replacement',
       },
