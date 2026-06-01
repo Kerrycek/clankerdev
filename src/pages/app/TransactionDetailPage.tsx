@@ -13,8 +13,9 @@ import { transactionBadge } from '../../lib/taskStatus';
 import { useTierAIntervalMs } from '../../lib/refreshTiers';
 import { formatDateTime } from '../../lib/format';
 import { resourceId, refLabel } from '../../lib/resources';
-import { durationSec, formatPayload, safeJson } from '../../lib/txFormat';
+import { durationSec, formatPayload, safeJson, transactionErrorText } from '../../lib/txFormat';
 
+import { Alert } from '../../components/ui/Alert';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
@@ -68,10 +69,13 @@ export function TransactionDetailPage() {
   const chainId = resourceId(tx?.transaction_chain);
   const vpsId = resourceId(tx?.vps);
   const nodeId = resourceId(tx?.node);
+  const userId = resourceId((tx as any)?.user);
 
   const urgent = Boolean((tx as any)?.urgent);
   const prio = typeof (tx as any)?.priority === 'number' ? ((tx as any).priority as number) : undefined;
   const type = typeof (tx as any)?.type === 'number' ? ((tx as any).type as number) : undefined;
+  const progress = typeof (tx as any)?.progress === 'number' ? String((tx as any).progress) : undefined;
+  const done = (tx as any)?.done ? String((tx as any).done) : undefined;
 
   const created = (tx as any)?.created_at as string | null | undefined;
   const started = (tx as any)?.started_at as string | null | undefined;
@@ -80,6 +84,16 @@ export function TransactionDetailPage() {
 
   const input = formatPayload((tx as any)?.input);
   const output = formatPayload((tx as any)?.output);
+  const errorText = transactionErrorText(tx);
+  const objectValue = (tx as any)?.object ?? (tx as any)?.object_ref ?? (tx as any)?.object_reference ?? null;
+  const objectText = objectValue
+    ? refLabel(objectValue) || formatPayload(objectValue)
+    : vpsId
+      ? refLabel((tx as any)?.vps) || `#${vpsId}`
+      : '';
+  const extraPayloads = ['details', 'detail', 'log', 'logs', 'stdout', 'stderr']
+    .map((key) => ({ key, value: formatPayload((tx as any)?.[key]) }))
+    .filter((item) => item.value);
 
   const deps = Array.isArray((tx as any)?.depends_on) ? (((tx as any).depends_on as any[]) ?? []) : [];
 
@@ -149,17 +163,28 @@ export function TransactionDetailPage() {
         />
       ) : tx ? (
         <>
+          {errorText ? (
+            <Alert variant="danger" title={t('transactions.tx.error_title')} testId="transactions.items.detail.error">
+              <pre className="whitespace-pre-wrap text-xs">{errorText}</pre>
+            </Alert>
+          ) : null}
+
           <Card testId="transactions.items.detail.info">
             <CardHeader title={t('transactions.items.detail.section.info')} />
             <CardBody>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div>
+                  <div className="text-xs text-muted">{t('common.id')}</div>
+                  <div className="mt-1 text-sm tabular-nums">#{txIdNum}</div>
+                </div>
+
                 <div>
                   <div className="text-xs text-muted">{t('common.state')}</div>
                   <div className="mt-1">{badge ?? <span className="text-sm text-muted">{t('common.na')}</span>}</div>
                 </div>
 
                 <div>
-                  <div className="text-xs text-muted">{t('common.created')}</div>
+                  <div className="text-xs text-muted">{t('transactions.tx.queued_at_label')}</div>
                   <div className="mt-1 text-sm">{formatDateTime(created)}</div>
                 </div>
 
@@ -184,6 +209,11 @@ export function TransactionDetailPage() {
                 </div>
 
                 <div>
+                  <div className="text-xs text-muted">{t('transactions.tx.done_label')}</div>
+                  <div className="mt-1 text-sm">{done ?? t('common.na')}</div>
+                </div>
+
+                <div>
                   <div className="text-xs text-muted">{t('transactions.tx.type_label')}</div>
                   <div className="mt-1 text-sm">{type !== undefined ? String(type) : t('common.na')}</div>
                 </div>
@@ -196,6 +226,21 @@ export function TransactionDetailPage() {
                 <div>
                   <div className="text-xs text-muted">{t('transactions.tx.success_label')}</div>
                   <div className="mt-1 text-sm">{typeof (tx as any)?.success === 'number' ? String((tx as any).success) : t('common.na')}</div>
+                </div>
+
+                <div>
+                  <div className="text-xs text-muted">{t('common.progress')}</div>
+                  <div className="mt-1 text-sm">{progress ?? t('common.na')}</div>
+                </div>
+
+                <div>
+                  <div className="text-xs text-muted">{t('common.user')}</div>
+                  <div className="mt-1 text-sm">{userId ? refLabel((tx as any)?.user) || `#${userId}` : t('common.na')}</div>
+                </div>
+
+                <div>
+                  <div className="text-xs text-muted">{t('transactions.tx.object_label')}</div>
+                  <div className="mt-1 text-sm">{objectText || t('common.na')}</div>
                 </div>
 
                 <div>
@@ -284,6 +329,18 @@ export function TransactionDetailPage() {
             />
             <CardBody>
               <TransactionPayloadPanels t={t} input={input} output={output} maxHeightClass="max-h-96" />
+              {extraPayloads.length ? (
+                <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                  {extraPayloads.map((item) => (
+                    <div key={item.key}>
+                      <div className="text-xs font-medium text-muted">{item.key}</div>
+                      <pre className="mt-2 max-h-96 overflow-auto rounded-md border border-border bg-surface p-3 text-xs text-muted">
+                        {item.value}
+                      </pre>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </CardBody>
           </Card>
         </>

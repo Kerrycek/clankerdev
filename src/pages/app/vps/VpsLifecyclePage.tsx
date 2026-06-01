@@ -17,8 +17,10 @@ import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 import { VpsLookupInput } from '../../../components/ui/VpsLookupInput';
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
 import { fetchLocations, type Location } from '../../../lib/api/infra';
+import { fetchIpAddressesForVps, type IpAddress } from '../../../lib/api/ipAddresses';
 import { fetchOsTemplates, type OsTemplate } from '../../../lib/api/osTemplates';
 import {
+  fetchVps,
   updateVps,
   vpsBoot,
   vpsClone,
@@ -170,6 +172,41 @@ function locationLabel(location: Location): string {
   return String(location.label ?? location.description ?? location.domain ?? `#${location.id}`);
 }
 
+function vpsLabel(vps: unknown, fallbackId?: number | null): string {
+  if (vps && typeof vps === 'object') {
+    const row = vps as any;
+    const id = resourceId(row) ?? fallbackId;
+    const hostname = row.hostname ? String(row.hostname) : '';
+    if (hostname && id) return `${hostname} (#${id})`;
+    if (hostname) return hostname;
+    if (row.label && id) return `${String(row.label)} (#${id})`;
+    if (row.label) return String(row.label);
+    if (id) return `#${id}`;
+  }
+  return fallbackId ? `#${fallbackId}` : '—';
+}
+
+function ipAddressText(ip: IpAddress): string {
+  const addr = String(ip.addr ?? '').trim();
+  const prefix = typeof ip.prefix === 'number' ? `/${ip.prefix}` : '';
+  const role = ip.network?.role || ip.network?.purpose;
+  return `${addr || `#${ip.id}`}${prefix}${role ? ` · ${String(role)}` : ''}`;
+}
+
+function IpList(props: { ips: IpAddress[] | undefined; loading: boolean; empty: string; loadingText: string; testId: string }) {
+  if (props.loading) return <div className="text-sm text-muted">{props.loadingText}</div>;
+  if (!props.ips?.length) return <div className="text-sm text-muted">{props.empty}</div>;
+  return (
+    <ul className="space-y-1 text-sm" data-testid={props.testId}>
+      {props.ips.map((ip) => (
+        <li key={ip.id} className="font-mono text-xs">
+          {ipAddressText(ip)}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function mutationErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message && error.message !== 'invalid-id' && error.message !== 'required-id' && error.message !== 'invalid-date') {
     return error.message;
@@ -205,6 +242,12 @@ export function VpsLifecyclePage() {
     queryFn: async () => (await fetchLocations({ limit: 500, hasHypervisor: true, hypervisorType: 'vpsadminos' })).data,
     enabled: !isAdminMode,
     staleTime: 60_000,
+  });
+
+  const sourceIpsQ = useQuery({
+    queryKey: ['ip_address', 'list', 'vps-lifecycle-source', { vpsId }],
+    queryFn: async () => (await fetchIpAddressesForVps(vpsId, { limit: 100 })).data,
+    staleTime: 30_000,
   });
 
   const [clone, setClone] = useState<CloneForm>(() => ({
@@ -270,6 +313,20 @@ export function VpsLifecyclePage() {
   const [deleteForm, setDeleteForm] = useState<DeleteForm>({
     lazy: true,
     confirm: false,
+  });
+
+  const targetVpsQ = useQuery({
+    queryKey: ['vps', 'show', 'swap-target', { id: swap.targetVps ?? -1 }],
+    queryFn: async () => (await fetchVps(swap.targetVps!, { includes: 'node__location,user' })).data,
+    enabled: Boolean(swap.targetVps),
+    staleTime: 30_000,
+  });
+
+  const targetIpsQ = useQuery({
+    queryKey: ['ip_address', 'list', 'vps-lifecycle-target', { vpsId: swap.targetVps ?? -1 }],
+    queryFn: async () => (await fetchIpAddressesForVps(swap.targetVps!, { limit: 100 })).data,
+    enabled: Boolean(swap.targetVps),
+    staleTime: 30_000,
   });
 
   const preflight = async () => {
@@ -465,7 +522,7 @@ export function VpsLifecyclePage() {
   const deleteM = useMutation({
     mutationFn: async () => {
       await preflight();
-      return vpsDelete(vpsId, { lazy: isAdminMode ? deleteForm.lazy : false });
+      return vpsDelete(vpsId, isAdminMode ? { lazy: deleteForm.lazy } : undefined);
     },
     onMutate: () => chrome.acquireLocalLock(vpsRef),
     onSuccess: (res) => {
@@ -504,6 +561,8 @@ export function VpsLifecyclePage() {
   );
 
   const cloneTargetReady = isAdminMode ? Boolean(clone.user.trim() && clone.node.trim()) : Boolean(clone.location.trim());
+  const sourceIps = sourceIpsQ.data ?? [];
+  const targetIps = targetIpsQ.data ?? [];
 
   const cloneCard = (
     <Card testId="vps.lifecycle.clone">
@@ -623,6 +682,67 @@ export function VpsLifecyclePage() {
           </div>
         ) : (
           <Alert variant="neutral">{t('vps.lifecycle.swap.user_options_hint')}</Alert>
+        )}
+
+        {swap.targetVps ? (
+          <div className="rounded-md border border-border bg-surface-2 p-3" data-testid="vps.lifecycle.swap.preview">
+            <div className="text-sm font-medium">{t('vps.lifecycle.swap.preview.title')}</div>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <div>
+                <div className="text-xs font-medium text-muted">{t('vps.lifecycle.swap.preview.source')}</div>
+                <div className="mt-1 text-sm" data-testid="vps.lifecycle.swap.preview.source_label">
+                  {vpsLabel(vps, vpsId)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-muted">{t('vps.lifecycle.swap.preview.target')}</div>
+                <div className="mt-1 text-sm" data-testid="vps.lifecycle.swap.preview.target_label">
+                  {targetVpsQ.isLoading ? t('common.loading') : targetVpsQ.isError ? `#${swap.targetVps}` : vpsLabel(targetVpsQ.data, swap.targetVps)}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <div className="rounded-md border border-border bg-surface p-3">
+                <div className="text-xs font-medium text-muted">{t('vps.lifecycle.swap.preview.source_after')}</div>
+                <div className="mt-1 text-xs text-faint">{t('vps.lifecycle.swap.preview.source_after_help')}</div>
+                <div className="mt-2">
+                  <IpList
+                    ips={targetIps}
+                    loading={targetIpsQ.isLoading}
+                    empty={t('vps.lifecycle.swap.preview.no_target_ips')}
+                    loadingText={t('common.loading')}
+                    testId="vps.lifecycle.swap.preview.source_ips_after"
+                  />
+                </div>
+              </div>
+              <div className="rounded-md border border-border bg-surface p-3">
+                <div className="text-xs font-medium text-muted">{t('vps.lifecycle.swap.preview.target_after')}</div>
+                <div className="mt-1 text-xs text-faint">{t('vps.lifecycle.swap.preview.target_after_help')}</div>
+                <div className="mt-2">
+                  <IpList
+                    ips={sourceIps}
+                    loading={sourceIpsQ.isLoading}
+                    empty={t('vps.lifecycle.swap.preview.no_source_ips')}
+                    loadingText={t('common.loading')}
+                    testId="vps.lifecycle.swap.preview.target_ips_after"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3 text-xs text-faint" data-testid="vps.lifecycle.swap.preview.options">
+              {isAdminMode
+                ? t('vps.lifecycle.swap.preview.admin_options', {
+                    hostname: swap.hostname ? t('common.yes') : t('common.no'),
+                    resources: swap.resources ? t('common.yes') : t('common.no'),
+                    expirations: swap.expirations ? t('common.yes') : t('common.no'),
+                  })
+                : t('vps.lifecycle.swap.preview.user_options')}
+            </div>
+          </div>
+        ) : (
+          <Alert variant="neutral">{t('vps.lifecycle.swap.preview.empty')}</Alert>
         )}
 
         <Checkbox

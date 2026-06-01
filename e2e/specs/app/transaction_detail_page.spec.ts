@@ -8,6 +8,7 @@ const handlers = {
     name: 'Step 2',
     done: 'done',
     success: 0,
+    progress: 40,
     priority: 20,
     urgent: true,
     type: 2,
@@ -19,7 +20,9 @@ const handlers = {
     transaction_chain: { id: 123 },
     depends_on: [701],
     input: { a: 1 },
-    output: { ok: false },
+    user: { id: 9, login: 'worker' },
+    output: { ok: false, error: 'dataset mount failed' },
+    details: { command: 'zfs mount tank/ct/vps100' },
   }),
 };
 
@@ -34,6 +37,10 @@ test.describe('@pr-smoke TransactionDetailPage', () => {
     await expect(page.getByTestId('transactions.items.detail.header')).toBeVisible();
     await expect(page.getByTestId('transactions.items.detail.info')).toBeVisible();
     await expect(page.getByTestId('transactions.items.detail.payload')).toBeVisible();
+    await expect(page.getByTestId('transactions.items.detail.error')).toContainText('dataset mount failed');
+    await expect(page.getByTestId('transactions.items.detail.info')).toContainText('worker');
+    await expect(page.getByTestId('transactions.items.detail.info')).toContainText('40');
+    await expect(page.getByTestId('transactions.items.detail.payload')).toContainText('zfs mount tank/ct/vps100');
     await expect(page.getByTestId('transactions.items.detail.raw')).toBeVisible();
     await page.getByTestId('transactions.items.detail.raw').getByText(/raw|surov/i).click();
     await expect(page.getByTestId('transactions.items.detail.raw.json')).toBeVisible();
@@ -55,5 +62,19 @@ test.describe('@pr-smoke TransactionDetailPage', () => {
     await expect(page.getByTestId('transactions.items.detail')).toBeVisible();
     await expect(page.getByTestId('transactions.items.detail.open_chain')).toHaveAttribute('href', '/admin/transactions/123');
     await expect(page.getByTestId('transactions.items.detail.node_link')).toHaveAttribute('href', '/admin/nodes/2');
+  });
+
+  test('deep reload keeps transaction detail route usable', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_TOKEN' });
+    await installHaveApiMock(page, { handlers });
+
+    await page.goto('/app/transactions/items/702');
+    await expect(page.getByTestId('transactions.items.detail')).toBeVisible();
+
+    await page.reload();
+
+    await expect(page).toHaveURL(/\/app\/transactions\/items\/702$/);
+    await expect(page.getByTestId('transactions.items.detail')).toBeVisible();
+    await expect(page.getByTestId('transactions.items.detail.error')).toContainText('dataset mount failed');
   });
 });

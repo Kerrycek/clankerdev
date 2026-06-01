@@ -29,3 +29,34 @@ export function durationSec(start: string | null | undefined, end: string | null
   const s = Math.max(0, (b - a) / 1000);
   return s;
 }
+
+function firstOwnValue(obj: Record<string, unknown>, keys: string[]): unknown {
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      const value = obj[key];
+      if (value !== null && value !== undefined && value !== '') return value;
+    }
+  }
+  return undefined;
+}
+
+function nestedValue(value: unknown, keys: string[]): unknown {
+  if (!value || typeof value !== 'object') return undefined;
+  return firstOwnValue(value as Record<string, unknown>, keys);
+}
+
+export function transactionErrorText(tx: unknown): string {
+  if (!tx || typeof tx !== 'object') return '';
+
+  const row = tx as Record<string, unknown>;
+  const keys = ['error', 'errors', 'exception', 'message', 'stderr', 'backtrace'];
+  const direct = firstOwnValue(row, keys);
+  const fromOutput = nestedValue(row['output'], keys);
+  const fromDetails = nestedValue(row['details'], keys);
+  const fromResult = nestedValue(row['result'], keys);
+  const value = direct ?? fromOutput ?? fromDetails ?? fromResult;
+
+  if (value === undefined) return '';
+  if (typeof value === 'string') return value;
+  return safeJson(value);
+}

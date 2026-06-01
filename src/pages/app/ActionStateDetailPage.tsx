@@ -23,7 +23,7 @@ import { TransactionPayloadPanels } from '../../components/ui/TransactionPayload
 import { formatDateTime } from '../../lib/format';
 import { formatErrorMessage } from '../../lib/errors';
 import { resourceId, refLabel } from '../../lib/resources';
-import { durationSec, formatPayload, safeJson } from '../../lib/txFormat';
+import { durationSec, formatPayload, safeJson, transactionErrorText } from '../../lib/txFormat';
 import { extractRelatedTransactionChainIdFromActionState } from '../../lib/taskLinks';
 import {
   actionStateBadge,
@@ -399,6 +399,7 @@ export function ActionStateDetailPage() {
                     const expanded = hasTxId && expandedTx.has(txId);
                     const input = formatPayload((tx as any).input);
                     const output = formatPayload((tx as any).output);
+                    const errorText = transactionErrorText(tx);
                     const progress = typeof (tx as any).progress === 'number' ? String((tx as any).progress) : null;
                     const done = (tx as any).done ? String((tx as any).done) : null;
                     const success = typeof (tx as any).success === 'number' ? String((tx as any).success) : null;
@@ -472,6 +473,13 @@ export function ActionStateDetailPage() {
                                 <div><span className="text-muted">{t('transactions.tx.done_label')}:</span> {done ?? t('common.na')}</div>
                                 <div><span className="text-muted">{t('common.progress')}:</span> {progress ?? t('common.na')}</div>
                               </div>
+                              {errorText ? (
+                                <div className="mt-4">
+                                  <Alert variant="danger" title={t('transactions.tx.error_title')}>
+                                    <pre className="whitespace-pre-wrap text-xs">{errorText}</pre>
+                                  </Alert>
+                                </div>
+                              ) : null}
                               <div className="mt-4">
                                 <TransactionPayloadPanels t={t} input={input} output={output} maxHeightClass="max-h-80" />
                               </div>

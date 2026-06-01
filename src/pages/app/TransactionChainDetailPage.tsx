@@ -14,7 +14,7 @@ import { useTierAIntervalMs } from '../../lib/refreshTiers';
 import { formatDateTime } from '../../lib/format';
 import { formatErrorMessage } from '../../lib/errors';
 import { resourceId, refLabel } from '../../lib/resources';
-import { durationSec, formatPayload, safeJson } from '../../lib/txFormat';
+import { durationSec, formatPayload, safeJson, transactionErrorText } from '../../lib/txFormat';
 import { dotVariantFromRowVariant, tableVariantFromBadgeVariant } from '../../lib/variantMap';
 
 import { Badge } from '../../components/ui/Badge';
@@ -30,6 +30,7 @@ import { TableRowLink } from '../../components/ui/TableRowLink';
 import { TransactionPayloadPanels } from '../../components/ui/TransactionPayloadPanels';
 
 import { ChevronDown, ChevronUp, Pin, PinOff } from 'lucide-react';
+import { Alert } from '../../components/ui/Alert';
 
 function txBadge(tx: Transaction) {
   return transactionBadge(tx);
@@ -334,6 +335,7 @@ export function TransactionChainDetailPage() {
 
                       const input = formatPayload((tx as any).input);
                       const output = formatPayload((tx as any).output);
+                      const errorText = transactionErrorText(tx);
                       const deps = Array.isArray((tx as any).depends_on) ? ((tx as any).depends_on as any[]) : [];
 
                       const expanded = Boolean(txId && expandedTx.has(txId));
@@ -453,6 +455,12 @@ export function TransactionChainDetailPage() {
                             >
                               <td colSpan={10} className="px-4 pb-4">
                                 <div className="mt-2 space-y-3">
+                                  {errorText ? (
+                                    <Alert variant="danger" title={t('transactions.tx.error_title')}>
+                                      <pre className="whitespace-pre-wrap text-xs">{errorText}</pre>
+                                    </Alert>
+                                  ) : null}
+
                                   {deps.length ? (
                                     <div>
                                       <div className="text-xs font-medium text-muted">{t('transactions.tx.depends_on')}</div>

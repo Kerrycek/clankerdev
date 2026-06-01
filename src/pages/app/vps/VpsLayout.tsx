@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, Outlet, useLocation, useParams } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { fetchActionState } from '../../../lib/api/actionStates';
@@ -28,6 +28,7 @@ import { Modal } from '../../../components/ui/Modal';
 import { LoadingState } from '../../../components/ui/LoadingState';
 import { CopyButton } from '../../../components/ui/CopyButton';
 import { LockStateStaleAlert } from '../../../components/ui/LockStateStaleAlert';
+import { Select } from '../../../components/ui/Select';
 import { gateVpsAction } from '../../../lib/gates/vps';
 import {
   actionStateProgressLabel,
@@ -109,6 +110,7 @@ export function VpsLayout() {
   const online = useNetworkStatus();
 
   const location = useLocation();
+  const navigate = useNavigate();
 
   const params = useParams();
   const vpsId = Number(params['vpsId']);
@@ -492,6 +494,25 @@ export function VpsLayout() {
           }
           actions={
             <>
+              <Select
+                value=""
+                ariaLabel={t('vps.actions.menu.label')}
+                testId="vps.actions.menu"
+                className="w-44"
+                onChange={(e) => {
+                  const to = e.target.value;
+                  if (to) navigate(to);
+                }}
+              >
+                <option value="">{t('vps.actions.menu.placeholder')}</option>
+                <option value={`${basePath}/vps/${(vps as any).id}/lifecycle`}>{t('vps.tabs.lifecycle')}</option>
+                <option value={`${basePath}/vps/${(vps as any).id}/network`}>{t('vps.tabs.network')}</option>
+                <option value={`${basePath}/vps/${(vps as any).id}/storage`}>{t('vps.tabs.storage')}</option>
+                <option value={`${basePath}/transactions/items?vps=${(vps as any).id}`}>
+                  {t('vps.overview.admin_actions.transaction_log')}
+                </option>
+              </Select>
+
               <LinkButton to={`${basePath}/vps/${(vps as any).id}/console`} variant="secondary">
                 {t('vps.tabs.console')}
               </LinkButton>

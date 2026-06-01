@@ -54,7 +54,7 @@ const handlers = {
         transaction_chain: { id: 123 },
         depends_on: [701],
         input: { a: 1 },
-        output: { ok: false },
+        output: { ok: false, error: 'step failed on node2' },
       },
     ];
   },
@@ -81,6 +81,7 @@ test.describe('@pr-smoke TransactionChainDetailPage', () => {
 
     await page.getByTestId('transactions.chain.detail.tx.toggle.702').click();
     await expect(page.getByTestId('transactions.chain.detail.tx.expanded.702')).toBeVisible();
+    await expect(page.getByTestId('transactions.chain.detail.tx.expanded.702')).toContainText('step failed on node2');
     await expect(page.getByTestId('transactions.chain.detail.tx.expanded.702')).toContainText('"a": 1');
     await expect(page.getByTestId('transactions.chain.detail.tx.expanded.702')).toContainText('"ok": false');
 
@@ -120,5 +121,19 @@ test.describe('@pr-smoke TransactionChainDetailPage', () => {
       'href',
       '/admin/transactions/items/702'
     );
+  });
+
+  test('deep reload keeps chain detail route and transaction table visible', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_TOKEN' });
+    await installHaveApiMock(page, { handlers });
+
+    await page.goto('/app/transactions/123');
+    await expect(page.getByTestId('transactions.chain.detail.tx.702')).toBeVisible();
+
+    await page.reload();
+
+    await expect(page).toHaveURL(/\/app\/transactions\/123$/);
+    await expect(page.getByTestId('transactions.chain.detail')).toBeVisible();
+    await expect(page.getByTestId('transactions.chain.detail.tx.702')).toBeVisible();
   });
 });

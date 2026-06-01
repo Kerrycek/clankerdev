@@ -337,11 +337,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await page.getByTestId('vps.lifecycle.delete.submit').click();
 
     const req = await reqPromise;
-    expect(req.postDataJSON()).toEqual({
-      vps: {
-        lazy: false,
-      },
-    });
+    expect(req.postDataJSON()).toEqual({});
     await expect(page).toHaveURL(/\/app\/vps$/);
   });
 
@@ -393,8 +389,27 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
       handlers: {
         'GET vpses': () => ({ vpses: [] }),
         'GET vpses/123': () => ({ vps }),
+        'GET vpses/321': () => ({ vps: { ...vps, id: 321, hostname: 'vps123-playground' } }),
         'GET locations': () => ({ locations: [{ id: 2, label: 'Praha-2' }] }),
-        'GET ip_addresses': () => ({ ip_addresses: [] }),
+        'GET ip_addresses': ({ searchParams }: { searchParams: URLSearchParams }) => {
+          const vpsId = searchParams.get('ip_address[vps]');
+          if (vpsId === '123') {
+            return {
+              ip_addresses: [
+                { id: 1, addr: '203.0.113.10', prefix: 32, network: { id: 1, role: 'public' } },
+                { id: 2, addr: '2001:db8::10', prefix: 128, network: { id: 2, role: 'public' } },
+              ],
+            };
+          }
+          if (vpsId === '321') {
+            return {
+              ip_addresses: [
+                { id: 3, addr: '203.0.113.99', prefix: 32, network: { id: 1, role: 'public' } },
+              ],
+            };
+          }
+          return { ip_addresses: [] };
+        },
         'GET transaction_chains': () => ({ transaction_chains: [] }),
         'POST vpses/123/swap_with': () => ({ _meta: { action_state_id: 505 } }),
       },
@@ -403,6 +418,12 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await page.goto('/app/vps/123/lifecycle');
 
     await page.getByTestId('vps.lifecycle.swap.target').fill('#321');
+    await expect(page.getByTestId('vps.lifecycle.swap.preview')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.swap.preview.source_label')).toContainText('vps123.example');
+    await expect(page.getByTestId('vps.lifecycle.swap.preview.target_label')).toContainText('vps123-playground');
+    await expect(page.getByTestId('vps.lifecycle.swap.preview.source_ips_after')).toContainText('203.0.113.99');
+    await expect(page.getByTestId('vps.lifecycle.swap.preview.target_ips_after')).toContainText('203.0.113.10');
+    await expect(page.getByTestId('vps.lifecycle.swap.preview.target_ips_after')).toContainText('2001:db8::10');
     await page.getByTestId('vps.lifecycle.swap.confirm').check();
     await expect(page.getByTestId('vps.lifecycle.swap.hostname')).toHaveCount(0);
 
