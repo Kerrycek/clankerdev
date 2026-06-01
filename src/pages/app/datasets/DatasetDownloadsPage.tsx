@@ -109,6 +109,16 @@ export function DatasetDownloadsPage() {
   const [createFromId, setCreateFromId] = useState<string>('');
   const [createSendMail, setCreateSendMail] = useState(true);
 
+  useEffect(() => {
+    if (searchParams.get('action') !== 'create') return;
+    setCreateOpen(true);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('action');
+      return next;
+    }, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const [confirm, setConfirm] = useState<SnapshotDownload | null>(null);
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);

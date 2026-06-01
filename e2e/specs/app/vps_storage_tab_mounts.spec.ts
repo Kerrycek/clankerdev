@@ -78,7 +78,9 @@ test.describe('VPS storage tab mounts', () => {
     await expect(page.getByTestId('vps.storage.root_dataset')).toBeVisible();
     await expect(page.getByTestId('vps.storage.root_dataset.open')).toHaveAttribute('href', '/app/datasets/10');
     await expect(page.getByTestId('vps.storage.root_dataset.snapshots')).toHaveAttribute('href', '/app/datasets/10/snapshots');
+    await expect(page.getByTestId('vps.storage.root_dataset.create_snapshot')).toHaveAttribute('href', '/app/datasets/10/snapshots?action=create');
     await expect(page.getByTestId('vps.storage.root_dataset.restore')).toHaveAttribute('href', '/app/datasets/10/snapshots');
+    await expect(page.getByTestId('vps.storage.root_dataset.backup')).toHaveAttribute('href', '/app/datasets/10/downloads?action=create');
     await expect(page.getByTestId('vps.storage.root_dataset.downloads')).toHaveAttribute('href', '/app/datasets/10/downloads');
     await expect(page.getByTestId('vps.storage.mounts.table')).toBeVisible();
     await expect(page.getByTestId('vps.storage.mounts.row.1.dataset')).toHaveAttribute('href', '/app/datasets/9');

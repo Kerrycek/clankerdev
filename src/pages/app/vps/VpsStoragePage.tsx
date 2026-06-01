@@ -393,8 +393,14 @@ export function VpsStoragePage() {
               <ChipLink to={`${basePath}/datasets/${rootDatasetId}/snapshots`} data-testid="vps.storage.root_dataset.snapshots">
                 {t('vps.storage.root_dataset.snapshots')}
               </ChipLink>
+              <ChipLink to={`${basePath}/datasets/${rootDatasetId}/snapshots?action=create`} data-testid="vps.storage.root_dataset.create_snapshot">
+                {t('vps.storage.root_dataset.create_snapshot')}
+              </ChipLink>
               <ChipLink to={`${basePath}/datasets/${rootDatasetId}/snapshots`} data-testid="vps.storage.root_dataset.restore">
                 {t('vps.storage.root_dataset.restore')}
+              </ChipLink>
+              <ChipLink to={`${basePath}/datasets/${rootDatasetId}/downloads?action=create`} data-testid="vps.storage.root_dataset.backup">
+                {t('vps.storage.root_dataset.backup')}
               </ChipLink>
               <ChipLink to={`${basePath}/datasets/${rootDatasetId}/downloads`} data-testid="vps.storage.root_dataset.downloads">
                 {t('vps.storage.root_dataset.downloads')}
