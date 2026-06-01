@@ -125,7 +125,7 @@ export function VpsLayout() {
 
   const vpsQ = useQuery({
     queryKey: ['vps', 'show', { id: vpsId }],
-    queryFn: async () => (await fetchVps(vpsId, { includes: 'node__location,user,dns_resolver,user_namespace_map,os_template' })).data,
+    queryFn: async () => (await fetchVps(vpsId, { includes: 'node__location,user,dns_resolver,user_namespace_map,os_template,dataset' })).data,
     enabled: Number.isFinite(vpsId) && vpsId > 0,
   });
 

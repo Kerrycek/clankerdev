@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { useAppMode } from '../../../app/appMode';
 import { useAuth } from '../../../app/auth';
 import { useI18n } from '../../../app/i18n';
 import { useChrome } from '../../../components/layout/ChromeContext';
@@ -9,6 +10,7 @@ import { Alert } from '../../../components/ui/Alert';
 import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
+import { ChipLink } from '../../../components/ui/ChipLink';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { Input } from '../../../components/ui/Input';
 import { Modal } from '../../../components/ui/Modal';
@@ -35,11 +37,17 @@ function datasetLabel(d: any): string {
   return d?.name ?? d?.label ?? (d?.id ? `#${d.id}` : '—');
 }
 
+function datasetId(d: any): number | null {
+  const id = Number(d?.id);
+  return Number.isInteger(id) && id > 0 ? id : null;
+}
+
 function canonicalBool(v: unknown, fallback: boolean): boolean {
   return v === true ? true : v === false ? false : fallback;
 }
 
 export function VpsStoragePage() {
+  const { basePath } = useAppMode();
   const auth = useAuth();
   const chrome = useChrome();
   const qc = useQueryClient();
@@ -326,6 +334,8 @@ export function VpsStoragePage() {
   };
 
   const mounts = mountsQ.data ?? [];
+  const rootDatasetId = datasetId((vps as any).dataset);
+  const rootDatasetLabel = datasetLabel((vps as any).dataset);
 
   return (
     <div data-testid="vps.storage.page" className="space-y-4">
@@ -369,6 +379,32 @@ export function VpsStoragePage() {
         </CardBody>
       </Card>
 
+      {rootDatasetId ? (
+        <Card testId="vps.storage.root_dataset">
+          <CardHeader
+            title={t('vps.storage.root_dataset.title')}
+            subtitle={t('vps.storage.root_dataset.subtitle', { dataset: rootDatasetLabel })}
+          />
+          <CardBody>
+            <div className="flex flex-wrap gap-2">
+              <ChipLink to={`${basePath}/datasets/${rootDatasetId}`} data-testid="vps.storage.root_dataset.open">
+                {t('vps.storage.root_dataset.open')}
+              </ChipLink>
+              <ChipLink to={`${basePath}/datasets/${rootDatasetId}/snapshots`} data-testid="vps.storage.root_dataset.snapshots">
+                {t('vps.storage.root_dataset.snapshots')}
+              </ChipLink>
+              <ChipLink to={`${basePath}/datasets/${rootDatasetId}/snapshots`} data-testid="vps.storage.root_dataset.restore">
+                {t('vps.storage.root_dataset.restore')}
+              </ChipLink>
+              <ChipLink to={`${basePath}/datasets/${rootDatasetId}/downloads`} data-testid="vps.storage.root_dataset.downloads">
+                {t('vps.storage.root_dataset.downloads')}
+              </ChipLink>
+            </div>
+            <div className="mt-3 text-xs text-muted">{t('vps.storage.root_dataset.data_loss_note')}</div>
+          </CardBody>
+        </Card>
+      ) : null}
+
       <Card testId="vps.storage.mounts">
         <CardHeader
           title={t('vps.storage.mounts.title')}
@@ -397,13 +433,22 @@ export function VpsStoragePage() {
               <div className="space-y-3 md:hidden">
                 {mounts.map((m) => {
                   const ds = datasetLabel((m as any).dataset);
+                  const dsId = datasetId((m as any).dataset);
                   return (
                     <Card key={m.id} testId={`vps.storage.mounts.card.${m.id}`}>
                       <CardBody>
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <div className="truncate text-base font-semibold">{String((m as any).mountpoint ?? '—')}</div>
-                            <div className="mt-1 text-xs text-muted">{t('vps.storage.mounts.dataset', { dataset: ds })}</div>
+                            <div className="mt-1 text-xs text-muted">
+                              {dsId ? (
+                                <ChipLink to={`${basePath}/datasets/${dsId}`} data-testid={`vps.storage.mounts.card.${m.id}.dataset`}>
+                                  {ds}
+                                </ChipLink>
+                              ) : (
+                                t('vps.storage.mounts.dataset', { dataset: ds })
+                              )}
+                            </div>
                           </div>
                           <div className="flex shrink-0 items-center gap-2">
                             <Badge variant={canonicalBool((m as any).enabled, true) ? 'ok' : 'warn'}>
@@ -476,6 +521,7 @@ export function VpsStoragePage() {
                   <tbody>
                     {mounts.map((m) => {
                       const ds = datasetLabel((m as any).dataset);
+                      const dsId = datasetId((m as any).dataset);
                       const enabledLabel = canonicalBool((m as any).enabled, true) ? t('common.yes') : t('common.no');
                       const masterLabel = canonicalBool((m as any).master_enabled, true) ? t('common.yes') : t('common.no');
                       return (
@@ -485,7 +531,15 @@ export function VpsStoragePage() {
                           className="border-b border-border/60 last:border-b-0"
                         >
                           <td className="px-4 py-3 font-medium">{String((m as any).mountpoint ?? '—')}</td>
-                          <td className="px-4 py-3">{ds}</td>
+                          <td className="px-4 py-3">
+                            {dsId ? (
+                              <ChipLink to={`${basePath}/datasets/${dsId}`} data-testid={`vps.storage.mounts.row.${m.id}.dataset`}>
+                                {ds}
+                              </ChipLink>
+                            ) : (
+                              ds
+                            )}
+                          </td>
                           <td className="px-4 py-3">{String((m as any).mode ?? '—')}</td>
                           <td className="px-4 py-3">{String((m as any).type ?? '—')}</td>
                           <td className="px-4 py-3">
