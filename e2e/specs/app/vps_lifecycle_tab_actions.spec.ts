@@ -348,7 +348,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
       handlers: {
         'GET vpses': () => ({ vpses: [] }),
         'GET vpses/123': () => ({ vps }),
-        'GET locations': () => ({ locations: [{ id: 2, label: 'Praha-2' }] }),
+        'GET locations': () => ({ locations: [{ id: 2, label: 'Praha-2', environment: { id: 9, label: 'Playground' } }] }),
         'GET ip_addresses': () => ({ ip_addresses: [] }),
         'GET transaction_chains': () => ({ transaction_chains: [] }),
         'POST vpses/123/clone': () => ({ vps: { id: 456, hostname: 'vps123-playground' }, _meta: { action_state_id: 504 } }),
@@ -376,6 +376,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
         resources: true,
         features: true,
         stop: true,
+        environment: 9,
         location: 2,
       },
     });

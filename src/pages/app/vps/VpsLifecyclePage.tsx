@@ -172,6 +172,17 @@ function locationLabel(location: Location): string {
   return String(location.label ?? location.description ?? location.domain ?? `#${location.id}`);
 }
 
+function locationEnvironmentId(location: Location | undefined): number | undefined {
+  const nested = location?.environment?.id;
+  if (typeof nested === 'number' && Number.isFinite(nested)) return nested;
+
+  const raw = location ? (location as any).environment_id : undefined;
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+  if (typeof raw === 'string' && /^\d+$/.test(raw.trim())) return Number(raw.trim());
+
+  return undefined;
+}
+
 function vpsLabel(vps: unknown, fallbackId?: number | null): string {
   if (vps && typeof vps === 'object') {
     const row = vps as any;
@@ -238,8 +249,8 @@ export function VpsLifecyclePage() {
   });
 
   const locationsQ = useQuery({
-    queryKey: ['locations', 'vps-lifecycle', { limit: 500, hasHypervisor: true, hypervisorType: 'vpsadminos' }],
-    queryFn: async () => (await fetchLocations({ limit: 500, hasHypervisor: true, hypervisorType: 'vpsadminos' })).data,
+    queryKey: ['locations', 'vps-lifecycle', { limit: 500, hasHypervisor: true, hypervisorType: 'vpsadminos', includes: 'environment' }],
+    queryFn: async () => (await fetchLocations({ limit: 500, hasHypervisor: true, hypervisorType: 'vpsadminos', includes: 'environment' })).data,
     enabled: !isAdminMode,
     staleTime: 60_000,
   });
@@ -329,6 +340,13 @@ export function VpsLifecyclePage() {
     staleTime: 30_000,
   });
 
+  const cloneTargetReady = isAdminMode ? Boolean(clone.user.trim() && clone.node.trim()) : Boolean(clone.location.trim());
+  const cloneLocationId = parseLookupIdLike(clone.location.trim());
+  const cloneLocation = cloneLocationId !== null
+    ? locationsQ.data?.find((location) => Number(location.id) === cloneLocationId)
+    : undefined;
+  const cloneEnvironmentId = locationEnvironmentId(cloneLocation);
+
   const preflight = async () => {
     await preflightVpsNotBusy({ vpsId, t, knownBusy: busyLocalLock || busyTransaction });
   };
@@ -360,6 +378,7 @@ export function VpsLifecyclePage() {
         payload.node = parseRequiredId(clone.node);
       } else {
         payload.location = parseRequiredId(clone.location);
+        if (cloneEnvironmentId !== undefined) payload.environment = cloneEnvironmentId;
       }
 
       return vpsClone(vpsId, payload);
@@ -560,7 +579,6 @@ export function VpsLifecyclePage() {
     [t],
   );
 
-  const cloneTargetReady = isAdminMode ? Boolean(clone.user.trim() && clone.node.trim()) : Boolean(clone.location.trim());
   const sourceIps = sourceIpsQ.data ?? [];
   const targetIps = targetIpsQ.data ?? [];
 
