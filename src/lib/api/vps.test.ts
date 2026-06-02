@@ -265,6 +265,39 @@ describe('vps API wrappers', () => {
     });
   });
 
+  test('vpsClone can post user playground target environment and location', async () => {
+    globalThis.fetch = mockFetchOk({ vps: { id: 161 } }) as any;
+
+    await vpsClone(12, {
+      hostname: 'source-12-playground',
+      environment: 9,
+      location: 2,
+      subdatasets: true,
+      dataset_plans: true,
+      resources: true,
+      features: true,
+      stop: true,
+    });
+
+    const [url, init] = lastFetchCall();
+    const body = JSON.parse(String(init?.body));
+
+    expect(new URL(url).pathname).toBe('/v7.0/vpses/12/clone');
+    expect(init?.method).toBe('POST');
+    expect(body).toEqual({
+      vps: {
+        hostname: 'source-12-playground',
+        environment: 9,
+        location: 2,
+        subdatasets: true,
+        dataset_plans: true,
+        resources: true,
+        features: true,
+        stop: true,
+      },
+    });
+  });
+
   test('vpsSwapWith posts legacy swap payload', async () => {
     globalThis.fetch = mockFetchOk({}) as any;
 
