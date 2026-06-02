@@ -714,6 +714,7 @@ function AdminOutageDetailPage({ outageId }: { outageId: number | undefined }) {
 
       <ConfirmDialog
         open={Boolean(confirmState)}
+        testId="admin.outages.change_state.confirm"
         title={t('admin.outages.change_state.confirm_title')}
         description={t('admin.outages.change_state.confirm_body', { state: confirmState ? t(`admin.outages.state.${confirmState}`) : '' })}
         danger={confirmState === 'cancelled'}
