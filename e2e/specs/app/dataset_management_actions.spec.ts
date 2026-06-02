@@ -109,4 +109,103 @@ test.describe('Dataset management actions', () => {
     await deleteReq;
     await expect(page).toHaveURL(/\/admin\/datasets$/);
   });
+
+  test('keeps admin-only dataset fields hidden for normal users and omits them from payloads', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    const datasets: Record<number, any> = {
+      10: {
+        id: 10,
+        full_name: 'tank/vps/ds10',
+        name: 'ds10',
+        used: 2048,
+        avail: 10240,
+        quota: 0,
+        refquota: 10240,
+        recordsize: 131072,
+        compression: true,
+        atime: false,
+        relatime: false,
+        sync: 'standard',
+        snapshots_count: 2,
+        mount_count: 0,
+        export_count: 0,
+        object_state: 'active',
+        vps: { id: 300, hostname: 'alpha.example' },
+      },
+    };
+
+    await installHaveApiMock(page, {
+      user: { id: 2, login: 'member', level: 1 },
+      handlers: {
+        'GET datasets/10': () => datasets[10],
+        'GET datasets/12': () => datasets[12],
+        'GET transaction_chains': () => ({ transaction_chains: [], _meta: { total_count: 0 } }),
+        'POST datasets': () => {
+          datasets[12] = {
+            ...datasets[10],
+            id: 12,
+            name: 'memberdata',
+            full_name: 'tank/vps/ds10/memberdata',
+            refquota: 8192,
+          };
+          return { dataset: datasets[12] };
+        },
+        'PUT datasets/12': () => {
+          datasets[12] = { ...datasets[12], quota: 5120, sync: 'disabled' };
+          return { status: true, response: null };
+        },
+      },
+    });
+
+    await page.goto('/app/datasets/10');
+    await expect(page.getByTestId('dataset.manage')).toBeVisible();
+
+    await page.getByTestId('dataset.manage.create.open').click();
+    await expect(page.getByTestId('dataset.manage.sharenfs')).toHaveCount(0);
+    await expect(page.getByTestId('dataset.manage.admin_lock_type')).toHaveCount(0);
+    await expect(page.getByTestId('dataset.manage.admin_override')).toHaveCount(0);
+
+    await page.getByTestId('dataset.manage.create.name').fill('memberdata');
+    await page.getByTestId('dataset.manage.refquota').fill('8');
+
+    const createReq = page.waitForRequest((r) => r.method() === 'POST' && r.url().includes('/api/v7.0/datasets'));
+    await page.getByTestId('dataset.manage.create.submit').click();
+    expect((await createReq).postDataJSON()).toEqual({
+      dataset: {
+        name: 'memberdata',
+        dataset: 10,
+        automount: true,
+        refquota: 8192,
+        compression: true,
+        atime: false,
+        relatime: false,
+        recordsize: 131072,
+        sync: 'standard',
+      },
+    });
+
+    await expect(page).toHaveURL(/\/app\/datasets\/12$/);
+    await page.getByTestId('dataset.manage.edit.open').click();
+    await expect(page.getByTestId('dataset.manage.sharenfs')).toHaveCount(0);
+    await expect(page.getByTestId('dataset.manage.admin_lock_type')).toHaveCount(0);
+    await expect(page.getByTestId('dataset.manage.admin_override')).toHaveCount(0);
+
+    await page.getByTestId('dataset.manage.quota').fill('5');
+    await page.getByTestId('dataset.manage.sync').selectOption('disabled');
+
+    const editReq = page.waitForRequest((r) => r.method() === 'PUT' && r.url().includes('/api/v7.0/datasets/12'));
+    await page.getByTestId('dataset.manage.edit.submit').click();
+    expect((await editReq).postDataJSON()).toEqual({
+      dataset: {
+        quota: 5120,
+        refquota: 8192,
+        compression: true,
+        atime: false,
+        relatime: false,
+        recordsize: 131072,
+        sync: 'disabled',
+      },
+    });
+  });
 });
