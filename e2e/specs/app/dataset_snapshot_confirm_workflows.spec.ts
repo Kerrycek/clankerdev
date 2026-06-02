@@ -3,6 +3,36 @@ import { expect, test } from '@playwright/test';
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 
 test.describe('@smoke Dataset snapshots', () => {
+  test('create snapshot deep link opens the create workflow', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'test', level: 1 },
+      handlers: {
+        'GET datasets/10': () => ({
+          id: 10,
+          full_name: 'tank/vps/ds10',
+          name: 'ds10',
+          used: 2048,
+          refquota: 10240,
+          snapshots_count: 0,
+          mount_count: 0,
+          export_count: 0,
+          object_state: 'active',
+          vps: { id: 300, hostname: 'alpha.example' },
+        }),
+
+        'GET datasets/10/snapshots': () => ({ snapshots: [] }),
+      },
+    });
+
+    await page.goto('/app/datasets/10/snapshots?action=create');
+
+    await expect(page.getByTestId('dataset.snapshots.list')).toBeVisible();
+    await expect(page.getByTestId('dataset.snapshots.create.modal')).toBeVisible();
+    await expect(page).toHaveURL(/\/app\/datasets\/10\/snapshots$/);
+  });
+
   test('rollback snapshot uses a confirm dialog', async ({ page }) => {
     let rollbackCalls = 0;
 

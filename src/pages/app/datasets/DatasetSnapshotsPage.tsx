@@ -99,6 +99,16 @@ export function DatasetSnapshotsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [createLabel, setCreateLabel] = useState('');
 
+  useEffect(() => {
+    if (searchParams.get('action') !== 'create') return;
+    setCreateOpen(true);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('action');
+      return next;
+    }, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const [downloadOpen, setDownloadOpen] = useState(false);
   const [downloadSnapshot, setDownloadSnapshot] = useState<Snapshot | null>(null);
   const [downloadFormat, setDownloadFormat] = useState<SnapshotDownloadFormat>('archive');
