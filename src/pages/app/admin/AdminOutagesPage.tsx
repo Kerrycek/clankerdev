@@ -609,9 +609,9 @@ function AdminOutageDetailPage({ outageId }: { outageId: number | undefined }) {
         actions={
           <>
             <LinkButton to="/admin/outages" variant="secondary">{t('admin.outages.back')}</LinkButton>
-            <Button variant="secondary" onClick={openEdit}>{t('admin.outages.action.edit_attrs')}</Button>
-            <Button variant="secondary" onClick={openSystems}>{t('admin.outages.action.edit_systems')}</Button>
-            <Button onClick={openUpdate}>{t('admin.outages.action.post_update')}</Button>
+            <Button variant="secondary" onClick={openEdit} testId="admin.outages.detail.edit_attrs">{t('admin.outages.action.edit_attrs')}</Button>
+            <Button variant="secondary" onClick={openSystems} testId="admin.outages.detail.edit_systems">{t('admin.outages.action.edit_systems')}</Button>
+            <Button onClick={openUpdate} testId="admin.outages.detail.post_update">{t('admin.outages.action.post_update')}</Button>
           </>
         }
       />
@@ -627,7 +627,7 @@ function AdminOutageDetailPage({ outageId }: { outageId: number | undefined }) {
           <CardBody>
             <div className="flex flex-wrap gap-2">
               {['announced', 'cancelled', 'resolved'].map((st) => (
-                <Button key={st} variant={st === 'cancelled' ? 'danger' : 'secondary'} onClick={() => requestStateChange(st)}>
+                <Button key={st} variant={st === 'cancelled' ? 'danger' : 'secondary'} onClick={() => requestStateChange(st)} testId={`admin.outages.change_state.${st}`}>
                   {t(`admin.outages.change_state.${st}`)}
                 </Button>
               ))}
@@ -694,18 +694,21 @@ function AdminOutageDetailPage({ outageId }: { outageId: number | undefined }) {
         </CardBody>
       </Card>
 
-      <Modal open={editOpen} title={t('admin.outages.edit.title')} onClose={() => setEditOpen(false)} size="lg" footer={<div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setEditOpen(false)} disabled={saveAttrsM.isPending}>{t('common.cancel')}</Button><Button onClick={submitAttrs} loading={saveAttrsM.isPending}>{t('common.save')}</Button></div>}>
+      <Modal open={editOpen} title={t('admin.outages.edit.title')} onClose={() => setEditOpen(false)} size="lg" testId="admin.outages.edit.modal" footer={<div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setEditOpen(false)} disabled={saveAttrsM.isPending}>{t('common.cancel')}</Button><Button onClick={submitAttrs} loading={saveAttrsM.isPending} testId="admin.outages.edit.save">{t('common.save')}</Button></div>}>
         <Alert title={t('admin.outages.edit.notice.title')} variant="info">{t('admin.outages.edit.notice.body')}</Alert>
         {hasErrors(formErrors) ? <div className="mt-4"><Alert variant="warn" title={t('common.validation_error')}>{t('admin.outages.validation.body')}</Alert></div> : null}
+        {saveAttrsM.isError ? <div className="mt-4"><Alert variant="danger" title={t('common.error')} testId="admin.outages.edit.error">{formatErrorMessage(saveAttrsM.error)}</Alert></div> : null}
         <div className="mt-4"><OutageForm form={form} setForm={setForm} errors={formErrors} /></div>
       </Modal>
 
-      <Modal open={updateOpen} title={t('admin.outages.update.title')} onClose={() => setUpdateOpen(false)} size="lg" footer={<div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setUpdateOpen(false)} disabled={postUpdateM.isPending}>{t('common.cancel')}</Button><Button onClick={submitUpdate} loading={postUpdateM.isPending}>{t('admin.outages.action.post_update')}</Button></div>}>
+      <Modal open={updateOpen} title={t('admin.outages.update.title')} onClose={() => setUpdateOpen(false)} size="lg" testId="admin.outages.update.modal" footer={<div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setUpdateOpen(false)} disabled={postUpdateM.isPending}>{t('common.cancel')}</Button><Button onClick={submitUpdate} loading={postUpdateM.isPending} testId="admin.outages.update.save">{t('admin.outages.action.post_update')}</Button></div>}>
         {hasErrors(formErrors) ? <Alert variant="warn" title={t('common.validation_error')}>{t('admin.outages.validation.body')}</Alert> : null}
+        {postUpdateM.isError ? <div className="mt-4"><Alert variant="danger" title={t('common.error')} testId="admin.outages.update.error">{formatErrorMessage(postUpdateM.error)}</Alert></div> : null}
         <div className="mt-4"><OutageForm form={form} setForm={setForm} errors={formErrors} includeState updateMode /></div>
       </Modal>
 
-      <Modal open={systemsOpen} title={t('admin.outages.systems.title')} onClose={() => setSystemsOpen(false)} size="lg" footer={<div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setSystemsOpen(false)} disabled={saveSystemsM.isPending}>{t('common.cancel')}</Button><Button onClick={() => saveSystemsM.mutate()} loading={saveSystemsM.isPending}>{t('common.save')}</Button></div>}>
+      <Modal open={systemsOpen} title={t('admin.outages.systems.title')} onClose={() => setSystemsOpen(false)} size="lg" testId="admin.outages.systems.modal" footer={<div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setSystemsOpen(false)} disabled={saveSystemsM.isPending}>{t('common.cancel')}</Button><Button onClick={() => saveSystemsM.mutate()} loading={saveSystemsM.isPending} testId="admin.outages.systems.save">{t('common.save')}</Button></div>}>
+        {saveSystemsM.isError ? <Alert variant="danger" title={t('common.error')} testId="admin.outages.systems.error">{formatErrorMessage(saveSystemsM.error)}</Alert> : null}
         <SystemsEditor form={systemsForm} setForm={setSystemsForm} />
       </Modal>
 

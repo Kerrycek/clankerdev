@@ -36,3 +36,50 @@ test('admin user detail: shows header and shortcut links', async ({ page }) => {
 
   await expect(page.getByTestId('admin.user.refresh')).toBeVisible();
 });
+
+test('admin user detail: delete member requires confirmation and sends object state', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+
+  const deletes: any[] = [];
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100 },
+    handlers: {
+      'GET users/42': () => ({
+        user: {
+          id: 42,
+          login: 'alice',
+          level: 1,
+          full_name: 'Alice Example',
+          email: 'alice@example.test',
+          object_state: 'active',
+        },
+      }),
+      'DELETE users/42': () => ({}),
+      'GET users': () => ({ users: [] }),
+    },
+  });
+
+  page.on('request', (req) => {
+    const url = new URL(req.url());
+    if (req.method() === 'DELETE' && url.pathname === '/api/v7.0/users/42') {
+      deletes.push(req.postDataJSON());
+    }
+  });
+
+  await page.goto('/admin/users/42');
+  await expect(page.getByTestId('admin.user.page')).toBeVisible();
+
+  await page.getByTestId('admin.user.delete.open').click();
+  await expect(page.getByTestId('admin.user.delete.confirm')).toBeVisible();
+  await page.getByTestId('admin.user.delete.object_state').selectOption('suspended');
+  await page.getByTestId('admin.user.delete.confirm.cancel').click();
+  expect(deletes).toEqual([]);
+
+  await page.getByTestId('admin.user.delete.open').click();
+  await page.getByTestId('admin.user.delete.object_state').selectOption('suspended');
+  await page.getByTestId('admin.user.delete.confirm.confirm').click();
+
+  await expect(page).toHaveURL(/\/admin\/users$/);
+  expect(deletes).toEqual([{ user: { object_state: 'suspended' } }]);
+});
