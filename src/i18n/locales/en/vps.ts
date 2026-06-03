@@ -509,6 +509,8 @@ export const enVps = {
   'vps.storage.create.dataset_found': 'Found: {name}',
   'vps.storage.create.dataset_not_found': 'Dataset not found.',
   'vps.storage.create.basic_hint': 'If you are unsure, keep defaults. You can edit later.',
+  'vps.storage.create.scope': 'Mounting {dataset} into {vps}. The mount appears in this table after the action starts.',
+  'vps.storage.create.scope_pending': 'Choose the dataset to mount into {vps}.',
   'vps.storage.create.validation.dataset_required': 'Dataset is required.',
   'vps.storage.create.validation.mountpoint_required': 'Mountpoint is required.',
   'vps.storage.create.submit': 'Create',

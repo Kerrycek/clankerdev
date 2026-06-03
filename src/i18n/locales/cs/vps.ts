@@ -509,6 +509,8 @@ export const csVps = {
   'vps.storage.create.dataset_found': 'Nalezeno: {name}',
   'vps.storage.create.dataset_not_found': 'Dataset nebyl nalezen.',
   'vps.storage.create.basic_hint': 'Pokud si nejsi jistý, ponech výchozí hodnoty. Později je můžeš upravit.',
+  'vps.storage.create.scope': 'Připojuje se {dataset} do {vps}. Mount se po spuštění akce objeví v této tabulce.',
+  'vps.storage.create.scope_pending': 'Vyber dataset pro připojení do {vps}.',
   'vps.storage.create.validation.dataset_required': 'Dataset je povinný.',
   'vps.storage.create.validation.mountpoint_required': 'Bod připojení je povinný.',
   'vps.storage.create.submit': 'Vytvořit',

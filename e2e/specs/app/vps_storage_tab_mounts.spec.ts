@@ -67,8 +67,18 @@ test.describe('VPS storage tab mounts', () => {
             created_at: '2026-01-31T01:00:00Z',
           };
           mounts = [...mounts, created];
-          return { mount: created };
+          return { mount: created, _meta: { action_state_id: 703 } };
         },
+        'GET action_states/703': () => ({
+          action_state: {
+            id: 703,
+            label: 'Create mount',
+            status: true,
+            finished: false,
+            current: 1,
+            total: 2,
+          },
+        }),
       },
     });
 
@@ -113,6 +123,9 @@ test.describe('VPS storage tab mounts', () => {
     });
 
     await expect(page.getByTestId('vps.storage.mounts.create')).toBeHidden();
+    await expect(page.getByTestId('modal.action_progress')).toBeVisible();
+    await expect(page.getByTestId('modal.action_progress')).toContainText('#703');
+    await page.getByTestId('modal.action_progress.continue').click();
     await expect(page.getByTestId('vps.storage.mounts.row.2')).toBeVisible();
   });
 
