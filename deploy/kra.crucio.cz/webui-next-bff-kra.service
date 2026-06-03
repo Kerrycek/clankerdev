@@ -1,0 +1,27 @@
+[Unit]
+Description=WebUI Next OAuth BFF for kra.crucio.cz
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=webui-bff
+Group=webui-bff
+EnvironmentFile=/etc/webui-next/kra.oauth.env
+WorkingDirectory=/srv/clankerdev-deploy/repo/bff
+ExecStart=/usr/bin/node /srv/clankerdev-deploy/repo/bff/server.js
+Restart=on-failure
+RestartSec=3
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+ReadWritePaths=/var/lib/webui-next-bff-kra /etc/webui-next
+LockPersonality=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target
+
