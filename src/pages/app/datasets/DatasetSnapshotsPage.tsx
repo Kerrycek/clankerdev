@@ -127,6 +127,7 @@ export function DatasetSnapshotsPage() {
   const candBatchSize = 100;
 
   const [confirm, setConfirm] = useState<ConfirmState>(null);
+  const [confirmPhrase, setConfirmPhrase] = useState('');
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
 
@@ -294,6 +295,12 @@ export function DatasetSnapshotsPage() {
     setDownloadFromId('');
     setDownloadSendMail(true);
     setDownloadOpen(true);
+  }
+
+  function openConfirm(next: NonNullable<ConfirmState>) {
+    setConfirmPhrase('');
+    setConfirmError(null);
+    setConfirm(next);
   }
 
   async function ensureCandidateSnapshots(mode: 'reset' | 'load-more') {
@@ -474,7 +481,7 @@ export function DatasetSnapshotsPage() {
                       <ActionButton
                         size="sm"
                         variant="secondary"
-                        onClick={() => setConfirm({ kind: 'rollback', snapshot: s })}
+                        onClick={() => openConfirm({ kind: 'rollback', snapshot: s })}
                         disabled={!rollbackGate.allowed}
                         disabledReason={!rollbackGate.allowed ? rollbackGate.reason : undefined}
                         testId={`dataset.snapshots.card.${s.id}.rollback`}
@@ -484,7 +491,7 @@ export function DatasetSnapshotsPage() {
                       <ActionButton
                         size="sm"
                         variant="danger"
-                        onClick={() => setConfirm({ kind: 'delete', snapshot: s })}
+                        onClick={() => openConfirm({ kind: 'delete', snapshot: s })}
                         disabled={!deleteGate.allowed}
                         disabledReason={!deleteGate.allowed ? deleteGate.reason : undefined}
                         testId={`dataset.snapshots.card.${s.id}.delete`}
@@ -543,7 +550,7 @@ export function DatasetSnapshotsPage() {
                             <ActionButton
                               size="sm"
                               variant="secondary"
-                              onClick={() => setConfirm({ kind: 'rollback', snapshot: s })}
+                              onClick={() => openConfirm({ kind: 'rollback', snapshot: s })}
                               disabled={!rollbackGate.allowed}
                               disabledReason={!rollbackGate.allowed ? rollbackGate.reason : undefined}
                               testId={`dataset.snapshots.row.${s.id}.rollback`}
@@ -553,7 +560,7 @@ export function DatasetSnapshotsPage() {
                             <ActionButton
                               size="sm"
                               variant="danger"
-                              onClick={() => setConfirm({ kind: 'delete', snapshot: s })}
+                              onClick={() => openConfirm({ kind: 'delete', snapshot: s })}
                               disabled={!deleteGate.allowed}
                               disabledReason={!deleteGate.allowed ? deleteGate.reason : undefined}
                               testId={`dataset.snapshots.row.${s.id}.delete`}
@@ -757,10 +764,14 @@ export function DatasetSnapshotsPage() {
         danger
         confirmLoading={confirmBusy}
         confirmDisabled={confirmBusy || (confirmGate ? !confirmGate.allowed : false)}
+        confirmationText={confirm ? snapshotLabel(confirm.snapshot) : undefined}
+        confirmationValue={confirmPhrase}
+        onConfirmationValueChange={setConfirmPhrase}
         cancelDisabled={confirmBusy}
         onCancel={() => {
           if (confirmBusy) return;
           setConfirm(null);
+          setConfirmPhrase('');
           setConfirmError(null);
           setConfirmBusy(false);
         }}
@@ -768,6 +779,7 @@ export function DatasetSnapshotsPage() {
           const c = confirm;
           if (!c || confirmBusy) return;
           if (confirmGate && !confirmGate.allowed) return;
+          if (confirmPhrase !== snapshotLabel(c.snapshot)) return;
           setConfirmBusy(true);
           setConfirmError(null);
           try {

@@ -80,6 +80,11 @@ test.describe('@smoke Dataset snapshots', () => {
 
     await page.getByTestId('dataset.snapshots.row.200.rollback').click();
     await expect(page.getByTestId('dataset.snapshots.rollback_confirm')).toBeVisible();
+    await expect(page.getByTestId('dataset.snapshots.rollback_confirm.confirm')).toBeDisabled();
+    await page.getByTestId('dataset.snapshots.rollback_confirm.input').fill('snap-201');
+    await expect(page.getByTestId('dataset.snapshots.rollback_confirm.confirm')).toBeDisabled();
+    await page.getByTestId('dataset.snapshots.rollback_confirm.input').fill('snap-200');
+    await expect(page.getByTestId('dataset.snapshots.rollback_confirm.confirm')).toBeEnabled();
     await page.getByTestId('dataset.snapshots.rollback_confirm.confirm').click();
     await expect(page.getByTestId('dataset.snapshots.rollback_confirm')).toBeHidden();
 
@@ -140,6 +145,9 @@ test.describe('@smoke Dataset snapshots', () => {
 
     await page.getByTestId('dataset.snapshots.row.200.delete').click();
     await expect(page.getByTestId('dataset.snapshots.delete_confirm')).toBeVisible();
+    await expect(page.getByTestId('dataset.snapshots.delete_confirm.confirm')).toBeDisabled();
+    await page.getByTestId('dataset.snapshots.delete_confirm.input').fill('snap-200');
+    await expect(page.getByTestId('dataset.snapshots.delete_confirm.confirm')).toBeEnabled();
     await page.getByTestId('dataset.snapshots.delete_confirm.confirm').click();
     await expect(page.getByTestId('dataset.snapshots.delete_confirm')).toBeHidden();
 

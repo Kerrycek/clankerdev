@@ -314,20 +314,25 @@ export function VpsStoragePage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<VpsMount | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
 
   const openDelete = (m: VpsMount) => {
     setDeleteError(null);
+    setDeleteConfirmation('');
     setDeleteTarget(m);
     setDeleteOpen(true);
   };
 
   const submitDelete = async () => {
     if (!deleteTarget) return;
+    const expected = String((deleteTarget as any).mountpoint ?? deleteTarget.id);
+    if (deleteConfirmation !== expected) return;
     setDeleteError(null);
     try {
       await deleteMountM.mutateAsync(deleteTarget.id);
       setDeleteOpen(false);
       setDeleteTarget(null);
+      setDeleteConfirmation('');
     } catch (e: any) {
       setDeleteError(String(e?.message ?? e));
     }
@@ -901,7 +906,13 @@ export function VpsStoragePage() {
         confirmLabel={t('common.delete')}
         confirmLoading={deleteMountM.isPending}
         confirmDisabled={!gate.allowed}
-        onCancel={() => setDeleteOpen(false)}
+        confirmationText={deleteTarget ? String((deleteTarget as any).mountpoint ?? deleteTarget.id) : undefined}
+        confirmationValue={deleteConfirmation}
+        onConfirmationValueChange={setDeleteConfirmation}
+        onCancel={() => {
+          setDeleteOpen(false);
+          setDeleteConfirmation('');
+        }}
         onConfirm={() => void submitDelete()}
       >
         {deleteError ? (

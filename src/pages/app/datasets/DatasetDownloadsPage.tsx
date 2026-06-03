@@ -120,6 +120,7 @@ export function DatasetDownloadsPage() {
   }, [searchParams, setSearchParams]);
 
   const [confirm, setConfirm] = useState<SnapshotDownload | null>(null);
+  const [confirmPhrase, setConfirmPhrase] = useState('');
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
 
@@ -292,6 +293,16 @@ export function DatasetDownloadsPage() {
   const createGate = gateDatasetAction('download.create', { dataset, busyLocal, busyTransaction });
   const deleteGate = gateDatasetAction('download.delete', { dataset, busyLocal, busyTransaction });
 
+  function downloadConfirmText(dl: SnapshotDownload | null): string | undefined {
+    return dl ? String(dl.id) : undefined;
+  }
+
+  function openDeleteConfirm(dl: SnapshotDownload) {
+    setConfirmPhrase('');
+    setConfirmError(null);
+    setConfirm(dl);
+  }
+
   return (
     <div className="space-y-6" data-testid="dataset.downloads.list">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
@@ -417,7 +428,7 @@ export function DatasetDownloadsPage() {
                         <ActionButton
                           size="sm"
                           variant="danger"
-                          onClick={() => setConfirm(dl)}
+                          onClick={() => openDeleteConfirm(dl)}
                           disabled={!deleteGate.allowed}
                           disabledReason={!deleteGate.allowed ? deleteGate.reason : undefined}
                           testId={`dataset.downloads.card.${dl.id}.delete`}
@@ -511,7 +522,7 @@ export function DatasetDownloadsPage() {
                               <ActionButton
                                 size="sm"
                                 variant="danger"
-                                onClick={() => setConfirm(dl)}
+                                onClick={() => openDeleteConfirm(dl)}
                                 disabled={!deleteGate.allowed}
                                 disabledReason={!deleteGate.allowed ? deleteGate.reason : undefined}
                                 testId={`dataset.downloads.row.${dl.id}.delete`}
@@ -679,15 +690,20 @@ export function DatasetDownloadsPage() {
         danger
         confirmLoading={confirmBusy}
         confirmDisabled={confirmBusy || !deleteGate.allowed}
+        confirmationText={downloadConfirmText(confirm)}
+        confirmationValue={confirmPhrase}
+        onConfirmationValueChange={setConfirmPhrase}
         cancelDisabled={confirmBusy}
         onCancel={() => {
           if (confirmBusy) return;
           setConfirm(null);
+          setConfirmPhrase('');
           setConfirmError(null);
           setConfirmBusy(false);
         }}
         onConfirm={async () => {
           if (!confirm || confirmBusy || !deleteGate.allowed) return;
+          if (confirmPhrase !== String(confirm.id)) return;
           setConfirmBusy(true);
           setConfirmError(null);
           try {
