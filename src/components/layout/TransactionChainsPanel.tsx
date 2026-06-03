@@ -11,12 +11,13 @@ import { clsx } from '../ui/clsx';
 import { Badge } from '../ui/Badge';
 import { StatusDot } from '../ui/StatusDot';
 import { Button } from '../ui/Button';
+import { Alert } from '../ui/Alert';
 import { toneProgressFillClass, toneSurfaceClass, type ToneVariant } from '../ui/tone';
 import { useAppMode } from '../../app/appMode';
 import { useI18n } from '../../app/i18n';
 import { formatDateTime } from '../../lib/format';
 import { useTierAIntervalMs } from '../../lib/refreshTiers';
-import { durationSec, formatPayload } from '../../lib/txFormat';
+import { durationSec, formatPayload, transactionErrorText } from '../../lib/txFormat';
 import {
   chainBadgeFromState,
   chainProgressLabel,
@@ -346,6 +347,7 @@ export function TransactionChainsPanel(props: {
                   const sec = durationSec(started, finished);
                   const input = formatPayload((tx as any).input);
                   const output = formatPayload((tx as any).output);
+                  const errorText = transactionErrorText(tx);
                   const hasPayload = Boolean(input || output);
 
                   return (
@@ -382,8 +384,21 @@ export function TransactionChainsPanel(props: {
 
                       {txExpanded ? (
                         <div className="mt-2">
+                          {errorText ? (
+                            <div className="mb-3">
+                              <Alert variant="danger" title={i18n.t('transactions.tx.error_title')}>
+                                <pre className="whitespace-pre-wrap break-words text-xs">{errorText}</pre>
+                              </Alert>
+                            </div>
+                          ) : null}
                           {hasPayload ? (
-                            <TransactionPayloadPanels t={i18n.t} input={input} output={output} maxHeightClass="max-h-72" />
+                            <TransactionPayloadPanels
+                              t={i18n.t}
+                              input={input}
+                              output={output}
+                              maxHeightClass="max-h-72"
+                              layout="stacked"
+                            />
                           ) : (
                             <div className="rounded-md border border-border bg-surface-2 p-2 text-xs text-muted">
                               {i18n.t('transactions.tx.no_payload')}

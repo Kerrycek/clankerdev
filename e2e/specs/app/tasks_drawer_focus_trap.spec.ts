@@ -145,7 +145,7 @@ test('@pr-smoke Tasks drawer can inspect action state transactions without leavi
           transactions: [
             {
               id: 9001,
-              name: 'Create dataset',
+              name: 'Create dataset with a deliberately long transaction item name for drawer wrapping',
               done: 'done',
               success: 1,
               type: 3001,
@@ -175,6 +175,27 @@ test('@pr-smoke Tasks drawer can inspect action state transactions without leavi
   await expect(page.getByTestId('tasks.inspect.backend_details')).toContainText('vps_id');
 
   await page.getByTestId('tasks.inspect.tx.toggle.9001').click();
-  await expect(page.getByTestId('tasks.inspect.tx.expanded.9001')).toBeVisible();
-  await expect(page.getByTestId('tasks.inspect.tx.expanded.9001')).toContainText('tank/ct/vps12');
+  const drawer = page.getByTestId('tasks.drawer');
+  const card = page.getByTestId('tasks.inspect.tx.card.9001');
+  const expanded = page.getByTestId('tasks.inspect.tx.expanded.9001');
+  const toggle = page.getByTestId('tasks.inspect.tx.toggle.9001');
+
+  await expect(card).toBeVisible();
+  await expect(expanded).toBeVisible();
+  await expect(expanded).toContainText('tank/ct/vps12');
+
+  const drawerBox = await drawer.boundingBox();
+  const cardBox = await card.boundingBox();
+  const toggleBox = await toggle.boundingBox();
+
+  expect(drawerBox).not.toBeNull();
+  expect(cardBox).not.toBeNull();
+  expect(toggleBox).not.toBeNull();
+  expect(cardBox!.x).toBeGreaterThanOrEqual(drawerBox!.x);
+  expect(cardBox!.x + cardBox!.width).toBeLessThanOrEqual(drawerBox!.x + drawerBox!.width);
+  expect(toggleBox!.x).toBeGreaterThanOrEqual(cardBox!.x);
+  expect(toggleBox!.x + toggleBox!.width).toBeLessThanOrEqual(cardBox!.x + cardBox!.width);
+
+  await page.getByRole('button', { name: /collapse all/i }).click();
+  await expect(expanded).toBeHidden();
 });

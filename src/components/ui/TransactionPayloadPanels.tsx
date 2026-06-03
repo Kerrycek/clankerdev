@@ -16,17 +16,20 @@ export function TransactionPayloadPanels(props: {
   t: (k: any, vars?: any) => string;
   input: string;
   output: string;
-  /** e.g. "max-h-80" or "max-h-96" */
+  /** e.g. "max-h-72", "max-h-80", or "max-h-96" */
   maxHeightClass?: string;
+  layout?: 'grid' | 'stacked';
 }) {
   const maxH = (() => {
     // Keep the allowed values explicit so Tailwind can statically see them.
+    if (props.maxHeightClass === 'max-h-72') return 'max-h-72';
     if (props.maxHeightClass === 'max-h-80') return 'max-h-80';
     return 'max-h-96';
   })();
+  const layoutClass = props.layout === 'stacked' ? 'grid gap-3' : 'grid gap-3 lg:grid-cols-2';
 
   return (
-    <div className="grid gap-3 lg:grid-cols-2">
+    <div className={layoutClass}>
       <div>
         <div className="flex items-center justify-between gap-2">
           <div className="text-xs font-medium text-muted">{props.t('transactions.tx.input')}</div>

@@ -29,7 +29,6 @@ import { StatusDot } from '../ui/StatusDot';
 import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Spinner } from '../ui/Spinner';
-import { Table } from '../ui/Table';
 import { TransactionPayloadPanels } from '../ui/TransactionPayloadPanels';
 import { useChrome } from './ChromeContext';
 
@@ -141,7 +140,7 @@ function ActionStateInspect(props: {
   const tracked = chrome.trackedActionStates.some((x) => x.id === id);
   const chain = chainQ.data;
 
-  const renderTx = (tx: Transaction) => {
+  const renderTxCard = (tx: Transaction) => {
     const b = transactionBadge(tx);
     const name = tx.name ? String(tx.name) : `#${tx.id}`;
     const input = formatPayload((tx as any).input);
@@ -157,44 +156,54 @@ function ActionStateInspect(props: {
     const started = (tx as any).started_at as string | null | undefined;
     const finished = (tx as any).finished_at as string | null | undefined;
     const sec = durationSec(started, finished);
+    const dotVariant =
+      b.variant === 'danger' || b.variant === 'warn' || b.variant === 'ok' || b.variant === 'info'
+        ? b.variant
+        : 'neutral';
+    const meta: React.ReactNode[] = [];
+    if (hasTxId) meta.push(<span key="id">#{txId}</span>);
+    if (type !== null) meta.push(<span key="type">{i18n.t('transactions.items.row.type_chip', { type })}</span>);
+    if (priority !== null) meta.push(<span key="priority">{i18n.t('transactions.tx.prio', { prio: priority })}</span>);
+    if (nodeId) meta.push(<span key="node">{refLabel((tx as any).node) || `#${nodeId}`}</span>);
+    if (vpsId) {
+      meta.push(
+        <Link key="vps" className="underline" to={`${basePath}/vps/${vpsId}`}>
+          #{vpsId}
+        </Link>
+      );
+    }
+    if (started) meta.push(<span key="started">{i18n.t('common.started')}: {formatDateTime(started)}</span>);
+    if (sec !== null) meta.push(<span key="duration">{i18n.t('transactions.tx.duration', { sec })}</span>);
 
     return (
-      <React.Fragment key={(tx as any).id ?? name}>
-        <tr className="border-b border-border last:border-b-0">
-          <td className="px-3 py-2 text-xs">
-            {hasTxId ? (
-              <Link className="text-accent underline" to={`${basePath}/transactions/items/${txId}`}>
-                {txId}
-              </Link>
-            ) : (
-              <span className="text-faint">{i18n.t('common.na')}</span>
-            )}
-          </td>
-          <td className="px-3 py-2">
-            <Badge variant={b.variant}>{b.label}</Badge>
-          </td>
-          <td className="px-3 py-2">
-            <div className="text-sm font-medium">{name}</div>
-            <div className="mt-1 text-xs text-faint">
-              {type !== null ? i18n.t('transactions.items.row.type_chip', { type }) : null}
-              {priority !== null ? ` · ${i18n.t('transactions.tx.prio', { prio: priority })}` : null}
+      <div
+        key={(tx as any).id ?? name}
+        className="rounded-md border border-border bg-surface p-3"
+        data-testid={hasTxId ? `tasks.inspect.tx.card.${txId}` : undefined}
+      >
+        <div className="space-y-3">
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-2">
+                <StatusDot variant={dotVariant} title={b.label} />
+                <div className="min-w-0 break-words text-sm font-medium">{name}</div>
+              </div>
+              <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs text-faint">
+                {meta.map((p, i) => (
+                  <React.Fragment key={i}>{p}</React.Fragment>
+                ))}
+              </div>
             </div>
-          </td>
-          <td className="px-3 py-2 text-xs text-muted">
-            {nodeId ? refLabel((tx as any).node) || `#${nodeId}` : i18n.t('common.na')}
-          </td>
-          <td className="px-3 py-2 text-xs">
-            {vpsId ? (
-              <Link className="text-accent underline" to={`${basePath}/vps/${vpsId}`}>
-                #{vpsId}
+
+            <Badge variant={b.variant}>{b.label}</Badge>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {hasTxId ? (
+              <Link className="text-xs font-medium underline" to={`${basePath}/transactions/items/${txId}`}>
+                {i18n.t('transactions.tx.details')}
               </Link>
-            ) : (
-              <span className="text-faint">{i18n.t('common.na')}</span>
-            )}
-          </td>
-          <td className="px-3 py-2 text-xs text-muted">{formatDateTime(started)}</td>
-          <td className="px-3 py-2 text-xs text-muted">{sec !== null ? i18n.t('transactions.tx.duration', { sec }) : i18n.t('common.na')}</td>
-          <td className="px-3 py-2 text-right">
+            ) : null}
             {hasTxId ? (
               <Button
                 size="sm"
@@ -205,23 +214,28 @@ function ActionStateInspect(props: {
                 {expanded ? i18n.t('common.collapse') : i18n.t('common.expand')}
               </Button>
             ) : null}
-          </td>
-        </tr>
+          </div>
+        </div>
+
         {expanded ? (
-          <tr className="border-b border-border bg-surface-2" data-testid={`tasks.inspect.tx.expanded.${txId}`}>
-            <td colSpan={8} className="px-3 py-3">
-              {errorText ? (
-                <div className="mb-3">
-                  <Alert variant="danger" title={i18n.t('transactions.tx.error_title')}>
-                    <pre className="whitespace-pre-wrap text-xs">{errorText}</pre>
-                  </Alert>
-                </div>
-              ) : null}
-              <TransactionPayloadPanels t={i18n.t} input={input} output={output} maxHeightClass="max-h-80" />
-            </td>
-          </tr>
+          <div className="mt-3 border-t border-border pt-3" data-testid={`tasks.inspect.tx.expanded.${txId}`}>
+            {errorText ? (
+              <div className="mb-3">
+                <Alert variant="danger" title={i18n.t('transactions.tx.error_title')}>
+                  <pre className="whitespace-pre-wrap break-words text-xs">{errorText}</pre>
+                </Alert>
+              </div>
+            ) : null}
+            <TransactionPayloadPanels
+              t={i18n.t}
+              input={input}
+              output={output}
+              maxHeightClass="max-h-80"
+              layout="stacked"
+            />
+          </div>
         ) : null}
-      </React.Fragment>
+      </div>
     );
   };
 
@@ -340,23 +354,7 @@ function ActionStateInspect(props: {
         ) : txQ.isError ? (
           <Alert variant="danger" title={i18n.t('tasks.error.load_items')}>{formatErrorMessage(txQ.error)}</Alert>
         ) : transactionRows.length > 0 ? (
-          <div className="mt-2 overflow-x-auto rounded-md border border-border">
-            <Table minWidth="lg" variant="list">
-              <thead>
-                <tr className="border-b border-border text-left text-xs text-muted">
-                  <th className="px-3 py-2">{i18n.t('common.id')}</th>
-                  <th className="px-3 py-2">{i18n.t('common.state')}</th>
-                  <th className="px-3 py-2">{i18n.t('common.name')}</th>
-                  <th className="px-3 py-2">{i18n.t('common.node')}</th>
-                  <th className="px-3 py-2">{i18n.t('common.vps')}</th>
-                  <th className="px-3 py-2">{i18n.t('common.started')}</th>
-                  <th className="px-3 py-2">{i18n.t('transactions.tx.duration_label')}</th>
-                  <th className="px-3 py-2 text-right">{i18n.t('transactions.tx.details')}</th>
-                </tr>
-              </thead>
-              <tbody>{transactionRows.map(renderTx)}</tbody>
-            </Table>
-          </div>
+          <div className="mt-2 space-y-2">{transactionRows.map(renderTxCard)}</div>
         ) : (
           <div className="mt-2 text-sm text-muted">{i18n.t('tasks.empty.no_items')}</div>
         )}
