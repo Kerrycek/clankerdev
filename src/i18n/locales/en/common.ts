@@ -7,6 +7,7 @@ export const enCommon = {
   'common.auto': 'Auto',
   'common.date': 'Date',
   'common.confirm': 'Confirm',
+  'confirm.type_to_confirm': 'Type “{value}” to confirm.',
   'common.continue': 'Continue',
   'common.back': 'Back',
   'common.retry': 'Retry',

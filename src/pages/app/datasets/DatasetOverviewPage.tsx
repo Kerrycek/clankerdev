@@ -389,6 +389,7 @@ function DatasetManagementCard() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [childName, setChildName] = useState('');
   const [automount, setAutomount] = useState(true);
@@ -622,7 +623,10 @@ function DatasetManagementCard() {
             testId="dataset.manage.delete.open"
             disabled={!deleteGate.allowed}
             disabledReason={!deleteGate.allowed ? deleteGate.reason : undefined}
-            onClick={() => setDeleteOpen(true)}
+            onClick={() => {
+              setDeleteConfirmation('');
+              setDeleteOpen(true);
+            }}
           >
             {t('common.delete')}
           </ActionButton>
@@ -686,8 +690,17 @@ function DatasetManagementCard() {
         confirmLabel={t('common.delete')}
         confirmLoading={deleteM.isPending}
         confirmDisabled={!deleteGate.allowed}
-        onCancel={() => setDeleteOpen(false)}
-        onConfirm={() => deleteM.mutate()}
+        confirmationText={objectLabel}
+        confirmationValue={deleteConfirmation}
+        onConfirmationValueChange={setDeleteConfirmation}
+        onCancel={() => {
+          setDeleteOpen(false);
+          setDeleteConfirmation('');
+        }}
+        onConfirm={() => {
+          if (deleteConfirmation !== objectLabel) return;
+          deleteM.mutate();
+        }}
       >
         {deleteM.isError ? (
           <Alert title={t('dataset.manage.delete.error')} variant="danger">

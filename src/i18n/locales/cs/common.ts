@@ -7,6 +7,7 @@ export const csCommon = {
   'common.auto': 'Automaticky',
   'common.date': 'Datum',
   'common.confirm': 'Potvrdit',
+  'confirm.type_to_confirm': 'Pro potvrzení napiš „{value}“.',
   'common.continue': 'Pokračovat',
   'common.back': 'Zpět',
   'common.retry': 'Zkusit znovu',

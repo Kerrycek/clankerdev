@@ -109,6 +109,11 @@ test.describe('Dataset downloads', () => {
 
     await page.getByTestId('dataset.downloads.row.501.delete').click();
     await expect(page.getByTestId('dataset.downloads.delete_confirm')).toBeVisible();
+    await expect(page.getByTestId('dataset.downloads.delete_confirm.confirm')).toBeDisabled();
+    await page.getByTestId('dataset.downloads.delete_confirm.input').fill('500');
+    await expect(page.getByTestId('dataset.downloads.delete_confirm.confirm')).toBeDisabled();
+    await page.getByTestId('dataset.downloads.delete_confirm.input').fill('501');
+    await expect(page.getByTestId('dataset.downloads.delete_confirm.confirm')).toBeEnabled();
 
     await page.getByTestId('dataset.downloads.delete_confirm.confirm').click();
     await expect(page.getByTestId('dataset.downloads.delete_confirm')).toBeHidden();
