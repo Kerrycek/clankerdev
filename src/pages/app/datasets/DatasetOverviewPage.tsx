@@ -480,9 +480,9 @@ function DatasetManagementCard() {
   });
 
   const busyLocal = busyLocalLock || createM.isPending || updateM.isPending || deleteM.isPending;
-  const createGate = gateDatasetAction('dataset.create', { dataset, busyLocal, busyTransaction });
-  const updateGate = gateDatasetAction('dataset.update', { dataset, busyLocal, busyTransaction });
-  const deleteGate = gateDatasetAction('dataset.delete', { dataset, busyLocal, busyTransaction });
+  const createGate = gateDatasetAction('dataset.create', { dataset, busyLocal, busyTransaction, role });
+  const updateGate = gateDatasetAction('dataset.update', { dataset, busyLocal, busyTransaction, role });
+  const deleteGate = gateDatasetAction('dataset.delete', { dataset, busyLocal, busyTransaction, role });
 
   const submitCreate = () => {
     setFormError(null);
@@ -598,47 +598,57 @@ function DatasetManagementCard() {
     <Card testId="dataset.manage">
       <CardHeader title={t('dataset.manage.title')} subtitle={t('dataset.manage.subtitle')} />
       <CardBody>
-        <div className="flex flex-wrap gap-2">
-          <ActionButton
-            variant="primary"
-            size="sm"
-            testId="dataset.manage.create.open"
-            disabled={!createGate.allowed}
-            disabledReason={!createGate.allowed ? createGate.reason : undefined}
-            onClick={() => {
-              setFormError(null);
-              setCreateOpen(true);
-            }}
-          >
-            {t('dataset.manage.create.open')}
-          </ActionButton>
-          <ActionButton
-            variant="secondary"
-            size="sm"
-            testId="dataset.manage.edit.open"
-            disabled={!updateGate.allowed}
-            disabledReason={!updateGate.allowed ? updateGate.reason : undefined}
-            onClick={() => {
-              setFormError(null);
-              setEditOpen(true);
-            }}
-          >
-            {t('common.edit')}
-          </ActionButton>
-          <ActionButton
-            variant="danger"
-            size="sm"
-            testId="dataset.manage.delete.open"
-            disabled={!deleteGate.allowed}
-            disabledReason={!deleteGate.allowed ? deleteGate.reason : undefined}
-            onClick={() => {
-              setDeleteConfirmation('');
-              setDeleteOpen(true);
-            }}
-          >
-            {t('common.delete')}
-          </ActionButton>
-        </div>
+        {!isAdmin ? (
+          <div className="mb-3">
+            <Alert title={t('dataset.manage.user_limited.title')} variant="neutral">
+              {t('dataset.manage.user_limited.body')}
+            </Alert>
+          </div>
+        ) : null}
+
+        {isAdmin ? (
+          <div className="flex flex-wrap gap-2">
+            <ActionButton
+              variant="primary"
+              size="sm"
+              testId="dataset.manage.create.open"
+              disabled={!createGate.allowed}
+              disabledReason={!createGate.allowed ? createGate.reason : undefined}
+              onClick={() => {
+                setFormError(null);
+                setCreateOpen(true);
+              }}
+            >
+              {t('dataset.manage.create.open')}
+            </ActionButton>
+            <ActionButton
+              variant="secondary"
+              size="sm"
+              testId="dataset.manage.edit.open"
+              disabled={!updateGate.allowed}
+              disabledReason={!updateGate.allowed ? updateGate.reason : undefined}
+              onClick={() => {
+                setFormError(null);
+                setEditOpen(true);
+              }}
+            >
+              {t('common.edit')}
+            </ActionButton>
+            <ActionButton
+              variant="danger"
+              size="sm"
+              testId="dataset.manage.delete.open"
+              disabled={!deleteGate.allowed}
+              disabledReason={!deleteGate.allowed ? deleteGate.reason : undefined}
+              onClick={() => {
+                setDeleteConfirmation('');
+                setDeleteOpen(true);
+              }}
+            >
+              {t('common.delete')}
+            </ActionButton>
+          </div>
+        ) : null}
 
         <div className="mt-3 text-xs text-muted">
           {t('dataset.manage.current', { dataset: datasetShortName(dataset), id: dataset.id })}

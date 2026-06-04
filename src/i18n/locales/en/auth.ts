@@ -31,6 +31,8 @@ export const enAuth = {
   'gate.busy.transaction.body': 'This object is currently being changed. Try again when the operation finishes.',
   'gate.busy.local.title': 'Working…',
   'gate.busy.local.body': 'The action was started. Please wait until it finishes.',
+  'gate.admin_only.title': 'Admin action',
+  'gate.admin_only.body': 'This action is available only in the admin view.',
   'gate.blocked.maintenance.title': 'Blocked by maintenance',
   'gate.blocked.maintenance.body': 'This action is not available during maintenance.',
   'gate.blocked.readonly.title': 'Read-only',

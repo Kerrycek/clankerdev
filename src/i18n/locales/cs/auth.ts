@@ -31,6 +31,8 @@ export const csAuth = {
   'gate.busy.transaction.body': 'Na tomto objektu právě probíhá změna. Zkus to znovu po dokončení operace.',
   'gate.busy.local.title': 'Pracuje se…',
   'gate.busy.local.body': 'Akce byla spuštěna. Vyčkej na její dokončení.',
+  'gate.admin_only.title': 'Administrátorská akce',
+  'gate.admin_only.body': 'Tato akce je dostupná pouze v administrátorském zobrazení.',
   'gate.blocked.maintenance.title': 'Zablokováno údržbou',
   'gate.blocked.maintenance.body': 'Během údržby není tato akce dostupná.',
   'gate.blocked.readonly.title': 'Pouze pro čtení',

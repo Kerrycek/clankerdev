@@ -1,4 +1,5 @@
 import type { Dataset } from '../api/datasets';
+import type { UserRole } from '../roles';
 import type { GateDecision, GateReason } from './types';
 
 export type DatasetAction =
@@ -31,6 +32,23 @@ function blocksWhenInactive(action: DatasetAction): boolean {
   return action !== 'download.delete';
 }
 
+function requiresAdmin(action: DatasetAction): boolean {
+  switch (action) {
+    case 'dataset.create':
+    case 'dataset.update':
+    case 'dataset.delete':
+    case 'snapshot.rollback':
+    case 'snapshot.delete':
+    case 'download.delete':
+      return true;
+    case 'snapshot.create':
+    case 'download.create':
+      return false;
+    default:
+      return false;
+  }
+}
+
 function deny(reason: GateReason): GateDecision {
   return { allowed: false, reason };
 }
@@ -41,8 +59,13 @@ export function gateDatasetAction(
     dataset: Dataset;
     busyTransaction?: boolean;
     busyLocal?: boolean;
+    role?: UserRole;
   }
 ): GateDecision {
+  if (ctx.role && ctx.role !== 'admin' && requiresAdmin(action)) {
+    return deny({ titleKey: 'gate.admin_only.title', descriptionKey: 'gate.admin_only.body' });
+  }
+
   if (ctx.busyTransaction) {
     return deny({ titleKey: 'gate.busy.transaction.title', descriptionKey: 'gate.busy.transaction.body' });
   }

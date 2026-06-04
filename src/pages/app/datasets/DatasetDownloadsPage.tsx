@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
+import { useAuth } from '../../../app/auth';
 import { useI18n } from '../../../app/i18n';
 
 import { useChrome } from '../../../components/layout/ChromeContext';
@@ -91,6 +92,8 @@ export function DatasetDownloadsPage() {
   } = useDatasetContext();
   const chrome = useChrome();
   const { t } = useI18n();
+  const { role } = useAuth();
+  const isAdmin = role === 'admin';
 
   const datasetLabelForToast = String((dataset as any).label ?? (dataset as any).name ?? `Dataset #${dataset.id}`);
 
@@ -303,8 +306,8 @@ export function DatasetDownloadsPage() {
 
   const busyLocal = busyLocalLock || createDl.isPending || delDl.isPending || confirmBusy;
 
-  const createGate = gateDatasetAction('download.create', { dataset, busyLocal, busyTransaction });
-  const deleteGate = gateDatasetAction('download.delete', { dataset, busyLocal, busyTransaction });
+  const createGate = gateDatasetAction('download.create', { dataset, busyLocal, busyTransaction, role });
+  const deleteGate = gateDatasetAction('download.delete', { dataset, busyLocal, busyTransaction, role });
 
   function downloadConfirmText(dl: SnapshotDownload | null): string | undefined {
     return dl ? String(dl.id) : undefined;
@@ -442,16 +445,18 @@ export function DatasetDownloadsPage() {
                           />
                         ) : null}
 
-                        <ActionButton
-                          size="sm"
-                          variant="danger"
-                          onClick={() => openDeleteConfirm(dl)}
-                          disabled={!deleteGate.allowed}
-                          disabledReason={!deleteGate.allowed ? deleteGate.reason : undefined}
-                          testId={`dataset.downloads.card.${dl.id}.delete`}
-                        >
-                          {t('common.delete')}
-                        </ActionButton>
+                        {isAdmin ? (
+                          <ActionButton
+                            size="sm"
+                            variant="danger"
+                            onClick={() => openDeleteConfirm(dl)}
+                            disabled={!deleteGate.allowed}
+                            disabledReason={!deleteGate.allowed ? deleteGate.reason : undefined}
+                            testId={`dataset.downloads.card.${dl.id}.delete`}
+                          >
+                            {t('common.delete')}
+                          </ActionButton>
+                        ) : null}
                       </div>
                     </div>
                   </Card>
@@ -544,16 +549,18 @@ export function DatasetDownloadsPage() {
                                 />
                               ) : null}
 
-                              <ActionButton
-                                size="sm"
-                                variant="danger"
-                                onClick={() => openDeleteConfirm(dl)}
-                                disabled={!deleteGate.allowed}
-                                disabledReason={!deleteGate.allowed ? deleteGate.reason : undefined}
-                                testId={`dataset.downloads.row.${dl.id}.delete`}
-                              >
-                                {t('common.delete')}
-                              </ActionButton>
+                              {isAdmin ? (
+                                <ActionButton
+                                  size="sm"
+                                  variant="danger"
+                                  onClick={() => openDeleteConfirm(dl)}
+                                  disabled={!deleteGate.allowed}
+                                  disabledReason={!deleteGate.allowed ? deleteGate.reason : undefined}
+                                  testId={`dataset.downloads.row.${dl.id}.delete`}
+                                >
+                                  {t('common.delete')}
+                                </ActionButton>
+                              ) : null}
                             </div>
                           </td>
                         </tr>

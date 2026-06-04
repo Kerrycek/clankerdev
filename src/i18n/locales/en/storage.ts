@@ -86,6 +86,8 @@ export const enStorage = {
   'dataset.manage.title': 'Dataset management',
   'dataset.manage.subtitle': 'Create subdatasets, update storage properties, or remove this dataset.',
   'dataset.manage.current': 'Current dataset: {dataset} (#{id})',
+  'dataset.manage.user_limited.title': 'Admin-managed dataset actions',
+  'dataset.manage.user_limited.body': 'Creating, editing and deleting datasets is limited to admins here. You can still create snapshots and snapshot downloads from the adjacent tabs.',
   'dataset.manage.create.open': 'Create subdataset',
   'dataset.manage.create.title': 'Create subdataset',
   'dataset.manage.create.scope': 'Parent dataset: {dataset}. The new subdataset opens after the create action starts if the API returns its ID.',
