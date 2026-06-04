@@ -84,4 +84,29 @@ test.describe('Transactions items list keyset pagination', () => {
     await expect(page.getByTestId('transactions.items.smart_filter.input')).toHaveValue('');
     await expect(page.getByTestId('transactions.items.row.300')).toBeVisible();
   });
+
+  test('direct reload preserves item list filters and admin-scoped links', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
+      handlers: {
+        'GET transactions': ({ searchParams }) => {
+          if (searchParams.get('transaction[transaction_chain]') !== '123') return { transactions: [], _meta: { total_count: 0 } };
+          return { transactions: [makeTx(300)], _meta: { total_count: 1 } };
+        },
+      },
+    });
+
+    await page.goto('/admin/transactions/items?transaction_chain=123');
+    await expect(page.getByTestId('transactions.items.row.300')).toBeVisible();
+
+    await page.reload();
+
+    await expect(page).toHaveURL(/\/admin\/transactions\/items\?transaction_chain=123$/);
+    await expect(page.getByTestId('transactions.items.row.300')).toBeVisible();
+    await expect(page.locator('a[href="/admin/transactions/items/300"]')).toHaveCount(2);
+    await expect(page.locator('a[href="/admin/transactions/123"]')).toBeVisible();
+    await expect(page.locator('a[href="/app/transactions/items/300"]')).toHaveCount(0);
+  });
 });

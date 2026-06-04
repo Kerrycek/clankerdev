@@ -19,7 +19,7 @@ import { LinkButton } from '../../components/ui/LinkButton';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { ObjectHeader } from '../../components/ui/ObjectHeader';
 import { Table } from '../../components/ui/Table';
-import { TransactionPayloadPanels } from '../../components/ui/TransactionPayloadPanels';
+import { TransactionDebugSections } from '../../components/ui/TransactionPayloadPanels';
 import { formatDateTime } from '../../lib/format';
 import { formatErrorMessage } from '../../lib/errors';
 import { resourceId, refLabel } from '../../lib/resources';
@@ -41,6 +41,24 @@ function pickedActionStateDebugPayload(s: ActionState): string {
     if (Object.prototype.hasOwnProperty.call(s as any, key)) picked[key] = (s as any)[key];
   }
   return Object.keys(picked).length > 0 ? safeJson(picked) : safeJson(s);
+}
+
+function firstCurrentTransactionId(transactions: Transaction[] | undefined): number | null {
+  for (const tx of transactions ?? []) {
+    const txId = Number((tx as any).id);
+    if (!Number.isFinite(txId) || txId <= 0) continue;
+    if (String((tx as any).done ?? '') !== 'done') return txId;
+  }
+  return null;
+}
+
+function firstFailedTransactionId(transactions: Transaction[] | undefined): number | null {
+  for (const tx of transactions ?? []) {
+    const txId = Number((tx as any).id);
+    if (!Number.isFinite(txId) || txId <= 0) continue;
+    if (transactionBadge(tx).variant === 'danger') return txId;
+  }
+  return null;
 }
 
 export function ActionStateDetailPage() {
@@ -168,6 +186,8 @@ export function ActionStateDetailPage() {
   const transactionIds = (txQ.data ?? [])
     .map((tx) => Number((tx as any).id))
     .filter((txId) => Number.isFinite(txId) && txId > 0);
+  const currentTxId = firstCurrentTransactionId(txQ.data);
+  const failedTxId = firstFailedTransactionId(txQ.data);
 
   const toggleExpandedTx = (txId: number) => {
     setExpandedTx((prev) => {
@@ -252,6 +272,29 @@ export function ActionStateDetailPage() {
           }
         />
         <CardBody>
+          <div className="mb-4 grid gap-3 md:grid-cols-3">
+            <DebugSummaryTile label={t('common.state')} value={<Badge variant={badge.variant}>{badge.label}</Badge>} />
+            <DebugSummaryTile label={t('common.progress')} value={pLabel ? `${pLabel}${pct !== null ? ` · ${pct}%` : ''}` : t('common.na')} />
+            <DebugSummaryTile
+              label={failedTxId ? t('transactions.tx.failed_here') : t('transactions.tx.current_step')}
+              value={
+                failedTxId ? (
+                  <Link className="text-danger hover:underline" to={`${basePath}/transactions/items/${failedTxId}`}>
+                    #{failedTxId}
+                  </Link>
+                ) : currentTxId ? (
+                  <Link className="text-accent hover:underline" to={`${basePath}/transactions/items/${currentTxId}`}>
+                    #{currentTxId}
+                  </Link>
+                ) : relatedChainId ? (
+                  t('common.na')
+                ) : (
+                  t('tasks.inspect.no_chain')
+                )
+              }
+            />
+          </div>
+
           <div className="grid gap-2 text-sm sm:grid-cols-2">
             <div>
               <span className="text-muted">{t('common.id')}:</span> <span className="font-medium">#{id}</span>
@@ -403,6 +446,8 @@ export function ActionStateDetailPage() {
                     const progress = typeof (tx as any).progress === 'number' ? String((tx as any).progress) : null;
                     const done = (tx as any).done ? String((tx as any).done) : null;
                     const success = typeof (tx as any).success === 'number' ? String((tx as any).success) : null;
+                    const isCurrent = hasTxId && currentTxId === txId;
+                    const isFailed = hasTxId && failedTxId === txId;
 
                     return (
                       <React.Fragment key={hasTxId ? txId : name}>
@@ -416,7 +461,13 @@ export function ActionStateDetailPage() {
                               t('common.na')
                             )}
                           </td>
-                          <td className="px-4 py-2"><Badge variant={badge.variant}>{badge.label}</Badge></td>
+                          <td className="px-4 py-2">
+                            <div className="flex flex-wrap gap-2">
+                              <Badge variant={badge.variant}>{badge.label}</Badge>
+                              {isFailed ? <Badge variant="danger">{t('transactions.tx.failed_here')}</Badge> : null}
+                              {!isFailed && isCurrent ? <Badge variant="warn">{t('transactions.tx.current_step')}</Badge> : null}
+                            </div>
+                          </td>
                           <td className="px-4 py-2">
                             <div className="font-medium">{name}</div>
                             <div className="mt-1 text-xs text-muted">
@@ -473,20 +524,17 @@ export function ActionStateDetailPage() {
                                 <div><span className="text-muted">{t('transactions.tx.done_label')}:</span> {done ?? t('common.na')}</div>
                                 <div><span className="text-muted">{t('common.progress')}:</span> {progress ?? t('common.na')}</div>
                               </div>
-                              {errorText ? (
-                                <div className="mt-4">
-                                  <Alert variant="danger" title={t('transactions.tx.error_title')}>
-                                    <pre className="whitespace-pre-wrap text-xs">{errorText}</pre>
-                                  </Alert>
-                                </div>
-                              ) : null}
                               <div className="mt-4">
-                                <TransactionPayloadPanels t={t} input={input} output={output} maxHeightClass="max-h-80" />
+                                <TransactionDebugSections
+                                  t={t}
+                                  input={input}
+                                  output={output}
+                                  errorText={errorText}
+                                  source={tx as any}
+                                  raw={tx}
+                                  maxHeightClass="max-h-80"
+                                />
                               </div>
-                              <details className="mt-4 rounded-md border border-border bg-surface p-3">
-                                <summary className="cursor-pointer select-none text-sm font-medium">{t('transactions.items.detail.section.raw')}</summary>
-                                <pre className="mt-2 max-h-80 overflow-auto text-xs text-muted">{safeJson(tx)}</pre>
-                              </details>
                             </td>
                           </tr>
                         ) : null}
@@ -521,5 +569,14 @@ export function ActionStateDetailPage() {
         ) : null}
       </ConfirmDialog>
     </DetailShell>
+  );
+}
+
+function DebugSummaryTile(props: { label: React.ReactNode; value: React.ReactNode }) {
+  return (
+    <div className="rounded-md border border-border bg-surface-2 p-3">
+      <div className="text-xs text-muted">{props.label}</div>
+      <div className="mt-1 text-sm font-medium">{props.value}</div>
+    </div>
   );
 }
