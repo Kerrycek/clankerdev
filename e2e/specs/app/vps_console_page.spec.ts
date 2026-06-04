@@ -65,12 +65,29 @@ test.describe('@smoke VPS console page', () => {
 
     await expect(page.getByTestId('vps.console.page')).toBeVisible();
     await expect(page.getByTestId('vps.console.new_session')).toBeVisible();
+    await expect(page.getByTestId('vps.console.copy_url')).toBeVisible();
+    await expect(page.getByTestId('vps.console.open_new_tab')).toHaveAttribute(
+      'href',
+      /\/_console\/console\/123\?session=T1/
+    );
 
     const iframe = page.getByTestId('vps.console.iframe');
     await expect(iframe).toBeVisible();
+    await expect(page.getByTestId('vps.console.frame_status')).toContainText('Connected');
 
     const src1 = await iframe.getAttribute('src');
     expect(src1).toContain('/_console/console/123?session=T1');
+
+    await page.getByTestId('vps.console.copy_url').click();
+    await expect(page.getByTestId('vps.console.copy_url')).toContainText(/Copied|Copy failed/);
+
+    const normalBox = await page.getByTestId('vps.console.frame').boundingBox();
+    await page.getByTestId('vps.console.focus').click();
+    await expect(page.getByTestId('vps.console.exit_focus')).toBeVisible();
+    const focusedBox = await page.getByTestId('vps.console.frame').boundingBox();
+    expect(focusedBox?.height ?? 0).toBeGreaterThan(normalBox?.height ?? 0);
+    await page.getByTestId('vps.console.exit_focus').click();
+    await expect(page.getByTestId('vps.console.focus')).toBeVisible();
 
     // Recreate session (opens a confirm dialog when a session exists).
     await page.getByTestId('vps.console.new_session').click();

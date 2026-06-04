@@ -38,8 +38,9 @@
 
     --textarea-min-h: 120px;
 
-    /* Console iframe height token (responsive via media queries below) */
-    --console-h: 70vh;
+    /* Console iframe height tokens (responsive via media queries below) */
+    --console-h: clamp(22rem, calc(100vh - 19rem), 52rem);
+    --console-focus-h: clamp(28rem, calc(100vh - 12rem), 70rem);
 
     /* Shadows */
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.06);
@@ -123,13 +124,15 @@
 
   @media (min-width: 768px) {
     :root {
-      --console-h: 75vh;
+      --console-h: clamp(26rem, calc(100vh - 18rem), 56rem);
+      --console-focus-h: clamp(34rem, calc(100vh - 11rem), 72rem);
     }
   }
 
   @media (min-width: 1024px) {
     :root {
-      --console-h: calc(100vh - 18rem);
+      --console-h: clamp(30rem, calc(100vh - 16rem), 60rem);
+      --console-focus-h: clamp(38rem, calc(100vh - 10rem), 76rem);
     }
   }
 

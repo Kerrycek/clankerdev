@@ -14,6 +14,10 @@ module.exports = {
         // Registry / metadata side panels where 420px gives a good balance.
         'scroll-registry': '420px',
       },
+      height: {
+        console: 'var(--console-h)',
+        'console-focus': 'var(--console-focus-h)',
+      },
       width: {
         'drawer-sm': 'var(--drawer-w-sm)',
         'drawer-md': 'var(--drawer-w-md)',
