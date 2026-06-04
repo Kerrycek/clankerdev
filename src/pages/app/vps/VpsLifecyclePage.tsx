@@ -955,7 +955,7 @@ export function VpsLifecyclePage() {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="font-medium">{vpsLabel(candidate, candidate.id)}</div>
-                      <span className="shrink-0 rounded-sm border border-border bg-surface-2 px-1.5 py-0.5 text-[0.6875rem] font-medium text-muted">
+                      <span className="shrink-0 rounded-sm border border-border bg-surface-2 px-1.5 py-0.5 text-xs font-medium text-muted">
                         {t('vps.lifecycle.swap.candidate.badge')}
                       </span>
                     </div>
