@@ -480,10 +480,6 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await expect(submit).toBeVisible();
     await page.getByTestId('vps.lifecycle.delete.confirm').check();
     await expect(submit).toHaveAttribute('aria-disabled', 'true');
-
-    await submit.click();
-
-    await expect(page.getByTestId('vps.lifecycle.delete.submit.reason')).toBeVisible();
-    await expect(page.getByTestId('vps.lifecycle.delete.submit.reason')).toContainText('Operation in progress');
+    await expect(submit).toHaveAttribute('title', 'Operation in progress');
   });
 });
