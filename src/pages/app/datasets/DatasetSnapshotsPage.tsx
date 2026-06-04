@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
+import { useAuth } from '../../../app/auth';
 import { useI18n } from '../../../app/i18n';
 
 import { useChrome } from '../../../components/layout/ChromeContext';
@@ -73,6 +74,8 @@ export function DatasetSnapshotsPage() {
   } = useDatasetContext();
   const chrome = useChrome();
   const { t } = useI18n();
+  const { role } = useAuth();
+  const isAdmin = role === 'admin';
 
   const datasetLabelForToast = String((dataset as any).label ?? (dataset as any).name ?? `Dataset #${dataset.id}`);
 
@@ -378,10 +381,10 @@ export function DatasetSnapshotsPage() {
     createDl.isPending ||
     confirmBusy;
 
-  const createGate = gateDatasetAction('snapshot.create', { dataset, busyLocal, busyTransaction });
-  const downloadGate = gateDatasetAction('download.create', { dataset, busyLocal, busyTransaction });
-  const rollbackGate = gateDatasetAction('snapshot.rollback', { dataset, busyLocal, busyTransaction });
-  const deleteGate = gateDatasetAction('snapshot.delete', { dataset, busyLocal, busyTransaction });
+  const createGate = gateDatasetAction('snapshot.create', { dataset, busyLocal, busyTransaction, role });
+  const downloadGate = gateDatasetAction('download.create', { dataset, busyLocal, busyTransaction, role });
+  const rollbackGate = gateDatasetAction('snapshot.rollback', { dataset, busyLocal, busyTransaction, role });
+  const deleteGate = gateDatasetAction('snapshot.delete', { dataset, busyLocal, busyTransaction, role });
 
   const confirmGate = confirm?.kind === 'rollback' ? rollbackGate : confirm?.kind === 'delete' ? deleteGate : null;
   const confirmTestId =
@@ -482,26 +485,30 @@ export function DatasetSnapshotsPage() {
                       >
                         {t('common.download')}
                       </ActionButton>
-                      <ActionButton
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => openConfirm({ kind: 'rollback', snapshot: s })}
-                        disabled={!rollbackGate.allowed}
-                        disabledReason={!rollbackGate.allowed ? rollbackGate.reason : undefined}
-                        testId={`dataset.snapshots.card.${s.id}.rollback`}
-                      >
-                        {t('common.rollback')}
-                      </ActionButton>
-                      <ActionButton
-                        size="sm"
-                        variant="danger"
-                        onClick={() => openConfirm({ kind: 'delete', snapshot: s })}
-                        disabled={!deleteGate.allowed}
-                        disabledReason={!deleteGate.allowed ? deleteGate.reason : undefined}
-                        testId={`dataset.snapshots.card.${s.id}.delete`}
-                      >
-                        {t('common.delete')}
-                      </ActionButton>
+                      {isAdmin ? (
+                        <>
+                          <ActionButton
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => openConfirm({ kind: 'rollback', snapshot: s })}
+                            disabled={!rollbackGate.allowed}
+                            disabledReason={!rollbackGate.allowed ? rollbackGate.reason : undefined}
+                            testId={`dataset.snapshots.card.${s.id}.rollback`}
+                          >
+                            {t('common.rollback')}
+                          </ActionButton>
+                          <ActionButton
+                            size="sm"
+                            variant="danger"
+                            onClick={() => openConfirm({ kind: 'delete', snapshot: s })}
+                            disabled={!deleteGate.allowed}
+                            disabledReason={!deleteGate.allowed ? deleteGate.reason : undefined}
+                            testId={`dataset.snapshots.card.${s.id}.delete`}
+                          >
+                            {t('common.delete')}
+                          </ActionButton>
+                        </>
+                      ) : null}
                     </div>
                   </div>
                 </Card>
@@ -551,26 +558,30 @@ export function DatasetSnapshotsPage() {
                             >
                               {t('common.download')}
                             </ActionButton>
-                            <ActionButton
-                              size="sm"
-                              variant="secondary"
-                              onClick={() => openConfirm({ kind: 'rollback', snapshot: s })}
-                              disabled={!rollbackGate.allowed}
-                              disabledReason={!rollbackGate.allowed ? rollbackGate.reason : undefined}
-                              testId={`dataset.snapshots.row.${s.id}.rollback`}
-                            >
-                              {t('common.rollback')}
-                            </ActionButton>
-                            <ActionButton
-                              size="sm"
-                              variant="danger"
-                              onClick={() => openConfirm({ kind: 'delete', snapshot: s })}
-                              disabled={!deleteGate.allowed}
-                              disabledReason={!deleteGate.allowed ? deleteGate.reason : undefined}
-                              testId={`dataset.snapshots.row.${s.id}.delete`}
-                            >
-                              {t('common.delete')}
-                            </ActionButton>
+                            {isAdmin ? (
+                              <>
+                                <ActionButton
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={() => openConfirm({ kind: 'rollback', snapshot: s })}
+                                  disabled={!rollbackGate.allowed}
+                                  disabledReason={!rollbackGate.allowed ? rollbackGate.reason : undefined}
+                                  testId={`dataset.snapshots.row.${s.id}.rollback`}
+                                >
+                                  {t('common.rollback')}
+                                </ActionButton>
+                                <ActionButton
+                                  size="sm"
+                                  variant="danger"
+                                  onClick={() => openConfirm({ kind: 'delete', snapshot: s })}
+                                  disabled={!deleteGate.allowed}
+                                  disabledReason={!deleteGate.allowed ? deleteGate.reason : undefined}
+                                  testId={`dataset.snapshots.row.${s.id}.delete`}
+                                >
+                                  {t('common.delete')}
+                                </ActionButton>
+                              </>
+                            ) : null}
                             <Badge variant="neutral">#{s.id}</Badge>
                           </div>
                         </td>

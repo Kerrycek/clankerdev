@@ -7,7 +7,7 @@ test.describe('@smoke Dataset snapshots', () => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
     await installHaveApiMock(page, {
-      user: { id: 1, login: 'test', level: 1 },
+      user: { id: 1, login: 'admin', level: 99 },
       handlers: {
         'GET datasets/10': () => ({
           id: 10,
@@ -39,7 +39,7 @@ test.describe('@smoke Dataset snapshots', () => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
     await installHaveApiMock(page, {
-      user: { id: 1, login: 'test', level: 1 },
+      user: { id: 1, login: 'admin', level: 99 },
       handlers: {
         'GET datasets/10': () => ({
           id: 10,
@@ -110,7 +110,7 @@ test.describe('@smoke Dataset snapshots', () => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
     await installHaveApiMock(page, {
-      user: { id: 1, login: 'test', level: 1 },
+      user: { id: 1, login: 'admin', level: 99 },
       handlers: {
         'GET datasets/10': () => ({
           id: 10,
@@ -169,7 +169,7 @@ test.describe('@smoke Dataset snapshots', () => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
     await installHaveApiMock(page, {
-      user: { id: 1, login: 'test', level: 1 },
+      user: { id: 1, login: 'admin', level: 99 },
       handlers: {
         'GET datasets/10': () => ({
           id: 10,
@@ -224,5 +224,45 @@ test.describe('@smoke Dataset snapshots', () => {
 
     await expect(page.getByTestId('dataset.snapshots.row.200')).toHaveCount(0);
     expect(deleteCalls).toBe(1);
+  });
+
+  test('normal users can create backups but cannot see restore or snapshot delete actions', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    await installHaveApiMock(page, {
+      user: { id: 2, login: 'member', level: 1 },
+      handlers: {
+        'GET datasets/10': () => ({
+          id: 10,
+          full_name: 'tank/vps/ds10',
+          name: 'ds10',
+          used: 2048,
+          refquota: 10240,
+          snapshots_count: 1,
+          mount_count: 0,
+          export_count: 0,
+          object_state: 'active',
+          vps: { id: 300, hostname: 'alpha.example' },
+        }),
+
+        'GET datasets/10/snapshots': () => ({
+          snapshots: [
+            {
+              id: 200,
+              dataset: 10,
+              name: 'snap-200',
+              label: 'snap-200',
+              created_at: '2026-01-26T00:00:00.000Z',
+            },
+          ],
+        }),
+      },
+    });
+
+    await page.goto('/app/datasets/10/snapshots');
+
+    await expect(page.getByTestId('dataset.snapshots.row.200.download')).toBeVisible();
+    await expect(page.getByTestId('dataset.snapshots.row.200.rollback')).toHaveCount(0);
+    await expect(page.getByTestId('dataset.snapshots.row.200.delete')).toHaveCount(0);
   });
 });

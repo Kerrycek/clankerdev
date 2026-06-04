@@ -9,7 +9,7 @@ test.describe('@smoke Dataset downloads', () => {
     });
 
     await installHaveApiMock(page, {
-      user: { id: 1, login: 'test', level: 1 },
+      user: { id: 1, login: 'admin', level: 99 },
       handlers: {
         'GET datasets/10': () => ({
           id: 10,
@@ -56,7 +56,7 @@ test.describe('@smoke Dataset downloads', () => {
     });
 
     await installHaveApiMock(page, {
-      user: { id: 1, login: 'test', level: 1 },
+      user: { id: 1, login: 'admin', level: 99 },
       handlers: {
         'GET datasets/10': () => ({
           id: 10,
@@ -150,7 +150,7 @@ test.describe('@smoke Dataset downloads', () => {
     });
 
     await installHaveApiMock(page, {
-      user: { id: 1, login: 'test', level: 1 },
+      user: { id: 1, login: 'admin', level: 99 },
       handlers: {
         'GET datasets/10': () => ({
           id: 10,
@@ -213,5 +213,52 @@ test.describe('@smoke Dataset downloads', () => {
 
     await expect(page.getByTestId('dataset.downloads.row.501')).toHaveCount(0);
     expect(deleteCalls).toBe(1);
+  });
+
+  test('normal users can download ready backups but cannot delete download records', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, {
+      sessionToken: 'TEST',
+    });
+
+    await installHaveApiMock(page, {
+      user: { id: 2, login: 'member', level: 1 },
+      handlers: {
+        'GET datasets/10': () => ({
+          id: 10,
+          full_name: 'tank/vps/ds10',
+          name: 'ds10',
+          used: 2048,
+          refquota: 10240,
+          snapshots_count: 1,
+          mount_count: 0,
+          export_count: 1,
+          object_state: 'active',
+          vps: { id: 300, hostname: 'alpha.example' },
+        }),
+
+        'GET snapshot_downloads': () => ({
+          snapshot_downloads: [
+            {
+              id: 501,
+              dataset: 10,
+              snapshot: { id: 200, label: 'snap-200' },
+              format: 'archive',
+              ready: true,
+              url: 'https://example.test/dl.tar.gz',
+              file_name: 'dl.tar.gz',
+              size: 128,
+              sha256: 'a'.repeat(64),
+              expires_at: '2026-02-10T00:00:00.000Z',
+            },
+          ],
+        }),
+      },
+    });
+
+    await page.goto('/app/datasets/10/downloads');
+
+    await expect(page.getByTestId('dataset.downloads.row.501')).toBeVisible();
+    await expect(page.getByTestId('dataset.downloads.row.501.download')).toBeVisible();
+    await expect(page.getByTestId('dataset.downloads.row.501.delete')).toHaveCount(0);
   });
 });

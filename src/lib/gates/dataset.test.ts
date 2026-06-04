@@ -33,4 +33,28 @@ describe('gateDatasetAction', () => {
     const r = gateDatasetAction('download.delete', { dataset: { ...baseDataset, object_state: 'deleted' } });
     expect(r.allowed).toBe(true);
   });
+
+  it('keeps user-safe snapshot and backup actions available to regular users', () => {
+    expect(gateDatasetAction('snapshot.create', { dataset: baseDataset, role: 'user' }).allowed).toBe(true);
+    expect(gateDatasetAction('download.create', { dataset: baseDataset, role: 'user' }).allowed).toBe(true);
+  });
+
+  it('blocks destructive dataset and restore actions for regular users', () => {
+    const actions = [
+      'dataset.create',
+      'dataset.update',
+      'dataset.delete',
+      'snapshot.rollback',
+      'snapshot.delete',
+      'download.delete',
+    ] as const;
+
+    for (const action of actions) {
+      const r = gateDatasetAction(action, { dataset: baseDataset, role: 'user' });
+      expect(r.allowed, action).toBe(false);
+      if (!r.allowed) {
+        expect(r.reason.titleKey).toBe('gate.admin_only.title');
+      }
+    }
+  });
 });

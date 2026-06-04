@@ -86,6 +86,8 @@ export const csStorage = {
   'dataset.manage.title': 'Správa datasetu',
   'dataset.manage.subtitle': 'Vytvářej subdatasety, uprav vlastnosti úložiště nebo dataset odeber.',
   'dataset.manage.current': 'Aktuální dataset: {dataset} (#{id})',
+  'dataset.manage.user_limited.title': 'Akce datasetu spravované administrátory',
+  'dataset.manage.user_limited.body': 'Vytváření, úpravy a mazání datasetů jsou zde omezené na administrátory. Snapshoty a snapshot downloady můžeš dál vytvářet v sousedních tabech.',
   'dataset.manage.create.open': 'Vytvořit subdataset',
   'dataset.manage.create.title': 'Vytvořit subdataset',
   'dataset.manage.create.scope': 'Nadřazený dataset: {dataset}. Nový subdataset se otevře po spuštění akce, pokud API vrátí jeho ID.',
