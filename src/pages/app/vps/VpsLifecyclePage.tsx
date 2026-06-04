@@ -219,6 +219,16 @@ function looksLikeSwapCandidate(vps: Vps): boolean {
   return /\b(playground|pgnd|staging|stage|test|testing|dev)\b/.test(text);
 }
 
+function swapCandidateReasonKeys(candidate: Vps, source: Vps, sourceNodeId: number | null, sourceLocationId: number | null): string[] {
+  const reasons: string[] = [];
+  if (looksLikeSwapCandidate(candidate)) reasons.push('vps.lifecycle.swap.candidate.reason.environment');
+  if (resourceId(candidate.user) === resourceId(source.user)) reasons.push('vps.lifecycle.swap.candidate.reason.owner');
+  if (resourceId(candidate.node) === sourceNodeId) reasons.push('vps.lifecycle.swap.candidate.reason.node');
+  if (vpsLocationId(candidate) === sourceLocationId) reasons.push('vps.lifecycle.swap.candidate.reason.location');
+  if (String(candidate.object_state ?? 'active') === 'active') reasons.push('vps.lifecycle.swap.candidate.reason.active');
+  return reasons;
+}
+
 function rankSwapCandidate(candidate: Vps, source: Vps, sourceNodeId: number | null, sourceLocationId: number | null): number {
   let score = 0;
   if (looksLikeSwapCandidate(candidate)) score += 50;
@@ -272,6 +282,19 @@ function IpList(props: { ips: IpAddress[] | undefined; loading: boolean; empty: 
         </li>
       ))}
     </ul>
+  );
+}
+
+function CompactValueList(props: { values: string[]; empty: string; testId: string }) {
+  if (!props.values.length) return <span className="text-muted" data-testid={props.testId}>{props.empty}</span>;
+  return (
+    <span className="inline-flex flex-col gap-0.5" data-testid={props.testId}>
+      {props.values.map((value) => (
+        <span key={value} className="font-mono text-xs">
+          {value}
+        </span>
+      ))}
+    </span>
   );
 }
 
@@ -759,8 +782,19 @@ export function VpsLifecyclePage() {
   );
 
   const candidateRows = swapCandidatesQ.data ?? [];
+  const likelyCandidateRows = candidateRows.filter((candidate) => looksLikeSwapCandidate(candidate));
   const selectedTarget = targetVpsQ.data;
   const targetLabel = targetVpsQ.isLoading ? t('common.loading') : targetVpsQ.isError ? `#${swap.targetVps}` : vpsLabel(selectedTarget, swap.targetVps);
+  const selectedSourceIps = sourceIps.map(ipAddressText);
+  const selectedTargetIps = targetIps.map(ipAddressText);
+  const sourceHostnameAfter = isAdminMode && !swap.hostname ? vpsLabel(vps, vpsId) : targetLabel;
+  const targetHostnameAfter = isAdminMode && !swap.hostname ? targetLabel : vpsLabel(vps, vpsId);
+  const sourceResourcesAfter = isAdminMode && !swap.resources ? resourceSummary(vps) : resourceSummary(selectedTarget);
+  const targetResourcesAfter = isAdminMode && !swap.resources ? resourceSummary(selectedTarget) : resourceSummary(vps);
+  const sourceExpirationAfter =
+    isAdminMode && !swap.expirations ? formatDateTime((vps as any).expiration_date) : formatDateTime((selectedTarget as any)?.expiration_date);
+  const targetExpirationAfter =
+    isAdminMode && !swap.expirations ? formatDateTime((selectedTarget as any)?.expiration_date) : formatDateTime((vps as any).expiration_date);
 
   const swapPreview = swap.targetVps ? (
     <div className="rounded-md border border-border bg-surface-2 p-3" data-testid="vps.lifecycle.swap.preview">
@@ -791,6 +825,37 @@ export function VpsLifecyclePage() {
             <div><dt className="inline text-faint">{t('vps.lifecycle.swap.preview.resources')}</dt><dd className="inline"> {resourceSummary(selectedTarget)}</dd></div>
             <div><dt className="inline text-faint">{t('vps.lifecycle.swap.preview.expiration')}</dt><dd className="inline"> {formatDateTime((selectedTarget as any)?.expiration_date)}</dd></div>
           </dl>
+        </div>
+      </div>
+
+      <div className="mt-3 overflow-hidden rounded-md border border-border bg-surface" data-testid="vps.lifecycle.swap.preview.after_table">
+        <div className="grid grid-cols-[minmax(7rem,0.8fr)_minmax(0,1fr)_minmax(0,1fr)] border-b border-border bg-surface-2 px-3 py-2 text-xs font-medium text-muted">
+          <div>{t('vps.lifecycle.swap.preview.after_field')}</div>
+          <div>{t('vps.lifecycle.swap.preview.after_source')}</div>
+          <div>{t('vps.lifecycle.swap.preview.after_target')}</div>
+        </div>
+        {[
+          [t('vps.lifecycle.swap.preview.hostname'), sourceHostnameAfter, targetHostnameAfter],
+          [t('vps.lifecycle.swap.preview.owner'), ownerLabel(vps), ownerLabel(selectedTarget)],
+          [t('vps.lifecycle.swap.preview.node'), nodeLabel(vps), nodeLabel(selectedTarget)],
+          [t('vps.lifecycle.swap.preview.location'), vpsLocationLabel(vps), vpsLocationLabel(selectedTarget)],
+          [t('vps.lifecycle.swap.preview.resources'), sourceResourcesAfter, targetResourcesAfter],
+          [t('vps.lifecycle.swap.preview.expiration'), sourceExpirationAfter, targetExpirationAfter],
+        ].map(([label, sourceValue, targetValue]) => (
+          <div key={label} className="grid grid-cols-[minmax(7rem,0.8fr)_minmax(0,1fr)_minmax(0,1fr)] border-b border-border px-3 py-2 text-xs last:border-b-0">
+            <div className="font-medium text-muted">{label}</div>
+            <div className="min-w-0 pr-2">{sourceValue}</div>
+            <div className="min-w-0">{targetValue}</div>
+          </div>
+        ))}
+        <div className="grid grid-cols-[minmax(7rem,0.8fr)_minmax(0,1fr)_minmax(0,1fr)] px-3 py-2 text-xs">
+          <div className="font-medium text-muted">{t('vps.lifecycle.swap.preview.ip_assignments')}</div>
+          <div className="min-w-0 pr-2">
+            <CompactValueList values={selectedTargetIps} empty={t('vps.lifecycle.swap.preview.no_target_ips')} testId="vps.lifecycle.swap.preview.after_table.source_ips" />
+          </div>
+          <div className="min-w-0">
+            <CompactValueList values={selectedSourceIps} empty={t('vps.lifecycle.swap.preview.no_source_ips')} testId="vps.lifecycle.swap.preview.after_table.target_ips" />
+          </div>
         </div>
       </div>
 
@@ -872,10 +937,11 @@ export function VpsLifecyclePage() {
           <div className="text-xs font-medium text-muted">{t('vps.lifecycle.swap.candidates.title')}</div>
           {swapCandidatesQ.isLoading ? (
             <div className="text-sm text-muted">{t('common.loading')}</div>
-          ) : candidateRows.length > 0 ? (
+          ) : likelyCandidateRows.length > 0 ? (
             <div className="grid gap-2 sm:grid-cols-2">
-              {candidateRows.map((candidate) => {
+              {likelyCandidateRows.map((candidate) => {
                 const selected = Number(candidate.id) === swap.targetVps;
+                const reasons = swapCandidateReasonKeys(candidate, vps as Vps, nodeId ?? null, locationId ?? null);
                 return (
                   <button
                     type="button"
@@ -887,17 +953,27 @@ export function VpsLifecyclePage() {
                     onClick={() => setSwap((p) => ({ ...p, targetVps: Number(candidate.id), confirm: false }))}
                     data-testid={`vps.lifecycle.swap.candidate.${candidate.id}`}
                   >
-                    <div className="font-medium">{vpsLabel(candidate, candidate.id)}</div>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="font-medium">{vpsLabel(candidate, candidate.id)}</div>
+                      <span className="shrink-0 rounded-sm border border-border bg-surface-2 px-1.5 py-0.5 text-xs font-medium text-muted">
+                        {t('vps.lifecycle.swap.candidate.badge')}
+                      </span>
+                    </div>
                     <div className="mt-1 text-xs text-faint">
                       {nodeLabel(candidate)} / {vpsLocationLabel(candidate)}
                     </div>
                     <div className="mt-1 text-xs text-faint">{resourceSummary(candidate)}</div>
+                    <div className="mt-2 text-xs text-muted" data-testid={`vps.lifecycle.swap.candidate.${candidate.id}.reasons`}>
+                      {reasons.map((reason) => t(reason)).join(' · ')}
+                    </div>
                   </button>
                 );
               })}
             </div>
           ) : (
-            <div className="text-sm text-muted">{t('vps.lifecycle.swap.candidates.empty')}</div>
+            <Alert variant="neutral" title={t('vps.lifecycle.swap.candidates.empty_title')}>
+              {t('vps.lifecycle.swap.candidates.empty')}
+            </Alert>
           )}
         </div>
 
@@ -923,6 +999,10 @@ export function VpsLifecyclePage() {
         )}
 
         {swapPreview}
+
+        <Alert variant="warn" title={t('vps.lifecycle.swap.warning_title')}>
+          {t('vps.lifecycle.swap.warning_body')}
+        </Alert>
 
         <Checkbox
           checked={swap.confirm}
@@ -954,9 +1034,9 @@ export function VpsLifecyclePage() {
         />
         <CardBody className="space-y-3">
           <div className="text-sm text-muted">{t('vps.lifecycle.swap.entry_summary')}</div>
-          {candidateRows.length > 0 ? (
+          {likelyCandidateRows.length > 0 ? (
             <div className="text-xs text-faint" data-testid="vps.lifecycle.swap.entry_candidates">
-              {t('vps.lifecycle.swap.entry_candidates', { count: candidateRows.length })}
+              {t('vps.lifecycle.swap.entry_candidates', { count: likelyCandidateRows.length })}
             </div>
           ) : null}
         </CardBody>
