@@ -85,6 +85,7 @@ export const enRequests = {
   'requests.detail.admin': 'Admin',
   'requests.detail.api_ip': 'API IP',
   'requests.detail.client_ip': 'Client IP',
+  'requests.detail.card.operations': 'Operational links',
   'requests.detail.card.state': 'State',
   'requests.detail.admin_response': 'Admin response',
   'requests.detail.risk.ip_fraud': 'IP fraud score',

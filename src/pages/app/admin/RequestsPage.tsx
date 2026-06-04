@@ -942,6 +942,24 @@ export function RequestsPage() {
               <span className="ml-2 hidden sm:inline">{t('filters.advanced.label')}</span>
             </Button>
 
+            <Button
+              variant={state === 'awaiting' ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => setState(state === 'awaiting' ? '' : 'awaiting')}
+              testId="admin.requests.quick.awaiting"
+            >
+              {t(requestStateLabelKey('awaiting'))}
+            </Button>
+
+            <Button
+              variant={state === 'pending_correction' ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => setState(state === 'pending_correction' ? '' : 'pending_correction')}
+              testId="admin.requests.quick.pending_correction"
+            >
+              {t(requestStateLabelKey('pending_correction'))}
+            </Button>
+
             <CopyButton
               size="sm"
               variant="secondary"
@@ -1128,11 +1146,27 @@ export function RequestsPage() {
       }
     >
       {isLoading ? (
-        <LoadingState />
+        <LoadingState testId="admin.requests.loading" title={t('common.loading')} />
       ) : error ? (
-        <ErrorState title={t('requests.list.load_error.title')} error={error as any} />
+        <ErrorState
+          testId="admin.requests.error"
+          title={t('requests.list.load_error.title')}
+          error={error as any}
+          onRetry={() => {
+            if (needRegs) void regQ.refetch();
+            if (needChanges) void changeQ.refetch();
+          }}
+          showBack={false}
+          detailsExtra={{ page: isAdmin ? 'admin.requests' : 'app.requests', scope: basePath }}
+        />
       ) : rows.length === 0 ? (
-        <EmptyState title={t('requests.list.empty')} />
+        <EmptyState
+          testId="admin.requests.empty"
+          title={filtersActive ? t('empty.list.no_matches.title') : t('requests.list.empty')}
+          body={filtersActive ? t('empty.list.no_matches.body') : undefined}
+          actionLabel={filtersActive ? t('common.clear_filters') : undefined}
+          onAction={filtersActive ? clearFilters : undefined}
+        />
       ) : (
         <>
           {/* Mobile: cards */}

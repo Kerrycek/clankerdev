@@ -85,6 +85,7 @@ export const csRequests = {
   'requests.detail.admin': 'Administrátor',
   'requests.detail.api_ip': 'API IP',
   'requests.detail.client_ip': 'Klient IP',
+  'requests.detail.card.operations': 'Provozní odkazy',
   'requests.detail.card.state': 'Stav',
   'requests.detail.admin_response': 'Odpověď administrátora',
   'requests.detail.risk.ip_fraud': 'IP skóre podvodu',
