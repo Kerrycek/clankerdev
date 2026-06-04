@@ -441,4 +441,49 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
       },
     });
   });
+
+  test('busy VPS transaction gates lifecycle submissions with an explanation', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
+      handlers: {
+        'GET vpses/123': () => ({ vps }),
+        'GET ip_addresses': () => ({ ip_addresses: [] }),
+        'GET os_templates': () => ({ os_templates: osTemplates }),
+        'GET transaction_chains': (ctx) => {
+          const cls = ctx.searchParams.get('transaction_chain[class_name]');
+          const rowId = ctx.searchParams.get('transaction_chain[row_id]');
+          if (cls === 'Vps' && rowId === '123') {
+            return {
+              transaction_chains: [
+                {
+                  id: 919,
+                  state: 'running',
+                  name: 'Vps#123 lifecycle operation',
+                  progress: 0,
+                  size: 1,
+                },
+              ],
+            };
+          }
+          return { transaction_chains: [] };
+        },
+        'DELETE vpses/123': () => {
+          throw new Error('delete should be blocked by busy gate');
+        },
+      },
+    });
+
+    await page.goto('/admin/vps/123/lifecycle');
+
+    const submit = page.getByTestId('vps.lifecycle.delete.submit');
+    await expect(submit).toBeVisible();
+    await page.getByTestId('vps.lifecycle.delete.confirm').check();
+    await expect(submit).toHaveAttribute('aria-disabled', 'true');
+
+    await submit.click();
+
+    await expect(page.getByTestId('vps.lifecycle.delete.submit.reason')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.delete.submit.reason')).toContainText('Operation in progress');
+  });
 });
