@@ -6,6 +6,8 @@ const vps = {
   id: 123,
   hostname: 'vps123.example',
   object_state: 'active',
+  expiration_date: '2026-08-01T00:00:00.000Z',
+  remind_after_date: '2026-07-20T00:00:00.000Z',
   is_running: false,
   enable_network: true,
   cpus: 2,
@@ -32,8 +34,32 @@ async function installLifecycleMock(page: Page) {
   await installHaveApiMock(page, {
     user: { id: 1, login: 'admin', level: 99 },
     handlers: {
+      'GET vpses': () => ({
+        vpses: [
+          {
+            ...vps,
+            id: 321,
+            hostname: 'vps123-playground',
+            node: { id: 1, domain_name: 'node1.example', location: { id: 2, label: 'Praha-2' } },
+            memory: 2048,
+            swap: 512,
+            diskspace: 20480,
+          },
+        ],
+      }),
       'GET vpses/123': () => ({ vps }),
+      'GET vpses/321': () => ({
+        vps: {
+          ...vps,
+          id: 321,
+          hostname: 'vps123-playground',
+          memory: 2048,
+          swap: 512,
+          diskspace: 20480,
+        },
+      }),
       'GET ip_addresses': () => ({ ip_addresses: [] }),
+      'GET vpses/123/state_logs': () => ({ state_logs: [] }),
       'GET transaction_chains': () => ({ transaction_chains: [] }),
       'GET os_templates': () => ({ os_templates: osTemplates }),
       'PUT vpses/123': () => ({ vps, _meta: { action_state_id: 506 } }),
@@ -163,6 +189,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.goto('/admin/vps/123/lifecycle');
 
+    await page.getByTestId('vps.lifecycle.swap.open').click();
     await page.getByTestId('vps.lifecycle.swap.target').fill('#321');
     await page.getByTestId('vps.lifecycle.swap.resources').uncheck();
     await page.getByTestId('vps.lifecycle.swap.confirm').check();
@@ -180,6 +207,58 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
         hostname: true,
         resources: false,
         expirations: true,
+      },
+    });
+  });
+
+  test('admin can change VPS lifecycle expiration payload', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installLifecycleMock(page);
+    const expirationInput = '2026-09-15T10:45';
+    const expectedExpirationIso = new Date(expirationInput).toISOString();
+
+    await page.goto('/admin/vps/123/lifecycle');
+
+    await expect(page.getByTestId('vps.lifecycle.lifetime')).toBeVisible();
+    await page.getByTestId('lifetimes.admin.edit').click();
+    await page.getByTestId('lifetimes.admin.expiration').fill(expirationInput);
+    await page.getByTestId('lifetimes.admin.reason').fill('extend staging validation');
+
+    const reqPromise = page.waitForRequest(
+      (r) => r.method() === 'PUT' && r.url().includes('/api/v7.0/vpses/123')
+    );
+
+    await page.getByRole('button', { name: 'Save' }).click();
+
+    const req = await reqPromise;
+    expect(req.postDataJSON()).toEqual({
+      vps: {
+        expiration_date: expectedExpirationIso,
+        change_reason: 'extend staging validation',
+      },
+    });
+  });
+
+  test('admin can clear VPS lifecycle expiration and reminder payload', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installLifecycleMock(page);
+
+    await page.goto('/admin/vps/123/lifecycle');
+
+    await page.getByTestId('lifetimes.admin.edit').click();
+    await page.getByTestId('lifetimes.admin.expiration.clear').click();
+
+    const reqPromise = page.waitForRequest(
+      (r) => r.method() === 'PUT' && r.url().includes('/api/v7.0/vpses/123')
+    );
+
+    await page.getByRole('button', { name: 'Save' }).click();
+
+    const req = await reqPromise;
+    expect(req.postDataJSON()).toEqual({
+      vps: {
+        expiration_date: null,
+        remind_after_date: null,
       },
     });
   });
@@ -323,10 +402,12 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await expect(page.getByTestId('vps.lifecycle.clone')).toBeVisible();
     await expect(page.getByTestId('vps.lifecycle.swap')).toBeVisible();
     await expect(page.getByTestId('vps.lifecycle.delete')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.lifetime')).toBeVisible();
     await expect(page.getByTestId('vps.lifecycle.replace')).toHaveCount(0);
     await expect(page.getByTestId('vps.lifecycle.migrate')).toHaveCount(0);
     await expect(page.getByTestId('vps.lifecycle.reinstall')).toHaveCount(0);
     await expect(page.getByTestId('vps.lifecycle.delete.lazy')).toHaveCount(0);
+    await expect(page.getByTestId('lifetimes.admin.edit')).toHaveCount(0);
 
     await page.getByTestId('vps.lifecycle.delete.confirm').check();
 
@@ -388,9 +469,30 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await installHaveApiMock(page, {
       user: { id: 7, login: 'owner', level: 1 },
       handlers: {
-        'GET vpses': () => ({ vpses: [] }),
+        'GET vpses': () => ({
+          vpses: [
+            {
+              ...vps,
+              id: 321,
+              hostname: 'vps123-playground',
+              memory: 4096,
+              swap: 512,
+              diskspace: 40960,
+            },
+            { ...vps, id: 322, hostname: 'vps123-prod-copy' },
+          ],
+        }),
         'GET vpses/123': () => ({ vps }),
-        'GET vpses/321': () => ({ vps: { ...vps, id: 321, hostname: 'vps123-playground' } }),
+        'GET vpses/321': () => ({
+          vps: {
+            ...vps,
+            id: 321,
+            hostname: 'vps123-playground',
+            memory: 4096,
+            swap: 512,
+            diskspace: 40960,
+          },
+        }),
         'GET locations': () => ({ locations: [{ id: 2, label: 'Praha-2' }] }),
         'GET ip_addresses': ({ searchParams }: { searchParams: URLSearchParams }) => {
           const vpsId = searchParams.get('ip_address[vps]');
@@ -418,15 +520,21 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.goto('/app/vps/123/lifecycle');
 
-    await page.getByTestId('vps.lifecycle.swap.target').fill('#321');
+    await page.getByTestId('vps.lifecycle.swap.open').click();
+    await expect(page.getByTestId('vps.lifecycle.swap.drawer')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.swap.candidate.321')).toContainText('vps123-playground');
+    await page.getByTestId('vps.lifecycle.swap.candidate.321').click();
     await expect(page.getByTestId('vps.lifecycle.swap.preview')).toBeVisible();
     await expect(page.getByTestId('vps.lifecycle.swap.preview.source_label')).toContainText('vps123.example');
     await expect(page.getByTestId('vps.lifecycle.swap.preview.target_label')).toContainText('vps123-playground');
+    await expect(page.getByTestId('vps.lifecycle.swap.preview')).toContainText('4.0 GiB');
     await expect(page.getByTestId('vps.lifecycle.swap.preview.source_ips_after')).toContainText('203.0.113.99');
     await expect(page.getByTestId('vps.lifecycle.swap.preview.target_ips_after')).toContainText('203.0.113.10');
     await expect(page.getByTestId('vps.lifecycle.swap.preview.target_ips_after')).toContainText('2001:db8::10');
     await page.getByTestId('vps.lifecycle.swap.confirm').check();
     await expect(page.getByTestId('vps.lifecycle.swap.hostname')).toHaveCount(0);
+    await expect(page.getByTestId('vps.lifecycle.swap.resources')).toHaveCount(0);
+    await expect(page.getByTestId('vps.lifecycle.swap.expirations')).toHaveCount(0);
 
     const reqPromise = page.waitForRequest(
       (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/vpses/123/swap_with')
