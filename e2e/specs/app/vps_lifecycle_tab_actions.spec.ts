@@ -228,7 +228,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
       (r) => r.method() === 'PUT' && r.url().includes('/api/v7.0/vpses/123')
     );
 
-    await page.getByRole('button', { name: 'Save' }).click();
+    await page.getByTestId('lifetimes.admin.modal').getByRole('button', { name: 'Save' }).click();
 
     const req = await reqPromise;
     expect(req.postDataJSON()).toEqual({
@@ -252,7 +252,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
       (r) => r.method() === 'PUT' && r.url().includes('/api/v7.0/vpses/123')
     );
 
-    await page.getByRole('button', { name: 'Save' }).click();
+    await page.getByTestId('lifetimes.admin.modal').getByRole('button', { name: 'Save' }).click();
 
     const req = await reqPromise;
     expect(req.postDataJSON()).toEqual({
