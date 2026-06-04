@@ -4,13 +4,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAppMode } from '../../app/appMode';
 import { useI18n } from '../../app/i18n';
 import { useToasts } from '../../app/toasts';
+import { useChrome } from '../layout/ChromeContext';
 
 import { updateUser } from '../../lib/api/users';
 import { updateVps } from '../../lib/api/vps';
+import { getMetaActionStateId } from '../../lib/api/haveapi';
 import { fetchUserStateLogs, fetchVpsStateLogs } from '../../lib/api/lifetimes';
 import { isoToLocalInput, localInputToIso } from '../../lib/datetimeLocal';
 import { formatErrorMessage } from '../../lib/errors';
 import { formatDateTime } from '../../lib/format';
+import { objectRef } from '../../lib/objectRef';
 import { objectStateBadge } from '../../lib/taskStatus';
 
 import { Badge } from '../ui/Badge';
@@ -74,6 +77,7 @@ export function LifecyclePanel(props: {
   const { t } = useI18n();
   const { mode } = useAppMode();
   const toasts = useToasts();
+  const chrome = useChrome();
   const qc = useQueryClient();
 
   const isAdminUi = mode === 'admin';
@@ -103,8 +107,16 @@ export function LifecyclePanel(props: {
       if (!snooze.valid || !snooze.iso) throw new Error('Invalid remind-after date');
       return await updateVps(props.id, { remind_after_date: snooze.iso });
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
       setSnoozeOpen(false);
+      const asId = getMetaActionStateId(res.meta);
+      if (asId !== undefined) {
+        chrome.trackActionState(asId, {
+          actionLabelKey: 'action.vps.lifecycle.label',
+          objectLabel: props.objectLabel,
+          object: objectRef('Vps', props.id),
+        });
+      }
       toasts.pushToast({
         variant: 'ok',
         title: t('lifetimes.snooze.success.title'),
@@ -214,10 +226,20 @@ export function LifecyclePanel(props: {
       if (props.kind === 'vps') return await updateVps(props.id, adminPayload);
       return await updateUser(props.id, adminPayload);
     },
-    onSuccess: () => {
+    onSuccess: (res) => {
       setAdminOpen(false);
       setConfirmDeleteOpen(false);
       setAdminReason('');
+
+      const asId = getMetaActionStateId(res.meta);
+      if (asId !== undefined) {
+        chrome.trackActionState(asId, {
+          actionLabelKey: props.kind === 'vps' ? 'action.vps.lifecycle.label' : undefined,
+          actionLabel: props.kind === 'user' ? t('lifetimes.panel.title') : undefined,
+          objectLabel: props.objectLabel,
+          object: objectRef(props.kind === 'vps' ? 'Vps' : 'User', props.id),
+        });
+      }
 
       toasts.pushToast({
         variant: 'ok',
