@@ -161,6 +161,7 @@ export function DatasetSnapshotsPage() {
           actionLabelKey: 'action.dataset.snapshot.create.label',
           objectLabel: datasetLabelForToast,
           object: datasetRef,
+          progressTitleKey: 'modal.dataset.snapshot.create.title',
         });
 
       setCreateOpen(false);
@@ -195,6 +196,7 @@ export function DatasetSnapshotsPage() {
           actionLabelKey: 'action.dataset.snapshot.rollback.label',
           objectLabel: datasetLabelForToast,
           object: datasetRef,
+          progressTitleKey: 'modal.dataset.snapshot.rollback.title',
         });
 
       snapsQ.refetch();
@@ -224,6 +226,7 @@ export function DatasetSnapshotsPage() {
           actionLabelKey: 'action.dataset.snapshot.delete.label',
           objectLabel: datasetLabelForToast,
           object: datasetRef,
+          progressTitleKey: 'modal.dataset.snapshot.delete.title',
         });
 
       snapsQ.refetch();
@@ -263,6 +266,7 @@ export function DatasetSnapshotsPage() {
           actionLabelKey: 'action.dataset.download.create.label',
           objectLabel: datasetLabelForToast,
           object: datasetRef,
+          progressTitleKey: 'modal.dataset.download.create.title',
         });
 
       setDownloadOpen(false);
@@ -617,6 +621,9 @@ export function DatasetSnapshotsPage() {
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title={t('dataset.snapshots.create.modal_title')}>
         <div className="space-y-4" data-testid="dataset.snapshots.create.modal">
           <div className="text-sm text-muted">{t('dataset.snapshots.create.help')}</div>
+          <div className="rounded-md border border-border bg-surface-2 p-3 text-xs text-muted">
+            {t('dataset.snapshots.create.scope', { dataset: datasetLabelForToast })}
+          </div>
 
           <div>
             <div className="mb-1 text-xs font-medium text-muted">{t('common.label')}</div>
@@ -657,6 +664,9 @@ export function DatasetSnapshotsPage() {
             {t('dataset.download.modal_help', {
               snapshot: downloadSnapshot ? snapshotLabel(downloadSnapshot) : t('common.na'),
             })}
+          </div>
+          <div className="rounded-md border border-border bg-surface-2 p-3 text-xs text-muted">
+            {t('dataset.download.scope', { dataset: datasetLabelForToast })}
           </div>
 
           <div>

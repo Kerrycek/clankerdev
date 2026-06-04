@@ -112,6 +112,7 @@ export interface SnapshotDownload {
   sha256sum?: string;
   ready?: boolean;
   expiration_date?: string;
+  expires_at?: string;
   [k: string]: unknown;
 }
 

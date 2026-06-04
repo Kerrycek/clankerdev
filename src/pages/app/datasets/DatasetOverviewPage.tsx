@@ -412,7 +412,15 @@ function DatasetManagementCard() {
   const track = (meta: unknown, labelKey: string) => {
     const asId = getMetaActionStateId(meta);
     if (asId !== undefined) {
-      chrome.trackActionState(asId, { actionLabelKey: labelKey, objectLabel, object: datasetRef });
+      const progressTitleKey =
+        labelKey === 'action.dataset.create.label'
+          ? 'modal.dataset.create.title'
+          : labelKey === 'action.dataset.update.label'
+            ? 'modal.dataset.update.title'
+            : labelKey === 'action.dataset.delete.label'
+              ? 'modal.dataset.delete.title'
+              : undefined;
+      chrome.trackActionState(asId, { actionLabelKey: labelKey, objectLabel, object: datasetRef, progressTitleKey });
     }
     refetch();
     refetchChains();
@@ -648,6 +656,9 @@ function DatasetManagementCard() {
               testId="dataset.manage.create.name"
             />
           </label>
+          <div className="rounded-md border border-border bg-surface-2 p-3 text-xs text-muted">
+            {t('dataset.manage.create.scope', { dataset: objectLabel })}
+          </div>
           <Checkbox checked={automount} onChange={setAutomount} label={t('dataset.manage.field.automount')} testId="dataset.manage.create.automount" />
           {fields}
           {createM.isError ? (

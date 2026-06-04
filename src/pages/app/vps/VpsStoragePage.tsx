@@ -83,7 +83,12 @@ export function VpsStoragePage() {
       invalidate();
       const asId = getMetaActionStateId(r.meta);
       if (asId !== undefined) {
-        chrome.trackActionState(asId, { actionLabelKey: 'action.vps.mount.create.label', objectLabel, object: vpsRef });
+        chrome.trackActionState(asId, {
+          actionLabelKey: 'action.vps.mount.create.label',
+          objectLabel,
+          object: vpsRef,
+          progressTitleKey: 'modal.vps.mount.create.title',
+        });
       }
       refetchChains();
     },
@@ -107,7 +112,12 @@ export function VpsStoragePage() {
       invalidate();
       const asId = getMetaActionStateId(r.meta);
       if (asId !== undefined) {
-        chrome.trackActionState(asId, { actionLabelKey: 'action.vps.mount.update.label', objectLabel, object: vpsRef });
+        chrome.trackActionState(asId, {
+          actionLabelKey: 'action.vps.mount.update.label',
+          objectLabel,
+          object: vpsRef,
+          progressTitleKey: 'modal.vps.mount.update.title',
+        });
       }
       refetchChains();
     },
@@ -131,7 +141,12 @@ export function VpsStoragePage() {
       invalidate();
       const asId = getMetaActionStateId((r as any)?.meta);
       if (asId !== undefined) {
-        chrome.trackActionState(asId, { actionLabelKey: 'action.vps.mount.delete.label', objectLabel, object: vpsRef });
+        chrome.trackActionState(asId, {
+          actionLabelKey: 'action.vps.mount.delete.label',
+          objectLabel,
+          object: vpsRef,
+          progressTitleKey: 'modal.vps.mount.delete.title',
+        });
       }
       refetchChains();
     },
@@ -757,6 +772,11 @@ export function VpsStoragePage() {
           </div>
 
           <div className="text-xs text-muted">{t('vps.storage.create.basic_hint')}</div>
+          <div className="rounded-md border border-border bg-surface-2 p-3 text-xs text-muted">
+            {foundDataset
+              ? t('vps.storage.create.scope', { dataset: datasetLabel(foundDataset), vps: objectLabel })
+              : t('vps.storage.create.scope_pending', { vps: objectLabel })}
+          </div>
         </div>
       </Modal>
 

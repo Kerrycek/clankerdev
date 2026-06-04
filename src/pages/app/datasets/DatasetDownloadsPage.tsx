@@ -59,6 +59,17 @@ function snapshotLabel(s: Snapshot): string {
   return String(s.label ?? s.name ?? `#${s.id}`);
 }
 
+function refLabel(ref: unknown, t: (k: any) => string): string {
+  if (!ref || typeof ref !== 'object') return t('common.na');
+  const r = ref as any;
+  return String(r.label ?? r.name ?? (r.id ? `#${r.id}` : t('common.na')));
+}
+
+function downloadExpiration(dl: SnapshotDownload): string | undefined {
+  const raw = (dl as any).expiration_date ?? (dl as any).expires_at;
+  return typeof raw === 'string' && raw.trim() ? raw : undefined;
+}
+
 function uniqSnapshots(input: Snapshot[]): Snapshot[] {
   const byId = new Map<number, Snapshot>();
   for (const s of input) {
@@ -174,6 +185,7 @@ export function DatasetDownloadsPage() {
           actionLabelKey: 'action.dataset.download.create.label',
           objectLabel: datasetLabelForToast,
           object: datasetRef,
+          progressTitleKey: 'modal.dataset.download.create.title',
         });
 
       setCreateOpen(false);
@@ -210,6 +222,7 @@ export function DatasetDownloadsPage() {
           actionLabelKey: 'action.dataset.download.delete.label',
           objectLabel: datasetLabelForToast,
           object: datasetRef,
+          progressTitleKey: 'modal.dataset.download.delete.title',
         });
       dlsQ.refetch();
       refetchChains();
@@ -372,6 +385,9 @@ export function DatasetDownloadsPage() {
               rows.map((dl) => {
                 const snap = dl.snapshot as any;
                 const snapId = typeof snap?.id === 'number' ? Number(snap.id) : undefined;
+                const fromSnap = (dl as any).from_snapshot;
+                const fromSnapId = typeof fromSnap?.id === 'number' ? Number(fromSnap.id) : undefined;
+                const expiration = downloadExpiration(dl);
                 const sha = (dl as any).sha256sum ?? (dl as any).sha256;
                 return (
                   <Card key={dl.id} testId={`dataset.downloads.card.${dl.id}`}>
@@ -386,10 +402,11 @@ export function DatasetDownloadsPage() {
                             {readyBadge(dl, t)}
                             <span>{formatLabel(dl.format, t)}</span>
                             {snapId ? <span>{t('dataset.downloads.snapshot_ref', { id: snapId })}</span> : null}
+                            {fromSnapId ? <span>{t('dataset.downloads.from_snapshot_ref', { id: fromSnapId })}</span> : null}
                           </div>
-                          {dl.expiration_date ? (
+                          {expiration ? (
                             <div className="mt-1 text-xs text-faint">
-                              {t('dataset.downloads.expires_at', { dt: formatDateTime(dl.expiration_date as any) })}
+                              {t('dataset.downloads.expires_at', { dt: formatDateTime(expiration as any) })}
                             </div>
                           ) : null}
                           {sha ? <div className="mt-1 break-words text-xs text-faint">sha256: {String(sha)}</div> : null}
@@ -467,6 +484,7 @@ export function DatasetDownloadsPage() {
                     rows.map((dl) => {
                       const snap = dl.snapshot as any;
                       const snapId = typeof snap?.id === 'number' ? Number(snap.id) : undefined;
+                      const expiration = downloadExpiration(dl);
                       const sha = (dl as any).sha256sum ?? (dl as any).sha256;
 
                       return (
@@ -479,6 +497,13 @@ export function DatasetDownloadsPage() {
                             {snapId ? (
                               <div className="mt-1 text-xs text-faint">{t('dataset.downloads.snapshot_ref', { id: snapId })}</div>
                             ) : null}
+                            {(dl as any).from_snapshot ? (
+                              <div className="mt-1 text-xs text-faint">
+                                {t('dataset.downloads.from_snapshot', {
+                                  snapshot: refLabel((dl as any).from_snapshot, t),
+                                })}
+                              </div>
+                            ) : null}
                             {dl.size !== undefined ? (
                               <div className="mt-1 text-xs text-faint">{t('dataset.downloads.size', { size: formatMiB(dl.size) })}</div>
                             ) : null}
@@ -487,7 +512,7 @@ export function DatasetDownloadsPage() {
                           <td className="py-2 pr-3">{formatLabel(dl.format, t)}</td>
                           <td className="py-2 pr-3">{readyBadge(dl, t)}</td>
                           <td className="py-2 pr-3">
-                            {dl.expiration_date ? formatDateTime(dl.expiration_date as any) : <span className="text-faint">{t('common.na')}</span>}
+                            {expiration ? formatDateTime(expiration as any) : <span className="text-faint">{t('common.na')}</span>}
                           </td>
                           <td className="py-2 pr-4">
                             <div className="flex flex-wrap items-center gap-2">
@@ -579,6 +604,9 @@ export function DatasetDownloadsPage() {
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title={t('dataset.download.modal_title')}>
         <div className="space-y-4" data-testid="dataset.downloads.create.modal">
           <div className="text-sm text-muted">{t('dataset.downloads.create.help')}</div>
+          <div className="rounded-md border border-border bg-surface-2 p-3 text-xs text-muted">
+            {t('dataset.downloads.create.scope', { dataset: datasetLabelForToast })}
+          </div>
 
           <div>
             <div className="mb-1 text-xs font-medium text-muted">{t('dataset.download.field.snapshot')}</div>

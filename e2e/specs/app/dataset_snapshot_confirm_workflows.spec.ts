@@ -33,6 +33,77 @@ test.describe('@smoke Dataset snapshots', () => {
     await expect(page).toHaveURL(/\/app\/datasets\/10\/snapshots$/);
   });
 
+  test('creates snapshot and opens the returned action state progress', async ({ page }) => {
+    let created = false;
+
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'test', level: 1 },
+      handlers: {
+        'GET datasets/10': () => ({
+          id: 10,
+          full_name: 'tank/vps/ds10',
+          name: 'ds10',
+          used: 2048,
+          refquota: 10240,
+          snapshots_count: created ? 1 : 0,
+          mount_count: 0,
+          export_count: 0,
+          object_state: 'active',
+          vps: { id: 300, hostname: 'alpha.example' },
+        }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'GET datasets/10/snapshots': () => ({
+          snapshots: created
+            ? [
+                {
+                  id: 201,
+                  dataset: 10,
+                  name: 'snap-201',
+                  label: 'before-upgrade',
+                  created_at: '2026-01-26T00:00:00.000Z',
+                },
+              ]
+            : [],
+        }),
+        'POST datasets/10/snapshots': () => {
+          created = true;
+          return {
+            snapshot: { id: 201, dataset: 10, name: 'snap-201', label: 'before-upgrade' },
+            _meta: { action_state_id: 701 },
+          };
+        },
+        'GET action_states/701': () => ({
+          action_state: {
+            id: 701,
+            label: 'Create snapshot',
+            status: true,
+            finished: false,
+            current: 1,
+            total: 2,
+          },
+        }),
+      },
+    });
+
+    await page.goto('/app/datasets/10/snapshots');
+
+    await page.getByTestId('dataset.snapshots.create.open').click();
+    await page.getByTestId('dataset.snapshots.create.label').fill('before-upgrade');
+
+    const reqPromise = page.waitForRequest(
+      (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/datasets/10/snapshots')
+    );
+    await page.getByTestId('dataset.snapshots.create.submit').click();
+
+    expect((await reqPromise).postDataJSON()).toEqual({ snapshot: { label: 'before-upgrade' } });
+    await expect(page.getByTestId('modal.action_progress')).toBeVisible();
+    await expect(page.getByTestId('modal.action_progress')).toContainText('#701');
+    await page.getByTestId('modal.action_progress.continue').click();
+    await expect(page.getByTestId('dataset.snapshots.row.201')).toBeVisible();
+  });
+
   test('rollback snapshot uses a confirm dialog', async ({ page }) => {
     let rollbackCalls = 0;
 
