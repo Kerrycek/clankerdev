@@ -23,6 +23,8 @@ const handlers = {
     user: { id: 9, login: 'worker' },
     output: { ok: false, error: 'dataset mount failed' },
     details: { command: 'zfs mount tank/ct/vps100' },
+    stdout: 'created mountpoint',
+    stderr: 'cannot mount dataset',
   }),
 };
 
@@ -41,6 +43,8 @@ test.describe('@pr-smoke TransactionDetailPage', () => {
     await expect(page.getByTestId('transactions.items.detail.info')).toContainText('worker');
     await expect(page.getByTestId('transactions.items.detail.info')).toContainText('40');
     await expect(page.getByTestId('transactions.items.detail.payload')).toContainText('zfs mount tank/ct/vps100');
+    await expect(page.getByTestId('transactions.items.detail.payload')).toContainText('created mountpoint');
+    await expect(page.getByTestId('transactions.items.detail.payload')).toContainText('cannot mount dataset');
     await expect(page.getByTestId('transactions.items.detail.raw')).toBeVisible();
     await page.getByTestId('transactions.items.detail.raw').getByText(/raw|surov/i).click();
     await expect(page.getByTestId('transactions.items.detail.raw.json')).toBeVisible();

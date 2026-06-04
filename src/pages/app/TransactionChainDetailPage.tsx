@@ -27,10 +27,9 @@ import { ObjectHeader } from '../../components/ui/ObjectHeader';
 import { StatusDot } from '../../components/ui/StatusDot';
 import { Table } from '../../components/ui/Table';
 import { TableRowLink } from '../../components/ui/TableRowLink';
-import { TransactionPayloadPanels } from '../../components/ui/TransactionPayloadPanels';
+import { TransactionDebugSections } from '../../components/ui/TransactionPayloadPanels';
 
 import { ChevronDown, ChevronUp, Pin, PinOff } from 'lucide-react';
-import { Alert } from '../../components/ui/Alert';
 
 function txBadge(tx: Transaction) {
   return transactionBadge(tx);
@@ -44,6 +43,25 @@ function chainProgressLabel(chain: TransactionChain): { label: string; pct: numb
   const p = typeof progress === 'number' ? Math.max(0, Math.min(size, progress)) : 0;
   const pct = Math.round((p / size) * 100);
   return { label: `${p}/${size}`, pct };
+}
+
+function firstCurrentTransactionId(transactions: Transaction[] | undefined): number | null {
+  for (const tx of transactions ?? []) {
+    const txId = typeof (tx as any).id === 'number' ? ((tx as any).id as number) : null;
+    if (!txId) continue;
+    if (String((tx as any).done ?? '') !== 'done') return txId;
+  }
+  return null;
+}
+
+function firstFailedTransactionId(transactions: Transaction[] | undefined): number | null {
+  for (const tx of transactions ?? []) {
+    const txId = typeof (tx as any).id === 'number' ? ((tx as any).id as number) : null;
+    if (!txId) continue;
+    const b = transactionBadge(tx);
+    if (b.variant === 'danger') return txId;
+  }
+  return null;
 }
 
 export function TransactionChainDetailPage() {
@@ -106,6 +124,8 @@ export function TransactionChainDetailPage() {
         .filter((txId) => Number.isFinite(txId) && txId > 0),
     [txQ.data]
   );
+  const currentTxId = useMemo(() => firstCurrentTransactionId(txQ.data), [txQ.data]);
+  const failedTxId = useMemo(() => firstFailedTransactionId(txQ.data), [txQ.data]);
 
   const toggleExpanded = (txId: number) => {
     setExpandedTx((prev) => {
@@ -196,6 +216,30 @@ export function TransactionChainDetailPage() {
           <Card testId="transactions.chain.detail.info">
             <CardHeader title={t('transactions.chain.detail.section.info')} />
             <CardBody>
+              <div className="mb-4 grid gap-3 md:grid-cols-3">
+                <DebugSummaryTile label={t('common.state')} value={stateBadge ?? t('common.na')} />
+                <DebugSummaryTile
+                  label={t('common.progress')}
+                  value={progress.pct !== null ? `${progress.label} · ${progress.pct}%` : t('common.na')}
+                />
+                <DebugSummaryTile
+                  label={failedTxId ? t('transactions.tx.failed_here') : t('transactions.tx.current_step')}
+                  value={
+                    failedTxId ? (
+                      <Link className="text-danger hover:underline" to={`${basePath}/transactions/items/${failedTxId}`}>
+                        #{failedTxId}
+                      </Link>
+                    ) : currentTxId ? (
+                      <Link className="text-accent hover:underline" to={`${basePath}/transactions/items/${currentTxId}`}>
+                        #{currentTxId}
+                      </Link>
+                    ) : (
+                      t('common.na')
+                    )
+                  }
+                />
+              </div>
+
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
                   <div className="text-xs text-muted">{t('common.label')}</div>
@@ -339,6 +383,8 @@ export function TransactionChainDetailPage() {
                       const deps = Array.isArray((tx as any).depends_on) ? ((tx as any).depends_on as any[]) : [];
 
                       const expanded = Boolean(txId && expandedTx.has(txId));
+                      const isCurrent = Boolean(txId && currentTxId === txId);
+                      const isFailed = Boolean(txId && failedTxId === txId);
 
                       return (
                         <React.Fragment key={txId ?? name}>
@@ -361,6 +407,8 @@ export function TransactionChainDetailPage() {
                             <td className="px-4 py-2">
                               <div className="flex flex-wrap items-center gap-2">
                                 <Badge variant={b.variant}>{b.label}</Badge>
+                                {isFailed ? <Badge variant="danger">{t('transactions.tx.failed_here')}</Badge> : null}
+                                {!isFailed && isCurrent ? <Badge variant="warn">{t('transactions.tx.current_step')}</Badge> : null}
                                 {urgent ? <Badge variant="warn">{t('transactions.tx.urgent')}</Badge> : null}
                                 {type !== undefined ? (
                                   <Badge variant="neutral">{t('transactions.items.row.type_chip', { type })}</Badge>
@@ -455,12 +503,6 @@ export function TransactionChainDetailPage() {
                             >
                               <td colSpan={10} className="px-4 pb-4">
                                 <div className="mt-2 space-y-3">
-                                  {errorText ? (
-                                    <Alert variant="danger" title={t('transactions.tx.error_title')}>
-                                      <pre className="whitespace-pre-wrap text-xs">{errorText}</pre>
-                                    </Alert>
-                                  ) : null}
-
                                   {deps.length ? (
                                     <div>
                                       <div className="text-xs font-medium text-muted">{t('transactions.tx.depends_on')}</div>
@@ -482,7 +524,14 @@ export function TransactionChainDetailPage() {
                                     </div>
                                   ) : null}
 
-                                  <TransactionPayloadPanels t={t} input={input} output={output} maxHeightClass="max-h-80" />
+                                  <TransactionDebugSections
+                                    t={t}
+                                    input={input}
+                                    output={output}
+                                    errorText={errorText}
+                                    source={tx as any}
+                                    maxHeightClass="max-h-80"
+                                  />
                                 </div>
                               </td>
                             </tr>
@@ -499,6 +548,15 @@ export function TransactionChainDetailPage() {
         </>
       ) : null}
     </DetailShell>
+  );
+}
+
+function DebugSummaryTile(props: { label: React.ReactNode; value: React.ReactNode }) {
+  return (
+    <div className="rounded-md border border-border bg-surface-2 p-3">
+      <div className="text-xs text-muted">{props.label}</div>
+      <div className="mt-1 text-sm font-medium">{props.value}</div>
+    </div>
   );
 }
 

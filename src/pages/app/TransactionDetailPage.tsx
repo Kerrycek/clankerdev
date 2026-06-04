@@ -13,7 +13,7 @@ import { transactionBadge } from '../../lib/taskStatus';
 import { useTierAIntervalMs } from '../../lib/refreshTiers';
 import { formatDateTime } from '../../lib/format';
 import { resourceId, refLabel } from '../../lib/resources';
-import { durationSec, formatPayload, safeJson, transactionErrorText } from '../../lib/txFormat';
+import { durationSec, formatPayload, transactionErrorText } from '../../lib/txFormat';
 
 import { Alert } from '../../components/ui/Alert';
 import { Badge } from '../../components/ui/Badge';
@@ -23,7 +23,7 @@ import { ErrorState } from '../../components/ui/ErrorState';
 import { LinkButton } from '../../components/ui/LinkButton';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { ObjectHeader } from '../../components/ui/ObjectHeader';
-import { TransactionPayloadPanels } from '../../components/ui/TransactionPayloadPanels';
+import { TransactionDebugSections } from '../../components/ui/TransactionPayloadPanels';
 
 function txBadge(tx: Transaction) {
   return transactionBadge(tx);
@@ -91,10 +91,6 @@ export function TransactionDetailPage() {
     : vpsId
       ? refLabel((tx as any)?.vps) || `#${vpsId}`
       : '';
-  const extraPayloads = ['details', 'detail', 'log', 'logs', 'stdout', 'stderr']
-    .map((key) => ({ key, value: formatPayload((tx as any)?.[key]) }))
-    .filter((item) => item.value);
-
   const deps = Array.isArray((tx as any)?.depends_on) ? (((tx as any).depends_on as any[]) ?? []) : [];
 
   return (
@@ -230,7 +226,7 @@ export function TransactionDetailPage() {
 
                 <div>
                   <div className="text-xs text-muted">{t('common.progress')}</div>
-                  <div className="mt-1 text-sm">{progress ?? t('common.na')}</div>
+                  <div className="mt-1 text-sm font-medium">{progress ?? t('common.na')}</div>
                 </div>
 
                 <div>
@@ -312,12 +308,6 @@ export function TransactionDetailPage() {
                   </div>
                 ) : null}
 
-                <div className="sm:col-span-2 lg:col-span-3">
-                  <details className="rounded-md border border-border bg-surface-2 p-3" data-testid="transactions.items.detail.raw">
-                    <summary className="cursor-pointer select-none text-sm font-medium">{t('transactions.items.detail.section.raw')}</summary>
-                    <pre className="mt-2 overflow-x-auto text-xs text-muted" data-testid="transactions.items.detail.raw.json">{safeJson(txQ.data)}</pre>
-                  </details>
-                </div>
               </div>
             </CardBody>
           </Card>
@@ -328,19 +318,17 @@ export function TransactionDetailPage() {
               subtitle={txDone ? t('transactions.items.detail.payload_subtitle_done') : t('transactions.items.detail.payload_subtitle_live')}
             />
             <CardBody>
-              <TransactionPayloadPanels t={t} input={input} output={output} maxHeightClass="max-h-96" />
-              {extraPayloads.length ? (
-                <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                  {extraPayloads.map((item) => (
-                    <div key={item.key}>
-                      <div className="text-xs font-medium text-muted">{item.key}</div>
-                      <pre className="mt-2 max-h-96 overflow-auto rounded-md border border-border bg-surface p-3 text-xs text-muted">
-                        {item.value}
-                      </pre>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
+              <TransactionDebugSections
+                t={t}
+                input={input}
+                output={output}
+                errorText={errorText}
+                source={tx as any}
+                raw={txQ.data}
+                maxHeightClass="max-h-96"
+                rawTestId="transactions.items.detail.raw"
+                testId="transactions.items.detail.debug_sections"
+              />
             </CardBody>
           </Card>
         </>

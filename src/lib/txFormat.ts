@@ -49,12 +49,14 @@ export function transactionErrorText(tx: unknown): string {
   if (!tx || typeof tx !== 'object') return '';
 
   const row = tx as Record<string, unknown>;
-  const keys = ['error', 'errors', 'exception', 'message', 'stderr', 'backtrace'];
-  const direct = firstOwnValue(row, keys);
-  const fromOutput = nestedValue(row['output'], keys);
-  const fromDetails = nestedValue(row['details'], keys);
-  const fromResult = nestedValue(row['result'], keys);
-  const value = direct ?? fromOutput ?? fromDetails ?? fromResult;
+  const primaryKeys = ['error', 'errors', 'exception', 'message'];
+  const fallbackKeys = ['stderr', 'backtrace'];
+  const direct = firstOwnValue(row, primaryKeys);
+  const fromOutput = nestedValue(row['output'], [...primaryKeys, ...fallbackKeys]);
+  const fromDetails = nestedValue(row['details'], [...primaryKeys, ...fallbackKeys]);
+  const fromResult = nestedValue(row['result'], [...primaryKeys, ...fallbackKeys]);
+  const fallback = firstOwnValue(row, fallbackKeys);
+  const value = direct ?? fromOutput ?? fromDetails ?? fromResult ?? fallback;
 
   if (value === undefined) return '';
   if (typeof value === 'string') return value;
