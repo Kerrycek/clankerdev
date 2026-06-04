@@ -1,29 +1,31 @@
-name: Playwright broad smoke
+name: Playwright nightly
 
 on:
-  push:
-    branches:
-      - main
+  schedule:
+    # Nightly Prague morning signal, UTC.
+    - cron: '20 3 * * *'
   workflow_dispatch:
 
 concurrency:
-  group: playwright-broad-smoke-${{ github.ref }}
+  group: playwright-nightly-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  broad-smoke:
-    name: Broad smoke E2E (${{ matrix.project }})
+  nightly:
+    name: Nightly full E2E (${{ matrix.project }})
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 75
 
     strategy:
       fail-fast: false
       matrix:
         include:
           - project: chromium
-            script: e2e:smoke
+            script: e2e:full
+            layer: full mocked user and admin parity
           - project: mobile-chrome
             script: e2e:smoke:mobile
+            layer: mobile broad smoke parity
 
     steps:
       - name: Checkout
@@ -41,18 +43,18 @@ jobs:
       - name: Install Playwright browsers
         run: npm run e2e:install -- --with-deps chromium
 
-      - name: Run broad smoke suite
+      - name: Run nightly E2E suite
         run: npm run ${{ matrix.script }}
 
-      - name: Write broad smoke summary
+      - name: Write nightly summary
         if: always()
         run: |
           {
-            echo "## Playwright broad smoke"
+            echo "## Playwright nightly"
             echo ""
             echo "- Command: \`npm run ${{ matrix.script }}\`"
             echo "- Project: \`${{ matrix.project }}\`"
-            echo "- Layer: mocked app/admin smoke surfaces"
+            echo "- Layer: ${{ matrix.layer }}"
             echo "- Artifacts: HTML report and traces/videos/screenshots are uploaded on failure"
           } >> "$GITHUB_STEP_SUMMARY"
 

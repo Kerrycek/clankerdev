@@ -31,10 +31,21 @@ jobs:
         run: npm ci
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npm run e2e:install -- --with-deps chromium
 
       - name: Run PR smoke E2E
         run: npm run e2e:pr
+
+      - name: Write PR smoke summary
+        if: always()
+        run: |
+          {
+            echo "## Playwright PR smoke"
+            echo ""
+            echo "- Command: \`npm run e2e:pr\`"
+            echo "- Layer: fast mocked critical path on desktop and mobile"
+            echo "- Artifacts: HTML report and traces/videos/screenshots are uploaded on failure"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload Playwright report
         if: failure()
@@ -43,6 +54,7 @@ jobs:
           name: playwright-report
           path: playwright-report
           if-no-files-found: ignore
+          retention-days: 7
 
       - name: Upload Playwright traces
         if: failure()
@@ -51,3 +63,4 @@ jobs:
           name: playwright-test-results
           path: e2e/test-results
           if-no-files-found: ignore
+          retention-days: 7

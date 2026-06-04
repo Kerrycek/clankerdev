@@ -62,15 +62,42 @@ On every pull request, GitHub Actions runs a small Tier 0 PR smoke subset:
 - `.github/workflows/e2e-smoke.yml`
 
 It runs:
-- `npm run e2e:pr:desktop` (`@pr-smoke` on chromium)
-- `npm run e2e:pr:mobile` (`@pr-smoke-mobile` on mobile-chrome)
+- `npm run e2e:pr` (`@pr-smoke` on chromium, then `@pr-smoke-mobile` on mobile-chrome)
 
-The broader `@smoke` / `@smoke-mobile` suite is intentionally separate while old parity specs are being hardened.
-Promote tests into `@pr-smoke` only when they are deterministic enough to block pull requests.
+This PR gate covers mocked critical paths: public overview, authenticated dashboard/VPS entry, tasks drawer behavior,
+transaction/action-state detail payloads, VPS lifecycle payloads, and admin VPS create scope handling. Promote tests into
+`@pr-smoke` only when they are deterministic enough to block pull requests.
 
 On failure, the workflow uploads Playwright artifacts:
 - `playwright-report` (HTML)
-- `e2e/test-results` (traces/videos)
+- `e2e/test-results` (screenshots/videos/traces)
+
+The workflow uses per-ref concurrency with `cancel-in-progress: true`, so only the newest run for a branch continues.
+
+### Broad smoke workflow
+
+The broader app/admin smoke workflow is:
+- `.github/workflows/e2e-broad-smoke.yml`
+
+It runs on pushes to `main` and manually:
+- `npm run e2e:smoke` (`@smoke` on chromium)
+- `npm run e2e:smoke:mobile` (`@smoke-mobile` on mobile-chrome)
+
+Use `npm run e2e:broad` locally to run both projects. This layer includes mocked dashboard/auth, user/admin scope
+switching, VPS list and detail tasks behavior, transaction/action-state expand/collapse payloads, storage snapshots,
+backup/download flows, mount flows, admin surfaces, and session-expiry handling.
+
+### Nightly/full workflow
+
+The longer parity workflow is:
+- `.github/workflows/e2e-nightly.yml`
+
+It runs on the Prague morning schedule and manually:
+- `npm run e2e:full` on chromium
+- `npm run e2e:smoke:mobile` on mobile-chrome
+
+Use `npm run e2e:nightly` locally to mirror the scheduled command set. Keep long user/admin parity coverage here unless a
+workflow is short and stable enough for broad smoke or PR smoke.
 
 ### Local runs
 
@@ -83,10 +110,10 @@ npm run e2e:install
 # Run full e2e with Playwright starting the Vite dev server
 npm run e2e
 
-# Tier 0 smoke subset
+# PR, broad smoke, and nightly/full E2E layers
 npm run e2e:pr
-npm run e2e:smoke
-npm run e2e:smoke:mobile
+npm run e2e:broad
+npm run e2e:nightly
 
 # Release candidate gate (CI scripts + smoke e2e)
 # (Run `npm run e2e:install` once first.)
@@ -103,3 +130,5 @@ E2E_START_SERVER=1 E2E_SCREENSHOTS=1 node scripts/playwright.mjs test
 - If you start the server yourself, omit `E2E_START_SERVER` and set `E2E_BASE_URL`.
 - Real OAuth login is intentionally not part of the default PR suite. If needed, add a separate staging-only workflow
   using credentials from CI secrets.
+- To inspect a trace from CI, download `playwright-test-results`, then run
+  `npx playwright show-trace path/to/trace.zip`.
