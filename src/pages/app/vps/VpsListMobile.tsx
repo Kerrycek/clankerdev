@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Play, RotateCw, Square } from 'lucide-react';
+import { Play, RotateCw, Square, Trash2 } from 'lucide-react';
 
 import type { KeysetPaginationState } from '../../../lib/hooks/useKeysetPagination';
 import { formatMiB, formatUptimeSeconds } from '../../../lib/format';
@@ -27,6 +27,7 @@ interface VpsListMobileProps {
   onStart: (row: VpsListRecord) => void;
   onRequestStop: (row: VpsListRecord) => void;
   onRequestRestart: (row: VpsListRecord) => void;
+  onRequestDelete: (row: VpsListRecord) => void;
 }
 
 export function VpsListMobile({
@@ -40,6 +41,7 @@ export function VpsListMobile({
   onStart,
   onRequestStop,
   onRequestRestart,
+  onRequestDelete,
 }: VpsListMobileProps) {
   return (
     <>
@@ -149,6 +151,19 @@ export function VpsListMobile({
                     onClick={() => onRequestStop(row)}
                   >
                     <Square className="h-4 w-4" />
+                  </ActionButton>
+                  <ActionButton
+                    variant="danger"
+                    size="sm"
+                    testId={`vps.card.${vps.id}.action.delete`}
+                    disabled={!row.deleteGate.allowed}
+                    disabledReason={!row.deleteGate.allowed ? row.deleteGate.reason : undefined}
+                    loading={row.inFlightKind === 'delete'}
+                    ariaLabel={t('vps.list.aria.delete')}
+                    title={t('action.vps.delete.label')}
+                    onClick={() => onRequestDelete(row)}
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </ActionButton>
                 </div>
               </div>

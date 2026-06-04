@@ -5,7 +5,7 @@ import { Plus } from 'lucide-react';
 
 import { fetchActiveTransactionChains, fetchTransactionChains } from '../../lib/api/transactions';
 import { fetchNodes } from '../../lib/api/nodes';
-import { fetchVpsList, vpsRestart, vpsStart, vpsStop } from '../../lib/api/vps';
+import { fetchVpsList, vpsDelete, vpsRestart, vpsStart, vpsStop } from '../../lib/api/vps';
 import { searchUsers } from '../../lib/api/users';
 import { getMetaActionStateId } from '../../lib/api/haveapi';
 import { useDebouncedValue } from '../../lib/hooks/useDebouncedValue';
@@ -183,9 +183,9 @@ export function VpsListPage() {
     return buildTransactionLockIndex(activeChainsQ.data, { onlyActive: true });
   }, [activeChainsQ.data, lockIndexStale]);
 
-  const [confirm, setConfirm] = useState<null | { vpsId: number; kind: 'stop' | 'restart'; force: boolean }>(null);
+  const [confirm, setConfirm] = useState<null | { vpsId: number; kind: 'stop' | 'restart' | 'delete'; force: boolean; lazy?: boolean }>(null);
 
-  const [inFlight, setInFlight] = useState<Record<number, 'start' | 'stop' | 'restart'>>({});
+  const [inFlight, setInFlight] = useState<Record<number, 'start' | 'stop' | 'restart' | 'delete'>>({});
 
   const powerM = useMutation({
     mutationFn: async (vars: { vpsId: number; kind: 'start' | 'stop' | 'restart'; force?: boolean; objectLabel?: string }) => {
@@ -217,6 +217,55 @@ export function VpsListPage() {
         chrome.trackActionState(asId, { actionLabelKey: key, objectLabel, object: objectRef('Vps', vars.vpsId) });
       }
       // Refresh list data (runtime state changes) and busy index.
+      void qc.invalidateQueries({ queryKey: ['vps', 'list'] });
+      void qc.invalidateQueries({ queryKey: ['transaction_chain', 'active'] });
+    },
+    onError: (err: any) => {
+      if (err?.code === 'BUSY') {
+        chrome.openTasks();
+        setActionError({ title: t('toast.action_blocked.title'), body: t('toast.action_blocked.body') });
+        return;
+      }
+
+      setActionError({ title: t('common.action_failed'), body: String(err?.message ?? err) });
+    },
+    onSettled: (_res, _err, vars) => {
+      if (vars) {
+        chrome.releaseLocalLock(objectRef('Vps', vars.vpsId));
+      }
+      setInFlight((prev) => {
+        const next = { ...prev };
+        if (vars) delete next[vars.vpsId];
+        return next;
+      });
+    },
+  });
+
+  const deleteM = useMutation({
+    mutationFn: async (vars: { vpsId: number; lazy?: boolean; objectLabel?: string }) => {
+      const vpsId = vars.vpsId;
+
+      const chainsRes = await fetchTransactionChains({ className: 'Vps', rowId: vpsId, limit: 10 });
+      const busy = hasActiveChains(chainsRes.data);
+      if (busy) {
+        const err: any = new Error('busy');
+        err.code = 'BUSY';
+        throw err;
+      }
+
+      return vpsDelete(vpsId, mode === 'admin' ? { lazy: vars.lazy ?? true } : undefined);
+    },
+    onMutate: ({ vpsId }) => {
+      setActionError(null);
+      chrome.acquireLocalLock(objectRef('Vps', vpsId));
+      setInFlight((prev) => ({ ...prev, [vpsId]: 'delete' }));
+    },
+    onSuccess: (res, vars) => {
+      const asId = getMetaActionStateId(res.meta);
+      if (asId !== undefined) {
+        const objectLabel = vars.objectLabel ? String(vars.objectLabel) : t('common.vps_ref', { id: vars.vpsId });
+        chrome.trackActionState(asId, { actionLabelKey: 'action.vps.delete.label', objectLabel, object: objectRef('Vps', vars.vpsId) });
+      }
       void qc.invalidateQueries({ queryKey: ['vps', 'list'] });
       void qc.invalidateQueries({ queryKey: ['transaction_chain', 'active'] });
     },
@@ -802,6 +851,7 @@ export function VpsListPage() {
             }
             onRequestStop={(row) => setConfirm({ vpsId: row.vps.id, kind: 'stop', force: false })}
             onRequestRestart={(row) => setConfirm({ vpsId: row.vps.id, kind: 'restart', force: false })}
+            onRequestDelete={(row) => setConfirm({ vpsId: row.vps.id, kind: 'delete', force: false, lazy: true })}
           />
 
           <VpsListTable
@@ -821,6 +871,7 @@ export function VpsListPage() {
             }
             onRequestStop={(row) => setConfirm({ vpsId: row.vps.id, kind: 'stop', force: false })}
             onRequestRestart={(row) => setConfirm({ vpsId: row.vps.id, kind: 'restart', force: false })}
+            onRequestDelete={(row) => setConfirm({ vpsId: row.vps.id, kind: 'delete', force: false, lazy: true })}
           />
         </>
       )}
@@ -828,30 +879,57 @@ export function VpsListPage() {
       {confirm ? (
         <ConfirmDialog
           open
-          testId="vps.list.power_confirm"
-          title={confirm.kind === 'stop' ? t('vps.power.stop.confirm_title') : t('vps.power.restart.confirm_title')}
+          testId={confirm.kind === 'delete' ? 'vps.list.delete_confirm' : 'vps.list.power_confirm'}
+          title={
+            confirm.kind === 'delete'
+              ? t('vps.list.delete_confirm.title')
+              : confirm.kind === 'stop'
+                ? t('vps.power.stop.confirm_title')
+                : t('vps.power.restart.confirm_title')
+          }
           description={
-            confirm.kind === 'stop'
+            confirm.kind === 'delete'
+              ? t('vps.list.delete_confirm.description')
+              : confirm.kind === 'stop'
               ? t('vps.power.stop.confirm_desc_basic')
               : t('vps.power.restart.confirm_desc_basic')
           }
-          danger={confirm.kind === 'stop'}
-          confirmLabel={confirm.kind === 'stop' ? t('action.vps.stop.label') : t('action.vps.restart.label')}
+          danger={confirm.kind === 'stop' || confirm.kind === 'delete'}
+          confirmLabel={
+            confirm.kind === 'delete'
+              ? t('action.vps.delete.label')
+              : confirm.kind === 'stop'
+                ? t('action.vps.stop.label')
+                : t('action.vps.restart.label')
+          }
           onCancel={() => setConfirm(null)}
           onConfirm={() => {
             const found = (q.data ?? []).find((v) => Number(v.id) === Number(confirm.vpsId));
             const objectLabel = found?.hostname ? String(found.hostname) : t('common.vps_ref', { id: confirm.vpsId });
-            const vars = { vpsId: confirm.vpsId, kind: confirm.kind, force: confirm.force, objectLabel } as const;
+            const current = confirm;
             setConfirm(null);
-            powerM.mutate(vars);
+            if (current.kind === 'delete') {
+              deleteM.mutate({ vpsId: current.vpsId, lazy: current.lazy, objectLabel });
+            } else {
+              powerM.mutate({ vpsId: current.vpsId, kind: current.kind, force: current.force, objectLabel });
+            }
           }}
         >
-          <Checkbox
-            checked={confirm.force}
-            onChange={(checked) => setConfirm((prev) => (prev ? { ...prev, force: checked } : prev))}
-            label={t('common.force')}
-            testId="vps.list.power_confirm.force"
-          />
+          {confirm.kind === 'delete' && mode === 'admin' ? (
+            <Checkbox
+              checked={Boolean(confirm.lazy)}
+              onChange={(checked) => setConfirm((prev) => (prev ? { ...prev, lazy: checked } : prev))}
+              label={t('vps.lifecycle.delete.lazy')}
+              testId="vps.list.delete_confirm.lazy"
+            />
+          ) : confirm.kind === 'delete' ? null : (
+            <Checkbox
+              checked={confirm.force}
+              onChange={(checked) => setConfirm((prev) => (prev ? { ...prev, force: checked } : prev))}
+              label={t('common.force')}
+              testId="vps.list.power_confirm.force"
+            />
+          )}
         </ConfirmDialog>
       ) : null}
     </ListShell>
