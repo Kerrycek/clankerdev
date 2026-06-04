@@ -1,7 +1,7 @@
 import type { Vps } from '../../../lib/api/vps';
 import type { TransactionLockIndex } from '../../../lib/lockIndex';
 import { transactionLockChainIds } from '../../../lib/lockIndex';
-import { gateVpsAction } from '../../../lib/gates/vps';
+import { gateVpsAction, gateVpsMutation } from '../../../lib/gates/vps';
 import type { GateDecision } from '../../../lib/gates/types';
 import { objectStateBadge, runtimeStateBadge, type BadgeSpec } from '../../../lib/taskStatus';
 import { dotVariantFromBadgeVariant, dotVariantFromRowVariant } from '../../../lib/variantMap';
@@ -22,7 +22,8 @@ export interface VpsListRecord {
   startGate: GateDecision;
   stopGate: GateDecision;
   restartGate: GateDecision;
-  inFlightKind?: 'start' | 'stop' | 'restart';
+  deleteGate: GateDecision;
+  inFlightKind?: 'start' | 'stop' | 'restart' | 'delete';
   memUsed: number | undefined;
   memMax: number | undefined;
   diskUsed: number | undefined;
@@ -98,7 +99,7 @@ export function buildVpsListRecord(args: {
   vps: Vps;
   lockIndex: TransactionLockIndex;
   isLocallyLocked: (id: number) => boolean;
-  inFlightKind?: 'start' | 'stop' | 'restart';
+  inFlightKind?: 'start' | 'stop' | 'restart' | 'delete';
   t: VpsListTranslator;
 }): VpsListRecord {
   const { vps, lockIndex, isLocallyLocked, inFlightKind, t } = args;
@@ -113,6 +114,7 @@ export function buildVpsListRecord(args: {
   const startGate = gateVpsAction('start', { vps, busyLocal, busyTransaction: busyTx });
   const stopGate = gateVpsAction('stop', { vps, busyLocal, busyTransaction: busyTx });
   const restartGate = gateVpsAction('restart', { vps, busyLocal, busyTransaction: busyTx });
+  const deleteGate = gateVpsMutation({ vps, busyLocal, busyTransaction: busyTx });
 
   const memUsed = typeof vps.used_memory === 'number' ? vps.used_memory : undefined;
   const memMax = typeof vps.memory === 'number' ? vps.memory : undefined;
@@ -147,6 +149,7 @@ export function buildVpsListRecord(args: {
     startGate,
     stopGate,
     restartGate,
+    deleteGate,
     inFlightKind,
     memUsed,
     memMax,

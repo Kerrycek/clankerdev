@@ -60,4 +60,74 @@ test.describe('VPS list row navigation', () => {
     await expect(page).toHaveURL(/\/app\/vps(?:\?|$)/);
     await expect(page.getByTestId('vps.list.power_confirm')).toBeVisible();
   });
+
+  test('clicking user delete action opens confirmation without row navigation and sends empty delete payload', async ({ page }) => {
+    const vps = makeVps(300);
+
+    await installHaveApiMock(page, {
+      user: { id: 42, login: 'owner', level: 1 },
+      handlers: {
+        'GET vpses': () => ({ vpses: [vps] }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'DELETE vpses/300': () => ({ _meta: { action_state_id: 901 } }),
+      },
+    });
+
+    await bootstrapVpsAdminWindow(page);
+
+    await page.goto('/app/vps');
+    const row = page.getByTestId('vps.row.300');
+    await expect(row).toBeVisible();
+
+    await row.getByTestId('vps.row.300.action.delete').click();
+
+    await expect(page).toHaveURL(/\/app\/vps(?:\?|$)/);
+    await expect(page.getByTestId('vps.list.delete_confirm')).toBeVisible();
+    await expect(page.getByTestId('vps.list.delete_confirm.lazy')).toHaveCount(0);
+
+    const reqPromise = page.waitForRequest(
+      (r) => r.method() === 'DELETE' && r.url().includes('/api/v7.0/vpses/300')
+    );
+
+    await page.getByTestId('vps.list.delete_confirm.confirm').click();
+
+    const req = await reqPromise;
+    expect(req.postDataJSON()).toEqual({});
+    await expect(page).toHaveURL(/\/app\/vps(?:\?|$)/);
+  });
+
+  test('admin list delete keeps lazy delete as the legacy default', async ({ page }) => {
+    const vps = makeVps(300);
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
+      handlers: {
+        'GET vpses': () => ({ vpses: [vps] }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'DELETE vpses/300': () => ({ _meta: { action_state_id: 902 } }),
+      },
+    });
+
+    await bootstrapVpsAdminWindow(page);
+
+    await page.goto('/admin/vps');
+    const row = page.getByTestId('vps.row.300');
+    await expect(row).toBeVisible();
+
+    await row.getByTestId('vps.row.300.action.delete').click();
+
+    await expect(page).toHaveURL(/\/admin\/vps(?:\?|$)/);
+    await expect(page.getByTestId('vps.list.delete_confirm')).toBeVisible();
+    await expect(page.getByTestId('vps.list.delete_confirm.lazy')).toBeChecked();
+
+    const reqPromise = page.waitForRequest(
+      (r) => r.method() === 'DELETE' && r.url().includes('/api/v7.0/vpses/300')
+    );
+
+    await page.getByTestId('vps.list.delete_confirm.confirm').click();
+
+    const req = await reqPromise;
+    expect(req.postDataJSON()).toEqual({ vps: { lazy: true } });
+    await expect(page).toHaveURL(/\/admin\/vps(?:\?|$)/);
+  });
 });
