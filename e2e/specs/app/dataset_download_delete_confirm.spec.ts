@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 
-test.describe('Dataset downloads', () => {
+test.describe('@smoke Dataset downloads', () => {
   test('create backup deep link opens the create workflow and loads snapshots', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, {
       sessionToken: 'TEST',

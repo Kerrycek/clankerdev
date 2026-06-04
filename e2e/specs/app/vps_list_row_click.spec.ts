@@ -16,7 +16,7 @@ function makeVps(id: number) {
   };
 }
 
-test.describe('VPS list row navigation', () => {
+test.describe('@smoke VPS list row navigation', () => {
   test('clicking a row navigates to VPS detail', async ({ page }) => {
     const vps = makeVps(300);
 

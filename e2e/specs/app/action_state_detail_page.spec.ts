@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 
-test.describe('Action state detail page', () => {
+test.describe('@smoke Action state detail page', () => {
   test('Renders header + cancel dialog and calls cancel endpoint', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, {
       sessionToken: 'TEST_TOKEN',
