@@ -92,7 +92,7 @@ test('admin user detail: edit drawer saves safe account fields', async ({ page }
   await page.getByTestId('admin.user.edit.save').click();
 
   await expect(page.getByTestId('admin.user.edit.drawer')).toHaveCount(0);
-  await expect(page.getByText('Alice Renamed')).toBeVisible();
+  await expect(page.getByTestId('admin.user.details.card').getByText('Alice Renamed')).toBeVisible();
   expect(updates).toEqual([
     {
       user: {

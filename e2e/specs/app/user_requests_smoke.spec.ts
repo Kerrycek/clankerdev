@@ -44,7 +44,7 @@ test('user requests: list and detail are available without admin controls', asyn
   await page.getByTestId('admin.requests.row.registration.123').click();
 
   await expect(page).toHaveURL('/app/requests/registration/123');
-  await expect(page.getByTestId('admin.requests.detail.registration.123.dot')).toBeVisible();
+  await expect(page.getByTestId('admin.requests.detail.registration.123.dot').first()).toBeVisible();
   await expect(page.getByTestId('admin.requests.resolve.open')).toHaveCount(0);
   await expect(page.getByTestId('admin.requests.detail.ops')).toHaveCount(0);
   await expect(page.getByTestId('admin.requests.detail.open_action_state')).toHaveCount(0);
