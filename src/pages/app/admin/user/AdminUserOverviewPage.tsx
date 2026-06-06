@@ -31,12 +31,12 @@ interface EditUserDraft {
 
 function makeEditDraft(u: Record<string, unknown>): EditUserDraft {
   return {
-    fullName: typeof u.full_name === 'string' ? u.full_name : '',
-    email: typeof u.email === 'string' ? u.email : '',
-    address: typeof u.address === 'string' ? u.address : '',
-    level: typeof u.level === 'number' && Number.isFinite(u.level) ? String(u.level) : '',
-    info: typeof u.info === 'string' ? u.info : '',
-    mailerEnabled: u.mailer_enabled !== false,
+    fullName: typeof u['full_name'] === 'string' ? u['full_name'] : '',
+    email: typeof u['email'] === 'string' ? u['email'] : '',
+    address: typeof u['address'] === 'string' ? u['address'] : '',
+    level: typeof u['level'] === 'number' && Number.isFinite(u['level']) ? String(u['level']) : '',
+    info: typeof u['info'] === 'string' ? u['info'] : '',
+    mailerEnabled: u['mailer_enabled'] !== false,
   };
 }
 
