@@ -31,6 +31,7 @@
     "e2e:pr": "npm run e2e:pr:desktop && npm run e2e:pr:mobile",
     "e2e:pr:desktop": "npm run env:check && E2E_START_SERVER=1 node scripts/playwright.mjs test --pr-smoke --project=chromium",
     "e2e:pr:mobile": "npm run env:check && E2E_START_SERVER=1 node scripts/playwright.mjs test --pr-smoke-mobile --project=mobile-chrome",
+    "e2e:live:manual": "npm run env:check && node scripts/playwright.mjs test --live-manual --project=chromium",
     "audit:ui-strings": "node scripts/audit-ui-strings.mjs --write work/audits/ui_strings.md",
     "audit:ui-strings:check": "node scripts/audit-ui-strings.mjs --fail --write work/audits/ui_strings.md",
     "audit:pages": "node scripts/audit-page-integrity.mjs",

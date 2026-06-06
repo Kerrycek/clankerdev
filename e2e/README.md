@@ -83,6 +83,14 @@ Prefer mocked HaveAPI tests for default CI coverage:
 Real-environment smoke is intentionally separate from default CI. If needed, add a staging-only workflow that uses CI
 secrets and document the environment, credentials source, and expected blast radius in that workflow or `deploy/`.
 
+## Live/manual dev checks
+
+Use `npm run e2e:live:manual` only for explicit human-run checks against
+`dev.crucio.cz`. The live parity spec is skipped unless `E2E_LIVE_PARITY=1` is
+set and object IDs are provided through environment variables. It opens real
+VPS and dataset workflows and checks confirmation gates without submitting
+destructive actions. See `deploy/dev.crucio.cz/live-parity-workflows.md`.
+
 ## Auth model
 
 Most tests use `bootstrapVpsAdminWindow()` plus `installHaveApiMock()` to emulate an authenticated HaveAPI session.
