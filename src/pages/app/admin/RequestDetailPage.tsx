@@ -36,6 +36,7 @@ import { Button } from '../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
 import { ErrorState } from '../../../components/ui/ErrorState';
 import { Input } from '../../../components/ui/Input';
+import { LinkButton } from '../../../components/ui/LinkButton';
 import { LoadingState } from '../../../components/ui/LoadingState';
 import { Modal } from '../../../components/ui/Modal';
 import { Select } from '../../../components/ui/Select';
@@ -59,6 +60,25 @@ function userLabel(u: any): string {
   if (typeof u.label === 'string') return u.label;
   if (typeof u.id === 'number') return `#${u.id}`;
   return String(u);
+}
+
+function resourceId(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) return Math.floor(value);
+  if (typeof value === 'string' && /^\d+$/.test(value.trim())) return Number(value.trim());
+  if (value && typeof value === 'object') {
+    const raw = (value as any).id ?? (value as any).value;
+    return resourceId(raw);
+  }
+  return null;
+}
+
+function firstResourceId(source: Record<string, unknown> | null | undefined, keys: string[]): number | null {
+  if (!source) return null;
+  for (const key of keys) {
+    const id = resourceId(source[key]);
+    if (id) return id;
+  }
+  return null;
 }
 
 
@@ -127,6 +147,21 @@ export function RequestDetailPage() {
     if (!request || reqType !== 'registration') return null;
     return fraudRiskBadge(request as any);
   }, [reqType, request]);
+
+  const actionStateId = firstResourceId(request as any, [
+    'action_state',
+    'action_state_id',
+    'resolve_action_state',
+    'resolve_action_state_id',
+  ]);
+  const transactionChainId = firstResourceId(request as any, [
+    'transaction_chain',
+    'transaction_chain_id',
+    'resolve_transaction_chain',
+    'resolve_transaction_chain_id',
+  ]);
+  const transactionId = firstResourceId(request as any, ['transaction', 'transaction_id', 'resolve_transaction', 'resolve_transaction_id']);
+  const hasOperationalLinks = Boolean(actionStateId || transactionChainId || transactionId);
 
   async function submitResolve() {
     if (!reqType || !reqId) return;
@@ -246,6 +281,16 @@ export function RequestDetailPage() {
             <Link className="text-sm text-accent hover:underline" to={`${basePath}/requests`}>
               {t('common.back')}
             </Link>
+            {isAdmin && actionStateId ? (
+              <LinkButton to={`${basePath}/action-states/${actionStateId}`} variant="secondary" testId="admin.requests.detail.open_action_state">
+                {t('common.action_state')} #{actionStateId}
+              </LinkButton>
+            ) : null}
+            {isAdmin && transactionChainId ? (
+              <LinkButton to={`${basePath}/transactions/${transactionChainId}`} variant="secondary" testId="admin.requests.detail.open_chain">
+                {t('common.chain')} #{transactionChainId}
+              </LinkButton>
+            ) : null}
             {isAdmin ? (
               <Button variant="primary" onClick={() => setResolveOpen(true)} testId="admin.requests.resolve.open">
                 {t('requests.resolve.button')}
@@ -379,6 +424,46 @@ export function RequestDetailPage() {
               ) : null}
             </CardBody>
           </Card>
+
+          {isAdmin && hasOperationalLinks ? (
+            <Card testId="admin.requests.detail.ops">
+              <CardHeader title={t('requests.detail.card.operations')} />
+              <CardBody>
+                <div className="flex flex-wrap gap-2">
+                  {actionStateId ? (
+                    <LinkButton
+                      to={`${basePath}/action-states/${actionStateId}`}
+                      variant="secondary"
+                      size="sm"
+                      testId="admin.requests.detail.ops.action_state"
+                    >
+                      {t('common.action_state')} #{actionStateId}
+                    </LinkButton>
+                  ) : null}
+                  {transactionChainId ? (
+                    <LinkButton
+                      to={`${basePath}/transactions/${transactionChainId}`}
+                      variant="secondary"
+                      size="sm"
+                      testId="admin.requests.detail.ops.chain"
+                    >
+                      {t('common.open_chain')}
+                    </LinkButton>
+                  ) : null}
+                  {transactionId ? (
+                    <LinkButton
+                      to={`${basePath}/transactions/items/${transactionId}`}
+                      variant="secondary"
+                      size="sm"
+                      testId="admin.requests.detail.ops.transaction"
+                    >
+                      {t('common.open_transaction')}
+                    </LinkButton>
+                  ) : null}
+                </div>
+              </CardBody>
+            </Card>
+          ) : null}
 
           {reqType === 'registration' ? (
             <>

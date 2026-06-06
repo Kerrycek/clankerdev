@@ -19,6 +19,9 @@ function reg(id: number) {
     updated_at: '2026-03-01T11:00:00Z',
     api_ip_addr: '203.0.113.10',
     client_ip_addr: '198.51.100.20',
+    action_state_id: 77,
+    transaction_chain_id: 88,
+    transaction_id: 99,
   };
 }
 
@@ -41,7 +44,9 @@ test('user requests: list and detail are available without admin controls', asyn
   await page.getByTestId('admin.requests.row.registration.123').click();
 
   await expect(page).toHaveURL('/app/requests/registration/123');
-  await expect(page.getByTestId('admin.requests.detail.registration.123.dot')).toBeVisible();
+  await expect(page.getByTestId('admin.requests.detail.registration.123.dot').first()).toBeVisible();
   await expect(page.getByTestId('admin.requests.resolve.open')).toHaveCount(0);
+  await expect(page.getByTestId('admin.requests.detail.ops')).toHaveCount(0);
+  await expect(page.getByTestId('admin.requests.detail.open_action_state')).toHaveCount(0);
   await expect(page.getByText('Please fix your address.')).toBeVisible();
 });
