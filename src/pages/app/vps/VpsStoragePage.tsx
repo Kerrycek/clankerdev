@@ -17,9 +17,10 @@ import { Modal } from '../../../components/ui/Modal';
 import { Select } from '../../../components/ui/Select';
 import { Spinner } from '../../../components/ui/Spinner';
 import { Table } from '../../../components/ui/Table';
+import { fetchDataset, type Dataset as StorageDataset } from '../../../lib/api/datasets';
 import { createVpsMount, deleteVpsMount, fetchVpsMounts, findDatasetByName, updateVpsMount, type Dataset, type VpsMount } from '../../../lib/api/vpsMounts';
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
-import { formatDateTime } from '../../../lib/format';
+import { formatDateTime, formatMiB } from '../../../lib/format';
 import { gateVpsMutation } from '../../../lib/gates/vps';
 import { preflightVpsNotBusy } from './vpsPreflight';
 import { useVps } from './VpsContext';
@@ -44,6 +45,20 @@ function datasetId(d: any): number | null {
 
 function canonicalBool(v: unknown, fallback: boolean): boolean {
   return v === true ? true : v === false ? false : fallback;
+}
+
+function finiteNumber(v: unknown): number | null {
+  return typeof v === 'number' && Number.isFinite(v) ? v : null;
+}
+
+function positiveNumber(v: unknown): number | null {
+  const n = finiteNumber(v);
+  return n !== null && n > 0 ? n : null;
+}
+
+function rootDatasetField(ds: StorageDataset | null | undefined, fallback: any, key: string): unknown {
+  if (ds && (ds as any)[key] !== undefined) return (ds as any)[key];
+  return fallback?.[key];
 }
 
 export function VpsStoragePage() {
@@ -357,6 +372,25 @@ export function VpsStoragePage() {
   const rootDatasetId = datasetId((vps as any).dataset);
   const rootDatasetLabel = datasetLabel((vps as any).dataset);
 
+  const rootDatasetQ = useQuery({
+    queryKey: ['datasets', 'show', rootDatasetId, 'vps-storage-root'],
+    enabled: rootDatasetId !== null,
+    queryFn: async () => (await fetchDataset(rootDatasetId as number, { includes: 'vps,environment' })).data,
+    refetchOnWindowFocus: false,
+  });
+
+  const rootDataset = rootDatasetQ.data ?? null;
+  const rootDatasetFallback = (vps as any).dataset;
+  const rootUsed = finiteNumber(rootDatasetField(rootDataset, rootDatasetFallback, 'used'));
+  const rootAvail = finiteNumber(rootDatasetField(rootDataset, rootDatasetFallback, 'avail'));
+  const rootRefquota = positiveNumber(rootDatasetField(rootDataset, rootDatasetFallback, 'refquota'));
+  const rootQuota = positiveNumber(rootDatasetField(rootDataset, rootDatasetFallback, 'quota'));
+  const rootReferenced = finiteNumber(rootDatasetField(rootDataset, rootDatasetFallback, 'referenced'));
+  const rootMountCount = rootDatasetField(rootDataset, rootDatasetFallback, 'mount_count');
+  const rootSnapshotCount = rootDatasetField(rootDataset, rootDatasetFallback, 'snapshots_count');
+  const rootExportCount = rootDatasetField(rootDataset, rootDatasetFallback, 'export_count');
+  const rootState = rootDatasetField(rootDataset, rootDatasetFallback, 'object_state');
+
   return (
     <div data-testid="vps.storage.page" className="space-y-4">
       <Card testId="vps.storage.summary">
@@ -406,6 +440,55 @@ export function VpsStoragePage() {
             subtitle={t('vps.storage.root_dataset.subtitle', { dataset: rootDatasetLabel })}
           />
           <CardBody>
+            {rootDatasetQ.isLoading ? (
+              <div className="mb-3 flex items-center gap-2 text-sm text-muted" data-testid="vps.storage.root_dataset.loading">
+                <Spinner /> {t('common.loading')}
+              </div>
+            ) : rootDatasetQ.isError ? (
+              <div className="mb-3">
+                <Alert title={t('vps.storage.root_dataset.load_error')} variant="danger">
+                  {String((rootDatasetQ.error as any)?.message ?? rootDatasetQ.error)}
+                </Alert>
+              </div>
+            ) : null}
+
+            <div className="mb-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4" data-testid="vps.storage.root_dataset.metadata">
+              <div>
+                <div className="text-xs text-faint">{t('dataset.field.used')}</div>
+                <div className="font-medium text-fg">{rootUsed !== null ? formatMiB(rootUsed) : t('common.na')}</div>
+              </div>
+              <div>
+                <div className="text-xs text-faint">{t('dataset.field.available')}</div>
+                <div className="font-medium text-fg">{rootAvail !== null ? formatMiB(rootAvail) : t('common.na')}</div>
+              </div>
+              <div>
+                <div className="text-xs text-faint">{t('dataset.field.reference_quota')}</div>
+                <div className="font-medium text-fg">{rootRefquota !== null ? formatMiB(rootRefquota) : '∞'}</div>
+              </div>
+              <div>
+                <div className="text-xs text-faint">{t('dataset.field.quota')}</div>
+                <div className="font-medium text-fg">{rootQuota !== null ? formatMiB(rootQuota) : t('common.na')}</div>
+              </div>
+              <div>
+                <div className="text-xs text-faint">{t('dataset.field.referenced')}</div>
+                <div className="font-medium text-fg">{rootReferenced !== null ? formatMiB(rootReferenced) : t('common.na')}</div>
+              </div>
+              <div>
+                <div className="text-xs text-faint">{t('common.state')}</div>
+                <div className="font-medium text-fg">{rootState ? String(rootState) : t('common.na')}</div>
+              </div>
+              <div>
+                <div className="text-xs text-faint">{t('vps.storage.root_dataset.related')}</div>
+                <div className="font-medium text-fg">
+                  {t('vps.storage.root_dataset.related_counts', {
+                    snapshots: rootSnapshotCount ?? t('common.na'),
+                    mounts: rootMountCount ?? t('common.na'),
+                    exports: rootExportCount ?? t('common.na'),
+                  })}
+                </div>
+              </div>
+            </div>
+
             <div className="flex flex-wrap gap-2">
               <ChipLink to={`${basePath}/datasets/${rootDatasetId}`} data-testid="vps.storage.root_dataset.open">
                 {t('vps.storage.root_dataset.open')}
@@ -500,6 +583,18 @@ export function VpsStoragePage() {
                               value: canonicalBool((m as any).use_default_map, true) ? t('common.yes') : t('common.no'),
                             })}
                           </span>
+                          <span>
+                            {t('vps.storage.mounts.field.current_state', {
+                              value: String((m as any).current_state ?? t('common.na')),
+                            })}
+                          </span>
+                          {(m as any).expiration_date ? (
+                            <span>
+                              {t('vps.storage.mounts.field.expiration', {
+                                value: formatDateTime((m as any).expiration_date),
+                              })}
+                            </span>
+                          ) : null}
                         </div>
 
                         <div className="mt-3 flex items-center justify-end gap-2">
@@ -538,9 +633,11 @@ export function VpsStoragePage() {
                       <th className="px-4 py-3">{t('vps.storage.mounts.field.enabled_short')}</th>
                       {canAdmin ? <th className="px-4 py-3">{t('vps.storage.mounts.field.master_short')}</th> : null}
                       <th className="px-4 py-3">{t('vps.storage.mounts.field.on_start_fail_short')}</th>
-                                                <th className="px-4 py-3">{t('vps.storage.mounts.field.default_map_short')}</th>
-                          <th className="px-4 py-3">{t('vps.storage.mounts.field.created')}</th>
-                          <th className="px-4 py-3">{t('vps.storage.mounts.field.updated')}</th>
+                      <th className="px-4 py-3">{t('vps.storage.mounts.field.default_map_short')}</th>
+                      <th className="px-4 py-3">{t('vps.storage.mounts.field.current_state_short')}</th>
+                      <th className="px-4 py-3">{t('vps.storage.mounts.field.expiration_short')}</th>
+                      <th className="px-4 py-3">{t('vps.storage.mounts.field.created')}</th>
+                      <th className="px-4 py-3">{t('vps.storage.mounts.field.updated')}</th>
                       <th className="px-4 py-3"></th>
                     </tr>
                   </thead>
@@ -579,9 +676,11 @@ export function VpsStoragePage() {
                             </td>
                           ) : null}
                           <td className="px-4 py-3">{String((m as any).on_start_fail ?? '—')}</td>
-                                                        <td className="px-4 py-3">{canonicalBool((m as any).use_default_map, true) ? t('common.yes') : t('common.no')}</td>
-                              <td className="px-4 py-3 text-xs text-muted">{formatDateTime((m as any).created_at)}</td>
-                              <td className="px-4 py-3 text-xs text-muted">{formatDateTime((m as any).updated_at)}</td>
+                          <td className="px-4 py-3">{canonicalBool((m as any).use_default_map, true) ? t('common.yes') : t('common.no')}</td>
+                          <td className="px-4 py-3">{String((m as any).current_state ?? '—')}</td>
+                          <td className="px-4 py-3 text-xs text-muted">{formatDateTime((m as any).expiration_date)}</td>
+                          <td className="px-4 py-3 text-xs text-muted">{formatDateTime((m as any).created_at)}</td>
+                          <td className="px-4 py-3 text-xs text-muted">{formatDateTime((m as any).updated_at)}</td>
                           <td className="px-4 py-3 text-right">
                             <div className="inline-flex items-center gap-2">
                               <Button

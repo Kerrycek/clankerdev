@@ -26,6 +26,16 @@ const vps = {
 const dataset = {
   id: 10,
   name: 'tank/data',
+  full_name: 'tank/data',
+  used: 5120,
+  avail: 15360,
+  referenced: 4096,
+  refquota: 20480,
+  quota: 0,
+  snapshots_count: 3,
+  mount_count: 1,
+  export_count: 2,
+  object_state: 'active',
 };
 
 test.describe('@smoke VPS storage tab mounts', () => {
@@ -41,6 +51,8 @@ test.describe('@smoke VPS storage tab mounts', () => {
         enabled: true,
         on_start_fail: 'ignore',
         use_default_map: true,
+        current_state: 'mounted',
+        expiration_date: '2026-02-28T00:00:00Z',
         dataset: { id: 9, name: 'tank/old' },
         created_at: '2026-01-31T00:00:00Z',
       },
@@ -50,6 +62,7 @@ test.describe('@smoke VPS storage tab mounts', () => {
       user: { id: 1, login: 'user', level: 1 },
       handlers: {
         'GET vpses/123': () => ({ vps }),
+        'GET datasets/10': () => ({ dataset }),
         'GET ip_addresses': () => ({ ip_addresses: [] }),
         'GET transaction_chains': () => ({ transaction_chains: [] }),
         'GET vpses/123/mounts': () => ({ mounts }),
@@ -63,6 +76,7 @@ test.describe('@smoke VPS storage tab mounts', () => {
             enabled: true,
             on_start_fail: 'ignore',
             use_default_map: true,
+            current_state: 'mounted',
             dataset: { ...dataset },
             created_at: '2026-01-31T01:00:00Z',
           };
@@ -86,6 +100,10 @@ test.describe('@smoke VPS storage tab mounts', () => {
 
     await expect(page.getByTestId('vps.storage.page')).toBeVisible();
     await expect(page.getByTestId('vps.storage.root_dataset')).toBeVisible();
+    await expect(page.getByTestId('vps.storage.root_dataset.metadata')).toContainText('5.0 GiB');
+    await expect(page.getByTestId('vps.storage.root_dataset.metadata')).toContainText('15 GiB');
+    await expect(page.getByTestId('vps.storage.root_dataset.metadata')).toContainText('20 GiB');
+    await expect(page.getByTestId('vps.storage.root_dataset.metadata')).toContainText('3 snapshots');
     await expect(page.getByTestId('vps.storage.root_dataset.open')).toHaveAttribute('href', '/app/datasets/10');
     await expect(page.getByTestId('vps.storage.root_dataset.snapshots')).toHaveAttribute('href', '/app/datasets/10/snapshots');
     await expect(page.getByTestId('vps.storage.root_dataset.create_snapshot')).toHaveAttribute('href', '/app/datasets/10/snapshots?action=create');
@@ -94,9 +112,13 @@ test.describe('@smoke VPS storage tab mounts', () => {
     await expect(page.getByTestId('vps.storage.root_dataset.downloads')).toHaveAttribute('href', '/app/datasets/10/downloads');
     await expect(page.getByTestId('vps.storage.mounts.table')).toBeVisible();
     await expect(page.getByTestId('vps.storage.mounts.row.1.dataset')).toHaveAttribute('href', '/app/datasets/9');
+    await expect(page.getByTestId('vps.storage.mounts.row.1')).toContainText('mounted');
+    await expect(page.getByTestId('vps.storage.mounts.row.1')).toContainText('2026');
+    await expect(page.getByText('Master enabled')).toHaveCount(0);
 
     await page.getByTestId('vps.storage.mounts.add').click();
     await expect(page.getByTestId('vps.storage.mounts.create')).toBeVisible();
+    await expect(page.getByTestId('vps.storage.mounts.create.master_enabled')).toHaveCount(0);
 
     await page.getByTestId('vps.storage.mounts.create.dataset').fill('tank/data');
     await page.getByTestId('vps.storage.mounts.create.find_dataset').click();
@@ -181,5 +203,45 @@ test.describe('@smoke VPS storage tab mounts', () => {
     await reqPromise;
 
     await expect(page.getByTestId('vps.storage.mounts.delete_confirm')).toBeHidden();
+  });
+
+  test('shows admin-only mount controls to admins', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
+      handlers: {
+        'GET vpses/123': () => ({ vps }),
+        'GET datasets/10': () => ({ dataset }),
+        'GET ip_addresses': () => ({ ip_addresses: [] }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'GET vpses/123/mounts': () => ({
+          mounts: [
+            {
+              id: 1,
+              mountpoint: '/mnt/old',
+              type: 'nfs',
+              mode: 'ro',
+              enabled: true,
+              master_enabled: false,
+              on_start_fail: 'ignore',
+              use_default_map: true,
+              current_state: 'mounted',
+              dataset: { id: 9, name: 'tank/old' },
+              created_at: '2026-01-31T00:00:00Z',
+            },
+          ],
+        }),
+      },
+    });
+
+    await page.goto('/admin/vps/123/storage');
+
+    await expect(page.getByTestId('vps.storage.root_dataset.open')).toHaveAttribute('href', '/admin/datasets/10');
+    await expect(page.getByTestId('vps.storage.mounts.table')).toContainText('Master');
+    await expect(page.getByTestId('vps.storage.mounts.row.1')).toContainText('No');
+
+    await page.getByTestId('vps.storage.mounts.add').click();
+    await expect(page.getByTestId('vps.storage.mounts.create.master_enabled')).toBeVisible();
   });
 });
