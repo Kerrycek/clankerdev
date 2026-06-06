@@ -432,7 +432,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await expect(page).toHaveURL(/\/admin\/vps$/);
   });
 
-  test('regular user gets legacy clone, swap and delete actions without admin-only lifecycle actions', async ({ page }) => {
+  test('@workflow-matrix regular user gets legacy clone, swap and delete actions without admin-only lifecycle actions', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installHaveApiMock(page, {
       user: { id: 7, login: 'owner', level: 1 },

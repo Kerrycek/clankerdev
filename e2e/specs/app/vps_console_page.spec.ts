@@ -25,7 +25,7 @@ const vps = {
   dns_resolver: 'inherit',
 };
 
-test.describe('@smoke VPS console page', () => {
+test.describe('@workflow-matrix @smoke VPS console page', () => {
   test('renders console iframe and can recreate session', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 

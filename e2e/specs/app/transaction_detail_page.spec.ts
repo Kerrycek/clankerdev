@@ -28,7 +28,7 @@ const handlers = {
   }),
 };
 
-test.describe('@pr-smoke TransactionDetailPage', () => {
+test.describe('@workflow-matrix @pr-smoke TransactionDetailPage', () => {
   test('renders user transaction details without broken admin node link', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_TOKEN' });
     await installHaveApiMock(page, { handlers });

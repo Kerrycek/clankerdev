@@ -23,7 +23,7 @@ function registration(id: number, state = 'awaiting') {
   };
 }
 
-test('admin requests: pending quick filters and operational links are visible', async ({ page }) => {
+test('@workflow-matrix @smoke admin requests: pending quick filters and operational links are visible', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
 
   const states: Array<string | null> = [];

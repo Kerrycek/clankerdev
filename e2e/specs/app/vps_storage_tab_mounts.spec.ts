@@ -28,7 +28,7 @@ const dataset = {
   name: 'tank/data',
 };
 
-test.describe('@smoke VPS storage tab mounts', () => {
+test.describe('@workflow-matrix @smoke VPS storage tab mounts', () => {
   test('creates mount by finding dataset and posting', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
