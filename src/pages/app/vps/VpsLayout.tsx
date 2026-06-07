@@ -424,6 +424,7 @@ export function VpsLayout() {
         chainsStale,
         busyLocalLock,
         activeChainIds,
+        sshCommand,
       }}
     >
       <DetailShell>

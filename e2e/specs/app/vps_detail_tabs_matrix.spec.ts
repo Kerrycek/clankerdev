@@ -28,6 +28,21 @@ const vps = {
   dns_resolver: 'inherit',
 };
 
+const dataset = {
+  id: 10,
+  name: 'tank/data',
+  full_name: 'tank/data',
+  used: 5120,
+  avail: 15360,
+  referenced: 4096,
+  refquota: 20480,
+  quota: 0,
+  snapshots_count: 1,
+  mount_count: 1,
+  export_count: 0,
+  object_state: 'active',
+};
+
 test('@workflow-matrix @smoke VPS detail tabs expose storage, lifecycle, and console routes', async ({ page }) => {
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_USER_SESSION' });
 
@@ -44,6 +59,7 @@ test('@workflow-matrix @smoke VPS detail tabs expose storage, lifecycle, and con
     handlers: {
       'GET vpses': () => ({ vpses: [vps], _meta: { total_count: 1 } }),
       'GET vpses/123': () => ({ vps }),
+      'GET datasets/10': () => ({ dataset }),
       'GET ip_addresses': () => ({ ip_addresses: [] }),
       'GET vpses/123/statuses': () => ({ statuses: [] }),
       'GET vpses/123/mounts': () => ({
@@ -67,7 +83,7 @@ test('@workflow-matrix @smoke VPS detail tabs expose storage, lifecycle, and con
       'GET transaction_chains': () => ({ transaction_chains: [] }),
       'POST vpses/123/console_token': () => ({
         token: 'T1',
-        expiration: '2026-01-31T00:00:00Z',
+        expiration: '2027-01-31T00:00:00Z',
       }),
     },
   });

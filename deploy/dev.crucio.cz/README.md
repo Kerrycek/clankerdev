@@ -77,6 +77,16 @@ SMOKE_USER_ID=... SMOKE_ENVIRONMENT_ID=... \
 Review the plan, then rerun with `--apply` against the local test API only. See
 `networking-smoke-data.md` for the expected rows and smoke-test checklist.
 
+## Live parity workflow
+
+Real VPS and dataset operation checks are documented in
+`live-parity-workflows.md`. They are human-run on `dev.crucio.cz` only and must
+use disposable objects with obvious `webui-next-live-test-*`,
+`webui-next-playground-*`, or `webui-next-staging-*` names. The optional
+Playwright helper is opt-in via `E2E_LIVE_PARITY=1` and only opens workflows to
+verify live labels, previews, and confirmation gates; it does not submit
+destructive actions.
+
 ## Build source
 
 This repository now contains the WebUI Next source project. Product fixes
