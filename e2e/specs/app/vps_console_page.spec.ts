@@ -25,18 +25,21 @@ const vps = {
   dns_resolver: 'inherit',
 };
 
+async function routeConsoleStub(page: Parameters<typeof installHaveApiMock>[0]) {
+  await page.route('**/_console/**', async (route) => {
+    return route.fulfill({
+      status: 200,
+      contentType: 'text/html',
+      body: '<!doctype html><html><body>console stub</body></html>',
+    });
+  });
+}
+
 test.describe('@smoke VPS console page', () => {
   test('renders console iframe and can recreate session', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
-    // Stub console_router endpoint to avoid noisy network failures.
-    await page.route('**/_console/**', async (route) => {
-      return route.fulfill({
-        status: 200,
-        contentType: 'text/html',
-        body: '<!doctype html><html><body>console stub</body></html>',
-      });
-    });
+    await routeConsoleStub(page);
 
     let createCalls = 0;
     let deleteCalls = 0;
@@ -45,13 +48,13 @@ test.describe('@smoke VPS console page', () => {
       user: { id: 1, login: 'test', level: 1 },
       handlers: {
         'GET vpses/123': () => ({ vps }),
-        'GET ip_addresses': () => ({ ip_addresses: [] }),
+        'GET ip_addresses': () => ({ ip_addresses: [{ id: 5, addr: '203.0.113.10', network: { role: 'public' } }] }),
         'GET transaction_chains': () => ({ transaction_chains: [] }),
         'POST vpses/123/console_token': () => {
           createCalls += 1;
           return {
             token: createCalls === 1 ? 'T1' : 'T2',
-            expiration: '2026-01-31T00:00:00Z',
+            expiration: '2027-01-31T00:00:00Z',
           };
         },
         'DELETE vpses/123/console_token': () => {
@@ -64,8 +67,11 @@ test.describe('@smoke VPS console page', () => {
     await page.goto('/app/vps/123/console');
 
     await expect(page.getByTestId('vps.console.page')).toBeVisible();
+    await expect(page.getByTestId('vps.console.connection_state')).toContainText(/Connecting|Connected/);
     await expect(page.getByTestId('vps.console.new_session')).toBeVisible();
+    await expect(page.getByTestId('vps.console.reconnect')).toBeVisible();
     await expect(page.getByTestId('vps.console.copy_url')).toBeVisible();
+    await expect(page.getByTestId('vps.console.copy_ssh')).toBeVisible();
     await expect(page.getByTestId('vps.console.open_new_tab')).toHaveAttribute(
       'href',
       /\/_console\/console\/123\?session=T1/
@@ -74,12 +80,19 @@ test.describe('@smoke VPS console page', () => {
     const iframe = page.getByTestId('vps.console.iframe');
     await expect(iframe).toBeVisible();
     await expect(page.getByTestId('vps.console.frame_status')).toContainText('Connected');
+    await expect(page.getByTestId('vps.console.connection_state')).toContainText('Connected');
 
     const src1 = await iframe.getAttribute('src');
     expect(src1).toContain('/_console/console/123?session=T1');
 
     await page.getByTestId('vps.console.copy_url').click();
     await expect(page.getByTestId('vps.console.copy_url')).toContainText(/Copied|Copy failed/);
+    await page.getByTestId('vps.console.copy_ssh').click();
+    await expect(page.getByTestId('vps.console.copy_ssh')).toContainText(/Copied|Copy failed/);
+
+    await page.getByTestId('vps.console.reconnect').click();
+    await expect(page.getByTestId('vps.console.connection_state')).toContainText(/Reconnecting|Connected/);
+    await expect(page.getByTestId('vps.console.frame_status')).toContainText('Connected');
 
     const normalBox = await page.getByTestId('vps.console.frame').boundingBox();
     await page.getByTestId('vps.console.focus').click();
@@ -100,5 +113,86 @@ test.describe('@smoke VPS console page', () => {
 
     expect(deleteCalls).toBe(1);
     expect(createCalls).toBeGreaterThanOrEqual(2);
+  });
+
+  test('preserves direct admin console reload', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await routeConsoleStub(page);
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 90 },
+      handlers: {
+        'GET vpses/123': () => ({ vps }),
+        'GET ip_addresses': () => ({ ip_addresses: [] }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'POST vpses/123/console_token': () => ({
+          token: 'ADMIN',
+          expiration: '2027-01-31T00:00:00Z',
+        }),
+      },
+    });
+
+    await page.goto('/admin/vps/123/console');
+    await expect(page.getByTestId('vps.console.page')).toBeVisible();
+    await expect(page.getByTestId('vps.console.open_new_tab')).toHaveAttribute(
+      'href',
+      /\/_console\/console\/123\?session=ADMIN/
+    );
+    await expect(page.getByTestId('vps.console.frame_status')).toContainText('Connected');
+  });
+
+  test('shows actionable API error state', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    let createCalls = 0;
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'test', level: 1 },
+      handlers: {
+        'GET vpses/123': () => ({ vps }),
+        'GET ip_addresses': () => ({ ip_addresses: [] }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'POST vpses/123/console_token': () => {
+          createCalls += 1;
+          return {
+            status: false,
+            message: 'console token unavailable',
+            response: null,
+          };
+        },
+      },
+    });
+
+    await page.goto('/app/vps/123/console');
+
+    await expect(page.getByTestId('vps.console.connection_state')).toContainText('Failed');
+    await expect(page.getByTestId('vps.console.error')).toContainText('The console session could not be created');
+    await expect(page.getByTestId('vps.console.retry')).toBeVisible();
+
+    await page.getByTestId('vps.console.retry').click();
+    await expect.poll(() => createCalls).toBeGreaterThanOrEqual(2);
+  });
+
+  test('shows unavailable state when no console server is configured', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'test', level: 1 },
+      handlers: {
+        'GET vpses/123': () => ({
+          vps: {
+            ...vps,
+            node: { ...vps.node, location: { label: 'dc1' } },
+          },
+        }),
+        'GET ip_addresses': () => ({ ip_addresses: [] }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+      },
+    });
+
+    await page.goto('/app/vps/123/console');
+
+    await expect(page.getByTestId('vps.console.connection_state')).toContainText('Unavailable');
+    await expect(page.getByTestId('vps.console.server_missing')).toContainText('remote console server configured');
+    await expect(page.getByTestId('vps.console.iframe')).toHaveCount(0);
   });
 });
