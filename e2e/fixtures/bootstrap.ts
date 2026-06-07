@@ -33,12 +33,76 @@ export async function bootstrapVpsAdminWindow(page: Page, opts?: BootstrapVpsAdm
 
   await page.addInitScript(
     ({ apiUrl, apiVersion, sessionToken, description, webuiNext }) => {
-      (window as any).vpsAdmin = {
+      const withPreservedAuth = (nextConfig: Record<string, any>, previousConfig?: Record<string, any>) => {
+        let preservedApi = previousConfig?.api ?? nextConfig.api ?? { url: apiUrl, version: apiVersion };
+        let preservedSessionToken =
+          nextConfig.sessionToken !== undefined ? nextConfig.sessionToken : previousConfig?.sessionToken;
+        let preservedAccessToken =
+          nextConfig.accessToken !== undefined ? nextConfig.accessToken : previousConfig?.accessToken;
+
+        const mergedConfig = {
+          ...nextConfig,
+          description: nextConfig.description ?? previousConfig?.description ?? description,
+          webuiNext: {
+            ...(previousConfig?.webuiNext ?? {}),
+            ...(nextConfig.webuiNext ?? webuiNext),
+          },
+        };
+
+        Object.defineProperty(mergedConfig, 'api', {
+          configurable: true,
+          enumerable: true,
+          get() {
+            return preservedApi;
+          },
+          set(value) {
+            if (!preservedApi && value !== undefined) preservedApi = value;
+          },
+        });
+
+        Object.defineProperty(mergedConfig, 'sessionToken', {
+          configurable: true,
+          enumerable: true,
+          get() {
+            return preservedSessionToken;
+          },
+          set(value) {
+            if (value !== undefined) preservedSessionToken = value;
+          },
+        });
+
+        Object.defineProperty(mergedConfig, 'accessToken', {
+          configurable: true,
+          enumerable: true,
+          get() {
+            return preservedAccessToken;
+          },
+          set(value) {
+            if (value !== undefined) preservedAccessToken = value;
+          },
+        });
+
+        return mergedConfig;
+      };
+
+      let currentConfig = withPreservedAuth({
         api: { url: apiUrl, version: apiVersion },
         sessionToken,
         description,
         webuiNext,
-      };
+      });
+
+      Object.defineProperty(window, 'vpsAdmin', {
+        configurable: true,
+        enumerable: true,
+        get() {
+          return currentConfig;
+        },
+        set(nextConfig) {
+          const next = nextConfig && typeof nextConfig === 'object' ? nextConfig : {};
+          currentConfig = withPreservedAuth(next, currentConfig);
+        },
+      });
     },
     { apiUrl, apiVersion, sessionToken, description, webuiNext }
   );

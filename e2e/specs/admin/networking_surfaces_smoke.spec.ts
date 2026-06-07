@@ -5,6 +5,7 @@ import { installHaveApiMock } from '../../fixtures/haveapi';
 test.describe('Admin / Networking surfaces (smoke)', () => {
   test('host IP list and assignment audit render', async ({ page }) => {
     await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
       handlers: {
         'GET host_ip_addresses': () => ({
           host_ip_addresses: [
@@ -49,6 +50,7 @@ test.describe('Admin / Networking surfaces (smoke)', () => {
 
   test('live monitor and traffic users render', async ({ page }) => {
     await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
       handlers: {
         'GET network_interface_monitors': () => ({
           network_interface_monitors: [

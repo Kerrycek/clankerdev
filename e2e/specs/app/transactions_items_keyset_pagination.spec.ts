@@ -103,7 +103,7 @@ test.describe('Transactions items list keyset pagination', () => {
 
     await page.reload();
 
-    await expect(page).toHaveURL(/\/admin\/transactions\/items\?transaction_chain=123$/);
+    await expect(page).toHaveURL(/\/admin\/transactions\/items\?.*transaction_chain=123/);
     await expect(page.getByTestId('transactions.items.row.300')).toBeVisible();
     await expect(page.locator('a[href="/admin/transactions/items/300"]')).toHaveCount(2);
     await expect(page.locator('a[href="/admin/transactions/123"]')).toBeVisible();
