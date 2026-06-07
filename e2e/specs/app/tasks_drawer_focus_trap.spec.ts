@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 
-test('@pr-smoke @pr-smoke-mobile @smoke @smoke-mobile Tasks drawer opens as a non-modal side panel', async ({ page }) => {
+test('@workflow-matrix @pr-smoke @pr-smoke-mobile @smoke @smoke-mobile Tasks drawer opens as a non-modal side panel', async ({ page }) => {
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
   await installHaveApiMock(page, {
@@ -40,7 +40,7 @@ test('@pr-smoke @pr-smoke-mobile @smoke @smoke-mobile Tasks drawer opens as a no
   await expect(page).toHaveURL(/\/app\/vps(?:\?.*)?$/);
 });
 
-test('@pr-smoke Tasks drawer cards stay readable in the narrow side panel', async ({ page }) => {
+test('@workflow-matrix @pr-smoke Tasks drawer cards stay readable in the narrow side panel', async ({ page }) => {
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
   await installHaveApiMock(page, {
@@ -93,7 +93,7 @@ test('@pr-smoke Tasks drawer cards stay readable in the narrow side panel', asyn
   expect(actionsBox!.x + actionsBox!.width).toBeLessThanOrEqual(rowBox!.x + rowBox!.width);
 });
 
-test('@pr-smoke Tasks drawer can inspect action state transactions without leaving the page', async ({ page }) => {
+test('@workflow-matrix @pr-smoke Tasks drawer can inspect action state transactions without leaving the page', async ({ page }) => {
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
   await installHaveApiMock(page, {

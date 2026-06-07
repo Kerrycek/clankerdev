@@ -34,6 +34,39 @@ Playwright is split into three practical layers:
 
 Use `npm run e2e:full` when you only want the full desktop parity suite.
 
+## User/admin workflow matrix
+
+The focused matrix is tagged `@workflow-matrix` and is mocked/CI-safe by default:
+
+```bash
+E2E_START_SERVER=1 node scripts/playwright.mjs test --grep '@workflow-matrix' --project=chromium
+```
+
+Checklist:
+
+| Area | Role | Coverage | Spec |
+| --- | --- | --- | --- |
+| Dashboard/home load | user | Authenticated dashboard and VPS KPI navigation | `e2e/specs/app/authenticated_home_smoke.spec.ts` |
+| Admin landing | admin | Admin diagnostics and shortcut page | `e2e/specs/admin/admin_info_page.spec.ts` |
+| VPS list | user/admin | List load, row navigation, and list action containment | `e2e/specs/app/authenticated_home_smoke.spec.ts`, `e2e/specs/app/vps_list_row_click.spec.ts` |
+| VPS detail tabs | user | Overview to storage/lifecycle/console tab navigation | `e2e/specs/app/vps_detail_tabs_matrix.spec.ts` |
+| Tasks drawer | user | Drawer open, non-modal behavior, action-state inspection | `e2e/specs/app/tasks_drawer_focus_trap.spec.ts` |
+| Action state detail | user/admin | Header, cancel dialog, related transactions, payload expansion | `e2e/specs/app/action_state_detail_page.spec.ts` |
+| Transaction/action-state detail | user/admin | Transaction detail payloads and admin-only operational links | `e2e/specs/app/transaction_detail_page.spec.ts`, `e2e/specs/app/action_state_detail_page.spec.ts` |
+| Create VPS form smoke | user/admin | User-scope and admin-scope create payloads without live mutation | `e2e/specs/app/vps_create_admin_flow.spec.ts` |
+| Storage tab | user | Root dataset links and mount create/delete flows with mocked mutations | `e2e/specs/app/vps_storage_tab_mounts.spec.ts` |
+| Lifecycle action visibility | user/admin | User-visible actions and admin-only lifecycle controls/gating | `e2e/specs/app/vps_lifecycle_tab_actions.spec.ts` |
+| Requests list/detail | user/admin | User request detail without admin controls; admin operational links | `e2e/specs/app/user_requests_smoke.spec.ts`, `e2e/specs/admin/requests_operations_smoke.spec.ts` |
+| Console tab smoke | user | Stubbed console iframe and token recreation path | `e2e/specs/app/vps_console_page.spec.ts` |
+
+All specs in the matrix use `bootstrapVpsAdminWindow()` and `installHaveApiMock()` or local Playwright route stubs for
+destructive or external actions. They do not require VPN-only services, committed credentials, real cookies, or production
+mutations.
+
+Live/manual coverage is intentionally separate from default CI. Any future real-environment smoke should be tagged
+outside `@workflow-matrix`, use credentials from env vars or CI secrets only, document its target environment, and remain
+opt-in so PRs do not depend on VPN-only services.
+
 ## Running locally
 
 ```bash

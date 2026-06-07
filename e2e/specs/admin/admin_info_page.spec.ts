@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 
-test('admin info page: renders diagnostics and shortcuts', async ({ page }) => {
+test('@workflow-matrix @smoke admin info page: renders diagnostics and shortcuts', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
 
   await installHaveApiMock(page, {

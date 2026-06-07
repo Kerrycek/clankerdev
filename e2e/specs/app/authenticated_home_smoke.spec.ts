@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 
-test('@pr-smoke @pr-smoke-mobile @smoke @smoke-mobile authenticated user lands on dashboard and can open VPS list', async ({ page }) => {
+test('@workflow-matrix @pr-smoke @pr-smoke-mobile @smoke @smoke-mobile authenticated user lands on dashboard and can open VPS list', async ({ page }) => {
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_USER_SESSION' });
 
   await installHaveApiMock(page, {

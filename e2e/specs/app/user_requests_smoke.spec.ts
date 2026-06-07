@@ -25,7 +25,7 @@ function reg(id: number) {
   };
 }
 
-test('user requests: list and detail are available without admin controls', async ({ page }) => {
+test('@workflow-matrix @smoke user requests: list and detail are available without admin controls', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
 
   await installHaveApiMock(page, {

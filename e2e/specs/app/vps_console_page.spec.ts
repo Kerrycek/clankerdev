@@ -36,7 +36,7 @@ async function routeConsoleStub(page: Parameters<typeof installHaveApiMock>[0]) 
 }
 
 test.describe('@smoke VPS console page', () => {
-  test('renders console iframe and can recreate session', async ({ page }) => {
+  test('@workflow-matrix renders console iframe and can recreate session', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
     await routeConsoleStub(page);
