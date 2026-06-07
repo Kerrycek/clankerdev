@@ -56,6 +56,14 @@ function parseIds(input: unknown, limit: number): number[] {
   return ids;
 }
 
+function compactFailureSummary(value: unknown, maxLength = 180): string | null {
+  const text = transactionErrorText(value).trim();
+  if (!text) return null;
+  const singleLine = text.replace(/\s+/g, ' ').trim();
+  if (singleLine.length <= maxLength) return singleLine;
+  return `${singleLine.slice(0, maxLength - 1)}…`;
+}
+
 export function TransactionChainsPanel(props: {
   limit?: number;
   filterText?: string;
@@ -231,14 +239,18 @@ export function TransactionChainsPanel(props: {
     const expanded = expandedChainId === c.id;
 
     const createdAt = formatDateTime(c.created_at);
+    const updatedAt = (c as any).updated_at ? formatDateTime(String((c as any).updated_at)) : null;
+    const failureSummary = compactFailureSummary(c);
     const meta: React.ReactNode[] = [];
     meta.push(<span key="id">#{c.id}</span>);
     meta.push(<span key="created">{i18n.t('tasks.meta.created', { time: createdAt })}</span>);
+    if (updatedAt) meta.push(<span key="updated">{i18n.t('tasks.meta.updated', { time: updatedAt })}</span>);
 
     return (
       <div
         key={c.id}
         className={clsx('rounded-md border p-3', toneSurfaceClass(toneVariant))}
+        data-testid={`tasks.chain.row.${c.id}`}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -283,6 +295,7 @@ export function TransactionChainsPanel(props: {
                 variant="secondary"
                 onClick={() => toggleChain(c.id, expanded)}
                 title={expanded ? i18n.t('tasks.action.hide_items') : i18n.t('tasks.action.items')}
+                testId={`tasks.chain.toggle.${c.id}`}
               >
                 {expanded ? i18n.t('tasks.action.hide_items') : i18n.t('tasks.action.items')}
               </Button>
@@ -296,8 +309,14 @@ export function TransactionChainsPanel(props: {
           </div>
         ) : null}
 
+        {failureSummary ? (
+          <div className="mt-3 rounded-md border border-danger-border bg-danger-bg p-2 text-xs text-muted" data-testid={`tasks.chain.failure.${c.id}`}>
+            <span className="font-medium text-danger">{i18n.t('tasks.meta.failure_summary')}:</span> {failureSummary}
+          </div>
+        ) : null}
+
         {expanded ? (
-          <div className="mt-3 border-t border-border pt-3">
+          <div className="mt-3 border-t border-border pt-3" data-testid={`tasks.chain.expanded.${c.id}`}>
             {txQ.isLoading || txQ.isFetching ? (
               <div className="text-xs text-muted">
                 <Spinner label={i18n.t('common.loading')} />
@@ -351,7 +370,11 @@ export function TransactionChainsPanel(props: {
                   const hasPayload = Boolean(input || output);
 
                   return (
-                    <div key={tx.id} className="rounded-md border border-border bg-surface p-2">
+                    <div
+                      key={tx.id}
+                      className="rounded-md border border-border bg-surface p-2"
+                      data-testid={hasTxId ? `tasks.chain.tx.card.${txId}` : undefined}
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <Link className="text-xs font-medium underline" to={`${basePath}/transactions/items/${tx.id}`}>
