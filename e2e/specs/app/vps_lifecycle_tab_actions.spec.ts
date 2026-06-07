@@ -22,6 +22,7 @@ const vps = {
   node: { id: 1, domain_name: 'node1.example', location: { id: 2, label: 'Praha-2' } },
   user: { id: 7, login: 'owner' },
   os_template: { id: 6, label: 'Debian latest' },
+  dataset: { id: 901, name: 'tank/vps/123/root' },
   dns_resolver: 'inherit',
 };
 
@@ -40,6 +41,7 @@ async function installLifecycleMock(page: Page) {
             ...vps,
             id: 321,
             hostname: 'vps123-playground',
+            dataset: { id: 902, name: 'tank/vps/321/root' },
             node: { id: 1, domain_name: 'node1.example', location: { id: 2, label: 'Praha-2' } },
             memory: 2048,
             swap: 512,
@@ -53,6 +55,7 @@ async function installLifecycleMock(page: Page) {
           ...vps,
           id: 321,
           hostname: 'vps123-playground',
+          dataset: { id: 902, name: 'tank/vps/321/root' },
           memory: 2048,
           swap: 512,
           diskspace: 20480,
@@ -213,6 +216,9 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await expect(page.getByTestId('vps.lifecycle.swap.preview')).toBeVisible();
     await expect(page.getByTestId('vps.lifecycle.swap.preview.after_table')).toContainText('This VPS receives');
     await expect(page.getByTestId('vps.lifecycle.swap.preview.after_table')).toContainText('Target receives');
+    await expect(page.getByTestId('vps.lifecycle.swap.impact.dataset')).toContainText('tank/vps/123/root');
+    await expect(page.getByTestId('vps.lifecycle.swap.impact.dataset')).toContainText('tank/vps/321/root');
+    await expect(page.getByTestId('vps.lifecycle.swap.preview.after_table')).toContainText('tank/vps/321/root');
     await expect(page.getByTestId('vps.lifecycle.swap.preview.options')).toContainText('Admin swap flags');
     await page.getByTestId('vps.lifecycle.swap.resources').uncheck();
     await page.getByTestId('vps.lifecycle.swap.confirm').check();
@@ -545,6 +551,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
               ...vps,
               id: 321,
               hostname: 'vps123-playground',
+              dataset: { id: 902, name: 'tank/vps/321/root' },
               memory: 4096,
               swap: 512,
               diskspace: 40960,
@@ -558,6 +565,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
             ...vps,
             id: 321,
             hostname: 'vps123-playground',
+            dataset: { id: 902, name: 'tank/vps/321/root' },
             memory: 4096,
             swap: 512,
             diskspace: 40960,
@@ -601,6 +609,12 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await expect(page.getByTestId('vps.lifecycle.swap.preview.source_label')).toContainText('vps123.example');
     await expect(page.getByTestId('vps.lifecycle.swap.preview.target_label')).toContainText('vps123-playground');
     await expect(page.getByTestId('vps.lifecycle.swap.preview')).toContainText('4.0 GiB');
+    await expect(page.getByTestId('vps.lifecycle.swap.impact.target_fit')).toContainText('staging/playground naming');
+    await expect(page.getByTestId('vps.lifecycle.swap.impact.network')).toContainText('Current VPS has 2 IP address(es); target has 1');
+    await expect(page.getByTestId('vps.lifecycle.swap.impact.dataset')).toContainText('tank/vps/123/root');
+    await expect(page.getByTestId('vps.lifecycle.swap.impact.dataset')).toContainText('tank/vps/321/root');
+    await expect(page.getByTestId('vps.lifecycle.swap.preview.after_table')).toContainText('Dataset:');
+    await expect(page.getByTestId('vps.lifecycle.swap.preview.after_table')).toContainText('tank/vps/321/root');
     await expect(page.getByTestId('vps.lifecycle.swap.preview.after_table')).toContainText('IP assignments');
     await expect(page.getByTestId('vps.lifecycle.swap.preview.after_table.source_ips')).toContainText('203.0.113.99');
     await expect(page.getByTestId('vps.lifecycle.swap.preview.after_table.target_ips')).toContainText('2001:db8::10');
