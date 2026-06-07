@@ -224,17 +224,15 @@ test('@pr-smoke Tasks drawer lets admins expand transaction chains and continue 
         ],
       }),
       'GET transaction_chains/880': () => ({
-        transaction_chain: {
-          id: 880,
-          label: 'Migrate VPS chain',
-          state: 'failed',
-          progress: 1,
-          size: 2,
-          created_at: '2026-06-01T08:00:00Z',
-          updated_at: '2026-06-01T08:02:00Z',
-          concerns: [{ class_name: 'Vps', row_id: 44, label: 'vps44' }],
-          error: 'migration failed on node3',
-        },
+        id: 880,
+        label: 'Migrate VPS chain',
+        state: 'failed',
+        progress: 1,
+        size: 2,
+        created_at: '2026-06-01T08:00:00Z',
+        updated_at: '2026-06-01T08:02:00Z',
+        concerns: [{ class_name: 'Vps', row_id: 44, label: 'vps44' }],
+        error: 'migration failed on node3',
       }),
       'GET transactions': ({ searchParams }: { searchParams: URLSearchParams }) => {
         if (searchParams.get('transaction[transaction_chain]') !== '880') return { transactions: [] };
@@ -282,6 +280,9 @@ test('@pr-smoke Tasks drawer lets admins expand transaction chains and continue 
   await page.goto('/admin/vps');
   await page.getByTestId('tasks.open-button').click();
 
+  await expect(page.getByTestId('tasks.drawer')).toHaveAttribute('aria-modal', 'false');
+  await expect(page.locator('[data-overlay-backdrop="true"]')).toHaveCount(0);
+  await expect(page.getByTestId('vps.list')).toBeVisible();
   await expect(page.getByTestId('tasks.chain.row.880')).toBeVisible();
   await expect(page.getByTestId('tasks.chain.row.880')).toContainText('Migrate VPS chain');
   await expect(page.getByTestId('tasks.chain.row.880')).toContainText('vps44');
