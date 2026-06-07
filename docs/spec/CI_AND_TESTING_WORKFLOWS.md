@@ -130,5 +130,9 @@ E2E_START_SERVER=1 E2E_SCREENSHOTS=1 node scripts/playwright.mjs test
 - If you start the server yourself, omit `E2E_START_SERVER` and set `E2E_BASE_URL`.
 - Real OAuth login is intentionally not part of the default PR suite. If needed, add a separate staging-only workflow
   using credentials from CI secrets.
+- Human-run live parity checks for real dev VPS/dataset workflows live outside
+  CI. Use `npm run e2e:live:manual` with `E2E_LIVE_PARITY=1`,
+  `E2E_BASE_URL=https://dev.crucio.cz`, local auth storage state, and disposable
+  object IDs. The checklist is `deploy/dev.crucio.cz/live-parity-workflows.md`.
 - To inspect a trace from CI, download `playwright-test-results`, then run
   `npx playwright show-trace path/to/trace.zip`.
