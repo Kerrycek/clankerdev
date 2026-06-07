@@ -14,6 +14,7 @@ export interface VpsContextValue {
   chainsStale: boolean;
   busyLocalLock: boolean;
   activeChainIds: number[];
+  sshCommand?: string | null;
 }
 
 const VpsContext = createContext<VpsContextValue | null>(null);
