@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
+import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock } from '../../fixtures';
 
 const vps = {
   id: 123,
@@ -101,6 +101,23 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
         mount_root_dataset: '/mnt/rescue-root',
       },
     });
+  });
+
+  test('admin sees lifecycle controls reserved for admin mode', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installLifecycleMock(page);
+
+    await page.goto('/admin/vps/123/lifecycle');
+
+    await expect(page.getByTestId('vps.lifecycle.clone')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.swap')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.delete')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.lifetime')).toBeVisible();
+    await expect(page.getByTestId('lifetimes.admin.edit')).toBeVisible();
+    await expect(page.getByTestId('lifetimes.admin.log')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.replace')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.migrate')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.delete.lazy')).toBeVisible();
   });
 
   test('can boot rescue template without mounting the original root dataset', async ({ page }) => {
@@ -458,6 +475,9 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await expect(page.getByTestId('vps.lifecycle.reinstall')).toHaveCount(0);
     await expect(page.getByTestId('vps.lifecycle.delete.lazy')).toHaveCount(0);
     await expect(page.getByTestId('lifetimes.admin.edit')).toHaveCount(0);
+    await expect(page.getByTestId('lifetimes.admin.log')).toHaveCount(0);
+
+    await expect(page.getByTestId('vps.lifecycle.delete.submit')).toHaveAttribute('aria-disabled', 'true');
 
     await page.getByTestId('vps.lifecycle.delete.confirm').check();
 
@@ -604,6 +624,37 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
         vps: 321,
       },
     });
+  });
+
+  test('swap API errors stay visible in the guided drawer', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installHaveApiMock(page, {
+      user: { id: 7, login: 'owner', level: 1 },
+      handlers: {
+        'GET vpses': () => ({
+          vpses: [{ ...vps, id: 321, hostname: 'vps123-playground', memory: 4096, swap: 512, diskspace: 40960 }],
+        }),
+        'GET vpses/123': () => ({ vps }),
+        'GET vpses/321': () => ({
+          vps: { ...vps, id: 321, hostname: 'vps123-playground', memory: 4096, swap: 512, diskspace: 40960 },
+        }),
+        'GET locations': () => ({ locations: [{ id: 2, label: 'Praha-2' }] }),
+        'GET ip_addresses': () => ({ ip_addresses: [] }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'POST vpses/123/swap_with': () => failEnvelope('swap target is not a staging VPS'),
+      },
+    });
+
+    await page.goto('/app/vps/123/lifecycle');
+
+    await page.getByTestId('vps.lifecycle.swap.open').click();
+    await page.getByTestId('vps.lifecycle.swap.candidate.321').click();
+    await page.getByTestId('vps.lifecycle.swap.confirm').check();
+    await page.getByTestId('vps.lifecycle.swap.submit').click();
+
+    await expect(page.getByTestId('vps.lifecycle.swap.drawer')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.swap.drawer')).toContainText('Swap VPS failed');
+    await expect(page.getByTestId('vps.lifecycle.swap.drawer')).toContainText('swap target is not a staging VPS');
   });
 
   test('busy VPS transaction gates lifecycle submissions with an explanation', async ({ page }) => {
