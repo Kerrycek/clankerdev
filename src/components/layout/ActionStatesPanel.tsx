@@ -53,6 +53,32 @@ function backendDetailPayload(s: ActionState): string {
   return Object.keys(picked).length > 0 ? safeJson(picked) : safeJson(s);
 }
 
+function compactActionTarget(s: ActionState): string | null {
+  const row = s as any;
+  const keys = ['object', 'vps', 'dataset', 'dns_zone', 'user', 'node', 'network', 'migration_plan', 'ip_address'];
+  for (const key of keys) {
+    const value = row[key];
+    const id = resourceId(value);
+    const label = refLabel(value);
+    if (label) return label;
+    if (id) return `#${id}`;
+  }
+
+  const kind = typeof row.object_type === 'string' ? row.object_type : typeof row.class_name === 'string' ? row.class_name : null;
+  const rowId = resourceId(row.object_id ?? row.row_id);
+  if (kind && rowId) return `${kind} #${rowId}`;
+  if (rowId) return `#${rowId}`;
+  return null;
+}
+
+function compactFailureSummary(value: unknown, maxLength = 180): string | null {
+  const text = transactionErrorText(value).trim();
+  if (!text) return null;
+  const singleLine = text.replace(/\s+/g, ' ').trim();
+  if (singleLine.length <= maxLength) return singleLine;
+  return `${singleLine.slice(0, maxLength - 1)}…`;
+}
+
 function ActionStateInspect(props: {
   actionStateId: number;
   fallback?: ActionState;
@@ -139,6 +165,8 @@ function ActionStateInspect(props: {
   const updatedAt = (s as any).updated_at ? formatDateTime(String((s as any).updated_at)) : null;
   const tracked = chrome.trackedActionStates.some((x) => x.id === id);
   const chain = chainQ.data;
+  const target = compactActionTarget(s);
+  const failureSummary = compactFailureSummary(s);
 
   const renderTxCard = (tx: Transaction) => {
     const b = transactionBadge(tx);
@@ -271,6 +299,7 @@ function ActionStateInspect(props: {
             <div>{isFailingActionState(s) ? i18n.t('common.no') : isFinishedActionState(s) ? i18n.t('common.yes') : i18n.t('state.running')}</div>
           </div>
           {pLabel ? <div><div className="text-xs text-muted">{i18n.t('common.progress')}</div><div>{pct !== null ? `${pLabel} · ${pct}%` : pLabel}</div></div> : null}
+          {target ? <div><div className="text-xs text-muted">{i18n.t('tasks.meta.object')}</div><div>{target}</div></div> : null}
           {createdAt ? <div><div className="text-xs text-muted">{i18n.t('common.created')}</div><div>{createdAt}</div></div> : null}
           {updatedAt ? <div><div className="text-xs text-muted">{i18n.t('common.updated')}</div><div>{updatedAt}</div></div> : null}
           {relatedChainId ? (
@@ -282,6 +311,12 @@ function ActionStateInspect(props: {
             </div>
           ) : null}
         </div>
+
+        {failureSummary ? (
+          <div className="mt-3 rounded-md border border-danger-border bg-danger-bg p-2 text-xs text-muted" data-testid="tasks.inspect.failure_summary">
+            <span className="font-medium text-danger">{i18n.t('tasks.meta.failure_summary')}:</span> {failureSummary}
+          </div>
+        ) : null}
 
         {pct !== null ? (
           <div className="mt-3 h-2 rounded-full bg-surface-2">
@@ -522,9 +557,12 @@ export function ActionStatesPanel(props: {
 
     const createdAt = (s as any).created_at ? formatDateTime(String((s as any).created_at)) : null;
     const updatedAt = (s as any).updated_at ? formatDateTime(String((s as any).updated_at)) : null;
+    const target = compactActionTarget(s);
+    const failureSummary = compactFailureSummary(s);
 
     const meta: React.ReactNode[] = [];
     meta.push(<span key="id">#{id}</span>);
+    if (target) meta.push(<span key="target">{i18n.t('tasks.meta.object')}: {target}</span>);
     if (createdAt) meta.push(<span key="created">{i18n.t('tasks.meta.created', { time: createdAt })}</span>);
     if (updatedAt) meta.push(<span key="updated">{i18n.t('tasks.meta.updated', { time: updatedAt })}</span>);
 
@@ -567,6 +605,12 @@ export function ActionStatesPanel(props: {
           ) : null}
 
           {pLabel ? <div className="text-xs text-faint">{i18n.t('tasks.meta.progress', { progress: pLabel })}</div> : null}
+
+          {failureSummary ? (
+            <div className="rounded-md border border-danger-border bg-danger-bg p-2 text-xs text-muted" data-testid={`tasks.row.failure.${id}`}>
+              <span className="font-medium text-danger">{i18n.t('tasks.meta.failure_summary')}:</span> {failureSummary}
+            </div>
+          ) : null}
 
           <div className="flex items-end justify-between gap-3">
             <div className="flex min-w-0 flex-wrap items-center gap-2" data-testid={`tasks.row.actions.${id}`}>

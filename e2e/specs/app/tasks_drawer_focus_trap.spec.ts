@@ -199,3 +199,110 @@ test('@workflow-matrix @pr-smoke Tasks drawer can inspect action state transacti
   await page.getByRole('button', { name: /collapse all/i }).click();
   await expect(expanded).toBeHidden();
 });
+
+test('@pr-smoke Tasks drawer lets admins expand transaction chains and continue to full detail', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 99 },
+    handlers: {
+      'GET vpses': () => ({ vpses: [], _meta: { total_count: 0 } }),
+      'GET action_states': () => ({ action_states: [] }),
+      'GET transaction_chains': () => ({
+        transaction_chains: [
+          {
+            id: 880,
+            label: 'Migrate VPS chain',
+            state: 'failed',
+            progress: 1,
+            size: 2,
+            created_at: '2026-06-01T08:00:00Z',
+            updated_at: '2026-06-01T08:02:00Z',
+            concerns: [{ class_name: 'Vps', row_id: 44, label: 'vps44' }],
+            error: 'migration failed on node3',
+          },
+        ],
+      }),
+      'GET transaction_chains/880': () => ({
+        id: 880,
+        label: 'Migrate VPS chain',
+        state: 'failed',
+        progress: 1,
+        size: 2,
+        created_at: '2026-06-01T08:00:00Z',
+        updated_at: '2026-06-01T08:02:00Z',
+        concerns: [{ class_name: 'Vps', row_id: 44, label: 'vps44' }],
+        error: 'migration failed on node3',
+      }),
+      'GET transactions': ({ searchParams }: { searchParams: URLSearchParams }) => {
+        if (searchParams.get('transaction[transaction_chain]') !== '880') return { transactions: [] };
+        return {
+          transactions: [
+            {
+              id: 881,
+              name: 'Prepare migration',
+              done: 'done',
+              success: 1,
+              type: 10,
+              priority: 0,
+              created_at: '2026-06-01T08:00:10Z',
+              started_at: '2026-06-01T08:00:15Z',
+              finished_at: '2026-06-01T08:01:00Z',
+              node: { id: 2, label: 'node2' },
+              vps: { id: 44, label: 'vps44' },
+              transaction_chain: { id: 880 },
+              input: { stage: 'prepare' },
+              output: { ok: true },
+            },
+            {
+              id: 882,
+              name: 'Move dataset',
+              done: 'done',
+              success: 0,
+              type: 11,
+              priority: 10,
+              created_at: '2026-06-01T08:01:00Z',
+              started_at: '2026-06-01T08:01:05Z',
+              finished_at: '2026-06-01T08:02:00Z',
+              node: { id: 3, label: 'node3' },
+              vps: { id: 44, label: 'vps44' },
+              transaction_chain: { id: 880 },
+              input: { dataset: 'tank/ct/vps44' },
+              output: { ok: false, error: 'zfs send failed' },
+              stderr: 'cannot receive incremental stream',
+            },
+          ],
+        };
+      },
+    },
+  });
+
+  await page.goto('/admin/vps');
+  await page.getByTestId('tasks.open-button').click();
+
+  await expect(page.getByTestId('tasks.drawer')).toHaveAttribute('aria-modal', 'false');
+  await expect(page.locator('[data-overlay-backdrop="true"]')).toHaveCount(0);
+  await expect(page.getByTestId('vps.list')).toBeVisible();
+  await expect(page.getByTestId('tasks.chain.row.880')).toBeVisible();
+  await expect(page.getByTestId('tasks.chain.row.880')).toContainText('Migrate VPS chain');
+  await expect(page.getByTestId('tasks.chain.row.880')).toContainText('Vps#44');
+  await expect(page.getByTestId('tasks.chain.failure.880')).toContainText('migration failed on node3');
+
+  await page.getByTestId('tasks.chain.toggle.880').click();
+  await expect(page.getByTestId('tasks.chain.expanded.880')).toBeVisible();
+  await expect(page.getByTestId('tasks.chain.tx.card.882')).toContainText('Move dataset');
+
+  await page.getByTestId('tasks.chain.tx.toggle.882').click();
+  await expect(page.getByTestId('tasks.chain.tx.card.882')).toContainText('tank/ct/vps44');
+  await expect(page.getByTestId('tasks.chain.tx.card.882')).toContainText('zfs send failed');
+
+  await page.getByRole('link', { name: 'Migrate VPS chain' }).click();
+  await expect(page).toHaveURL(/\/admin\/transactions\/880$/);
+  await expect(page.getByTestId('transactions.chain.detail')).toBeVisible();
+  await expect(page.getByTestId('transactions.chain.detail.tx.882')).toBeVisible();
+
+  await page.reload();
+
+  await expect(page).toHaveURL(/\/admin\/transactions\/880$/);
+  await expect(page.getByTestId('transactions.chain.detail.tx.882')).toBeVisible();
+});
