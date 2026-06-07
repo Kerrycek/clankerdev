@@ -285,7 +285,7 @@ test('@pr-smoke Tasks drawer lets admins expand transaction chains and continue 
   await expect(page.getByTestId('vps.list')).toBeVisible();
   await expect(page.getByTestId('tasks.chain.row.880')).toBeVisible();
   await expect(page.getByTestId('tasks.chain.row.880')).toContainText('Migrate VPS chain');
-  await expect(page.getByTestId('tasks.chain.row.880')).toContainText('vps44');
+  await expect(page.getByTestId('tasks.chain.row.880')).toContainText('Vps#44');
   await expect(page.getByTestId('tasks.chain.failure.880')).toContainText('migration failed on node3');
 
   await page.getByTestId('tasks.chain.toggle.880').click();
