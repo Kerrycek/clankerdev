@@ -294,7 +294,7 @@ test('@pr-smoke Tasks drawer lets admins expand transaction chains and continue 
 
   await page.getByTestId('tasks.chain.tx.toggle.882').click();
   await expect(page.getByTestId('tasks.chain.tx.card.882')).toContainText('tank/ct/vps44');
-  await expect(page.getByTestId('tasks.chain.tx.card.882')).toContainText('cannot receive incremental stream');
+  await expect(page.getByTestId('tasks.chain.tx.card.882')).toContainText('zfs send failed');
 
   await page.getByRole('link', { name: 'Migrate VPS chain' }).click();
   await expect(page).toHaveURL(/\/admin\/transactions\/880$/);
