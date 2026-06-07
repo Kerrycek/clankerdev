@@ -830,8 +830,10 @@ export function VpsLifecyclePage() {
   const sourceDatasetAfter = selectedTarget ? datasetLabel(selectedTarget) : '—';
   const targetDatasetAfter = datasetLabel(vps);
   const selectedTargetIsLikely = Boolean(selectedTarget && looksLikeSwapCandidate(selectedTarget as Vps));
-  const selectedTargetSameOwner = selectedTarget ? resourceId((selectedTarget as any).user) === ownerId : false;
-  const selectedTargetSameLocation = selectedTarget ? vpsLocationId(selectedTarget) === locationId : false;
+  const selectedTargetOwnerId = selectedTarget ? resourceId((selectedTarget as any).user) : null;
+  const selectedTargetLocationId = selectedTarget ? vpsLocationId(selectedTarget) : null;
+  const selectedTargetSameOwner = selectedTargetOwnerId !== null && ownerId !== null && selectedTargetOwnerId === ownerId;
+  const selectedTargetSameLocation = selectedTargetLocationId !== null && locationId !== null && selectedTargetLocationId === locationId;
   const sourceIpCount = sourceIps.length;
   const targetIpCount = targetIps.length;
 
