@@ -410,11 +410,15 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await page.getByTestId('vps.lifecycle.migrate.node').selectOption('5');
     await page.getByTestId('vps.lifecycle.migrate.replace_ip_addresses').check();
     await page.getByTestId('vps.lifecycle.migrate.transfer_ip_addresses').uncheck();
+    await page.getByTestId('vps.lifecycle.migrate.schedule').selectOption('custom');
     await page.getByTestId('vps.lifecycle.migrate.stop_on_error').check();
     await page.getByTestId('vps.lifecycle.migrate.cleanup_data').check();
     await page.getByTestId('vps.lifecycle.migrate.send_mail').check();
-    await page.getByTestId('vps.lifecycle.migrate.finish_weekday').fill('2');
-    await page.getByTestId('vps.lifecycle.migrate.finish_minutes').fill('90');
+    await page.getByTestId('vps.lifecycle.migrate.finish_weekday').selectOption('2');
+    await page.getByTestId('vps.lifecycle.migrate.finish_hour').selectOption('1');
+    await page.getByTestId('vps.lifecycle.migrate.advanced').locator('summary').click();
+    await page.getByTestId('vps.lifecycle.migrate.no_start').check();
+    await page.getByTestId('vps.lifecycle.migrate.reason').fill('rack maintenance');
     await page.getByTestId('vps.lifecycle.migrate.confirm').check();
 
     const reqPromise = page.waitForRequest(
@@ -432,9 +436,12 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
         maintenance_window: false,
         stop_on_error: true,
         cleanup_data: true,
+        no_start: true,
+        skip_start: false,
         send_mail: true,
         finish_weekday: 2,
-        finish_minutes: 90,
+        finish_minutes: 60,
+        reason: 'rack maintenance',
       },
     });
   });
