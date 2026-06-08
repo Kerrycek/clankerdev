@@ -107,6 +107,8 @@ export async function fetchNodes(
     q?: string;
     state?: 'all' | 'active' | 'inactive';
     location?: number;
+    type?: string;
+    hypervisorType?: string;
     includes?: string;
   } = {}
 ) {
@@ -116,6 +118,8 @@ export async function fetchNodes(
   if (opts.q) params['q'] = opts.q;
   if (opts.state) params['state'] = opts.state;
   if (opts.location !== undefined) params['location'] = opts.location;
+  if (opts.type) params['type'] = opts.type;
+  if (opts.hypervisorType) params['hypervisor_type'] = opts.hypervisorType;
 
   const res = await haveApiCall<unknown>({
     method: 'GET',

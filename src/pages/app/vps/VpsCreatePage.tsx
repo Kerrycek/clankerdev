@@ -114,6 +114,12 @@ function locationEnvironmentId(loc: Location | undefined): number | undefined {
   return undefined;
 }
 
+function isVpsHypervisorNode(node: Node): boolean {
+  const typeOk = node.type === undefined || node.type === 'node';
+  const hypervisorOk = node.hypervisor_type === undefined || node.hypervisor_type === 'vpsadminos';
+  return typeOk && hypervisorOk;
+}
+
 export function validateForm(
   form: FormState,
   isAdmin: boolean,
@@ -224,8 +230,16 @@ export function VpsCreatePage() {
   const selectedEnvironmentId = locationEnvironmentId(selectedLocation);
 
   const nodesQ = useQuery({
-    queryKey: ['nodes', { limit: 500, location: selectedLocationId ?? null }],
-    queryFn: async () => (await fetchNodes({ limit: 500, location: selectedLocationId })).data,
+    queryKey: ['nodes', { limit: 500, location: selectedLocationId ?? null, type: 'node', hypervisorType: 'vpsadminos' }],
+    queryFn: async () =>
+      (
+        await fetchNodes({
+          limit: 500,
+          location: selectedLocationId,
+          type: 'node',
+          hypervisorType: 'vpsadminos',
+        })
+      ).data,
     enabled: needsAdminPayload && selectedLocationId !== undefined,
   });
   const templatesQ = useQuery({
@@ -239,7 +253,7 @@ export function VpsCreatePage() {
     enabled: selectedEnvironmentId !== undefined,
   });
 
-  const nodes = needsAdminPayload ? nodesQ.data ?? [] : [];
+  const nodes = needsAdminPayload ? (nodesQ.data ?? []).filter(isVpsHypervisorNode) : [];
   const hiddenAdminTarget = !isAdminMode && isAdminAccount
     ? { userId: auth.user?.id, nodeId: nodes[0]?.id }
     : undefined;
