@@ -20,6 +20,7 @@ import { VpsLookupInput } from '../../../components/ui/VpsLookupInput';
 import { LifecyclePanel } from '../../../components/lifetimes/LifecyclePanel';
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
 import { fetchLocations, type Location } from '../../../lib/api/infra';
+import { fetchNodes } from '../../../lib/api/nodes';
 import { fetchIpAddressesForVps, type IpAddress } from '../../../lib/api/ipAddresses';
 import { fetchOsTemplates, type OsTemplate } from '../../../lib/api/osTemplates';
 import {
@@ -455,6 +456,13 @@ export function VpsLifecyclePage() {
     staleTime: 60_000,
   });
 
+  const nodesQ = useQuery({
+    queryKey: ['nodes', 'vps-lifecycle-migrate', { limit: 500 }],
+    queryFn: async () => (await fetchNodes({ limit: 500 })).data,
+    enabled: isAdminMode && requestedAction === 'migrate',
+    staleTime: 60_000,
+  });
+
   const sourceIpsQ = useQuery({
     queryKey: ['ip_address', 'list', 'vps-lifecycle-source', { vpsId }],
     queryFn: async () => (await fetchIpAddressesForVps(vpsId, { limit: 100 })).data,
@@ -514,7 +522,7 @@ export function VpsLifecyclePage() {
   }));
 
   const [migrate, setMigrate] = useState<MigrateForm>(() => ({
-    node: nodeId ? String(nodeId) : '',
+    node: '',
     replaceIpAddresses: false,
     transferIpAddresses: true,
     maintenanceWindow: false,
@@ -525,7 +533,6 @@ export function VpsLifecyclePage() {
     sendMail: true,
     confirm: false,
   }));
-  const [migrateNodeLabel, setMigrateNodeLabel] = useState('');
 
   const [deleteForm, setDeleteForm] = useState<DeleteForm>({
     lazy: true,
@@ -1772,18 +1779,22 @@ export function VpsLifecyclePage() {
         <CardHeader title={t('vps.lifecycle.migrate.title')} subtitle={t('vps.lifecycle.migrate.subtitle')} />
         <CardBody className="space-y-4">
           <Field label={t('vps.lifecycle.field.node')} help={t('vps.lifecycle.migrate.node_help')}>
-            <NodeLookupInput
+            <Select
               value={migrate.node}
-              selectedLabel={migrateNodeLabel}
-              onChange={(node) => {
-                setMigrateNodeLabel('');
-                setMigrate((prev) => ({ ...prev, node }));
-              }}
-              onPick={(node) => setMigrateNodeLabel(pickedNodeLabel(node))}
-              placeholder={t('vps.lifecycle.placeholder.node')}
+              onChange={(e) => setMigrate((prev) => ({ ...prev, node: e.target.value, confirm: false }))}
               testId="vps.lifecycle.migrate.node"
-              disabled={migrateM.isPending}
-            />
+              disabled={migrateM.isPending || nodesQ.isLoading || nodesQ.isError}
+            >
+              <option value="">{nodesQ.isLoading ? t('common.loading') : t('vps.lifecycle.placeholder.node')}</option>
+              {nodesQ.data?.map((node) => (
+                <option key={node.id} value={node.id}>
+                  {pickedNodeLabel(node)}
+                </option>
+              ))}
+            </Select>
+            {nodesQ.isError ? (
+              <div className="mt-1 text-xs text-danger">{t('vps.lifecycle.migrate.nodes_load_error')}</div>
+            ) : null}
           </Field>
 
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">

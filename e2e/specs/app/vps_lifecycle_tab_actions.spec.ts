@@ -65,6 +65,12 @@ async function installLifecycleMock(page: Page) {
       'GET vpses/123/state_logs': () => ({ state_logs: [] }),
       'GET transaction_chains': () => ({ transaction_chains: [] }),
       'GET os_templates': () => ({ os_templates: osTemplates }),
+      'GET nodes': () => ({
+        nodes: [
+          { id: 1, domain_name: 'node1.example', location: { id: 2, label: 'Praha-2' } },
+          { id: 5, domain_name: 'node5.example', location: { id: 2, label: 'Praha-2' } },
+        ],
+      }),
       'PUT vpses/123': () => ({ vps, _meta: { action_state_id: 506 } }),
       'POST vpses/123/clone': () => ({ vps: { id: 456, hostname: 'admin-clone' }, _meta: { action_state_id: 507 } }),
       'POST vpses/123/swap_with': () => ({ _meta: { action_state_id: 508 } }),
@@ -400,7 +406,8 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.goto('/admin/vps/123/lifecycle/migrate');
 
-    await page.getByTestId('vps.lifecycle.migrate.node').fill('#5');
+    await expect(page.getByTestId('vps.lifecycle.migrate.node')).toContainText('node5.example');
+    await page.getByTestId('vps.lifecycle.migrate.node').selectOption('5');
     await page.getByTestId('vps.lifecycle.migrate.replace_ip_addresses').check();
     await page.getByTestId('vps.lifecycle.migrate.transfer_ip_addresses').uncheck();
     await page.getByTestId('vps.lifecycle.migrate.stop_on_error').check();
