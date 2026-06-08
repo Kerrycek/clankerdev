@@ -507,6 +507,37 @@ export function VpsLayout() {
               >
                 <option value="">{t('vps.actions.menu.placeholder')}</option>
                 <option value={`${basePath}/vps/${(vps as any).id}/lifecycle`}>{t('vps.tabs.lifecycle')}</option>
+                <option value={`${basePath}/vps/${(vps as any).id}/lifecycle?action=reinstall`}>
+                  {t('action.vps.reinstall.label')}
+                </option>
+                <option value={`${basePath}/vps/${(vps as any).id}/lifecycle?action=clone`}>
+                  {t('action.vps.clone.label')}
+                </option>
+                <option value={`${basePath}/vps/${(vps as any).id}/lifecycle?action=swap`}>
+                  {t('action.vps.swap.label')}
+                </option>
+                <option value={`${basePath}/vps/${(vps as any).id}/lifecycle?action=delete`}>
+                  {t('action.vps.delete.label')}
+                </option>
+                {mode === 'admin' ? (
+                  <>
+                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle?action=lifetime`}>
+                      {t('action.vps.lifecycle.label')}
+                    </option>
+                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle?action=template`}>
+                      {t('action.vps.template.label')}
+                    </option>
+                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle?action=boot`}>
+                      {t('action.vps.boot.label')}
+                    </option>
+                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle?action=replace`}>
+                      {t('action.vps.replace.label')}
+                    </option>
+                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle?action=migrate`}>
+                      {t('action.vps.migrate.label')}
+                    </option>
+                  </>
+                ) : null}
                 <option value={`${basePath}/vps/${(vps as any).id}/network`}>{t('vps.tabs.network')}</option>
                 <option value={`${basePath}/vps/${(vps as any).id}/storage`}>{t('vps.tabs.storage')}</option>
                 <option value={`${basePath}/transactions/items?vps=${(vps as any).id}`}>
