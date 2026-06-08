@@ -20,7 +20,7 @@ import { VpsLookupInput } from '../../../components/ui/VpsLookupInput';
 import { LifecyclePanel } from '../../../components/lifetimes/LifecyclePanel';
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
 import { fetchLocations, type Location } from '../../../lib/api/infra';
-import { fetchNodes } from '../../../lib/api/nodes';
+import { fetchNodes, type Node } from '../../../lib/api/nodes';
 import { fetchIpAddressesForVps, type IpAddress } from '../../../lib/api/ipAddresses';
 import { fetchOsTemplates, type OsTemplate } from '../../../lib/api/osTemplates';
 import {
@@ -230,6 +230,11 @@ function pickedNodeLabel(node: { id?: number; domain_name?: unknown; name?: unkn
   const id = typeof node.id === 'number' && Number.isFinite(node.id) ? `#${node.id}` : '';
   if (name && id) return `${name} (${id})`;
   return name || id || '';
+}
+
+function nodeLocation(node: Node | undefined): Location | undefined {
+  const location = node?.location;
+  return location && typeof location === 'object' ? location : undefined;
 }
 
 function ownerLabel(vps: unknown): string {
@@ -475,8 +480,8 @@ export function VpsLifecyclePage() {
   });
 
   const nodesQ = useQuery({
-    queryKey: ['nodes', 'vps-lifecycle-migrate', { limit: 500 }],
-    queryFn: async () => (await fetchNodes({ limit: 500 })).data,
+    queryKey: ['nodes', 'vps-lifecycle-migrate', { limit: 500, includes: 'location__environment' }],
+    queryFn: async () => (await fetchNodes({ limit: 500, includes: 'location__environment' })).data,
     enabled: isAdminMode && requestedAction === 'migrate',
     staleTime: 60_000,
   });
@@ -597,6 +602,25 @@ export function VpsLifecyclePage() {
   });
 
   const cloneTargetReady = isAdminMode ? Boolean(clone.user.trim() && clone.node.trim()) : Boolean(clone.location.trim());
+  const sourceLocation = ((vps as any).node?.location ?? (vps as any).location) as Location | undefined;
+  const sourceLocationId = locationId;
+  const sourceEnvironmentId = locationEnvironmentId(sourceLocation);
+  const migrateNodeId = parseLookupIdLike(migrate.node.trim());
+  const migrateTargetNode = migrateNodeId !== null
+    ? nodesQ.data?.find((node) => Number(node.id) === migrateNodeId)
+    : undefined;
+  const migrateTargetLocation = nodeLocation(migrateTargetNode);
+  const migrateTargetLocationId = resourceId(migrateTargetLocation);
+  const migrateTargetEnvironmentId = locationEnvironmentId(migrateTargetLocation);
+  const migrateCanTransferIpAddresses =
+    sourceEnvironmentId !== undefined &&
+    migrateTargetEnvironmentId !== undefined &&
+    sourceEnvironmentId !== migrateTargetEnvironmentId;
+  const migrateCanReplaceIpAddresses =
+    sourceLocationId !== null &&
+    migrateTargetLocationId !== null &&
+    sourceLocationId !== migrateTargetLocationId;
+  const migrateTargetSelected = Boolean(migrateTargetNode);
   const cloneLocationId = parseLookupIdLike(clone.location.trim());
   const cloneLocation = cloneLocationId !== null
     ? locationsQ.data?.find((location) => Number(location.id) === cloneLocationId)
@@ -776,8 +800,8 @@ export function VpsLifecyclePage() {
       }
       const payload: VpsMigratePayload = {
         node: parseRequiredId(migrate.node),
-        replace_ip_addresses: migrate.replaceIpAddresses,
-        transfer_ip_addresses: migrate.transferIpAddresses,
+        replace_ip_addresses: migrateCanReplaceIpAddresses ? migrate.replaceIpAddresses : false,
+        transfer_ip_addresses: migrateCanTransferIpAddresses ? migrate.transferIpAddresses : false,
         maintenance_window: migrate.scheduleMode === 'maintenance',
         stop_on_error: migrate.stopOnError,
         cleanup_data: migrate.cleanupData,
@@ -1807,7 +1831,29 @@ export function VpsLifecyclePage() {
           <Field label={t('vps.lifecycle.field.node')} help={t('vps.lifecycle.migrate.node_help')}>
             <Select
               value={migrate.node}
-              onChange={(e) => setMigrate((prev) => ({ ...prev, node: e.target.value, confirm: false }))}
+              onChange={(e) => {
+                const nextNodeId = parseLookupIdLike(e.target.value);
+                const nextNode = nextNodeId !== null
+                  ? nodesQ.data?.find((node) => Number(node.id) === nextNodeId)
+                  : undefined;
+                const nextLocation = nodeLocation(nextNode);
+                const nextLocationId = resourceId(nextLocation);
+                const nextEnvironmentId = locationEnvironmentId(nextLocation);
+                const nextChangedLocation = sourceLocationId !== null && nextLocationId !== null && sourceLocationId !== nextLocationId;
+                const nextChangedEnvironment =
+                  sourceEnvironmentId !== undefined &&
+                  nextEnvironmentId !== undefined &&
+                  sourceEnvironmentId !== nextEnvironmentId;
+
+                setMigrate((prev) => ({
+                  ...prev,
+                  node: e.target.value,
+                  transferIpAddresses: nextChangedEnvironment ? prev.transferIpAddresses : false,
+                  replaceIpAddresses: nextChangedLocation ? prev.replaceIpAddresses : false,
+                  scheduleMode: nextChangedEnvironment || nextChangedLocation ? 'now' : 'maintenance',
+                  confirm: false,
+                }));
+              }}
               testId="vps.lifecycle.migrate.node"
               disabled={migrateM.isPending || nodesQ.isLoading || nodesQ.isError}
             >
@@ -1886,8 +1932,12 @@ export function VpsLifecyclePage() {
           </div>
 
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            <Checkbox checked={migrate.transferIpAddresses} onChange={(v) => setMigrate((p) => ({ ...p, transferIpAddresses: v, confirm: false }))} label={t('vps.lifecycle.migrate.option.transfer_ip_addresses')} testId="vps.lifecycle.migrate.transfer_ip_addresses" />
-            <Checkbox checked={migrate.replaceIpAddresses} onChange={(v) => setMigrate((p) => ({ ...p, replaceIpAddresses: v, confirm: false }))} label={t('vps.lifecycle.migrate.option.replace_ip_addresses')} testId="vps.lifecycle.migrate.replace_ip_addresses" />
+            {migrateTargetSelected && migrateCanTransferIpAddresses ? (
+              <Checkbox checked={migrate.transferIpAddresses} onChange={(v) => setMigrate((p) => ({ ...p, transferIpAddresses: v, confirm: false }))} label={t('vps.lifecycle.migrate.option.transfer_ip_addresses')} testId="vps.lifecycle.migrate.transfer_ip_addresses" />
+            ) : null}
+            {migrateTargetSelected && migrateCanReplaceIpAddresses ? (
+              <Checkbox checked={migrate.replaceIpAddresses} onChange={(v) => setMigrate((p) => ({ ...p, replaceIpAddresses: v, confirm: false }))} label={t('vps.lifecycle.migrate.option.replace_ip_addresses')} testId="vps.lifecycle.migrate.replace_ip_addresses" />
+            ) : null}
             <Checkbox checked={migrate.stopOnError} onChange={(v) => setMigrate((p) => ({ ...p, stopOnError: v, confirm: false }))} label={t('vps.lifecycle.migrate.option.stop_on_error')} testId="vps.lifecycle.migrate.stop_on_error" />
             <Checkbox checked={migrate.cleanupData} onChange={(v) => setMigrate((p) => ({ ...p, cleanupData: v, confirm: false }))} label={t('vps.lifecycle.migrate.option.cleanup_data')} testId="vps.lifecycle.migrate.cleanup_data" />
             <Checkbox checked={migrate.sendMail} onChange={(v) => setMigrate((p) => ({ ...p, sendMail: v, confirm: false }))} label={t('vps.lifecycle.migrate.option.send_mail')} testId="vps.lifecycle.migrate.send_mail" />

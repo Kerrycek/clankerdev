@@ -19,7 +19,7 @@ const vps = {
   used_diskspace: 5120,
   uptime: 0,
   loadavg1: 0,
-  node: { id: 1, domain_name: 'node1.example', location: { id: 2, label: 'Praha-2' } },
+  node: { id: 1, domain_name: 'node1.example', location: { id: 2, label: 'Praha-2', environment: { id: 1, label: 'prod' } } },
   user: { id: 7, login: 'owner' },
   os_template: { id: 6, label: 'Debian latest' },
   dataset: { id: 901, name: 'tank/vps/123/root' },
@@ -42,7 +42,7 @@ async function installLifecycleMock(page: Page) {
             id: 321,
             hostname: 'vps123-playground',
             dataset: { id: 902, name: 'tank/vps/321/root' },
-            node: { id: 1, domain_name: 'node1.example', location: { id: 2, label: 'Praha-2' } },
+            node: { id: 1, domain_name: 'node1.example', location: { id: 2, label: 'Praha-2', environment: { id: 1, label: 'prod' } } },
             memory: 2048,
             swap: 512,
             diskspace: 20480,
@@ -67,8 +67,9 @@ async function installLifecycleMock(page: Page) {
       'GET os_templates': () => ({ os_templates: osTemplates }),
       'GET nodes': () => ({
         nodes: [
-          { id: 1, domain_name: 'node1.example', location: { id: 2, label: 'Praha-2' } },
-          { id: 5, domain_name: 'node5.example', location: { id: 2, label: 'Praha-2' } },
+          { id: 1, domain_name: 'node1.example', location: { id: 2, label: 'Praha-2', environment: { id: 1, label: 'prod' } } },
+          { id: 2, domain_name: 'node2.example', location: { id: 2, label: 'Praha-2', environment: { id: 1, label: 'prod' } } },
+          { id: 5, domain_name: 'node5.example', location: { id: 5, label: 'Brno', environment: { id: 2, label: 'staging' } } },
         ],
       }),
       'PUT vpses/123': () => ({ vps, _meta: { action_state_id: 506 } }),
@@ -442,6 +443,42 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
         finish_weekday: 2,
         finish_minutes: 60,
         reason: 'rack maintenance',
+      },
+    });
+  });
+
+  test('admin migrate follows legacy IP option availability for same-location moves', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installLifecycleMock(page);
+
+    await page.goto('/admin/vps/123/lifecycle/migrate');
+
+    await page.getByTestId('vps.lifecycle.migrate.node').selectOption('2');
+
+    await expect(page.getByTestId('vps.lifecycle.migrate.transfer_ip_addresses')).toHaveCount(0);
+    await expect(page.getByTestId('vps.lifecycle.migrate.replace_ip_addresses')).toHaveCount(0);
+    await expect(page.getByTestId('vps.lifecycle.migrate.schedule')).toHaveValue('maintenance');
+
+    await page.getByTestId('vps.lifecycle.migrate.confirm').check();
+
+    const reqPromise = page.waitForRequest(
+      (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/vpses/123/migrate')
+    );
+
+    await page.getByTestId('vps.lifecycle.migrate.submit').click();
+
+    const req = await reqPromise;
+    expect(req.postDataJSON()).toEqual({
+      vps: {
+        node: 2,
+        replace_ip_addresses: false,
+        transfer_ip_addresses: false,
+        maintenance_window: true,
+        stop_on_error: true,
+        cleanup_data: true,
+        no_start: false,
+        skip_start: false,
+        send_mail: true,
       },
     });
   });

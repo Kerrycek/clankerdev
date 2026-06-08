@@ -107,6 +107,7 @@ export async function fetchNodes(
     q?: string;
     state?: 'all' | 'active' | 'inactive';
     location?: number;
+    includes?: string;
   } = {}
 ) {
   const params: Record<string, string | number | boolean> = {};
@@ -121,6 +122,7 @@ export async function fetchNodes(
     path: '/nodes',
     namespace: 'node',
     params,
+    meta: opts.includes ? { includes: opts.includes } : undefined,
   });
 
   // Be tolerant: some deployments wrap the list under a `nodes` key.
