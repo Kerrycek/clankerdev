@@ -320,7 +320,7 @@ export function VpsLayout() {
       { label: t('vps.tabs.storage'), to: `${basePath}/vps/${vpsId}/storage`, end: true },
       { label: t('vps.tabs.features'), to: `${basePath}/vps/${vpsId}/features`, end: true },
       { label: t('vps.tabs.maintenance'), to: `${basePath}/vps/${vpsId}/maintenance`, end: true },
-      { label: t('vps.tabs.lifecycle'), to: `${basePath}/vps/${vpsId}/lifecycle`, end: true },
+      { label: t('vps.tabs.lifecycle'), to: `${basePath}/vps/${vpsId}/lifecycle` },
       { label: t('vps.tabs.console'), to: `${basePath}/vps/${vpsId}/console`, end: true },
     ],
     [basePath, t, vpsId]
@@ -507,33 +507,33 @@ export function VpsLayout() {
               >
                 <option value="">{t('vps.actions.menu.placeholder')}</option>
                 <option value={`${basePath}/vps/${(vps as any).id}/lifecycle`}>{t('vps.tabs.lifecycle')}</option>
-                <option value={`${basePath}/vps/${(vps as any).id}/lifecycle?action=reinstall`}>
+                <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/reinstall`}>
                   {t('action.vps.reinstall.label')}
                 </option>
-                <option value={`${basePath}/vps/${(vps as any).id}/lifecycle?action=clone`}>
+                <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/clone`}>
                   {t('action.vps.clone.label')}
                 </option>
-                <option value={`${basePath}/vps/${(vps as any).id}/lifecycle?action=swap`}>
+                <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/swap`}>
                   {t('action.vps.swap.label')}
                 </option>
-                <option value={`${basePath}/vps/${(vps as any).id}/lifecycle?action=delete`}>
+                <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/delete`}>
                   {t('action.vps.delete.label')}
                 </option>
                 {mode === 'admin' ? (
                   <>
-                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle?action=lifetime`}>
+                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/lifetime`}>
                       {t('action.vps.lifecycle.label')}
                     </option>
-                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle?action=template`}>
+                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/template`}>
                       {t('action.vps.template.label')}
                     </option>
-                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle?action=boot`}>
+                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/boot`}>
                       {t('action.vps.boot.label')}
                     </option>
-                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle?action=replace`}>
+                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/replace`}>
                       {t('action.vps.replace.label')}
                     </option>
-                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle?action=migrate`}>
+                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/migrate`}>
                       {t('action.vps.migrate.label')}
                     </option>
                   </>
