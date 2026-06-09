@@ -21,6 +21,7 @@ import { LifecyclePanel } from '../../../components/lifetimes/LifecyclePanel';
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
 import { fetchLocations, type Location } from '../../../lib/api/infra';
 import { fetchIpAddressesForVps, type IpAddress } from '../../../lib/api/ipAddresses';
+import { fetchNodes } from '../../../lib/api/nodes';
 import { fetchOsTemplates, type OsTemplate } from '../../../lib/api/osTemplates';
 import {
   fetchVps,
@@ -109,6 +110,14 @@ type MigrateForm = {
 type DeleteForm = {
   lazy: boolean;
   confirm: boolean;
+};
+
+type LifecycleAction = 'template' | 'boot' | 'reinstall' | 'clone' | 'swap' | 'replace' | 'migrate' | 'delete';
+type LifecycleActionEntry = {
+  id: LifecycleAction;
+  titleKey: string;
+  descriptionKey: string;
+  danger?: boolean;
 };
 
 function resourceId(value: unknown): number | null {
@@ -352,24 +361,33 @@ export function VpsLifecyclePage() {
   const locationId = resourceId((vps as any).node?.location ?? (vps as any).location);
   const osTemplateId = resourceId((vps as any).os_template);
   const isAdminMode = mode === 'admin';
+  const [selectedAction, setSelectedAction] = useState<LifecycleAction | null>(null);
 
   const templatesQ = useQuery({
     queryKey: ['os_templates', 'vps-lifecycle', { limit: 500, enabled: true, hypervisorType: 'vpsadminos' }],
     queryFn: async () => (await fetchOsTemplates({ limit: 500, enabled: true, hypervisorType: 'vpsadminos' })).data,
-    enabled: isAdminMode,
+    enabled: selectedAction === 'template' || selectedAction === 'boot' || selectedAction === 'reinstall',
     staleTime: 60_000,
   });
 
   const locationsQ = useQuery({
     queryKey: ['locations', 'vps-lifecycle', { limit: 500, hasHypervisor: true, hypervisorType: 'vpsadminos', includes: 'environment' }],
     queryFn: async () => (await fetchLocations({ limit: 500, hasHypervisor: true, hypervisorType: 'vpsadminos', includes: 'environment' })).data,
-    enabled: !isAdminMode,
+    enabled: !isAdminMode && selectedAction === 'clone',
     staleTime: 60_000,
+  });
+
+  const migrateNodesQ = useQuery({
+    queryKey: ['nodes', 'vps-lifecycle-migrate', { limit: 500 }],
+    queryFn: async () => (await fetchNodes({ limit: 500, state: 'active' })).data,
+    enabled: isAdminMode && selectedAction === 'migrate',
+    staleTime: 30_000,
   });
 
   const sourceIpsQ = useQuery({
     queryKey: ['ip_address', 'list', 'vps-lifecycle-source', { vpsId }],
     queryFn: async () => (await fetchIpAddressesForVps(vpsId, { limit: 100 })).data,
+    enabled: selectedAction === 'swap',
     staleTime: 30_000,
   });
 
@@ -464,7 +482,7 @@ export function VpsLifecyclePage() {
         })
         .slice(0, 6);
     },
-    enabled: Boolean(ownerId),
+    enabled: selectedAction === 'swap' && Boolean(ownerId),
     staleTime: 30_000,
   });
 
@@ -551,6 +569,7 @@ export function VpsLifecyclePage() {
       void qc.invalidateQueries({ queryKey: ['vps', vpsId] });
       setSwap((p) => ({ ...p, confirm: false }));
       setSwapOpen(false);
+      setSelectedAction(null);
       chrome.openTasks();
     },
     onError: (e: any) => {
@@ -716,6 +735,96 @@ export function VpsLifecyclePage() {
     ],
     [t],
   );
+
+  const lifecycleActions = useMemo(
+    () => {
+      const userActions: LifecycleActionEntry[] = [
+        { id: 'reinstall', titleKey: 'vps.lifecycle.reinstall.title', descriptionKey: 'vps.lifecycle.action.reinstall' },
+        { id: 'clone', titleKey: 'vps.lifecycle.clone.title', descriptionKey: 'vps.lifecycle.action.clone' },
+        { id: 'swap', titleKey: 'vps.lifecycle.swap.title', descriptionKey: 'vps.lifecycle.action.swap' },
+        { id: 'delete', titleKey: 'vps.lifecycle.delete.title', descriptionKey: 'vps.lifecycle.action.delete', danger: true },
+      ];
+
+      if (!isAdminMode) return userActions;
+
+      return [
+        { id: 'template', titleKey: 'vps.lifecycle.template.title', descriptionKey: 'vps.lifecycle.action.template' },
+        { id: 'boot', titleKey: 'vps.lifecycle.boot.title', descriptionKey: 'vps.lifecycle.action.boot', danger: true },
+        ...userActions,
+        { id: 'replace', titleKey: 'vps.lifecycle.replace.title', descriptionKey: 'vps.lifecycle.action.replace', danger: true },
+        { id: 'migrate', titleKey: 'vps.lifecycle.migrate.title', descriptionKey: 'vps.lifecycle.action.migrate', danger: true },
+      ] satisfies LifecycleActionEntry[];
+    },
+    [isAdminMode],
+  );
+
+  const openAction = (action: LifecycleAction) => {
+    setSelectedAction(action);
+    if (action === 'swap') setSwapOpen(true);
+  };
+
+  const closeFocusedAction = () => {
+    setSelectedAction(null);
+    setSwapOpen(false);
+  };
+
+  const actionList = (
+    <Card testId="vps.lifecycle.actions">
+      <CardHeader
+        title={t('vps.lifecycle.actions.title')}
+        subtitle={isAdminMode ? t('vps.lifecycle.actions.subtitle_admin') : t('vps.lifecycle.actions.subtitle_user')}
+      />
+      <CardBody>
+        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+          {lifecycleActions.map((action) => {
+            const selected = selectedAction === action.id;
+            return (
+              <button
+                key={action.id}
+                type="button"
+                className={[
+                  'rounded-md border p-3 text-left transition hover:bg-surface-2',
+                  selected ? 'border-border bg-surface-2 ring-2 ring-focus/35' : 'border-border bg-surface',
+                ].join(' ')}
+                onClick={() => openAction(action.id)}
+                data-testid={`vps.lifecycle.action.${action.id}`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="font-medium">{t(action.titleKey)}</div>
+                  {action.danger ? (
+                    <span className="shrink-0 rounded-sm border border-danger/30 bg-danger/10 px-1.5 py-0.5 text-xs font-medium text-danger">
+                      {t('vps.lifecycle.actions.danger')}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="mt-1 text-xs text-muted">{t(action.descriptionKey)}</div>
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-3 text-xs text-faint">
+          {t('vps.lifecycle.current_target', {
+            vps: `#${vpsId}`,
+            node: nodeId ? nodeLabel(vps) : '—',
+            owner: ownerId ? ownerLabel(vps) : '—',
+            expiration: formatDateTime((vps as any).expiration_date),
+          })}
+        </div>
+      </CardBody>
+    </Card>
+  );
+
+  const workflowHeader = selectedAction ? (
+    <div className="flex items-center justify-between gap-3" data-testid="vps.lifecycle.workflow">
+      <div>
+        <div className="text-xs font-medium uppercase text-faint">{t('vps.lifecycle.workflow.label')}</div>
+        <div className="text-sm text-muted">{t('vps.lifecycle.workflow.help')}</div>
+      </div>
+      <Button variant="secondary" onClick={closeFocusedAction} testId="vps.lifecycle.workflow.close">
+        {t('common.back')}
+      </Button>
+    </div>
+  ) : null;
 
   const sourceIps = sourceIpsQ.data ?? [];
   const targetIps = targetIpsQ.data ?? [];
@@ -985,14 +1094,14 @@ export function VpsLifecyclePage() {
   const swapDrawer = (
     <Drawer
       open={swapOpen}
-      onClose={() => setSwapOpen(false)}
+      onClose={closeFocusedAction}
       side="right"
       width="lg"
       title={t('vps.lifecycle.swap.title')}
       testId="vps.lifecycle.swap.drawer"
       footer={
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button variant="secondary" onClick={() => setSwapOpen(false)} disabled={swapM.isPending}>
+          <Button variant="secondary" onClick={closeFocusedAction} disabled={swapM.isPending}>
             {t('common.cancel')}
           </Button>
           <ActionButton
@@ -1103,31 +1212,6 @@ export function VpsLifecyclePage() {
     </Drawer>
   );
 
-  const swapCard = (
-    <>
-      <Card testId="vps.lifecycle.swap">
-        <CardHeader
-          title={t('vps.lifecycle.swap.title')}
-          subtitle={isAdminMode ? t('vps.lifecycle.swap.subtitle') : t('vps.lifecycle.swap.subtitle_user')}
-          actions={
-            <Button variant="primary" onClick={() => setSwapOpen(true)} testId="vps.lifecycle.swap.open">
-              {t('vps.lifecycle.swap.open')}
-            </Button>
-          }
-        />
-        <CardBody className="space-y-3">
-          <div className="text-sm text-muted">{t('vps.lifecycle.swap.entry_summary')}</div>
-          {likelyCandidateRows.length > 0 ? (
-            <div className="text-xs text-faint" data-testid="vps.lifecycle.swap.entry_candidates">
-              {t('vps.lifecycle.swap.entry_candidates', { count: likelyCandidateRows.length })}
-            </div>
-          ) : null}
-        </CardBody>
-      </Card>
-      {swapDrawer}
-    </>
-  );
-
   const deleteCard = (
     <Card testId="vps.lifecycle.delete">
       <CardHeader title={t('vps.lifecycle.delete.title')} subtitle={t('vps.lifecycle.delete.subtitle')} />
@@ -1197,9 +1281,63 @@ export function VpsLifecyclePage() {
           testId="vps.lifecycle.lifetime"
         />
 
-        {cloneCard}
-        {swapCard}
-        {deleteCard}
+        {actionList}
+        {workflowHeader}
+        {selectedAction === 'reinstall' ? (
+          <Card testId="vps.lifecycle.reinstall">
+            <CardHeader title={t('vps.lifecycle.reinstall.title')} subtitle={t('vps.lifecycle.reinstall.subtitle')} />
+            <CardBody className="space-y-4">
+              <Alert variant="warn" title={t('vps.lifecycle.reinstall.warning_title')}>
+                {t('vps.lifecycle.reinstall.warning_body')}
+              </Alert>
+
+              <Field label={t('vps.lifecycle.field.os_template')} help={t('vps.lifecycle.reinstall.os_template_help')}>
+                <Select
+                  value={reinstall.osTemplate}
+                  onChange={(e) => setReinstall((prev) => ({ ...prev, osTemplate: e.target.value }))}
+                  disabled={reinstallM.isPending || templatesQ.isLoading}
+                  testId="vps.lifecycle.reinstall.os_template"
+                >
+                  <option value="">{t('vps.lifecycle.placeholder.os_template')}</option>
+                  {templatesQ.data?.map((tpl) => (
+                    <option key={tpl.id} value={tpl.id}>
+                      {templateLabel(tpl)}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+
+              <Checkbox
+                checked={reinstall.confirm}
+                onChange={(v) => setReinstall((p) => ({ ...p, confirm: v }))}
+                label={t('vps.lifecycle.confirm.reinstall')}
+                testId="vps.lifecycle.reinstall.confirm"
+              />
+
+              {reinstallM.isError ? (
+                <Alert title={t('vps.lifecycle.reinstall.error')} variant="danger">
+                  {mutationErrorMessage(reinstallM.error, t('vps.lifecycle.validation.reinstall'))}
+                </Alert>
+              ) : null}
+
+              <div className="flex justify-end">
+                <ActionButton
+                  variant="danger"
+                  testId="vps.lifecycle.reinstall.submit"
+                  disabled={!reinstall.confirm || !reinstall.osTemplate || !gate.allowed}
+                  disabledReason={!gate.allowed ? gate.reason : undefined}
+                  loading={reinstallM.isPending}
+                  onClick={() => reinstallM.mutate()}
+                >
+                  {t('vps.lifecycle.reinstall.submit')}
+                </ActionButton>
+              </div>
+            </CardBody>
+          </Card>
+        ) : null}
+        {selectedAction === 'clone' ? cloneCard : null}
+        {selectedAction === 'swap' ? swapDrawer : null}
+        {selectedAction === 'delete' ? deleteCard : null}
       </div>
     );
   }
@@ -1238,6 +1376,10 @@ export function VpsLifecyclePage() {
         testId="vps.lifecycle.lifetime"
       />
 
+      {actionList}
+      {workflowHeader}
+
+      {selectedAction === 'template' ? (
       <Card testId="vps.lifecycle.template">
         <CardHeader title={t('vps.lifecycle.template.title')} subtitle={t('vps.lifecycle.template.subtitle')} />
         <CardBody className="space-y-4">
@@ -1295,7 +1437,9 @@ export function VpsLifecyclePage() {
           </div>
         </CardBody>
       </Card>
+      ) : null}
 
+      {selectedAction === 'boot' ? (
       <Card testId="vps.lifecycle.boot">
         <CardHeader title={t('vps.lifecycle.boot.title')} subtitle={t('vps.lifecycle.boot.subtitle')} />
         <CardBody className="space-y-4">
@@ -1364,7 +1508,9 @@ export function VpsLifecyclePage() {
           </div>
         </CardBody>
       </Card>
+      ) : null}
 
+      {selectedAction === 'reinstall' ? (
       <Card testId="vps.lifecycle.reinstall">
         <CardHeader title={t('vps.lifecycle.reinstall.title')} subtitle={t('vps.lifecycle.reinstall.subtitle')} />
         <CardBody className="space-y-4">
@@ -1415,11 +1561,13 @@ export function VpsLifecyclePage() {
           </div>
         </CardBody>
       </Card>
+      ) : null}
 
-      {cloneCard}
+      {selectedAction === 'clone' ? cloneCard : null}
 
-      {swapCard}
+      {selectedAction === 'swap' ? swapDrawer : null}
 
+      {selectedAction === 'replace' ? (
       <Card testId="vps.lifecycle.replace">
         <CardHeader title={t('vps.lifecycle.replace.title')} subtitle={t('vps.lifecycle.replace.subtitle')} />
         <CardBody className="space-y-4">
@@ -1493,18 +1641,27 @@ export function VpsLifecyclePage() {
           </div>
         </CardBody>
       </Card>
+      ) : null}
 
+      {selectedAction === 'migrate' ? (
       <Card testId="vps.lifecycle.migrate">
         <CardHeader title={t('vps.lifecycle.migrate.title')} subtitle={t('vps.lifecycle.migrate.subtitle')} />
         <CardBody className="space-y-4">
           <Field label={t('vps.lifecycle.field.node')} help={t('vps.lifecycle.migrate.node_help')}>
-            <NodeLookupInput
+            <Select
               value={migrate.node}
-              onChange={(node) => setMigrate((prev) => ({ ...prev, node }))}
-              placeholder={t('vps.lifecycle.placeholder.node')}
+              onChange={(e) => setMigrate((prev) => ({ ...prev, node: e.target.value }))}
               testId="vps.lifecycle.migrate.node"
-              disabled={migrateM.isPending}
-            />
+              disabled={migrateM.isPending || migrateNodesQ.isLoading}
+            >
+              <option value="">{t('vps.lifecycle.placeholder.node_select')}</option>
+              {migrateNodesQ.data?.map((node) => (
+                <option key={node.id} value={node.id}>
+                  {String(node.domain_name ?? node.fqdn ?? node.name ?? `#${node.id}`)}
+                  {node.fqdn && node.fqdn !== node.domain_name ? ` (${node.fqdn})` : ''}
+                </option>
+              ))}
+            </Select>
           </Field>
 
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -1562,8 +1719,9 @@ export function VpsLifecyclePage() {
           </div>
         </CardBody>
       </Card>
+      ) : null}
 
-      {deleteCard}
+      {selectedAction === 'delete' ? deleteCard : null}
     </div>
   );
 }
