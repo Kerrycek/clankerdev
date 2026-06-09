@@ -11,7 +11,7 @@ import { formatDateTime } from '../../lib/format';
 import { formatErrorMessage } from '../../lib/errors';
 import { useActionStatePollIntervalMs, useTierAIntervalMs } from '../../lib/refreshTiers';
 import { extractRelatedTransactionChainIdFromActionState } from '../../lib/taskLinks';
-import { durationSec, formatPayload, safeJson, transactionErrorText } from '../../lib/txFormat';
+import { durationSec, safeJson, transactionErrorText } from '../../lib/txFormat';
 import {
   actionStateBadge,
   actionStateProgressLabel,
@@ -29,7 +29,7 @@ import { StatusDot } from '../ui/StatusDot';
 import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Spinner } from '../ui/Spinner';
-import { TransactionPayloadPanels } from '../ui/TransactionPayloadPanels';
+import { TransactionInlineDetails } from '../ui/TransactionInlineDetails';
 import { useChrome } from './ChromeContext';
 
 function parseIds(input: unknown, limit: number): number[] {
@@ -171,9 +171,6 @@ function ActionStateInspect(props: {
   const renderTxCard = (tx: Transaction) => {
     const b = transactionBadge(tx);
     const name = tx.name ? String(tx.name) : `#${tx.id}`;
-    const input = formatPayload((tx as any).input);
-    const output = formatPayload((tx as any).output);
-    const errorText = transactionErrorText(tx);
     const txId = Number((tx as any).id);
     const hasTxId = Number.isFinite(txId) && txId > 0;
     const expanded = hasTxId && expandedTx.has(txId);
@@ -247,19 +244,12 @@ function ActionStateInspect(props: {
 
         {expanded ? (
           <div className="mt-3 border-t border-border pt-3" data-testid={`tasks.inspect.tx.expanded.${txId}`}>
-            {errorText ? (
-              <div className="mb-3">
-                <Alert variant="danger" title={i18n.t('transactions.tx.error_title')}>
-                  <pre className="whitespace-pre-wrap break-words text-xs">{errorText}</pre>
-                </Alert>
-              </div>
-            ) : null}
-            <TransactionPayloadPanels
+            <TransactionInlineDetails
+              tx={tx}
               t={i18n.t}
-              input={input}
-              output={output}
+              basePath={basePath}
               maxHeightClass="max-h-80"
-              layout="stacked"
+              payloadLayout="stacked"
             />
           </div>
         ) : null}

@@ -11,13 +11,12 @@ import { clsx } from '../ui/clsx';
 import { Badge } from '../ui/Badge';
 import { StatusDot } from '../ui/StatusDot';
 import { Button } from '../ui/Button';
-import { Alert } from '../ui/Alert';
 import { toneProgressFillClass, toneSurfaceClass, type ToneVariant } from '../ui/tone';
 import { useAppMode } from '../../app/appMode';
 import { useI18n } from '../../app/i18n';
 import { formatDateTime } from '../../lib/format';
 import { useTierAIntervalMs } from '../../lib/refreshTiers';
-import { durationSec, formatPayload, transactionErrorText } from '../../lib/txFormat';
+import { durationSec, transactionErrorText } from '../../lib/txFormat';
 import {
   chainBadgeFromState,
   chainProgressLabel,
@@ -27,7 +26,7 @@ import {
   transactionBadge,
 } from '../../lib/taskStatus';
 import { resourceId, refLabel } from '../../lib/resources';
-import { TransactionPayloadPanels } from '../ui/TransactionPayloadPanels';
+import { TransactionInlineDetails } from '../ui/TransactionInlineDetails';
 
 function formatConcerns(chain: TransactionChain): string | null {
   const c = chain.concerns as any;
@@ -364,10 +363,6 @@ export function TransactionChainsPanel(props: {
                   const started = (tx as any).started_at as string | null | undefined;
                   const finished = (tx as any).finished_at as string | null | undefined;
                   const sec = durationSec(started, finished);
-                  const input = formatPayload((tx as any).input);
-                  const output = formatPayload((tx as any).output);
-                  const errorText = transactionErrorText(tx);
-                  const hasPayload = Boolean(input || output);
 
                   return (
                     <div
@@ -406,27 +401,14 @@ export function TransactionChainsPanel(props: {
                       </div>
 
                       {txExpanded ? (
-                        <div className="mt-2">
-                          {errorText ? (
-                            <div className="mb-3">
-                              <Alert variant="danger" title={i18n.t('transactions.tx.error_title')}>
-                                <pre className="whitespace-pre-wrap break-words text-xs">{errorText}</pre>
-                              </Alert>
-                            </div>
-                          ) : null}
-                          {hasPayload ? (
-                            <TransactionPayloadPanels
-                              t={i18n.t}
-                              input={input}
-                              output={output}
-                              maxHeightClass="max-h-72"
-                              layout="stacked"
-                            />
-                          ) : (
-                            <div className="rounded-md border border-border bg-surface-2 p-2 text-xs text-muted">
-                              {i18n.t('transactions.tx.no_payload')}
-                            </div>
-                          )}
+                        <div className="mt-2" data-testid={`tasks.chain.tx.expanded.${txId}`}>
+                          <TransactionInlineDetails
+                            tx={tx}
+                            t={i18n.t}
+                            basePath={basePath}
+                            maxHeightClass="max-h-72"
+                            payloadLayout="stacked"
+                          />
                         </div>
                       ) : null}
                     </div>

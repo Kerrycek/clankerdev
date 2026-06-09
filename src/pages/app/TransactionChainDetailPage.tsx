@@ -14,7 +14,7 @@ import { useTierAIntervalMs } from '../../lib/refreshTiers';
 import { formatDateTime } from '../../lib/format';
 import { formatErrorMessage } from '../../lib/errors';
 import { resourceId, refLabel } from '../../lib/resources';
-import { durationSec, formatPayload, safeJson, transactionErrorText } from '../../lib/txFormat';
+import { durationSec, safeJson, transactionErrorText } from '../../lib/txFormat';
 import { dotVariantFromRowVariant, tableVariantFromBadgeVariant } from '../../lib/variantMap';
 
 import { Badge } from '../../components/ui/Badge';
@@ -27,7 +27,7 @@ import { ObjectHeader } from '../../components/ui/ObjectHeader';
 import { StatusDot } from '../../components/ui/StatusDot';
 import { Table } from '../../components/ui/Table';
 import { TableRowLink } from '../../components/ui/TableRowLink';
-import { TransactionDebugSections } from '../../components/ui/TransactionPayloadPanels';
+import { TransactionInlineDetails } from '../../components/ui/TransactionInlineDetails';
 
 import { ChevronDown, ChevronUp, Pin, PinOff } from 'lucide-react';
 
@@ -377,11 +377,6 @@ export function TransactionChainDetailPage() {
                       const finished = (tx as any).finished_at as string | null | undefined;
                       const sec = durationSec(started, finished);
 
-                      const input = formatPayload((tx as any).input);
-                      const output = formatPayload((tx as any).output);
-                      const errorText = transactionErrorText(tx);
-                      const deps = Array.isArray((tx as any).depends_on) ? ((tx as any).depends_on as any[]) : [];
-
                       const expanded = Boolean(txId && expandedTx.has(txId));
                       const isCurrent = Boolean(txId && currentTxId === txId);
                       const isFailed = Boolean(txId && failedTxId === txId);
@@ -502,34 +497,12 @@ export function TransactionChainDetailPage() {
                               className="border-b border-border"
                             >
                               <td colSpan={10} className="px-4 pb-4">
-                                <div className="mt-2 space-y-3">
-                                  {deps.length ? (
-                                    <div>
-                                      <div className="text-xs font-medium text-muted">{t('transactions.tx.depends_on')}</div>
-                                      <div className="mt-2 flex flex-wrap gap-2">
-                                        {deps.map((d, idx) => {
-                                          const id = resourceId(d);
-                                          if (!id) return null;
-                                          return (
-                                            <Link
-                                              key={idx}
-                                              to={`${basePath}/transactions/items/${id}`}
-                                              className="rounded-md border border-border bg-surface px-2 py-1 text-xs text-accent hover:underline"
-                                            >
-                                              #{id}
-                                            </Link>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-                                  ) : null}
-
-                                  <TransactionDebugSections
+                                <div className="mt-2">
+                                  <TransactionInlineDetails
+                                    tx={tx}
                                     t={t}
-                                    input={input}
-                                    output={output}
-                                    errorText={errorText}
-                                    source={tx as any}
+                                    basePath={basePath}
+                                    raw={tx}
                                     maxHeightClass="max-h-80"
                                   />
                                 </div>

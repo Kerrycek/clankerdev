@@ -86,7 +86,7 @@ export function TransactionDebugSections(props: {
     return 'max-h-96';
   })();
   const source = props.source ?? {};
-  const extraKeys = ['exception', 'stdout', 'stderr', 'backtrace', 'message', 'details', 'detail', 'log', 'logs'];
+  const extraKeys = ['result', 'response', 'exception', 'stdout', 'stderr', 'backtrace', 'message', 'details', 'detail', 'log', 'logs'];
   const extras = extraKeys
     .map((key) => {
       const value = source[key];

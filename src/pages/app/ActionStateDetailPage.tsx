@@ -19,11 +19,11 @@ import { LinkButton } from '../../components/ui/LinkButton';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { ObjectHeader } from '../../components/ui/ObjectHeader';
 import { Table } from '../../components/ui/Table';
-import { TransactionDebugSections } from '../../components/ui/TransactionPayloadPanels';
+import { TransactionInlineDetails } from '../../components/ui/TransactionInlineDetails';
 import { formatDateTime } from '../../lib/format';
 import { formatErrorMessage } from '../../lib/errors';
 import { resourceId, refLabel } from '../../lib/resources';
-import { durationSec, formatPayload, safeJson, transactionErrorText } from '../../lib/txFormat';
+import { durationSec, safeJson, transactionErrorText } from '../../lib/txFormat';
 import { extractRelatedTransactionChainIdFromActionState } from '../../lib/taskLinks';
 import {
   actionStateBadge,
@@ -435,16 +435,10 @@ export function ActionStateDetailPage() {
                     const name = tx.name ? String(tx.name) : t('transactions.items.row.fallback_name');
                     const nodeId = resourceId((tx as any).node);
                     const vpsId = resourceId((tx as any).vps);
-                    const userId = resourceId((tx as any).user);
                     const started = (tx as any).started_at as string | null | undefined;
                     const finished = (tx as any).finished_at as string | null | undefined;
                     const sec = durationSec(started, finished);
                     const expanded = hasTxId && expandedTx.has(txId);
-                    const input = formatPayload((tx as any).input);
-                    const output = formatPayload((tx as any).output);
-                    const errorText = transactionErrorText(tx);
-                    const progress = typeof (tx as any).progress === 'number' ? String((tx as any).progress) : null;
-                    const done = (tx as any).done ? String((tx as any).done) : null;
                     const success = typeof (tx as any).success === 'number' ? String((tx as any).success) : null;
                     const isCurrent = hasTxId && currentTxId === txId;
                     const isFailed = hasTxId && failedTxId === txId;
@@ -518,23 +512,13 @@ export function ActionStateDetailPage() {
                         {expanded ? (
                           <tr className="border-b border-border bg-surface-2" data-testid={`action_state.detail.tx.expanded.${txId}`}>
                             <td colSpan={10} className="px-4 py-4">
-                              <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                                <div><span className="text-muted">{t('common.user')}:</span> {userId ? `#${userId}` : t('common.na')}</div>
-                                <div><span className="text-muted">{t('transactions.tx.duration_label')}:</span> {sec !== null ? t('transactions.tx.duration', { sec }) : t('common.na')}</div>
-                                <div><span className="text-muted">{t('transactions.tx.done_label')}:</span> {done ?? t('common.na')}</div>
-                                <div><span className="text-muted">{t('common.progress')}:</span> {progress ?? t('common.na')}</div>
-                              </div>
-                              <div className="mt-4">
-                                <TransactionDebugSections
-                                  t={t}
-                                  input={input}
-                                  output={output}
-                                  errorText={errorText}
-                                  source={tx as any}
-                                  raw={tx}
-                                  maxHeightClass="max-h-80"
-                                />
-                              </div>
+                              <TransactionInlineDetails
+                                tx={tx}
+                                t={t}
+                                basePath={basePath}
+                                raw={tx}
+                                maxHeightClass="max-h-80"
+                              />
                             </td>
                           </tr>
                         ) : null}
