@@ -16,8 +16,16 @@ function choicesHandlers() {
     'GET nodes': () => ({
       nodes: [
         {
+          id: 99,
+          name: 'storage99',
+          role: 'storage',
+          location: { id: 2, label: 'Praha' },
+        },
+        {
           id: 101,
           name: 'node101',
+          role: 'hypervisor',
+          hypervisor_type: 'vpsadminos',
           location: { id: 2, label: 'Praha' },
         },
       ],
@@ -58,7 +66,7 @@ function choicesHandlers() {
 }
 
 test.describe('@workflow-matrix @pr-smoke VPS create admin flow', () => {
-  test('keeps an admin in user-scope create flow on app route', async ({ page }) => {
+  test('keeps an admin in user-scope create flow on app route and auto-picks only a hypervisor node', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_ADMIN' });
     const createBodies: unknown[] = [];
     page.on('request', (req) => {

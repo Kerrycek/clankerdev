@@ -54,6 +54,7 @@ Checklist:
 | Action state detail | user/admin | Header, cancel dialog, related transactions, payload expansion | `e2e/specs/app/action_state_detail_page.spec.ts` |
 | Transaction/action-state detail | user/admin | Transaction detail payloads and admin-only operational links | `e2e/specs/app/transaction_detail_page.spec.ts`, `e2e/specs/app/action_state_detail_page.spec.ts` |
 | Create VPS form smoke | user/admin | User-scope and admin-scope create payloads without live mutation | `e2e/specs/app/vps_create_admin_flow.spec.ts` |
+| VPS access actions | user | Root password result display and SSH public key deployment task tracking | `e2e/specs/app/vps_access_action_flows.spec.ts` |
 | Storage tab | user | Root dataset links and mount create/delete flows with mocked mutations | `e2e/specs/app/vps_storage_tab_mounts.spec.ts` |
 | Lifecycle action visibility | user/admin | User-visible actions and admin-only lifecycle controls/gating | `e2e/specs/app/vps_lifecycle_tab_actions.spec.ts` |
 | Requests list/detail | user/admin | User request detail without admin controls; admin operational links | `e2e/specs/app/user_requests_smoke.spec.ts`, `e2e/specs/admin/requests_operations_smoke.spec.ts` |

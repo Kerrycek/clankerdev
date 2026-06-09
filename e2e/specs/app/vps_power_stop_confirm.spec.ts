@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 
@@ -23,13 +23,19 @@ const vps = {
   dns_resolver: 'inherit',
 };
 
-test('@smoke VPS detail stop action uses confirm dialog and sends POST with force', async ({ page }) => {
-  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
-
+async function installPowerMock(
+  page: Page,
+  opts: {
+    vpsOverride?: Record<string, unknown>;
+    actionId: number;
+    actionLabel: string;
+    actionPath: 'start' | 'stop' | 'restart';
+  }
+) {
   await installHaveApiMock(page, {
     user: { id: 42, login: 'user', level: 1 },
     handlers: {
-      'GET vpses/123': () => ({ vps }),
+      'GET vpses/123': () => ({ vps: { ...vps, ...opts.vpsOverride } }),
       'GET ip_addresses': () => ({
         ip_addresses: [
           {
@@ -41,21 +47,41 @@ test('@smoke VPS detail stop action uses confirm dialog and sends POST with forc
         ],
       }),
       'GET vpses/123/statuses': () => ({ statuses: [] }),
-      'POST vpses/123/stop': () => ({ _meta: { action_state_id: 777 } }),
-      'GET action_states/777': () => ({
+      [`POST vpses/123/${opts.actionPath}`]: () => ({ _meta: { action_state_id: opts.actionId } }),
+      [`GET action_states/${opts.actionId}`]: () => ({
         action_state: {
-          id: 777,
-          label: 'Stop',
+          id: opts.actionId,
+          label: opts.actionLabel,
           status: true,
-          finished: true,
+          finished: false,
           current: 1,
-          total: 1,
+          total: 2,
           created_at: '2026-02-04T00:00:00Z',
           updated_at: '2026-02-04T00:00:01Z',
         },
       }),
+      'GET action_states': () => ({
+        action_states: [
+          {
+            id: opts.actionId,
+            label: opts.actionLabel,
+            status: true,
+            finished: false,
+            current: 1,
+            total: 2,
+            created_at: '2026-02-04T00:00:00Z',
+            updated_at: '2026-02-04T00:00:01Z',
+          },
+        ],
+      }),
     },
   });
+}
+
+test('@smoke VPS detail stop action uses confirm dialog and sends POST with force', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+  await installPowerMock(page, { actionId: 777, actionLabel: 'Stop', actionPath: 'stop' });
 
   await page.goto('/app/vps/123');
 
@@ -82,4 +108,49 @@ test('@smoke VPS detail stop action uses confirm dialog and sends POST with forc
   expect(req.postDataJSON()).toEqual({ vps: { force: true } });
 
   await expect(page.getByTestId('vps.action.stop_confirm')).toBeHidden();
+});
+
+test('@workflow-matrix @smoke VPS detail start action opens blocking progress and is tracked in tasks', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+  await installPowerMock(page, {
+    vpsOverride: { is_running: false, uptime: 0 },
+    actionId: 778,
+    actionLabel: 'Start VPS',
+    actionPath: 'start',
+  });
+
+  await page.goto('/app/vps/123');
+
+  await page.getByTestId('vps.action.start').click();
+  await expect(page.getByTestId('modal.action_progress')).toBeVisible();
+  await page.getByTestId('modal.action_progress.continue').click();
+
+  await page.getByTestId('tasks.open-button').click();
+  await expect(page.getByTestId('tasks.drawer')).toBeVisible();
+  await expect(page.getByTestId('tasks.row.778')).toContainText('Start VPS');
+});
+
+test('@workflow-matrix @smoke VPS detail restart action sends force payload and tracks action state', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+  await installPowerMock(page, { actionId: 779, actionLabel: 'Restart VPS', actionPath: 'restart' });
+
+  await page.goto('/app/vps/123');
+
+  await page.getByTestId('vps.action.restart').click();
+  await expect(page.getByTestId('vps.action.restart_confirm')).toBeVisible();
+  await page.getByTestId('vps.action.restart_confirm.force').click();
+
+  const reqPromise = page.waitForRequest(
+    (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/vpses/123/restart')
+  );
+
+  await page.getByTestId('vps.action.restart_confirm.confirm').click();
+
+  const req = await reqPromise;
+  expect(req.postDataJSON()).toEqual({ vps: { force: true } });
+
+  await expect(page.getByTestId('modal.action_progress')).toBeVisible();
+  await page.getByTestId('modal.action_progress.continue').click();
+  await page.getByTestId('tasks.open-button').click();
+  await expect(page.getByTestId('tasks.row.779')).toContainText('Restart VPS');
 });

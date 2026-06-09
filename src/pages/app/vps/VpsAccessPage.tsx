@@ -300,6 +300,7 @@ export function VpsAccessPage() {
                 onChange={(event: any) => setPasswordType(event.target.value as VpsPasswordType)}
                 disabled={passwdM.isPending}
                 className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-fg"
+                data-testid="vps.access.password.type"
               >
                 <option value="secure">{t('vps.access.password_type.secure')}</option>
                 <option value="simple">{t('vps.access.password_type.simple')}</option>
@@ -307,7 +308,12 @@ export function VpsAccessPage() {
               <span className="block text-xs text-muted">{t('vps.access.form.type.description')}</span>
             </label>
 
-            <ActionButton loading={passwdM.isPending} disabled={!canGenerate} onClick={() => setPendingPasswordType(passwordType)}>
+            <ActionButton
+              loading={passwdM.isPending}
+              disabled={!canGenerate}
+              onClick={() => setPendingPasswordType(passwordType)}
+              testId="vps.access.password.generate"
+            >
               {t('vps.access.reset.button')}
             </ActionButton>
           </div>
@@ -347,6 +353,7 @@ export function VpsAccessPage() {
                 onChange={(event: any) => setSelectedPublicKeyId(event.target.value ? Number(event.target.value) : null)}
                 disabled={publicKeysQ.isPending || publicKeys.length === 0 || deployKeyM.isPending}
                 className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-fg"
+                data-testid="vps.access.ssh.key"
               >
                 {publicKeys.length === 0 ? <option value="">{t('vps.access.ssh.no_keys_option')}</option> : null}
                 {publicKeys.map((key: VpsPublicKey) => (
@@ -362,7 +369,12 @@ export function VpsAccessPage() {
               </span>
             </label>
 
-            <Button variant="secondary" onClick={() => void publicKeysQ.refetch()} disabled={publicKeyUserId === null || publicKeysQ.isPending}>
+            <Button
+              variant="secondary"
+              onClick={() => void publicKeysQ.refetch()}
+              disabled={publicKeyUserId === null || publicKeysQ.isPending}
+              testId="vps.access.ssh.refresh"
+            >
               {publicKeysQ.isPending ? t('vps.access.ssh.loading') : t('vps.access.ssh.refresh')}
             </Button>
 
@@ -370,6 +382,7 @@ export function VpsAccessPage() {
               loading={deployKeyM.isPending}
               disabled={!canDeployKey}
               onClick={() => (selectedPublicKeyId !== null ? setPendingPublicKeyId(selectedPublicKeyId) : undefined)}
+              testId="vps.access.ssh.deploy"
             >
               {t('vps.access.ssh.deploy.button')}
             </ActionButton>
@@ -409,6 +422,7 @@ export function VpsAccessPage() {
         confirmDisabled={!pendingPasswordType || passwdM.isPending}
         onCancel={() => setPendingPasswordType(null)}
         onConfirm={() => (pendingPasswordType ? passwdM.mutate(pendingPasswordType) : undefined)}
+        testId="vps.access.password.confirm"
       />
 
       <ConfirmDialog
@@ -420,6 +434,7 @@ export function VpsAccessPage() {
         confirmDisabled={!pendingPublicKeyId || deployKeyM.isPending}
         onCancel={() => setPendingPublicKeyId(null)}
         onConfirm={() => (pendingPublicKeyId ? deployKeyM.mutate(pendingPublicKeyId) : undefined)}
+        testId="vps.access.ssh.confirm"
       />
     </div>
   );

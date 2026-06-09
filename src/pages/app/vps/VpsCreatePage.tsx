@@ -114,6 +114,13 @@ function locationEnvironmentId(loc: Location | undefined): number | undefined {
   return undefined;
 }
 
+function isHypervisorNode(node: Node | undefined): boolean {
+  if (!node) return false;
+  const role = String((node as any).role ?? node.type ?? '').toLowerCase();
+  const hypervisorType = String(node.hypervisor_type ?? '').trim();
+  return role === 'hypervisor' || hypervisorType.length > 0;
+}
+
 export function validateForm(
   form: FormState,
   isAdmin: boolean,
@@ -241,7 +248,7 @@ export function VpsCreatePage() {
 
   const nodes = needsAdminPayload ? nodesQ.data ?? [] : [];
   const hiddenAdminTarget = !isAdminMode && isAdminAccount
-    ? { userId: auth.user?.id, nodeId: nodes[0]?.id }
+    ? { userId: auth.user?.id, nodeId: nodes.find(isHypervisorNode)?.id }
     : undefined;
   const templatesByFamily = useMemo(() => {
     const groups = new Map<string, OsTemplate[]>();
