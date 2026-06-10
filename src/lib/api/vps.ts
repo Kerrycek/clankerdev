@@ -119,7 +119,10 @@ export interface VpsMigratePayload {
   finish_minutes?: number;
   stop_on_error?: boolean;
   cleanup_data?: boolean;
+  no_start?: boolean;
+  skip_start?: boolean;
   send_mail?: boolean;
+  reason?: string;
 }
 
 interface CreateVpsCommonPayload {

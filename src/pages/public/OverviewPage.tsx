@@ -201,7 +201,7 @@ export function OverviewPage() {
       )}
 
       {ipv4Level === 'critical' ? (
-        <Alert title={i18n.t('public.overview.ipv4_critical.title')} variant="danger" data-testid="public.ipv4.alert">
+        <Alert title={i18n.t('public.overview.ipv4_critical.title')} variant="danger" testId="public.ipv4.alert">
           {i18n.t('public.overview.ipv4_critical.body', { count: ipv4Left ?? 0 })}
         </Alert>
       ) : null}

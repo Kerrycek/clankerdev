@@ -16,6 +16,7 @@ export function NodeLookupInput(props: {
 
   /** Called when the user picks a suggestion. */
   onPick?: (node: Node) => void;
+  selectedLabel?: string;
 
   placeholder?: string;
   disabled?: boolean;
@@ -133,11 +134,12 @@ export function NodeLookupInput(props: {
   }
 
   const showDropdown = open && needle.length >= 1;
+  const displayValue = props.selectedLabel && !open ? props.selectedLabel : props.value;
 
   return (
     <div className={clsx('relative', props.className)}>
       <Input
-        value={props.value}
+        value={displayValue}
         onChange={(e) => {
           props.onChange(e.target.value);
           setOpen(true);

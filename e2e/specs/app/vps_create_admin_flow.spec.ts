@@ -18,6 +18,8 @@ function choicesHandlers() {
         {
           id: 101,
           name: 'node101',
+          type: 'node',
+          hypervisor_type: 'vpsadminos',
           location: { id: 2, label: 'Praha' },
         },
       ],
@@ -96,6 +98,63 @@ test.describe('@workflow-matrix @pr-smoke VPS create admin flow', () => {
     });
     expect(body.vps).not.toHaveProperty('location');
     expect(body.vps).not.toHaveProperty('environment');
+  });
+
+  test('admin user-scope create auto-picks a VPS hypervisor node only', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_ADMIN' });
+    const createBodies: unknown[] = [];
+    const nodeRequests: URL[] = [];
+
+    page.on('request', (req) => {
+      const url = new URL(req.url());
+      if (req.method() === 'GET' && url.pathname.endsWith('/nodes')) {
+        nodeRequests.push(url);
+      }
+      if (req.method() === 'POST' && url.pathname.endsWith('/vpses')) {
+        createBodies.push(JSON.parse(req.postData() ?? '{}'));
+      }
+    });
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
+      handlers: {
+        ...choicesHandlers(),
+        'GET nodes': () => ({
+          nodes: [
+            {
+              id: 5,
+              name: 'vpsadmin1.prg',
+              type: 'mailer',
+              hypervisor_type: null,
+              location: { id: 2, label: 'Praha' },
+            },
+            {
+              id: 101,
+              name: 'node101',
+              type: 'node',
+              hypervisor_type: 'vpsadminos',
+              location: { id: 2, label: 'Praha' },
+            },
+          ],
+        }),
+      },
+    });
+
+    await page.goto('/app/vps/new');
+
+    await page.getByTestId('vps.create.location').selectOption('2');
+    await page.getByTestId('vps.create.os_template').selectOption('6');
+    await page.getByTestId('vps.create.hostname').fill('hypervisor-picked.example');
+    await page.getByTestId('vps.create.submit').click();
+
+    await expect(page).toHaveURL(/\/app\/vps\/150$/);
+
+    expect(nodeRequests.some((url) => url.searchParams.get('node[type]') === 'node')).toBe(true);
+    expect(nodeRequests.some((url) => url.searchParams.get('node[hypervisor_type]') === 'vpsadminos')).toBe(true);
+    expect(createBodies).toHaveLength(1);
+    const body = createBodies[0] as any;
+    expect(body.vps.node).toBe(101);
+    expect(body.vps.node).not.toBe(5);
   });
 
   test('regular user create flow still sends location for backend node picking', async ({ page }) => {

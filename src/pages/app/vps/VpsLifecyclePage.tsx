@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { useAppMode } from '../../../app/appMode';
 import { useI18n } from '../../../app/i18n';
@@ -20,6 +20,7 @@ import { VpsLookupInput } from '../../../components/ui/VpsLookupInput';
 import { LifecyclePanel } from '../../../components/lifetimes/LifecyclePanel';
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
 import { fetchLocations, type Location } from '../../../lib/api/infra';
+import { fetchNodes, type Node } from '../../../lib/api/nodes';
 import { fetchIpAddressesForVps, type IpAddress } from '../../../lib/api/ipAddresses';
 import { fetchOsTemplates, type OsTemplate } from '../../../lib/api/osTemplates';
 import {
@@ -97,12 +98,15 @@ type MigrateForm = {
   node: string;
   replaceIpAddresses: boolean;
   transferIpAddresses: boolean;
-  maintenanceWindow: boolean;
+  scheduleMode: 'now' | 'maintenance' | 'custom';
   finishWeekday: string;
-  finishMinutes: string;
+  finishHour: string;
   stopOnError: boolean;
   cleanupData: boolean;
+  noStart: boolean;
+  skipStart: boolean;
   sendMail: boolean;
+  reason: string;
   confirm: boolean;
 };
 
@@ -110,6 +114,29 @@ type DeleteForm = {
   lazy: boolean;
   confirm: boolean;
 };
+
+type LifecycleActionKind =
+  | 'lifetime'
+  | 'template'
+  | 'boot'
+  | 'reinstall'
+  | 'clone'
+  | 'swap'
+  | 'replace'
+  | 'migrate'
+  | 'delete';
+
+const lifecycleActionKinds = new Set<LifecycleActionKind>([
+  'lifetime',
+  'template',
+  'boot',
+  'reinstall',
+  'clone',
+  'swap',
+  'replace',
+  'migrate',
+  'delete',
+]);
 
 function resourceId(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -143,6 +170,21 @@ function parseOptionalNonNegativeInt(raw: string): number | undefined {
   if (!Number.isInteger(n) || n < 0) throw new Error('invalid-id');
   return n;
 }
+
+const migrateWeekdayOptions = [
+  { value: '0', labelKey: 'common.weekday.sun' },
+  { value: '1', labelKey: 'common.weekday.mon' },
+  { value: '2', labelKey: 'common.weekday.tue' },
+  { value: '3', labelKey: 'common.weekday.wed' },
+  { value: '4', labelKey: 'common.weekday.thu' },
+  { value: '5', labelKey: 'common.weekday.fri' },
+  { value: '6', labelKey: 'common.weekday.sat' },
+] as const;
+
+const migrateHourOptions = Array.from({ length: 24 }, (_, hour) => ({
+  value: String(hour),
+  label: `${String(hour).padStart(2, '0')}:00`,
+}));
 
 function defaultExpirationInput(): string {
   const d = new Date();
@@ -181,6 +223,18 @@ function nodeLabel(vps: unknown): string {
   const node = vps && typeof vps === 'object' ? (vps as any).node : null;
   if (!node || typeof node !== 'object') return '—';
   return String(node.domain_name ?? node.name ?? node.label ?? `#${resourceId(node) ?? ''}`).trim() || '—';
+}
+
+function pickedNodeLabel(node: { id?: number; domain_name?: unknown; name?: unknown; fqdn?: unknown }): string {
+  const name = String(node.domain_name ?? node.name ?? node.fqdn ?? '').trim();
+  const id = typeof node.id === 'number' && Number.isFinite(node.id) ? `#${node.id}` : '';
+  if (name && id) return `${name} (${id})`;
+  return name || id || '';
+}
+
+function nodeLocation(node: Node | undefined): Location | undefined {
+  const location = node?.location;
+  return location && typeof location === 'object' ? location : undefined;
 }
 
 function ownerLabel(vps: unknown): string {
@@ -330,6 +384,47 @@ function ImpactItem(props: { label: React.ReactNode; children: React.ReactNode; 
   );
 }
 
+function LifecycleActionPanel(props: {
+  kind: LifecycleActionKind;
+  title: React.ReactNode;
+  subtitle: React.ReactNode;
+  danger?: boolean;
+  open: boolean;
+  openLabel: string;
+  closeLabel: string;
+  onToggle: (kind: LifecycleActionKind, open: boolean) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <details
+      open={props.open}
+      className="group rounded-lg border border-border bg-surface shadow-card"
+      data-testid={`vps.lifecycle.action.${props.kind}`}
+      onToggle={(e) => props.onToggle(props.kind, e.currentTarget.open)}
+    >
+      <summary
+        className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-lg px-4 py-3 hover:bg-surface-2 [&::-webkit-details-marker]:hidden"
+        data-testid={`vps.lifecycle.action.${props.kind}.toggle`}
+      >
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-fg">{props.title}</span>
+          <span className="mt-0.5 block text-xs text-muted">{props.subtitle}</span>
+        </span>
+        <span
+          className={[
+            'shrink-0 rounded-md border px-2.5 py-1 text-xs font-medium',
+            props.danger ? 'border-danger-border text-danger' : 'border-border text-muted',
+          ].join(' ')}
+        >
+          <span className="group-open:hidden">{props.openLabel}</span>
+          <span className="hidden group-open:inline">{props.closeLabel}</span>
+        </span>
+      </summary>
+      <div className="border-t border-border p-4">{props.children}</div>
+    </details>
+  );
+}
+
 function mutationErrorMessage(error: unknown, fallback: string) {
   if (error instanceof Error && error.message && error.message !== 'invalid-id' && error.message !== 'required-id' && error.message !== 'invalid-date') {
     return error.message;
@@ -342,6 +437,8 @@ export function VpsLifecyclePage() {
   const { mode, basePath } = useAppMode();
   const chrome = useChrome();
   const navigate = useNavigate();
+  const routeParams = useParams();
+  const [searchParams] = useSearchParams();
   const qc = useQueryClient();
   const { vps, refetch, refetchChains, vpsRef, busyTransaction, busyLocalLock } = useVps();
 
@@ -352,11 +449,26 @@ export function VpsLifecyclePage() {
   const locationId = resourceId((vps as any).node?.location ?? (vps as any).location);
   const osTemplateId = resourceId((vps as any).os_template);
   const isAdminMode = mode === 'admin';
+  const routeActionRaw = routeParams['lifecycleAction'];
+  const requestedActionRaw = routeActionRaw ?? searchParams.get('action');
+  const requestedAction = lifecycleActionKinds.has(requestedActionRaw as LifecycleActionKind)
+    ? (requestedActionRaw as LifecycleActionKind)
+    : null;
+  const invalidAction = Boolean(routeActionRaw && !requestedAction);
+  const [openActions, setOpenActions] = useState<Set<LifecycleActionKind>>(() => new Set());
+  const templatesNeeded =
+    isAdminMode ||
+    requestedAction === 'template' ||
+    requestedAction === 'boot' ||
+    requestedAction === 'reinstall' ||
+    openActions.has('template') ||
+    openActions.has('boot') ||
+    openActions.has('reinstall');
 
   const templatesQ = useQuery({
     queryKey: ['os_templates', 'vps-lifecycle', { limit: 500, enabled: true, hypervisorType: 'vpsadminos' }],
     queryFn: async () => (await fetchOsTemplates({ limit: 500, enabled: true, hypervisorType: 'vpsadminos' })).data,
-    enabled: isAdminMode,
+    enabled: templatesNeeded,
     staleTime: 60_000,
   });
 
@@ -364,6 +476,13 @@ export function VpsLifecyclePage() {
     queryKey: ['locations', 'vps-lifecycle', { limit: 500, hasHypervisor: true, hypervisorType: 'vpsadminos', includes: 'environment' }],
     queryFn: async () => (await fetchLocations({ limit: 500, hasHypervisor: true, hypervisorType: 'vpsadminos', includes: 'environment' })).data,
     enabled: !isAdminMode,
+    staleTime: 60_000,
+  });
+
+  const nodesQ = useQuery({
+    queryKey: ['nodes', 'vps-lifecycle-migrate', { limit: 500, includes: 'location__environment' }],
+    queryFn: async () => (await fetchNodes({ limit: 500, includes: 'location__environment' })).data,
+    enabled: isAdminMode && requestedAction === 'migrate',
     staleTime: 60_000,
   });
 
@@ -394,6 +513,9 @@ export function VpsLifecyclePage() {
     confirm: false,
   });
   const [swapOpen, setSwapOpen] = useState(false);
+  useEffect(() => {
+    if (requestedAction === 'swap') setSwapOpen(true);
+  }, [requestedAction]);
 
   const [replace, setReplace] = useState<ReplaceForm>(() => ({
     node: nodeId ? String(nodeId) : '',
@@ -402,6 +524,7 @@ export function VpsLifecyclePage() {
     reason: '',
     confirm: false,
   }));
+  const [replaceNodeLabel, setReplaceNodeLabel] = useState('');
 
   const [templateForm, setTemplateForm] = useState<TemplateForm>(() => ({
     osTemplate: osTemplateId ? String(osTemplateId) : '',
@@ -422,15 +545,18 @@ export function VpsLifecyclePage() {
   }));
 
   const [migrate, setMigrate] = useState<MigrateForm>(() => ({
-    node: nodeId ? String(nodeId) : '',
+    node: '',
     replaceIpAddresses: false,
     transferIpAddresses: true,
-    maintenanceWindow: false,
+    scheduleMode: 'maintenance',
     finishWeekday: '',
-    finishMinutes: '',
+    finishHour: '',
     stopOnError: true,
     cleanupData: true,
+    noStart: false,
+    skipStart: false,
     sendMail: true,
+    reason: '',
     confirm: false,
   }));
 
@@ -476,6 +602,25 @@ export function VpsLifecyclePage() {
   });
 
   const cloneTargetReady = isAdminMode ? Boolean(clone.user.trim() && clone.node.trim()) : Boolean(clone.location.trim());
+  const sourceLocation = ((vps as any).node?.location ?? (vps as any).location) as Location | undefined;
+  const sourceLocationId = locationId;
+  const sourceEnvironmentId = locationEnvironmentId(sourceLocation);
+  const migrateNodeId = parseLookupIdLike(migrate.node.trim());
+  const migrateTargetNode = migrateNodeId !== null
+    ? nodesQ.data?.find((node) => Number(node.id) === migrateNodeId)
+    : undefined;
+  const migrateTargetLocation = nodeLocation(migrateTargetNode);
+  const migrateTargetLocationId = resourceId(migrateTargetLocation);
+  const migrateTargetEnvironmentId = locationEnvironmentId(migrateTargetLocation);
+  const migrateCanTransferIpAddresses =
+    sourceEnvironmentId !== undefined &&
+    migrateTargetEnvironmentId !== undefined &&
+    sourceEnvironmentId !== migrateTargetEnvironmentId;
+  const migrateCanReplaceIpAddresses =
+    sourceLocationId !== null &&
+    migrateTargetLocationId !== null &&
+    sourceLocationId !== migrateTargetLocationId;
+  const migrateTargetSelected = Boolean(migrateTargetNode);
   const cloneLocationId = parseLookupIdLike(clone.location.trim());
   const cloneLocation = cloneLocationId !== null
     ? locationsQ.data?.find((location) => Number(location.id) === cloneLocationId)
@@ -648,21 +793,26 @@ export function VpsLifecyclePage() {
   const migrateM = useMutation({
     mutationFn: async () => {
       await preflight();
-      const finishWeekday = parseOptionalNonNegativeInt(migrate.finishWeekday);
-      const finishMinutes = parseOptionalNonNegativeInt(migrate.finishMinutes);
-      if ((finishWeekday === undefined) !== (finishMinutes === undefined)) throw new Error('invalid-id');
-      if (migrate.maintenanceWindow && (finishWeekday !== undefined || finishMinutes !== undefined)) throw new Error('invalid-id');
+      const finishWeekday = migrate.scheduleMode === 'custom' ? parseOptionalNonNegativeInt(migrate.finishWeekday) : undefined;
+      const finishHour = migrate.scheduleMode === 'custom' ? parseOptionalNonNegativeInt(migrate.finishHour) : undefined;
+      if (migrate.scheduleMode === 'custom' && (finishWeekday === undefined || finishHour === undefined || finishHour > 23)) {
+        throw new Error('invalid-id');
+      }
       const payload: VpsMigratePayload = {
         node: parseRequiredId(migrate.node),
-        replace_ip_addresses: migrate.replaceIpAddresses,
-        transfer_ip_addresses: migrate.transferIpAddresses,
-        maintenance_window: migrate.maintenanceWindow,
+        replace_ip_addresses: migrateCanReplaceIpAddresses ? migrate.replaceIpAddresses : false,
+        transfer_ip_addresses: migrateCanTransferIpAddresses ? migrate.transferIpAddresses : false,
+        maintenance_window: migrate.scheduleMode === 'maintenance',
         stop_on_error: migrate.stopOnError,
         cleanup_data: migrate.cleanupData,
+        no_start: migrate.noStart,
+        skip_start: migrate.skipStart,
         send_mail: migrate.sendMail,
       };
       if (finishWeekday !== undefined) payload.finish_weekday = finishWeekday;
-      if (finishMinutes !== undefined) payload.finish_minutes = finishMinutes;
+      if (finishHour !== undefined) payload.finish_minutes = finishHour * 60;
+      const reason = migrate.reason.trim();
+      if (reason) payload.reason = reason;
       return vpsMigrate(vpsId, payload);
     },
     onMutate: () => chrome.acquireLocalLock(vpsRef),
@@ -703,19 +853,6 @@ export function VpsLifecyclePage() {
     migrateM.isPending ||
     deleteM.isPending;
   const gate = gateVpsMutation({ vps, busyLocal, busyTransaction });
-
-  const adminSummary = useMemo(
-    () => [
-      t('vps.lifecycle.admin.summary.clone'),
-      t('vps.lifecycle.admin.summary.swap'),
-      t('vps.lifecycle.admin.summary.replace'),
-      t('vps.lifecycle.admin.summary.template'),
-      t('vps.lifecycle.admin.summary.boot'),
-      t('vps.lifecycle.admin.summary.migrate'),
-      t('vps.lifecycle.admin.summary.delete'),
-    ],
-    [t],
-  );
 
   const sourceIps = sourceIpsQ.data ?? [];
   const targetIps = targetIpsQ.data ?? [];
@@ -1176,30 +1313,199 @@ export function VpsLifecyclePage() {
     </Card>
   );
 
+  const handleActionToggle = (kind: LifecycleActionKind, open: boolean) => {
+    setOpenActions((prev) => {
+      const next = new Set(prev);
+      if (open) next.add(kind);
+      else next.delete(kind);
+      return next;
+    });
+  };
+
+  const panelOpen = (kind: LifecycleActionKind) => requestedAction === kind || openActions.has(kind);
+  const actionPanelProps = (kind: LifecycleActionKind) => ({
+    kind,
+    open: panelOpen(kind),
+    openLabel: t('common.open'),
+    closeLabel: t('common.close'),
+    onToggle: handleActionToggle,
+  });
+
+  const lifecycleBasePath = `${basePath}/vps/${vpsId}/lifecycle`;
+  const goToAction = (kind: LifecycleActionKind) => navigate(`${lifecycleBasePath}/${kind}`);
+  const allActionChoices: Array<{
+    kind: LifecycleActionKind;
+    title: string;
+    description: string;
+    danger?: boolean;
+    adminOnly?: boolean;
+  }> = [
+    { kind: 'reinstall', title: t('vps.lifecycle.reinstall.title'), description: t('vps.lifecycle.reinstall.subtitle'), danger: true },
+    { kind: 'clone', title: t('vps.lifecycle.clone.title'), description: isAdminMode ? t('vps.lifecycle.clone.subtitle') : t('vps.lifecycle.clone.subtitle_user') },
+    { kind: 'swap', title: t('vps.lifecycle.swap.title'), description: isAdminMode ? t('vps.lifecycle.swap.subtitle') : t('vps.lifecycle.swap.subtitle_user'), danger: true },
+    { kind: 'delete', title: t('vps.lifecycle.delete.title'), description: t('vps.lifecycle.delete.subtitle'), danger: true },
+    { kind: 'lifetime', title: t('vps.lifecycle.lifetime.title'), description: isAdminMode ? t('vps.lifecycle.lifetime.subtitle_admin') : t('vps.lifecycle.lifetime.subtitle_user'), adminOnly: true },
+    { kind: 'template', title: t('vps.lifecycle.template.title'), description: t('vps.lifecycle.template.subtitle'), adminOnly: true },
+    { kind: 'boot', title: t('vps.lifecycle.boot.title'), description: t('vps.lifecycle.boot.subtitle'), danger: true, adminOnly: true },
+    { kind: 'replace', title: t('vps.lifecycle.replace.title'), description: t('vps.lifecycle.replace.subtitle'), danger: true, adminOnly: true },
+    { kind: 'migrate', title: t('vps.lifecycle.migrate.title'), description: t('vps.lifecycle.migrate.subtitle'), adminOnly: true },
+  ];
+  const actionChoices = allActionChoices.filter((choice) => isAdminMode || !choice.adminOnly);
+  const activeChoice = requestedAction ? actionChoices.find((choice) => choice.kind === requestedAction) : undefined;
+
+  if (invalidAction || (requestedAction && !actionChoices.some((choice) => choice.kind === requestedAction))) {
+    return (
+      <div className="space-y-4" data-testid="vps.lifecycle.page">
+        <Card testId="vps.lifecycle.summary">
+          <CardHeader title={t('vps.lifecycle.title')} subtitle={t('vps.lifecycle.invalid_action')} />
+          <CardBody>
+            <Button variant="primary" onClick={() => navigate(lifecycleBasePath)}>
+              {t('vps.lifecycle.back_to_actions')}
+            </Button>
+          </CardBody>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!requestedAction) {
+    return (
+      <div className="space-y-4" data-testid="vps.lifecycle.page">
+        <Card testId="vps.lifecycle.summary">
+          <CardHeader title={t('vps.lifecycle.title')} subtitle={isAdminMode ? t('vps.lifecycle.subtitle_admin') : t('vps.lifecycle.subtitle_user')} />
+          <CardBody className="space-y-4">
+            <Alert variant="neutral">
+              {isAdminMode ? t('vps.lifecycle.action_index.summary_admin') : t('vps.lifecycle.action_index.summary_user')}
+            </Alert>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3" data-testid="vps.lifecycle.action_index">
+              {actionChoices.map((choice) => (
+                <button
+                  key={choice.kind}
+                  type="button"
+                  className={[
+                    'rounded-lg border bg-surface p-4 text-left shadow-card transition hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-focus',
+                    choice.danger ? 'border-danger-border' : 'border-border',
+                  ].join(' ')}
+                  onClick={() => goToAction(choice.kind)}
+                  data-testid={`vps.lifecycle.action_link.${choice.kind}`}
+                >
+                  <span className={choice.danger ? 'block text-sm font-semibold text-danger' : 'block text-sm font-semibold text-fg'}>
+                    {choice.title}
+                  </span>
+                  <span className="mt-1 block text-xs text-muted">{choice.description}</span>
+                </button>
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+      </div>
+    );
+  }
+
   if (!isAdminMode) {
     return (
       <div className="space-y-4" data-testid="vps.lifecycle.page">
         <Card testId="vps.lifecycle.summary">
-          <CardHeader title={t('vps.lifecycle.title')} subtitle={t('vps.lifecycle.subtitle_user')} />
+          <CardHeader
+            title={activeChoice?.title ?? t('vps.lifecycle.title')}
+            subtitle={activeChoice?.description ?? t('vps.lifecycle.subtitle_user')}
+            actions={
+              <Button variant="secondary" onClick={() => navigate(lifecycleBasePath)}>
+                {t('vps.lifecycle.back_to_actions')}
+              </Button>
+            }
+          />
           <CardBody>
             <Alert variant="neutral">{t('vps.lifecycle.user_lifecycle.summary')}</Alert>
           </CardBody>
         </Card>
 
-        <LifecyclePanel
-          kind="vps"
-          id={vps.id}
-          objectLabel={objectLabel}
-          objectState={(vps as any).object_state as any}
-          expirationDate={(vps as any).expiration_date as any}
-          remindAfterDate={(vps as any).remind_after_date as any}
-          onUpdated={refetch}
-          testId="vps.lifecycle.lifetime"
-        />
+        {requestedAction === 'lifetime' ? <LifecycleActionPanel
+          {...actionPanelProps('lifetime')}
+          title={t('vps.lifecycle.lifetime.title')}
+          subtitle={t('vps.lifecycle.lifetime.subtitle_user')}
+        >
+          <LifecyclePanel
+            kind="vps"
+            id={vps.id}
+            objectLabel={objectLabel}
+            objectState={(vps as any).object_state as any}
+            expirationDate={(vps as any).expiration_date as any}
+            remindAfterDate={(vps as any).remind_after_date as any}
+            onUpdated={refetch}
+            testId="vps.lifecycle.lifetime"
+          />
+        </LifecycleActionPanel> : null}
 
-        {cloneCard}
-        {swapCard}
-        {deleteCard}
+        {requestedAction === 'reinstall' ? <LifecycleActionPanel
+          {...actionPanelProps('reinstall')}
+          title={t('vps.lifecycle.reinstall.title')}
+          subtitle={t('vps.lifecycle.reinstall.subtitle')}
+          danger
+        >
+          <Card testId="vps.lifecycle.reinstall">
+            <CardHeader title={t('vps.lifecycle.reinstall.title')} subtitle={t('vps.lifecycle.reinstall.subtitle')} />
+            <CardBody className="space-y-4">
+              <Alert variant="warn" title={t('vps.lifecycle.reinstall.warning_title')}>
+                {t('vps.lifecycle.reinstall.warning_body')}
+              </Alert>
+
+              <Field label={t('vps.lifecycle.field.os_template')} help={t('vps.lifecycle.reinstall.os_template_help')}>
+                <Select
+                  value={reinstall.osTemplate}
+                  onChange={(e) => setReinstall((prev) => ({ ...prev, osTemplate: e.target.value }))}
+                  disabled={reinstallM.isPending || templatesQ.isLoading}
+                  testId="vps.lifecycle.reinstall.os_template"
+                >
+                  <option value="">{t('vps.lifecycle.placeholder.os_template')}</option>
+                  {templatesQ.data?.map((tpl) => (
+                    <option key={tpl.id} value={tpl.id}>
+                      {templateLabel(tpl)}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+
+              <Checkbox
+                checked={reinstall.confirm}
+                onChange={(v) => setReinstall((p) => ({ ...p, confirm: v }))}
+                label={t('vps.lifecycle.confirm.reinstall')}
+                testId="vps.lifecycle.reinstall.confirm"
+              />
+
+              {reinstallM.isError ? (
+                <Alert title={t('vps.lifecycle.reinstall.error')} variant="danger">
+                  {mutationErrorMessage(reinstallM.error, t('vps.lifecycle.validation.reinstall'))}
+                </Alert>
+              ) : null}
+
+              <div className="flex justify-end">
+                <ActionButton
+                  variant="danger"
+                  testId="vps.lifecycle.reinstall.submit"
+                  disabled={!reinstall.confirm || !reinstall.osTemplate || !gate.allowed}
+                  disabledReason={!gate.allowed ? gate.reason : undefined}
+                  loading={reinstallM.isPending}
+                  onClick={() => reinstallM.mutate()}
+                >
+                  {t('vps.lifecycle.reinstall.submit')}
+                </ActionButton>
+              </div>
+            </CardBody>
+          </Card>
+        </LifecycleActionPanel> : null}
+
+        {requestedAction === 'clone' ? <LifecycleActionPanel {...actionPanelProps('clone')} title={t('vps.lifecycle.clone.title')} subtitle={t('vps.lifecycle.clone.subtitle_user')}>
+          {cloneCard}
+        </LifecycleActionPanel> : null}
+
+        {requestedAction === 'swap' ? <LifecycleActionPanel {...actionPanelProps('swap')} title={t('vps.lifecycle.swap.title')} subtitle={t('vps.lifecycle.swap.subtitle_user')} danger>
+          {swapCard}
+        </LifecycleActionPanel> : null}
+
+        {requestedAction === 'delete' ? <LifecycleActionPanel {...actionPanelProps('delete')} title={t('vps.lifecycle.delete.title')} subtitle={t('vps.lifecycle.delete.subtitle')} danger>
+          {deleteCard}
+        </LifecycleActionPanel> : null}
       </div>
     );
   }
@@ -1207,15 +1513,16 @@ export function VpsLifecyclePage() {
   return (
     <div className="space-y-4" data-testid="vps.lifecycle.page">
       <Card testId="vps.lifecycle.summary">
-        <CardHeader title={t('vps.lifecycle.title')} subtitle={t('vps.lifecycle.subtitle_admin')} />
+        <CardHeader
+          title={activeChoice?.title ?? t('vps.lifecycle.title')}
+          subtitle={activeChoice?.description ?? t('vps.lifecycle.subtitle_admin')}
+          actions={
+            <Button variant="secondary" onClick={() => navigate(lifecycleBasePath)}>
+              {t('vps.lifecycle.back_to_actions')}
+            </Button>
+          }
+        />
         <CardBody>
-          <div className="grid gap-3 md:grid-cols-3">
-            {adminSummary.map((item) => (
-              <div key={item} className="rounded-md border border-border bg-surface-2 p-3 text-sm text-muted">
-                {item}
-              </div>
-            ))}
-          </div>
           <div className="mt-3 text-xs text-faint">
             {t('vps.lifecycle.current_target', {
               vps: `#${vpsId}`,
@@ -1227,18 +1534,25 @@ export function VpsLifecyclePage() {
         </CardBody>
       </Card>
 
-      <LifecyclePanel
-        kind="vps"
-        id={vps.id}
-        objectLabel={objectLabel}
-        objectState={(vps as any).object_state as any}
-        expirationDate={(vps as any).expiration_date as any}
-        remindAfterDate={(vps as any).remind_after_date as any}
-        onUpdated={refetch}
-        testId="vps.lifecycle.lifetime"
-      />
+      {requestedAction === 'lifetime' ? <LifecycleActionPanel
+        {...actionPanelProps('lifetime')}
+        title={t('vps.lifecycle.lifetime.title')}
+        subtitle={t('vps.lifecycle.lifetime.subtitle_admin')}
+      >
+        <LifecyclePanel
+          kind="vps"
+          id={vps.id}
+          objectLabel={objectLabel}
+          objectState={(vps as any).object_state as any}
+          expirationDate={(vps as any).expiration_date as any}
+          remindAfterDate={(vps as any).remind_after_date as any}
+          onUpdated={refetch}
+          testId="vps.lifecycle.lifetime"
+        />
+      </LifecycleActionPanel> : null}
 
-      <Card testId="vps.lifecycle.template">
+      {requestedAction === 'template' ? <LifecycleActionPanel {...actionPanelProps('template')} title={t('vps.lifecycle.template.title')} subtitle={t('vps.lifecycle.template.subtitle')}>
+        <Card testId="vps.lifecycle.template">
         <CardHeader title={t('vps.lifecycle.template.title')} subtitle={t('vps.lifecycle.template.subtitle')} />
         <CardBody className="space-y-4">
           <div className="grid gap-3 md:grid-cols-2">
@@ -1294,9 +1608,11 @@ export function VpsLifecyclePage() {
             </ActionButton>
           </div>
         </CardBody>
-      </Card>
+        </Card>
+      </LifecycleActionPanel> : null}
 
-      <Card testId="vps.lifecycle.boot">
+      {requestedAction === 'boot' ? <LifecycleActionPanel {...actionPanelProps('boot')} title={t('vps.lifecycle.boot.title')} subtitle={t('vps.lifecycle.boot.subtitle')} danger>
+        <Card testId="vps.lifecycle.boot">
         <CardHeader title={t('vps.lifecycle.boot.title')} subtitle={t('vps.lifecycle.boot.subtitle')} />
         <CardBody className="space-y-4">
           <Alert variant="warn" title={t('vps.lifecycle.boot.warning_title')}>
@@ -1363,9 +1679,11 @@ export function VpsLifecyclePage() {
             </ActionButton>
           </div>
         </CardBody>
-      </Card>
+        </Card>
+      </LifecycleActionPanel> : null}
 
-      <Card testId="vps.lifecycle.reinstall">
+      {requestedAction === 'reinstall' ? <LifecycleActionPanel {...actionPanelProps('reinstall')} title={t('vps.lifecycle.reinstall.title')} subtitle={t('vps.lifecycle.reinstall.subtitle')} danger>
+        <Card testId="vps.lifecycle.reinstall">
         <CardHeader title={t('vps.lifecycle.reinstall.title')} subtitle={t('vps.lifecycle.reinstall.subtitle')} />
         <CardBody className="space-y-4">
           <Alert variant="warn" title={t('vps.lifecycle.reinstall.warning_title')}>
@@ -1414,13 +1732,19 @@ export function VpsLifecyclePage() {
             </ActionButton>
           </div>
         </CardBody>
-      </Card>
+        </Card>
+      </LifecycleActionPanel> : null}
 
-      {cloneCard}
+      {requestedAction === 'clone' ? <LifecycleActionPanel {...actionPanelProps('clone')} title={t('vps.lifecycle.clone.title')} subtitle={t('vps.lifecycle.clone.subtitle')}>
+        {cloneCard}
+      </LifecycleActionPanel> : null}
 
-      {swapCard}
+      {requestedAction === 'swap' ? <LifecycleActionPanel {...actionPanelProps('swap')} title={t('vps.lifecycle.swap.title')} subtitle={t('vps.lifecycle.swap.subtitle')} danger>
+        {swapCard}
+      </LifecycleActionPanel> : null}
 
-      <Card testId="vps.lifecycle.replace">
+      {requestedAction === 'replace' ? <LifecycleActionPanel {...actionPanelProps('replace')} title={t('vps.lifecycle.replace.title')} subtitle={t('vps.lifecycle.replace.subtitle')} danger>
+        <Card testId="vps.lifecycle.replace">
         <CardHeader title={t('vps.lifecycle.replace.title')} subtitle={t('vps.lifecycle.replace.subtitle')} />
         <CardBody className="space-y-4">
           <Alert variant="warn" title={t('vps.lifecycle.replace.warning_title')}>
@@ -1431,7 +1755,12 @@ export function VpsLifecyclePage() {
             <Field label={t('vps.lifecycle.field.node')} help={t('vps.lifecycle.replace.node_help')}>
               <NodeLookupInput
                 value={replace.node}
-                onChange={(node) => setReplace((prev) => ({ ...prev, node }))}
+                selectedLabel={replaceNodeLabel}
+                onChange={(node) => {
+                  setReplaceNodeLabel('');
+                  setReplace((prev) => ({ ...prev, node }));
+                }}
+                onPick={(node) => setReplaceNodeLabel(pickedNodeLabel(node))}
                 placeholder={t('vps.lifecycle.placeholder.node_optional')}
                 testId="vps.lifecycle.replace.node"
                 disabled={replaceM.isPending}
@@ -1492,48 +1821,145 @@ export function VpsLifecyclePage() {
             </ActionButton>
           </div>
         </CardBody>
-      </Card>
+        </Card>
+      </LifecycleActionPanel> : null}
 
-      <Card testId="vps.lifecycle.migrate">
+      {requestedAction === 'migrate' ? <LifecycleActionPanel {...actionPanelProps('migrate')} title={t('vps.lifecycle.migrate.title')} subtitle={t('vps.lifecycle.migrate.subtitle')}>
+        <Card testId="vps.lifecycle.migrate">
         <CardHeader title={t('vps.lifecycle.migrate.title')} subtitle={t('vps.lifecycle.migrate.subtitle')} />
         <CardBody className="space-y-4">
           <Field label={t('vps.lifecycle.field.node')} help={t('vps.lifecycle.migrate.node_help')}>
-            <NodeLookupInput
+            <Select
               value={migrate.node}
-              onChange={(node) => setMigrate((prev) => ({ ...prev, node }))}
-              placeholder={t('vps.lifecycle.placeholder.node')}
+              onChange={(e) => {
+                const nextNodeId = parseLookupIdLike(e.target.value);
+                const nextNode = nextNodeId !== null
+                  ? nodesQ.data?.find((node) => Number(node.id) === nextNodeId)
+                  : undefined;
+                const nextLocation = nodeLocation(nextNode);
+                const nextLocationId = resourceId(nextLocation);
+                const nextEnvironmentId = locationEnvironmentId(nextLocation);
+                const nextChangedLocation = sourceLocationId !== null && nextLocationId !== null && sourceLocationId !== nextLocationId;
+                const nextChangedEnvironment =
+                  sourceEnvironmentId !== undefined &&
+                  nextEnvironmentId !== undefined &&
+                  sourceEnvironmentId !== nextEnvironmentId;
+
+                setMigrate((prev) => ({
+                  ...prev,
+                  node: e.target.value,
+                  transferIpAddresses: nextChangedEnvironment ? prev.transferIpAddresses : false,
+                  replaceIpAddresses: nextChangedLocation ? prev.replaceIpAddresses : false,
+                  scheduleMode: nextChangedEnvironment || nextChangedLocation ? 'now' : 'maintenance',
+                  confirm: false,
+                }));
+              }}
               testId="vps.lifecycle.migrate.node"
-              disabled={migrateM.isPending}
-            />
+              disabled={migrateM.isPending || nodesQ.isLoading || nodesQ.isError}
+            >
+              <option value="">{nodesQ.isLoading ? t('common.loading') : t('vps.lifecycle.placeholder.node')}</option>
+              {nodesQ.data?.map((node) => (
+                <option key={node.id} value={node.id}>
+                  {pickedNodeLabel(node)}
+                </option>
+              ))}
+            </Select>
+            {nodesQ.isError ? (
+              <div className="mt-1 text-xs text-danger">{t('vps.lifecycle.migrate.nodes_load_error')}</div>
+            ) : null}
           </Field>
 
-          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            <Checkbox checked={migrate.transferIpAddresses} onChange={(v) => setMigrate((p) => ({ ...p, transferIpAddresses: v }))} label={t('vps.lifecycle.migrate.option.transfer_ip_addresses')} testId="vps.lifecycle.migrate.transfer_ip_addresses" />
-            <Checkbox checked={migrate.replaceIpAddresses} onChange={(v) => setMigrate((p) => ({ ...p, replaceIpAddresses: v }))} label={t('vps.lifecycle.migrate.option.replace_ip_addresses')} testId="vps.lifecycle.migrate.replace_ip_addresses" />
-            <Checkbox checked={migrate.maintenanceWindow} onChange={(v) => setMigrate((p) => ({ ...p, maintenanceWindow: v }))} label={t('vps.lifecycle.migrate.option.maintenance_window')} testId="vps.lifecycle.migrate.maintenance_window" />
-            <Checkbox checked={migrate.stopOnError} onChange={(v) => setMigrate((p) => ({ ...p, stopOnError: v }))} label={t('vps.lifecycle.migrate.option.stop_on_error')} testId="vps.lifecycle.migrate.stop_on_error" />
-            <Checkbox checked={migrate.cleanupData} onChange={(v) => setMigrate((p) => ({ ...p, cleanupData: v }))} label={t('vps.lifecycle.migrate.option.cleanup_data')} testId="vps.lifecycle.migrate.cleanup_data" />
-            <Checkbox checked={migrate.sendMail} onChange={(v) => setMigrate((p) => ({ ...p, sendMail: v }))} label={t('vps.lifecycle.migrate.option.send_mail')} testId="vps.lifecycle.migrate.send_mail" />
+          <div className="rounded-md border border-border bg-surface p-3" data-testid="vps.lifecycle.migrate.schedule_panel">
+            <div className="mb-3">
+              <div className="text-sm font-semibold text-fg">{t('vps.lifecycle.migrate.schedule.title')}</div>
+              <div className="text-xs text-muted">{t('vps.lifecycle.migrate.schedule.subtitle')}</div>
+            </div>
+            <div className="space-y-3">
+              <Field label={t('vps.lifecycle.migrate.schedule.label')} help={t('vps.lifecycle.migrate.schedule.help')}>
+                <Select
+                  value={migrate.scheduleMode}
+                  onChange={(e) =>
+                    setMigrate((prev) => ({
+                      ...prev,
+                      scheduleMode: e.target.value as MigrateForm['scheduleMode'],
+                      confirm: false,
+                    }))
+                  }
+                  testId="vps.lifecycle.migrate.schedule"
+                  disabled={migrateM.isPending}
+                >
+                  <option value="maintenance">{t('vps.lifecycle.migrate.schedule.maintenance')}</option>
+                  <option value="now">{t('vps.lifecycle.migrate.schedule.now')}</option>
+                  <option value="custom">{t('vps.lifecycle.migrate.schedule.custom')}</option>
+                </Select>
+              </Field>
+
+              {migrate.scheduleMode === 'custom' ? (
+                <div className="grid gap-3 md:grid-cols-2">
+                  <Field label={t('vps.lifecycle.migrate.finish_weekday')} help={t('vps.lifecycle.migrate.finish_weekday_help')}>
+                    <Select
+                      value={migrate.finishWeekday}
+                      onChange={(e) => setMigrate((prev) => ({ ...prev, finishWeekday: e.target.value, confirm: false }))}
+                      testId="vps.lifecycle.migrate.finish_weekday"
+                      disabled={migrateM.isPending}
+                    >
+                      <option value="">{t('vps.lifecycle.migrate.schedule.choose_day')}</option>
+                      {migrateWeekdayOptions.map((day) => (
+                        <option key={day.value} value={day.value}>
+                          {t(day.labelKey)}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <Field label={t('vps.lifecycle.migrate.finish_hour')} help={t('vps.lifecycle.migrate.finish_hour_help')}>
+                    <Select
+                      value={migrate.finishHour}
+                      onChange={(e) => setMigrate((prev) => ({ ...prev, finishHour: e.target.value, confirm: false }))}
+                      testId="vps.lifecycle.migrate.finish_hour"
+                      disabled={migrateM.isPending}
+                    >
+                      <option value="">{t('vps.lifecycle.migrate.schedule.choose_hour')}</option>
+                      {migrateHourOptions.map((hour) => (
+                        <option key={hour.value} value={hour.value}>
+                          {hour.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                </div>
+              ) : null}
+            </div>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
-            <Field label={t('vps.lifecycle.migrate.finish_weekday')} help={t('vps.lifecycle.migrate.finish_weekday_help')}>
-              <Input
-                value={migrate.finishWeekday}
-                onChange={(e) => setMigrate((prev) => ({ ...prev, finishWeekday: e.target.value }))}
-                testId="vps.lifecycle.migrate.finish_weekday"
-                disabled={migrateM.isPending || migrate.maintenanceWindow}
-              />
-            </Field>
-            <Field label={t('vps.lifecycle.migrate.finish_minutes')} help={t('vps.lifecycle.migrate.finish_minutes_help')}>
-              <Input
-                value={migrate.finishMinutes}
-                onChange={(e) => setMigrate((prev) => ({ ...prev, finishMinutes: e.target.value }))}
-                testId="vps.lifecycle.migrate.finish_minutes"
-                disabled={migrateM.isPending || migrate.maintenanceWindow}
-              />
-            </Field>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {migrateTargetSelected && migrateCanTransferIpAddresses ? (
+              <Checkbox checked={migrate.transferIpAddresses} onChange={(v) => setMigrate((p) => ({ ...p, transferIpAddresses: v, confirm: false }))} label={t('vps.lifecycle.migrate.option.transfer_ip_addresses')} testId="vps.lifecycle.migrate.transfer_ip_addresses" />
+            ) : null}
+            {migrateTargetSelected && migrateCanReplaceIpAddresses ? (
+              <Checkbox checked={migrate.replaceIpAddresses} onChange={(v) => setMigrate((p) => ({ ...p, replaceIpAddresses: v, confirm: false }))} label={t('vps.lifecycle.migrate.option.replace_ip_addresses')} testId="vps.lifecycle.migrate.replace_ip_addresses" />
+            ) : null}
+            <Checkbox checked={migrate.stopOnError} onChange={(v) => setMigrate((p) => ({ ...p, stopOnError: v, confirm: false }))} label={t('vps.lifecycle.migrate.option.stop_on_error')} testId="vps.lifecycle.migrate.stop_on_error" />
+            <Checkbox checked={migrate.cleanupData} onChange={(v) => setMigrate((p) => ({ ...p, cleanupData: v, confirm: false }))} label={t('vps.lifecycle.migrate.option.cleanup_data')} testId="vps.lifecycle.migrate.cleanup_data" />
+            <Checkbox checked={migrate.sendMail} onChange={(v) => setMigrate((p) => ({ ...p, sendMail: v, confirm: false }))} label={t('vps.lifecycle.migrate.option.send_mail')} testId="vps.lifecycle.migrate.send_mail" />
           </div>
+
+          <details className="rounded-md border border-border bg-surface p-3" data-testid="vps.lifecycle.migrate.advanced">
+            <summary className="cursor-pointer text-sm font-semibold text-fg">{t('vps.lifecycle.migrate.advanced.title')}</summary>
+            <div className="mt-3 space-y-3">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <Checkbox checked={migrate.noStart} onChange={(v) => setMigrate((p) => ({ ...p, noStart: v, confirm: false }))} label={t('vps.lifecycle.migrate.option.no_start')} testId="vps.lifecycle.migrate.no_start" />
+                <Checkbox checked={migrate.skipStart} onChange={(v) => setMigrate((p) => ({ ...p, skipStart: v, confirm: false }))} label={t('vps.lifecycle.migrate.option.skip_start')} testId="vps.lifecycle.migrate.skip_start" />
+              </div>
+              <Field label={t('vps.lifecycle.migrate.reason')} help={t('vps.lifecycle.migrate.reason_help')}>
+                <Textarea
+                  value={migrate.reason}
+                  onChange={(e) => setMigrate((prev) => ({ ...prev, reason: e.target.value, confirm: false }))}
+                  testId="vps.lifecycle.migrate.reason"
+                  disabled={migrateM.isPending}
+                />
+              </Field>
+            </div>
+          </details>
 
           <Checkbox
             checked={migrate.confirm}
@@ -1552,7 +1978,12 @@ export function VpsLifecyclePage() {
             <ActionButton
               variant="danger"
               testId="vps.lifecycle.migrate.submit"
-              disabled={!migrate.confirm || !migrate.node.trim() || !gate.allowed}
+              disabled={
+                !migrate.confirm ||
+                !migrate.node.trim() ||
+                (migrate.scheduleMode === 'custom' && (!migrate.finishWeekday || !migrate.finishHour)) ||
+                !gate.allowed
+              }
               disabledReason={!gate.allowed ? gate.reason : undefined}
               loading={migrateM.isPending}
               onClick={() => migrateM.mutate()}
@@ -1561,9 +1992,12 @@ export function VpsLifecyclePage() {
             </ActionButton>
           </div>
         </CardBody>
-      </Card>
+        </Card>
+      </LifecycleActionPanel> : null}
 
-      {deleteCard}
+      {requestedAction === 'delete' ? <LifecycleActionPanel {...actionPanelProps('delete')} title={t('vps.lifecycle.delete.title')} subtitle={t('vps.lifecycle.delete.subtitle')} danger>
+        {deleteCard}
+      </LifecycleActionPanel> : null}
     </div>
   );
 }

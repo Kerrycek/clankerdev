@@ -107,6 +107,9 @@ export async function fetchNodes(
     q?: string;
     state?: 'all' | 'active' | 'inactive';
     location?: number;
+    type?: string;
+    hypervisorType?: string;
+    includes?: string;
   } = {}
 ) {
   const params: Record<string, string | number | boolean> = {};
@@ -115,12 +118,15 @@ export async function fetchNodes(
   if (opts.q) params['q'] = opts.q;
   if (opts.state) params['state'] = opts.state;
   if (opts.location !== undefined) params['location'] = opts.location;
+  if (opts.type) params['type'] = opts.type;
+  if (opts.hypervisorType) params['hypervisor_type'] = opts.hypervisorType;
 
   const res = await haveApiCall<unknown>({
     method: 'GET',
     path: '/nodes',
     namespace: 'node',
     params,
+    meta: opts.includes ? { includes: opts.includes } : undefined,
   });
 
   // Be tolerant: some deployments wrap the list under a `nodes` key.

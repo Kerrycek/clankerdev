@@ -19,7 +19,7 @@ const vps = {
   used_diskspace: 5120,
   uptime: 0,
   loadavg1: 0,
-  node: { id: 1, domain_name: 'node1.example', location: { id: 2, label: 'Praha-2' } },
+  node: { id: 1, domain_name: 'node1.example', location: { id: 2, label: 'Praha-2', environment: { id: 1, label: 'prod' } } },
   user: { id: 7, login: 'owner' },
   os_template: { id: 6, label: 'Debian latest' },
   dataset: { id: 901, name: 'tank/vps/123/root' },
@@ -42,7 +42,7 @@ async function installLifecycleMock(page: Page) {
             id: 321,
             hostname: 'vps123-playground',
             dataset: { id: 902, name: 'tank/vps/321/root' },
-            node: { id: 1, domain_name: 'node1.example', location: { id: 2, label: 'Praha-2' } },
+            node: { id: 1, domain_name: 'node1.example', location: { id: 2, label: 'Praha-2', environment: { id: 1, label: 'prod' } } },
             memory: 2048,
             swap: 512,
             diskspace: 20480,
@@ -65,6 +65,13 @@ async function installLifecycleMock(page: Page) {
       'GET vpses/123/state_logs': () => ({ state_logs: [] }),
       'GET transaction_chains': () => ({ transaction_chains: [] }),
       'GET os_templates': () => ({ os_templates: osTemplates }),
+      'GET nodes': () => ({
+        nodes: [
+          { id: 1, domain_name: 'node1.example', location: { id: 2, label: 'Praha-2', environment: { id: 1, label: 'prod' } } },
+          { id: 2, domain_name: 'node2.example', location: { id: 2, label: 'Praha-2', environment: { id: 1, label: 'prod' } } },
+          { id: 5, domain_name: 'node5.example', location: { id: 5, label: 'Brno', environment: { id: 2, label: 'staging' } } },
+        ],
+      }),
       'PUT vpses/123': () => ({ vps, _meta: { action_state_id: 506 } }),
       'POST vpses/123/clone': () => ({ vps: { id: 456, hostname: 'admin-clone' }, _meta: { action_state_id: 507 } }),
       'POST vpses/123/swap_with': () => ({ _meta: { action_state_id: 508 } }),
@@ -82,7 +89,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installLifecycleMock(page);
 
-    await page.goto('/admin/vps/123/lifecycle');
+    await page.goto('/admin/vps/123/lifecycle/boot');
 
     await expect(page.getByTestId('vps.lifecycle.page')).toBeVisible();
     await expect(page.getByTestId('vps.lifecycle.boot')).toBeVisible();
@@ -112,22 +119,23 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.goto('/admin/vps/123/lifecycle');
 
-    await expect(page.getByTestId('vps.lifecycle.clone')).toBeVisible();
-    await expect(page.getByTestId('vps.lifecycle.swap')).toBeVisible();
-    await expect(page.getByTestId('vps.lifecycle.delete')).toBeVisible();
-    await expect(page.getByTestId('vps.lifecycle.lifetime')).toBeVisible();
-    await expect(page.getByTestId('lifetimes.admin.edit')).toBeVisible();
-    await expect(page.getByTestId('lifetimes.admin.log')).toBeVisible();
-    await expect(page.getByTestId('vps.lifecycle.replace')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.action_index')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.action_link.clone')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.action_link.swap')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.action_link.delete')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.action_link.lifetime')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.action_link.replace')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.action_link.migrate')).toBeVisible();
+    await page.getByTestId('vps.lifecycle.action_link.migrate').click();
+    await expect(page).toHaveURL(/\/admin\/vps\/123\/lifecycle\/migrate$/);
     await expect(page.getByTestId('vps.lifecycle.migrate')).toBeVisible();
-    await expect(page.getByTestId('vps.lifecycle.delete.lazy')).toBeVisible();
   });
 
   test('can boot rescue template without mounting the original root dataset', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installLifecycleMock(page);
 
-    await page.goto('/admin/vps/123/lifecycle');
+    await page.goto('/admin/vps/123/lifecycle/boot');
 
     await page.getByTestId('vps.lifecycle.boot.mount_root_dataset').uncheck();
     await expect(page.getByTestId('vps.lifecycle.boot.mountpoint')).toBeDisabled();
@@ -151,7 +159,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installLifecycleMock(page);
 
-    await page.goto('/admin/vps/123/lifecycle');
+    await page.goto('/admin/vps/123/lifecycle/reinstall');
 
     await page.getByTestId('vps.lifecycle.reinstall.os_template').selectOption('7');
     await page.getByTestId('vps.lifecycle.reinstall.confirm').check();
@@ -174,7 +182,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installLifecycleMock(page);
 
-    await page.goto('/admin/vps/123/lifecycle');
+    await page.goto('/admin/vps/123/lifecycle/clone');
 
     await page.getByTestId('vps.lifecycle.clone.user').fill('#8');
     await page.getByTestId('vps.lifecycle.clone.node').fill('#3');
@@ -207,9 +215,9 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installLifecycleMock(page);
 
-    await page.goto('/admin/vps/123/lifecycle');
+    await page.goto('/admin/vps/123/lifecycle/swap');
 
-    await page.getByTestId('vps.lifecycle.swap.open').click();
+    await expect(page.getByTestId('vps.lifecycle.swap.drawer')).toBeVisible();
     await expect(page.getByTestId('vps.lifecycle.swap.candidate.321')).toContainText('Likely');
     await expect(page.getByTestId('vps.lifecycle.swap.candidate.321.reasons')).toContainText('staging/playground name');
     await page.getByTestId('vps.lifecycle.swap.target').fill('#321');
@@ -261,9 +269,9 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
       },
     });
 
-    await page.goto('/app/vps/123/lifecycle');
+    await page.goto('/app/vps/123/lifecycle/swap');
 
-    await page.getByTestId('vps.lifecycle.swap.open').click();
+    await expect(page.getByTestId('vps.lifecycle.swap.drawer')).toBeVisible();
     await expect(page.getByText('No likely staging target found')).toBeVisible();
     await expect(page.getByTestId('vps.lifecycle.swap.candidate.321')).toHaveCount(0);
     await page.getByTestId('vps.lifecycle.swap.target').fill('#321');
@@ -290,7 +298,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     const expirationInput = '2026-09-15T10:45';
     const expectedExpirationIso = new Date(expirationInput).toISOString();
 
-    await page.goto('/admin/vps/123/lifecycle');
+    await page.goto('/admin/vps/123/lifecycle/lifetime');
 
     await expect(page.getByTestId('vps.lifecycle.lifetime')).toBeVisible();
     await page.getByTestId('lifetimes.admin.edit').click();
@@ -316,7 +324,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installLifecycleMock(page);
 
-    await page.goto('/admin/vps/123/lifecycle');
+    await page.goto('/admin/vps/123/lifecycle/lifetime');
 
     await page.getByTestId('lifetimes.admin.edit').click();
     await page.getByTestId('lifetimes.admin.expiration.clear').click();
@@ -340,7 +348,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installLifecycleMock(page);
 
-    await page.goto('/admin/vps/123/lifecycle');
+    await page.goto('/admin/vps/123/lifecycle/template');
 
     await page.getByTestId('vps.lifecycle.template.os_template').selectOption('7');
     await page.getByTestId('vps.lifecycle.template.auto_update').check();
@@ -367,7 +375,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     const expirationInput = '2026-07-01T12:30';
     const expectedExpirationIso = new Date(expirationInput).toISOString();
 
-    await page.goto('/admin/vps/123/lifecycle');
+    await page.goto('/admin/vps/123/lifecycle/replace');
 
     await page.getByTestId('vps.lifecycle.replace.node').fill('#4');
     await page.getByTestId('vps.lifecycle.replace.expiration').fill(expirationInput);
@@ -397,16 +405,21 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installLifecycleMock(page);
 
-    await page.goto('/admin/vps/123/lifecycle');
+    await page.goto('/admin/vps/123/lifecycle/migrate');
 
-    await page.getByTestId('vps.lifecycle.migrate.node').fill('#5');
+    await expect(page.getByTestId('vps.lifecycle.migrate.node')).toContainText('node5.example');
+    await page.getByTestId('vps.lifecycle.migrate.node').selectOption('5');
     await page.getByTestId('vps.lifecycle.migrate.replace_ip_addresses').check();
     await page.getByTestId('vps.lifecycle.migrate.transfer_ip_addresses').uncheck();
+    await page.getByTestId('vps.lifecycle.migrate.schedule').selectOption('custom');
     await page.getByTestId('vps.lifecycle.migrate.stop_on_error').check();
     await page.getByTestId('vps.lifecycle.migrate.cleanup_data').check();
     await page.getByTestId('vps.lifecycle.migrate.send_mail').check();
-    await page.getByTestId('vps.lifecycle.migrate.finish_weekday').fill('2');
-    await page.getByTestId('vps.lifecycle.migrate.finish_minutes').fill('90');
+    await page.getByTestId('vps.lifecycle.migrate.finish_weekday').selectOption('2');
+    await page.getByTestId('vps.lifecycle.migrate.finish_hour').selectOption('1');
+    await page.getByTestId('vps.lifecycle.migrate.advanced').locator('summary').click();
+    await page.getByTestId('vps.lifecycle.migrate.no_start').check();
+    await page.getByTestId('vps.lifecycle.migrate.reason').fill('rack maintenance');
     await page.getByTestId('vps.lifecycle.migrate.confirm').check();
 
     const reqPromise = page.waitForRequest(
@@ -424,9 +437,48 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
         maintenance_window: false,
         stop_on_error: true,
         cleanup_data: true,
+        no_start: true,
+        skip_start: false,
         send_mail: true,
         finish_weekday: 2,
-        finish_minutes: 90,
+        finish_minutes: 60,
+        reason: 'rack maintenance',
+      },
+    });
+  });
+
+  test('admin migrate follows legacy IP option availability for same-location moves', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installLifecycleMock(page);
+
+    await page.goto('/admin/vps/123/lifecycle/migrate');
+
+    await page.getByTestId('vps.lifecycle.migrate.node').selectOption('2');
+
+    await expect(page.getByTestId('vps.lifecycle.migrate.transfer_ip_addresses')).toHaveCount(0);
+    await expect(page.getByTestId('vps.lifecycle.migrate.replace_ip_addresses')).toHaveCount(0);
+    await expect(page.getByTestId('vps.lifecycle.migrate.schedule')).toHaveValue('maintenance');
+
+    await page.getByTestId('vps.lifecycle.migrate.confirm').check();
+
+    const reqPromise = page.waitForRequest(
+      (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/vpses/123/migrate')
+    );
+
+    await page.getByTestId('vps.lifecycle.migrate.submit').click();
+
+    const req = await reqPromise;
+    expect(req.postDataJSON()).toEqual({
+      vps: {
+        node: 2,
+        replace_ip_addresses: false,
+        transfer_ip_addresses: false,
+        maintenance_window: true,
+        stop_on_error: true,
+        cleanup_data: true,
+        no_start: false,
+        skip_start: false,
+        send_mail: true,
       },
     });
   });
@@ -435,7 +487,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installLifecycleMock(page);
 
-    await page.goto('/admin/vps/123/lifecycle');
+    await page.goto('/admin/vps/123/lifecycle/delete');
 
     await page.getByTestId('vps.lifecycle.delete.lazy').check();
     await page.getByTestId('vps.lifecycle.delete.confirm').check();
@@ -455,7 +507,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await expect(page).toHaveURL(/\/admin\/vps$/);
   });
 
-  test('@workflow-matrix regular user gets legacy clone, swap and delete actions without admin-only lifecycle actions', async ({ page }) => {
+  test('@workflow-matrix regular user gets legacy reinstall, clone, swap and delete actions without admin-only lifecycle actions', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installHaveApiMock(page, {
       user: { id: 7, login: 'owner', level: 1 },
@@ -472,17 +524,18 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await page.goto('/app/vps/123/lifecycle');
 
     await expect(page.getByTestId('vps.lifecycle.page')).toBeVisible();
-    await expect(page.getByTestId('vps.lifecycle.clone')).toBeVisible();
-    await expect(page.getByTestId('vps.lifecycle.swap')).toBeVisible();
-    await expect(page.getByTestId('vps.lifecycle.delete')).toBeVisible();
-    await expect(page.getByTestId('vps.lifecycle.lifetime')).toBeVisible();
-    await expect(page.getByTestId('vps.lifecycle.replace')).toHaveCount(0);
-    await expect(page.getByTestId('vps.lifecycle.migrate')).toHaveCount(0);
-    await expect(page.getByTestId('vps.lifecycle.reinstall')).toHaveCount(0);
-    await expect(page.getByTestId('vps.lifecycle.delete.lazy')).toHaveCount(0);
+    await expect(page.getByTestId('vps.lifecycle.action_link.clone')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.action_link.swap')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.action_link.delete')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.action_link.reinstall')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.action_link.lifetime')).toHaveCount(0);
+    await expect(page.getByTestId('vps.lifecycle.action_link.replace')).toHaveCount(0);
+    await expect(page.getByTestId('vps.lifecycle.action_link.migrate')).toHaveCount(0);
     await expect(page.getByTestId('lifetimes.admin.edit')).toHaveCount(0);
     await expect(page.getByTestId('lifetimes.admin.log')).toHaveCount(0);
 
+    await page.goto('/app/vps/123/lifecycle/delete');
+    await expect(page.getByTestId('vps.lifecycle.delete.lazy')).toHaveCount(0);
     await expect(page.getByTestId('vps.lifecycle.delete.submit')).toHaveAttribute('aria-disabled', 'true');
 
     await page.getByTestId('vps.lifecycle.delete.confirm').check();
@@ -512,7 +565,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
       },
     });
 
-    await page.goto('/app/vps/123/lifecycle');
+    await page.goto('/app/vps/123/lifecycle/clone');
 
     await page.getByTestId('vps.lifecycle.clone.location').selectOption('2');
     await page.getByTestId('vps.lifecycle.clone.hostname').fill('vps123-playground');
@@ -596,9 +649,8 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
       },
     });
 
-    await page.goto('/app/vps/123/lifecycle');
+    await page.goto('/app/vps/123/lifecycle/swap');
 
-    await page.getByTestId('vps.lifecycle.swap.open').click();
     await expect(page.getByTestId('vps.lifecycle.swap.drawer')).toBeVisible();
     await expect(page.getByTestId('vps.lifecycle.swap.candidate.321')).toContainText('vps123-playground');
     await expect(page.getByTestId('vps.lifecycle.swap.candidate.321')).toContainText('Likely');
@@ -659,9 +711,9 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
       },
     });
 
-    await page.goto('/app/vps/123/lifecycle');
+    await page.goto('/app/vps/123/lifecycle/swap');
 
-    await page.getByTestId('vps.lifecycle.swap.open').click();
+    await expect(page.getByTestId('vps.lifecycle.swap.drawer')).toBeVisible();
     await page.getByTestId('vps.lifecycle.swap.candidate.321').click();
     await page.getByTestId('vps.lifecycle.swap.confirm').check();
     await page.getByTestId('vps.lifecycle.swap.submit').click();
@@ -703,7 +755,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
       },
     });
 
-    await page.goto('/admin/vps/123/lifecycle');
+    await page.goto('/admin/vps/123/lifecycle/delete');
 
     const submit = page.getByTestId('vps.lifecycle.delete.submit');
     await expect(submit).toBeVisible();

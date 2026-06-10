@@ -125,7 +125,7 @@ export function VpsLayout() {
 
   const vpsQ = useQuery({
     queryKey: ['vps', 'show', { id: vpsId }],
-    queryFn: async () => (await fetchVps(vpsId, { includes: 'node__location,user,dns_resolver,user_namespace_map,os_template,dataset' })).data,
+    queryFn: async () => (await fetchVps(vpsId, { includes: 'node__location__environment,user,dns_resolver,user_namespace_map,os_template,dataset' })).data,
     enabled: Number.isFinite(vpsId) && vpsId > 0,
   });
 
@@ -320,7 +320,7 @@ export function VpsLayout() {
       { label: t('vps.tabs.storage'), to: `${basePath}/vps/${vpsId}/storage`, end: true },
       { label: t('vps.tabs.features'), to: `${basePath}/vps/${vpsId}/features`, end: true },
       { label: t('vps.tabs.maintenance'), to: `${basePath}/vps/${vpsId}/maintenance`, end: true },
-      { label: t('vps.tabs.lifecycle'), to: `${basePath}/vps/${vpsId}/lifecycle`, end: true },
+      { label: t('vps.tabs.lifecycle'), to: `${basePath}/vps/${vpsId}/lifecycle` },
       { label: t('vps.tabs.console'), to: `${basePath}/vps/${vpsId}/console`, end: true },
     ],
     [basePath, t, vpsId]
@@ -507,6 +507,37 @@ export function VpsLayout() {
               >
                 <option value="">{t('vps.actions.menu.placeholder')}</option>
                 <option value={`${basePath}/vps/${(vps as any).id}/lifecycle`}>{t('vps.tabs.lifecycle')}</option>
+                <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/reinstall`}>
+                  {t('action.vps.reinstall.label')}
+                </option>
+                <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/clone`}>
+                  {t('action.vps.clone.label')}
+                </option>
+                <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/swap`}>
+                  {t('action.vps.swap.label')}
+                </option>
+                <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/delete`}>
+                  {t('action.vps.delete.label')}
+                </option>
+                {mode === 'admin' ? (
+                  <>
+                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/lifetime`}>
+                      {t('action.vps.lifecycle.label')}
+                    </option>
+                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/template`}>
+                      {t('action.vps.template.label')}
+                    </option>
+                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/boot`}>
+                      {t('action.vps.boot.label')}
+                    </option>
+                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/replace`}>
+                      {t('action.vps.replace.label')}
+                    </option>
+                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/migrate`}>
+                      {t('action.vps.migrate.label')}
+                    </option>
+                  </>
+                ) : null}
                 <option value={`${basePath}/vps/${(vps as any).id}/network`}>{t('vps.tabs.network')}</option>
                 <option value={`${basePath}/vps/${(vps as any).id}/storage`}>{t('vps.tabs.storage')}</option>
                 <option value={`${basePath}/transactions/items?vps=${(vps as any).id}`}>
