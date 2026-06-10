@@ -130,8 +130,10 @@ export function UserNamespaceMapDetail(props: {
     staleTime: 30_000,
   });
 
+  const entriesQueryKey = ['user_namespace_map', props.mapId, 'entries'] as const;
+
   const entriesQ = useQuery({
-    queryKey: ['user_namespace_map', props.mapId, 'entries'],
+    queryKey: entriesQueryKey,
     queryFn: async () => (await fetchUserNamespaceMapEntries(props.mapId, { limit: 200 })).data,
     enabled: Number.isFinite(props.mapId) && props.mapId > 0,
     staleTime: 15_000,
@@ -227,12 +229,17 @@ export function UserNamespaceMapDetail(props: {
         });
 
         try {
-          await updateUserNamespaceMapEntry(props.mapId, r.id, {
+          const updatedRes = await updateUserNamespaceMapEntry(props.mapId, r.id, {
             vps_id: r.vps_id,
             ns_id: r.ns_id,
             count: r.count,
           });
           results.push({ id: r.id, ok: true });
+
+          qc.setQueryData<UserNamespaceMapEntry[]>(entriesQueryKey, (old) => {
+            const next = old ?? [];
+            return next.map((e) => (e.id === r.id ? { ...e, ...(updatedRes.data ?? {}) } : e));
+          });
 
           setRows((prev) => {
             const p = prev ?? [];
@@ -281,6 +288,7 @@ export function UserNamespaceMapDetail(props: {
   const deleteEntryM = useMutation({
     mutationFn: async (entryId: number) => deleteUserNamespaceMapEntry(props.mapId, entryId),
     onSuccess: (_r, entryId) => {
+      qc.setQueryData<UserNamespaceMapEntry[]>(entriesQueryKey, (old) => (old ?? []).filter((e) => e.id !== entryId));
       setRows((prev) => {
         const p = prev ?? [];
         return p.filter((x) => x.id !== entryId);
@@ -339,6 +347,23 @@ export function UserNamespaceMapDetail(props: {
     },
     onSuccess: (created) => {
       if (!created || created.length === 0) return;
+
+      qc.setQueryData<UserNamespaceMapEntry[]>(entriesQueryKey, (old) => {
+        const byId = new Map<number, UserNamespaceMapEntry>();
+        for (const e of old ?? []) {
+          if (typeof e.id === 'number') byId.set(e.id, e);
+        }
+        for (const e of created) {
+          if (typeof e?.id === 'number') byId.set(e.id, e);
+        }
+
+        return Array.from(byId.values()).sort((a, b) => {
+          const ak = String(a.kind ?? '');
+          const bk = String(b.kind ?? '');
+          if (ak !== bk) return ak === 'uid' ? -1 : 1;
+          return Number(a.id) - Number(b.id);
+        });
+      });
 
       setRows((prev) => {
         const p = prev ?? [];

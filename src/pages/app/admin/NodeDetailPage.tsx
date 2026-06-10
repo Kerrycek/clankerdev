@@ -364,7 +364,7 @@ export function NodeDetailPage() {
           lock || busyTransaction || busyLocalAny ? (
             <>
               {lock ? <LockBadge kind="maintenance" t={t} maintenanceReason={lockReason} /> : null}
-              {busyTransaction ? <LockBadge kind="transaction" t={t} chainIds={activeChainIds} showDetails /> : null}
+              {busyTransaction ? <LockBadge kind="transaction" t={t} chainIds={activeChainIds} showDetails testId="admin.node.transactions.lock.badge" /> : null}
               {busyLocalAny ? <LockBadge kind="local" t={t} /> : null}
             </>
           ) : null

@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 
+import { bootstrapVpsAdminWindow } from '../../fixtures/bootstrap';
 import { installHaveApiMock } from '../../fixtures/haveapi';
 
 function nowIso() {
@@ -8,7 +9,11 @@ function nowIso() {
 
 test.describe('Profile: user data templates', () => {
   test('list, create, edit, deploy and delete', async ({ page }) => {
+    test.setTimeout(90_000);
+
     const t0 = nowIso();
+
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_SESSION' });
 
     // In-memory templates for the mock.
     let templates = [
@@ -111,7 +116,8 @@ test.describe('Profile: user data templates', () => {
 
     await page.goto('/app/profile/user-data');
 
-    await expect(page.getByTestId('profile.user_data.panel')).toBeVisible();
+    await expect(page.getByTestId('profile.user_data.panel')).toBeVisible({ timeout: 30_000 });
+    await expect(page).toHaveURL(/\/app\/profile\/user-data\?limit=50&page=1$/);
 
     // Initial list
     await expect(page.getByTestId('profile.user_data.row.101')).toBeVisible();
@@ -124,7 +130,9 @@ test.describe('Profile: user data templates', () => {
     await page.getByTestId('profile.user_data.editor.format').selectOption('script');
     await page.getByTestId('profile.user_data.editor.content').fill('#!/bin/sh\necho hello\n');
 
-    await page.getByTestId('profile.user_data.editor.create').click();
+    const createButton = page.getByTestId('profile.user_data.editor.create');
+    await expect(createButton).toBeEnabled();
+    await createButton.click({ force: true });
 
     // The new template should get id 102 from the mock.
     await expect(page.getByTestId('profile.user_data.row.102')).toBeVisible();

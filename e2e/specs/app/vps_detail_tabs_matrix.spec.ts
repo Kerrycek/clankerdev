@@ -105,6 +105,10 @@ test('@workflow-matrix @smoke VPS detail tabs expose storage, lifecycle, and con
   await page.getByRole('link', { name: /^Lifecycle$/ }).click();
   await expect(page).toHaveURL(/\/app\/vps\/123\/lifecycle$/);
   await expect(page.getByTestId('vps.lifecycle.page')).toBeVisible();
+  await expect(page.getByTestId('vps.lifecycle.action_index')).toBeVisible();
+  await expect(page.getByTestId('vps.lifecycle.action_link.clone')).toBeVisible();
+  await page.getByTestId('vps.lifecycle.action_link.clone').click();
+  await expect(page).toHaveURL(/\/app\/vps\/123\/lifecycle\/clone$/);
   await expect(page.getByTestId('vps.lifecycle.clone')).toBeVisible();
   await expect(page.getByTestId('vps.lifecycle.replace')).toHaveCount(0);
 

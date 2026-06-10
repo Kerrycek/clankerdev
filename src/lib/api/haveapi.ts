@@ -211,6 +211,10 @@ export function unwrapSingleResponse<T>(
     return { data: null as unknown as T };
   }
 
+  if (Array.isArray(resp)) {
+    return { data: resp as unknown as T };
+  }
+
   // HaveAPI uses a configurable meta namespace (usually "_meta"). When the SPA runs
   // without the legacy vpsAdmin bootstrap, we may not know it. Be tolerant and
   // treat both "_meta" and "meta" as meta keys.

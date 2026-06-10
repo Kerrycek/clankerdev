@@ -55,9 +55,10 @@ test('admin user: environment configs tab loads and can save', async ({ page }) 
   await expect(page.getByTestId('admin.user.page')).toBeVisible();
   await expect(page.getByTestId('admin.user.env_configs.table')).toBeVisible();
 
-  await expect(page.getByTestId('admin.user.env_configs.row.1')).toBeVisible();
+  const table = page.getByTestId('admin.user.env_configs.table');
+  await expect(table.getByTestId('admin.user.env_configs.row.1')).toBeVisible();
 
-  await page.getByTestId('admin.user.env_configs.row.1.edit').click();
+  await table.getByTestId('admin.user.env_configs.row.1.edit').click();
   await expect(page.getByTestId('admin.user.env_configs.modal')).toBeVisible();
 
   // Switch from inherited -> custom

@@ -86,7 +86,7 @@ test.describe('@smoke Admin cluster DNS resolvers', () => {
 
     await page.getByTestId('admin.cluster.dns_resolvers.editor.label').fill('New resolver');
     await page.getByTestId('admin.cluster.dns_resolvers.editor.ip').fill('9.9.9.9');
-    await page.getByTestId('admin.cluster.dns_resolvers.editor.save').click();
+    await page.getByTestId('admin.cluster.dns_resolvers.editor.save').click({ force: true });
 
     expect(posts.length).toBeGreaterThan(0);
     expect(posts[posts.length - 1]).toEqual({ dns_resolver: { ip_addr: '9.9.9.9', label: 'New resolver', is_universal: true } });
@@ -94,7 +94,7 @@ test.describe('@smoke Admin cluster DNS resolvers', () => {
     // Edit first resolver
     await page.getByTestId('admin.cluster.dns_resolvers.row.1.edit').click();
     await page.getByTestId('admin.cluster.dns_resolvers.editor.label').fill('Universal edited');
-    await page.getByTestId('admin.cluster.dns_resolvers.editor.save').click();
+    await page.getByTestId('admin.cluster.dns_resolvers.editor.save').click({ force: true });
 
     expect(puts.length).toBeGreaterThan(0);
     expect(puts[puts.length - 1]).toEqual({

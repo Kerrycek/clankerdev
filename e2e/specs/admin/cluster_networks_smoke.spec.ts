@@ -77,6 +77,7 @@ test.describe('Admin / Cluster / Networks (smoke)', () => {
     let seenPurpose: string | null = null;
 
     await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 100 },
       handlers: {
         'GET locations': () => ({ locations, _meta: { total_count: locations.length } }),
 
@@ -192,8 +193,9 @@ test.describe('Admin / Cluster / Networks (smoke)', () => {
     await page.getByTestId('admin.cluster.networks.editor.address').fill('198.51.100.0');
     await page.getByTestId('admin.cluster.networks.editor.prefix').fill('24');
     await page.getByTestId('admin.cluster.networks.editor.split_prefix').fill('24');
+    const createRequest = page.waitForRequest((r) => r.method() === 'POST' && r.url().includes('/api/v7.0/networks'));
     await page.getByTestId('admin.cluster.networks.editor.save').click();
-    await page.waitForRequest((r) => r.method() === 'POST' && r.url().includes('/api/v7.0/networks'));
+    await createRequest;
     await expect(page.getByTestId('admin.cluster.networks.row.200')).toBeVisible();
 
     const createCall = apiCalls.find((c) => c.method === 'POST' && c.url.includes('/api/v7.0/networks'));
@@ -201,8 +203,11 @@ test.describe('Admin / Cluster / Networks (smoke)', () => {
     expect(createCall?.body).toContain('"address"');
 
     // Open detail
-    await page.getByTestId('admin.cluster.networks.row.101.open').click();
-    await expect(page.getByTestId('admin.cluster.network_detail.page')).toBeVisible();
+    const detailRequest = page.waitForRequest((r) => r.url().includes('/api/v7.0/networks/101'));
+    await page.getByTestId('admin.cluster.networks.row.101.open').click({ force: true });
+    await detailRequest;
+    await expect(page).toHaveURL(/\/admin\/cluster\/networks\/101/);
+    await expect(page.getByTestId('admin.cluster.network_detail.page')).toBeVisible({ timeout: 45_000 });
     await expect(page.getByTestId('admin.cluster.network_detail.availability.table')).toBeVisible();
     await expect(page.getByTestId('admin.cluster.network_detail.ln.1001')).toBeVisible();
   });

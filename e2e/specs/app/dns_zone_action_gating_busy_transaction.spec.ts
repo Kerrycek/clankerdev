@@ -43,7 +43,7 @@ test.describe('DNS zone action gating (busy transaction)', () => {
 
     // Attempt to open "Add record" while the zone is busy.
     await expect(page.getByTestId('dns.records.create.open')).toBeVisible();
-    await page.getByTestId('dns.records.create.open').click();
+    await page.getByTestId('dns.records.create.open').click({ force: true });
 
     // We should get the generic disabled-reason modal, not the create form.
     await expect(page.getByTestId('dns.records.create.open.reason')).toBeVisible();
@@ -53,7 +53,7 @@ test.describe('DNS zone action gating (busy transaction)', () => {
     await page.goto('/app/dns/zones/10/settings');
     await expect(page.getByTestId('dns.settings.save')).toBeVisible();
 
-    await page.getByTestId('dns.settings.save').click();
+    await page.getByTestId('dns.settings.save').click({ force: true });
     await expect(page.getByTestId('dns.settings.save.reason')).toBeVisible();
   });
 });

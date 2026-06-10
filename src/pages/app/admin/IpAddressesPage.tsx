@@ -102,6 +102,23 @@ export function IpAddressesPage() {
     });
   };
 
+  const setAddressFilter = (nextAddr: string, nextPrefix?: string) => {
+    const addrValue = nextAddr.trim();
+    const prefixValue = String(nextPrefix ?? '').trim();
+
+    setSp((prev) => {
+      const next = new URLSearchParams(prev);
+
+      if (addrValue) next.set('addr', addrValue);
+      else next.delete('addr');
+
+      if (prefixValue) next.set('prefix', prefixValue);
+      else next.delete('prefix');
+
+      return next;
+    });
+  };
+
   const filtersActive = Boolean(
     qText.trim() ||
       addr.trim() ||
@@ -282,11 +299,9 @@ export function IpAddressesPage() {
         case 'addr': {
           const match = valueRaw.trim().match(/^(.+?)\/(\d+)$/);
           if (match && match[1] && match[2]) {
-            setTextParam('addr', match[1]);
-            setTextParam('prefix', match[2]);
+            setAddressFilter(match[1], match[2]);
           } else {
-            setTextParam('addr', valueRaw.trim());
-            setTextParam('prefix', undefined);
+            setAddressFilter(valueRaw.trim());
           }
           return;
         }

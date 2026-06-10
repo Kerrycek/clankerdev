@@ -15,7 +15,13 @@ test.describe('Sync banner', () => {
 
   test('shows a page banner when Tier A sync fails', async ({ page }) => {
     // Break background sync (Tier A) – AppLayout should switch to syncStatus=error.
-    await page.route('**/api/app/action_states?**', (route) => route.fulfill({ status: 500 }));
+    await page.route('**/api/v7.0/action_states?**', (route) =>
+      route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: false, message: 'sync failed', response: null }),
+      })
+    );
 
     await page.goto('/app/vps');
 

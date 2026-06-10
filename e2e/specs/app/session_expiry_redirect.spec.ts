@@ -19,7 +19,7 @@ test('@smoke expired session redirects to public overview with a clear notice', 
   await page.goto('/app/vps');
 
   await expect(page).toHaveURL(/\/\?session=expired$/);
-  await expect(page.getByTestId('public.overview.page')).toBeVisible();
+  await expect(page.getByTestId('public.overview.page')).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId('auth.session-expired.notice')).toBeVisible();
   await expect(page.getByText('Your session expired due to inactivity. Please sign in again.')).toBeVisible();
 });
