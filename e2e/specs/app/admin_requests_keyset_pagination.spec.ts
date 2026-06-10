@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 
+import { bootstrapVpsAdminWindow } from '../../fixtures/bootstrap';
 import { installHaveApiMock } from '../../fixtures/haveapi';
 import { withAppUrl } from '../../fixtures/url';
 
@@ -36,7 +37,8 @@ function pageSlice(descIds: number[], fromId: number | null, limit: number): num
 }
 
 test('admin requests: keyset pagination merges registrations + changes', async ({ page }) => {
-  const haveApiMock = await installHaveApiMock(page);
+  await bootstrapVpsAdminWindow(page);
+  const haveApiMock = await installHaveApiMock(page, { user: { id: 1, login: 'admin', level: 100 } });
 
   // Interleaved ids: registrations are even, changes are odd.
   const registrations = Array.from({ length: 60 }, (_, i) => 300 - i).filter((id) => id % 2 === 0);
@@ -73,15 +75,17 @@ test('admin requests: keyset pagination merges registrations + changes', async (
   await page.goto(withAppUrl('/admin/requests?limit=25'));
 
   // First page should contain the newest mixed ids.
-  await expect(page.getByTestId('admin.requests.table')).toBeVisible();
-  await expect(page.getByTestId('admin.requests.row.registration.300')).toBeVisible();
-  await expect(page.getByTestId('admin.requests.row.change.299')).toBeVisible();
-  await expect(page.getByTestId('admin.requests.row.change.299.dot')).toHaveClass(/bg-danger/);
+  const table = page.getByTestId('admin.requests.table');
+  await expect(table).toBeVisible();
+  await expect(table.getByTestId('admin.requests.row.registration.300')).toBeVisible();
+  const change299 = table.getByTestId('admin.requests.row.change.299');
+  await expect(change299).toBeVisible();
+  await expect(change299.getByTestId('admin.requests.row.change.299.dot')).toHaveClass(/bg-warn/);
 
   // Next page should advance by the last id on page 1 (300..276 => cursor 276).
   await page.getByTestId('admin.requests.pagination.desktop.next').click();
 
   await expect(page).toHaveURL(/from_id=276/);
-  await expect(page.getByTestId('admin.requests.row.change.275')).toBeVisible();
-  await expect(page.getByTestId('admin.requests.row.registration.274')).toBeVisible();
+  await expect(table.getByTestId('admin.requests.row.change.275')).toBeVisible();
+  await expect(table.getByTestId('admin.requests.row.registration.274')).toBeVisible();
 });

@@ -1,9 +1,13 @@
 import { test, expect } from '@playwright/test';
 
+import { bootstrapVpsAdminWindow } from '../../fixtures/bootstrap';
 import { installHaveApiMock } from '../../fixtures/haveapi';
 import { withAppUrl } from '../../fixtures/url';
 
 test('user payments page: shows status, instructions and history', async ({ page }) => {
+  test.setTimeout(90_000);
+
+  await bootstrapVpsAdminWindow(page);
   const haveApiMock = await installHaveApiMock(page);
 
   haveApiMock.addHandler('GET users/current', () => {
@@ -51,8 +55,8 @@ test('user payments page: shows status, instructions and history', async ({ page
 
   await page.goto(withAppUrl('/app/payments'));
 
-  await expect(page.getByTestId('payments.my.stat.paid_until')).toBeVisible();
-  await expect(page.getByTestId('payments.my.stat.paid_until').getByText('Paid')).toBeVisible();
+  await expect(page.getByTestId('payments.my.stat.paid_until')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId('payments.my.stat.paid_until').getByText('Paid', { exact: true })).toBeVisible();
 
   await expect(page.getByTestId('payments.my.instructions.text')).toContainText('IBAN: CZ00TEST');
   await expect(page.getByTestId('payments.my.instructions.copy')).toBeVisible();

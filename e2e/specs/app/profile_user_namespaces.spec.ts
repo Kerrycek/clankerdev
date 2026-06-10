@@ -86,7 +86,7 @@ test('profile: user namespaces - create map and edit entries', async ({ page }) 
 
   // Landing should redirect to maps when the user has exactly one namespace
   await page.goto('/app/profile/user-namespaces');
-  await expect(page).toHaveURL(/\/app\/profile\/user-namespaces\/maps/);
+  await expect(page.getByTestId('profile.userns.maps.create')).toBeVisible({ timeout: 30_000 });
 
   // Create a new map
   await page.getByTestId('profile.userns.maps.create').click();

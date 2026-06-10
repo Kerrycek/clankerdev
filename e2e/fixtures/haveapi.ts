@@ -52,7 +52,16 @@ export interface HaveApiMockUser {
 export interface HaveApiRequestCtx {
   url: URL;
   /** Compatibility alias used by older specs. */
-  request: URL;
+  request: URL & {
+    postData?: () => string | null;
+    postDataJSON?: () => unknown;
+  };
+  /** Compatibility object used by older specs. */
+  params: Record<string, unknown>;
+  /** Compatibility alias for JSON request bodies used by older specs. */
+  reqJson?: unknown;
+  /** Compatibility alias for JSON request bodies used by older specs. */
+  json?: unknown;
   method: string;
   pathname: string;
   /**
@@ -81,6 +90,10 @@ export interface HaveApiMockOptions {
   apiVersion?: string;
   description?: HaveApiDescription;
   user?: HaveApiMockUser;
+  /** Compatibility alias used by older specs. */
+  authorizeUser?: { user?: Partial<HaveApiMockUser> };
+  /** Compatibility alias used by older specs. */
+  authorize?: { user?: Partial<HaveApiMockUser> };
   handlers?: Record<string, HaveApiHandler>;
   /** Fallback response for unmatched requests (default: {}). */
   fallbackResponse?: unknown;
@@ -119,13 +132,28 @@ function escapeRegExp(s: string): string {
  * - centralize boilerplate (description + users/current + empty chrome panels)
  * - allow per-test handlers for specific endpoints
  */
-export async function installHaveApiMock(page: Page, opts?: HaveApiMockOptions) {
+export async function installHaveApiMock(page: Page, opts?: HaveApiMockOptions): Promise<HaveApiMock>;
+export async function installHaveApiMock(opts: HaveApiMockOptions & { page: Page }): Promise<HaveApiMock>;
+export async function installHaveApiMock(pageOrOpts: Page | (HaveApiMockOptions & { page: Page }), maybeOpts?: HaveApiMockOptions) {
+  const page = 'route' in pageOrOpts ? pageOrOpts : pageOrOpts.page;
+  const opts = 'route' in pageOrOpts ? maybeOpts : pageOrOpts;
+  if (!('route' in pageOrOpts)) {
+    const { bootstrapVpsAdminWindow } = await import('./bootstrap');
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_SESSION' });
+  }
   const apiBase = (opts?.apiBasePath ?? '/api').replace(/\/+$/, '');
   const apiVersion = opts?.apiVersion ?? '7.0';
   const versionBase = `${apiBase}/v${apiVersion}`;
 
   const description = opts?.description ?? defaultHaveApiDescription();
-  const user: HaveApiMockUser = { id: 1, login: 'e2e', level: 1, ...(opts?.user ?? {}) };
+  const user: HaveApiMockUser = {
+    id: 1,
+    login: 'e2e',
+    level: 1,
+    ...(opts?.authorize?.user ?? {}),
+    ...(opts?.authorizeUser?.user ?? {}),
+    ...(opts?.user ?? {}),
+  };
 
   const fallback = opts?.fallbackResponse ?? {};
 
@@ -185,9 +213,29 @@ export async function installHaveApiMock(page: Page, opts?: HaveApiMockOptions) 
     const handlerKey = candidates.find((k) => Object.prototype.hasOwnProperty.call(handlers, k));
     const handler = handlerKey ? handlers[handlerKey] : undefined;
 
+    const requestUrl = url as HaveApiRequestCtx['request'];
+    requestUrl.postData = () => req.postData();
+    requestUrl.postDataJSON = () => {
+      const raw = req.postData();
+      return raw ? JSON.parse(raw) : {};
+    };
+    const reqJson = requestUrl.postDataJSON();
+    const params: Record<string, unknown> = {};
+    url.searchParams.forEach((value, key) => {
+      params[key] = value;
+    });
+    if (reqJson && typeof reqJson === 'object' && !Array.isArray(reqJson)) {
+      for (const [key, value] of Object.entries(reqJson as Record<string, unknown>)) {
+        params[key] = value;
+      }
+    }
+
     const ctx: HaveApiRequestCtx = {
       url,
-      request: url,
+      request: requestUrl,
+      params,
+      reqJson,
+      json: reqJson,
       method,
       pathname,
       relPath,

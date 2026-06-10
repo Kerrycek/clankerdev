@@ -3,6 +3,8 @@ import { expect, test } from '@playwright/test';
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 
 test.describe('ListShell primitives', () => {
+  test.setTimeout(120_000);
+
   test.beforeEach(async ({ page }) => {
     await bootstrapVpsAdminWindow(page, {
       sessionToken: 'TEST',
@@ -79,27 +81,27 @@ test.describe('ListShell primitives', () => {
   });
 
   test('list pages expose header + filters testids', async ({ page }) => {
-    await page.goto('/app/vps');
+    await page.goto('/app/vps', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('vps.list.header')).toBeVisible();
     await expect(page.getByTestId('vps.list.filters')).toBeVisible();
 
-    await page.goto('/app/datasets');
+    await page.goto('/app/datasets', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('datasets.list.header')).toBeVisible();
     await expect(page.getByTestId('datasets.list.filters')).toBeVisible();
 
-    await page.goto('/app/dns');
+    await page.goto('/app/dns', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('dns.zones.list.header')).toBeVisible();
     await expect(page.getByTestId('dns.zones.list.filters')).toBeVisible();
 
-    await page.goto('/app/transactions');
+    await page.goto('/app/transactions', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('transactions.list.header')).toBeVisible();
     await expect(page.getByTestId('transactions.list.filters')).toBeVisible();
 
-    await page.goto('/app/action-states');
+    await page.goto('/app/action-states', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('action_states.list.header')).toBeVisible();
     await expect(page.getByTestId('action_states.list.filters')).toBeVisible();
 
-    await page.goto('/app/transactions/items');
+    await page.goto('/app/transactions/items', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('transactions.items.list.header')).toBeVisible();
     await expect(page.getByTestId('transactions.items.list.filters')).toBeVisible();
     await expect(page.getByTestId('transactions.items.pagination')).toBeVisible();

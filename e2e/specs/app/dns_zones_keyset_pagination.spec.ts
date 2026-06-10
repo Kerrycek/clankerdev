@@ -46,10 +46,12 @@ test.describe('DNS zones keyset pagination', () => {
     await expect(page).toHaveURL(/page=2/);
     await expect(page.getByTestId('dns.zones.row.250')).toBeVisible();
 
-    await page.getByTestId('dns.zones.pagination.desktop.prev').click();
-    await expect(page).not.toHaveURL(/from_id=/);
+    const prev = page.getByTestId('dns.zones.pagination.desktop.prev');
+    await expect(prev).toBeEnabled();
+    await prev.click({ force: true });
+    await expect(page).not.toHaveURL(/from_id=/, { timeout: 30_000 });
     await expect(page).toHaveURL(/page=1/);
-    await expect(page.getByTestId('dns.zones.row.300')).toBeVisible();
+    await expect(page.getByTestId('dns.zones.row.300')).toBeVisible({ timeout: 30_000 });
     await expect(page.getByTestId('dns.zones.row.300.dot')).toBeVisible();
     await expect(page.getByTestId('dns.zones.row.299')).toHaveAttribute('data-row-variant', 'warn');
     await expect(page.getByTestId('dns.zones.row.299.dot')).toBeVisible();

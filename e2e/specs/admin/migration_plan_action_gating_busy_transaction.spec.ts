@@ -48,6 +48,6 @@ test('admin migration plan detail: busy transaction gates start', async ({ page 
   // Wait for the active transaction chain to be loaded and applied to gates.
   await expect(startBtn).toHaveAttribute('aria-disabled', 'true');
 
-  await startBtn.click();
+  await startBtn.click({ force: true });
   await expect(page.getByTestId('admin.migration_plan.start.reason')).toBeVisible();
 });

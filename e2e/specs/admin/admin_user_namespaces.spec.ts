@@ -36,7 +36,7 @@ test('admin: user namespaces tool loads namespaces and maps', async ({ page }) =
   await expect(page.getByTestId('admin.userns.namespaces.table')).toBeVisible();
   await expect(page.getByText('#101')).toBeVisible();
 
-  await page.getByRole('link', { name: 'Maps' }).click();
+  await page.getByTestId('admin.userns.tabs.maps').click();
   await expect(page).toHaveURL(/\/admin\/user-namespaces\/maps/);
   await expect(page.getByTestId('admin.userns.maps.table')).toBeVisible();
   await expect(page.getByText('#501')).toBeVisible();

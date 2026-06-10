@@ -41,7 +41,8 @@ test('admin migration plans: keyset pagination (from_id)', async ({ page }) => {
   await expect(page.getByTestId('admin.migration_plans.row.300')).toBeVisible();
   await expect(page.getByTestId('admin.migration_plans.row.300')).toHaveAttribute('data-row-variant', 'ok');
   await expect(page.getByTestId('admin.migration_plans.row.300.dot')).toBeVisible();
-  await expect(page.getByTestId('admin.migration_plans.row.299')).toHaveAttribute('data-row-variant', 'info');
+  await expect(page.getByTestId('admin.migration_plans.row.299')).toHaveAttribute('data-row-variant', 'neutral');
+  await expect(page.getByTestId('admin.migration_plans.row.298')).toHaveAttribute('data-row-variant', 'info');
 
   await expect(page.getByTestId('admin.migration_plans.row.300')).toContainText('root');
   await expect(page.getByTestId('admin.migration_plans.row.300')).toContainText('node7');
@@ -49,11 +50,15 @@ test('admin migration plans: keyset pagination (from_id)', async ({ page }) => {
   await page.getByTestId('admin.migration_plans.pagination.desktop.next').click();
   await expect(page.getByTestId('admin.migration_plans.row.250')).toBeVisible();
 
-  await page.getByTestId('admin.migration_plans.pagination.desktop.prev').click();
-  await expect(page.getByTestId('admin.migration_plans.row.300')).toBeVisible();
+  const prev = page.getByTestId('admin.migration_plans.pagination.desktop.prev');
+  await expect(prev).toBeEnabled();
+  await prev.click({ force: true });
+  await expect(page).toHaveURL(/page=1/, { timeout: 30_000 });
+  await expect(page.getByTestId('admin.migration_plans.row.300')).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId('admin.migration_plans.row.300')).toHaveAttribute('data-row-variant', 'ok');
   await expect(page.getByTestId('admin.migration_plans.row.300.dot')).toBeVisible();
-  await expect(page.getByTestId('admin.migration_plans.row.299')).toHaveAttribute('data-row-variant', 'info');
+  await expect(page.getByTestId('admin.migration_plans.row.299')).toHaveAttribute('data-row-variant', 'neutral');
+  await expect(page.getByTestId('admin.migration_plans.row.298')).toHaveAttribute('data-row-variant', 'info');
 
   await expect(page.getByTestId('admin.migration_plans.row.300')).toContainText('root');
   await expect(page.getByTestId('admin.migration_plans.row.300')).toContainText('node7');

@@ -1,10 +1,12 @@
 import { test, expect } from '@playwright/test';
 
+import { bootstrapVpsAdminWindow } from '../../fixtures/bootstrap';
 import { installHaveApiMock } from '../../fixtures/haveapi';
 import { withAppUrl } from '../../fixtures/url';
 
 test('admin incoming payment: assign to user', async ({ page }) => {
-  const haveApiMock = await installHaveApiMock(page);
+  await bootstrapVpsAdminWindow(page);
+  const haveApiMock = await installHaveApiMock(page, { user: { id: 1, login: 'admin', level: 100 } });
 
   let assigned = false;
   let assignedUser: any = null;

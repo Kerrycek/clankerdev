@@ -19,14 +19,14 @@ test.describe('Incident reports - Smart Filter Input', () => {
           };
         },
         'GET incident_reports': async ({ request }) => {
-          const limit = Number(request.searchParams.get('incident_report[limit]') ?? '3') || 3;
+          const limit = Number(request.searchParams.get('incident_report[limit]') ?? '25') || 25;
           const fromIdRaw = request.searchParams.get('incident_report[from_id]');
           const fromId = fromIdRaw ? Number(fromIdRaw) : 0;
 
           const codename = request.searchParams.get('incident_report[codename]') ?? 'default';
 
           const start = fromId > 0 ? fromId - 1 : 125;
-          const count = Math.min(limit, 3);
+          const count = Math.min(limit, 25);
 
           const incident_reports = Array.from({ length: count }, (_, i) => {
             const id = start - i;
@@ -44,14 +44,14 @@ test.describe('Incident reports - Smart Filter Input', () => {
             };
           });
 
-          return { incident_reports };
+          return { incident_reports, _meta: { total_count: 125 } };
         },
       },
     });
   });
 
   test('applies codename: filter and keeps it on next page', async ({ page }) => {
-    await page.goto(withAppUrl('/admin/incidents'));
+    await page.goto(withAppUrl('/admin/incidents?limit=25'));
 
     // Initial page
     await expect(page.getByTestId('incidents.list.row.125')).toBeVisible();
@@ -69,7 +69,7 @@ test.describe('Incident reports - Smart Filter Input', () => {
 
     // Keyset pagination should use from_id and keep filters
     await page.getByTestId('incidents.list.pagination.next').click();
-    await expect(page.getByTestId('incidents.list.row.122')).toBeVisible();
-    await expect(page.getByTestId('incidents.list.row.122')).toContainText('abuse');
+    await expect(page.getByTestId('incidents.list.row.100')).toBeVisible();
+    await expect(page.getByTestId('incidents.list.row.100')).toContainText('abuse');
   });
 });

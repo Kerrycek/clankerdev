@@ -25,14 +25,14 @@ test.describe('OOM reports - Smart Filter Input', () => {
           return { locations: [{ id: 1, label: 'PRG' }] };
         },
         'GET oom_reports': async ({ request }) => {
-          const limit = Number(request.searchParams.get('oom_report[limit]') ?? '3') || 3;
+          const limit = Number(request.searchParams.get('oom_report[limit]') ?? '25') || 25;
           const fromIdRaw = request.searchParams.get('oom_report[from_id]');
           const fromId = fromIdRaw ? Number(fromIdRaw) : 0;
 
           const cgroup = request.searchParams.get('oom_report[cgroup]') ?? 'default-cgroup';
 
           const start = fromId > 0 ? fromId - 1 : 125;
-          const count = Math.min(limit, 3);
+          const count = Math.min(limit, 25);
 
           const oom_reports = Array.from({ length: count }, (_, i) => {
             const id = start - i;
@@ -55,14 +55,14 @@ test.describe('OOM reports - Smart Filter Input', () => {
             };
           });
 
-          return { oom_reports };
+          return { oom_reports, _meta: { total_count: 125 } };
         },
       },
     });
   });
 
   test('applies cgroup: filter and keeps it on next page', async ({ page }) => {
-    await page.goto(withAppUrl('/admin/oom-reports'));
+    await page.goto(withAppUrl('/admin/oom-reports?limit=25'));
 
     await expect(page.getByTestId('oom.list.row.125')).toBeVisible();
     await expect(page.getByTestId('oom.list.row.125')).toHaveAttribute('data-row-variant', 'warn');
@@ -77,7 +77,7 @@ test.describe('OOM reports - Smart Filter Input', () => {
     await expect(page.getByTestId('oom.list.row.125')).toContainText('system.slice');
 
     await page.getByTestId('oom.list.pagination.next').click();
-    await expect(page.getByTestId('oom.list.row.122')).toBeVisible();
-    await expect(page.getByTestId('oom.list.row.122')).toContainText('system.slice');
+    await expect(page.getByTestId('oom.list.row.100')).toBeVisible();
+    await expect(page.getByTestId('oom.list.row.100')).toContainText('system.slice');
   });
 });

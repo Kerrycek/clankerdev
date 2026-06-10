@@ -55,15 +55,12 @@ test('admin ip addresses: filters + keyset pagination (from_id)', async ({ page 
   await expect(page.getByTestId('admin.ip_addresses.row.125.dot')).toBeVisible();
 
   // Apply a server-side filter.
-  const filteredReq = page.waitForRequest((req) => {
-    const u = req.url();
-    return u.includes('/api/v7.0/ip_addresses') && u.includes('ip_address%5Baddr%5D=10.0.0');
-  });
   const sfi = page.getByTestId('admin.ip_addresses.smart_filter.input');
-  await sfi.fill('addr:10.0.0');
+  await sfi.fill('addr:10.0.0.1');
+  await expect(sfi).toHaveValue('addr:10.0.0.1');
   await sfi.press('Enter');
-  await filteredReq;
-  expect(seenFilterAddr).toBe('10.0.0');
+  await expect.poll(() => seenFilterAddr).toBe('10.0.0.1');
+  await expect(page.getByTestId('admin.ip_addresses.row.125')).toContainText('10.0.0.1');
 
   // Next page uses from_id.
   await page.getByTestId('admin.ip_addresses.pagination.desktop.next').click();

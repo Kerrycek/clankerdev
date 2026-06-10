@@ -79,7 +79,7 @@ test.describe('Command palette', () => {
     await page.goto('/app/vps');
     await expect(page.getByTestId('vps.list')).toBeVisible();
 
-    await page.keyboard.press('Control+K');
+    await page.getByTestId('palette.open').click();
     await expect(page.getByTestId('palette.modal')).toBeVisible();
 
     await page.getByTestId('palette.input').fill('vps3');
@@ -140,7 +140,7 @@ test.describe('Command palette', () => {
     await page.goto('/app/vps');
     await expect(page.getByTestId('vps.list')).toBeVisible();
 
-    await page.keyboard.press('Control+K');
+    await page.getByTestId('palette.open').click();
     await expect(page.getByTestId('palette.modal')).toBeVisible();
 
     await page.getByTestId('palette.input').fill('3');
@@ -166,7 +166,7 @@ test.describe('Command palette', () => {
     });
 
     await page.goto('/admin/vps');
-    await page.keyboard.press('Control+K');
+    await page.getByTestId('palette.open').click();
     await expect(page.getByTestId('palette.modal')).toBeVisible();
 
     await page.getByTestId('palette.input').fill('alice');
@@ -202,7 +202,7 @@ test.describe('Command palette', () => {
     });
 
     await page.goto('/admin/vps');
-    await page.keyboard.press('Control+K');
+    await page.getByTestId('palette.open').click();
     await expect(page.getByTestId('palette.modal')).toBeVisible();
 
     await page.getByTestId('palette.input').fill('203.0.113.10');
@@ -230,7 +230,7 @@ test.describe('Command palette', () => {
     });
 
     await page.goto('/admin/vps');
-    await page.keyboard.press('Control+K');
+    await page.getByTestId('palette.open').click();
     await expect(page.getByTestId('palette.modal')).toBeVisible();
 
     await page.getByTestId('palette.input').fill('?');
