@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import { getRuntimeConfig } from './config';
 import { useAuth } from './auth';
@@ -6,9 +6,11 @@ import {
   DEFAULT_SETTINGS,
   normalizeUiSettings,
   loadUiSettingsFromLocalStorage,
+  resetUiSettingsPreferences,
   saveUiSettingsToLocalStorage,
   type UiLanguagePreference,
   type UiSettings,
+  type UiTipLifecycleState,
   type UiThemePreference,
 } from './uiSettingsModel';
 
@@ -22,6 +24,8 @@ export interface UiSettingsSyncState {
   status: 'idle' | 'loading' | 'saving' | 'error';
   lastLoadedAt?: string;
   lastSavedAt?: string;
+  lastLoadError?: string;
+  lastSaveError?: string;
   error?: string;
 }
 
@@ -33,6 +37,9 @@ interface UiSettingsCtx {
   setSidebarCollapsed: (collapsed: boolean) => void;
   setTheme: (theme: UiThemePreference) => void;
   setLanguage: (language: UiLanguagePreference) => void;
+  setSidebarTimeZoneTipState: (state: UiTipLifecycleState) => void;
+  retryLoad: () => Promise<void>;
+  resetPreferences: (opts?: { includeTips?: boolean }) => Promise<void>;
 
   // For diagnostics and future UI
   sync: UiSettingsSyncState;
@@ -70,7 +77,7 @@ function parseServerSettingsValue(value: unknown): UiSettings {
  * - Always persists to localStorage.
  * - Optionally syncs to the API (HaveAPI) when configured.
  */
-export function UiSettingsProvider(props: { children: React.ReactNode }) {
+export function UiSettingsProvider(props: { children: React.ReactNode; serverSyncEnabled?: boolean }) {
   const auth = useAuth();
   const cfg = getRuntimeConfig();
 
@@ -78,8 +85,7 @@ export function UiSettingsProvider(props: { children: React.ReactNode }) {
 
   const [settings, setSettings] = useState<UiSettings>(() => loadUiSettingsFromLocalStorage(localStorage));
 
-  const serverEnabled = cfg.uiSettings.persistence === 'server' && cfg.auth.kind !== 'none';
-  const serverPath = cfg.uiSettings.server.path;
+  const serverEnabled = props.serverSyncEnabled !== false && cfg.uiSettings.persistence === 'server' && cfg.auth.kind !== 'none';
   const serverNamespace = cfg.uiSettings.server.namespace;
   const serverField = cfg.uiSettings.server.field;
   const serverUserKey = auth.status === 'authenticated' ? String(auth.user?.id ?? 'current') : null;
@@ -94,6 +100,7 @@ export function UiSettingsProvider(props: { children: React.ReactNode }) {
   const lastSavedJsonRef = useRef<string | null>(null);
   const skipNextServerSaveRef = useRef(false);
   const [loadedServerKey, setLoadedServerKey] = useState<string | null>(null);
+  const loadInFlightRef = useRef<Promise<void> | null>(null);
 
   // Keep sync.mode in sync when config changes.
   useEffect(() => {
@@ -114,6 +121,53 @@ export function UiSettingsProvider(props: { children: React.ReactNode }) {
     saveUiSettingsToLocalStorage(localStorage, settings);
   }, [localStorage, settings]);
 
+  const loadFromServer = useCallback(async () => {
+    if (!serverEnabled) return;
+    if (auth.status !== 'authenticated') return;
+    const loadKey = serverUserKey ?? 'current';
+    if (loadInFlightRef.current) return loadInFlightRef.current;
+
+    const p = (async () => {
+      setSync((s) => ({ ...s, status: 'loading', error: undefined, lastLoadError: undefined }));
+      try {
+        const value = await fetchWebuiUserSetting(serverNamespace, serverField);
+
+        if (value === undefined) {
+          // Missing record or empty payload. Keep local settings.
+          setLoadedServerKey(loadKey);
+          setSync((s) => ({ ...s, status: 'idle', lastLoadedAt: nowIso(), lastLoadError: undefined }));
+          return;
+        }
+
+        const fromServer = parseServerSettingsValue(value);
+        const json = JSON.stringify(normalizeUiSettings(fromServer));
+
+        // Avoid an immediate write-back caused by the state update.
+        skipNextServerSaveRef.current = true;
+        lastSavedJsonRef.current = json;
+
+        setSettings(fromServer);
+        saveUiSettingsToLocalStorage(localStorage, fromServer);
+        setLoadedServerKey(loadKey);
+        setSync((s) => ({ ...s, status: 'idle', lastLoadedAt: nowIso(), lastLoadError: undefined }));
+      } catch (e) {
+        const message = safeErrorMessage(e);
+        setSync((s) => ({
+          ...s,
+          status: 'error',
+          error: message,
+          lastLoadError: message,
+        }));
+        throw e;
+      } finally {
+        loadInFlightRef.current = null;
+      }
+    })();
+
+    loadInFlightRef.current = p;
+    return p;
+  }, [auth.status, localStorage, serverEnabled, serverField, serverNamespace, serverUserKey]);
+
   // Server load (best-effort) after authentication.
   const loadedFromServerRef = useRef<string | null>(null);
   useEffect(() => {
@@ -125,47 +179,15 @@ export function UiSettingsProvider(props: { children: React.ReactNode }) {
     loadedFromServerRef.current = loadKey;
     let cancelled = false;
 
-    (async () => {
-      setSync((s) => ({ ...s, status: 'loading', error: undefined }));
-
-      try {
-        const value = await fetchWebuiUserSetting(serverNamespace, serverField);
-
-        if (value === undefined) {
-          // Missing record or empty payload. Keep local settings.
-          if (cancelled) return;
-          setLoadedServerKey(loadKey);
-          setSync((s) => ({ ...s, status: 'idle', lastLoadedAt: nowIso() }));
-          return;
-        }
-
-        const fromServer = parseServerSettingsValue(value);
-        const json = JSON.stringify(normalizeUiSettings(fromServer));
-
-        if (cancelled) return;
-
-        // Avoid an immediate write-back caused by the state update.
-        skipNextServerSaveRef.current = true;
-        lastSavedJsonRef.current = json;
-
-        setSettings(fromServer);
-        saveUiSettingsToLocalStorage(localStorage, fromServer);
-        setLoadedServerKey(loadKey);
-        setSync((s) => ({ ...s, status: 'idle', lastLoadedAt: nowIso() }));
-      } catch (e) {
-        if (cancelled) return;
-        setSync((s) => ({
-          ...s,
-          status: 'error',
-          error: safeErrorMessage(e),
-        }));
-      }
-    })();
+    loadFromServer().catch(() => {
+      if (cancelled) return;
+      // loadFromServer already recorded diagnostics.
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [auth.status, localStorage, serverEnabled, serverField, serverNamespace, serverPath, serverUserKey]);
+  }, [auth.status, loadFromServer, serverEnabled, serverUserKey]);
 
   // Server save (best-effort, debounced) when settings change.
   useEffect(() => {
@@ -186,16 +208,18 @@ export function UiSettingsProvider(props: { children: React.ReactNode }) {
 
     saveTimerRef.current = window.setTimeout(async () => {
       try {
-        setSync((s) => ({ ...s, status: 'saving', error: undefined }));
+        setSync((s) => ({ ...s, status: 'saving', error: undefined, lastSaveError: undefined }));
         await saveWebuiUserSetting(serverNamespace, serverField, normalizeUiSettings(settings));
 
         lastSavedJsonRef.current = json;
-        setSync((s) => ({ ...s, status: 'idle', lastSavedAt: nowIso() }));
+        setSync((s) => ({ ...s, status: 'idle', lastSavedAt: nowIso(), lastSaveError: undefined }));
       } catch (e) {
+        const message = safeErrorMessage(e);
         setSync((s) => ({
           ...s,
           status: 'error',
-          error: safeErrorMessage(e),
+          error: message,
+          lastSaveError: message,
         }));
       }
     }, 500);
@@ -203,7 +227,51 @@ export function UiSettingsProvider(props: { children: React.ReactNode }) {
     return () => {
       if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     };
-  }, [auth.status, loadedServerKey, serverEnabled, serverField, serverNamespace, serverPath, serverUserKey, settings]);
+  }, [auth.status, loadedServerKey, serverEnabled, serverField, serverNamespace, serverUserKey, settings]);
+
+  const retryLoad = useCallback(async () => {
+    loadedFromServerRef.current = null;
+    await loadFromServer();
+  }, [loadFromServer]);
+
+  const resetPreferences = useCallback(async (opts?: { includeTips?: boolean }) => {
+    const next = resetUiSettingsPreferences(settings, opts);
+    const json = JSON.stringify(normalizeUiSettings(next));
+
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+
+    if (serverEnabled && auth.status === 'authenticated') {
+      try {
+        setSync((s) => ({ ...s, status: 'saving', error: undefined, lastSaveError: undefined }));
+        await saveWebuiUserSetting(serverNamespace, serverField, next);
+
+        lastSavedJsonRef.current = json;
+        skipNextServerSaveRef.current = true;
+        setSettings(next);
+        saveUiSettingsToLocalStorage(localStorage, next);
+        setSync((s) => ({ ...s, status: 'idle', lastSavedAt: nowIso(), lastSaveError: undefined }));
+        return;
+      } catch (e) {
+        const message = safeErrorMessage(e);
+        setSync((s) => ({
+          ...s,
+          status: 'error',
+          error: message,
+          lastSaveError: message,
+        }));
+        throw e;
+      }
+    }
+
+    lastSavedJsonRef.current = json;
+    skipNextServerSaveRef.current = true;
+    setSettings(next);
+    saveUiSettingsToLocalStorage(localStorage, next);
+    setSync((s) => ({ ...s, status: 'idle', lastSavedAt: nowIso(), lastSaveError: undefined }));
+  }, [auth.status, localStorage, serverEnabled, serverField, serverNamespace, settings]);
 
   const ctx: UiSettingsCtx = useMemo(
     () => ({
@@ -215,9 +283,18 @@ export function UiSettingsProvider(props: { children: React.ReactNode }) {
       setSidebarCollapsed: (collapsed) => setSettings((s) => ({ ...s, sidebarCollapsed: collapsed })),
       setTheme: (theme) => setSettings((s) => ({ ...s, theme })),
       setLanguage: (language) => setSettings((s) => ({ ...s, language })),
+      setSidebarTimeZoneTipState: (state) => setSettings((s) => ({
+        ...s,
+        tips: {
+          ...s.tips,
+          sidebarTimeZone: state,
+        },
+      })),
+      retryLoad,
+      resetPreferences,
       sync,
     }),
-    [settings, sync]
+    [resetPreferences, retryLoad, settings, sync]
   );
 
   return <UiSettingsContext.Provider value={ctx}>{props.children}</UiSettingsContext.Provider>;

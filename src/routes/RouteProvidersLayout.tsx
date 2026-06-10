@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 
 import { AuthProvider } from '../app/auth';
+import { getRuntimeConfig } from '../app/config';
 import { UiSettingsProvider } from '../app/uiSettings';
 import { ThemeProvider } from '../app/theme';
 import { I18nProvider } from '../app/i18n';
@@ -13,14 +14,27 @@ function currentBrowserPath(): string {
   return window.location.pathname + window.location.search + window.location.hash;
 }
 
+function stripRouterBasename(pathname: string): string {
+  const basename = getRuntimeConfig().routerBasename;
+  if (!basename) return pathname;
+  if (pathname === basename) return '/';
+  if (pathname.startsWith(`${basename}/`)) return pathname.slice(basename.length) || '/';
+  return pathname;
+}
+
+function shouldSyncUiSettings(pathname: string): boolean {
+  const path = stripRouterBasename(pathname);
+  return path === '/app' || path.startsWith('/app/') || path === '/admin' || path.startsWith('/admin/');
+}
+
 export function RouteProvidersLayout() {
   // Re-render on navigation so auth/login/logout URLs always use the full browser path,
   // including any configured router basename.
-  useLocation();
+  const location = useLocation();
 
   return (
     <AuthProvider nextPath={currentBrowserPath()}>
-      <UiSettingsProvider>
+      <UiSettingsProvider serverSyncEnabled={shouldSyncUiSettings(location.pathname)}>
         <ThemeProvider>
           <I18nProvider>
             <DocumentTitleManager />

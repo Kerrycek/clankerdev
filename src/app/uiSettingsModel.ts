@@ -1,5 +1,10 @@
 export type UiThemePreference = 'system' | 'light' | 'dark';
 export type UiLanguagePreference = 'system' | 'en' | 'cs';
+export type UiTipLifecycleState = 'visible' | 'dismissed' | 'accepted';
+
+export interface UiTipSettings {
+  sidebarTimeZone: UiTipLifecycleState;
+}
 
 /**
  * Unified UI settings.
@@ -11,12 +16,16 @@ export interface UiSettings {
   sidebarCollapsed: boolean;
   theme: UiThemePreference;
   language: UiLanguagePreference;
+  tips: UiTipSettings;
 }
 
 export const DEFAULT_SETTINGS: UiSettings = {
   sidebarCollapsed: false,
   theme: 'system',
   language: 'system',
+  tips: {
+    sidebarTimeZone: 'visible',
+  },
 };
 
 export const STORAGE_KEY = 'vpsadmin.uiSettings.v1';
@@ -48,7 +57,35 @@ export function normalizeUiSettings(input: unknown): UiSettings {
   const languageRaw = input['language'];
   const language: UiLanguagePreference = languageRaw === 'en' || languageRaw === 'cs' ? languageRaw : 'system';
 
-  return { sidebarCollapsed, theme, language };
+  const tipsRaw = input['tips'];
+  const tipsRecord = isRecord(tipsRaw) ? tipsRaw : {};
+  const sidebarTimeZoneRaw = tipsRecord['sidebarTimeZone'];
+  const sidebarTimeZone: UiTipLifecycleState =
+    sidebarTimeZoneRaw === 'dismissed' || sidebarTimeZoneRaw === 'accepted'
+      ? sidebarTimeZoneRaw
+      : DEFAULT_SETTINGS.tips.sidebarTimeZone;
+
+  return {
+    sidebarCollapsed,
+    theme,
+    language,
+    tips: {
+      sidebarTimeZone,
+    },
+  };
+}
+
+export function resetUiSettingsPreferences(settings: UiSettings, opts?: { includeTips?: boolean }): UiSettings {
+  const normalized = normalizeUiSettings(settings);
+
+  return {
+    ...DEFAULT_SETTINGS,
+    tips: opts?.includeTips ? { ...DEFAULT_SETTINGS.tips } : normalized.tips,
+  };
+}
+
+export function isUiTipVisible(settings: UiSettings, tip: keyof UiTipSettings): boolean {
+  return normalizeUiSettings(settings).tips[tip] === 'visible';
 }
 
 export function parseUiSettingsJson(raw: string): UiSettings {
