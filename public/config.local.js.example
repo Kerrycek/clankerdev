@@ -61,13 +61,18 @@
   //   authHeader: 'X-HaveAPI-Auth-Token',
   //   metaNamespace: '_meta',
   // };
+
+  // OPTIONAL: server default time zone for sidebar tips.
+  // @ts-ignore
+  // window.vpsAdmin.webuiNext.serverTimeZone = 'Europe/Prague';
+
   // @ts-ignore
   window.vpsAdmin.webuiNext.uiSettings = window.vpsAdmin.webuiNext.uiSettings || {
     persistence: 'local',
     // persistence: 'server',
     // server: {
-    //   path: '/user_sessions/current/ui_setting',
-    //   namespace: 'ui_setting',
+    //   path: '/webui_user_settings',
+    //   namespace: 'ui',
     //   field: 'settings',
     // },
   };

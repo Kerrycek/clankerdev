@@ -44,6 +44,7 @@ import { ImpersonationBanner } from './ImpersonationBanner';
 import { ContextualHelpPanel } from './ContextualHelpPanel';
 import { AppHeader } from './AppHeader';
 import { AppSidebar, buildSidebarNavItems } from './AppSidebar';
+import { SidebarTips } from './SidebarTips';
 
 function useOutsideClick(ref: React.RefObject<HTMLElement | null>, onOutside: () => void, enabled: boolean) {
   useEffect(() => {
@@ -637,6 +638,7 @@ export function AppLayout(props: { children: React.ReactNode }) {
           sidebarCollapsed={ui.settings.sidebarCollapsed}
           onToggleSidebar={() => ui.setSidebarCollapsed(!ui.settings.sidebarCollapsed)}
           t={i18n.t}
+          sidebarTips={<SidebarTips collapsed={ui.settings.sidebarCollapsed} />}
         />
 
         <Drawer
