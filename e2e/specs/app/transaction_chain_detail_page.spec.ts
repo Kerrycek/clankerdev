@@ -156,6 +156,7 @@ const handlers = {
         depends_on: [701],
         input: { a: 1 },
         output: { ok: false, error: 'step failed on node2' },
+        result: { rollback_needed: true },
         stderr: 'mount: permission denied',
       },
     ];
@@ -187,6 +188,7 @@ test.describe('@pr-smoke TransactionChainDetailPage', () => {
     await expect(page.getByTestId('transactions.chain.detail.tx.expanded.702')).toContainText('mount: permission denied');
     await expect(page.getByTestId('transactions.chain.detail.tx.expanded.702')).toContainText('"a": 1');
     await expect(page.getByTestId('transactions.chain.detail.tx.expanded.702')).toContainText('"ok": false');
+    await expect(page.getByTestId('transactions.chain.detail.tx.expanded.702')).toContainText('rollback_needed');
 
     await page.getByRole('button', { name: /collapse all|sbalit vše/i }).click();
     await expect(page.getByTestId('transactions.chain.detail.tx.expanded.702')).toBeHidden();

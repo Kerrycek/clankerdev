@@ -102,9 +102,11 @@ test.describe('@workflow-matrix @smoke Action state detail page', () => {
                 finished_at: '2026-01-26T00:01:05.000Z',
                 node: { id: 2, label: 'node2' },
                 vps: { id: 12, label: 'vps12' },
+                user: { id: 9, login: 'worker' },
                 transaction_chain: { id: 456 },
                 input: { dataset: 'tank/ct/vps12' },
                 output: { ok: true },
+                result: { mounted: true },
               },
             ],
           };
@@ -127,6 +129,8 @@ test.describe('@workflow-matrix @smoke Action state detail page', () => {
       await page.getByTestId('action_state.detail.tx.toggle.7001').click();
       await expect(page.getByTestId('action_state.detail.tx.expanded.7001')).toBeVisible();
       await expect(page.getByTestId('action_state.detail.tx.expanded.7001')).toContainText('tank/ct/vps12');
+      await expect(page.getByTestId('action_state.detail.tx.expanded.7001')).toContainText('worker');
+      await expect(page.getByTestId('action_state.detail.tx.expanded.7001')).toContainText('mounted');
     });
   }
 

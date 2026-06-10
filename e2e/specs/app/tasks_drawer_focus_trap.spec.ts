@@ -157,6 +157,7 @@ test('@workflow-matrix @pr-smoke Tasks drawer can inspect action state transacti
               transaction_chain: { id: 79 },
               input: { dataset: 'tank/ct/vps12' },
               output: { ok: true },
+              result: { dataset_created: true },
             },
           ],
         };
@@ -183,6 +184,7 @@ test('@workflow-matrix @pr-smoke Tasks drawer can inspect action state transacti
   await expect(card).toBeVisible();
   await expect(expanded).toBeVisible();
   await expect(expanded).toContainText('tank/ct/vps12');
+  await expect(expanded).toContainText('dataset_created');
 
   const drawerBox = await drawer.boundingBox();
   const cardBox = await card.boundingBox();
