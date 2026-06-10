@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
 
-import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
+import { bootstrapVpsAdminWindow, installHaveApiMock, type HaveApiRequestCtx } from '../../fixtures';
 
-function choicesHandlers() {
+function choicesHandlers(nodeQueryStrings: string[] = []) {
   return {
     'GET locations': () => ({
       locations: [
@@ -13,22 +13,19 @@ function choicesHandlers() {
         },
       ],
     }),
-    'GET nodes': () => ({
-      nodes: [
-        {
-          id: 99,
-          name: 'storage99',
-          role: 'storage',
-          location: { id: 2, label: 'Praha' },
-        },
-        {
-          id: 101,
-          name: 'node101',
-          role: 'hypervisor',
-          hypervisor_type: 'vpsadminos',
-          location: { id: 2, label: 'Praha' },
-        },
-      ],
+    'GET nodes': (ctx: HaveApiRequestCtx) => {
+      nodeQueryStrings.push(ctx.searchParams.toString());
+      return {
+        nodes: [
+          {
+            id: 101,
+            name: 'node101',
+            type: 'node',
+            hypervisor_type: 'vpsadminos',
+            location: { id: 2, label: 'Praha' },
+          },
+        ],
+      };
     }),
     'GET os_templates': () => ({
       os_templates: [
@@ -66,9 +63,10 @@ function choicesHandlers() {
 }
 
 test.describe('@workflow-matrix @pr-smoke VPS create admin flow', () => {
-  test('keeps an admin in user-scope create flow on app route and auto-picks only a hypervisor node', async ({ page }) => {
+  test('keeps an admin in user-scope create flow on app route and requests a VPS hypervisor node', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_ADMIN' });
     const createBodies: unknown[] = [];
+    const nodeQueryStrings: string[] = [];
     page.on('request', (req) => {
       const url = new URL(req.url());
       if (req.method() === 'POST' && url.pathname.endsWith('/vpses')) {
@@ -78,7 +76,7 @@ test.describe('@workflow-matrix @pr-smoke VPS create admin flow', () => {
 
     await installHaveApiMock(page, {
       user: { id: 1, login: 'admin', level: 99 },
-      handlers: choicesHandlers(),
+      handlers: choicesHandlers(nodeQueryStrings),
     });
 
     await page.goto('/app/vps/new');
@@ -95,6 +93,11 @@ test.describe('@workflow-matrix @pr-smoke VPS create admin flow', () => {
     await expect(page).toHaveURL(/\/app\/vps\/150$/);
 
     expect(createBodies).toHaveLength(1);
+    expect(nodeQueryStrings.length).toBeGreaterThan(0);
+    const nodeQuery = new URLSearchParams(nodeQueryStrings[nodeQueryStrings.length - 1]);
+    expect(nodeQuery.get('node[location]')).toBe('2');
+    expect(nodeQuery.get('node[type]')).toBe('node');
+    expect(nodeQuery.get('node[hypervisor_type]')).toBe('vpsadminos');
     const body = createBodies[0] as any;
     expect(body.vps).toMatchObject({
       user: 1,
