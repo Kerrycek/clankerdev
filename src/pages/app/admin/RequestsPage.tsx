@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { CircleHelp, SlidersHorizontal } from 'lucide-react';
+import { ChevronDown, ChevronRight, CircleHelp, SlidersHorizontal } from 'lucide-react';
 
 import { useAppMode } from '../../../app/appMode';
 import { useI18n } from '../../../app/i18n';
@@ -59,6 +59,10 @@ import { StatusDot } from '../../../components/ui/StatusDot';
 import { TableCard } from '../../../components/ui/TableCard';
 import { TableRowLink } from '../../../components/ui/TableRowLink';
 import { UserLookupInput } from '../../../components/ui/UserLookupInput';
+import {
+  RequestOperationalLinks,
+  RequestReviewActions,
+} from './RequestReviewActions';
 
 type RequestTypeFilter = 'all' | 'registration' | 'change';
 
@@ -74,6 +78,18 @@ function safeNumber(value: string): number | undefined {
   const i = Math.floor(n);
   if (i <= 0) return undefined;
   return i;
+}
+
+function userLabel(u: any): string {
+  if (!u) return '—';
+  if (typeof u.login === 'string') return u.login;
+  if (typeof u.label === 'string') return u.label;
+  if (typeof u.id === 'number') return `#${u.id}`;
+  return String(u);
+}
+
+function requestKey(r: UnifiedRequestRow): string {
+  return `${(r as any)._type}-${Number((r as any).id)}`;
 }
 
 function mergeByIdDesc(reg: RegistrationRequest[], ch: ChangeRequest[], limit: number): UnifiedRequestRow[] {
@@ -177,6 +193,7 @@ export function RequestsPage() {
   const [smartErrors, setSmartErrors] = useState<string[]>([]);
   const [helpOpen, setHelpOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
   const smartInputRef = useRef<HTMLInputElement>(null);
 
   // Sync from URL on navigation.
@@ -353,6 +370,45 @@ export function RequestsPage() {
     if (type === 'change') return ch.map((x) => ({ ...x, _type: 'change' as const })) as UnifiedRequestRow[];
     return mergeByIdDesc(reg, ch, pagination.limit);
   }, [ch, pagination.limit, reg, type]);
+
+  const visibleKeys = useMemo(() => new Set(rows.map((r) => requestKey(r))), [rows]);
+  const allVisibleExpanded = rows.length > 0 && rows.every((r) => expandedKeys.has(requestKey(r)));
+
+  useEffect(() => {
+    setExpandedKeys((prev) => {
+      let changed = false;
+      const next = new Set<string>();
+      for (const key of prev) {
+        if (visibleKeys.has(key)) next.add(key);
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [visibleKeys]);
+
+  const refreshRequests = useCallback(async () => {
+    const tasks: Promise<unknown>[] = [];
+    if (needRegs) tasks.push(regQ.refetch());
+    if (needChanges) tasks.push(changeQ.refetch());
+    await Promise.all(tasks);
+  }, [changeQ, needChanges, needRegs, regQ]);
+
+  function toggleExpanded(key: string) {
+    setExpandedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  function expandAllVisible() {
+    setExpandedKeys(new Set(rows.map((r) => requestKey(r))));
+  }
+
+  function collapseAllVisible() {
+    setExpandedKeys(new Set());
+  }
 
   const pageCursor = useMemo(() => cursorFromDescendingPage(rows as any), [rows]);
 
@@ -890,6 +946,101 @@ export function RequestsPage() {
     { key: 'id', description: t('requests.list.smart_help.keys.id'), example: 'id:123' },
   ];
 
+  function renderExpandedContent(r: UnifiedRequestRow, compact = false) {
+    const id = Number((r as any).id);
+    const reqType = (r as any)._type as 'registration' | 'change';
+    const testPrefix = `admin.requests.expanded.${reqType}.${id}`;
+    const risk = reqType === 'registration' ? fraudRiskBadge(r as any) : null;
+
+    return (
+      <div className="space-y-3" data-testid={testPrefix}>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div>
+            <div className="text-xs text-muted">{t('common.user')}</div>
+            <div className="text-sm">{userLabel((r as any).user)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-muted">{t('requests.detail.admin')}</div>
+            <div className="text-sm">{userLabel((r as any).admin)}</div>
+          </div>
+          <div>
+            <div className="text-xs text-muted">{t('common.updated')}</div>
+            <div className="text-sm">{(r as any).updated_at ? formatDateTime(String((r as any).updated_at)) : '—'}</div>
+          </div>
+          {reqType === 'registration' ? (
+            <>
+              <div>
+                <div className="text-xs text-muted">{t('requests.field.login')}</div>
+                <div className="text-sm">{String((r as any).login ?? '—')}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted">{t('requests.field.full_name')}</div>
+                <div className="text-sm">{String((r as any).full_name ?? '—')}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted">{t('requests.field.email')}</div>
+                <div className="text-sm">{String((r as any).email ?? '—')}</div>
+              </div>
+              <div className="md:col-span-3">
+                <div className="text-xs text-muted">{t('requests.field.address')}</div>
+                <div className="whitespace-pre-line text-sm">{String((r as any).address ?? '—')}</div>
+              </div>
+              <div className="md:col-span-3">
+                <div className="text-xs text-muted">{t('requests.field.note')}</div>
+                <div className="whitespace-pre-line text-sm">{String((r as any).note ?? '—')}</div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <div className="text-xs text-muted">{t('requests.field.full_name')}</div>
+                <div className="text-sm">{String((r as any).full_name ?? '—')}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted">{t('requests.field.email')}</div>
+                <div className="text-sm">{String((r as any).email ?? '—')}</div>
+              </div>
+              <div className="md:col-span-3">
+                <div className="text-xs text-muted">{t('requests.field.change_reason')}</div>
+                <div className="whitespace-pre-line text-sm">{String((r as any).change_reason ?? '—')}</div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {(r as any).admin_response ? (
+          <div className="rounded-md border border-border bg-surface p-3">
+            <div className="text-xs text-muted">{t('requests.detail.admin_response')}</div>
+            <div className="mt-1 whitespace-pre-line text-sm">{String((r as any).admin_response)}</div>
+          </div>
+        ) : null}
+
+        <div className="flex flex-wrap items-center gap-2">
+          {isAdmin && risk ? (
+            <Badge variant={risk.variant} title={t('requests.risk.tooltip', { score: risk.score })}>
+              {t(risk.labelKey)} {risk.score}
+            </Badge>
+          ) : null}
+          <RequestOperationalLinks request={r} basePath={basePath} compact testIdPrefix={testPrefix} />
+        </div>
+
+        {isAdmin ? (
+          <RequestReviewActions
+            request={r}
+            reqType={reqType}
+            reqId={id}
+            isAdmin={isAdmin}
+            basePath={basePath}
+            compact={compact}
+            showDetailLink
+            testIdPrefix={`${testPrefix}.resolve`}
+            onResolved={refreshRequests}
+          />
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <ListShell
       testId="admin.requests.list"
@@ -967,6 +1118,16 @@ export function RequestsPage() {
               text={shareUrl}
               testId="admin.requests.copy_link"
             />
+
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={allVisibleExpanded ? collapseAllVisible : expandAllVisible}
+              disabled={rows.length === 0}
+              testId={allVisibleExpanded ? 'admin.requests.collapse_all' : 'admin.requests.expand_all'}
+            >
+              {allVisibleExpanded ? t('requests.list.collapse_all') : t('requests.list.expand_all')}
+            </Button>
 
             {filtersActive ? (
               <Button variant="secondary" size="sm" onClick={clearFilters}>
@@ -1187,9 +1348,11 @@ export function RequestsPage() {
                       : '—';
               const label = String((r as any).label ?? '').trim() || '—';
               const risk = reqType === 'registration' ? fraudRiskBadge(r as any) : null;
+              const key = requestKey(r);
+              const expanded = expandedKeys.has(key);
 
               return (
-                <Card key={`${reqType}-${id}`} className="p-4">
+                <Card key={`${reqType}-${id}`} className="p-4" testId={`admin.requests.mobile.row.${reqType}.${id}`}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
@@ -1216,13 +1379,26 @@ export function RequestsPage() {
                         {(r as any).created_at ? formatDateTime(String((r as any).created_at)) : '—'}
                       </div>
                     </div>
-                    <Link
-                      className="text-xs font-medium text-accent hover:underline"
-                      to={`${basePath}/requests/${reqType}/${id}`}
-                    >
-                      {t('common.open')}
-                    </Link>
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 px-0"
+                        onClick={() => toggleExpanded(key)}
+                        aria-label={expanded ? t('requests.list.collapse_row') : t('requests.list.expand_row')}
+                        testId={`admin.requests.expand.${reqType}.${id}`}
+                      >
+                        {expanded ? <ChevronDown className="h-4 w-4" aria-hidden /> : <ChevronRight className="h-4 w-4" aria-hidden />}
+                      </Button>
+                      <Link
+                        className="text-xs font-medium text-accent hover:underline"
+                        to={`${basePath}/requests/${reqType}/${id}`}
+                      >
+                        {t('common.open')}
+                      </Link>
+                    </div>
                   </div>
+                  {expanded ? <div className="mt-4 border-t border-border pt-4">{renderExpandedContent(r, true)}</div> : null}
                 </Card>
               );
             })}
@@ -1267,6 +1443,7 @@ export function RequestsPage() {
           >
             <thead>
               <tr className="border-b border-border text-left text-xs text-muted">
+                <th className="w-10 px-2 py-2"></th>
                 <th className="px-4 py-2">{t('common.id')}</th>
                 <th className="px-4 py-2">{t('common.type')}</th>
                 <th className="px-4 py-2">{t('common.label')}</th>
@@ -1301,46 +1478,69 @@ export function RequestsPage() {
                   typeof (r as any).client_ip_addr === 'string' ? String((r as any).client_ip_addr) : '—';
 
                 const risk = reqType === 'registration' ? fraudRiskBadge(r as any) : null;
+                const key = requestKey(r);
+                const expanded = expandedKeys.has(key);
+                const colSpan = isAdmin ? 10 : 8;
 
                 return (
-                  <TableRowLink
-                    key={`${reqType}-${id}`}
-                    testId={`admin.requests.row.${reqType}.${id}`}
-                    to={`${basePath}/requests/${reqType}/${id}`}
-                    variant={rowVar}
-                    className="border-b border-border/60 last:border-b-0"
-                  >
-                    <td className="px-4 py-2">
-                      <div className="flex items-center gap-2">
-                        <StatusDot variant={dotVar} testId={`admin.requests.row.${reqType}.${id}.dot`} />
-                        <span className="font-medium text-accent">#{id}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-2">
-                      <Badge variant={requestTypeBadgeVariant(reqType)}>{t(requestTypeLabelKey(reqType))}</Badge>
-                    </td>
-                    <td className="px-4 py-2 text-xs text-muted">{label}</td>
-                    {isAdmin ? <td className="px-4 py-2 text-xs text-muted">{userLabel}</td> : null}
-                    <td className="px-4 py-2">
-                      <Badge variant={stateVar}>{t(requestStateLabelKey(st))}</Badge>
-                    </td>
-                    <td className="px-4 py-2 text-xs text-muted">
-                      {(r as any).created_at ? formatDateTime(String((r as any).created_at)) : '—'}
-                    </td>
-                    <td className="px-4 py-2 text-xs text-muted">{apiIpStr}</td>
-                    <td className="px-4 py-2 text-xs text-muted">{clientIpStr}</td>
-                    {isAdmin ? (
-                      <td className="px-4 py-2">
-                        {risk ? (
-                          <Badge variant={risk.variant} title={t('requests.risk.tooltip', { score: risk.score })}>
-                            {t(risk.labelKey)} {risk.score}
-                          </Badge>
-                        ) : (
-                          <span className="text-faint">—</span>
-                        )}
+                  <React.Fragment key={`${reqType}-${id}`}>
+                    <TableRowLink
+                      testId={`admin.requests.row.${reqType}.${id}`}
+                      to={`${basePath}/requests/${reqType}/${id}`}
+                      variant={rowVar}
+                      className={expanded ? 'border-b border-border/30' : 'border-b border-border/60 last:border-b-0'}
+                    >
+                      <td className="px-2 py-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 px-0"
+                          onClick={() => toggleExpanded(key)}
+                          aria-label={expanded ? t('requests.list.collapse_row') : t('requests.list.expand_row')}
+                          testId={`admin.requests.expand.${reqType}.${id}`}
+                        >
+                          {expanded ? <ChevronDown className="h-4 w-4" aria-hidden /> : <ChevronRight className="h-4 w-4" aria-hidden />}
+                        </Button>
                       </td>
+                      <td className="px-4 py-2">
+                        <div className="flex items-center gap-2">
+                          <StatusDot variant={dotVar} testId={`admin.requests.row.${reqType}.${id}.dot`} />
+                          <span className="font-medium text-accent">#{id}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-2">
+                        <Badge variant={requestTypeBadgeVariant(reqType)}>{t(requestTypeLabelKey(reqType))}</Badge>
+                      </td>
+                      <td className="px-4 py-2 text-xs text-muted">{label}</td>
+                      {isAdmin ? <td className="px-4 py-2 text-xs text-muted">{userLabel}</td> : null}
+                      <td className="px-4 py-2">
+                        <Badge variant={stateVar}>{t(requestStateLabelKey(st))}</Badge>
+                      </td>
+                      <td className="px-4 py-2 text-xs text-muted">
+                        {(r as any).created_at ? formatDateTime(String((r as any).created_at)) : '—'}
+                      </td>
+                      <td className="px-4 py-2 text-xs text-muted">{apiIpStr}</td>
+                      <td className="px-4 py-2 text-xs text-muted">{clientIpStr}</td>
+                      {isAdmin ? (
+                        <td className="px-4 py-2">
+                          {risk ? (
+                            <Badge variant={risk.variant} title={t('requests.risk.tooltip', { score: risk.score })}>
+                              {t(risk.labelKey)} {risk.score}
+                            </Badge>
+                          ) : (
+                            <span className="text-faint">—</span>
+                          )}
+                        </td>
+                      ) : null}
+                    </TableRowLink>
+                    {expanded ? (
+                      <tr className="border-b border-border/60 bg-surface-2/50" data-testid={`admin.requests.expanded_row.${reqType}.${id}`}>
+                        <td colSpan={colSpan} className="px-4 py-4">
+                          {renderExpandedContent(r)}
+                        </td>
+                      </tr>
                     ) : null}
-                  </TableRowLink>
+                  </React.Fragment>
                 );
               })}
             </tbody>
