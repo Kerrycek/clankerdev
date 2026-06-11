@@ -25,6 +25,7 @@ Optional environment:
   NODE_ID                     default: 104
   NODE_NAME                   default: vpsadmin-nas-storage1
   NODE_ADDR                   default: 10.0.0.5
+  SSH_PORT                    default: 2225
   LOCATION_DOMAIN             default: nas-lab
   LOCATION_LABEL              default: dev NAS lab
   TAP_NAME                    default: tap-nas
@@ -123,9 +124,11 @@ esac
 lab_root="${LAB_ROOT:-/root/vpsadmin-dev-lab}"
 vpsadminos_root="${VPSADMINOS_ROOT:-/root/vpsadminos}"
 vpsadmin_root="${VPSADMIN_ROOT:-/opt/vpsadmin}"
+nix_cmd="${NIX_CMD:-/nix/var/nix/profiles/default/bin/nix --extra-experimental-features nix-command --extra-experimental-features flakes}"
 node_id="${NODE_ID:-104}"
 node_name="${NODE_NAME:-vpsadmin-nas-storage1}"
 node_addr="${NODE_ADDR:-10.0.0.5}"
+ssh_port="${SSH_PORT:-2225}"
 services_addr="${SERVICES_ADDR:-10.0.0.1}"
 location_domain="${LOCATION_DOMAIN:-nas-lab}"
 location_label="${LOCATION_LABEL:-dev NAS lab}"
@@ -156,10 +159,11 @@ fi
 
 if [ "$apply" -eq 1 ]; then
   require_cmd "$db_cli"
-  require_cmd nix
+  require_cmd make
   require_cmd systemctl
   require_cmd rabbitmqctl
   [ -d "$vpsadminos_root" ] || { echo "Missing VPSADMINOS_ROOT: $vpsadminos_root" >&2; exit 1; }
+  [ -d "$vpsadminos_root/os" ] || { echo "Missing VPSADMINOS_ROOT/os: $vpsadminos_root/os" >&2; exit 1; }
   [ -d "$vpsadmin_root" ] || { echo "Missing VPSADMIN_ROOT: $vpsadmin_root" >&2; exit 1; }
 fi
 
@@ -257,12 +261,16 @@ WantedBy=multi-user.target
 EOF
 
 if [ "$apply" -eq 0 ]; then
-  say "DRY RUN: build QEMU script with VPSADMINOS_CONFIG=$nix_config nix build --impure --out-link ${lab_root}/result-${node_name}-qemu-script ${vpsadminos_root}#qemu-script"
+  say "DRY RUN: build QEMU script with VPSADMINOS_CONFIG=$nix_config NIX='$nix_cmd' make build-qemu-script in ${vpsadminos_root}/os"
+  say "DRY RUN: patch QEMU script name to ${node_name} and SSH host forward to ${ssh_port}"
 else
   install -d "$node_dir"
-  out_link="${lab_root}/result-${node_name}-qemu-script"
-  VPSADMINOS_CONFIG="$nix_config" nix build --impure --out-link "$out_link" "${vpsadminos_root}#qemu-script"
-  install -m 0755 "$out_link" "$qemu_script"
+  (cd "${vpsadminos_root}/os" && VPSADMINOS_CONFIG="$nix_config" NIX="$nix_cmd" make build-qemu-script)
+  install -m 0755 "${vpsadminos_root}/os/result/qemu-script" "$qemu_script"
+  sed -i \
+    -e "s/-name vpsadminos /-name ${node_name} /" \
+    -e "s/hostfwd=tcp::2222-:22/hostfwd=tcp::${ssh_port}-:22/" \
+    "$qemu_script"
   systemctl daemon-reload
   systemctl enable "$service_name"
 fi
@@ -379,7 +387,7 @@ cat <<EOF
 
 Next verification on admin.crucio.cz:
   systemctl status ${service_name} --no-pager
-  ssh root@${node_addr} 'svctl status nodectld || systemctl status nodectld --no-pager; zpool status tank; zfs list tank/backup'
+  ssh -p ${ssh_port} root@127.0.0.1 'svctl status nodectld || systemctl status nodectld --no-pager; zpool status tank; zfs list tank/backup'
   rabbitmqctl list_queues -p ${rabbitmq_vhost} name messages consumers | grep 'node:${rabbitmq_user}'
   ${db_cli} ${db_name} -e "SELECT id,name,role,ip_addr FROM nodes WHERE id=${node_id}; SELECT node_id,updated_at,pool_state,pool_checked_at FROM node_current_statuses WHERE node_id=${node_id}; SELECT id,label,filesystem,role,state,checked_at,total_space,available_space FROM pools WHERE id=${pool_id};"
 EOF
