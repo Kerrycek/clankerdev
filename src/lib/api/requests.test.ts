@@ -4,6 +4,8 @@ import {
   fetchChangeRequests,
   fetchRegistrationRequests,
   previewRegistrationRequest,
+  resolveChangeRequest,
+  resolveRegistrationRequest,
   updateRegistrationRequestByToken,
 } from './requests';
 
@@ -120,6 +122,58 @@ describe('requests API wrappers', () => {
         location: 9,
         currency: 'eur',
         language: 1,
+      },
+    });
+  });
+
+  test('resolveRegistrationRequest posts namespaced action payload', async () => {
+    globalThis.fetch = mockFetchOk({ registration: { id: 12 }, _meta: { action_state_id: 44 } }) as any;
+
+    await resolveRegistrationRequest(12, {
+      action: 'approve',
+      reason: 'Looks fine',
+      activate: true,
+      create_vps: false,
+      node: 7,
+    });
+
+    const [url, init] = lastFetchCall();
+    const u = new URL(url);
+    const body = JSON.parse(String((init as RequestInit).body));
+
+    expect(u.pathname).toBe('/v7.0/user_request/registrations/12/resolve');
+    expect((init as RequestInit).method).toBe('POST');
+    expect(body).toEqual({
+      registration: {
+        action: 'approve',
+        reason: 'Looks fine',
+        activate: true,
+        create_vps: false,
+        node: 7,
+      },
+    });
+  });
+
+  test('resolveChangeRequest posts namespaced action payload', async () => {
+    globalThis.fetch = mockFetchOk({ change: { id: 13 } }) as any;
+
+    await resolveChangeRequest(13, {
+      action: 'request_correction',
+      reason: 'Missing address',
+      address: 'New address',
+    });
+
+    const [url, init] = lastFetchCall();
+    const u = new URL(url);
+    const body = JSON.parse(String((init as RequestInit).body));
+
+    expect(u.pathname).toBe('/v7.0/user_request/changes/13/resolve');
+    expect((init as RequestInit).method).toBe('POST');
+    expect(body).toEqual({
+      change: {
+        action: 'request_correction',
+        reason: 'Missing address',
+        address: 'New address',
       },
     });
   });

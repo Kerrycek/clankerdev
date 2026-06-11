@@ -1,23 +1,16 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 import { useAppMode } from '../../../app/appMode';
 import { useI18n } from '../../../app/i18n';
-import { useToasts } from '../../../app/toasts';
-import { useChrome } from '../../../components/layout/ChromeContext';
 
 import {
   fetchChangeRequest,
   fetchRegistrationRequest,
-  resolveChangeRequest,
-  resolveRegistrationRequest,
   type ChangeRequest,
   type RegistrationRequest,
-  type ResolveUserRequestAction,
 } from '../../../lib/api/requests';
-import { fetchNodes, type Node } from '../../../lib/api/nodes';
-import { getMetaActionStateId } from '../../../lib/api/haveapi';
 
 import { formatDateTime } from '../../../lib/format';
 import {
@@ -32,17 +25,17 @@ import { ListShell } from '../../../components/layout/ListShell';
 import { PageHeader } from '../../../components/layout/PageHeader';
 
 import { Badge } from '../../../components/ui/Badge';
-import { Button } from '../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
 import { ErrorState } from '../../../components/ui/ErrorState';
-import { Input } from '../../../components/ui/Input';
 import { LinkButton } from '../../../components/ui/LinkButton';
 import { LoadingState } from '../../../components/ui/LoadingState';
-import { Modal } from '../../../components/ui/Modal';
-import { Select } from '../../../components/ui/Select';
 import { StatCard } from '../../../components/ui/StatCard';
 import { StatusDot } from '../../../components/ui/StatusDot';
-import { Textarea } from '../../../components/ui/Textarea';
+import {
+  RequestOperationalLinks,
+  RequestReviewActions,
+  requestOperationalLinks,
+} from './RequestReviewActions';
 
 function safeNumber(value: string | undefined): number | undefined {
   const t = String(value ?? '').trim();
@@ -62,26 +55,6 @@ function userLabel(u: any): string {
   return String(u);
 }
 
-function resourceId(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value) && value > 0) return Math.floor(value);
-  if (typeof value === 'string' && /^\d+$/.test(value.trim())) return Number(value.trim());
-  if (value && typeof value === 'object') {
-    const raw = (value as any).id ?? (value as any).value;
-    return resourceId(raw);
-  }
-  return null;
-}
-
-function firstResourceId(source: Record<string, unknown> | null | undefined, keys: string[]): number | null {
-  if (!source) return null;
-  for (const key of keys) {
-    const id = resourceId(source[key]);
-    if (id) return id;
-  }
-  return null;
-}
-
-
 export function RequestDetailPage() {
   const { basePath, mode } = useAppMode();
   const isAdmin = mode === 'admin';
@@ -92,10 +65,6 @@ export function RequestDetailPage() {
     if (v === false) return t('common.no');
     return '—';
   };
-  const toasts = useToasts();
-  const chrome = useChrome();
-  const qc = useQueryClient();
-
   const params = useParams();
   const typeParam = String(params['type'] ?? '').trim();
   const reqType = typeParam === 'registration' || typeParam === 'change' ? typeParam : null;
@@ -117,117 +86,13 @@ export function RequestDetailPage() {
   const stateVar = requestStateBadgeVariant(state);
   const dotVar = dotVariantFromBadgeVariant(stateVar);
 
-  const [resolveOpen, setResolveOpen] = useState(false);
-  const [resolveAction, setResolveAction] = useState<ResolveUserRequestAction>('approve');
-  const [resolveReason, setResolveReason] = useState('');
-
-  // Optional overrides
-  const [oLogin, setOLogin] = useState('');
-  const [oFullName, setOFullName] = useState('');
-  const [oOrgName, setOOrgName] = useState('');
-  const [oOrgId, setOOrgId] = useState('');
-  const [oEmail, setOEmail] = useState('');
-  const [oAddress, setOAddress] = useState('');
-  const [oChangeReason, setOChangeReason] = useState('');
-
-  // Approve options (registration only)
-  const [approveCreateVps, setApproveCreateVps] = useState(true);
-  const [approveActivate, setApproveActivate] = useState(true);
-  const [approveNode, setApproveNode] = useState('');
-
-  const nodesQ = useQuery({
-    queryKey: ['nodes', 'index', { limit: 200 }],
-    enabled: resolveOpen && reqType === 'registration' && resolveAction === 'approve',
-    queryFn: async () => (await fetchNodes({ limit: 200 })).data,
-  });
-
-  const nodes = nodesQ.data ?? [];
-
   const risk = useMemo(() => {
     if (!request || reqType !== 'registration') return null;
     return fraudRiskBadge(request as any);
   }, [reqType, request]);
 
-  const actionStateId = firstResourceId(request as any, [
-    'action_state',
-    'action_state_id',
-    'resolve_action_state',
-    'resolve_action_state_id',
-  ]);
-  const transactionChainId = firstResourceId(request as any, [
-    'transaction_chain',
-    'transaction_chain_id',
-    'resolve_transaction_chain',
-    'resolve_transaction_chain_id',
-  ]);
-  const transactionId = firstResourceId(request as any, ['transaction', 'transaction_id', 'resolve_transaction', 'resolve_transaction_id']);
+  const { actionStateId, transactionChainId, transactionId } = requestOperationalLinks(request);
   const hasOperationalLinks = Boolean(actionStateId || transactionChainId || transactionId);
-
-  async function submitResolve() {
-    if (!reqType || !reqId) return;
-
-    const reason = resolveReason.trim() || undefined;
-
-    try {
-      if (reqType === 'registration') {
-        const p: any = {
-          action: resolveAction,
-          reason,
-        };
-
-        // overrides
-        if (oLogin.trim()) p.login = oLogin.trim();
-        if (oFullName.trim()) p.full_name = oFullName.trim();
-        if (oOrgName.trim()) p.org_name = oOrgName.trim();
-        if (oOrgId.trim()) p.org_id = oOrgId.trim();
-        if (oEmail.trim()) p.email = oEmail.trim();
-        if (oAddress.trim()) p.address = oAddress.trim();
-
-        if (resolveAction === 'approve') {
-          p.create_vps = approveCreateVps;
-          p.activate = approveActivate;
-          const nodeId = safeNumber(approveNode);
-          if (nodeId) p.node = nodeId;
-        }
-
-        const res = await resolveRegistrationRequest(reqId, p);
-        const asId = getMetaActionStateId(res.meta);
-        if (asId) chrome.trackActionState(asId);
-      } else {
-        const p: any = {
-          action: resolveAction,
-          reason,
-        };
-
-        if (oFullName.trim()) p.full_name = oFullName.trim();
-        if (oEmail.trim()) p.email = oEmail.trim();
-        if (oAddress.trim()) p.address = oAddress.trim();
-        if (oChangeReason.trim()) p.change_reason = oChangeReason.trim();
-
-        const res = await resolveChangeRequest(reqId, p);
-        const asId = getMetaActionStateId(res.meta);
-        if (asId) chrome.trackActionState(asId);
-      }
-
-      toasts.pushToast({
-        variant: 'ok',
-        title: t('requests.resolve.toast.title'),
-        body: t('requests.resolve.toast.message'),
-      });
-
-      setResolveOpen(false);
-      setResolveReason('');
-
-      await qc.invalidateQueries({ queryKey: ['user_request'] });
-      q.refetch();
-    } catch (e: any) {
-      toasts.pushToast({
-        variant: 'danger',
-        title: t('requests.resolve.toast.error.title'),
-        body: e?.message ?? String(e),
-      });
-    }
-  }
 
   if (!reqType || !reqId) {
     return (
@@ -290,11 +155,6 @@ export function RequestDetailPage() {
               <LinkButton to={`${basePath}/transactions/${transactionChainId}`} variant="secondary" testId="admin.requests.detail.open_chain">
                 {t('common.chain')} #{transactionChainId}
               </LinkButton>
-            ) : null}
-            {isAdmin ? (
-              <Button variant="primary" onClick={() => setResolveOpen(true)} testId="admin.requests.resolve.open">
-                {t('requests.resolve.button')}
-              </Button>
             ) : null}
           </div>
         }
@@ -429,38 +289,26 @@ export function RequestDetailPage() {
             <Card testId="admin.requests.detail.ops">
               <CardHeader title={t('requests.detail.card.operations')} />
               <CardBody>
-                <div className="flex flex-wrap gap-2">
-                  {actionStateId ? (
-                    <LinkButton
-                      to={`${basePath}/action-states/${actionStateId}`}
-                      variant="secondary"
-                      size="sm"
-                      testId="admin.requests.detail.ops.action_state"
-                    >
-                      {t('common.action_state')} #{actionStateId}
-                    </LinkButton>
-                  ) : null}
-                  {transactionChainId ? (
-                    <LinkButton
-                      to={`${basePath}/transactions/${transactionChainId}`}
-                      variant="secondary"
-                      size="sm"
-                      testId="admin.requests.detail.ops.chain"
-                    >
-                      {t('common.open_chain')}
-                    </LinkButton>
-                  ) : null}
-                  {transactionId ? (
-                    <LinkButton
-                      to={`${basePath}/transactions/items/${transactionId}`}
-                      variant="secondary"
-                      size="sm"
-                      testId="admin.requests.detail.ops.transaction"
-                    >
-                      {t('common.open_transaction')}
-                    </LinkButton>
-                  ) : null}
-                </div>
+                <RequestOperationalLinks request={request} basePath={basePath} compact testIdPrefix="admin.requests.detail" />
+              </CardBody>
+            </Card>
+          ) : null}
+
+          {isAdmin ? (
+            <Card>
+              <CardHeader title={t('requests.detail.card.actions')} />
+              <CardBody>
+                <RequestReviewActions
+                  request={request}
+                  reqType={reqType}
+                  reqId={reqId}
+                  isAdmin={isAdmin}
+                  basePath={basePath}
+                  testIdPrefix="admin.requests.resolve"
+                  onResolved={async () => {
+                    await q.refetch();
+                  }}
+                />
               </CardBody>
             </Card>
           ) : null}
@@ -511,102 +359,6 @@ export function RequestDetailPage() {
         </div>
       </div>
 
-      {isAdmin ? (
-      <Modal
-        open={resolveOpen}
-        onClose={() => setResolveOpen(false)}
-        title={t('requests.resolve.modal.title')}
-        size="lg"
-        footer={
-          <div className="flex items-center justify-end gap-2">
-            <Button variant="secondary" onClick={() => setResolveOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button variant="primary" onClick={submitResolve} testId="admin.requests.resolve.submit">
-              {t('requests.resolve.modal.submit')}
-            </Button>
-          </div>
-        }
-      >
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <div className="text-sm font-medium">{t('requests.resolve.action')}</div>
-            <Select value={resolveAction} onChange={(e) => setResolveAction(e.target.value as ResolveUserRequestAction)}>
-              <option value="approve">{t('requests.resolve.action.approve')}</option>
-              <option value="deny">{t('requests.resolve.action.deny')}</option>
-              <option value="ignore">{t('requests.resolve.action.ignore')}</option>
-              <option value="request_correction">{t('requests.resolve.action.request_correction')}</option>
-            </Select>
-          </div>
-
-          <div>
-            <div className="text-sm font-medium">{t('requests.resolve.reason')}</div>
-            <Textarea value={resolveReason} onChange={(e) => setResolveReason(e.target.value)} rows={3} />
-          </div>
-        </div>
-
-        {reqType === 'registration' && resolveAction === 'approve' ? (
-          <div className="mt-4 rounded-lg border border-border bg-surface-2 p-3">
-            <div className="text-sm font-medium">{t('requests.resolve.approve.options')}</div>
-            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={approveCreateVps}
-                  onChange={(e) => setApproveCreateVps(e.target.checked)}
-                />
-                {t('requests.resolve.approve.create_vps')}
-              </label>
-
-              <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={approveActivate} onChange={(e) => setApproveActivate(e.target.checked)} />
-                {t('requests.resolve.approve.activate')}
-              </label>
-
-              <div className="md:col-span-2">
-                <div className="text-xs text-muted">{t('requests.resolve.approve.node')}</div>
-                <Select value={approveNode} onChange={(e) => setApproveNode(e.target.value)}>
-                  <option value="">{t('common.auto')}</option>
-                  {nodes.map((n: Node) => (
-                    <option key={n.id} value={String(n.id)}>
-                      #{n.id} {n.domain_name ?? n.name ?? ''}
-                    </option>
-                  ))}
-                </Select>
-                {nodesQ.isError ? <div className="mt-1 text-xs text-danger">{t('requests.resolve.nodes_load_error')}</div> : null}
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        <details className="mt-4">
-          <summary className="cursor-pointer text-sm text-accent">{t('requests.resolve.overrides')}</summary>
-          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-            {reqType === 'registration' ? (
-              <>
-                <Input value={oLogin} onChange={(e) => setOLogin(e.target.value)} placeholder={t('requests.override.login')} />
-                <Input value={oFullName} onChange={(e) => setOFullName(e.target.value)} placeholder={t('requests.override.full_name')} />
-                <Input value={oOrgName} onChange={(e) => setOOrgName(e.target.value)} placeholder={t('requests.override.org_name')} />
-                <Input value={oOrgId} onChange={(e) => setOOrgId(e.target.value)} placeholder={t('requests.override.org_id')} />
-                <Input value={oEmail} onChange={(e) => setOEmail(e.target.value)} placeholder={t('requests.override.email')} />
-                <Input value={oAddress} onChange={(e) => setOAddress(e.target.value)} placeholder={t('requests.override.address')} />
-              </>
-            ) : (
-              <>
-                <Input value={oFullName} onChange={(e) => setOFullName(e.target.value)} placeholder={t('requests.override.full_name')} />
-                <Input value={oEmail} onChange={(e) => setOEmail(e.target.value)} placeholder={t('requests.override.email')} />
-                <Input value={oAddress} onChange={(e) => setOAddress(e.target.value)} placeholder={t('requests.override.address')} />
-                <Input
-                  value={oChangeReason}
-                  onChange={(e) => setOChangeReason(e.target.value)}
-                  placeholder={t('requests.override.change_reason')}
-                />
-              </>
-            )}
-          </div>
-        </details>
-      </Modal>
-      ) : null}
     </ListShell>
   );
 }
