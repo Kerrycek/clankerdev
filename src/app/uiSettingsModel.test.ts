@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   DEFAULT_SETTINGS,
+  isUiTipVisible,
   normalizeUiSettings,
   parseUiSettingsJson,
+  resetUiSettingsPreferences,
   toUiSettingsJson,
 } from './uiSettingsModel';
 
@@ -54,11 +56,17 @@ describe('uiSettingsModel', () => {
       sidebarCollapsed: true,
       theme: 'dark',
       language: 'cs',
+      tips: {
+        sidebarTimeZone: 'dismissed',
+      },
     });
     expect(parseUiSettingsJson(json)).toEqual({
       sidebarCollapsed: true,
       theme: 'dark',
       language: 'cs',
+      tips: {
+        sidebarTimeZone: 'dismissed',
+      },
     });
   });
 
@@ -72,5 +80,47 @@ describe('uiSettingsModel', () => {
       ...DEFAULT_SETTINGS,
       theme: 'dark',
     });
+  });
+
+  it('makes sidebar time zone tip lifecycle explicit', () => {
+    expect(isUiTipVisible(DEFAULT_SETTINGS, 'sidebarTimeZone')).toBe(true);
+
+    const dismissed = normalizeUiSettings({
+      tips: {
+        sidebarTimeZone: 'dismissed',
+      },
+    });
+
+    expect(dismissed.tips.sidebarTimeZone).toBe('dismissed');
+    expect(isUiTipVisible(dismissed, 'sidebarTimeZone')).toBe(false);
+
+    const accepted = normalizeUiSettings({
+      tips: {
+        sidebarTimeZone: 'accepted',
+      },
+    });
+
+    expect(accepted.tips.sidebarTimeZone).toBe('accepted');
+    expect(isUiTipVisible(accepted, 'sidebarTimeZone')).toBe(false);
+  });
+
+  it('resets preferences without clearing tips unless requested', () => {
+    const settings = normalizeUiSettings({
+      sidebarCollapsed: true,
+      theme: 'dark',
+      language: 'cs',
+      tips: {
+        sidebarTimeZone: 'dismissed',
+      },
+    });
+
+    expect(resetUiSettingsPreferences(settings)).toEqual({
+      ...DEFAULT_SETTINGS,
+      tips: {
+        sidebarTimeZone: 'dismissed',
+      },
+    });
+
+    expect(resetUiSettingsPreferences(settings, { includeTips: true })).toEqual(DEFAULT_SETTINGS);
   });
 });
