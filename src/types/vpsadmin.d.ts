@@ -78,11 +78,17 @@ declare global {
           ipv4Critical?: number;
         };
 
+        /** Server default time zone, used to suppress equivalent browser time-zone tips. */
+        serverTimeZone?: string;
+
         uiSettings?: VpsAdminUiSettingsConfig;
       };
 
       /** Legacy placement of UI settings config */
       uiSettings?: VpsAdminUiSettingsConfig;
+
+      /** Server default time zone, used to suppress equivalent browser time-zone tips. */
+      serverTimeZone?: string;
       accessToken?: string;
       sessionToken?: string;
       sessionLength?: number;

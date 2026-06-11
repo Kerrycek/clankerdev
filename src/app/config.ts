@@ -50,6 +50,8 @@ export interface RuntimeConfig {
   publicStatus: PublicStatusConfig;
   uiSettings: UiSettingsConfig;
   haveApi: HaveApiClientConfig;
+  /** Server default time zone used by sidebar time-zone tips. */
+  serverTimeZone?: string;
 }
 
 export interface HaveApiClientConfig {
@@ -63,17 +65,17 @@ export type UiSettingsPersistence = 'local' | 'server';
 
 export interface UiSettingsServerConfig {
   /**
-   * HaveAPI path used to fetch and update UI settings for the current user session.
+   * HaveAPI path used to fetch and update UI settings for the current user.
    *
-   * Default (planned API extension):
-   *   GET/PUT /v{apiVersion}/user_sessions/current/ui_setting
+   * Default upstream resource:
+   *   GET/PUT /v{apiVersion}/webui_user_settings
    */
   path: string;
 
-  /** HaveAPI input namespace used when updating settings */
+  /** webui_user_settings namespace used for general UI preferences */
   namespace: string;
 
-  /** Attribute name that contains JSON settings */
+  /** webui_user_settings key that contains the JSON settings object */
   field: string;
 }
 
@@ -222,26 +224,27 @@ export function getRuntimeConfig(): RuntimeConfig {
           ? { kind: 'oauth2', accessToken: stored.accessToken }
           : { kind: 'none' };
 
-  // UI settings persistence config is optional; default is local-only.
+  // UI settings persistence config is optional; default is upstream server storage
+  // with localStorage used by the provider as a fallback/cache.
   const uiSettingsFromWindow = win?.vpsAdmin?.webuiNext?.uiSettings ?? win?.vpsAdmin?.uiSettings;
 
   const persistenceEnv = env('VITE_UI_SETTINGS_PERSISTENCE');
   const persistenceCandidate =
     uiSettingsFromWindow?.persistence ?? uiSettingsFromWindow?.mode ?? persistenceEnv;
 
-  const persistence: UiSettingsPersistence = persistenceCandidate === 'server' ? 'server' : 'local';
+  const persistence: UiSettingsPersistence = persistenceCandidate === 'local' ? 'local' : 'server';
 
   const serverPath =
     uiSettingsFromWindow?.server?.path ??
     uiSettingsFromWindow?.path ??
     env('VITE_UI_SETTINGS_SERVER_PATH') ??
-    '/user_sessions/current/ui_setting';
+    '/webui_user_settings';
 
   const serverNamespace =
     uiSettingsFromWindow?.server?.namespace ??
     uiSettingsFromWindow?.namespace ??
     env('VITE_UI_SETTINGS_NAMESPACE') ??
-    'ui_setting';
+    'ui';
 
   const serverField =
     uiSettingsFromWindow?.server?.field ??
@@ -263,6 +266,12 @@ export function getRuntimeConfig(): RuntimeConfig {
 
   const haveApiMetaNamespace =
     win?.vpsAdmin?.webuiNext?.haveApi?.metaNamespace ?? env('VITE_HAVEAPI_META_NAMESPACE');
+
+  const serverTimeZoneCandidate =
+    win?.vpsAdmin?.webuiNext?.serverTimeZone ??
+    win?.vpsAdmin?.serverTimeZone ??
+    env('VITE_SERVER_TIME_ZONE') ??
+    'Europe/Prague';
 
   // Public status landing tuning.
   // Allow runtime overrides from window and optional env variables.
@@ -309,5 +318,6 @@ export function getRuntimeConfig(): RuntimeConfig {
       authHeader: haveApiAuthHeader,
       metaNamespace: haveApiMetaNamespace,
     },
+    serverTimeZone: serverTimeZoneCandidate,
   };
 }

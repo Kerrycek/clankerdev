@@ -24,6 +24,7 @@ const ENV_KEYS = [
   'VITE_UI_SETTINGS_SERVER_PATH',
   'VITE_UI_SETTINGS_NAMESPACE',
   'VITE_UI_SETTINGS_FIELD',
+  'VITE_SERVER_TIME_ZONE',
   'VITE_PUBLIC_IPV4_WARN',
   'VITE_PUBLIC_IPV4_CRITICAL',
 ];
@@ -57,12 +58,14 @@ describe('getRuntimeConfig', () => {
     expect(cfg.apiBaseUrl).toBe('https://api.example.test/v7.0');
   });
 
-  it('defaults ui settings persistence to local', () => {
+  it('defaults ui settings persistence to upstream server storage', () => {
     window.vpsAdmin = {
       api: { url: 'https://api.example.test', version: '7.0' },
     };
     const cfg = getRuntimeConfig();
-    expect(cfg.uiSettings.persistence).toBe('local');
+    expect(cfg.uiSettings.persistence).toBe('server');
+    expect(cfg.uiSettings.server.path).toBe('/webui_user_settings');
+    expect(cfg.uiSettings.server.namespace).toBe('ui');
   });
 
   it('reads ui settings persistence config from window.vpsAdmin.webuiNext', () => {
@@ -83,6 +86,16 @@ describe('getRuntimeConfig', () => {
     const cfg = getRuntimeConfig();
     expect(cfg.uiSettings.persistence).toBe('server');
     expect(cfg.uiSettings.server.path).toBe('/user_sessions/current/ui_setting');
+  });
+
+  it('defaults ui settings server storage to upstream webui_user_settings', () => {
+    process.env['VITE_UI_SETTINGS_PERSISTENCE'] = 'server';
+
+    const cfg = getRuntimeConfig();
+    expect(cfg.uiSettings.persistence).toBe('server');
+    expect(cfg.uiSettings.server.path).toBe('/webui_user_settings');
+    expect(cfg.uiSettings.server.namespace).toBe('ui');
+    expect(cfg.uiSettings.server.field).toBe('settings');
   });
 
   it('reads stored OAuth2 token from sessionStorage', () => {
@@ -117,6 +130,12 @@ describe('getRuntimeConfig', () => {
     process.env['VITE_WEBUI_URL'] = 'https://vpsadmin.example.test/';
     const cfg = getRuntimeConfig();
     expect(cfg.webuiUrl).toBe('https://vpsadmin.example.test');
+  });
+
+  it('reads server time zone from env', () => {
+    process.env['VITE_SERVER_TIME_ZONE'] = 'UTC';
+    const cfg = getRuntimeConfig();
+    expect(cfg.serverTimeZone).toBe('UTC');
   });
 
   it('normalizes router basename', () => {

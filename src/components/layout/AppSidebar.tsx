@@ -124,8 +124,9 @@ export function AppSidebar(props: {
   sidebarCollapsed: boolean;
   onToggleSidebar: () => void;
   t: (key: any) => string;
+  sidebarTips?: React.ReactNode;
 }) {
-  const { mobileNavOpen, onCloseMobileNav, navItems, sidebarCollapsed, onToggleSidebar, t } = props;
+  const { mobileNavOpen, onCloseMobileNav, navItems, sidebarCollapsed, onToggleSidebar, t, sidebarTips } = props;
 
   return (
     <>
@@ -193,6 +194,8 @@ export function AppSidebar(props: {
               </NavLink>
             ))}
           </nav>
+
+          {sidebarTips}
 
           <div className="border-t border-border p-2">
             <Button

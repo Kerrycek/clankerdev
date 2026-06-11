@@ -12,7 +12,8 @@ import {
   type UiThemePreference,
 } from './uiSettingsModel';
 
-import { haveApiCall, HaveApiError } from '../lib/api/haveapi';
+import { HaveApiError } from '../lib/api/haveapi';
+import { fetchWebuiUserSetting, saveWebuiUserSetting } from '../lib/api/webuiUserSettings';
 
 export type { UiLanguagePreference, UiSettings, UiThemePreference };
 
@@ -81,6 +82,7 @@ export function UiSettingsProvider(props: { children: React.ReactNode }) {
   const serverPath = cfg.uiSettings.server.path;
   const serverNamespace = cfg.uiSettings.server.namespace;
   const serverField = cfg.uiSettings.server.field;
+  const serverUserKey = auth.status === 'authenticated' ? String(auth.user?.id ?? 'current') : null;
 
   const [sync, setSync] = useState<UiSettingsSyncState>(() => ({
     mode: serverEnabled ? 'server' : 'local',
@@ -91,6 +93,7 @@ export function UiSettingsProvider(props: { children: React.ReactNode }) {
   const saveTimerRef = useRef<number | null>(null);
   const lastSavedJsonRef = useRef<string | null>(null);
   const skipNextServerSaveRef = useRef(false);
+  const [loadedServerKey, setLoadedServerKey] = useState<string | null>(null);
 
   // Keep sync.mode in sync when config changes.
   useEffect(() => {
@@ -100,37 +103,38 @@ export function UiSettingsProvider(props: { children: React.ReactNode }) {
     }));
   }, [serverEnabled]);
 
+  useEffect(() => {
+    lastSavedJsonRef.current = null;
+    skipNextServerSaveRef.current = false;
+    if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
+  }, [serverUserKey]);
+
   // Local persistence is always enabled.
   useEffect(() => {
     saveUiSettingsToLocalStorage(localStorage, settings);
   }, [localStorage, settings]);
 
   // Server load (best-effort) after authentication.
-  const loadedFromServerRef = useRef(false);
+  const loadedFromServerRef = useRef<string | null>(null);
   useEffect(() => {
     if (!serverEnabled) return;
     if (auth.status !== 'authenticated') return;
-    if (loadedFromServerRef.current) return;
+    const loadKey = serverUserKey ?? 'current';
+    if (loadedFromServerRef.current === loadKey) return;
 
-    loadedFromServerRef.current = true;
+    loadedFromServerRef.current = loadKey;
     let cancelled = false;
 
     (async () => {
       setSync((s) => ({ ...s, status: 'loading', error: undefined }));
 
       try {
-        const reply = await haveApiCall<any>({ method: 'GET', path: serverPath });
-
-        // The endpoint is expected to return a single namespace, e.g. { ui_setting: { settings: "{...}" } }
-        // but we accept any shape as long as it has the configured field.
-        const record = reply.data;
-        const value = (record && typeof record === 'object')
-          ? (record as any)[serverField]
-          : undefined;
+        const value = await fetchWebuiUserSetting(serverNamespace, serverField);
 
         if (value === undefined) {
           // Missing record or empty payload. Keep local settings.
           if (cancelled) return;
+          setLoadedServerKey(loadKey);
           setSync((s) => ({ ...s, status: 'idle', lastLoadedAt: nowIso() }));
           return;
         }
@@ -146,6 +150,7 @@ export function UiSettingsProvider(props: { children: React.ReactNode }) {
 
         setSettings(fromServer);
         saveUiSettingsToLocalStorage(localStorage, fromServer);
+        setLoadedServerKey(loadKey);
         setSync((s) => ({ ...s, status: 'idle', lastLoadedAt: nowIso() }));
       } catch (e) {
         if (cancelled) return;
@@ -160,12 +165,13 @@ export function UiSettingsProvider(props: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [auth.status, localStorage, serverEnabled, serverField, serverPath]);
+  }, [auth.status, localStorage, serverEnabled, serverField, serverNamespace, serverPath, serverUserKey]);
 
   // Server save (best-effort, debounced) when settings change.
   useEffect(() => {
     if (!serverEnabled) return;
     if (auth.status !== 'authenticated') return;
+    if (!serverUserKey || loadedServerKey !== serverUserKey) return;
 
     // When we set settings from server, we don't want to immediately write back.
     if (skipNextServerSaveRef.current) {
@@ -181,14 +187,7 @@ export function UiSettingsProvider(props: { children: React.ReactNode }) {
     saveTimerRef.current = window.setTimeout(async () => {
       try {
         setSync((s) => ({ ...s, status: 'saving', error: undefined }));
-        await haveApiCall<void>({
-          method: 'PUT',
-          path: serverPath,
-          namespace: serverNamespace,
-          params: {
-            [serverField]: json,
-          },
-        });
+        await saveWebuiUserSetting(serverNamespace, serverField, normalizeUiSettings(settings));
 
         lastSavedJsonRef.current = json;
         setSync((s) => ({ ...s, status: 'idle', lastSavedAt: nowIso() }));
@@ -204,7 +203,7 @@ export function UiSettingsProvider(props: { children: React.ReactNode }) {
     return () => {
       if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current);
     };
-  }, [auth.status, serverEnabled, serverField, serverNamespace, serverPath, settings]);
+  }, [auth.status, loadedServerKey, serverEnabled, serverField, serverNamespace, serverPath, serverUserKey, settings]);
 
   const ctx: UiSettingsCtx = useMemo(
     () => ({
