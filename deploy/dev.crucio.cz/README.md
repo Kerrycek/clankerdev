@@ -90,6 +90,19 @@ Review the plan, then rerun with `--apply` against the local test API only. See
 `dns-smoke-data.md` for the expected DNS rows, nodectld/service dependency
 notes, and DNS/PTR smoke-test checklist.
 
+Storage, backup and dataset UI smoke tests need a nested vpsAdminOS storage
+node with a live backup-capable pool. The dev-only helper in
+`bootstrap-storage-lab-node.sh` prepares the QEMU node config, systemd service,
+RabbitMQ node user and guarded local DB seed:
+
+```sh
+deploy/dev.crucio.cz/bootstrap-storage-lab-node.sh
+```
+
+Review the dry-run output, then rerun with `--apply` on `admin.crucio.cz` only.
+See `storage-lab-node.md` for the expected node/pool rows, status commands and
+UI smoke path.
+
 ## Live parity workflow
 
 Real VPS and dataset operation checks are documented in
