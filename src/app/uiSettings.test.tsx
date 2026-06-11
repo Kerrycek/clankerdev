@@ -49,7 +49,7 @@ function serverWindowConfig() {
       uiSettings: {
         persistence: 'server',
         server: {
-          path: '/user_sessions/current/ui_setting',
+          path: '/webui_user_settings',
           namespace: 'ui_setting',
           field: 'settings',
         },
@@ -130,7 +130,12 @@ describe('UiSettingsProvider', () => {
     await waitFor(() => expect(screen.getByTestId('load-error')).toHaveTextContent('load failed'));
     expect(haveApiCallMock).toHaveBeenCalledWith({
       method: 'GET',
-      path: '/user_sessions/current/ui_setting',
+      path: '/webui_user_settings',
+      namespace: 'webui_user_setting',
+      params: {
+        namespace: 'ui_setting',
+        key: 'settings',
+      },
     });
   });
 
@@ -138,7 +143,9 @@ describe('UiSettingsProvider', () => {
     haveApiCallMock
       .mockResolvedValueOnce({
         data: {
-          settings: toUiSettingsJson(DEFAULT_SETTINGS),
+          namespace: 'ui_setting',
+          key: 'settings',
+          value: toUiSettingsJson(DEFAULT_SETTINGS),
         },
       })
       .mockRejectedValueOnce(new Error('save failed'));
@@ -156,10 +163,12 @@ describe('UiSettingsProvider', () => {
     expect(screen.getByTestId('theme')).toHaveTextContent('dark');
   });
 
-  it('resets preferences through delete and preserves dismissed tips unless included', async () => {
+  it('resets preferences and preserves dismissed tips unless included', async () => {
     haveApiCallMock.mockResolvedValue({
       data: {
-        settings: toUiSettingsJson({
+        namespace: 'ui_setting',
+        key: 'settings',
+        value: toUiSettingsJson({
           ...DEFAULT_SETTINGS,
           theme: 'dark',
           tips: {
@@ -182,16 +191,13 @@ describe('UiSettingsProvider', () => {
     expect(screen.getByTestId('tip')).toHaveTextContent('dismissed');
 
     expect(haveApiCallMock).toHaveBeenCalledWith({
-      method: 'DELETE',
-      path: '/user_sessions/current/ui_setting',
-      namespace: 'ui_setting',
-    });
-    expect(haveApiCallMock).toHaveBeenCalledWith({
       method: 'PUT',
-      path: '/user_sessions/current/ui_setting',
-      namespace: 'ui_setting',
+      path: '/webui_user_settings',
+      namespace: 'webui_user_setting',
       params: {
-        settings: toUiSettingsJson({
+        namespace: 'ui_setting',
+        key: 'settings',
+        value: toUiSettingsJson({
           ...DEFAULT_SETTINGS,
           tips: {
             sidebarTimeZone: 'dismissed',
@@ -211,7 +217,9 @@ describe('UiSettingsProvider', () => {
     haveApiCallMock
       .mockResolvedValueOnce({
         data: {
-          settings: toUiSettingsJson(DEFAULT_SETTINGS),
+          namespace: 'ui_setting',
+          key: 'settings',
+          value: toUiSettingsJson(DEFAULT_SETTINGS),
         },
       })
       .mockResolvedValue(undefined);
