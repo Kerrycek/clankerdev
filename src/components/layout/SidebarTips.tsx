@@ -60,7 +60,7 @@ export function SidebarTips(props: { collapsed: boolean }) {
 
   const browserZone = useMemo(() => browserTimeZone(), []);
   const serverZone = useMemo(() => configuredServerTimeZone(), []);
-  const userTimeZone = auth.user?.time_zone;
+  const userTimeZone = auth.user?.['time_zone'];
   const userHasTimeZone = typeof userTimeZone === 'string' && userTimeZone.trim() !== '';
   const canSuggestTimeZone =
     !props.collapsed &&
