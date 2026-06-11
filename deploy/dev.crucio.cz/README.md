@@ -77,6 +77,19 @@ SMOKE_USER_ID=... SMOKE_ENVIRONMENT_ID=... \
 Review the plan, then rerun with `--apply` against the local test API only. See
 `networking-smoke-data.md` for the expected rows and smoke-test checklist.
 
+DNS UI smoke tests need authoritative server metadata, zone assignments, and
+disposable forward/reverse zones in the local test API. The dev-only helper in
+`seed-dns-smoke-data.sh` is also dry-run by default:
+
+```sh
+SMOKE_USER_ID=... SMOKE_DNS_NODE_ID=... \
+  deploy/dev.crucio.cz/seed-dns-smoke-data.sh
+```
+
+Review the plan, then rerun with `--apply` against the local test API only. See
+`dns-smoke-data.md` for the expected DNS rows, nodectld/service dependency
+notes, and DNS/PTR smoke-test checklist.
+
 Storage, backup and dataset UI smoke tests need a nested vpsAdminOS storage
 node with a live backup-capable pool. The dev-only helper in
 `bootstrap-storage-lab-node.sh` prepares the QEMU node config, systemd service,
