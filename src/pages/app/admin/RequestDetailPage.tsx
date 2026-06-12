@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
 import { useAppMode } from '../../../app/appMode';
@@ -72,7 +72,7 @@ export function RequestDetailPage() {
 
   const q = useQuery({
     queryKey: ['user_request', reqType, 'show', reqId],
-    enabled: Boolean(reqType && reqId),
+    enabled: Boolean(isAdmin && reqType && reqId),
     queryFn: async () => {
       if (!reqType || !reqId) throw new Error('invalid request');
       if (reqType === 'registration') return (await fetchRegistrationRequest(reqId)).data;
@@ -101,6 +101,8 @@ export function RequestDetailPage() {
       </ListShell>
     );
   }
+
+  if (!isAdmin) return <Navigate to="/app" replace />;
 
   if (q.isLoading) {
     return (

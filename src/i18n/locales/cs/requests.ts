@@ -8,6 +8,7 @@ export const csRequests = {
   'requests.list.filter.type.all': 'Všechny typy',
   'requests.list.filter.state.label': 'Stav',
   'requests.list.filter.state.aria': 'Filtrovat podle stavu',
+  'requests.list.filter.state.open': 'Aktivní žádosti',
   'requests.list.filter.user.label': 'Uživatel',
   'requests.list.filter.user.placeholder': 'Přihlašovací jméno nebo #id',
   'requests.list.filter.admin.label': 'Administrátor',

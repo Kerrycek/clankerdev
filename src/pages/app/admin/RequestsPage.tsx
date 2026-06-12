@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, CircleHelp, SlidersHorizontal } from 'lucide-react';
 
@@ -45,7 +45,6 @@ import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { CopyButton } from '../../../components/ui/CopyButton';
-import { Drawer } from '../../../components/ui/Drawer';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { ErrorState } from '../../../components/ui/ErrorState';
 import { FilterChip } from '../../../components/ui/FilterChip';
@@ -65,6 +64,7 @@ import {
 } from './RequestReviewActions';
 
 type RequestTypeFilter = 'all' | 'registration' | 'change';
+const CLOSED_REQUEST_STATES = new Set(['approved', 'denied', 'ignored']);
 
 type UnifiedRequestRow =
   | (RegistrationRequest & { _type: 'registration' })
@@ -289,8 +289,8 @@ export function RequestsPage() {
     allowedLimits: [25, 50, 100, 200],
   });
 
-  const needRegs = type === 'all' || type === 'registration';
-  const needChanges = type === 'all' || type === 'change';
+  const needRegs = isAdmin && (type === 'all' || type === 'registration');
+  const needChanges = isAdmin && (type === 'all' || type === 'change');
 
   const regQ = useQuery({
     queryKey: [
@@ -366,10 +366,16 @@ export function RequestsPage() {
   const ch = changeQ.data?.data ?? [];
 
   const rows = useMemo(() => {
-    if (type === 'registration') return reg.map((x) => ({ ...x, _type: 'registration' as const })) as UnifiedRequestRow[];
-    if (type === 'change') return ch.map((x) => ({ ...x, _type: 'change' as const })) as UnifiedRequestRow[];
-    return mergeByIdDesc(reg, ch, pagination.limit);
-  }, [ch, pagination.limit, reg, type]);
+    const raw =
+      type === 'registration'
+        ? (reg.map((x) => ({ ...x, _type: 'registration' as const })) as UnifiedRequestRow[])
+        : type === 'change'
+          ? (ch.map((x) => ({ ...x, _type: 'change' as const })) as UnifiedRequestRow[])
+          : mergeByIdDesc(reg, ch, pagination.limit);
+
+    if (stateTrim) return raw;
+    return raw.filter((row) => !CLOSED_REQUEST_STATES.has(String((row as any).state ?? '').trim()));
+  }, [ch, pagination.limit, reg, stateTrim, type]);
 
   const visibleKeys = useMemo(() => new Set(rows.map((r) => requestKey(r))), [rows]);
   const allVisibleExpanded = rows.length > 0 && rows.every((r) => expandedKeys.has(requestKey(r)));
@@ -946,6 +952,8 @@ export function RequestsPage() {
     { key: 'id', description: t('requests.list.smart_help.keys.id'), example: 'id:123' },
   ];
 
+  if (!isAdmin) return <Navigate to="/app" replace />;
+
   function renderExpandedContent(r: UnifiedRequestRow, compact = false) {
     const id = Number((r as any).id);
     const reqType = (r as any)._type as 'registration' | 'change';
@@ -1047,6 +1055,7 @@ export function RequestsPage() {
       header={<PageHeader title={isAdmin ? t('requests.list.title') : t('requests.my.title')} description={isAdmin ? t('requests.list.description') : t('requests.my.description')} />}
       filters={
         <>
+          <div className="relative">
           <FilterBar testId="admin.requests.filters">
             <div className="w-full sm:max-w-xl">
               <SmartFilterInput
@@ -1136,6 +1145,135 @@ export function RequestsPage() {
             ) : null}
           </FilterBar>
 
+          {advancedOpen ? (
+            <div
+              className="absolute left-0 top-full z-40 mt-2 w-[min(760px,calc(100vw-2rem))] rounded-lg border border-border bg-surface p-4 shadow-xl"
+              data-testid="admin.requests.advanced_filters"
+            >
+              <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
+                <div className="text-sm font-semibold">{t('filters.advanced.title')}</div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 px-0"
+                  onClick={() => setAdvancedOpen(false)}
+                  aria-label={t('common.close')}
+                >
+                  ×
+                </Button>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <div className="text-sm font-medium">{t('requests.list.filter.type.label')}</div>
+                  <div className="mt-1">
+                    <Select
+                      value={type}
+                      onChange={(e) => setType((e.target.value as RequestTypeFilter) || 'all')}
+                      aria-label={t('requests.list.filter.type.aria')}
+                    >
+                      <option value="all">{t('requests.list.filter.type.all')}</option>
+                      <option value="registration">{t('requests.type.registration')}</option>
+                      <option value="change">{t('requests.type.change')}</option>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-sm font-medium">{t('requests.list.filter.state.label')}</div>
+                  <div className="mt-1">
+                    <Select value={state} onChange={(e) => setState(e.target.value)} aria-label={t('requests.list.filter.state.aria')}>
+                      <option value="">{t('requests.list.filter.state.open')}</option>
+                      {defaultStateOptions()
+                        .filter((x) => x)
+                        .map((s) => (
+                          <option key={s} value={s}>
+                            {t(requestStateLabelKey(s))}
+                          </option>
+                        ))}
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-sm font-medium">{t('requests.list.filter.user.label')}</div>
+                  <div className="mt-1">
+                    <UserLookupInput
+                      value={userId}
+                      onChange={setUserId}
+                      placeholder={t('requests.list.filter.user.placeholder')}
+                      testId="admin.requests.filter.user.lookup"
+                      loadingLabel={t('common.loading')}
+                      noResultsLabel={t('palette.empty.no_results')}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-sm font-medium">{t('requests.list.filter.admin.label')}</div>
+                  <div className="mt-1">
+                    <UserLookupInput
+                      value={adminId}
+                      onChange={setAdminId}
+                      placeholder={t('requests.list.filter.admin.placeholder')}
+                      testId="admin.requests.filter.admin.lookup"
+                      loadingLabel={t('common.loading')}
+                      noResultsLabel={t('palette.empty.no_results')}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-sm font-medium">{t('requests.list.filter.api_ip.label')}</div>
+                  <div className="mt-1">
+                    <Input
+                      value={apiIp}
+                      onChange={(e) => setApiIp(e.target.value)}
+                      placeholder={t('requests.list.filter.api_ip.placeholder')}
+                      testId="admin.requests.filter.api_ip"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-sm font-medium">{t('requests.list.filter.client_ip.label')}</div>
+                  <div className="mt-1">
+                    <Input
+                      value={clientIp}
+                      onChange={(e) => setClientIp(e.target.value)}
+                      placeholder={t('requests.list.filter.client_ip.placeholder')}
+                      testId="admin.requests.filter.client_ip"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-sm font-medium">{t('requests.list.filter.client_ptr.label')}</div>
+                  <div className="mt-1">
+                    <Input
+                      value={clientPtr}
+                      onChange={(e) => setClientPtr(e.target.value)}
+                      placeholder={t('requests.list.filter.client_ptr.placeholder')}
+                      testId="admin.requests.filter.client_ptr"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-center justify-end gap-2 border-t border-border pt-3">
+                {filtersActive ? (
+                  <Button variant="secondary" size="sm" onClick={clearFilters}>
+                    {t('common.clear_filters')}
+                  </Button>
+                ) : null}
+                <Button variant="primary" size="sm" onClick={() => setAdvancedOpen(false)}>
+                  {t('common.done')}
+                </Button>
+              </div>
+            </div>
+          ) : null}
+          </div>
+
           <SmartInputHelp
             open={helpOpen}
             onClose={() => {
@@ -1183,126 +1321,6 @@ export function RequestsPage() {
             keyRowTestIdPrefix="admin.requests.smart_filter.help.key"
           />
 
-          <Drawer
-            open={advancedOpen}
-            onClose={() => setAdvancedOpen(false)}
-            title={t('filters.advanced.title')}
-            width="lg"
-            testId="admin.requests.advanced_filters"
-            footer={
-              <div className="flex items-center justify-end gap-2">
-                {filtersActive ? (
-                  <Button variant="secondary" size="sm" onClick={clearFilters}>
-                    {t('common.clear_filters')}
-                  </Button>
-                ) : null}
-                <Button variant="primary" size="sm" onClick={() => setAdvancedOpen(false)}>
-                  {t('common.done')}
-                </Button>
-              </div>
-            }
-          >
-            <div className="space-y-4">
-              <div>
-                <div className="text-sm font-medium">{t('requests.list.filter.type.label')}</div>
-                <div className="mt-1">
-                  <Select
-                    value={type}
-                    onChange={(e) => setType((e.target.value as RequestTypeFilter) || 'all')}
-                    aria-label={t('requests.list.filter.type.aria')}
-                  >
-                    <option value="all">{t('requests.list.filter.type.all')}</option>
-                    <option value="registration">{t('requests.type.registration')}</option>
-                    <option value="change">{t('requests.type.change')}</option>
-                  </Select>
-                </div>
-              </div>
-
-              <div>
-                <div className="text-sm font-medium">{t('requests.list.filter.state.label')}</div>
-                <div className="mt-1">
-                  <Select value={state} onChange={(e) => setState(e.target.value)} aria-label={t('requests.list.filter.state.aria')}>
-                    <option value="">{t('common.all')}</option>
-                    {defaultStateOptions()
-                      .filter((x) => x)
-                      .map((s) => (
-                        <option key={s} value={s}>
-                          {t(requestStateLabelKey(s))}
-                        </option>
-                      ))}
-                  </Select>
-                </div>
-              </div>
-
-              {isAdmin ? (
-                <>
-                  <div>
-                    <div className="text-sm font-medium">{t('requests.list.filter.user.label')}</div>
-                    <div className="mt-1">
-                      <UserLookupInput
-                        value={userId}
-                        onChange={setUserId}
-                        placeholder={t('requests.list.filter.user.placeholder')}
-                        testId="admin.requests.filter.user.lookup"
-                        loadingLabel={t('common.loading')}
-                        noResultsLabel={t('palette.empty.no_results')}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm font-medium">{t('requests.list.filter.admin.label')}</div>
-                    <div className="mt-1">
-                      <UserLookupInput
-                        value={adminId}
-                        onChange={setAdminId}
-                        placeholder={t('requests.list.filter.admin.placeholder')}
-                        testId="admin.requests.filter.admin.lookup"
-                        loadingLabel={t('common.loading')}
-                        noResultsLabel={t('palette.empty.no_results')}
-                      />
-                    </div>
-                  </div>
-                </>
-              ) : null}
-
-              <div>
-                <div className="text-sm font-medium">{t('requests.list.filter.api_ip.label')}</div>
-                <div className="mt-1">
-                  <Input
-                    value={apiIp}
-                    onChange={(e) => setApiIp(e.target.value)}
-                    placeholder={t('requests.list.filter.api_ip.placeholder')}
-                    testId="admin.requests.filter.api_ip"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="text-sm font-medium">{t('requests.list.filter.client_ip.label')}</div>
-                <div className="mt-1">
-                  <Input
-                    value={clientIp}
-                    onChange={(e) => setClientIp(e.target.value)}
-                    placeholder={t('requests.list.filter.client_ip.placeholder')}
-                    testId="admin.requests.filter.client_ip"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="text-sm font-medium">{t('requests.list.filter.client_ptr.label')}</div>
-                <div className="mt-1">
-                  <Input
-                    value={clientPtr}
-                    onChange={(e) => setClientPtr(e.target.value)}
-                    placeholder={t('requests.list.filter.client_ptr.placeholder')}
-                    testId="admin.requests.filter.client_ptr"
-                  />
-                </div>
-              </div>
-            </div>
-          </Drawer>
         </>
       }
     >
