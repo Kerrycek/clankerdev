@@ -55,6 +55,19 @@ npm run e2e:live:manual
 Use a local Playwright storage state file or another locally approved auth
 setup. Do not commit that file.
 
+## Mocked PR verification baseline
+
+The storage/NAS mocked workflow coverage for issue #127 was verified on the
+dev machine after the pull request was opened:
+
+```sh
+npm run typecheck
+E2E_START_SERVER=1 node scripts/playwright.mjs test e2e/specs/app/nas_smoke.spec.ts e2e/specs/app/vps_storage_tab_mounts.spec.ts --project=chromium --workers=2
+```
+
+The Playwright run covered 7/7 tests. This does not replace the live
+`dev.crucio.cz` checklist below; it only confirms the stable mocked paths.
+
 ## VPS workflows
 
 ### Clone
@@ -117,6 +130,38 @@ setup. Do not commit that file.
 
 ## Dataset workflows
 
+### NAS and storage list checks
+
+1. Open `/admin/nas` and verify the page title is `NAS`.
+2. Confirm the request returns primary-role datasets and the rows show clear
+   dataset names/full names, owner login when available, usage, snapshot count,
+   mount count, export count, and object state.
+3. Open advanced filters and confirm there is no VPS filter on NAS. In admin
+   mode, the owner filter is expected to remain available.
+4. Search for one known NAS dataset by a distinctive name fragment, then clear
+   filters and verify the unfiltered NAS list returns.
+5. Open `/admin/datasets` and compare the same dataset detail links with
+   `/admin/nas`; the NAS page should be an alias focused on primary-pool
+   datasets, while the general datasets list keeps VPS filtering.
+
+### VPS storage tab
+
+1. Open `/admin/vps/<source-id>/storage` for a disposable VPS with a root
+   dataset.
+2. Verify the root dataset card shows used/available/refquota/quota/referenced
+   values, object state, snapshot count, mount count, and export count.
+3. Follow the root dataset links without submitting actions:
+   `Open dataset`, `Snapshots and backups`, `Create snapshot`, `Restore or
+   rollback`, `Create backup`, and `Downloads`.
+4. Return to the storage tab and verify each mount row shows mountpoint,
+   dataset link, mode, type, enabled state, on-start-fail behavior, default map,
+   current state, expiration, created timestamp, and updated timestamp when the
+   API exposes them.
+5. In admin mode, confirm the `Master` column and create/edit `Master enabled`
+   control are visible. In user mode, confirm they are hidden.
+6. Open add/edit/delete mount dialogs, verify validation and confirmation
+   gates, then cancel unless a human explicitly asked for mutation testing.
+
 ### Create / edit / delete
 
 1. Open `/admin/datasets/<parent-id>`.
@@ -154,11 +199,45 @@ setup. Do not commit that file.
    value.
 6. Verify the record is removed or no longer listed.
 
+## Storage and backup parity notes
+
+Current new-UI coverage:
+
+- `/app/nas` and `/admin/nas` list primary-role datasets with NAS-specific
+  empty/error copy and no VPS filter.
+- `/app/datasets` and `/admin/datasets` list datasets, owner/VPS context,
+  usage, snapshot/mount/export counts, state, and links to detail pages.
+- Dataset detail supports subdataset create, storage property edit, delete,
+  snapshot create/delete, admin rollback, snapshot download creation, ready
+  download links, and download deletion when role gates allow them.
+- `/app/vps/<id>/storage` and `/admin/vps/<id>/storage` show root dataset
+  backup/restore entry links plus mount create/edit/delete flows. Mutating
+  actions track returned action-state IDs through the normal task/progress UI.
+
+Legacy `page_backup.php` actions still needing explicit parity follow-up:
+
+- A single legacy backup page combined VPS backup, NAS, restore, snapshot,
+  download, and download cleanup flows. The new UI intentionally splits these
+  across VPS storage, dataset snapshots, dataset downloads, and NAS list
+  surfaces; a dedicated parity review should verify no discoverability gap
+  remains for users who expect one backup hub.
+- Full restore parity is represented as snapshot rollback on the dataset
+  snapshot page. Any legacy VPS-level restore wizard or backup-source chooser
+  should be compared against real dev lab objects before marking complete.
+- Download-link details depend on API fields (`url`, checksum, size,
+  expiration). If the API omits them for a live object, the UI can only show
+  pending/metadata state and the missing fields should be recorded in PR notes.
+- Retention policy, backup plan, or scheduled backup management is not exposed
+  as a first-class new-UI backup screen beyond dataset plans and snapshot
+  download entry points. Treat this as a follow-up unless the legacy UI confirms
+  it is not part of the target workflow.
+
 ## PR verification notes
 
 For the pull request, include:
 
 - Object naming pattern used, not fixed IDs.
+- Which NAS/storage nodes or object labels were checked on `dev.crucio.cz`.
 - Which VPS workflows were exercised.
 - Which dataset, snapshot, and download workflows were exercised.
 - Action-state IDs and final state observations.

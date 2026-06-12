@@ -107,6 +107,9 @@ export interface DatasetsListPageProps {
   titleKey?: string;
   descriptionKey?: string;
   searchPlaceholderKey?: string;
+  loadErrorTitleKey?: string;
+  emptyTitleKey?: string;
+  emptyBodyKey?: string;
   showVpsFilter?: boolean;
   showOwnerColumn?: boolean;
 }
@@ -116,6 +119,9 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
   const titleKey = props.titleKey ?? 'datasets.list.title';
   const descriptionKey = props.descriptionKey ?? 'datasets.list.description';
   const searchPlaceholderKey = props.searchPlaceholderKey ?? 'datasets.list.search.placeholder';
+  const loadErrorTitleKey = props.loadErrorTitleKey ?? 'datasets.list.load_error.title';
+  const emptyTitleKey = props.emptyTitleKey ?? 'datasets.list.empty';
+  const emptyBodyKey = props.emptyBodyKey;
   const showVpsFilter = props.showVpsFilter ?? true;
   const requestedOwnerColumn = props.showOwnerColumn ?? false;
   const { basePath, mode } = useAppMode();
@@ -635,7 +641,7 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
       ) : datasetsQ.isError ? (
         <ErrorState
           testId="datasets.list.error"
-          title={t('datasets.list.load_error.title')}
+          title={t(loadErrorTitleKey)}
           error={datasetsQ.error}
           onRetry={() => void datasetsQ.refetch()}
           showBack={false}
@@ -644,8 +650,8 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
       ) : rows.length === 0 ? (
         <EmptyState
           testId="datasets.list.empty"
-          title={filtersActive ? t('empty.list.no_matches.title') : t('datasets.list.empty')}
-          body={filtersActive ? t('empty.list.no_matches.body') : undefined}
+          title={filtersActive ? t('empty.list.no_matches.title') : t(emptyTitleKey)}
+          body={filtersActive ? t('empty.list.no_matches.body') : emptyBodyKey ? t(emptyBodyKey) : undefined}
           actionLabel={filtersActive ? t('common.clear_filters') : undefined}
           onAction={filtersActive ? clearFilters : undefined}
         />

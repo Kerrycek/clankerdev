@@ -836,6 +836,8 @@ export const csVps = {
   'vps.storage.root_dataset.downloads': 'Downloady',
   'vps.storage.root_dataset.data_loss_note': 'Restore a rollback se provádí na stránce snapshotů a před nahrazením dat vyžaduje výslovné potvrzení.',
   'vps.storage.root_dataset.load_error': 'Nepodařilo se načíst metadata root datasetu.',
+  'vps.storage.root_dataset.empty.subtitle': 'Pro tuto VPS není dostupný odkaz na root dataset.',
+  'vps.storage.root_dataset.empty.body': 'Mounty se dál zobrazují níže. Odkazy na backup a restore root datasetu se zde objeví, až API vrátí referenci datasetu.',
   'vps.storage.root_dataset.related': 'Související',
   'vps.storage.root_dataset.related_counts': '{snapshots} snapshotů · {mounts} mountů · {exports} exportů',
   'vps.storage.mounts.load_error': 'Nepodařilo se načíst mounty.',
