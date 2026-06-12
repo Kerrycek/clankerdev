@@ -248,6 +248,7 @@ export const csVps = {
   'vps.lifecycle.migrate.subtitle': 'Přesuň tuto VPS na jiný uzel přes legacy per-VPS migraci.',
   'vps.lifecycle.migrate.node_help': 'Vyber cílový uzel. API ověří kompatibilitu lokace, prostředí a uzlu.',
   'vps.lifecycle.migrate.nodes_load_error': 'Nepodařilo se načíst uzly pro výběr.',
+  'vps.lifecycle.migrate.no_nodes': 'Žádné odpovídající uzly nenalezeny.',
   'vps.lifecycle.migrate.option.transfer_ip_addresses': 'Přenést IP adresy',
   'vps.lifecycle.migrate.option.replace_ip_addresses': 'Nahradit IP adresy',
   'vps.lifecycle.migrate.option.maintenance_window': 'Použít maintenance window',

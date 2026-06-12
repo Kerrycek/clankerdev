@@ -411,8 +411,9 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await page.goto('/admin/vps/123/lifecycle/migrate');
 
     await expect(page.getByTestId('vps.lifecycle.summary').getByText('Migrate VPS')).toHaveCount(1);
-    await expect(page.getByTestId('vps.lifecycle.migrate.node')).toContainText('node5.example');
-    await page.getByTestId('vps.lifecycle.migrate.node').selectOption('5');
+    await page.getByTestId('vps.lifecycle.migrate.node').fill('node5');
+    await page.getByTestId('vps.lifecycle.migrate.node.opt.5').click();
+    await expect(page.getByTestId('vps.lifecycle.migrate.node')).toHaveValue('node5.example (#5)');
     await page.getByTestId('vps.lifecycle.migrate.replace_ip_addresses').check();
     await page.getByTestId('vps.lifecycle.migrate.transfer_ip_addresses').uncheck();
     await page.getByTestId('vps.lifecycle.migrate.schedule').selectOption('custom');
@@ -457,7 +458,9 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.goto('/admin/vps/123/lifecycle/migrate');
 
-    await page.getByTestId('vps.lifecycle.migrate.node').selectOption('2');
+    await page.getByTestId('vps.lifecycle.migrate.node').fill('node2');
+    await page.getByTestId('vps.lifecycle.migrate.node.opt.2').click();
+    await expect(page.getByTestId('vps.lifecycle.migrate.node')).toHaveValue('node2.example (#2)');
 
     await expect(page.getByTestId('vps.lifecycle.migrate.transfer_ip_addresses')).toHaveCount(0);
     await expect(page.getByTestId('vps.lifecycle.migrate.replace_ip_addresses')).toHaveCount(0);

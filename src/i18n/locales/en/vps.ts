@@ -248,6 +248,7 @@ export const enVps = {
   'vps.lifecycle.migrate.subtitle': 'Move this VPS to another node using the legacy per-VPS migration flow.',
   'vps.lifecycle.migrate.node_help': 'Choose the target node. The API validates location, environment and node compatibility.',
   'vps.lifecycle.migrate.nodes_load_error': 'Failed to load nodes for selection.',
+  'vps.lifecycle.migrate.no_nodes': 'No matching nodes found.',
   'vps.lifecycle.migrate.option.transfer_ip_addresses': 'Transfer IP addresses',
   'vps.lifecycle.migrate.option.replace_ip_addresses': 'Replace IP addresses',
   'vps.lifecycle.migrate.option.maintenance_window': 'Use maintenance window',
