@@ -8,6 +8,7 @@ export const enRequests = {
   'requests.list.filter.type.all': 'All types',
   'requests.list.filter.state.label': 'State',
   'requests.list.filter.state.aria': 'Filter by state',
+  'requests.list.filter.state.open': 'Active requests',
   'requests.list.filter.user.label': 'User',
   'requests.list.filter.user.placeholder': 'Login or #id',
   'requests.list.filter.admin.label': 'Admin',
