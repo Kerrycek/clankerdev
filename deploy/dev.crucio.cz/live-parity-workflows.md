@@ -55,6 +55,19 @@ npm run e2e:live:manual
 Use a local Playwright storage state file or another locally approved auth
 setup. Do not commit that file.
 
+## Mocked PR verification baseline
+
+The storage/NAS mocked workflow coverage for issue #127 was verified on the
+dev machine after the pull request was opened:
+
+```sh
+npm run typecheck
+E2E_START_SERVER=1 node scripts/playwright.mjs test e2e/specs/app/nas_smoke.spec.ts e2e/specs/app/vps_storage_tab_mounts.spec.ts --project=chromium --workers=2
+```
+
+The Playwright run covered 7/7 tests. This does not replace the live
+`dev.crucio.cz` checklist below; it only confirms the stable mocked paths.
+
 ## VPS workflows
 
 ### Clone
