@@ -173,7 +173,6 @@ export const enVps = {
   'vps.lifecycle.swap.title': 'Swap VPS',
   'vps.lifecycle.swap.subtitle': 'Swaps selected properties with another VPS. The backend enforces the same restrictions as legacy vpsAdmin.',
   'vps.lifecycle.swap.subtitle_user': 'Swap this VPS with another VPS you are allowed to use.',
-  'vps.lifecycle.swap.open': 'Open swap flow',
   'vps.lifecycle.swap.entry_summary': 'Use a guided flow to pick a staging or playground target, preview IP/resource consequences, then confirm the swap.',
   'vps.lifecycle.swap.entry_candidates': '{count} likely swap targets found for this owner.',
   'vps.lifecycle.swap.candidates.title': 'Suggested staging / playground targets',

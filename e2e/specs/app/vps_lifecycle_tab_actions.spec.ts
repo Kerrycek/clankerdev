@@ -217,7 +217,9 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.goto('/admin/vps/123/lifecycle/swap');
 
-    await expect(page.getByTestId('vps.lifecycle.swap.drawer')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.swap')).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.getByTestId('vps.lifecycle.summary').getByText('Swap VPS')).toHaveCount(1);
     await expect(page.getByTestId('vps.lifecycle.swap.candidate.321')).toContainText('Likely');
     await expect(page.getByTestId('vps.lifecycle.swap.candidate.321.reasons')).toContainText('staging/playground name');
     await page.getByTestId('vps.lifecycle.swap.target').fill('#321');
@@ -271,7 +273,8 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.goto('/app/vps/123/lifecycle/swap');
 
-    await expect(page.getByTestId('vps.lifecycle.swap.drawer')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.swap')).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.getByText('No likely staging target found')).toBeVisible();
     await expect(page.getByTestId('vps.lifecycle.swap.candidate.321')).toHaveCount(0);
     await page.getByTestId('vps.lifecycle.swap.target').fill('#321');
@@ -407,6 +410,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.goto('/admin/vps/123/lifecycle/migrate');
 
+    await expect(page.getByTestId('vps.lifecycle.summary').getByText('Migrate VPS')).toHaveCount(1);
     await expect(page.getByTestId('vps.lifecycle.migrate.node')).toContainText('node5.example');
     await page.getByTestId('vps.lifecycle.migrate.node').selectOption('5');
     await page.getByTestId('vps.lifecycle.migrate.replace_ip_addresses').check();
@@ -651,7 +655,8 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.goto('/app/vps/123/lifecycle/swap');
 
-    await expect(page.getByTestId('vps.lifecycle.swap.drawer')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.swap')).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.getByTestId('vps.lifecycle.swap.candidate.321')).toContainText('vps123-playground');
     await expect(page.getByTestId('vps.lifecycle.swap.candidate.321')).toContainText('Likely');
     await expect(page.getByTestId('vps.lifecycle.swap.candidate.321.reasons')).toContainText('same owner');
@@ -692,7 +697,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     });
   });
 
-  test('swap API errors stay visible in the guided drawer', async ({ page }) => {
+  test('swap API errors stay visible in the page workflow', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installHaveApiMock(page, {
       user: { id: 7, login: 'owner', level: 1 },
@@ -713,14 +718,15 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.goto('/app/vps/123/lifecycle/swap');
 
-    await expect(page.getByTestId('vps.lifecycle.swap.drawer')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.swap')).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
     await page.getByTestId('vps.lifecycle.swap.candidate.321').click();
     await page.getByTestId('vps.lifecycle.swap.confirm').check();
     await page.getByTestId('vps.lifecycle.swap.submit').click();
 
-    await expect(page.getByTestId('vps.lifecycle.swap.drawer')).toBeVisible();
-    await expect(page.getByTestId('vps.lifecycle.swap.drawer')).toContainText('Swap VPS failed');
-    await expect(page.getByTestId('vps.lifecycle.swap.drawer')).toContainText('swap target is not a staging VPS');
+    await expect(page.getByTestId('vps.lifecycle.swap')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.swap')).toContainText('Swap VPS failed');
+    await expect(page.getByTestId('vps.lifecycle.swap')).toContainText('swap target is not a staging VPS');
   });
 
   test('busy VPS transaction gates lifecycle submissions with an explanation', async ({ page }) => {

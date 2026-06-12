@@ -11,17 +11,19 @@ test.describe('@live-manual live parity readiness', () => {
   test('VPS lifecycle workflows expose real-operation gates without submitting actions', async ({ page }) => {
     test.skip(!liveVpsId, 'Set E2E_LIVE_VPS_ID to a disposable VPS ID.');
 
-    await page.goto(`/admin/vps/${liveVpsId}/lifecycle`);
+    await page.goto(`/admin/vps/${liveVpsId}/lifecycle/clone`);
 
     await expect(page.getByTestId('vps.lifecycle.page')).toBeVisible();
     await expect(page.getByTestId('vps.lifecycle.clone')).toBeVisible();
-    await expect(page.getByTestId('vps.lifecycle.delete')).toBeVisible();
-
     await expect(page.getByTestId('vps.lifecycle.clone.submit')).toBeDisabled();
+
+    await page.goto(`/admin/vps/${liveVpsId}/lifecycle/delete`);
+    await expect(page.getByTestId('vps.lifecycle.delete')).toBeVisible();
     await expect(page.getByTestId('vps.lifecycle.delete.submit')).toBeDisabled();
 
-    await page.getByTestId('vps.lifecycle.swap.open').click();
-    await expect(page.getByTestId('vps.lifecycle.swap.drawer')).toBeVisible();
+    await page.goto(`/admin/vps/${liveVpsId}/lifecycle/swap`);
+    await expect(page.getByTestId('vps.lifecycle.swap')).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.getByTestId('vps.lifecycle.swap.submit')).toBeDisabled();
 
     if (liveSwapTargetVpsId) {
@@ -30,10 +32,12 @@ test.describe('@live-manual live parity readiness', () => {
       await expect(page.getByTestId('vps.lifecycle.swap.preview.after_table')).toBeVisible();
     }
 
-    await page.keyboard.press('Escape');
+    await page.goto(`/admin/vps/${liveVpsId}/lifecycle/boot`);
     await expect(page.getByTestId('vps.lifecycle.boot')).toBeVisible();
-    await expect(page.getByTestId('vps.lifecycle.reinstall')).toBeVisible();
     await expect(page.getByTestId('vps.lifecycle.boot.submit')).toBeDisabled();
+
+    await page.goto(`/admin/vps/${liveVpsId}/lifecycle/reinstall`);
+    await expect(page.getByTestId('vps.lifecycle.reinstall')).toBeVisible();
     await expect(page.getByTestId('vps.lifecycle.reinstall.submit')).toBeDisabled();
   });
 
