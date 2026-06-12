@@ -244,4 +244,46 @@ test.describe('@smoke VPS storage tab mounts', () => {
     await page.getByTestId('vps.storage.mounts.add').click();
     await expect(page.getByTestId('vps.storage.mounts.create.master_enabled')).toBeVisible();
   });
+
+  test('keeps mounts visible and explains missing root dataset references', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    const vpsWithoutDataset = {
+      ...vps,
+      dataset: null,
+    };
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'user', level: 1 },
+      handlers: {
+        'GET vpses/123': () => ({ vps: vpsWithoutDataset }),
+        'GET ip_addresses': () => ({ ip_addresses: [] }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'GET vpses/123/mounts': () => ({
+          mounts: [
+            {
+              id: 1,
+              mountpoint: '/mnt/old',
+              type: 'nfs',
+              mode: 'ro',
+              enabled: true,
+              on_start_fail: 'ignore',
+              use_default_map: true,
+              current_state: 'mounted',
+              dataset: { id: 9, name: 'tank/old' },
+              created_at: '2026-01-31T00:00:00Z',
+            },
+          ],
+        }),
+      },
+    });
+
+    await page.goto('/app/vps/123/storage');
+
+    await expect(page.getByTestId('vps.storage.root_dataset.empty')).toBeVisible();
+    await expect(page.getByTestId('vps.storage.root_dataset.empty')).toContainText('No root dataset reference');
+    await expect(page.getByTestId('vps.storage.root_dataset.open')).toHaveCount(0);
+    await expect(page.getByTestId('vps.storage.mounts.row.1')).toBeVisible();
+    await expect(page.getByTestId('vps.storage.mounts.row.1.dataset')).toHaveAttribute('href', '/app/datasets/9');
+  });
 });

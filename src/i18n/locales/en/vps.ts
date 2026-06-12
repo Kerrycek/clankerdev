@@ -836,6 +836,8 @@ export const enVps = {
   'vps.storage.root_dataset.downloads': 'Downloads',
   'vps.storage.root_dataset.data_loss_note': 'Restore and rollback actions are handled on the snapshot page and require explicit confirmation before data is replaced.',
   'vps.storage.root_dataset.load_error': 'Failed to load root dataset metadata.',
+  'vps.storage.root_dataset.empty.subtitle': 'No root dataset reference is available for this VPS.',
+  'vps.storage.root_dataset.empty.body': 'Mounts can still be listed below. Root dataset backup and restore links appear here once the API includes a dataset reference.',
   'vps.storage.root_dataset.related': 'Related',
   'vps.storage.root_dataset.related_counts': '{snapshots} snapshots · {mounts} mounts · {exports} exports',
   'vps.storage.mounts.load_error': 'Failed to load mounts.',

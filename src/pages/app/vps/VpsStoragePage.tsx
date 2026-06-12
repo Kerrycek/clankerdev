@@ -512,7 +512,17 @@ export function VpsStoragePage() {
             <div className="mt-3 text-xs text-muted">{t('vps.storage.root_dataset.data_loss_note')}</div>
           </CardBody>
         </Card>
-      ) : null}
+      ) : (
+        <Card testId="vps.storage.root_dataset.empty">
+          <CardHeader
+            title={t('vps.storage.root_dataset.title')}
+            subtitle={t('vps.storage.root_dataset.empty.subtitle')}
+          />
+          <CardBody>
+            <div className="text-sm text-muted">{t('vps.storage.root_dataset.empty.body')}</div>
+          </CardBody>
+        </Card>
+      )}
 
       <Card testId="vps.storage.mounts">
         <CardHeader
