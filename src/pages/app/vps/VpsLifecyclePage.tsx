@@ -474,6 +474,7 @@ export function VpsLifecyclePage() {
     confirm: false,
   }));
   const [replaceNodeLabel, setReplaceNodeLabel] = useState('');
+  const [migrateNodeLabel, setMigrateNodeLabel] = useState('');
 
   const [templateForm, setTemplateForm] = useState<TemplateForm>(() => ({
     osTemplate: osTemplateId ? String(osTemplateId) : '',
@@ -1689,10 +1690,12 @@ export function VpsLifecyclePage() {
         <Card testId="vps.lifecycle.migrate">
         <CardBody className="space-y-4">
           <Field label={t('vps.lifecycle.field.node')} help={t('vps.lifecycle.migrate.node_help')}>
-            <Select
+            <NodeLookupInput
               value={migrate.node}
-              onChange={(e) => {
-                const nextNodeId = parseLookupIdLike(e.target.value);
+              selectedLabel={migrateNodeLabel}
+              onChange={(value) => {
+                setMigrateNodeLabel('');
+                const nextNodeId = parseLookupIdLike(value);
                 const nextNode = nextNodeId !== null
                   ? nodesQ.data?.find((node) => Number(node.id) === nextNodeId)
                   : undefined;
@@ -1707,23 +1710,20 @@ export function VpsLifecyclePage() {
 
                 setMigrate((prev) => ({
                   ...prev,
-                  node: e.target.value,
+                  node: value,
                   transferIpAddresses: nextChangedEnvironment ? prev.transferIpAddresses : false,
                   replaceIpAddresses: nextChangedLocation ? prev.replaceIpAddresses : false,
                   scheduleMode: nextChangedEnvironment || nextChangedLocation ? 'now' : 'maintenance',
                   confirm: false,
                 }));
               }}
+              onPick={(node) => setMigrateNodeLabel(pickedNodeLabel(node))}
+              placeholder={t('vps.lifecycle.placeholder.node')}
+              loadingLabel={t('common.loading')}
+              noResultsLabel={t('vps.lifecycle.migrate.no_nodes')}
               testId="vps.lifecycle.migrate.node"
-              disabled={migrateM.isPending || nodesQ.isLoading || nodesQ.isError}
-            >
-              <option value="">{nodesQ.isLoading ? t('common.loading') : t('vps.lifecycle.placeholder.node')}</option>
-              {nodesQ.data?.map((node) => (
-                <option key={node.id} value={node.id}>
-                  {pickedNodeLabel(node)}
-                </option>
-              ))}
-            </Select>
+              disabled={migrateM.isPending || nodesQ.isError}
+            />
             {nodesQ.isError ? (
               <div className="mt-1 text-xs text-danger">{t('vps.lifecycle.migrate.nodes_load_error')}</div>
             ) : null}

@@ -27,7 +27,12 @@ test.describe('@live-manual live parity readiness', () => {
     await expect(page.getByTestId('vps.lifecycle.swap.submit')).toBeDisabled();
 
     if (liveSwapTargetVpsId) {
-      await page.getByTestId('vps.lifecycle.swap.target').fill(`#${liveSwapTargetVpsId}`);
+      const candidate = page.getByTestId(`vps.lifecycle.swap.candidate.${liveSwapTargetVpsId}`);
+      if (await candidate.count()) {
+        await candidate.click();
+      } else {
+        await page.getByTestId('vps.lifecycle.swap.target').fill(`#${liveSwapTargetVpsId}`);
+      }
       await expect(page.getByTestId('vps.lifecycle.swap.preview')).toBeVisible();
       await expect(page.getByTestId('vps.lifecycle.swap.preview.after_table')).toBeVisible();
     }

@@ -52,6 +52,22 @@ E2E_LIVE_DATASET_ID=... \
 npm run e2e:live:manual
 ```
 
+For a broader screenshot/video audit of the live UI shell, task drawer,
+lifecycle workflows, storage/NAS and requests, run:
+
+```bash
+E2E_BASE_URL=https://dev.crucio.cz \
+E2E_LIVE_SESSION_TOKEN_FILE=/root/playwright-live-token \
+E2E_LIVE_VPS_ID=... \
+E2E_LIVE_SWAP_TARGET_VPS_ID=... \
+E2E_LIVE_ACTION_STATE_ID=... \
+npm run e2e:live:audit
+```
+
+The audit writes screenshots, videos and `report.json` under
+`work/live-audits/<timestamp>/`. It fails on broken checks or JavaScript assets
+served with the wrong MIME type.
+
 Use a local Playwright storage state file or another locally approved auth
 setup. Do not commit that file.
 
