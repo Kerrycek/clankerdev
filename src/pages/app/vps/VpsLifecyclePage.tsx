@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
@@ -10,7 +10,6 @@ import { Alert } from '../../../components/ui/Alert';
 import { Button } from '../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
 import { Checkbox } from '../../../components/ui/Checkbox';
-import { Drawer } from '../../../components/ui/Drawer';
 import { Input } from '../../../components/ui/Input';
 import { NodeLookupInput } from '../../../components/ui/NodeLookupInput';
 import { Select } from '../../../components/ui/Select';
@@ -512,10 +511,6 @@ export function VpsLifecyclePage() {
     expirations: true,
     confirm: false,
   });
-  const [swapOpen, setSwapOpen] = useState(false);
-  useEffect(() => {
-    if (requestedAction === 'swap') setSwapOpen(true);
-  }, [requestedAction]);
 
   const [replace, setReplace] = useState<ReplaceForm>(() => ({
     node: nodeId ? String(nodeId) : '',
@@ -695,7 +690,6 @@ export function VpsLifecyclePage() {
       track(res.meta, 'action.vps.swap.label');
       void qc.invalidateQueries({ queryKey: ['vps', vpsId] });
       setSwap((p) => ({ ...p, confirm: false }));
-      setSwapOpen(false);
       chrome.openTasks();
     },
     onError: (e: any) => {
@@ -1119,150 +1113,145 @@ export function VpsLifecyclePage() {
     <Alert variant="neutral">{t('vps.lifecycle.swap.preview.empty')}</Alert>
   );
 
-  const swapDrawer = (
-    <Drawer
-      open={swapOpen}
-      onClose={() => setSwapOpen(false)}
-      side="right"
-      width="lg"
-      title={t('vps.lifecycle.swap.title')}
-      testId="vps.lifecycle.swap.drawer"
-      footer={
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button variant="secondary" onClick={() => setSwapOpen(false)} disabled={swapM.isPending}>
-            {t('common.cancel')}
-          </Button>
-          <ActionButton
-            variant="danger"
-            testId="vps.lifecycle.swap.submit"
-            disabled={!swap.confirm || !swap.targetVps || !gate.allowed}
-            disabledReason={!gate.allowed ? gate.reason : undefined}
-            loading={swapM.isPending}
-            onClick={() => swapM.mutate()}
-          >
-            {t('vps.lifecycle.swap.submit')}
-          </ActionButton>
-        </div>
-      }
-    >
-      <div className="space-y-4">
-        <div className="text-sm text-muted">
-          {isAdminMode ? t('vps.lifecycle.swap.subtitle') : t('vps.lifecycle.swap.subtitle_user')}
-        </div>
+  const swapForm = (
+    <div className="space-y-4" data-testid="vps.lifecycle.swap.drawer">
+      <div className="text-sm text-muted">
+        {isAdminMode ? t('vps.lifecycle.swap.subtitle') : t('vps.lifecycle.swap.subtitle_user')}
+      </div>
 
-        <div className="space-y-2" data-testid="vps.lifecycle.swap.candidates">
-          <div className="text-xs font-medium text-muted">{t('vps.lifecycle.swap.candidates.title')}</div>
-          {swapCandidatesQ.isLoading ? (
-            <div className="text-sm text-muted">{t('common.loading')}</div>
-          ) : likelyCandidateRows.length > 0 ? (
-            <div className="grid gap-2 sm:grid-cols-2">
-              {likelyCandidateRows.map((candidate) => {
-                const selected = Number(candidate.id) === swap.targetVps;
-                const reasons = swapCandidateReasonKeys(candidate, vps as Vps, nodeId ?? null, locationId ?? null);
-                return (
-                  <button
-                    type="button"
-                    key={candidate.id}
-                    className={[
-                      'rounded-md border p-3 text-left text-sm hover:bg-surface-2',
-                      selected ? 'border-border bg-surface-2 ring-2 ring-focus/35' : 'border-border bg-surface',
-                    ].join(' ')}
-                    onClick={() => setSwap((p) => ({ ...p, targetVps: Number(candidate.id), confirm: false }))}
-                    data-testid={`vps.lifecycle.swap.candidate.${candidate.id}`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="font-medium">{vpsLabel(candidate, candidate.id)}</div>
-                      <span className="shrink-0 rounded-sm border border-border bg-surface-2 px-1.5 py-0.5 text-xs font-medium text-muted" data-testid={`vps.lifecycle.swap.candidate.${candidate.id}.badge`}>
-                        {selected ? t('vps.lifecycle.swap.candidate.selected') : t('vps.lifecycle.swap.candidate.badge')}
-                      </span>
-                    </div>
-                    <div className="mt-1 text-xs text-faint">
-                      {nodeLabel(candidate)} / {vpsLocationLabel(candidate)}
-                    </div>
-                    <div className="mt-1 text-xs text-faint">{resourceSummary(candidate)}</div>
-                    <div className="mt-1 text-xs text-faint">
-                      {t('vps.lifecycle.swap.preview.dataset')} {datasetLabel(candidate)}
-                    </div>
-                    <div className="mt-2 text-xs text-muted" data-testid={`vps.lifecycle.swap.candidate.${candidate.id}.reasons`}>
-                      {reasons.map((reason) => t(reason)).join(' · ')}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
-            <Alert variant="neutral" title={t('vps.lifecycle.swap.candidates.empty_title')}>
-              {t('vps.lifecycle.swap.candidates.empty')}
-            </Alert>
-          )}
-        </div>
-
-        <Field label={t('vps.lifecycle.field.target_vps')} help={t('vps.lifecycle.swap.target_help')}>
-          <VpsLookupInput
-            value={swap.targetVps}
-            onChange={(targetVps) => setSwap((prev) => ({ ...prev, targetVps, confirm: false }))}
-            userId={ownerId ?? undefined}
-            placeholder={t('vps.lifecycle.placeholder.vps')}
-            testId="vps.lifecycle.swap.target"
-            disabled={swapM.isPending}
-          />
-        </Field>
-
-        {isAdminMode ? (
-          <div className="grid gap-2 sm:grid-cols-3">
-            <Checkbox checked={swap.hostname} onChange={(v) => setSwap((p) => ({ ...p, hostname: v, confirm: false }))} label={t('vps.lifecycle.swap.option.hostname')} testId="vps.lifecycle.swap.hostname" />
-            <Checkbox checked={swap.resources} onChange={(v) => setSwap((p) => ({ ...p, resources: v, confirm: false }))} label={t('vps.lifecycle.swap.option.resources')} testId="vps.lifecycle.swap.resources" />
-            <Checkbox checked={swap.expirations} onChange={(v) => setSwap((p) => ({ ...p, expirations: v, confirm: false }))} label={t('vps.lifecycle.swap.option.expirations')} testId="vps.lifecycle.swap.expirations" />
+      <div className="space-y-2" data-testid="vps.lifecycle.swap.candidates">
+        <div className="text-xs font-medium text-muted">{t('vps.lifecycle.swap.candidates.title')}</div>
+        {swapCandidatesQ.isLoading ? (
+          <div className="text-sm text-muted">{t('common.loading')}</div>
+        ) : likelyCandidateRows.length > 0 ? (
+          <div className="grid gap-2 sm:grid-cols-2">
+            {likelyCandidateRows.map((candidate) => {
+              const selected = Number(candidate.id) === swap.targetVps;
+              const reasons = swapCandidateReasonKeys(candidate, vps as Vps, nodeId ?? null, locationId ?? null);
+              return (
+                <button
+                  type="button"
+                  key={candidate.id}
+                  className={[
+                    'rounded-md border p-3 text-left text-sm hover:bg-surface-2',
+                    selected ? 'border-border bg-surface-2 ring-2 ring-focus/35' : 'border-border bg-surface',
+                  ].join(' ')}
+                  onClick={() => setSwap((p) => ({ ...p, targetVps: Number(candidate.id), confirm: false }))}
+                  data-testid={`vps.lifecycle.swap.candidate.${candidate.id}`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="font-medium">{vpsLabel(candidate, candidate.id)}</div>
+                    <span className="shrink-0 rounded-sm border border-border bg-surface-2 px-1.5 py-0.5 text-xs font-medium text-muted" data-testid={`vps.lifecycle.swap.candidate.${candidate.id}.badge`}>
+                      {selected ? t('vps.lifecycle.swap.candidate.selected') : t('vps.lifecycle.swap.candidate.badge')}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-xs text-faint">
+                    {nodeLabel(candidate)} / {vpsLocationLabel(candidate)}
+                  </div>
+                  <div className="mt-1 text-xs text-faint">{resourceSummary(candidate)}</div>
+                  <div className="mt-1 text-xs text-faint">
+                    {t('vps.lifecycle.swap.preview.dataset')} {datasetLabel(candidate)}
+                  </div>
+                  <div className="mt-2 text-xs text-muted" data-testid={`vps.lifecycle.swap.candidate.${candidate.id}.reasons`}>
+                    {reasons.map((reason) => t(reason)).join(' · ')}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         ) : (
-          <Alert variant="neutral">{t('vps.lifecycle.swap.user_options_hint')}</Alert>
-        )}
-
-        {swapPreview}
-
-        <Alert variant="warn" title={t('vps.lifecycle.swap.warning_title')}>
-          {t('vps.lifecycle.swap.warning_body')}
-        </Alert>
-
-        <Checkbox
-          checked={swap.confirm}
-          onChange={(v) => setSwap((p) => ({ ...p, confirm: v }))}
-          label={t('vps.lifecycle.confirm.swap')}
-          testId="vps.lifecycle.swap.confirm"
-        />
-
-        {swapM.isError ? (
-          <Alert title={t('vps.lifecycle.swap.error')} variant="danger">
-            {mutationErrorMessage(swapM.error, t('vps.lifecycle.validation.swap'))}
+          <Alert variant="neutral" title={t('vps.lifecycle.swap.candidates.empty_title')}>
+            {t('vps.lifecycle.swap.candidates.empty')}
           </Alert>
-        ) : null}
+        )}
       </div>
-    </Drawer>
+
+      <Field label={t('vps.lifecycle.field.target_vps')} help={t('vps.lifecycle.swap.target_help')}>
+        <VpsLookupInput
+          value={swap.targetVps}
+          onChange={(targetVps) => setSwap((prev) => ({ ...prev, targetVps, confirm: false }))}
+          userId={ownerId ?? undefined}
+          placeholder={t('vps.lifecycle.placeholder.vps')}
+          testId="vps.lifecycle.swap.target"
+          disabled={swapM.isPending}
+        />
+      </Field>
+
+      {isAdminMode ? (
+        <div className="grid gap-2 sm:grid-cols-3">
+          <Checkbox checked={swap.hostname} onChange={(v) => setSwap((p) => ({ ...p, hostname: v, confirm: false }))} label={t('vps.lifecycle.swap.option.hostname')} testId="vps.lifecycle.swap.hostname" />
+          <Checkbox checked={swap.resources} onChange={(v) => setSwap((p) => ({ ...p, resources: v, confirm: false }))} label={t('vps.lifecycle.swap.option.resources')} testId="vps.lifecycle.swap.resources" />
+          <Checkbox checked={swap.expirations} onChange={(v) => setSwap((p) => ({ ...p, expirations: v, confirm: false }))} label={t('vps.lifecycle.swap.option.expirations')} testId="vps.lifecycle.swap.expirations" />
+        </div>
+      ) : (
+        <Alert variant="neutral">{t('vps.lifecycle.swap.user_options_hint')}</Alert>
+      )}
+
+      {swapPreview}
+
+      <Alert variant="warn" title={t('vps.lifecycle.swap.warning_title')}>
+        {t('vps.lifecycle.swap.warning_body')}
+      </Alert>
+
+      <Checkbox
+        checked={swap.confirm}
+        onChange={(v) => setSwap((p) => ({ ...p, confirm: v }))}
+        label={t('vps.lifecycle.confirm.swap')}
+        testId="vps.lifecycle.swap.confirm"
+      />
+
+      {swapM.isError ? (
+        <Alert title={t('vps.lifecycle.swap.error')} variant="danger">
+          {mutationErrorMessage(swapM.error, t('vps.lifecycle.validation.swap'))}
+        </Alert>
+      ) : null}
+
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Button variant="secondary" onClick={() => navigate(lifecycleBasePath)} disabled={swapM.isPending}>
+          {t('common.cancel')}
+        </Button>
+        <ActionButton
+          variant="danger"
+          testId="vps.lifecycle.swap.submit"
+          disabled={!swap.confirm || !swap.targetVps || !gate.allowed}
+          disabledReason={!gate.allowed ? gate.reason : undefined}
+          loading={swapM.isPending}
+          onClick={() => swapM.mutate()}
+        >
+          {t('vps.lifecycle.swap.submit')}
+        </ActionButton>
+      </div>
+    </div>
   );
 
   const swapCard = (
-    <>
-      <Card testId="vps.lifecycle.swap">
-        <CardHeader
-          title={t('vps.lifecycle.swap.title')}
-          subtitle={isAdminMode ? t('vps.lifecycle.swap.subtitle') : t('vps.lifecycle.swap.subtitle_user')}
-          actions={
-            <Button variant="primary" onClick={() => setSwapOpen(true)} testId="vps.lifecycle.swap.open">
+    <Card testId="vps.lifecycle.swap">
+      <CardHeader
+        title={t('vps.lifecycle.swap.title')}
+        subtitle={isAdminMode ? t('vps.lifecycle.swap.subtitle') : t('vps.lifecycle.swap.subtitle_user')}
+        actions={
+          requestedAction === 'swap' ? null : (
+            <Button variant="primary" onClick={() => navigate(`${lifecycleBasePath}/swap`)} testId="vps.lifecycle.swap.open">
               {t('vps.lifecycle.swap.open')}
             </Button>
-          }
-        />
-        <CardBody className="space-y-3">
-          <div className="text-sm text-muted">{t('vps.lifecycle.swap.entry_summary')}</div>
-          {likelyCandidateRows.length > 0 ? (
-            <div className="text-xs text-faint" data-testid="vps.lifecycle.swap.entry_candidates">
-              {t('vps.lifecycle.swap.entry_candidates', { count: likelyCandidateRows.length })}
-            </div>
-          ) : null}
-        </CardBody>
-      </Card>
-      {swapDrawer}
-    </>
+          )
+        }
+      />
+      <CardBody className="space-y-3">
+        {requestedAction === 'swap' ? (
+          swapForm
+        ) : (
+          <>
+            <div className="text-sm text-muted">{t('vps.lifecycle.swap.entry_summary')}</div>
+            {likelyCandidateRows.length > 0 ? (
+              <div className="text-xs text-faint" data-testid="vps.lifecycle.swap.entry_candidates">
+                {t('vps.lifecycle.swap.entry_candidates', { count: likelyCandidateRows.length })}
+              </div>
+            ) : null}
+          </>
+        )}
+      </CardBody>
+    </Card>
   );
 
   const deleteCard = (
