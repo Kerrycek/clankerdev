@@ -173,7 +173,6 @@ export const csVps = {
   'vps.lifecycle.swap.title': 'Swap VPS',
   'vps.lifecycle.swap.subtitle': 'Prohodí vybrané vlastnosti s jinou VPS. Backend vynutí stejná omezení jako legacy vpsAdmin.',
   'vps.lifecycle.swap.subtitle_user': 'Prohodí tuto VPS s jinou VPS, ke které máš oprávnění.',
-  'vps.lifecycle.swap.open': 'Otevřít swap flow',
   'vps.lifecycle.swap.entry_summary': 'Průvodce pomůže vybrat staging nebo playground cíl, ukáže dopad na IP/prostředky a teprve potom povolí potvrzení.',
   'vps.lifecycle.swap.entry_candidates': 'Nalezeno {count} pravděpodobných cílů pro tohoto vlastníka.',
   'vps.lifecycle.swap.candidates.title': 'Doporučené staging / playground cíle',
