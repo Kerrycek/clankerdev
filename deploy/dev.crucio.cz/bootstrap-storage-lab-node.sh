@@ -194,6 +194,13 @@ write_file "$nix_config" <<EOF
     networking.firewall.interfaces.eth1.allowedTCPPorts = [ 111 2049 20048 ];
     networking.firewall.interfaces.eth1.allowedUDPPorts = [ 111 20048 ];
 
+    system.activationScripts.vpsadminDevDownloadExports.text = ''
+      install -d -m 0755 /${pool_filesystem}/vpsadmin/download
+      install -d -m 0755 /${primary_pool_filesystem}/vpsadmin/download
+      printf '%s\n' '${pool_id}' > /${pool_filesystem}/vpsadmin/download/_vpsadmin-download-healthcheck
+      printf '%s\n' '${primary_pool_id}' > /${primary_pool_filesystem}/vpsadmin/download/_vpsadmin-download-healthcheck
+    '';
+
     systemd.services.vpsadmin-dev-download-export-init = {
       description = "Prepare dev snapshot download export directories";
       wantedBy = [ "multi-user.target" ];
