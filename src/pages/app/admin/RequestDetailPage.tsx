@@ -286,7 +286,7 @@ export function RequestDetailPage() {
           </Card>
 
           {isAdmin && hasOperationalLinks ? (
-            <Card testId="admin.requests.detail.ops">
+            <Card testId="admin.requests.detail.ops.card">
               <CardHeader title={t('requests.detail.card.operations')} />
               <CardBody>
                 <RequestOperationalLinks request={request} basePath={basePath} compact testIdPrefix="admin.requests.detail" />
