@@ -155,6 +155,10 @@ export const enStorage = {
   'dataset.download.send_mail.label': 'Send notification email',
   'dataset.download.create.error.title': 'Download creation failed',
   'dataset.download.create_link': 'Create link',
+  'dataset.download.created.title': 'Backup is ready',
+  'dataset.download.created.body':
+    'A temporary snapshot download link was created. If it is still preparing, its state is available on the Downloads tab.',
+  'dataset.download.created.open_downloads': 'Open downloads',
   'dataset.downloads.title': 'Downloads',
   'dataset.downloads.subtitle': 'Create and manage snapshot download links.',
   'dataset.downloads.search.placeholder': 'Filter by snapshot ID, format, filename or download ID',

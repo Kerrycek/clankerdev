@@ -155,6 +155,10 @@ export const csStorage = {
   'dataset.download.send_mail.label': 'Poslat notifikační e-mail',
   'dataset.download.create.error.title': 'Vytvoření downloadu selhalo',
   'dataset.download.create_link': 'Vytvořit odkaz',
+  'dataset.download.created.title': 'Záloha je připravená',
+  'dataset.download.created.body':
+    'Vytvořil se dočasný odkaz pro stažení snapshotu. Pokud není ještě připravený, najdeš jeho stav na tabu Downloady.',
+  'dataset.download.created.open_downloads': 'Otevřít downloady',
   'dataset.downloads.title': 'Downloady',
   'dataset.downloads.subtitle': 'Vytvářej a spravuj odkazy pro stažení snapshotů.',
   'dataset.downloads.search.placeholder': 'Filtrovat podle ID snapshotu, formátu, názvu souboru nebo ID downloadu',

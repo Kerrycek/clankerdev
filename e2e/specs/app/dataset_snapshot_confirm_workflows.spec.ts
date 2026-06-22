@@ -256,12 +256,34 @@ test.describe('@smoke Dataset snapshots', () => {
             },
           ],
         }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'POST snapshot_downloads': () => ({
+          snapshot_download: {
+            id: 501,
+            snapshot: { id: 200 },
+            ready: true,
+            download_url: '/generated/snap-200.tar.gz',
+          },
+        }),
       },
     });
 
     await page.goto('/app/datasets/10/snapshots');
 
     await expect(page.getByTestId('dataset.snapshots.row.200.download')).toBeVisible();
+    const downloadReq = page.waitForRequest(
+      (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/snapshot_downloads')
+    );
+    await page.getByTestId('dataset.snapshots.row.200.download').click();
+    expect((await downloadReq).postDataJSON()).toEqual({
+      snapshot_download: {
+        snapshot: 200,
+        format: 'archive',
+        send_mail: true,
+      },
+    });
+    await expect(page.getByTestId('dataset.snapshots.download.created')).toBeVisible();
+    await expect(page.getByTestId('dataset.snapshots.download.created.open')).toHaveAttribute('href', /\/generated\/snap-200\.tar\.gz$/);
     await expect(page.getByTestId('dataset.snapshots.row.200.rollback')).toHaveCount(0);
     await expect(page.getByTestId('dataset.snapshots.row.200.delete')).toHaveCount(0);
   });

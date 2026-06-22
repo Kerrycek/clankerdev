@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 
@@ -52,6 +52,10 @@ const ips = [
 ];
 
 const acct = [{ id: 1, bytes_in: 1024, bytes_out: 2048 }];
+
+async function openAdvancedNetworkOptions(page: Page) {
+  await page.getByTestId('vps.network.advanced.toggle').click();
+}
 
 test.describe('@pr-smoke VPS network tab', () => {
   test('edits interface and sends PUT', async ({ page }) => {
@@ -130,6 +134,7 @@ test.describe('@pr-smoke VPS network tab', () => {
 
     await page.goto('/app/vps/123/network');
 
+    await openAdvancedNetworkOptions(page);
     await expect(page.getByTestId('vps.network.disable')).toBeVisible();
     await page.getByTestId('vps.network.disable').click();
 
@@ -230,6 +235,7 @@ test.describe('@pr-smoke VPS network tab', () => {
 
     await page.goto('/admin/vps/123/network');
     await expect(page.getByTestId('vps.network.page')).toBeVisible();
+    await openAdvancedNetworkOptions(page);
 
     await page.getByTestId('vps.network.ip_addresses.unassigned.2.assign').click();
     await expect(page.getByTestId('vps.network.ip_addresses.assign_route')).toBeVisible();
@@ -347,6 +353,7 @@ test.describe('@pr-smoke VPS network tab', () => {
 
     await page.goto('/app/vps/123/network');
     await expect(page.getByTestId('vps.network.page')).toBeVisible();
+    await openAdvancedNetworkOptions(page);
     await expect(page.getByTestId('vps.network.host_addresses')).toBeVisible();
     await expect(page.getByTestId('vps.network.host_addresses.row.50.ptr')).toBeVisible();
     await expect(page.getByTestId('vps.network.ip_addresses.item.1.host_create')).toBeVisible();
