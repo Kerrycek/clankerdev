@@ -69,6 +69,7 @@ export const csPublic = {
   'public.overview.nodes.vps_free': 'volných {count}',
   'public.overview.nodes.cpu_idle': 'Nečinnost CPU',
   'public.overview.nodes.table.node': 'Uzel',
+  'public.overview.nodes.table.location': 'Lokalita',
   'public.overview.nodes.table.status': 'Stav',
   'public.overview.nodes.table.last_report': 'Poslední hlášení',
   'public.overview.nodes.table.vps': 'VPS',

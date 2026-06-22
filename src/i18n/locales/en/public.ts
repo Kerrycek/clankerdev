@@ -68,6 +68,7 @@ export const enPublic = {
   'public.overview.nodes.vps_free': 'free {count}',
   'public.overview.nodes.cpu_idle': 'CPU idle',
   'public.overview.nodes.table.node': 'Node',
+  'public.overview.nodes.table.location': 'Location',
   'public.overview.nodes.table.status': 'Status',
   'public.overview.nodes.table.last_report': 'Last report',
   'public.overview.nodes.table.vps': 'VPS',
