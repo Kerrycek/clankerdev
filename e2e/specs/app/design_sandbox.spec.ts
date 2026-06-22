@@ -46,12 +46,16 @@ async function assertTableScanContrast(table: Locator) {
   expect(zebraA).toBe(1);
 
   await clickableRow.hover();
-  const hoverBg = await clickableRow.evaluate((node) => getComputedStyle(node).backgroundColor);
-  const hoverA = parseAlpha(hoverBg);
-
   // Contract: zebra rows use a solid alternate background, and hover on a clickable row
-  // switches that row to a visible scan-contrast tone.
-  expect(hoverA).toBeGreaterThanOrEqual(0.8);
+  // switches that row to a visible scan-contrast tone. Wait for the CSS transition
+  // before reading the computed style; CI can otherwise sample the transparent
+  // pre-hover value immediately after hover().
+  await expect
+    .poll(async () => {
+      const hoverBg = await clickableRow.evaluate((node) => getComputedStyle(node).backgroundColor);
+      return parseAlpha(hoverBg);
+    })
+    .toBeGreaterThanOrEqual(0.8);
 }
 
 test('@smoke design sandbox renders and UI settings controls work', async ({ page }) => {

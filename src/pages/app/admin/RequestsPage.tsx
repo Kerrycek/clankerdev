@@ -946,10 +946,13 @@ export function RequestsPage() {
     { key: 'id', description: t('requests.list.smart_help.keys.id'), example: 'id:123' },
   ];
 
-  function renderExpandedContent(r: UnifiedRequestRow, compact = false) {
+  function renderExpandedContent(r: UnifiedRequestRow, compact = false, testScope: 'desktop' | 'mobile' = 'desktop') {
     const id = Number((r as any).id);
     const reqType = (r as any)._type as 'registration' | 'change';
-    const testPrefix = `admin.requests.expanded.${reqType}.${id}`;
+    const testPrefix =
+      testScope === 'mobile'
+        ? `admin.requests.mobile.expanded.${reqType}.${id}`
+        : `admin.requests.expanded.${reqType}.${id}`;
     const risk = reqType === 'registration' ? fraudRiskBadge(r as any) : null;
 
     return (
@@ -1386,7 +1389,7 @@ export function RequestsPage() {
                         className="h-8 w-8 px-0"
                         onClick={() => toggleExpanded(key)}
                         aria-label={expanded ? t('requests.list.collapse_row') : t('requests.list.expand_row')}
-                        testId={`admin.requests.expand.${reqType}.${id}`}
+                        testId={`admin.requests.mobile.expand.${reqType}.${id}`}
                       >
                         {expanded ? <ChevronDown className="h-4 w-4" aria-hidden /> : <ChevronRight className="h-4 w-4" aria-hidden />}
                       </Button>
@@ -1398,7 +1401,7 @@ export function RequestsPage() {
                       </Link>
                     </div>
                   </div>
-                  {expanded ? <div className="mt-4 border-t border-border pt-4">{renderExpandedContent(r, true)}</div> : null}
+                  {expanded ? <div className="mt-4 border-t border-border pt-4">{renderExpandedContent(r, true, 'mobile')}</div> : null}
                 </Card>
               );
             })}
