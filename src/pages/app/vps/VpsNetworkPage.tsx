@@ -608,6 +608,8 @@ export function VpsNetworkPage() {
   const netifs = netifsQ.data ?? [];
 
   const unassignedIps = ipByNetif.get(-1) ?? [];
+  const hostRows = hostAddrsQ.data ?? [];
+  const routeCount = ipsQ.data?.length ?? 0;
 
   const showGateAlert = !gate.allowed;
 
@@ -882,6 +884,29 @@ export function VpsNetworkPage() {
         </CardBody>
       </Card>
 
+      <Card testId="vps.network.advanced">
+        <details>
+          <summary
+            className="flex cursor-pointer list-none items-start justify-between gap-3 p-4 focus:outline-none focus:ring-2 focus:ring-focus/35"
+            data-testid="vps.network.advanced.toggle"
+          >
+            <div className="min-w-0">
+              <div className="font-semibold">{t('vps.network.advanced.title')}</div>
+              <div className="mt-0.5 text-sm text-muted">{t('vps.network.advanced.subtitle')}</div>
+              <div className="mt-1 text-xs text-faint">
+                {t('vps.network.advanced.summary', {
+                  routes: routeCount,
+                  detached: unassignedIps.length,
+                  hosts: hostRows.length,
+                })}
+              </div>
+            </div>
+            <span className="shrink-0 rounded-md border border-border bg-surface-2 px-3 py-1 text-xs font-medium text-muted">
+              {t('vps.network.advanced.show')}
+            </span>
+          </summary>
+
+          <div className="space-y-4 border-t border-border p-4">
       <Card testId="vps.network.ip_addresses">
         <CardHeader
           title={t('vps.network.ip_addresses.title')}
@@ -1172,6 +1197,9 @@ export function VpsNetworkPage() {
             ) : null}
           </CardBody>
         </Card>
+          </div>
+        </details>
+      </Card>
 
       <Modal
         open={!!editNetif}
