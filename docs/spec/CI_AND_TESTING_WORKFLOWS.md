@@ -23,6 +23,7 @@ It runs on every push and pull request and executes:
 - `npm run lint` (Tailwind token lint + banned-pattern lint)
 - `npm run audit:i18n`
 - `npm run typecheck`
+- `npm run test:scripts` (Node tests for repository scripts)
 - `npm test` (Vitest)
 
 `npm run ci:check` is the stricter full local audit target. It also runs:
@@ -36,8 +37,20 @@ It runs on every push and pull request and executes:
 - `npm run audit:api-barrel-imports`
 - `npm run audit:ui-strings:check`
 - `npm run audit:mutations:check`
+- `npm run test:scripts`
 
 Some full-audit checks are currently cleanup targets and should not block every PR until they are green on `main`.
+
+### Structural budget ratchet
+
+`npm run audit:structural` is baseline-backed by `scripts/fixtures/structural-baseline.json`. The baseline captures the current known structural debt while keeping the audit useful in CI: lower counts are accepted, but the check fails when:
+
+- the total `as any`, `>500` line, or `>1000` line counts increase,
+- a file outside the baseline gains an `as any` cast or crosses 500/1000 lines,
+- an already over-budget file grows beyond its recorded line count, or
+- an existing file increases its `as any` count.
+
+Use `npm run audit:structural:baseline` only after a human-reviewed cleanup or intentionally accepted baseline movement. Prefer lowering the baseline after refactors so future PRs keep the smaller budget.
 
 In addition, a separate workflow runs a **Playwright PR smoke subset** on every pull request (see below).
 
@@ -121,11 +134,24 @@ npm run e2e:nightly
 npm run rc:notes
 npm run rc:check
 
+# Local/container fallback when system Chromium is available but Playwright browsers are not
+npm run e2e:container -- --project=chromium e2e/specs/app/dashboard.spec.ts
+
 # Optional: enable screenshot matrix specs
 E2E_START_SERVER=1 E2E_SCREENSHOTS=1 node scripts/playwright.mjs test
+
+# Optional: capture reusable mocked screenshots
+npm run e2e:screenshots
 ```
 
 #### Notes
+
+- `npm run e2e:container` is a local-only wrapper for locked-down machines. It auto-detects system Chromium, disables
+  failure artifacts by default for that system browser path, and temporarily relaxes blocking Chromium `URLBlocklist`
+  policy files during the run before restoring them from backups outside the active policy tree. CI should keep using
+  Playwright-managed browsers from `npm run e2e:install`.
+- `npm run e2e:screenshots` runs the permanent mocked screenshot capture spec. Use `E2E_SCREENSHOT_DIR` and
+  `E2E_SCREENSHOT_SCENARIOS` to capture phase-specific artifacts without creating temporary specs.
 - `E2E_BASE_URL` defaults to `http://127.0.0.1:5173`.
 - If you start the server yourself, omit `E2E_START_SERVER` and set `E2E_BASE_URL`.
 - Real OAuth login is intentionally not part of the default PR suite. If needed, add a separate staging-only workflow

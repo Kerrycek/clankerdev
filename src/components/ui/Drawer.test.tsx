@@ -1,3 +1,4 @@
+// i18n-ignore-file
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 

@@ -4,6 +4,7 @@ import type { TableRowVariant } from '../../../components/ui/TableRowLink';
 import { transactionBadge, type BadgeVariant } from '../../../lib/taskStatus';
 import { resourceId, refLabel } from '../../../lib/resources';
 import type { Transaction } from '../../../lib/api/transactions';
+import { classifyTransaction, operationLabel, type OperationTaxonomy } from '../../../lib/operationTaxonomy';
 
 export const DONE_VALUES = ['waiting', 'staged', 'done'] as const;
 
@@ -43,6 +44,8 @@ export interface TransactionItemRow {
   tx: Transaction;
   id?: number;
   name: string;
+  displayName: string;
+  operation: OperationTaxonomy;
   type?: number;
   rowVariant: TableRowVariant;
   dotVariant: StatusDotVariant;
@@ -168,10 +171,14 @@ export function buildTransactionItemsFilterHref({
 export function buildTransactionItemRow(tx: Transaction, t: TransactionItemsTranslator): TransactionItemRow {
   const badge = transactionBadge(tx);
   const rowVariant = variantToSemantic(badge.variant);
+  const operation = classifyTransaction(tx);
+  const name = tx.name ? String(tx.name) : t('transactions.items.row.fallback_name');
   return {
     tx,
     id: typeof tx.id === 'number' ? tx.id : undefined,
-    name: tx.name ? String(tx.name) : t('transactions.items.row.fallback_name'),
+    name,
+    displayName: operationLabel(operation, t),
+    operation,
     type: typeof tx.type === 'number' ? tx.type : undefined,
     rowVariant,
     dotVariant: rowVariant,

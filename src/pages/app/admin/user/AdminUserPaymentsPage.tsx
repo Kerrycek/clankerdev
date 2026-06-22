@@ -23,6 +23,7 @@ import { createUserPayment, fetchPaymentInstructions, fetchUserPayments } from '
 import { fetchUserAccount, updateUserAccount } from '../../../../lib/api/userAccounts';
 import { getMetaActionStateId } from '../../../../lib/api/haveapi';
 import { objectRef } from '../../../../lib/objectRef';
+import type { ObjectRef } from '../../../../lib/objectRef';
 
 import { localInputToIso, isoToLocalInput } from '../../../../lib/datetimeLocal';
 import { formatErrorMessage } from '../../../../lib/errors';
@@ -32,15 +33,17 @@ import { getPaidUntilStatus, paidUntilBadgeVariant, paidUntilStatusLabelKey } fr
 import { formatMoneyLike, safeInt } from '../../../../lib/paymentsFormat';
 import { useKeysetPagination } from '../../../../lib/hooks/useKeysetPagination';
 
-import { useAdminUserContext } from './AdminUserLayout';
+import {
+  buildManualPaymentPreview,
+  buildPaymentSettingsReview,
+  normalizePaymentInstructions,
+  paidUntilSubtitleToken,
+  parsePositiveInt,
+  resourceRefLabel,
+} from '../../payments/PaymentsModel';
 
-function parsePositiveInt(value: string): number | null {
-  const v = value.trim();
-  if (!v) return null;
-  const n = Number(v);
-  if (!Number.isFinite(n) || n <= 0) return null;
-  return Math.floor(n);
-}
+import { ManualPaymentReviewCard, PaymentSettingsReviewCard } from './AdminUserPaymentsReviewCards';
+import { useAdminUserContext } from './AdminUserLayout';
 
 export function AdminUserPaymentsPage() {
   const { t, tc } = useI18n();
@@ -65,18 +68,8 @@ export function AdminUserPaymentsPage() {
   const status = getPaidUntilStatus(paidUntil, now);
 
   const paidUntilSubtitle = (() => {
-    if (status.status === 'overdue' && status.days === undefined) return t('payments.my.stat.paid_until.missing');
-    if (status.status === 'unknown' || status.days === undefined) return t('common.na');
-
-    if (status.status === 'overdue') {
-      const overdueDays = Math.max(0, Math.abs(status.days));
-      if (overdueDays === 0) return t('payments.my.stat.paid_until.today');
-      return tc('payments.my.stat.paid_until.expired', overdueDays);
-    }
-
-    const daysLeft = Math.max(0, status.days);
-    if (daysLeft === 0) return t('payments.my.stat.paid_until.today');
-    return tc('payments.my.stat.paid_until.in_days', daysLeft);
+    const token = paidUntilSubtitleToken(status);
+    return token.kind === 'plural' ? tc(token.key, token.count) : t(token.key);
   })();
 
   const pagination = useKeysetPagination({
@@ -108,9 +101,10 @@ export function AdminUserPaymentsPage() {
   });
 
   const canNext = (historyQ.data?.length ?? 0) >= pagination.limit;
-  const cursor = useMemo(() => cursorFromDescendingPage(historyQ.data as any), [historyQ.data]);
+  const cursor = useMemo(() => cursorFromDescendingPage(historyQ.data), [historyQ.data]);
 
-  const instructions = String((instructionsQ.data as any)?.instructions ?? '').trim();
+  const instructions = normalizePaymentInstructions(instructionsQ.data);
+  const userLabel = resourceRefLabel({ id: userId, login: user.login, label: user.full_name });
 
   // -----------------------
   // Edit payment settings
@@ -129,11 +123,23 @@ export function AdminUserPaymentsPage() {
 
   const settingsMonthlyParsed = parsePositiveInt(settingsMonthly);
   const settingsPaidUntilParsed = useMemo(() => localInputToIso(settingsPaidUntilLocal), [settingsPaidUntilLocal]);
+  const settingsReview = useMemo(
+    () =>
+      buildPaymentSettingsReview({
+        currentMonthly: monthlyPayment,
+        nextMonthly: settingsMonthlyParsed,
+        currentPaidUntil: paidUntil,
+        nextPaidUntilIso: settingsPaidUntilParsed.iso,
+      }),
+    [monthlyPayment, paidUntil, settingsMonthlyParsed, settingsPaidUntilParsed.iso]
+  );
+  const settingsCanSave = settingsMonthlyParsed !== null && settingsPaidUntilParsed.valid && settingsReview.hasChanges;
 
   const settingsM = useMutation({
     mutationFn: async () => {
       if (settingsMonthlyParsed === null) throw new Error(t('admin.user.payments.settings.validation.monthly_payment'));
       if (!settingsPaidUntilParsed.valid) throw new Error(t('admin.user.payments.settings.validation.paid_until'));
+      if (!settingsReview.hasChanges) throw new Error(t('admin.user.payments.settings.validation.no_changes'));
 
       await updateUserAccount(userId, {
         monthly_payment: settingsMonthlyParsed,
@@ -160,20 +166,18 @@ export function AdminUserPaymentsPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [addMonths, setAddMonths] = useState('1');
 
-  const addMonthsParsed = parsePositiveInt(addMonths);
-  const addAmount = useMemo(() => {
-    if (!monthlyPayment) return undefined;
-    if (!addMonthsParsed) return undefined;
-    return monthlyPayment * addMonthsParsed;
-  }, [addMonthsParsed, monthlyPayment]);
+  const addPreview = useMemo(
+    () => buildManualPaymentPreview({ monthlyPayment, rawMonths: addMonths }),
+    [addMonths, monthlyPayment]
+  );
 
   const addM = useMutation({
     mutationFn: async () => {
-      if (!monthlyPayment) throw new Error(t('admin.user.payments.add_payment.validation.no_monthly_payment'));
-      if (!addMonthsParsed) throw new Error(t('admin.user.payments.add_payment.validation.months'));
+      if (!addPreview.canSubmit || addPreview.amount === undefined) {
+        throw new Error(t(addPreview.validationKey ?? 'admin.user.payments.add_payment.validation.months'));
+      }
 
-      const amount = monthlyPayment * addMonthsParsed;
-      const res = await createUserPayment({ user: userId, amount });
+      const res = await createUserPayment({ user: userId, amount: addPreview.amount });
 
       const asId = getMetaActionStateId(res.meta);
       if (asId) {
@@ -189,8 +193,8 @@ export function AdminUserPaymentsPage() {
       chrome.acquireLocalLock(ref);
       return { lockRef: ref };
     },
-    onSettled: (_data, _err, _vars, ctx) => {
-      if ((ctx as any)?.lockRef) chrome.releaseLocalLock((ctx as any).lockRef);
+    onSettled: (_data, _err, _vars, ctx: { lockRef?: ObjectRef } | undefined) => {
+      if (ctx?.lockRef) chrome.releaseLocalLock(ctx.lockRef);
     },
     onSuccess: () => {
       toasts.pushToast({ variant: 'ok', title: t('admin.user.payments.add_payment.toast.created') });
@@ -262,7 +266,7 @@ export function AdminUserPaymentsPage() {
           <CardBody>
             {instructionsQ.isLoading ? <LoadingState /> : null}
             {instructionsQ.isError ? (
-              <ErrorState title={t('payments.my.instructions.load_error.title')} error={instructionsQ.error as any} />
+              <ErrorState title={t('payments.my.instructions.load_error.title')} error={instructionsQ.error} />
             ) : null}
             {!instructionsQ.isLoading && !instructionsQ.isError ? (
               instructions ? (
@@ -285,7 +289,7 @@ export function AdminUserPaymentsPage() {
           <CardHeader title={t('payments.my.history.title')} subtitle={t('payments.my.history.description')} />
           <CardBody>
             {historyQ.isLoading ? <LoadingState /> : null}
-            {historyQ.isError ? <ErrorState title={t('payments.my.history.load_error.title')} error={historyQ.error as any} /> : null}
+            {historyQ.isError ? <ErrorState title={t('payments.my.history.load_error.title')} error={historyQ.error} /> : null}
 
             {!historyQ.isLoading && !historyQ.isError ? (
               historyQ.data && historyQ.data.length > 0 ? (
@@ -309,14 +313,7 @@ export function AdminUserPaymentsPage() {
                             <span className="tabular-nums">{formatDateTime(p.to_date)}</span>
                           </td>
                           <td className="px-3 py-2 text-xs text-muted">
-                            {typeof (p as any).accounted_by === 'object' && (p as any).accounted_by ? (
-                              <span className="tabular-nums">
-                                {String((p as any).accounted_by.login ?? '')}
-                                {typeof (p as any).accounted_by.id === 'number' ? ` (#${(p as any).accounted_by.id})` : ''}
-                              </span>
-                            ) : (
-                              '—'
-                            )}
+                            <span className="tabular-nums">{resourceRefLabel(p.accounted_by)}</span>
                           </td>
                         </tr>
                       ))}
@@ -358,7 +355,7 @@ export function AdminUserPaymentsPage() {
           {accountQ.isError ? (
             <ErrorState
               title={t('admin.user.payments.settings.load_error.title')}
-              error={accountQ.error as any}
+              error={accountQ.error}
               showDetails
             />
           ) : null}
@@ -390,6 +387,16 @@ export function AdminUserPaymentsPage() {
             <div className="mt-1 text-xs text-muted">{t('admin.user.payments.settings.hint.paid_until')}</div>
           </div>
 
+          <PaymentSettingsReviewCard
+            userLabel={userLabel}
+            userId={userId}
+            currentMonthly={monthlyPayment}
+            nextMonthly={settingsMonthlyParsed}
+            currentPaidUntil={paidUntil}
+            nextPaidUntilIso={settingsPaidUntilParsed.iso}
+            review={settingsReview}
+          />
+
           <div className="flex items-center justify-end gap-2 pt-2">
             <Button variant="secondary" onClick={() => setSettingsOpen(false)} testId="admin.user.payments.settings.cancel">
               {t('common.cancel')}
@@ -397,7 +404,7 @@ export function AdminUserPaymentsPage() {
             <Button
               onClick={() => settingsM.mutate()}
               loading={settingsM.isPending}
-              disabled={settingsMonthlyParsed === null || !settingsPaidUntilParsed.valid}
+              disabled={!settingsCanSave}
               testId="admin.user.payments.settings.save"
             >
               {t('common.save')}
@@ -436,9 +443,16 @@ export function AdminUserPaymentsPage() {
           <div>
             <div className="text-xs font-medium text-muted">{t('admin.user.payments.add_payment.field.amount')}</div>
             <div className="mt-1 text-sm tabular-nums" data-testid="admin.user.payments.add.amount">
-              {addAmount !== undefined ? formatMoneyLike(addAmount) : '—'}
+              {addPreview.amount !== undefined ? formatMoneyLike(addPreview.amount) : '—'}
             </div>
           </div>
+
+          <ManualPaymentReviewCard
+            userLabel={userLabel}
+            userId={userId}
+            monthlyPayment={monthlyPayment}
+            preview={addPreview}
+          />
 
           <div className="flex items-center justify-end gap-2 pt-2">
             <Button variant="secondary" onClick={() => setAddOpen(false)} testId="admin.user.payments.add.cancel">
@@ -447,7 +461,7 @@ export function AdminUserPaymentsPage() {
             <Button
               onClick={() => addM.mutate()}
               loading={addM.isPending}
-              disabled={!monthlyPayment || !addMonthsParsed}
+              disabled={!addPreview.canSubmit}
               testId="admin.user.payments.add.save"
             >
               {t('common.create')}

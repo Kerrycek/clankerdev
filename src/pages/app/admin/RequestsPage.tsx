@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronDown, ChevronRight, CircleHelp, SlidersHorizontal } from 'lucide-react';
 
 import { useAppMode } from '../../../app/appMode';
 import { useI18n } from '../../../app/i18n';
@@ -13,8 +12,6 @@ import {
   fetchChangeRequests,
   fetchRegistrationRequest,
   fetchRegistrationRequests,
-  type ChangeRequest,
-  type RegistrationRequest,
 } from '../../../lib/api/requests';
 import { formatDateTime } from '../../../lib/format';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
@@ -29,146 +26,44 @@ import {
 } from '../../../lib/smartFilter';
 import {
   fraudRiskBadge,
-  requestRowVariant,
-  requestStateBadgeVariant,
   requestStateLabelKey,
-  requestTypeBadgeVariant,
   requestTypeLabelKey,
 } from '../../../lib/requestsBadges';
-import { dotVariantFromBadgeVariant, tableVariantFromBadgeVariant } from '../../../lib/variantMap';
 
-import { FilterBar } from '../../../components/layout/FilterBar';
 import { ListShell } from '../../../components/layout/ListShell';
 import { PageHeader } from '../../../components/layout/PageHeader';
 
 import { Badge } from '../../../components/ui/Badge';
-import { Button } from '../../../components/ui/Button';
-import { Card } from '../../../components/ui/Card';
-import { CopyButton } from '../../../components/ui/CopyButton';
-import { Drawer } from '../../../components/ui/Drawer';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { ErrorState } from '../../../components/ui/ErrorState';
-import { FilterChip } from '../../../components/ui/FilterChip';
-import { Input } from '../../../components/ui/Input';
-import { KeysetPagination } from '../../../components/ui/KeysetPagination';
 import { LoadingState } from '../../../components/ui/LoadingState';
-import { Select } from '../../../components/ui/Select';
-import { SmartFilterInput, type SmartFilterSuggestion } from '../../../components/ui/SmartFilterInput';
-import { SmartInputHelp } from '../../../components/ui/SmartInputHelp';
-import { StatusDot } from '../../../components/ui/StatusDot';
-import { TableCard } from '../../../components/ui/TableCard';
-import { TableRowLink } from '../../../components/ui/TableRowLink';
-import { UserLookupInput } from '../../../components/ui/UserLookupInput';
+import type { SmartFilterSuggestion } from '../../../components/ui/SmartFilterInput';
 import {
   RequestOperationalLinks,
   RequestReviewActions,
 } from './RequestReviewActions';
-
-type RequestTypeFilter = 'all' | 'registration' | 'change';
-
-type UnifiedRequestRow =
-  | (RegistrationRequest & { _type: 'registration' })
-  | (ChangeRequest & { _type: 'change' });
-
-function safeNumber(value: string): number | undefined {
-  const t = value.trim();
-  if (!t) return undefined;
-  const n = Number(t);
-  if (!Number.isFinite(n)) return undefined;
-  const i = Math.floor(n);
-  if (i <= 0) return undefined;
-  return i;
-}
-
-function userLabel(u: any): string {
-  if (!u) return '—';
-  if (typeof u.login === 'string') return u.login;
-  if (typeof u.label === 'string') return u.label;
-  if (typeof u.id === 'number') return `#${u.id}`;
-  return String(u);
-}
-
-function requestKey(r: UnifiedRequestRow): string {
-  return `${(r as any)._type}-${Number((r as any).id)}`;
-}
-
-function mergeByIdDesc(reg: RegistrationRequest[], ch: ChangeRequest[], limit: number): UnifiedRequestRow[] {
-  const out: UnifiedRequestRow[] = [];
-
-  let i = 0;
-  let j = 0;
-
-  const r = reg.map((x) => ({ ...x, _type: 'registration' as const }));
-  const c = ch.map((x) => ({ ...x, _type: 'change' as const }));
-
-  while (out.length < limit && (i < r.length || j < c.length)) {
-    const a = i < r.length ? Number(r[i]?.id) : -1;
-    const b = j < c.length ? Number(c[j]?.id) : -1;
-
-    if (a >= b) {
-      const item = r[i];
-      if (item) out.push(item);
-      i++;
-    } else {
-      const item = c[j];
-      if (item) out.push(item);
-      j++;
-    }
-  }
-
-  return out;
-}
-
-function defaultStateOptions(): string[] {
-  return ['', 'awaiting', 'pending_correction', 'approved', 'denied', 'ignored'];
-}
-
-function canonicalKey(rawKey: string):
-  | 'q'
-  | 'type'
-  | 'state'
-  | 'user'
-  | 'admin'
-  | 'api_ip'
-  | 'client_ip'
-  | 'client_ptr'
-  | 'id'
-  | null {
-  const k = rawKey.trim().toLowerCase();
-  if (!k) return null;
-  if (k === 'q' || k === 'search' || k === 'text' || k === 'query') return 'q';
-  if (k === 'type' || k === 't' || k === 'kind') return 'type';
-  if (k === 'state' || k === 's' || k === 'status') return 'state';
-  if (k === 'user' || k === 'u' || k === 'owner') return 'user';
-  if (k === 'admin' || k === 'a' || k === 'operator' || k === 'op') return 'admin';
-  if (k === 'api' || k === 'api_ip' || k === 'api_ip_addr' || k === 'apiip') return 'api_ip';
-  if (k === 'client' || k === 'client_ip' || k === 'client_ip_addr' || k === 'clientip') return 'client_ip';
-  if (k === 'ptr' || k === 'client_ptr' || k === 'client_ip_ptr' || k === 'clientptr') return 'client_ptr';
-  if (k === 'id' || k === '#') return 'id';
-  return null;
-}
-
-function parseTypeValue(value: string): RequestTypeFilter | null {
-  const v = value.trim().toLowerCase();
-  if (!v) return null;
-  if (v === 'all' || v === '*') return 'all';
-  if (v === 'registration' || v === 'registrations' || v === 'reg' || v === 'r') return 'registration';
-  if (v === 'change' || v === 'changes' || v === 'c') return 'change';
-  return null;
-}
-
-function resolveStateValue(value: string): string | null {
-  const v = value.trim().toLowerCase();
-  if (!v) return null;
-
-  const known = defaultStateOptions().filter((x) => x);
-  const exact = known.find((s) => s.toLowerCase() === v);
-  if (exact) return exact;
-
-  const pref = known.filter((s) => s.toLowerCase().startsWith(v));
-  if (pref.length === 1) return pref[0] ?? null;
-  return null;
-}
+import { RequestsFilters } from './RequestsFilters';
+import { RequestsListContent } from './RequestsListContent';
+import {
+  canonicalKey,
+  changeRows,
+  defaultStateOptions,
+  mergeByIdDesc,
+  parseTypeValue,
+  registrationRows,
+  requestDateValue,
+  requestId,
+  requestKey,
+  requestState,
+  requestType,
+  requestTypeFilterFromUrl,
+  resolveStateValue,
+  safeNumber,
+  type RequestTypeFilter,
+  type UnifiedRequestRow,
+  userLabel,
+  visibleRequestRows,
+} from './RequestsModel';
 
 export function RequestsPage() {
   const { basePath, mode } = useAppMode();
@@ -180,7 +75,7 @@ export function RequestsPage() {
   const tierSlowRefetchMs = useTierSlowIntervalMs();
   const [sp, setSp] = useSearchParams();
 
-  const [type, setType] = useState<RequestTypeFilter>(() => (sp.get('type') as any) || 'all');
+  const [type, setType] = useState<RequestTypeFilter>(() => requestTypeFilterFromUrl(sp.get('type')));
   const [state, setState] = useState(() => sp.get('state') ?? '');
   const [qText, setQText] = useState(() => sp.get('q') ?? '');
   const [userId, setUserId] = useState(() => sp.get('user') ?? '');
@@ -198,7 +93,7 @@ export function RequestsPage() {
 
   // Sync from URL on navigation.
   useEffect(() => {
-    setType(((sp.get('type') as any) || 'all') as RequestTypeFilter);
+    setType(requestTypeFilterFromUrl(sp.get('type')));
     setState(sp.get('state') ?? '');
     setQText(sp.get('q') ?? '');
     setUserId(isAdmin ? sp.get('user') ?? '' : '');
@@ -289,8 +184,8 @@ export function RequestsPage() {
     allowedLimits: [25, 50, 100, 200],
   });
 
-  const needRegs = type === 'all' || type === 'registration';
-  const needChanges = type === 'all' || type === 'change';
+  const needRegs = isAdmin && (type === 'all' || type === 'registration');
+  const needChanges = isAdmin && (type === 'all' || type === 'change');
 
   const regQ = useQuery({
     queryKey: [
@@ -366,10 +261,15 @@ export function RequestsPage() {
   const ch = changeQ.data?.data ?? [];
 
   const rows = useMemo(() => {
-    if (type === 'registration') return reg.map((x) => ({ ...x, _type: 'registration' as const })) as UnifiedRequestRow[];
-    if (type === 'change') return ch.map((x) => ({ ...x, _type: 'change' as const })) as UnifiedRequestRow[];
-    return mergeByIdDesc(reg, ch, pagination.limit);
-  }, [ch, pagination.limit, reg, type]);
+    const raw =
+      type === 'registration'
+        ? registrationRows(reg)
+        : type === 'change'
+          ? changeRows(ch)
+          : mergeByIdDesc(reg, ch, pagination.limit);
+
+    return visibleRequestRows(raw, stateTrim);
+  }, [ch, pagination.limit, reg, stateTrim, type]);
 
   const visibleKeys = useMemo(() => new Set(rows.map((r) => requestKey(r))), [rows]);
   const allVisibleExpanded = rows.length > 0 && rows.every((r) => expandedKeys.has(requestKey(r)));
@@ -410,7 +310,7 @@ export function RequestsPage() {
     setExpandedKeys(new Set());
   }
 
-  const pageCursor = useMemo(() => cursorFromDescendingPage(rows as any), [rows]);
+  const pageCursor = useMemo(() => cursorFromDescendingPage(rows, requestId) ?? undefined, [rows]);
 
   const fetchedCount = reg.length + ch.length;
   const canNext = useMemo(() => {
@@ -444,9 +344,9 @@ export function RequestsPage() {
   const openRequestById = useCallback(
     async (id: number) => {
       // If the id is already on the page, we know the type and can open directly.
-      const onPage = rows.find((r) => Number((r as any).id) === id);
+      const onPage = rows.find((request) => requestId(request) === id);
       if (onPage) {
-        navigate(`${basePath}/requests/${(onPage as any)._type}/${id}`);
+        navigate(`${basePath}/requests/${requestType(onPage)}/${id}`);
         return;
       }
 
@@ -797,224 +697,77 @@ export function RequestsPage() {
     return suggestions;
   }, [applySmartText, isAdmin, openRequestById, smartNeedle, t, userSuggestQuery.data]);
 
-  const activeFilterChips = useMemo(() => {
-    const chips: React.ReactNode[] = [];
-
-    if (type && type !== 'all') {
-      chips.push(
-        <FilterChip
-          key="type"
-          label={`type:${t(requestTypeLabelKey(type))}`}
-          onRemove={() => setType('all')}
-          testId="admin.requests.chip.type"
-        />
-      );
-    }
-
-    if (stateTrim) {
-      const tone = (tableVariantFromBadgeVariant(requestStateBadgeVariant(stateTrim)) ?? 'neutral') as any;
-
-      chips.push(
-        <FilterChip
-          key="state"
-          label={`state:${t(requestStateLabelKey(stateTrim))}`}
-          tone={tone}
-          onRemove={() => setState('')}
-          testId="admin.requests.chip.state"
-        />
-      );
-    }
-
-    if (qTrim) {
-      chips.push(
-        <FilterChip
-          key="q"
-          label={`q:${qTrim}`}
-          onRemove={() => setQText('')}
-          testId="admin.requests.chip.q"
-        />
-      );
-    }
-
-    if (isAdmin && userIdNum !== undefined) {
-      chips.push(
-        <FilterChip
-          key="user"
-          label={`user:#${userIdNum}`}
-          onRemove={() => setUserId('')}
-          testId="admin.requests.chip.user"
-        />
-      );
-    }
-
-    if (isAdmin && adminIdNum !== undefined) {
-      chips.push(
-        <FilterChip
-          key="admin"
-          label={`admin:#${adminIdNum}`}
-          onRemove={() => setAdminId('')}
-          testId="admin.requests.chip.admin"
-        />
-      );
-    }
-
-    if (apiIp.trim()) {
-      chips.push(
-        <FilterChip
-          key="api_ip"
-          label={`api_ip:${apiIp.trim()}`}
-          onRemove={() => setApiIp('')}
-          testId="admin.requests.chip.api_ip"
-        />
-      );
-    }
-
-    if (clientIp.trim()) {
-      chips.push(
-        <FilterChip
-          key="client_ip"
-          label={`client_ip:${clientIp.trim()}`}
-          onRemove={() => setClientIp('')}
-          testId="admin.requests.chip.client_ip"
-        />
-      );
-    }
-
-    if (clientPtr.trim()) {
-      chips.push(
-        <FilterChip
-          key="client_ptr"
-          label={`client_ptr:${clientPtr.trim()}`}
-          onRemove={() => setClientPtr('')}
-          testId="admin.requests.chip.client_ptr"
-        />
-      );
-    }
-
-    smartErrors.forEach((e, idx) => {
-      chips.push(
-        <FilterChip
-          key={`err.${idx}`}
-          label={e}
-          tone="danger"
-          onRemove={() => setSmartErrors([])}
-          testId={`admin.requests.chip.error.${idx}`}
-        />
-      );
-    });
-
-    return chips;
-  }, [adminIdNum, apiIp, clientIp, clientPtr, isAdmin, qTrim, smartErrors, stateTrim, t, type, userIdNum]);
-
   const shareUrl = useMemo(() => (typeof window !== 'undefined' ? window.location.href : ''), [sp]);
 
-  const helpExamples = isAdmin
-    ? [
-        { example: '?', description: t('requests.list.smart_help.examples.help') },
-        { example: '123', description: t('requests.list.smart_help.examples.open_id') },
-        { example: 'alice', description: t('requests.list.smart_help.examples.search') },
-        { example: 'state:awaiting', description: t('requests.list.smart_help.examples.state') },
-        { example: 'type:registration', description: t('requests.list.smart_help.examples.type') },
-        { example: 'user:alice', description: t('requests.list.smart_help.examples.user') },
-      ]
-    : [
-        { example: '?', description: t('requests.list.smart_help.examples.help') },
-        { example: '123', description: t('requests.list.smart_help.examples.open_id') },
-        { example: 'address change', description: t('requests.list.smart_help.examples.search') },
-        { example: 'state:awaiting', description: t('requests.list.smart_help.examples.state') },
-        { example: 'type:change', description: t('requests.list.smart_help.examples.type') },
-      ];
+  if (!isAdmin) return <Navigate to="/app" replace />;
 
-  const helpTopKeys = isAdmin
-    ? [
-        { key: 'q', description: t('requests.list.smart_help.keys.q'), example: 'q:alice' },
-        { key: 'state', description: t('requests.list.smart_help.keys.state'), example: 'state:awaiting' },
-        { key: 'type', description: t('requests.list.smart_help.keys.type'), example: 'type:change' },
-        { key: 'user', description: t('requests.list.smart_help.keys.user'), example: 'user:alice' },
-        { key: 'admin', description: t('requests.list.smart_help.keys.admin'), example: 'admin:root' },
-      ]
-    : [
-        { key: 'q', description: t('requests.list.smart_help.keys.q'), example: 'q:address change' },
-        { key: 'state', description: t('requests.list.smart_help.keys.state'), example: 'state:awaiting' },
-        { key: 'type', description: t('requests.list.smart_help.keys.type'), example: 'type:change' },
-      ];
-
-  const helpMoreKeys = [
-    { key: 'api_ip', description: t('requests.list.smart_help.keys.api_ip'), example: 'api_ip:203.0.113.10' },
-    { key: 'client_ip', description: t('requests.list.smart_help.keys.client_ip'), example: 'client_ip:198.51.100.20' },
-    { key: 'client_ptr', description: t('requests.list.smart_help.keys.client_ptr'), example: 'client_ptr:example.net' },
-    { key: 'id', description: t('requests.list.smart_help.keys.id'), example: 'id:123' },
-  ];
-
-  function renderExpandedContent(r: UnifiedRequestRow, compact = false, testScope: 'desktop' | 'mobile' = 'desktop') {
-    const id = Number((r as any).id);
-    const reqType = (r as any)._type as 'registration' | 'change';
-    const testPrefix =
-      testScope === 'mobile'
-        ? `admin.requests.mobile.expanded.${reqType}.${id}`
-        : `admin.requests.expanded.${reqType}.${id}`;
-    const risk = reqType === 'registration' ? fraudRiskBadge(r as any) : null;
+  function renderExpandedContent(request: UnifiedRequestRow, compact = false) {
+    const id = requestId(request);
+    const reqType = requestType(request);
+    const testPrefix = `admin.requests.expanded.${reqType}.${id}`;
+    const risk = request._type === 'registration' ? fraudRiskBadge(request) : null;
+    const updatedAt = requestDateValue(request, 'updated_at');
 
     return (
       <div className="space-y-3" data-testid={testPrefix}>
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <div>
             <div className="text-xs text-muted">{t('common.user')}</div>
-            <div className="text-sm">{userLabel((r as any).user)}</div>
+            <div className="text-sm">{userLabel(request.user)}</div>
           </div>
           <div>
             <div className="text-xs text-muted">{t('requests.detail.admin')}</div>
-            <div className="text-sm">{userLabel((r as any).admin)}</div>
+            <div className="text-sm">{userLabel(request.admin)}</div>
           </div>
           <div>
             <div className="text-xs text-muted">{t('common.updated')}</div>
-            <div className="text-sm">{(r as any).updated_at ? formatDateTime(String((r as any).updated_at)) : '—'}</div>
+            <div className="text-sm">{updatedAt ? formatDateTime(updatedAt) : '—'}</div>
           </div>
-          {reqType === 'registration' ? (
+          {request._type === 'registration' ? (
             <>
               <div>
                 <div className="text-xs text-muted">{t('requests.field.login')}</div>
-                <div className="text-sm">{String((r as any).login ?? '—')}</div>
+                <div className="text-sm">{String(request.login ?? '—')}</div>
               </div>
               <div>
                 <div className="text-xs text-muted">{t('requests.field.full_name')}</div>
-                <div className="text-sm">{String((r as any).full_name ?? '—')}</div>
+                <div className="text-sm">{String(request.full_name ?? '—')}</div>
               </div>
               <div>
                 <div className="text-xs text-muted">{t('requests.field.email')}</div>
-                <div className="text-sm">{String((r as any).email ?? '—')}</div>
+                <div className="text-sm">{String(request.email ?? '—')}</div>
               </div>
               <div className="md:col-span-3">
                 <div className="text-xs text-muted">{t('requests.field.address')}</div>
-                <div className="whitespace-pre-line text-sm">{String((r as any).address ?? '—')}</div>
+                <div className="whitespace-pre-line text-sm">{String(request.address ?? '—')}</div>
               </div>
               <div className="md:col-span-3">
                 <div className="text-xs text-muted">{t('requests.field.note')}</div>
-                <div className="whitespace-pre-line text-sm">{String((r as any).note ?? '—')}</div>
+                <div className="whitespace-pre-line text-sm">{String(request.note ?? '—')}</div>
               </div>
             </>
           ) : (
             <>
               <div>
                 <div className="text-xs text-muted">{t('requests.field.full_name')}</div>
-                <div className="text-sm">{String((r as any).full_name ?? '—')}</div>
+                <div className="text-sm">{String(request.full_name ?? '—')}</div>
               </div>
               <div>
                 <div className="text-xs text-muted">{t('requests.field.email')}</div>
-                <div className="text-sm">{String((r as any).email ?? '—')}</div>
+                <div className="text-sm">{String(request.email ?? '—')}</div>
               </div>
               <div className="md:col-span-3">
                 <div className="text-xs text-muted">{t('requests.field.change_reason')}</div>
-                <div className="whitespace-pre-line text-sm">{String((r as any).change_reason ?? '—')}</div>
+                <div className="whitespace-pre-line text-sm">{String(request.change_reason ?? '—')}</div>
               </div>
             </>
           )}
         </div>
 
-        {(r as any).admin_response ? (
+        {request.admin_response ? (
           <div className="rounded-md border border-border bg-surface p-3">
             <div className="text-xs text-muted">{t('requests.detail.admin_response')}</div>
-            <div className="mt-1 whitespace-pre-line text-sm">{String((r as any).admin_response)}</div>
+            <div className="mt-1 whitespace-pre-line text-sm">{String(request.admin_response)}</div>
           </div>
         ) : null}
 
@@ -1024,12 +777,12 @@ export function RequestsPage() {
               {t(risk.labelKey)} {risk.score}
             </Badge>
           ) : null}
-          <RequestOperationalLinks request={r} basePath={basePath} compact testIdPrefix={testPrefix} />
+          <RequestOperationalLinks request={request} basePath={basePath} compact testIdPrefix={testPrefix} />
         </div>
 
         {isAdmin ? (
           <RequestReviewActions
-            request={r}
+            request={request}
             reqType={reqType}
             reqId={id}
             isAdmin={isAdmin}
@@ -1044,270 +797,52 @@ export function RequestsPage() {
     );
   }
 
+
   return (
     <ListShell
       testId="admin.requests.list"
       header={<PageHeader title={isAdmin ? t('requests.list.title') : t('requests.my.title')} description={isAdmin ? t('requests.list.description') : t('requests.my.description')} />}
       filters={
-        <>
-          <FilterBar testId="admin.requests.filters">
-            <div className="w-full sm:max-w-xl">
-              <SmartFilterInput
-                ref={smartInputRef}
-                value={smart}
-                onChange={(v) => {
-                  setSmart(v);
-                  if (smartErrors.length) setSmartErrors([]);
-                }}
-                placeholder={t('requests.list.search.placeholder')}
-                ariaLabel={t('requests.list.search.placeholder')}
-                testId="admin.requests.smart_filter.input"
-                suggestions={smartSuggestions}
-                onSubmit={() => void applySmartText(smart)}
-                suffix={
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 px-0"
-                    onClick={() => setHelpOpen(true)}
-                    aria-label={t('filters.help.open')}
-                    title={t('filters.help.open')}
-                  >
-                    <CircleHelp className="h-4 w-4" aria-hidden />
-                  </Button>
-                }
-              />
-
-              {activeFilterChips.length > 0 ? (
-                <div className="mt-2 flex flex-wrap gap-1" data-testid="admin.requests.active_filters">
-                  {activeFilterChips}
-                </div>
-              ) : null}
-            </div>
-
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setAdvancedOpen(true)}
-              aria-label={t('filters.advanced.open')}
-              title={t('filters.advanced.open')}
-            >
-              <SlidersHorizontal className="h-4 w-4" aria-hidden />
-              <span className="ml-2 hidden sm:inline">{t('filters.advanced.label')}</span>
-            </Button>
-
-            <Button
-              variant={state === 'awaiting' ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={() => setState(state === 'awaiting' ? '' : 'awaiting')}
-              testId="admin.requests.quick.awaiting"
-            >
-              {t(requestStateLabelKey('awaiting'))}
-            </Button>
-
-            <Button
-              variant={state === 'pending_correction' ? 'primary' : 'secondary'}
-              size="sm"
-              onClick={() => setState(state === 'pending_correction' ? '' : 'pending_correction')}
-              testId="admin.requests.quick.pending_correction"
-            >
-              {t(requestStateLabelKey('pending_correction'))}
-            </Button>
-
-            <CopyButton
-              size="sm"
-              variant="secondary"
-              label={t('common.copy_link')}
-              text={shareUrl}
-              testId="admin.requests.copy_link"
-            />
-
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={allVisibleExpanded ? collapseAllVisible : expandAllVisible}
-              disabled={rows.length === 0}
-              testId={allVisibleExpanded ? 'admin.requests.collapse_all' : 'admin.requests.expand_all'}
-            >
-              {allVisibleExpanded ? t('requests.list.collapse_all') : t('requests.list.expand_all')}
-            </Button>
-
-            {filtersActive ? (
-              <Button variant="secondary" size="sm" onClick={clearFilters}>
-                {t('common.clear_filters')}
-              </Button>
-            ) : null}
-          </FilterBar>
-
-          <SmartInputHelp
-            open={helpOpen}
-            onClose={() => {
-              setHelpOpen(false);
-              if (smartNeedle === '?') setSmart('');
-            }}
-            title={t('filters.help.title')}
-            intro={t('requests.list.smart_help.intro')}
-            examples={helpExamples}
-            topKeys={helpTopKeys}
-            moreKeys={helpMoreKeys}
-            inference={[
-              t('requests.list.smart_help.inference.enter_applies'),
-              t('requests.list.smart_help.inference.number_opens'),
-              t('requests.list.smart_help.inference.key_value'),
-            ]}
-            onInsertKey={(key) => {
-              setHelpOpen(false);
-              setSmart(`${key}:`);
-              window.requestAnimationFrame(() => smartInputRef.current?.focus());
-            }}
-            actions={[
-              {
-                label: t('filters.help.open_advanced'),
-                onClick: () => {
-                  setHelpOpen(false);
-                  setAdvancedOpen(true);
-                },
-              },
-              {
-                label: t('common.copy_link'),
-                onClick: async () => {
-                  const url = typeof window !== 'undefined' ? window.location.href : '';
-                  if (!url) return;
-                  try {
-                    await navigator.clipboard.writeText(url);
-                    toasts.pushToast({ variant: 'ok', title: t('toast.copied.title') });
-                  } catch {
-                    toasts.pushToast({ variant: 'warn', title: t('toast.copied_failed.title') });
-                  }
-                },
-              },
-            ]}
-            testId="admin.requests.smart_filter.help"
-            keyRowTestIdPrefix="admin.requests.smart_filter.help.key"
-          />
-
-          <Drawer
-            open={advancedOpen}
-            onClose={() => setAdvancedOpen(false)}
-            title={t('filters.advanced.title')}
-            width="lg"
-            testId="admin.requests.advanced_filters"
-            footer={
-              <div className="flex items-center justify-end gap-2">
-                {filtersActive ? (
-                  <Button variant="secondary" size="sm" onClick={clearFilters}>
-                    {t('common.clear_filters')}
-                  </Button>
-                ) : null}
-                <Button variant="primary" size="sm" onClick={() => setAdvancedOpen(false)}>
-                  {t('common.done')}
-                </Button>
-              </div>
-            }
-          >
-            <div className="space-y-4">
-              <div>
-                <div className="text-sm font-medium">{t('requests.list.filter.type.label')}</div>
-                <div className="mt-1">
-                  <Select
-                    value={type}
-                    onChange={(e) => setType((e.target.value as RequestTypeFilter) || 'all')}
-                    aria-label={t('requests.list.filter.type.aria')}
-                  >
-                    <option value="all">{t('requests.list.filter.type.all')}</option>
-                    <option value="registration">{t('requests.type.registration')}</option>
-                    <option value="change">{t('requests.type.change')}</option>
-                  </Select>
-                </div>
-              </div>
-
-              <div>
-                <div className="text-sm font-medium">{t('requests.list.filter.state.label')}</div>
-                <div className="mt-1">
-                  <Select value={state} onChange={(e) => setState(e.target.value)} aria-label={t('requests.list.filter.state.aria')}>
-                    <option value="">{t('common.all')}</option>
-                    {defaultStateOptions()
-                      .filter((x) => x)
-                      .map((s) => (
-                        <option key={s} value={s}>
-                          {t(requestStateLabelKey(s))}
-                        </option>
-                      ))}
-                  </Select>
-                </div>
-              </div>
-
-              {isAdmin ? (
-                <>
-                  <div>
-                    <div className="text-sm font-medium">{t('requests.list.filter.user.label')}</div>
-                    <div className="mt-1">
-                      <UserLookupInput
-                        value={userId}
-                        onChange={setUserId}
-                        placeholder={t('requests.list.filter.user.placeholder')}
-                        testId="admin.requests.filter.user.lookup"
-                        loadingLabel={t('common.loading')}
-                        noResultsLabel={t('palette.empty.no_results')}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm font-medium">{t('requests.list.filter.admin.label')}</div>
-                    <div className="mt-1">
-                      <UserLookupInput
-                        value={adminId}
-                        onChange={setAdminId}
-                        placeholder={t('requests.list.filter.admin.placeholder')}
-                        testId="admin.requests.filter.admin.lookup"
-                        loadingLabel={t('common.loading')}
-                        noResultsLabel={t('palette.empty.no_results')}
-                      />
-                    </div>
-                  </div>
-                </>
-              ) : null}
-
-              <div>
-                <div className="text-sm font-medium">{t('requests.list.filter.api_ip.label')}</div>
-                <div className="mt-1">
-                  <Input
-                    value={apiIp}
-                    onChange={(e) => setApiIp(e.target.value)}
-                    placeholder={t('requests.list.filter.api_ip.placeholder')}
-                    testId="admin.requests.filter.api_ip"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="text-sm font-medium">{t('requests.list.filter.client_ip.label')}</div>
-                <div className="mt-1">
-                  <Input
-                    value={clientIp}
-                    onChange={(e) => setClientIp(e.target.value)}
-                    placeholder={t('requests.list.filter.client_ip.placeholder')}
-                    testId="admin.requests.filter.client_ip"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="text-sm font-medium">{t('requests.list.filter.client_ptr.label')}</div>
-                <div className="mt-1">
-                  <Input
-                    value={clientPtr}
-                    onChange={(e) => setClientPtr(e.target.value)}
-                    placeholder={t('requests.list.filter.client_ptr.placeholder')}
-                    testId="admin.requests.filter.client_ptr"
-                  />
-                </div>
-              </div>
-            </div>
-          </Drawer>
-        </>
+        <RequestsFilters
+          isAdmin={isAdmin}
+          type={type}
+          state={state}
+          qText={qText}
+          userId={userId}
+          adminId={adminId}
+          apiIp={apiIp}
+          clientIp={clientIp}
+          clientPtr={clientPtr}
+          smart={smart}
+          smartNeedle={smartNeedle}
+          smartErrors={smartErrors}
+          smartSuggestions={smartSuggestions}
+          helpOpen={helpOpen}
+          advancedOpen={advancedOpen}
+          filtersActive={filtersActive}
+          shareUrl={shareUrl}
+          rowsLength={rows.length}
+          allVisibleExpanded={allVisibleExpanded}
+          smartInputRef={smartInputRef}
+          setType={setType}
+          setState={setState}
+          setQText={setQText}
+          setUserId={setUserId}
+          setAdminId={setAdminId}
+          setApiIp={setApiIp}
+          setClientIp={setClientIp}
+          setClientPtr={setClientPtr}
+          setSmart={setSmart}
+          setSmartErrors={setSmartErrors}
+          setHelpOpen={setHelpOpen}
+          setAdvancedOpen={setAdvancedOpen}
+          applySmartText={applySmartText}
+          clearFilters={clearFilters}
+          expandAllVisible={expandAllVisible}
+          collapseAllVisible={collapseAllVisible}
+        />
       }
+
     >
       {isLoading ? (
         <LoadingState testId="admin.requests.loading" title={t('common.loading')} />
@@ -1315,7 +850,7 @@ export function RequestsPage() {
         <ErrorState
           testId="admin.requests.error"
           title={t('requests.list.load_error.title')}
-          error={error as any}
+          error={error}
           onRetry={() => {
             if (needRegs) void regQ.refetch();
             if (needChanges) void changeQ.refetch();
@@ -1332,223 +867,17 @@ export function RequestsPage() {
           onAction={filtersActive ? clearFilters : undefined}
         />
       ) : (
-        <>
-          {/* Mobile: cards */}
-          <div className="space-y-2 md:hidden">
-            {rows.map((r) => {
-              const id = Number((r as any).id);
-              const reqType = (r as any)._type as 'registration' | 'change';
-              const st = String((r as any).state ?? '').trim();
-              const stateVar = requestStateBadgeVariant(st);
-              const dotVar = dotVariantFromBadgeVariant(stateVar);
-              const userLabel =
-                typeof (r as any).user?.login === 'string'
-                  ? String((r as any).user.login)
-                  : typeof (r as any).user?.label === 'string'
-                    ? String((r as any).user.label)
-                    : (r as any).user
-                      ? `#${String((r as any).user.id)}`
-                      : '—';
-              const label = String((r as any).label ?? '').trim() || '—';
-              const risk = reqType === 'registration' ? fraudRiskBadge(r as any) : null;
-              const key = requestKey(r);
-              const expanded = expandedKeys.has(key);
-
-              return (
-                <Card key={`${reqType}-${id}`} className="p-4" testId={`admin.requests.mobile.row.${reqType}.${id}`}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <StatusDot variant={dotVar} testId={`admin.requests.row.${reqType}.${id}.dot`} />
-                        <div className="text-sm font-semibold">#{id}</div>
-                        <Badge variant={requestTypeBadgeVariant(reqType)}>{t(requestTypeLabelKey(reqType))}</Badge>
-                      </div>
-                      <div className="mt-1 truncate text-xs text-muted">{label}</div>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <Badge variant={stateVar}>{t(requestStateLabelKey(st))}</Badge>
-                        {isAdmin && risk ? (
-                          <Badge variant={risk.variant} title={t('requests.risk.tooltip', { score: risk.score })}>
-                            {t(risk.labelKey)} {risk.score}
-                          </Badge>
-                        ) : null}
-                      </div>
-                      {isAdmin ? (
-                        <div className="mt-2 text-xs text-muted">
-                          <span className="text-faint">{t('common.user')}:</span> {userLabel}
-                        </div>
-                      ) : null}
-                      <div className="mt-1 text-xs text-muted">
-                        <span className="text-faint">{t('common.created')}:</span>{' '}
-                        {(r as any).created_at ? formatDateTime(String((r as any).created_at)) : '—'}
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 flex-col items-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 px-0"
-                        onClick={() => toggleExpanded(key)}
-                        aria-label={expanded ? t('requests.list.collapse_row') : t('requests.list.expand_row')}
-                        testId={`admin.requests.mobile.expand.${reqType}.${id}`}
-                      >
-                        {expanded ? <ChevronDown className="h-4 w-4" aria-hidden /> : <ChevronRight className="h-4 w-4" aria-hidden />}
-                      </Button>
-                      <Link
-                        className="text-xs font-medium text-accent hover:underline"
-                        to={`${basePath}/requests/${reqType}/${id}`}
-                      >
-                        {t('common.open')}
-                      </Link>
-                    </div>
-                  </div>
-                  {expanded ? <div className="mt-4 border-t border-border pt-4">{renderExpandedContent(r, true, 'mobile')}</div> : null}
-                </Card>
-              );
-            })}
-
-            <Card>
-              <KeysetPagination
-                page={pagination.page}
-                pageCount={pagination.stack.length}
-                canPrev={pagination.canPrev}
-                canNext={canNext}
-                onPrev={pagination.goPrev}
-                onNext={() => pagination.goNext(pageCursor)}
-                onGoToPage={pagination.goToPage}
-                limit={pagination.limit}
-                allowedLimits={pagination.allowedLimits}
-                onLimitChange={pagination.setLimit}
-                testId="admin.requests.pagination.mobile"
-              />
-            </Card>
-          </div>
-
-          {/* Desktop: table */}
-          <TableCard
-            className="hidden md:block"
-            minWidth="lg"
-            tableTestId="admin.requests.table"
-            footer={
-              <KeysetPagination
-                page={pagination.page}
-                pageCount={pagination.stack.length}
-                canPrev={pagination.canPrev}
-                canNext={canNext}
-                onPrev={pagination.goPrev}
-                onNext={() => pagination.goNext(pageCursor)}
-                onGoToPage={pagination.goToPage}
-                limit={pagination.limit}
-                allowedLimits={pagination.allowedLimits}
-                onLimitChange={pagination.setLimit}
-                testId="admin.requests.pagination.desktop"
-              />
-            }
-          >
-            <thead>
-              <tr className="border-b border-border text-left text-xs text-muted">
-                <th className="w-10 px-2 py-2"></th>
-                <th className="px-4 py-2">{t('common.id')}</th>
-                <th className="px-4 py-2">{t('common.type')}</th>
-                <th className="px-4 py-2">{t('common.label')}</th>
-                {isAdmin ? <th className="px-4 py-2">{t('common.user')}</th> : null}
-                <th className="px-4 py-2">{t('common.state')}</th>
-                <th className="px-4 py-2">{t('common.created')}</th>
-                <th className="px-4 py-2">{t('requests.list.col.api_ip')}</th>
-                <th className="px-4 py-2">{t('requests.list.col.client_ip')}</th>
-                {isAdmin ? <th className="px-4 py-2">{t('requests.list.col.risk')}</th> : null}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => {
-                const id = Number((r as any).id);
-                const reqType = (r as any)._type as 'registration' | 'change';
-                const st = String((r as any).state ?? '').trim();
-                const rowVar = requestRowVariant(st);
-                const stateVar = requestStateBadgeVariant(st);
-                const dotVar = dotVariantFromBadgeVariant(stateVar);
-                const label = String((r as any).label ?? '').trim() || '—';
-                const userLabel =
-                  typeof (r as any).user?.login === 'string'
-                    ? String((r as any).user.login)
-                    : typeof (r as any).user?.label === 'string'
-                      ? String((r as any).user.label)
-                      : (r as any).user
-                        ? `#${String((r as any).user.id)}`
-                        : '—';
-
-                const apiIpStr = typeof (r as any).api_ip_addr === 'string' ? String((r as any).api_ip_addr) : '—';
-                const clientIpStr =
-                  typeof (r as any).client_ip_addr === 'string' ? String((r as any).client_ip_addr) : '—';
-
-                const risk = reqType === 'registration' ? fraudRiskBadge(r as any) : null;
-                const key = requestKey(r);
-                const expanded = expandedKeys.has(key);
-                const colSpan = isAdmin ? 10 : 8;
-
-                return (
-                  <React.Fragment key={`${reqType}-${id}`}>
-                    <TableRowLink
-                      testId={`admin.requests.row.${reqType}.${id}`}
-                      to={`${basePath}/requests/${reqType}/${id}`}
-                      variant={rowVar}
-                      className={expanded ? 'border-b border-border/30' : 'border-b border-border/60 last:border-b-0'}
-                    >
-                      <td className="px-2 py-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 px-0"
-                          onClick={() => toggleExpanded(key)}
-                          aria-label={expanded ? t('requests.list.collapse_row') : t('requests.list.expand_row')}
-                          testId={`admin.requests.expand.${reqType}.${id}`}
-                        >
-                          {expanded ? <ChevronDown className="h-4 w-4" aria-hidden /> : <ChevronRight className="h-4 w-4" aria-hidden />}
-                        </Button>
-                      </td>
-                      <td className="px-4 py-2">
-                        <div className="flex items-center gap-2">
-                          <StatusDot variant={dotVar} testId={`admin.requests.row.${reqType}.${id}.dot`} />
-                          <span className="font-medium text-accent">#{id}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-2">
-                        <Badge variant={requestTypeBadgeVariant(reqType)}>{t(requestTypeLabelKey(reqType))}</Badge>
-                      </td>
-                      <td className="px-4 py-2 text-xs text-muted">{label}</td>
-                      {isAdmin ? <td className="px-4 py-2 text-xs text-muted">{userLabel}</td> : null}
-                      <td className="px-4 py-2">
-                        <Badge variant={stateVar}>{t(requestStateLabelKey(st))}</Badge>
-                      </td>
-                      <td className="px-4 py-2 text-xs text-muted">
-                        {(r as any).created_at ? formatDateTime(String((r as any).created_at)) : '—'}
-                      </td>
-                      <td className="px-4 py-2 text-xs text-muted">{apiIpStr}</td>
-                      <td className="px-4 py-2 text-xs text-muted">{clientIpStr}</td>
-                      {isAdmin ? (
-                        <td className="px-4 py-2">
-                          {risk ? (
-                            <Badge variant={risk.variant} title={t('requests.risk.tooltip', { score: risk.score })}>
-                              {t(risk.labelKey)} {risk.score}
-                            </Badge>
-                          ) : (
-                            <span className="text-faint">—</span>
-                          )}
-                        </td>
-                      ) : null}
-                    </TableRowLink>
-                    {expanded ? (
-                      <tr className="border-b border-border/60 bg-surface-2/50" data-testid={`admin.requests.expanded_row.${reqType}.${id}`}>
-                        <td colSpan={colSpan} className="px-4 py-4">
-                          {renderExpandedContent(r)}
-                        </td>
-                      </tr>
-                    ) : null}
-                  </React.Fragment>
-                );
-              })}
-            </tbody>
-          </TableCard>
-        </>
+        <RequestsListContent
+          rows={rows}
+          isAdmin={isAdmin}
+          basePath={basePath}
+          expandedKeys={expandedKeys}
+          canNext={canNext}
+          pageCursor={pageCursor}
+          pagination={pagination}
+          onToggleExpanded={toggleExpanded}
+          renderExpandedContent={renderExpandedContent}
+        />
       )}
     </ListShell>
   );

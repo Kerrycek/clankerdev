@@ -4,6 +4,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
+import {
+  buildPlaywrightEnvironment,
+  relaxChromiumUrlBlocklist,
+  shouldRelaxChromiumPolicy,
+} from './e2e-harness.mjs';
+
 function readPinnedVersion() {
   const envVersion = process.env.PLAYWRIGHT_VERSION?.trim();
   if (envVersion) return envVersion;
@@ -27,7 +33,24 @@ function readPinnedVersion() {
 }
 
 function usage() {
-  console.log(`\nPinned Playwright runner.\n\nUsage:\n  node scripts/playwright.mjs install [args...]\n  node scripts/playwright.mjs test [args...]\n\nNotes:\n  - Version is read from e2e/PLAYWRIGHT_VERSION (or PLAYWRIGHT_VERSION env).\n  - This intentionally uses npx so Playwright stays out of package-lock until we decide to pin it there.\n`);
+  console.log(`
+Pinned Playwright runner.
+
+Usage:
+  node scripts/playwright.mjs install [args...]
+  node scripts/playwright.mjs test [args...]
+  node scripts/playwright.mjs test --container [args...]
+
+Runner-only test flags:
+  --container                  Use system Chromium, disable artifacts, and temporarily relax local URLBlocklist policy.
+  --auto-system-chromium       Set E2E_CHROMIUM_EXECUTABLE_PATH from common Chromium paths when unset.
+  --no-artifacts               Set E2E_RECORD_ARTIFACTS=0 when unset.
+  --relax-chromium-policy      Temporarily remove blocking '*' entries from Chromium URLBlocklist policies.
+
+Notes:
+  - Version is read from e2e/PLAYWRIGHT_VERSION (or PLAYWRIGHT_VERSION env).
+  - This intentionally uses npx so Playwright stays out of package-lock until we decide to pin it there.
+`);
 }
 
 const [action, ...args] = process.argv.slice(2);
@@ -43,41 +66,44 @@ if (action !== 'install' && action !== 'test') {
   process.exit(2);
 }
 
-// Convenience: allow `--smoke` / `--smoke-mobile` without fragile regex quoting.
-// These expand to a grep pattern that matches the tag as a standalone token.
-const normalizedArgs = [];
-for (const a of args) {
-  if (a === '--smoke') {
-    normalizedArgs.push('--grep', '(^|\\s)@smoke(\\s|$)');
-    continue;
+const harness = buildPlaywrightEnvironment({ action, args });
+for (const note of harness.notes) console.error(`[e2e] ${note}`);
+for (const warning of harness.warnings) console.error(`[e2e] Warning: ${warning}`);
+
+let restoreChromiumPolicy = () => [];
+if (shouldRelaxChromiumPolicy({ action, options: harness.options, env: harness.env })) {
+  const relaxed = relaxChromiumUrlBlocklist({});
+  restoreChromiumPolicy = relaxed.restore;
+  if (relaxed.changed === 0 && relaxed.warnings.length === 0) {
+    console.error('[e2e] No blocking Chromium URLBlocklist policy found.');
   }
-  if (a === '--smoke-mobile') {
-    normalizedArgs.push('--grep', '(^|\\s)@smoke-mobile(\\s|$)');
-    continue;
-  }
-  if (a === '--pr-smoke') {
-    normalizedArgs.push('--grep', '(^|\\s)@pr-smoke(\\s|$)');
-    continue;
-  }
-  if (a === '--pr-smoke-mobile') {
-    normalizedArgs.push('--grep', '(^|\\s)@pr-smoke-mobile(\\s|$)');
-    continue;
-  }
-  if (a === '--live-manual') {
-    normalizedArgs.push('--grep', '(^|\\s)@live-manual(\\s|$)');
-    continue;
-  }
-  normalizedArgs.push(a);
+  for (const note of relaxed.notes) console.error(`[e2e] ${note}`);
+  for (const warning of relaxed.warnings) console.error(`[e2e] Warning: ${warning}`);
 }
 
 const version = readPinnedVersion();
 const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
 
-const cmdArgs = ['-y', `@playwright/test@${version}`, action, ...normalizedArgs];
+const cmdArgs = ['-y', `@playwright/test@${version}`, action, ...harness.playwrightArgs];
 
-const res = spawnSync(npxCmd, cmdArgs, {
-  stdio: 'inherit',
-  env: process.env,
-});
+let res;
+try {
+  res = spawnSync(npxCmd, cmdArgs, {
+    stdio: 'inherit',
+    env: harness.env,
+  });
+} finally {
+  for (const warning of restoreChromiumPolicy()) console.error(`[e2e] Warning: ${warning}`);
+}
 
-process.exit(res.status ?? 1);
+if (res?.error) {
+  console.error(`[e2e] Failed to run Playwright: ${res.error.message}`);
+  process.exit(1);
+}
+
+if (res?.signal) {
+  const signalExitCode = res.signal === 'SIGINT' ? 130 : res.signal === 'SIGTERM' ? 143 : 1;
+  process.exit(signalExitCode);
+}
+
+process.exit(res?.status ?? 1);

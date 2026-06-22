@@ -193,6 +193,7 @@ export async function fetchVpsList(opts?: {
   node?: number;
   location?: number;
   environment?: number;
+  includes?: string;
   /** Optional abort signal (used by command palette for rapid typing). */
   signal?: AbortSignal;
 }) {
@@ -213,6 +214,7 @@ export async function fetchVpsList(opts?: {
     path: '/vpses',
     namespace: 'vps',
     params,
+    meta: opts?.includes ? { includes: opts.includes } : undefined,
     signal: opts?.signal,
   });
   return { ...res, data: expectArray<Vps>(res.data, 'vpses') };

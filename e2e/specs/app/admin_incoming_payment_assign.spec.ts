@@ -9,12 +9,12 @@ test('admin incoming payment: assign to user', async ({ page }) => {
   const haveApiMock = await installHaveApiMock(page, { user: { id: 1, login: 'admin', level: 100 } });
 
   let assigned = false;
-  let assignedUser: any = null;
+  let assignedUser: { id: number; login: string } | null = null;
   let state: string = 'unmatched';
 
   const paymentId = 300;
 
-  function paymentEnvelope(): any {
+  function paymentEnvelope() {
     return {
       id: paymentId,
       state,
@@ -93,11 +93,24 @@ test('admin incoming payment: assign to user', async ({ page }) => {
 
   await page.goto(withAppUrl('/admin/payments/incoming/300'));
 
+  await expect(page.getByTestId('admin.payments.incoming.state.review')).toContainText(/No change/);
+  await expect(page.getByTestId('admin.payments.incoming.state.save')).toBeDisabled();
+
+  await page.getByTestId('admin.payments.incoming.state.select').selectOption('ignored');
+  await expect(page.getByTestId('admin.payments.incoming.state.review.warning')).toContainText(/Ignored payments leave/);
+  await expect(page.getByTestId('admin.payments.incoming.state.save')).toBeEnabled();
+
   await expect(page.getByTestId('admin.payments.incoming.assign.open')).toBeEnabled();
   await page.getByTestId('admin.payments.incoming.assign.open').click();
 
   await expect(page.getByTestId('admin.payments.incoming.assign.user_id')).toBeVisible();
+  await expect(page.getByTestId('admin.payments.incoming.assign.review')).toContainText(/Assignment review/);
+  await expect(page.getByTestId('admin.payments.incoming.assign.submit')).toBeDisabled();
+
   await page.getByTestId('admin.payments.incoming.assign.user_id').fill('123');
+  await expect(page.getByTestId('admin.payments.incoming.assign.review.user')).toContainText('#123');
+  await expect(page.getByTestId('admin.payments.incoming.assign.review.state')).toContainText(/Processed/);
+  await expect(page.getByTestId('admin.payments.incoming.assign.submit')).toBeEnabled();
 
   await page.getByTestId('admin.payments.incoming.assign.submit').click();
 

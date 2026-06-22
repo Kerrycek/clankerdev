@@ -23,22 +23,22 @@ const BANNED = [
 
   {
     code: 'modal_isopen_prop',
-    pattern: /<Modal[^>]*isOpen=/,
+    pattern: /<Modal[^>]*\bisOpen=/,
     message: 'Found `<Modal isOpen=...>`. Modal expects `open`, not `isOpen`.',
   },
   {
     code: 'drawer_onopenchange_prop',
-    pattern: /<Drawer[^>]*onOpenChange=/,
+    pattern: /<Drawer[^>]*\bonOpenChange=/,
     message: 'Found `<Drawer onOpenChange=...>`. Drawer expects `onClose`.',
   },
   {
     code: 'select_label_prop',
-    pattern: /<Select[^>]*label=/,
+    pattern: /<Select[^>]*\blabel=/,
     message: 'Found `<Select label=...>`. Select does not render labels; render a visible label element separately.',
   },
   {
     code: 'input_label_prop',
-    pattern: /<Input[^>]*label=/,
+    pattern: /<Input[^>]*\blabel=/,
     message: 'Found `<Input label=...>`. Input does not render labels; render a visible label element separately.',
   },
   {

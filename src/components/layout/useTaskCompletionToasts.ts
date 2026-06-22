@@ -14,6 +14,7 @@ import {
   isFinishedChainState,
 } from '../../lib/taskStatus';
 import { extractRelatedTransactionChainIdFromActionState } from '../../lib/taskLinks';
+import { classifyActionState, operationLabel } from '../../lib/operationTaxonomy';
 import type { TrackedActionState } from './ChromeContext';
 
 function uniqPositiveInts(list: number[], max: number): number[] {
@@ -44,6 +45,7 @@ function safeActionLabel(opts: {
   }
 
   if (tracked.actionLabel) return tracked.actionLabel;
+  if (actionState) return operationLabel(classifyActionState(actionState), t);
 
   const label = actionState && (actionState as any).label ? String((actionState as any).label) : '';
   if (label) return label;

@@ -8,13 +8,14 @@ import { Drawer } from '../../../components/ui/Drawer';
 import { FilterChip } from '../../../components/ui/FilterChip';
 import { Input } from '../../../components/ui/Input';
 import { NodeLookupInput } from '../../../components/ui/NodeLookupInput';
+import { Select } from '../../../components/ui/Select';
 import { SmartFilterInput, type SmartFilterSuggestion } from '../../../components/ui/SmartFilterInput';
 import { SmartInputHelp } from '../../../components/ui/SmartInputHelp';
 import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 
-import type { VpsListTranslator } from './vpsListSemantics';
+import type { VpsListStateFilter, VpsListTranslator } from './vpsListSemantics';
 
-interface VpsListFiltersProps {
+export interface VpsListFiltersProps {
   mode: 'app' | 'admin';
   t: VpsListTranslator;
   smart: string;
@@ -38,6 +39,10 @@ interface VpsListFiltersProps {
   setUserId: (value: string) => void;
   userNamespaceMapId: string;
   setUserNamespaceMapId: (value: string) => void;
+  locationId: string;
+  setLocationId: (value: string) => void;
+  stateFilter: VpsListStateFilter;
+  setStateFilter: (value: VpsListStateFilter) => void;
   onCopyLink: () => void;
 }
 
@@ -127,6 +132,10 @@ export function VpsListFilters(props: VpsListFiltersProps) {
             description: props.t('vps.list.smart_help.examples.hostname'),
           },
           {
+            example: 'state:running',
+            description: props.t('vps.list.smart_help.examples.state'),
+          },
+          {
             example: 'user:alice',
             description: props.t('vps.list.smart_help.examples.user'),
           },
@@ -142,9 +151,24 @@ export function VpsListFilters(props: VpsListFiltersProps) {
             example: 'hostname:db-01',
           },
           {
+            key: 'ip',
+            description: props.t('vps.list.smart_help.keys.ip'),
+            example: 'ip:198.51.100.10',
+          },
+          {
+            key: 'state',
+            description: props.t('vps.list.smart_help.keys.state'),
+            example: 'state:busy',
+          },
+          {
             key: 'node',
             description: props.t('vps.list.smart_help.keys.node'),
             example: 'node:15',
+          },
+          {
+            key: 'location',
+            description: props.t('vps.list.smart_help.keys.location'),
+            example: 'location:1',
           },
           {
             key: 'user',
@@ -209,6 +233,25 @@ export function VpsListFilters(props: VpsListFiltersProps) {
         }
       >
         <div className="space-y-4">
+          <div>
+            <div className="text-sm font-medium">{props.t('vps.list.filter.state.label')}</div>
+            <div className="mt-1">
+              <Select
+                value={props.stateFilter}
+                onChange={(event) => props.setStateFilter(event.target.value as VpsListStateFilter)}
+                ariaLabel={props.t('vps.list.filter.state.label')}
+                testId="vps.filter.state.select"
+                options={[
+                  { value: 'all', label: props.t('vps.list.filter.state.all') },
+                  { value: 'running', label: props.t('vps.list.filter.state.running') },
+                  { value: 'stopped', label: props.t('vps.list.filter.state.stopped') },
+                  { value: 'busy', label: props.t('vps.list.filter.state.busy') },
+                  { value: 'failed', label: props.t('vps.list.filter.state.failed') },
+                ]}
+              />
+            </div>
+          </div>
+
           {props.mode === 'admin' ? (
             <div>
               <div className="text-sm font-medium">{props.t('vps.list.filter.node.label')}</div>
@@ -240,6 +283,20 @@ export function VpsListFilters(props: VpsListFiltersProps) {
               </div>
             </div>
           ) : null}
+
+          <div>
+            <div className="text-sm font-medium">{props.t('vps.list.filter.location.label')}</div>
+            <div className="mt-1">
+              <Input
+                value={props.locationId}
+                onChange={(e) => props.setLocationId(e.target.value)}
+                placeholder={props.t('vps.list.filter.location.placeholder')}
+                testId="vps.filter.location.input"
+                ariaLabel={props.t('vps.list.filter.location.placeholder')}
+                inputMode="numeric"
+              />
+            </div>
+          </div>
 
           <div>
             <div className="text-sm font-medium">{props.t('vps.list.filter.user_namespace_map.label')}</div>

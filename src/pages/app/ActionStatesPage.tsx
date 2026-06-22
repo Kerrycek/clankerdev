@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueries } from '@tanstack/react-query';
-import { CircleHelp, Pin, PinOff, SlidersHorizontal } from 'lucide-react';
+import { CircleHelp, SlidersHorizontal } from 'lucide-react';
 
 import { cancelActionState, fetchActionState, fetchActionStates, type ActionState } from '../../lib/api/actionStates';
 import { useAppMode } from '../../app/appMode';
@@ -12,8 +12,6 @@ import { ListShell } from '../../components/layout/ListShell';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { useChrome } from '../../components/layout/ChromeContext';
 import { Alert } from '../../components/ui/Alert';
-import { Badge } from '../../components/ui/Badge';
-import { StatusDot } from '../../components/ui/StatusDot';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { Checkbox } from '../../components/ui/Checkbox';
@@ -29,65 +27,33 @@ import { Input } from '../../components/ui/Input';
 import { KeysetPagination } from '../../components/ui/KeysetPagination';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { Select } from '../../components/ui/Select';
-import { clsx } from '../../components/ui/clsx';
-import { toneProgressFillClass, toneSurfaceClass, type ToneVariant } from '../../components/ui/tone';
-import { formatDateTime } from '../../lib/format';
 import { parseNumericToken, splitKeyValueToken, tokenizeSmartInput, unquoteSmartValue } from '../../lib/smartFilter';
+import {
+  classifyActionState,
+  operationCategoryLabel,
+  operationLabel,
+  operationSeverityLabel,
+  operationVisibilityLabel,
+} from '../../lib/operationTaxonomy';
+import {
+  ACTION_STATE_VISIBILITY_FILTERS,
+  actionStateMatchesVisibilityFilter,
+  actionStateVisibilityFromUrl,
+  canonicalActionStateSmartKey,
+  normalizeIds,
+  parseBoolToken,
+  parseOrderToken,
+  parseVisibilityToken,
+  type ActionStateVisibilityFilter,
+} from './ActionStatesFilterModel';
 import { useKeysetPagination } from '../../lib/hooks/useKeysetPagination';
 import { cursorFromAscendingPage, cursorFromDescendingPage } from '../../lib/lockIndex';
-import { extractRelatedTransactionChainIdFromActionState } from '../../lib/taskLinks';
 import {
-  actionStateBadge,
-  actionStateProgressLabel,
-  actionStateProgressPercent,
   isFailingActionState,
   isFinishedActionState,
 } from '../../lib/taskStatus';
 import { useActionStatePollIntervalMs, useTierAIntervalMs } from '../../lib/refreshTiers';
-
-function normalizeIds(ids: number[], limit: number): number[] {
-  const out: number[] = [];
-  const seen = new Set<number>();
-  for (const raw of ids) {
-    const n = Number(raw);
-    if (!Number.isFinite(n) || n <= 0) continue;
-    const id = Math.floor(n);
-    if (seen.has(id)) continue;
-    seen.add(id);
-    out.push(id);
-    if (out.length >= limit) break;
-  }
-  return out;
-}
-
-type SmartKey = 'q' | 'errors' | 'order' | 'id';
-
-function canonicalKey(raw: string): SmartKey | null {
-  const k = raw.trim().toLowerCase();
-  if (!k) return null;
-
-  if (['q', 'query', 'label', 'name', 'search', 'text'].includes(k)) return 'q';
-  if (['errors', 'error', 'err', 'failed', 'fail'].includes(k)) return 'errors';
-  if (['order', 'sort'].includes(k)) return 'order';
-  if (['id', '#', 'action', 'action_state', 'action_state_id', 'as'].includes(k)) return 'id';
-  return null;
-}
-
-function parseBoolToken(value: string): boolean | null {
-  const v = value.trim().toLowerCase();
-  if (!v) return null;
-  if (v === '1' || v === 'true' || v === 'yes' || v === 'on') return true;
-  if (v === '0' || v === 'false' || v === 'no' || v === 'off') return false;
-  return null;
-}
-
-function parseOrderToken(value: string): 'newest' | 'oldest' | null {
-  const v = value.trim().toLowerCase();
-  if (!v) return null;
-  if (v === 'newest' || v === 'latest' || v === 'desc' || v === 'down') return 'newest';
-  if (v === 'oldest' || v === 'asc' || v === 'up') return 'oldest';
-  return null;
-}
+import { ActionStateListRow, type ActionStateRowItem } from './ActionStateListRow';
 
 export function ActionStatesPage() {
   const { basePath } = useAppMode();
@@ -115,9 +81,10 @@ export function ActionStatesPage() {
 
   const qText = useMemo(() => sp.get('q') ?? '', [sp]);
   const errorsOnly = useMemo(() => sp.get('errors') === '1', [sp]);
+  const visibilityFilter = useMemo(() => actionStateVisibilityFromUrl(sp.get('visibility')), [sp]);
   const needle = useMemo(() => qText.trim().toLowerCase(), [qText]);
 
-  const filtersActive = Boolean(qText.trim() || errorsOnly);
+  const filtersActive = Boolean(qText.trim() || errorsOnly || visibilityFilter !== 'all');
 
   const setOrderInUrl = (next: 'newest' | 'oldest') => {
     setSp((prev) => {
@@ -145,6 +112,16 @@ export function ActionStatesPage() {
     });
   };
 
+
+  const setVisibilityFilterInUrl = (next: ActionStateVisibilityFilter) => {
+    setSp((prev) => {
+      const p = new URLSearchParams(prev);
+      if (next === 'all') p.delete('visibility');
+      else p.set('visibility', next);
+      return p;
+    });
+  };
+
   const clearFilters = () => {
     setSmart('');
     setSmartErrors([]);
@@ -153,6 +130,7 @@ export function ActionStatesPage() {
       const p = new URLSearchParams(prev);
       p.delete('q');
       p.delete('errors');
+      p.delete('visibility');
       // keep order
       return p;
     });
@@ -183,6 +161,7 @@ export function ActionStatesPage() {
     let nextOrder: 'newest' | 'oldest' = order;
     let nextQ = qText;
     let nextErrors = errorsOnly;
+    let nextVisibility = visibilityFilter;
 
     const free: string[] = [];
     const errs: string[] = [];
@@ -194,7 +173,7 @@ export function ActionStatesPage() {
         const rawValue = kv.rawValue;
         const value = unquoteSmartValue(rawValue);
 
-        const key = canonicalKey(rawKey);
+        const key = canonicalActionStateSmartKey(rawKey);
         if (!key) {
           errs.push(t('filters.smart.error.unknown_key', { key: rawKey }));
           continue;
@@ -240,6 +219,14 @@ export function ActionStatesPage() {
           continue;
         }
 
+
+        if (key === 'visibility') {
+          const next = parseVisibilityToken(value);
+          if (!next) errs.push(t('action_states.smart.error.invalid_visibility', { value }));
+          else nextVisibility = next;
+          continue;
+        }
+
         errs.push(t('filters.smart.error.unknown_key', { key: rawKey }));
         continue;
       }
@@ -248,6 +235,12 @@ export function ActionStatesPage() {
       const low = plain.trim().toLowerCase();
       if (low === 'errors' || low === 'error' || low === 'failed' || low === 'fail') {
         nextErrors = true;
+        continue;
+      }
+
+      const visibilityAlias = parseVisibilityToken(low);
+      if (visibilityAlias && low !== 'all') {
+        nextVisibility = visibilityAlias;
         continue;
       }
 
@@ -269,6 +262,8 @@ export function ActionStatesPage() {
       else p.delete('q');
       if (nextErrors) p.set('errors', '1');
       else p.delete('errors');
+      if (nextVisibility === 'all') p.delete('visibility');
+      else p.set('visibility', nextVisibility);
       return p;
     });
 
@@ -335,6 +330,22 @@ export function ActionStatesPage() {
       return suggestions;
     }
 
+    const suggestedVisibility = parseVisibilityToken(low);
+    if (suggestedVisibility && suggestedVisibility !== 'all') {
+      suggestions.push({
+        id: `visibility:${suggestedVisibility}`,
+        primary: t(`action_states.visibility.${suggestedVisibility}`),
+        secondary: t('action_states.smart.suggest.visibility.secondary'),
+        onPick: () => {
+          setVisibilityFilterInUrl(suggestedVisibility);
+          setSmart('');
+          setSmartErrors([]);
+        },
+        testId: 'action_states.smart_filter.suggest.visibility',
+      });
+      return suggestions;
+    }
+
     suggestions.push({
       id: 'search',
       primary: t('action_states.smart.suggest.search', { value: needle }),
@@ -348,7 +359,7 @@ export function ActionStatesPage() {
     });
 
     return suggestions;
-  }, [applySmartText, basePath, errorsOnly, navigate, order, qText, setErrorsOnlyInUrl, setQueryInUrl, smartNeedle, t]);
+  }, [applySmartText, basePath, errorsOnly, navigate, order, qText, setErrorsOnlyInUrl, setQueryInUrl, setVisibilityFilterInUrl, smartNeedle, t]);
 
   const activeFilterChips = useMemo(() => {
     const chips: React.ReactNode[] = [];
@@ -377,6 +388,18 @@ export function ActionStatesPage() {
       );
     }
 
+    if (visibilityFilter !== 'all') {
+      chips.push(
+        <FilterChip
+          key="visibility"
+          label={t('action_states.visibility.chip', { value: t(`action_states.visibility.${visibilityFilter}`) })}
+          tone={visibilityFilter === 'system' ? 'info' : visibilityFilter === 'admin' ? 'warn' : 'neutral'}
+          onRemove={() => setVisibilityFilterInUrl('all')}
+          testId="action_states.chip.visibility"
+        />
+      );
+    }
+
     smartErrors.forEach((e, idx) => {
       chips.push(
         <FilterChip
@@ -390,11 +413,11 @@ export function ActionStatesPage() {
     });
 
     return chips;
-  }, [errorsOnly, qText, setErrorsOnlyInUrl, setQueryInUrl, smartErrors]);
+  }, [errorsOnly, qText, setErrorsOnlyInUrl, setQueryInUrl, setVisibilityFilterInUrl, smartErrors, t, visibilityFilter]);
 
   const pagination = useKeysetPagination({
     id: 'action_states.list',
-    filterKey: JSON.stringify({ order, q: qText.trim(), errors: errorsOnly, scope: basePath }),
+    filterKey: JSON.stringify({ order, q: qText.trim(), errors: errorsOnly, visibility: visibilityFilter, scope: basePath }),
     searchParams: sp,
     setSearchParams: setSp,
     defaultLimit: 50,
@@ -452,7 +475,7 @@ export function ActionStatesPage() {
   const hasMore = (q.data ?? []).length >= pagination.limit;
 
   const merged = useMemo(() => {
-    const map = new Map<number, { s: ActionState; tracked: boolean; pinned: boolean }>();
+    const map = new Map<number, ActionStateRowItem>();
 
     const upsert = (sid: number, s: ActionState, flags: { tracked?: boolean; pinned?: boolean }) => {
       const prev = map.get(sid);
@@ -529,16 +552,33 @@ export function ActionStatesPage() {
       rows = rows.filter((x) => isFailingActionState(x.s));
     }
 
+    if (visibilityFilter !== 'all') {
+      rows = rows.filter((x) => actionStateMatchesVisibilityFilter(x.s, visibilityFilter));
+    }
+
     if (needle) {
       rows = rows.filter((x) => {
-        const id = Number((x.s as any).id);
-        const label = (x.s as any).label ? String((x.s as any).label) : `#${id}`;
-        return String(id).includes(needle) || label.toLowerCase().includes(needle);
+        const id = Number(x.s.id);
+        const rawLabel = x.s.label ? String(x.s.label) : `#${id}`;
+        const op = classifyActionState(x.s);
+        const taxonomyLabel = op.key.endsWith('.unknown') ? op.fallbackLabel : operationLabel(op, t);
+        const haystack = [
+          String(id),
+          rawLabel,
+          taxonomyLabel,
+          operationCategoryLabel(op, t),
+          operationSeverityLabel(op, t),
+          operationVisibilityLabel(op, t),
+          op.matchText,
+        ]
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(needle);
       });
     }
 
     return rows;
-  }, [errorsOnly, merged, needle]);
+  }, [errorsOnly, merged, needle, t, visibilityFilter]);
 
   const pinnedRows = useMemo(() => filtered.filter((x) => x.pinned), [filtered]);
   const restRows = useMemo(() => filtered.filter((x) => !x.pinned), [filtered]);
@@ -572,122 +612,25 @@ export function ActionStatesPage() {
     },
   });
 
-  const renderRow = (x: { s: ActionState; tracked: boolean; pinned: boolean }) => {
-    const s = x.s;
-    const id = Number((s as any).id);
-    const label = (s as any).label ? String((s as any).label) : `#${id}`;
-    const badge = actionStateBadge(s);
-    const toneVariant: ToneVariant | undefined = ((): ToneVariant | undefined => {
-      const v = badge.variant;
-      if (v === 'ok' || v === 'warn' || v === 'danger' || v === 'info' || v === 'neutral') return v;
-      return undefined;
-    })();
-    const dotVariant = toneVariant && toneVariant !== 'muted' ? toneVariant : 'neutral';
-    const pct = actionStateProgressPercent(s);
-    const pLabel = actionStateProgressLabel(s);
-
-    const relatedChainId = extractRelatedTransactionChainIdFromActionState(s);
-
+  const renderRow = (x: ActionStateRowItem) => {
+    const id = Number(x.s.id);
     const highlight = chrome.highlightActionStateId != null && chrome.highlightActionStateId === id;
 
-    const createdAt = (s as any).created_at ? formatDateTime(String((s as any).created_at)) : null;
-    const updatedAt = (s as any).updated_at ? formatDateTime(String((s as any).updated_at)) : null;
-
-    const meta: React.ReactNode[] = [];
-    meta.push(<span key="id">#{id}</span>);
-    if (createdAt) meta.push(<span key="created">{t('tasks.meta.created', { time: createdAt })}</span>);
-    if (updatedAt) meta.push(<span key="updated">{t('tasks.meta.updated', { time: updatedAt })}</span>);
-
-    const pinLabel = x.pinned ? t('tasks.action.unpin') : t('tasks.action.pin');
-
     return (
-      <div
+      <ActionStateListRow
         key={id}
-        className={clsx('rounded-md border p-3', toneSurfaceClass(toneVariant), highlight ? 'ring-1 ring-warn-border' : null)}
-        data-testid={`action_states.row.${id}`}
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <StatusDot variant={dotVariant} title={badge.label} />
-              <Link className="text-fg underline" to={`${basePath}/action-states/${id}`}>
-                {label}
-              </Link>
-            </div>
-
-            <div className="mt-1 text-xs text-faint">
-              {meta.map((p, i) => (
-                <React.Fragment key={i}>
-                  {i > 0 ? ' · ' : null}
-                  {p}
-                </React.Fragment>
-              ))}
-
-              {relatedChainId ? (
-                <>
-                  {meta.length > 0 ? ' · ' : null}
-                  <Link className="underline" to={`${basePath}/transactions/${relatedChainId}`}>
-                    {t('tasks.meta.chain', { id: relatedChainId })}
-                  </Link>
-                </>
-              ) : null}
-            </div>
-
-            {pLabel ? (
-              <div className="mt-1 text-xs text-faint">{t('tasks.meta.progress', { progress: pLabel })}</div>
-            ) : null}
-          </div>
-
-          <div className="flex flex-col items-end gap-2">
-            <Badge variant={badge.variant}>{badge.label}</Badge>
-
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="px-2"
-                onClick={() => chrome.togglePinnedActionState(id)}
-                title={pinLabel}
-                ariaLabel={pinLabel}
-              >
-                {x.pinned ? <PinOff size={16} /> : <Pin size={16} />}
-              </Button>
-
-              {Boolean((s as any).can_cancel) && !isFinishedActionState(s) ? (
-                <Button
-                  size="sm"
-                  variant="danger"
-                  onClick={() => {
-                    setCancelError(null);
-                    setCancelTarget(s);
-                  }}
-                  disabled={cancelM.isPending}
-                >
-                  {t('tasks.action.cancel')}
-                </Button>
-              ) : null}
-
-              {x.tracked ? (
-                <Button size="sm" variant="secondary" onClick={() => chrome.dismissActionState(id)}>
-                  {t('tasks.action.dismiss')}
-                </Button>
-              ) : (
-                <Button size="sm" variant="secondary" onClick={() => chrome.trackActionState(id)}>
-                  {t('tasks.action.track')}
-                </Button>
-              )}
-            </div>
-
-            {pct !== null ? <div className="text-xs text-faint">{pct}%</div> : null}
-          </div>
-        </div>
-
-        {pct !== null ? (
-          <div className="mt-3 h-2 rounded-full bg-surface-2">
-            <div className={clsx('h-2 rounded-full', toneProgressFillClass(toneVariant))} style={{ width: `${pct}%` }} />
-          </div>
-        ) : null}
-      </div>
+        item={x}
+        basePath={basePath}
+        highlighted={highlight}
+        cancelPending={cancelM.isPending}
+        onTogglePinned={(targetId) => chrome.togglePinnedActionState(targetId)}
+        onTrack={(targetId) => chrome.trackActionState(targetId)}
+        onDismiss={(targetId) => chrome.dismissActionState(targetId)}
+        onCancel={(state) => {
+          setCancelError(null);
+          setCancelTarget(state);
+        }}
+      />
     );
   };
 
@@ -748,6 +691,20 @@ export function ActionStatesPage() {
               ) : null}
             </div>
 
+            <div className="flex w-full flex-wrap gap-2 sm:w-auto" data-testid="action_states.visibility.filters">
+              {ACTION_STATE_VISIBILITY_FILTERS.map((value) => (
+                <Button
+                  key={value}
+                  variant={visibilityFilter === value ? 'primary' : 'secondary'}
+                  size="sm"
+                  onClick={() => setVisibilityFilterInUrl(value)}
+                  testId={`action_states.visibility.${value}`}
+                >
+                  {t(`action_states.visibility.${value}`)}
+                </Button>
+              ))}
+            </div>
+
             <div className="w-full sm:w-44">
               <Select
                 testId="action_states.order.select"
@@ -803,12 +760,14 @@ export function ActionStatesPage() {
               { example: 'errors', description: t('action_states.smart_help.examples.errors') },
               { example: 'backup', description: t('action_states.smart_help.examples.search') },
               { example: 'order:oldest', description: t('action_states.smart_help.examples.order') },
+              { example: 'visibility:system', description: t('action_states.smart_help.examples.visibility') },
             ]}
             topKeys={[
               { key: 'q', description: t('action_states.smart_help.keys.q'), example: 'q:backup' },
               { key: 'errors', description: t('action_states.smart_help.keys.errors'), example: 'errors' },
               { key: 'id', description: t('action_states.smart_help.keys.id'), example: 'id:123' },
               { key: 'order', description: t('action_states.smart_help.keys.order'), example: 'order:oldest' },
+              { key: 'visibility', description: t('action_states.smart_help.keys.visibility'), example: 'visibility:user' },
             ]}
             inference={[
               t('action_states.smart_help.inference.enter_applies'),
@@ -880,6 +839,21 @@ export function ActionStatesPage() {
                   description={t('action_states.errors.title')}
                   testId="action_states.advanced.errors"
                 />
+              </div>
+
+              <div>
+                <div className="text-sm font-medium">{t('action_states.visibility.label')}</div>
+                <div className="mt-2">
+                  <Select
+                    testId="action_states.advanced.visibility"
+                    value={visibilityFilter}
+                    onChange={(e) => setVisibilityFilterInUrl(actionStateVisibilityFromUrl(e.target.value))}
+                    options={ACTION_STATE_VISIBILITY_FILTERS.map((value) => ({
+                      value,
+                      label: t(`action_states.visibility.${value}`),
+                    }))}
+                  />
+                </div>
               </div>
             </div>
           </Drawer>

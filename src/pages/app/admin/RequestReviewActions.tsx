@@ -22,6 +22,7 @@ import { LinkButton } from '../../../components/ui/LinkButton';
 import { Modal } from '../../../components/ui/Modal';
 import { Select } from '../../../components/ui/Select';
 import { Textarea } from '../../../components/ui/Textarea';
+import { RequestResolveReview } from './RequestResolveReview';
 
 export type RequestReviewType = 'registration' | 'change';
 export type ReviewableRequest = RegistrationRequest | ChangeRequest;
@@ -40,13 +41,14 @@ export function resourceId(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value) && value > 0) return Math.floor(value);
   if (typeof value === 'string' && /^\d+$/.test(value.trim())) return Number(value.trim());
   if (value && typeof value === 'object') {
-    const raw = (value as any).id ?? (value as any).value;
+    const record = value as Record<string, unknown>;
+    const raw = record['id'] ?? record['value'];
     return resourceId(raw);
   }
   return null;
 }
 
-export function firstResourceId(source: Record<string, unknown> | null | undefined, keys: string[]): number | null {
+export function firstResourceId(source: { [key: string]: unknown } | null | undefined, keys: string[]): number | null {
   if (!source) return null;
   for (const key of keys) {
     const id = resourceId(source[key]);
@@ -57,19 +59,19 @@ export function firstResourceId(source: Record<string, unknown> | null | undefin
 
 export function requestOperationalLinks(request: ReviewableRequest | undefined) {
   return {
-    actionStateId: firstResourceId(request as any, [
+    actionStateId: firstResourceId(request, [
       'action_state',
       'action_state_id',
       'resolve_action_state',
       'resolve_action_state_id',
     ]),
-    transactionChainId: firstResourceId(request as any, [
+    transactionChainId: firstResourceId(request, [
       'transaction_chain',
       'transaction_chain_id',
       'resolve_transaction_chain',
       'resolve_transaction_chain_id',
     ]),
-    transactionId: firstResourceId(request as any, [
+    transactionId: firstResourceId(request, [
       'transaction',
       'transaction_id',
       'resolve_transaction',
@@ -80,7 +82,7 @@ export function requestOperationalLinks(request: ReviewableRequest | undefined) 
 
 export function requestReviewActions(request: ReviewableRequest | undefined, isAdmin: boolean): ResolveUserRequestAction[] {
   if (!isAdmin || !request) return [];
-  const state = String((request as any).state ?? '').trim();
+  const state = String(request.state ?? '').trim();
   if (state !== 'awaiting' && state !== 'pending_correction') return [];
 
   const actions: ResolveUserRequestAction[] = ['approve', 'deny', 'ignore'];
@@ -211,7 +213,7 @@ export function RequestReviewActions(props: {
 
     try {
       if (props.reqType === 'registration') {
-        const p: any = { action: resolveAction, reason };
+        const p: Parameters<typeof resolveRegistrationRequest>[1] = { action: resolveAction, reason };
 
         if (oLogin.trim()) p.login = oLogin.trim();
         if (oFullName.trim()) p.full_name = oFullName.trim();
@@ -231,7 +233,7 @@ export function RequestReviewActions(props: {
         const asId = getMetaActionStateId(res.meta);
         if (asId) chrome.trackActionState(asId);
       } else {
-        const p: any = { action: resolveAction, reason };
+        const p: Parameters<typeof resolveChangeRequest>[1] = { action: resolveAction, reason };
 
         if (oFullName.trim()) p.full_name = oFullName.trim();
         if (oEmail.trim()) p.email = oEmail.trim();
@@ -252,11 +254,12 @@ export function RequestReviewActions(props: {
       setResolveOpen(false);
       await qc.invalidateQueries({ queryKey: ['user_request'] });
       await props.onResolved?.();
-    } catch (e: any) {
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
       toasts.pushToast({
         variant: 'danger',
         title: t('requests.resolve.toast.error.title'),
-        body: e?.message ?? String(e),
+        body: message,
         autoDismissMs: false,
       });
     } finally {
@@ -346,6 +349,28 @@ export function RequestReviewActions(props: {
             {reasonMissing ? <div className="mt-1 text-xs text-danger">{t('requests.resolve.reason_required')}</div> : null}
           </div>
         </div>
+
+        <RequestResolveReview
+          request={props.request}
+          reqType={props.reqType}
+          reqId={props.reqId}
+          action={resolveAction}
+          requiresReason={requiresReason}
+          requiresConfirmation={requiresConfirmation}
+          approveCreateVps={approveCreateVps}
+          approveActivate={approveActivate}
+          approveNode={approveNode}
+          overrides={{
+            login: oLogin,
+            fullName: oFullName,
+            orgName: oOrgName,
+            orgId: oOrgId,
+            email: oEmail,
+            address: oAddress,
+            changeReason: oChangeReason,
+          }}
+          testIdPrefix={props.testIdPrefix}
+        />
 
         {requiresConfirmation ? (
           <label className="mt-4 flex items-start gap-2 rounded-lg border border-danger-border bg-danger-bg p-3 text-sm">

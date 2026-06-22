@@ -1,6 +1,8 @@
 // Ops locale chunk: action_state
 export const csOps_action_state = {
   "action_state.field.can_cancel": "Lze zrušit",
+  "action_state.field.operation": "Operace",
+  "action_state.field.backend_label": "Backend štítek",
   "action_state.field.transaction_chain": "Transakční řetězec",
   "action_state.invalid_id.body": "Neplatné ID stavu akce.",
   "action_state.invalid_id.title": "Neplatný stav akce",

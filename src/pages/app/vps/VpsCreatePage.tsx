@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Plus } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 
@@ -10,191 +10,48 @@ import { useChrome } from '../../../components/layout/ChromeContext';
 import { ListShell } from '../../../components/layout/ListShell';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { SyncStaleBanner } from '../../../components/layout/SyncStaleBanner';
-import { Alert } from '../../../components/ui/Alert';
 import { Button } from '../../../components/ui/Button';
-import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
-import { Checkbox } from '../../../components/ui/Checkbox';
 import { ErrorState } from '../../../components/ui/ErrorState';
-import { Input } from '../../../components/ui/Input';
 import { LoadingState } from '../../../components/ui/LoadingState';
-import { Select } from '../../../components/ui/Select';
-import { Textarea } from '../../../components/ui/Textarea';
-import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 import { fetchDefaultObjectClusterResources } from '../../../lib/api/clusterResources';
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
-import { fetchLocations, type Location } from '../../../lib/api/infra';
-import { fetchNodes, type Node } from '../../../lib/api/nodes';
-import { fetchOsTemplates, type OsTemplate } from '../../../lib/api/osTemplates';
-import { createVps, type CreateVpsPayload } from '../../../lib/api/vps';
-import { formatErrorMessage } from '../../../lib/errors';
+import { fetchLocations } from '../../../lib/api/infra';
+import { fetchNodes } from '../../../lib/api/nodes';
+import { fetchOsTemplates } from '../../../lib/api/osTemplates';
+import { createVps } from '../../../lib/api/vps';
 import { objectRef } from '../../../lib/objectRef';
+import {
+  buildVpsCreatePayload,
+  defaultForm,
+  isVpsHypervisorNode,
+  locationEnvironmentId,
+  optionalResource,
+  osFamilyLabel,
+  RESOURCE_PRESETS,
+  validateForm,
+  type FormState,
+  type HiddenAdminTarget,
+  type ResourcePresetId,
+} from './VpsCreateModel';
+import {
+  CreateAccessHintCard,
+  CreateAdvancedHintCard,
+  CreateIdentityCard,
+  CreateNetworkCard,
+  CreatePageIntroCard,
+  CreateResourcesCard,
+  CreateReviewCard,
+  CreateStepRail,
+  CreateSystemCard,
+  CreateTargetCard,
+} from './VpsCreateWizardPrimitives';
 
-export type FormState = {
-  locationId: string;
-  nodeId: string;
-  osTemplateId: string;
-  userId: string;
-  hostname: string;
-  cpu: string;
-  memory: string;
-  diskspace: string;
-  swap: string;
-  ipv4: string;
-  ipv6: string;
-  ipv4Private: string;
-  start: boolean;
-  info: string;
-};
-
-const HOSTNAME_RE = /^[a-zA-Z0-9][a-zA-Z\-_.0-9]*[a-zA-Z0-9]$/;
-
-export function defaultForm(): FormState {
-  return {
-    locationId: '',
-    nodeId: '',
-    osTemplateId: '',
-    userId: '',
-    hostname: '',
-    cpu: '8',
-    memory: '4096',
-    diskspace: '122880',
-    swap: '0',
-    ipv4: '1',
-    ipv6: '1',
-    ipv4Private: '0',
-    start: true,
-    info: '',
-  };
-}
-
-function toPositiveInt(raw: string): number | undefined {
-  const n = Number(String(raw).trim());
-  if (!Number.isInteger(n) || n <= 0) return undefined;
-  return n;
-}
-
-function toNonNegativeInt(raw: string): number | undefined {
-  const n = Number(String(raw).trim());
-  if (!Number.isInteger(n) || n < 0) return undefined;
-  return n;
-}
-
-function optionalResource(raw: string): number | undefined {
-  const trimmed = String(raw).trim();
-  if (!trimmed) return undefined;
-  return toPositiveInt(trimmed);
-}
-
-function labelOf(x: { id: number; label?: string; name?: string; domain?: string; fqdn?: string }): string {
-  const main = x.label || x.name || x.fqdn || x.domain || `#${x.id}`;
-  return `${main} (#${x.id})`;
-}
-
-function templateLabel(t: OsTemplate): string {
-  const bits = [t.label || t.name || `#${t.id}`, t.distribution, t.version, t.arch].filter(Boolean);
-  return `${bits.join(' · ')} (#${t.id})`;
-}
-
-function nodeLabel(n: Node): string {
-  const loc = n.location?.label || n.location?.domain;
-  return `${n.name || n.fqdn || `#${n.id}`}${loc ? ` · ${loc}` : ''} (#${n.id})`;
-}
-
-function locationEnvironmentId(loc: Location | undefined): number | undefined {
-  const nested = loc?.environment?.id;
-  if (typeof nested === 'number') return nested;
-
-  const raw = loc ? (loc as any).environment_id : undefined;
-  if (typeof raw === 'number') return raw;
-  if (typeof raw === 'string') {
-    const n = Number(raw);
-    if (Number.isFinite(n)) return n;
-  }
-
-  return undefined;
-}
-
-function isVpsHypervisorNode(node: Node): boolean {
-  const typeOk = node.type === undefined || node.type === 'node';
-  const hypervisorOk = node.hypervisor_type === undefined || node.hypervisor_type === 'vpsadminos';
-  return typeOk && hypervisorOk;
-}
-
-export function validateForm(
-  form: FormState,
-  isAdmin: boolean,
-  hiddenAdminTarget?: { userId?: number; nodeId?: number }
-): string[] {
-  const errors: string[] = [];
-  const hostname = form.hostname.trim();
-  if (!hostname) errors.push('vps.create.validation.hostname_required');
-  else if (hostname.length < 2 || hostname.length > 64 || !HOSTNAME_RE.test(hostname)) errors.push('vps.create.validation.hostname_format');
-  if (!optionalResource(form.osTemplateId)) errors.push('vps.create.validation.os_template_required');
-  if (!optionalResource(form.locationId)) errors.push('vps.create.validation.target_required');
-  if (isAdmin) {
-    if (!form.userId.trim()) errors.push('vps.create.validation.user_required');
-    else if (!optionalResource(form.userId)) errors.push('vps.create.validation.user_invalid');
-    if (!optionalResource(form.nodeId)) errors.push('vps.create.validation.node_required');
-  } else if (hiddenAdminTarget) {
-    if (!hiddenAdminTarget.userId) errors.push('vps.create.validation.user_required');
-    if (!hiddenAdminTarget.nodeId) errors.push('vps.create.validation.auto_node_required');
-  }
-
-  const numeric: Array<[keyof FormState, number, number, string]> = [
-    ['cpu', 1, 32, 'vps.create.validation.cpu'],
-    ['memory', 512, 131072, 'vps.create.validation.memory'],
-    ['diskspace', 1024, 10485760, 'vps.create.validation.diskspace'],
-    ['swap', 0, 12288, 'vps.create.validation.swap'],
-    ['ipv4', 0, 64, 'vps.create.validation.ipv4'],
-    ['ipv6', 0, 64, 'vps.create.validation.ipv6'],
-    ['ipv4Private', 0, 64, 'vps.create.validation.ipv4_private'],
-  ];
-
-  for (const [key, min, max, msg] of numeric) {
-    const n = Number(form[key]);
-    if (!Number.isInteger(n) || n < min || n > max) errors.push(msg);
-  }
-
-  return errors;
-}
-
-export function buildVpsCreatePayload(
-  form: FormState,
-  opts: {
-    isAdminMode: boolean;
-    needsAdminPayload: boolean;
-    hiddenAdminTarget?: { userId?: number; nodeId?: number };
-  }
-): CreateVpsPayload {
-  const commonPayload = {
-    hostname: form.hostname.trim(),
-    os_template: optionalResource(form.osTemplateId),
-    start: form.start,
-    cpu: toPositiveInt(form.cpu),
-    memory: toPositiveInt(form.memory),
-    diskspace: toPositiveInt(form.diskspace),
-    swap: toNonNegativeInt(form.swap),
-    ipv4: toNonNegativeInt(form.ipv4),
-    ipv6: toNonNegativeInt(form.ipv6),
-    ipv4_private: toNonNegativeInt(form.ipv4Private),
-  };
-
-  if (opts.needsAdminPayload) {
-    return {
-      ...commonPayload,
-      mode: 'admin',
-      node: (opts.isAdminMode ? optionalResource(form.nodeId) : opts.hiddenAdminTarget?.nodeId) as number,
-      user: (opts.isAdminMode ? optionalResource(form.userId) : opts.hiddenAdminTarget?.userId) as number,
-      info: opts.isAdminMode ? form.info : '',
-    };
-  }
-
-  return {
-    ...commonPayload,
-    mode: 'user',
-    location: optionalResource(form.locationId),
-  };
-}
+export {
+  buildVpsCreatePayload,
+  defaultForm,
+  validateForm,
+  type FormState,
+} from './VpsCreateModel';
 
 export function VpsCreatePage() {
   const { basePath, mode } = useAppMode();
@@ -253,22 +110,36 @@ export function VpsCreatePage() {
     enabled: selectedEnvironmentId !== undefined,
   });
 
-  const nodes = needsAdminPayload ? (nodesQ.data ?? []).filter(isVpsHypervisorNode) : [];
-  const hiddenAdminTarget = !isAdminMode && isAdminAccount
-    ? { userId: auth.user?.id, nodeId: nodes[0]?.id }
-    : undefined;
+  const nodes = useMemo(
+    () => (needsAdminPayload ? (nodesQ.data ?? []).filter(isVpsHypervisorNode) : []),
+    [needsAdminPayload, nodesQ.data]
+  );
+  const hiddenAdminTarget = useMemo<HiddenAdminTarget | undefined>(
+    () => (!isAdminMode && isAdminAccount ? { userId: auth.user?.id, nodeId: nodes[0]?.id } : undefined),
+    [auth.user?.id, isAdminAccount, isAdminMode, nodes]
+  );
+  const templates = templatesQ.data ?? [];
+  const selectedTemplateId = optionalResource(form.osTemplateId);
+  const selectedTemplate = useMemo(
+    () => templates.find((tpl) => Number(tpl.id) === selectedTemplateId),
+    [selectedTemplateId, templates]
+  );
+  const selectedNodeId = optionalResource(form.nodeId);
+  const selectedNode = useMemo(
+    () => nodes.find((node) => Number(node.id) === selectedNodeId),
+    [nodes, selectedNodeId]
+  );
   const templatesByFamily = useMemo(() => {
-    const groups = new Map<string, OsTemplate[]>();
-    for (const tpl of templatesQ.data ?? []) {
-      const family = tpl.os_family as any;
-      const label = family?.label || family?.name || (family?.id ? `#${family.id}` : t('vps.create.option.other_templates'));
-      const list = groups.get(label) ?? [];
+    const groups = new Map<string, typeof templates>();
+    for (const tpl of templates) {
+      const family = osFamilyLabel(tpl.os_family, t('vps.create.option.other_templates'));
+      const list = groups.get(family) ?? [];
       list.push(tpl);
-      groups.set(label, list);
+      groups.set(family, list);
     }
 
     return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
-  }, [t, templatesQ.data]);
+  }, [t, templates]);
 
   useEffect(() => {
     const defaults = defaultResourcesQ.data;
@@ -298,11 +169,12 @@ export function VpsCreatePage() {
   );
   const canSubmit = validationKeys.length === 0;
 
+  // audit:ignore missing-local-lock -- create has no stable VPS object ref before the API returns the new id.
   const createM = useMutation({
     mutationFn: async () => {
       const errors = validateForm(form, isAdminMode, hiddenAdminTarget);
       if (errors.length > 0) {
-        const err: any = new Error('validation');
+        const err = new Error('validation') as Error & { validationKeys?: string[] };
         err.validationKeys = errors;
         throw err;
       }
@@ -328,13 +200,11 @@ export function VpsCreatePage() {
           object: Number.isFinite(vpsId) ? objectRef('Vps', vpsId) : undefined,
         });
         chrome.openTasks();
-        if (Number.isFinite(vpsId)) navigate(`${effectiveBasePath}/vps/${vpsId}`);
-        else navigate(`${effectiveBasePath}/vps`);
+        navigate(Number.isFinite(vpsId) ? `${effectiveBasePath}/vps/${vpsId}` : `${effectiveBasePath}/vps`);
         return;
       }
 
-      if (Number.isFinite(vpsId)) navigate(`${effectiveBasePath}/vps/${vpsId}`);
-      else navigate(`${effectiveBasePath}/vps`);
+      navigate(Number.isFinite(vpsId) ? `${effectiveBasePath}/vps/${vpsId}` : `${effectiveBasePath}/vps`);
     },
   });
 
@@ -345,8 +215,21 @@ export function VpsCreatePage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  function label(text: string, htmlFor?: string) {
-    return <label htmlFor={htmlFor} className="mb-1 block text-sm font-medium text-fg">{text}</label>;
+  function applyResourcePreset(presetId: string) {
+    const preset = RESOURCE_PRESETS.find((item) => item.id === (presetId as ResourcePresetId));
+    if (!preset) return;
+    setForm((prev) => ({
+      ...prev,
+      cpu: preset.cpu,
+      memory: preset.memory,
+      diskspace: preset.diskspace,
+      swap: preset.swap,
+    }));
+  }
+
+  function submit() {
+    setSubmitted(true);
+    if (canSubmit) createM.mutate();
   }
 
   return (
@@ -386,118 +269,47 @@ export function VpsCreatePage() {
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="space-y-4">
-            <Card testId="vps.create.target">
-              <CardHeader title={t('vps.create.section.target')} subtitle={t('vps.create.section.target_help')} />
-              <CardBody className="grid gap-4 md:grid-cols-2">
-                {isAdminMode ? (
-                  <div>
-                    {label(t('vps.create.field.user'))}
-                    <UserLookupInput value={form.userId} onChange={(v) => update('userId', v)} testId="vps.create.user" placeholder={t('vps.create.placeholder.user')} loadingLabel={t('common.loading')} noResultsLabel={t('palette.empty.no_results')} />
-                  </div>
-                ) : null}
-                <div>
-                  {label(t('vps.create.field.location'))}
-                  <Select
-                    value={form.locationId}
-                    onChange={(e) => setForm((prev) => ({ ...prev, locationId: e.target.value, nodeId: '' }))}
-                    testId="vps.create.location"
-                    options={[{ value: '', label: t('common.select') }, ...locations.map((l: Location) => ({ value: String(l.id), label: labelOf(l) }))]}
-                  />
-                  {selectedLocation?.environment ? (
-                    <p className="mt-1 text-xs text-muted">
-                      {t('vps.create.location_environment', { environment: labelOf(selectedLocation.environment) })}
-                    </p>
-                  ) : null}
-                </div>
-              </CardBody>
-            </Card>
-
-            <Card testId="vps.create.system">
-              <CardHeader title={t('vps.create.section.system')} subtitle={t('vps.create.section.system_help')} />
-              <CardBody>
-                <div>
-                  {label(t('vps.create.field.os_template'))}
-                  <Select value={form.osTemplateId} onChange={(e) => update('osTemplateId', e.target.value)} testId="vps.create.os_template">
-                    <option value="">{t('common.select')}</option>
-                    {templatesByFamily.map(([family, templates]) => (
-                      <optgroup key={family} label={family}>
-                        {templates.map((tpl) => (
-                          <option key={tpl.id} value={String(tpl.id)}>
-                            {templateLabel(tpl)}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
-                  </Select>
-                </div>
-              </CardBody>
-            </Card>
-
-            <Card testId="vps.create.resources">
-              <CardHeader title={t('vps.create.section.resources')} subtitle={t('vps.create.section.resources_help')} />
-              <CardBody className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div>{label(t('vps.create.field.cpu'))}<Input type="number" min="1" max="32" step="1" value={form.cpu} onChange={(e) => update('cpu', e.target.value)} testId="vps.create.cpu" /></div>
-                <div>{label(t('vps.create.field.memory'))}<Input type="number" min="512" max="131072" step="1" value={form.memory} onChange={(e) => update('memory', e.target.value)} testId="vps.create.memory" /></div>
-                <div>{label(t('vps.create.field.diskspace'))}<Input type="number" min="1024" max="10485760" step="1" value={form.diskspace} onChange={(e) => update('diskspace', e.target.value)} testId="vps.create.diskspace" /></div>
-                <div>{label(t('vps.create.field.swap'))}<Input type="number" min="0" max="12288" step="1" value={form.swap} onChange={(e) => update('swap', e.target.value)} testId="vps.create.swap" /></div>
-                <div>{label(t('vps.create.field.ipv4'))}<Input type="number" min="0" max="64" step="1" value={form.ipv4} onChange={(e) => update('ipv4', e.target.value)} testId="vps.create.ipv4" /></div>
-                <div>{label(t('vps.create.field.ipv6'))}<Input type="number" min="0" max="64" step="1" value={form.ipv6} onChange={(e) => update('ipv6', e.target.value)} testId="vps.create.ipv6" /></div>
-                <div>{label(t('vps.create.field.ipv4_private'))}<Input type="number" min="0" max="64" step="1" value={form.ipv4Private} onChange={(e) => update('ipv4Private', e.target.value)} testId="vps.create.ipv4_private" /></div>
-              </CardBody>
-            </Card>
+            <CreatePageIntroCard />
+            <CreateTargetCard
+              form={form}
+              isAdminMode={isAdminMode}
+              isAdminAccount={isAdminAccount}
+              locations={locations}
+              nodes={nodes}
+              selectedLocation={selectedLocation}
+              selectedLocationId={selectedLocationId}
+              hiddenAdminTarget={hiddenAdminTarget}
+              onUpdate={update}
+              onLocationChange={(value) => setForm((prev) => ({ ...prev, locationId: value, nodeId: '' }))}
+            />
+            <CreateSystemCard form={form} templatesByFamily={templatesByFamily} selectedTemplate={selectedTemplate} onUpdate={update} />
+            <CreateIdentityCard form={form} isAdminMode={isAdminMode} onUpdate={update} />
+            <CreateResourcesCard form={form} onApplyPreset={applyResourcePreset} onUpdate={update} />
+            <CreateNetworkCard form={form} onUpdate={update} />
+            <CreateAccessHintCard />
+            <CreateAdvancedHintCard />
           </div>
 
           <div className="space-y-4">
-            <Card testId="vps.create.confirm">
-              <CardHeader title={t('vps.create.section.confirm')} />
-              <CardBody className="space-y-4">
-                {isAdminMode ? (
-                  <div>
-                    {label(t('vps.create.field.node'))}
-                    <Select value={form.nodeId} onChange={(e) => update('nodeId', e.target.value)} testId="vps.create.node" disabled={!selectedLocationId} options={[{ value: '', label: t('common.select') }, ...nodes.map((n) => ({ value: String(n.id), label: nodeLabel(n) }))]} />
-                  </div>
-                ) : null}
-                <div>
-                  {label(t('vps.create.field.hostname'))}
-                  <Input value={form.hostname} onChange={(e) => update('hostname', e.target.value)} testId="vps.create.hostname" placeholder={t('vps.create.placeholder.hostname')} autoComplete="off" />
-                </div>
-                <Checkbox checked={form.start} onChange={(v) => update('start', v)} label={t('vps.create.field.start')} testId="vps.create.start" />
-                {isAdminMode ? (
-                  <div>
-                    {label(t('vps.create.field.info'))}
-                    <Textarea value={form.info} onChange={(e) => update('info', e.target.value)} testId="vps.create.info" rows={4} />
-                  </div>
-                ) : null}
-
-                {(submitted || createM.isError) && validationKeys.length > 0 ? (
-                  <Alert variant="warn" title={t('common.validation_error')} testId="vps.create.validation">
-                    <ul className="list-disc space-y-1 pl-5">
-                      {validationKeys.map((key) => <li key={key}>{t(key)}</li>)}
-                    </ul>
-                  </Alert>
-                ) : null}
-
-                {createM.isError && validationKeys.length === 0 ? (
-                  <Alert variant="danger" title={t('vps.create.error.title')} testId="vps.create.error">
-                    {formatErrorMessage(createM.error)}
-                  </Alert>
-                ) : null}
-
-                <Button
-                  onClick={() => {
-                    setSubmitted(true);
-                    if (canSubmit) createM.mutate();
-                  }}
-                  disabled={createM.isPending}
-                  loading={createM.isPending}
-                  testId="vps.create.submit"
-                  className="w-full justify-center"
-                >
-                  <Plus className="h-4 w-4" />
-                  {createM.isPending ? t('common.creating') : t('vps.create.submit')}
-                </Button>
-              </CardBody>
-            </Card>
+            <CreateStepRail
+              form={form}
+              isAdminMode={isAdminMode}
+              hiddenAdminTarget={hiddenAdminTarget}
+              selectedTemplate={selectedTemplate}
+              validationKeys={validationKeys}
+            />
+            <CreateReviewCard
+              form={form}
+              isAdminMode={isAdminMode}
+              selectedLocation={selectedLocation}
+              selectedTemplate={selectedTemplate}
+              selectedNode={selectedNode}
+              validationKeys={validationKeys}
+              submitted={submitted}
+              createError={createM.error}
+              isPending={createM.isPending}
+              onSubmit={submit}
+            />
           </div>
         </div>
       )}

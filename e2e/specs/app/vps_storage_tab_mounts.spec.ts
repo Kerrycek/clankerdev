@@ -103,13 +103,13 @@ test.describe('@smoke VPS storage tab mounts', () => {
     await expect(page.getByTestId('vps.storage.root_dataset.metadata')).toContainText('5.0 GiB');
     await expect(page.getByTestId('vps.storage.root_dataset.metadata')).toContainText('15 GiB');
     await expect(page.getByTestId('vps.storage.root_dataset.metadata')).toContainText('20 GiB');
-    await expect(page.getByTestId('vps.storage.root_dataset.metadata')).toContainText('3 snapshots');
+    await expect(page.getByTestId('vps.storage.no_backup_cta_note')).toContainText('does not offer a normal Create backup button');
     await expect(page.getByTestId('vps.storage.root_dataset.open')).toHaveAttribute('href', '/app/datasets/10');
     await expect(page.getByTestId('vps.storage.root_dataset.snapshots')).toHaveAttribute('href', '/app/datasets/10/snapshots');
-    await expect(page.getByTestId('vps.storage.root_dataset.create_snapshot')).toHaveAttribute('href', '/app/datasets/10/snapshots?action=create');
-    await expect(page.getByTestId('vps.storage.root_dataset.restore')).toHaveAttribute('href', '/app/datasets/10/snapshots');
-    await expect(page.getByTestId('vps.storage.root_dataset.backup')).toHaveAttribute('href', '/app/datasets/10/downloads?action=create');
     await expect(page.getByTestId('vps.storage.root_dataset.downloads')).toHaveAttribute('href', '/app/datasets/10/downloads');
+    await expect(page.getByTestId('vps.storage.root_dataset.create_snapshot')).toHaveCount(0);
+    await expect(page.getByTestId('vps.storage.root_dataset.restore')).toHaveCount(0);
+    await expect(page.getByTestId('vps.storage.root_dataset.backup')).toHaveCount(0);
     await expect(page.getByTestId('vps.storage.mounts.table')).toBeVisible();
     await expect(page.getByTestId('vps.storage.mounts.row.1.dataset')).toHaveAttribute('href', '/app/datasets/9');
     await expect(page.getByTestId('vps.storage.mounts.row.1')).toContainText('mounted');
@@ -238,6 +238,7 @@ test.describe('@smoke VPS storage tab mounts', () => {
     await page.goto('/admin/vps/123/storage');
 
     await expect(page.getByTestId('vps.storage.root_dataset.open')).toHaveAttribute('href', '/admin/datasets/10');
+    await expect(page.getByTestId('vps.storage.root_dataset.system_context')).toContainText('3 snapshots');
     await expect(page.getByTestId('vps.storage.mounts.table')).toContainText('Master');
     await expect(page.getByTestId('vps.storage.mounts.row.1')).toContainText('No');
 

@@ -6,5 +6,9 @@ dist/
 .env.*
 !.env.example
 
+# Playwright runtime artifacts
+playwright-report/
+e2e/test-results/
+
 # Local runtime config (may contain secrets)
 public/config.local.js

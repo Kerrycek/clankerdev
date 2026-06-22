@@ -6,22 +6,14 @@ import { useAppMode } from '../../../app/appMode';
 import { useI18n } from '../../../app/i18n';
 import { useToasts } from '../../../app/toasts';
 import { useChrome } from '../../../components/layout/ChromeContext';
-import { SummaryGrid } from '../../../components/layout/SummaryGrid';
 import { ActionButton } from '../../../components/ui/ActionButton';
 import { Alert } from '../../../components/ui/Alert';
-import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
-import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { Input } from '../../../components/ui/Input';
 import { Modal } from '../../../components/ui/Modal';
 import { Select } from '../../../components/ui/Select';
-import { Spinner } from '../../../components/ui/Spinner';
-import { StatusDot } from '../../../components/ui/StatusDot';
-import { StatCard } from '../../../components/ui/StatCard';
-import { Table } from '../../../components/ui/Table';
 import { Textarea } from '../../../components/ui/Textarea';
-import { toneSurfaceClass } from '../../../components/ui/tone';
 import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 import { fetchEnvironments } from '../../../lib/api/infra';
 import {
@@ -41,118 +33,32 @@ import {
   updateHostIpAddress,
   type HostIpAddress,
 } from '../../../lib/api/networking';
-import { fetchNetworkInterfaceAccountingForVps, fetchNetworkInterfaces, updateNetworkInterface, type NetworkInterface, type NetworkInterfaceAccounting } from '../../../lib/api/networkInterfaces';
+import { fetchNetworkInterfaceAccountingForVps, fetchNetworkInterfaces, updateNetworkInterface, type NetworkInterface } from '../../../lib/api/networkInterfaces';
 import { updateVps } from '../../../lib/api/vps';
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
 import { gateVpsMutation } from '../../../lib/gates/vps';
 import { preflightVpsNotBusy } from './vpsPreflight';
 import { useVps } from './VpsContext';
-
-function formatBytes(bytes: number | undefined | null): string {
-  if (bytes === undefined || bytes === null) return '—';
-  const b = Math.max(0, bytes);
-  if (b < 1024) return `${b} B`;
-  const kib = b / 1024;
-  if (kib < 1024) return `${kib.toFixed(1)} KiB`;
-  const mib = kib / 1024;
-  if (mib < 1024) return `${mib.toFixed(1)} MiB`;
-  const gib = mib / 1024;
-  if (gib < 1024) return `${gib.toFixed(2)} GiB`;
-  const tib = gib / 1024;
-  return `${tib.toFixed(2)} TiB`;
-}
-
-function formatMbpsFromBytesPerSec(value: number | undefined | null): string {
-  if (value === undefined || value === null) return '—';
-  // Legacy webui treats max_tx/max_rx as bytes/s and displays MiB/s labelled as Mbps.
-  // Keep the same arithmetic to avoid surprises.
-  return `${Math.round(value / 1024 / 1024)} Mbps`;
-}
-
-function groupIpByInterface(ips: IpAddress[]): Map<number, IpAddress[]> {
-  const m = new Map<number, IpAddress[]>();
-
-  for (const ip of ips) {
-    const ni = ip.network_interface as any;
-    const id = typeof ni?.id === 'number' ? ni.id : -1;
-    if (!m.has(id)) m.set(id, []);
-    m.get(id)!.push(ip);
-  }
-
-  return m;
-}
-
-function monthKey(d: Date) {
-  return { year: d.getFullYear(), month: d.getMonth() + 1 };
-}
-
-function sumAccountingRows(rows: NetworkInterfaceAccounting[]): { bytesIn: number; bytesOut: number } {
-  let bytesIn = 0;
-  let bytesOut = 0;
-
-  for (const r of rows) {
-    if (typeof r.bytes_in === 'number') bytesIn += r.bytes_in;
-    if (typeof r.bytes_out === 'number') bytesOut += r.bytes_out;
-  }
-
-  return { bytesIn, bytesOut };
-}
-
-function canonicalBool(v: unknown, fallback: boolean): boolean {
-  return v === true ? true : v === false ? false : fallback;
-}
-
-function hostAddr(row: HostIpAddress): string {
-  return String((row as any).addr ?? (row as any).ip_addr ?? `#${row.id}`);
-}
-
-function hostAssigned(row: HostIpAddress): boolean {
-  return row.assigned !== false;
-}
-
-function parsePositiveId(raw: string): number | null {
-  const n = Number(raw.trim());
-  return Number.isInteger(n) && n > 0 ? n : null;
-}
-
-function idFromResourceRef(v: unknown): number | null {
-  if (!v) return null;
-  if (typeof v === 'number') return Number.isInteger(v) && v > 0 ? v : null;
-  if (typeof v === 'string') {
-    const n = Number(v);
-    return Number.isInteger(n) && n > 0 ? n : null;
-  }
-  if (typeof v === 'object' && 'id' in v) return idFromResourceRef((v as any).id);
-  return null;
-}
-
-function labelFromResourceRef(v: unknown, fields: string[] = ['label', 'name', 'hostname', 'login', 'addr', 'ip_addr']): string {
-  if (!v) return '—';
-  if (typeof v === 'string' || typeof v === 'number') return String(v);
-  if (typeof v === 'object') {
-    for (const field of fields) {
-      const raw = (v as any)[field];
-      if (raw !== undefined && raw !== null && String(raw).trim()) return String(raw);
-    }
-    const id = idFromResourceRef(v);
-    if (id) return `#${id}`;
-  }
-  return '—';
-}
-
-function ipAddressLabel(ip: IpAddress | null): string {
-  if (!ip) return '—';
-  return String((ip as any).address ?? (ip as any).addr ?? `#${ip.id}`);
-}
-
-function ipFamilyLabel(ip: IpAddress): string {
-  const raw = (ip.network as any)?.ip_version ?? (ip as any).ip_version ?? (ip as any).version;
-  return raw ? `IPv${raw}` : '—';
-}
-
-function ipLocationLabel(ip: IpAddress): string {
-  return labelFromResourceRef((ip.network as any)?.location ?? (ip as any).location);
-}
+import { VpsNetworkInterfacesCard } from './VpsNetworkInterfacesCard';
+import { VpsNetworkAdvancedSection } from './VpsNetworkAdvancedSection';
+import { VpsNetworkOverviewCard } from './VpsNetworkOverviewCard';
+import {
+  buildNetworkRouteSummary,
+  canonicalBool,
+  errorMessage,
+  groupIpByInterface,
+  hostAddr,
+  idFromResourceRef,
+  ipAddressLabel,
+  ipFamilyLabel,
+  ipLocationLabel,
+  labelFromResourceRef,
+  monthKey,
+  parsePositiveId,
+  sumAccountingRows,
+  validateHostAddressInput,
+  validatePtrValue,
+} from './VpsNetworkModel';
 
 export function VpsNetworkPage() {
   const auth = useAuth();
@@ -168,8 +74,8 @@ export function VpsNetworkPage() {
   const canAdmin = auth.role === 'admin';
   const adminBasePath = mode === 'admin' ? basePath : '/admin';
 
-  const netEnabled = canonicalBool((vps as any).enable_network, true);
-  const objectLabel = String((vps as any).hostname ?? '') || `#${vpsId}`;
+  const netEnabled = canonicalBool(vps.enable_network, true);
+  const objectLabel = String(vps.hostname ?? '') || `#${vpsId}`;
 
   const netifsQ = useQuery({
     queryKey: ['network_interface', 'list', { vpsId, limit: 100 }],
@@ -407,6 +313,10 @@ export function VpsNetworkPage() {
   const updatePtrM = useMutation({
     mutationFn: async () => {
       if (!ptrEditor) throw new Error(t('vps.network.host_addresses.validation.missing'));
+      const validation = validatePtrValue(ptrValue);
+      if (!validation.ok) {
+        throw new Error(t('vps.network.host_addresses.ptr.validation.invalid', { value: validation.invalidValue ?? ptrValue.trim() }));
+      }
       await preflightVpsNotBusy({ vpsId, t, knownBusy: busyTransaction || busyLocalLock });
       return updateHostIpAddress(ptrEditor.id, { reverse_record_value: ptrValue.trim() });
     },
@@ -574,6 +484,7 @@ export function VpsNetworkPage() {
         params['environment'] = environment;
       }
 
+      await preflightVpsNotBusy({ vpsId, t, knownBusy: busyTransaction || busyLocalLock });
       return updateIpAddress(ownerIp.id, params);
     },
     onMutate: () => chrome.acquireLocalLock(vpsRef),
@@ -606,572 +517,113 @@ export function VpsNetworkPage() {
   const gate = gateVpsMutation({ vps, busyLocal, busyTransaction });
 
   const netifs = netifsQ.data ?? [];
-
+  const ips = ipsQ.data ?? [];
+  const hostRows = hostAddrsQ.data ?? [];
   const unassignedIps = ipByNetif.get(-1) ?? [];
-
-  const showGateAlert = !gate.allowed;
+  const networkSummary = useMemo(() => buildNetworkRouteSummary({ netifs, ips, hostAddresses: hostRows }), [hostRows, ips, netifs]);
+  const createHostValidation = useMemo(() => validateHostAddressInput(createHostValue), [createHostValue]);
+  const ptrValidation = useMemo(() => validatePtrValue(ptrValue), [ptrValue]);
+  const networkActionError =
+    updatePtrM.error ??
+    createHostM.error ??
+    assignHostM.error ??
+    freeHostM.error ??
+    deleteHostM.error ??
+    freeRouteM.error ??
+    assignRouteM.error ??
+    updateOwnerM.error;
+  const networkActionErrorMessage = networkActionError ? errorMessage(networkActionError) : null;
 
   return (
     <div data-testid="vps.network.page" className="space-y-4">
-      <Card testId="vps.network.summary">
-        <CardHeader
-          title={t('vps.network.title')}
-          subtitle={t('vps.network.subtitle')}
-          actions={
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                testId="vps.network.accounting.refresh"
-                onClick={() => {
-                  void acctQ.refetch();
-                  void netifsQ.refetch();
-                  void ipsQ.refetch();
-                }}
-              >
-                {t('common.refresh')}
-              </Button>
-              <Badge variant={netEnabled ? 'ok' : 'warn'}>
-                {netEnabled ? t('vps.network.status.enabled') : t('vps.network.status.disabled')}
-              </Badge>
+      <VpsNetworkOverviewCard
+        netEnabled={netEnabled}
+        gate={gate}
+        summary={networkSummary}
+        accountingLoading={acctQ.isLoading}
+        accountingError={acctQ.isError}
+        bytesIn={acctTotals.bytesIn}
+        bytesOut={acctTotals.bytesOut}
+        year={acctMonth.year}
+        month={acctMonth.month}
+        onRefresh={() => {
+          void acctQ.refetch();
+          void netifsQ.refetch();
+          void ipsQ.refetch();
+          void hostAddrsQ.refetch();
+        }}
+        onOpenTasks={chrome.openTasks}
+      />
 
-              {canAdmin ? (
-                netEnabled ? (
-                  <ActionButton
-                    testId="vps.network.disable"
-                    variant="danger"
-                    size="sm"
-                    disabled={!gate.allowed}
-                    disabledReason={!gate.allowed ? gate.reason : undefined}
-                    onClick={() => {
-                      setNetToggleError(null);
-                      setConfirmDisableOpen(true);
-                    }}
-                  >
-                    {t('vps.network.disable_button')}
-                  </ActionButton>
-                ) : (
-                  <ActionButton
-                    testId="vps.network.enable"
-                    variant="primary"
-                    size="sm"
-                    disabled={!gate.allowed}
-                    disabledReason={!gate.allowed ? gate.reason : undefined}
-                    onClick={() => {
-                      setNetToggleError(null);
-                      setConfirmEnableOpen(true);
-                    }}
-                  >
-                    {t('vps.network.enable_button')}
-                  </ActionButton>
-                )
-              ) : null}
-            </div>
-          }
-        />
+      <VpsNetworkInterfacesCard
+        canAdmin={canAdmin}
+        isLoading={netifsQ.isLoading}
+        errorMessage={netifsQ.isError ? errorMessage(netifsQ.error) : null}
+        netifs={netifs}
+        ipByNetif={ipByNetif}
+        onRefresh={() => void netifsQ.refetch()}
+        onEdit={openEdit}
+      />
 
-        <CardBody>
-          {showGateAlert ? (
-            <Alert title={t(gate.reason.titleKey)} variant="warn">
-              <div className="space-y-2">
-                {gate.reason.descriptionKey ? <div>{t(gate.reason.descriptionKey)}</div> : null}
-                <div>
-                  <Button variant="secondary" size="sm" onClick={chrome.openTasks}>
-                    {t('common.open_tasks')}
-                  </Button>
-                </div>
-              </div>
-            </Alert>
-          ) : null}
-
-          {netToggleError ? (
-            <Alert title={t('vps.network.toggle_error.title')} variant="danger" className={showGateAlert ? 'mt-3' : ''}>
-              {netToggleError}
-            </Alert>
-          ) : null}
-
-          <div className="mt-4">
-            <SummaryGrid testId="vps.network.accounting.grid">
-              <StatCard
-                testId="vps.network.accounting.in"
-                className="md:col-span-4"
-                variant="compact"
-                title={t('vps.network.accounting.ingress')}
-                value={acctQ.isLoading ? t('common.loading') : formatBytes(acctTotals.bytesIn)}
-                subtitle={t('vps.network.accounting.period', {
-                  year: acctMonth.year,
-                  month: String(acctMonth.month).padStart(2, '0'),
-                })}
-              />
-              <StatCard
-                testId="vps.network.accounting.out"
-                className="md:col-span-4"
-                variant="compact"
-                title={t('vps.network.accounting.egress')}
-                value={acctQ.isLoading ? t('common.loading') : formatBytes(acctTotals.bytesOut)}
-                subtitle={t('vps.network.accounting.period', {
-                  year: acctMonth.year,
-                  month: String(acctMonth.month).padStart(2, '0'),
-                })}
-              />
-              <StatCard
-                testId="vps.network.accounting.status"
-                className="md:col-span-4"
-                variant="compact"
-                title={t('vps.network.accounting.status')}
-                value={acctQ.isError ? t('vps.network.accounting.error') : t('vps.network.accounting.ok')}
-                subtitle={t('vps.network.accounting.note')}
-              />
-            </SummaryGrid>
-          </div>
-        </CardBody>
-      </Card>
-
-      <Card testId="vps.network.interfaces">
-        <CardHeader
-          title={t('vps.network.interfaces.title')}
-          subtitle={canAdmin ? t('vps.network.interfaces.subtitle_admin') : t('vps.network.interfaces.subtitle_user')}
-          actions={
-            <Button variant="secondary" size="sm" onClick={() => void netifsQ.refetch()}>
-              {t('common.refresh')}
-            </Button>
-          }
-        />
-
-        <CardBody>
-          {netifsQ.isLoading ? (
-            <div className="py-2">
-              <Spinner label={t('common.loading')} />
-            </div>
-          ) : netifsQ.isError ? (
-            <Alert title={t('vps.network.interfaces.load_error')} variant="danger">
-              {String((netifsQ.error as any)?.message ?? netifsQ.error)}
-            </Alert>
-          ) : netifs.length === 0 ? (
-            <div className="py-2 text-sm text-muted">{t('vps.network.interfaces.empty')}</div>
-          ) : (
-            <>
-              {/* Mobile: cards */}
-              <div className="space-y-3 md:hidden">
-                {netifs.map((ni) => {
-                  const ips = ipByNetif.get(ni.id) ?? [];
-                  const rowVariant = ni.enable === false ? 'warn' : 'ok';
-                  return (
-                    <Card key={ni.id} testId={`vps.network.interfaces.card.${ni.id}`} className={ni.enable === false ? toneSurfaceClass('warn') : undefined}>
-                      <CardBody>
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <StatusDot variant={rowVariant} testId={`vps.network.interfaces.card.${ni.id}.dot`} />
-                              <div className="truncate text-base font-semibold">{ni.name ?? t('vps.network.interfaces.unnamed')}</div>
-                              <Badge variant="neutral">{String(ni.type ?? '—')}</Badge>
-                              {canAdmin ? (
-                                <Badge variant={ni.enable !== false ? 'ok' : 'warn'}>
-                                  {ni.enable !== false ? t('vps.network.interfaces.enabled') : t('vps.network.interfaces.disabled')}
-                                </Badge>
-                              ) : null}
-                            </div>
-                            <div className="mt-1 text-xs text-muted">
-                              {t('vps.network.interfaces.ip_count', { n: ips.length })}
-                            </div>
-                          </div>
-
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            testId={`vps.network.interfaces.card.${ni.id}.edit`}
-                            onClick={() => openEdit(ni)}
-                          >
-                            {t('common.edit')}
-                          </Button>
-                        </div>
-
-                        <div className="mt-3 grid gap-2 text-sm">
-                          <div>
-                            <div className="text-xs text-muted">{t('vps.network.interfaces.max_tx')}</div>
-                            <div className="font-mono">{formatMbpsFromBytesPerSec(ni.max_tx as any)}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-muted">{t('vps.network.interfaces.max_rx')}</div>
-                            <div className="font-mono">{formatMbpsFromBytesPerSec(ni.max_rx as any)}</div>
-                          </div>
-                        </div>
-
-                        {ips.length > 0 ? (
-                          <div className="mt-3">
-                            <div className="text-xs font-medium text-muted">{t('vps.network.ip_addresses.title')}</div>
-                            <div className="mt-1 space-y-1">
-                              {ips.map((ip) => (
-                                <div key={ip.id} className="text-sm">
-                                  <span className="font-mono">{String((ip as any).address ?? (ip as any).addr ?? '—')}</span>
-                                  {(ip as any).purpose || (ip as any).routed ? (
-                                    <span className="ml-2 text-xs text-muted">
-                                      {(ip as any).purpose ? String((ip as any).purpose) : ''}
-                                      {(ip as any).routed ? ` · ${t('vps.network.ip_addresses.routed')}` : ''}
-                                    </span>
-                                  ) : null}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ) : null}
-                      </CardBody>
-                    </Card>
-                  );
-                })}
-              </div>
-
-              {/* Desktop: table */}
-              <div className="hidden overflow-x-auto md:block">
-                <Table testId="vps.network.interfaces.table" minWidth="md">
-                  <thead>
-                    <tr className="border-b border-border text-left text-xs text-muted">
-                      <th className="px-4 py-3"></th>
-                      <th className="px-4 py-3">{t('vps.network.interfaces.field.name')}</th>
-                      <th className="px-4 py-3">{t('vps.network.interfaces.field.type')}</th>
-                      <th className="px-4 py-3">{t('vps.network.interfaces.field.ip_count')}</th>
-                      {canAdmin ? <th className="px-4 py-3">{t('vps.network.interfaces.field.enabled')}</th> : null}
-                      <th className="px-4 py-3">{t('vps.network.interfaces.field.max_tx')}</th>
-                      <th className="px-4 py-3">{t('vps.network.interfaces.field.max_rx')}</th>
-                      <th className="px-4 py-3"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {netifs.map((ni) => {
-                      const ips = ipByNetif.get(ni.id) ?? [];
-                      return (
-                        <tr
-                          key={ni.id}
-                          data-testid={`vps.network.interfaces.row.${ni.id}`}
-                          data-row-variant={ni.enable === false ? 'warn' : undefined}
-                          className="border-b border-border/60 last:border-b-0"
-                        >
-                          <td className="px-4 py-3">
-                            <StatusDot variant={ni.enable === false ? 'warn' : 'ok'} testId={`vps.network.interfaces.row.${ni.id}.dot`} />
-                          </td>
-                          <td className="px-4 py-3 font-medium">{ni.name ?? '—'}</td>
-                          <td className="px-4 py-3">{String(ni.type ?? '—')}</td>
-                          <td className="px-4 py-3">{ips.length}</td>
-                          {canAdmin ? (
-                            <td className="px-4 py-3">
-                              <Badge variant={ni.enable !== false ? 'ok' : 'warn'}>
-                                {ni.enable !== false ? t('vps.network.interfaces.enabled') : t('vps.network.interfaces.disabled')}
-                              </Badge>
-                            </td>
-                          ) : null}
-                          <td className="px-4 py-3 font-mono text-xs">{formatMbpsFromBytesPerSec(ni.max_tx as any)}</td>
-                          <td className="px-4 py-3 font-mono text-xs">{formatMbpsFromBytesPerSec(ni.max_rx as any)}</td>
-                          <td className="px-4 py-3 text-right">
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              testId={`vps.network.interfaces.row.${ni.id}.edit`}
-                              onClick={() => openEdit(ni)}
-                            >
-                              {t('common.edit')}
-                            </Button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </Table>
-              </div>
-            </>
-          )}
-        </CardBody>
-      </Card>
-
-      <Card testId="vps.network.ip_addresses">
-        <CardHeader
-          title={t('vps.network.ip_addresses.title')}
-          subtitle={t('vps.network.ip_addresses.subtitle')}
-          actions={
-            <Button variant="secondary" size="sm" onClick={() => void ipsQ.refetch()}>
-              {t('common.refresh')}
-            </Button>
-          }
-        />
-        <CardBody>
-          {ipsQ.isLoading ? (
-            <div className="py-2">
-              <Spinner label={t('common.loading')} />
-            </div>
-          ) : ipsQ.isError ? (
-            <Alert title={t('vps.network.ip_addresses.load_error')} variant="danger">
-              {String((ipsQ.error as any)?.message ?? ipsQ.error)}
-            </Alert>
-          ) : (ipsQ.data ?? []).length === 0 ? (
-            <div className="py-2 text-sm text-muted">{t('vps.network.ip_addresses.empty')}</div>
-          ) : (
-            <div className="space-y-3">
-              {netifs.map((ni) => {
-                const ips = ipByNetif.get(ni.id) ?? [];
-                if (ips.length === 0) return null;
-
-                return (
-                  <Card key={ni.id} testId={`vps.network.ip_addresses.card.${ni.id}`}>
-                    <CardBody>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="font-semibold">
-                            {ni.name ?? t('vps.network.interfaces.unnamed')}
-                            <span className="text-faint"> · </span>
-                            <span className="text-sm text-muted">{String(ni.type ?? '—')}</span>
-                          </div>
-                          <div className="mt-0.5 text-xs text-muted">{t('vps.network.ip_addresses.count', { n: ips.length })}</div>
-                        </div>
-                        <Badge variant="neutral">{t('vps.network.ip_addresses.assigned')}</Badge>
-                      </div>
-
-                      <div className="mt-3 space-y-2">
-                        {ips.map((ip) => {
-                          const addr = ipAddressLabel(ip);
-                          const net = String((ip.network as any)?.address ?? (ip.network as any)?.label ?? '');
-                          const purpose = (ip as any).purpose ? String((ip as any).purpose) : '';
-                          const routed = Boolean((ip as any).routed);
-                          const owner = labelFromResourceRef((ip as any).user);
-                          const location = ipLocationLabel(ip);
-
-                          return (
-                            <div key={ip.id} data-testid={`vps.network.ip_addresses.item.${ip.id}`} className="rounded-md border border-border bg-surface-2 p-2">
-                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                <div className="font-mono text-sm">{addr}</div>
-                                <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-                                  {routed ? <Badge variant="neutral">{t('vps.network.ip_addresses.routed')}</Badge> : null}
-                                  <ActionButton
-                                    variant="primary"
-                                    size="sm"
-                                    testId={`vps.network.ip_addresses.item.${ip.id}.host_create`}
-                                    disabled={!gate.allowed}
-                                    disabledReason={!gate.allowed ? gate.reason : undefined}
-                                    onClick={() => {
-                                      setCreateHostForIp(ip);
-                                      setCreateHostValue('');
-                                    }}
-                                  >
-                                    {t('vps.network.ip_addresses.action.host_create')}
-                                  </ActionButton>
-                                  {canAdmin ? (
-                                    <>
-                                      <Button
-                                        to={`${adminBasePath}/networking/ip-addresses/${ip.id}`}
-                                        variant="secondary"
-                                        size="sm"
-                                        testId={`vps.network.ip_addresses.item.${ip.id}.detail`}
-                                      >
-                                        {t('vps.network.ip_addresses.action.detail')}
-                                      </Button>
-                                      <Button
-                                        variant="secondary"
-                                        size="sm"
-                                        testId={`vps.network.ip_addresses.item.${ip.id}.owner`}
-                                        onClick={() => {
-                                          setOwnerIp(ip);
-                                          setOwnerUser('');
-                                          setOwnerEnvironment('');
-                                        }}
-                                      >
-                                        {t('vps.network.ip_addresses.action.owner')}
-                                      </Button>
-                                      <ActionButton
-                                        variant="danger"
-                                        size="sm"
-                                        testId={`vps.network.ip_addresses.item.${ip.id}.free_route`}
-                                        disabled={!gate.allowed}
-                                        disabledReason={!gate.allowed ? gate.reason : undefined}
-                                        loading={freeRouteM.isPending}
-                                        onClick={() => setFreeRouteIp(ip)}
-                                      >
-                                        {t('vps.network.ip_addresses.action.free_route')}
-                                      </ActionButton>
-                                    </>
-                                  ) : null}
-                                </div>
-                              </div>
-
-                              <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
-                                <span>{t('vps.network.ip_addresses.field.network', { network: net || '—' })}</span>
-                                <span>{t('vps.network.ip_addresses.field.purpose', { purpose: purpose || '—' })}</span>
-                                <span>{t('vps.network.ip_addresses.field.owner', { owner })}</span>
-                                <span>{t('vps.network.ip_addresses.field.family', { family: ipFamilyLabel(ip) })}</span>
-                                <span>{t('vps.network.ip_addresses.field.location', { location })}</span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardBody>
-                  </Card>
-                );
-              })}
-
-              {unassignedIps.length > 0 ? (
-                <Alert title={t('vps.network.ip_addresses.unassigned.title')} variant="warn">
-                  <div className="space-y-2">
-                    <div>{t('vps.network.ip_addresses.unassigned.body')}</div>
-                    <div className="space-y-1">
-                      {unassignedIps.map((ip) => (
-                        <div key={ip.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                          <span className="font-mono">{String((ip as any).address ?? (ip as any).addr ?? '—')}</span>
-                          {canAdmin ? (
-                            <ActionButton
-                              variant="primary"
-                              size="sm"
-                              testId={`vps.network.ip_addresses.unassigned.${ip.id}.assign`}
-                              disabled={!gate.allowed}
-                              disabledReason={!gate.allowed ? gate.reason : undefined}
-                              onClick={() => {
-                                setAssignRouteIp(ip);
-                                setAssignRouteInterface('');
-                                setAssignRouteWithHost(false);
-                              }}
-                            >
-                              {t('vps.network.ip_addresses.action.assign_route')}
-                            </ActionButton>
-                          ) : null}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </Alert>
-              ) : null}
-            </div>
-          )}
-        </CardBody>
-      </Card>
-
-      <Card testId="vps.network.host_addresses">
-          <CardHeader
-            title={t('vps.network.host_addresses.title')}
-            subtitle={t('vps.network.host_addresses.subtitle')}
-            actions={
-              <Button variant="secondary" size="sm" onClick={() => void hostAddrsQ.refetch()}>
-                {t('common.refresh')}
-              </Button>
-            }
-          />
-          <CardBody>
-            {hostAddrsQ.isLoading ? (
-              <div className="py-2">
-                <Spinner label={t('common.loading')} />
-              </div>
-            ) : hostAddrsQ.isError ? (
-              <Alert title={t('vps.network.host_addresses.load_error')} variant="danger">
-                {String((hostAddrsQ.error as any)?.message ?? hostAddrsQ.error)}
-              </Alert>
-            ) : (hostAddrsQ.data ?? []).length === 0 ? (
-              <div className="py-2 text-sm text-muted">{t('vps.network.host_addresses.empty')}</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table testId="vps.network.host_addresses.table" minWidth="lg">
-                  <thead>
-                    <tr className="border-b border-border text-left text-xs text-muted">
-                      <th className="px-4 py-3">{t('vps.network.host_addresses.field.address')}</th>
-                      <th className="px-4 py-3">{t('vps.network.host_addresses.field.route')}</th>
-                      <th className="px-4 py-3">{t('vps.network.host_addresses.field.ptr')}</th>
-                      <th className="px-4 py-3">{t('vps.network.host_addresses.field.state')}</th>
-                      <th className="px-4 py-3"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(hostAddrsQ.data ?? []).map((row) => {
-                      const id = Number((row as any).id);
-                      const routeAddr = String((row as any).ip_address?.addr ?? (row as any).ip_address?.ip_addr ?? '—');
-                      const assigned = hostAssigned(row);
-                      const canDelete = (row as any).user_created && !assigned;
-
-                      return (
-                        <tr key={id} data-testid={`vps.network.host_addresses.row.${id}`} className="border-b border-border/60 last:border-b-0">
-                          <td className="px-4 py-3 font-mono text-sm">{hostAddr(row)}</td>
-                          <td className="px-4 py-3 font-mono text-sm">{routeAddr}</td>
-                          <td className="px-4 py-3 text-sm">{String((row as any).reverse_record_value ?? t('common.na'))}</td>
-                          <td className="px-4 py-3">
-                            <div className="flex flex-wrap gap-1">
-                              <Badge variant={assigned ? 'ok' : 'warn'}>
-                                {assigned ? t('common.assigned') : t('common.unassigned')}
-                              </Badge>
-                              {(row as any).user_created ? <Badge variant="neutral">{t('common.custom')}</Badge> : null}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex flex-wrap justify-end gap-2">
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                testId={`vps.network.host_addresses.row.${id}.ptr`}
-                                onClick={() => {
-                                  setPtrEditor(row);
-                                  setPtrValue(String((row as any).reverse_record_value ?? ''));
-                                }}
-                              >
-                                {t('vps.network.host_addresses.action.ptr')}
-                              </Button>
-                              {assigned ? (
-                                <ActionButton
-                                  variant="danger"
-                                  size="sm"
-                                  testId={`vps.network.host_addresses.row.${id}.free`}
-                                  disabled={!gate.allowed}
-                                  disabledReason={!gate.allowed ? gate.reason : undefined}
-                                  loading={freeHostM.isPending}
-                                  onClick={() => setFreeHost(row)}
-                                >
-                                  {t('vps.network.host_addresses.action.free')}
-                                </ActionButton>
-                              ) : (
-                                <ActionButton
-                                  variant="primary"
-                                  size="sm"
-                                  testId={`vps.network.host_addresses.row.${id}.assign`}
-                                  disabled={!gate.allowed}
-                                  disabledReason={!gate.allowed ? gate.reason : undefined}
-                                  loading={assignHostM.isPending}
-                                  onClick={() => {
-                                    setAssignHost(row);
-                                    setAssignHostInterface('');
-                                  }}
-                                >
-                                  {t('vps.network.host_addresses.action.assign')}
-                                </ActionButton>
-                              )}
-                              {canDelete ? (
-                                <Button
-                                  variant="danger"
-                                  size="sm"
-                                  testId={`vps.network.host_addresses.row.${id}.delete`}
-                                  onClick={() => setDeleteHost(row)}
-                                >
-                                  {t('common.delete')}
-                                </Button>
-                              ) : null}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </Table>
-              </div>
-            )}
-
-            {(updatePtrM.error || createHostM.error || assignHostM.error || freeHostM.error || deleteHostM.error || freeRouteM.error || assignRouteM.error || updateOwnerM.error) ? (
-              <Alert title={t('vps.network.host_addresses.action_error')} variant="danger" className="mt-3">
-                {String(
-                  (updatePtrM.error as any)?.message ??
-                    (createHostM.error as any)?.message ??
-                    (assignHostM.error as any)?.message ??
-                    (freeHostM.error as any)?.message ??
-                    (deleteHostM.error as any)?.message ??
-                    (freeRouteM.error as any)?.message ??
-                    (assignRouteM.error as any)?.message ??
-                    (updateOwnerM.error as any)?.message ??
-                    t('common.unknown_error')
-                )}
-              </Alert>
-            ) : null}
-          </CardBody>
-        </Card>
+      <VpsNetworkAdvancedSection
+        canAdmin={canAdmin}
+        adminBasePath={adminBasePath}
+        netEnabled={netEnabled}
+        gate={gate}
+        netToggleError={netToggleError}
+        routeCount={ips.length}
+        detachedCount={unassignedIps.length}
+        hostCount={hostRows.length}
+        routesLoading={ipsQ.isLoading}
+        routesErrorMessage={ipsQ.isError ? errorMessage(ipsQ.error) : null}
+        hostsLoading={hostAddrsQ.isLoading}
+        hostsErrorMessage={hostAddrsQ.isError ? errorMessage(hostAddrsQ.error) : null}
+        networkActionErrorMessage={networkActionErrorMessage}
+        netifs={netifs}
+        ipByNetif={ipByNetif}
+        unassignedIps={unassignedIps}
+        hostRows={hostRows}
+        freeRoutePending={freeRouteM.isPending}
+        updatePtrPending={updatePtrM.isPending}
+        assignHostPending={assignHostM.isPending}
+        freeHostPending={freeHostM.isPending}
+        deleteHostPending={deleteHostM.isPending}
+        onDisableNetwork={() => {
+          setNetToggleError(null);
+          setConfirmDisableOpen(true);
+        }}
+        onEnableNetwork={() => {
+          setNetToggleError(null);
+          setConfirmEnableOpen(true);
+        }}
+        onRefreshRoutes={() => void ipsQ.refetch()}
+        onRefreshHosts={() => void hostAddrsQ.refetch()}
+        onCreateHostAddress={(ip) => {
+          setCreateHostForIp(ip);
+          setCreateHostValue('');
+        }}
+        onEditOwner={(ip) => {
+          setOwnerIp(ip);
+          setOwnerUser('');
+          setOwnerEnvironment('');
+        }}
+        onFreeRoute={setFreeRouteIp}
+        onAssignRoute={(ip) => {
+          setAssignRouteIp(ip);
+          setAssignRouteInterface('');
+          setAssignRouteWithHost(false);
+        }}
+        onEditPtr={(row) => {
+          setPtrEditor(row);
+          setPtrValue(String(row.reverse_record_value ?? ''));
+        }}
+        onAssignHost={(row) => {
+          setAssignHost(row);
+          setAssignHostInterface('');
+        }}
+        onFreeHost={setFreeHost}
+        onDeleteHost={setDeleteHost}
+      />
 
       <Modal
         open={!!editNetif}
@@ -1280,7 +732,7 @@ export function VpsNetworkPage() {
         title={
           createHostForIp
             ? t('vps.network.host_addresses.create.title_for_ip', {
-                address: String((createHostForIp as any).addr ?? (createHostForIp as any).address ?? `#${createHostForIp.id}`),
+                address: ipAddressLabel(createHostForIp),
               })
             : t('vps.network.host_addresses.create.title')
         }
@@ -1305,7 +757,7 @@ export function VpsNetworkPage() {
             <ActionButton
               testId="vps.network.host_addresses.create.submit"
               loading={createHostM.isPending}
-              disabled={!createHostValue.trim() || !gate.allowed}
+              disabled={!createHostValue.trim() || !createHostValidation.ok || !gate.allowed}
               disabledReason={!gate.allowed ? gate.reason : undefined}
               onClick={() => createHostM.mutate()}
             >
@@ -1316,6 +768,11 @@ export function VpsNetworkPage() {
       >
         <div className="space-y-3">
           <div className="text-sm text-muted">{t('vps.network.host_addresses.create.help')}</div>
+          {createHostValue.trim() && !createHostValidation.ok ? (
+            <Alert title={t('vps.network.host_addresses.create.validation.title')} variant="warn">
+              {t('vps.network.host_addresses.validation.invalid_address', { value: createHostValidation.invalidValue ?? createHostValue.trim() })}
+            </Alert>
+          ) : null}
           <Textarea
             rows={5}
             testId="vps.network.host_addresses.create.addresses"
@@ -1352,7 +809,7 @@ export function VpsNetworkPage() {
             <ActionButton
               testId="vps.network.host_addresses.ptr.submit"
               loading={updatePtrM.isPending}
-              disabled={!gate.allowed}
+              disabled={!ptrValidation.ok || !gate.allowed}
               disabledReason={!gate.allowed ? gate.reason : undefined}
               onClick={() => updatePtrM.mutate()}
             >
@@ -1363,6 +820,11 @@ export function VpsNetworkPage() {
       >
         <div className="space-y-3">
           <div className="text-sm text-muted">{t('vps.network.host_addresses.ptr.help')}</div>
+          {ptrValue.trim() && !ptrValidation.ok ? (
+            <Alert title={t('vps.network.host_addresses.ptr.validation.title')} variant="warn">
+              {t('vps.network.host_addresses.ptr.validation.invalid', { value: ptrValidation.invalidValue ?? ptrValue.trim() })}
+            </Alert>
+          ) : null}
           <Input
             testId="vps.network.host_addresses.ptr.value"
             value={ptrValue}
@@ -1479,7 +941,7 @@ export function VpsNetworkPage() {
             <ActionButton
               testId="vps.network.ip_addresses.owner.submit"
               loading={updateOwnerM.isPending}
-              disabled={!canAdmin || (!ownerUser.trim() && !idFromResourceRef((ownerIp as any)?.user)) || !gate.allowed}
+              disabled={!canAdmin || (!ownerUser.trim() && !idFromResourceRef(ownerIp?.user)) || !gate.allowed}
               disabledReason={!gate.allowed ? gate.reason : undefined}
               onClick={() => updateOwnerM.mutate()}
             >
@@ -1492,7 +954,7 @@ export function VpsNetworkPage() {
           <div className="grid gap-3 text-sm sm:grid-cols-3">
             <div>
               <div className="text-xs text-muted">{t('vps.network.ip_addresses.owner.current_user')}</div>
-              <div className="font-medium">{labelFromResourceRef((ownerIp as any)?.user)}</div>
+              <div className="font-medium">{labelFromResourceRef(ownerIp?.user)}</div>
             </div>
             <div>
               <div className="text-xs text-muted">{t('vps.network.ip_addresses.owner.family')}</div>
@@ -1509,7 +971,7 @@ export function VpsNetworkPage() {
               testId="vps.network.ip_addresses.owner.user"
               value={ownerUser}
               onChange={setOwnerUser}
-              placeholder={idFromResourceRef((ownerIp as any)?.user) ? `#${idFromResourceRef((ownerIp as any)?.user)}` : t('vps.network.ip_addresses.owner.unassigned')}
+              placeholder={idFromResourceRef(ownerIp?.user) ? `#${idFromResourceRef(ownerIp?.user)}` : t('vps.network.ip_addresses.owner.unassigned')}
               allowRawId
             />
           </label>
@@ -1557,7 +1019,7 @@ export function VpsNetworkPage() {
         description={
           freeRouteIp
             ? t('vps.network.ip_addresses.free_route.description', {
-                address: String((freeRouteIp as any).addr ?? (freeRouteIp as any).address ?? `#${freeRouteIp.id}`),
+                address: ipAddressLabel(freeRouteIp),
               })
             : ''
         }
@@ -1575,7 +1037,7 @@ export function VpsNetworkPage() {
         title={
           assignRouteIp
             ? t('vps.network.ip_addresses.assign.title_for_ip', {
-                address: String((assignRouteIp as any).addr ?? (assignRouteIp as any).address ?? `#${assignRouteIp.id}`),
+                address: ipAddressLabel(assignRouteIp),
               })
             : t('vps.network.ip_addresses.assign.title')
         }

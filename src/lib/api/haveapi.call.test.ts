@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { haveApiCall, isExpiredSessionError, SESSION_EXPIRED_EVENT } from './haveapi';
+import { getMetaActionStateId, haveApiCall, isExpiredSessionError, SESSION_EXPIRED_EVENT } from './haveapi';
 
 function makeOkResponse(body: unknown, extraHeaders?: Record<string, string>) {
   return new Response(JSON.stringify(body), {
@@ -165,5 +165,14 @@ describe('haveApiCall', () => {
     expect(listener).toHaveBeenCalledTimes(1);
 
     window.removeEventListener(SESSION_EXPIRED_EVENT, listener);
+  });
+});
+
+describe('getMetaActionStateId', () => {
+  it('accepts current and legacy action-state meta shapes', () => {
+    expect(getMetaActionStateId({ action_state_id: 42 })).toBe(42);
+    expect(getMetaActionStateId({ state_id: '43' })).toBe(43);
+    expect(getMetaActionStateId({ action_state: 44 })).toBe(44);
+    expect(getMetaActionStateId({ action_state: { id: '45' } })).toBe(45);
   });
 });

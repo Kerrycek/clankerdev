@@ -2,7 +2,9 @@ import { describe, expect, test, vi } from 'vitest';
 
 import {
   buildCreateVpsParams,
+  createConsoleToken,
   createVps,
+  deleteConsoleToken,
   fetchVps,
   fetchVpsList,
   fetchVpsStatuses,
@@ -80,6 +82,7 @@ describe('vps API wrappers', () => {
       userNamespaceMap: 3,
       location: 2,
       environment: 9,
+      includes: 'node__location,user',
     });
 
     const [url] = lastFetchCall();
@@ -94,6 +97,7 @@ describe('vps API wrappers', () => {
     expect(u.searchParams.get('vps[user_namespace_map]')).toBe('3');
     expect(u.searchParams.get('vps[location]')).toBe('2');
     expect(u.searchParams.get('vps[environment]')).toBe('9');
+    expect(u.searchParams.get('_meta[includes]')).toBe('node__location,user');
   });
 
   test('fetchVpsStatuses forwards time-window and cursor params', async () => {
@@ -436,5 +440,23 @@ describe('vps API wrappers', () => {
         lazy: true,
       },
     });
+  });
+
+  test('console token lifecycle calls the legacy VPS console_token action', async () => {
+    globalThis.fetch = mockFetchOk({ console_token: { token: 'T1', expiration: '2027-01-01T00:00:00Z' } }) as any;
+
+    await createConsoleToken(12);
+
+    let [url, init] = lastFetchCall();
+    expect(new URL(url).pathname).toBe('/v7.0/vpses/12/console_token');
+    expect(init?.method).toBe('POST');
+    expect(JSON.parse(String(init?.body))).toEqual({});
+
+    await deleteConsoleToken(12);
+
+    [url, init] = lastFetchCall();
+    expect(new URL(url).pathname).toBe('/v7.0/vpses/12/console_token');
+    expect(init?.method).toBe('DELETE');
+    expect(JSON.parse(String(init?.body))).toEqual({});
   });
 });

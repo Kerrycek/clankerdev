@@ -83,9 +83,54 @@ npm run e2e:pr
 npm run e2e:broad
 npm run e2e:nightly
 
+# Locked-down local/container host with system Chromium and managed URLBlocklist
+npm run e2e:container -- --project=chromium e2e/specs/app/dashboard.spec.ts
+
 # Optional: enable screenshot matrix
 E2E_START_SERVER=1 E2E_SCREENSHOTS=1 node scripts/playwright.mjs test
+
+# Optional: capture reusable mocked workflow screenshots into docs/e2e-screenshots
+npm run e2e:screenshots
 ```
+
+
+## Locked-down local/container runs
+
+`npm run e2e:container` is a local harness for environments where Playwright-managed browsers are not installed or where
+system Chromium is constrained by a host `URLBlocklist` policy. It is not used by CI. The command is shorthand for the
+runner-only `--container` flag, which:
+
+- auto-detects a system Chromium executable when `E2E_CHROMIUM_EXECUTABLE_PATH` is unset,
+- sets `E2E_RECORD_ARTIFACTS=0` when the caller has not chosen an artifact mode,
+- temporarily removes blocking `"*"` entries from Chromium `URLBlocklist` policy files for the duration of the run,
+  stores backups outside the active policy tree, then restores the original files.
+
+Use the lower-level flags when only part of the behavior is needed:
+
+```bash
+node scripts/playwright.mjs test --auto-system-chromium --no-artifacts --project=chromium
+node scripts/playwright.mjs test --relax-chromium-policy --project=chromium
+```
+
+Override discovery with `E2E_CHROMIUM_EXECUTABLE_PATH=/path/to/chromium`, `E2E_CHROMIUM_CANDIDATES=/path/a:/path/b`, or
+`E2E_CHROMIUM_POLICY_DIRS=/policy/dir/a:/policy/dir/b`.
+
+## Reusable screenshot capture
+
+`e2e/specs/app/screenshot_capture.spec.ts` is a permanent, opt-in capture harness for mocked product screenshots. It
+replaces one-off temporary capture specs for common pages.
+
+```bash
+# Capture all default scenarios into docs/e2e-screenshots
+npm run e2e:screenshots
+
+# Capture one scenario into a phase-specific docs folder
+E2E_SCREENSHOT_DIR=docs/phase31-screenshots \
+E2E_SCREENSHOT_SCENARIOS=dashboard \
+npm run e2e:screenshots
+```
+
+Current scenarios are `dashboard` and `dataset-downloads`; set `E2E_SCREENSHOT_SCENARIOS=all` to run every scenario.
 
 ## CI behavior and artifacts
 

@@ -83,7 +83,10 @@ test.describe('@smoke Admin user payments', () => {
     // Open settings modal and save.
     await page.getByTestId('admin.user.payments.settings.open').click();
     await expect(page.getByTestId('admin.user.payments.settings.modal')).toBeVisible();
+    await expect(page.getByTestId('admin.user.payments.settings.review')).toBeVisible();
+    await expect(page.getByTestId('admin.user.payments.settings.review.impact')).toContainText('Nothing will be saved');
     await page.getByTestId('admin.user.payments.settings.monthly_payment').fill('120');
+    await expect(page.getByTestId('admin.user.payments.settings.review.monthly')).toContainText('120');
     await page.getByTestId('admin.user.payments.settings.save').click();
     await expect(page.getByTestId('admin.user.payments.settings.modal')).toBeHidden();
   
@@ -91,6 +94,8 @@ test.describe('@smoke Admin user payments', () => {
     await page.getByTestId('admin.user.payments.add.open').click();
     await expect(page.getByTestId('admin.user.payments.add.modal')).toBeVisible();
     await expect(page.getByTestId('admin.user.payments.add.amount')).toBeVisible();
+    await expect(page.getByTestId('admin.user.payments.add.review')).toBeVisible();
+    await expect(page.getByTestId('admin.user.payments.add.review.amount')).toContainText('100');
     await page.getByTestId('admin.user.payments.add.cancel').click();
   });
 });

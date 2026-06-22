@@ -6,6 +6,14 @@ import { formatDateTime } from '../../lib/format';
 import { resourceId, refLabel } from '../../lib/resources';
 import { durationSec, formatPayload, transactionErrorText } from '../../lib/txFormat';
 import { transactionBadge } from '../../lib/taskStatus';
+import {
+  classifyTransaction,
+  operationBadgeVariant,
+  operationCategoryLabel,
+  operationLabel,
+  operationSeverityLabel,
+  operationVisibilityLabel,
+} from '../../lib/operationTaxonomy';
 
 import { Badge } from './Badge';
 import { TransactionDebugSections } from './TransactionPayloadPanels';
@@ -22,6 +30,9 @@ export function TransactionInlineDetails(props: {
   const { tx, t, basePath } = props;
   const row = tx as any;
   const badge = transactionBadge(tx);
+  const operation = classifyTransaction(tx);
+  const operationName = operationLabel(operation, t);
+  const rawName = tx.name ? String(tx.name) : '';
   const txId = Number(row.id);
   const chainId = resourceId(row.transaction_chain);
   const nodeId = resourceId(row.node);
@@ -49,7 +60,22 @@ export function TransactionInlineDetails(props: {
       <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
         <Meta label={t('common.id')} value={Number.isFinite(txId) && txId > 0 ? `#${txId}` : t('common.na')} />
         <Meta label={t('common.state')} value={<Badge variant={badge.variant}>{badge.label}</Badge>} />
-        <Meta label={t('common.name')} value={tx.name ? String(tx.name) : t('transactions.items.row.fallback_name')} />
+        <Meta
+          label={t('common.name')}
+          value={
+            <span className="space-y-1">
+              <span className="block">{operationName}</span>
+              <span className="flex flex-wrap gap-1">
+                <Badge variant={operationBadgeVariant(operation)}>{operationCategoryLabel(operation, t)}</Badge>
+                {operation.severity !== 'normal' ? <Badge variant={operationBadgeVariant(operation)}>{operationSeverityLabel(operation, t)}</Badge> : null}
+                {operation.visibility !== 'user' ? <Badge variant={operationBadgeVariant(operation)}>{operationVisibilityLabel(operation, t)}</Badge> : null}
+              </span>
+              {rawName && rawName !== operationName ? (
+                <span className="block text-xs text-faint">{t('operation.raw_name', { name: rawName })}</span>
+              ) : null}
+            </span>
+          }
+        />
         <Meta
           label={t('transactions.tx.type_label')}
           value={type !== null ? t('transactions.items.row.type_chip', { type }) : t('common.na')}

@@ -5,6 +5,8 @@ import type { User } from './users';
 export interface Dataset {
   id: number;
   name?: string;
+  full_name?: string;
+  label?: string;
   user?: User | ResourceRef;
   [k: string]: unknown;
 }
@@ -15,12 +17,16 @@ export interface VpsMount {
   dataset?: Dataset | ResourceRef;
   user_namespace_map?: ResourceRef;
   mountpoint?: string;
+  type?: string;
   mode?: string;
   on_start_fail?: string;
   enabled?: boolean;
   master_enabled?: boolean;
+  use_default_map?: boolean;
   current_state?: string;
   expiration_date?: string | null;
+  created_at?: string;
+  updated_at?: string;
   [k: string]: unknown;
 }
 

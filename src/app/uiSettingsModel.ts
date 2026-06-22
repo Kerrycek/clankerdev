@@ -1,3 +1,14 @@
+import {
+  DEFAULT_DASHBOARD_SETTINGS,
+  cloneDashboardSettings,
+  normalizeDashboardSettings,
+  type DashboardDensity,
+  type DashboardSettings,
+  type DashboardWidgetId,
+} from './dashboardSettingsModel';
+
+export type { DashboardDensity, DashboardSettings, DashboardWidgetId };
+
 export type UiThemePreference = 'system' | 'light' | 'dark';
 export type UiLanguagePreference = 'system' | 'en' | 'cs';
 export type UiTipLifecycleState = 'visible' | 'dismissed' | 'accepted';
@@ -17,6 +28,7 @@ export interface UiSettings {
   theme: UiThemePreference;
   language: UiLanguagePreference;
   tips: UiTipSettings;
+  dashboard: DashboardSettings;
 }
 
 export const DEFAULT_SETTINGS: UiSettings = {
@@ -26,6 +38,7 @@ export const DEFAULT_SETTINGS: UiSettings = {
   tips: {
     sidebarTimeZone: 'visible',
   },
+  dashboard: cloneDashboardSettings(DEFAULT_DASHBOARD_SETTINGS),
 };
 
 export const STORAGE_KEY = 'vpsadmin.uiSettings.v1';
@@ -72,6 +85,7 @@ export function normalizeUiSettings(input: unknown): UiSettings {
     tips: {
       sidebarTimeZone,
     },
+    dashboard: normalizeDashboardSettings(input['dashboard']),
   };
 }
 

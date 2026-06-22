@@ -22,6 +22,7 @@ module.exports = {
         'drawer-sm': 'var(--drawer-w-sm)',
         'drawer-md': 'var(--drawer-w-md)',
         'drawer-lg': 'var(--drawer-w-lg)',
+        'drawer-xl': 'var(--drawer-w-xl)',
       },
       minWidth: {
         'table-sm': 'var(--table-min-w-sm)',

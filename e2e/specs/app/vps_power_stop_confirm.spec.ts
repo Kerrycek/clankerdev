@@ -61,11 +61,11 @@ test('@smoke VPS detail stop action uses confirm dialog and sends POST with forc
 
   await expect(page.getByTestId('vps.header')).toBeVisible();
 
-  const stopBtn = page.getByTestId('vps.action.stop');
-  await expect(stopBtn).toBeVisible();
-  await expect(stopBtn).toHaveAttribute('aria-disabled', 'false');
+  const actionsMenu = page.getByTestId('vps.actions.menu');
+  await expect(actionsMenu).toBeVisible();
+  await expect(page.locator('[data-testid="vps.actions.menu"] option[value="action:stop"]')).toBeEnabled();
 
-  await stopBtn.click();
+  await actionsMenu.selectOption('action:stop');
 
   await expect(page.getByTestId('vps.action.stop_confirm')).toBeVisible();
 

@@ -12,16 +12,9 @@ import { Alert } from '../../../components/ui/Alert';
 import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
-import { Checkbox } from '../../../components/ui/Checkbox';
-import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { CopyButton } from '../../../components/ui/CopyButton';
-import { Drawer } from '../../../components/ui/Drawer';
 import { ErrorState } from '../../../components/ui/ErrorState';
-import { Input } from '../../../components/ui/Input';
-import { IpAddressLookupInput } from '../../../components/ui/IpAddressLookupInput';
 import { LoadingState } from '../../../components/ui/LoadingState';
-import { TableCard } from '../../../components/ui/TableCard';
-import { clsx } from '../../../components/ui/clsx';
 import { formatDateTime } from '../../../lib/format';
 import {
   createExportHost,
@@ -32,68 +25,58 @@ import {
   updateExport,
   updateExportHost,
   type ExportHost,
-  type ExportItem,
 } from '../../../lib/api/exports';
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
 import { objectRef } from '../../../lib/objectRef';
+import { ExportDeleteDialogs } from './ExportDeleteDialogs';
+import { ExportEditDrawer, ExportHostEditorDrawer, type ExportHostFormState } from './ExportDetailDrawers';
+import { ExportHostsCard } from './ExportHostsCard';
+import {
+  buildExportDiff,
+  buildExportHostDiff,
+  buildUpdateExportPayload,
+  editFormFromExport,
+  exportAddress,
+  hostLabel,
+  parsePositiveInt,
+  sanitizeMountName,
+  snippetFstab,
+  snippetMountCommand,
+  snippetNix,
+  snippetSystemd,
+  sourceLabel,
+  sourceShortName,
+  type EditExportFormState,
+} from './ExportModel';
 
-function parsePositiveInt(v: unknown): number | null {
-  const n = typeof v === 'number' ? v : Number(v);
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
+function defaultEditForm(): EditExportFormState {
+  return {
+    all_vps: true,
+    rw: true,
+    sync: true,
+    subtree_check: false,
+    root_squash: false,
+    threads: '8',
+    enabled: true,
+  };
 }
 
-function exportAddress(ex: ExportItem | null | undefined): string {
-  const host: any = ex?.host_ip_address;
-  return String(host?.addr ?? (host?.id ? `#${host.id}` : '—'));
+function defaultHostForm(): ExportHostFormState {
+  return {
+    ip_address: null,
+    rw: true,
+    sync: true,
+    subtree_check: false,
+    root_squash: false,
+  };
 }
 
-function sourceLabel(ex: ExportItem | null | undefined): string {
-  const ds: any = ex?.dataset;
-  const dataset = String(ds?.full_name ?? ds?.name ?? (ds?.id ? `#${ds.id}` : '#?'));
-  const snap: any = ex?.snapshot;
-  if (snap?.id) return `${dataset} · ${String(snap.label ?? snap.name ?? `#${snap.id}`)}`;
-  return dataset;
+function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error ?? '');
 }
 
-function sourceShortName(ex: ExportItem | null | undefined): string {
-  const snap: any = ex?.snapshot;
-  if (snap?.id) return String(snap.label ?? snap.name ?? `snapshot-${snap.id}`);
-  const ds: any = ex?.dataset;
-  return String(ds?.name ?? ds?.full_name ?? ds?.label ?? (ds?.id ? `dataset-${ds.id}` : 'export'));
-}
-
-function hostLabel(host: ExportHost): string {
-  const ip: any = host.ip_address;
-  return String(ip?.addr ?? (ip?.id ? `#${ip.id}` : '#?'));
-}
-
-function sanitizeMountName(input: string, fallbackId: number): string {
-  const base = String(input || '').trim().toLowerCase();
-  const cleaned = base.replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48);
-  return cleaned || `export-${fallbackId}`;
-}
-
-function snippetMountCommand(address: string, path: string, mountPoint: string) {
-  return `sudo mkdir -p ${mountPoint}\nsudo mount -t nfs ${address}:${path} ${mountPoint}`;
-}
-
-function snippetFstab(address: string, path: string, mountPoint: string, rw: boolean) {
-  const mode = rw ? 'rw' : 'ro';
-  return `${address}:${path} ${mountPoint} nfs ${mode},defaults 0 0`;
-}
-
-function snippetSystemd(address: string, path: string, mountPoint: string, rw: boolean) {
-  const escaped = mountPoint.replace(/^\//, '').replace(/\//g, '-');
-  const opts = rw ? 'rw,defaults' : 'ro,defaults';
-  return `[Unit]\nDescription=Mount ${address}:${path}\nAfter=network-online.target\nWants=network-online.target\n\n[Mount]\nWhat=${address}:${path}\nWhere=${mountPoint}\nType=nfs\nOptions=${opts}\n\n[Install]\nWantedBy=multi-user.target\n# file: /etc/systemd/system/${escaped}.mount`;
-}
-
-function snippetNix(address: string, path: string, mountPoint: string, rw: boolean) {
-  const opts = rw ? '[ "rw" "defaults" ]' : '[ "ro" "defaults" ]';
-  return `fileSystems."${mountPoint}" = {\n  device = "${address}:${path}";\n  fsType = "nfs";\n  options = ${opts};\n};`;
-}
-
-function boolBadgeLabel(value: boolean, t: (k: string, vars?: Record<string, string>) => string) {
+function boolBadgeLabel(value: boolean, t: (key: string, vars?: Record<string, unknown>) => string) {
   return value ? t('common.enabled') : t('common.disabled');
 }
 
@@ -110,74 +93,58 @@ export function ExportDetailPage() {
   const exportQ = useQuery({
     queryKey: ['exports', 'show', id],
     enabled: id !== null,
-    queryFn: async () => (await fetchExport(id as number, { includes: 'dataset,snapshot,host_ip_address,user' })).data,
+    queryFn: async () => {
+      if (id === null) throw new Error('invalid export id');
+      return (await fetchExport(id, { includes: 'dataset,snapshot,host_ip_address,user' })).data;
+    },
     staleTime: 10_000,
   });
 
   const hostsQ = useQuery({
     queryKey: ['exports', 'hosts', id],
     enabled: id !== null,
-    queryFn: async () => (await fetchExportHosts(id as number, { limit: 200, includes: 'ip_address' })).data,
+    queryFn: async () => {
+      if (id === null) throw new Error('invalid export id');
+      return (await fetchExportHosts(id, { limit: 200, includes: 'ip_address' })).data;
+    },
     staleTime: 10_000,
   });
 
   const ex = exportQ.data ?? null;
   const hosts = hostsQ.data ?? [];
-  const datasetId = parsePositiveInt((ex as any)?.dataset?.id);
-  const userId = parsePositiveInt((ex as any)?.user?.id);
+  const datasetId = parsePositiveInt(ex?.dataset?.id);
+  const userId = parsePositiveInt(ex?.user?.id);
   const datasetRef = datasetId ? objectRef('Dataset', datasetId) : null;
-  const snapshotId = parsePositiveInt((ex as any)?.snapshot?.id);
+  const snapshotId = parsePositiveInt(ex?.snapshot?.id);
   const address = exportAddress(ex);
-  const path = String((ex as any)?.path ?? '');
+  const path = String(ex?.path ?? '');
   const mountPoint = useMemo(() => `/mnt/${sanitizeMountName(sourceShortName(ex), id ?? 0)}`, [ex, id]);
   const sourceIsSnapshot = snapshotId !== null;
-  const allVps = Boolean((ex as any)?.all_vps);
-  const rw = Boolean((ex as any)?.rw);
+  const allVps = Boolean(ex?.all_vps);
+  const rw = Boolean(ex?.rw);
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletePhrase, setDeletePhrase] = useState('');
   const [hostEditorOpen, setHostEditorOpen] = useState(false);
   const [editingHost, setEditingHost] = useState<ExportHost | null>(null);
-
-  const [editForm, setEditForm] = useState({
-    all_vps: true,
-    rw: true,
-    sync: true,
-    subtree_check: false,
-    root_squash: false,
-    threads: '8',
-    enabled: true,
-  });
+  const [deleteHost, setDeleteHost] = useState<ExportHost | null>(null);
+  const [deleteHostPhrase, setDeleteHostPhrase] = useState('');
+  const [editForm, setEditForm] = useState<EditExportFormState>(() => defaultEditForm());
+  const [hostForm, setHostForm] = useState<ExportHostFormState>(() => defaultHostForm());
 
   useEffect(() => {
-    if (!ex) return;
-    setEditForm({
-      all_vps: Boolean((ex as any).all_vps),
-      rw: Boolean((ex as any).rw),
-      sync: Boolean((ex as any).sync),
-      subtree_check: Boolean((ex as any).subtree_check),
-      root_squash: Boolean((ex as any).root_squash),
-      threads: String((ex as any).threads ?? 8),
-      enabled: Boolean((ex as any).enabled ?? true),
-    });
+    if (ex) setEditForm(editFormFromExport(ex));
   }, [ex]);
-
-  const [hostForm, setHostForm] = useState({
-    ip_address: null as number | null,
-    rw: true,
-    sync: true,
-    subtree_check: false,
-    root_squash: false,
-  });
 
   const openCreateHost = () => {
     setEditingHost(null);
     setHostForm({
       ip_address: null,
-      rw: rw,
-      sync: Boolean((ex as any)?.sync),
-      subtree_check: Boolean((ex as any)?.subtree_check),
-      root_squash: Boolean((ex as any)?.root_squash),
+      rw,
+      sync: Boolean(ex?.sync),
+      subtree_check: Boolean(ex?.subtree_check),
+      root_squash: Boolean(ex?.root_squash),
     });
     setHostEditorOpen(true);
   };
@@ -185,13 +152,38 @@ export function ExportDetailPage() {
   const openEditHost = (host: ExportHost) => {
     setEditingHost(host);
     setHostForm({
-      ip_address: parsePositiveInt((host as any)?.ip_address?.id),
-      rw: Boolean((host as any)?.rw),
-      sync: Boolean((host as any)?.sync),
-      subtree_check: Boolean((host as any)?.subtree_check),
-      root_squash: Boolean((host as any)?.root_squash),
+      ip_address: parsePositiveInt(host.ip_address?.id),
+      rw: Boolean(host.rw),
+      sync: Boolean(host.sync),
+      subtree_check: Boolean(host.subtree_check),
+      root_squash: Boolean(host.root_squash),
     });
     setHostEditorOpen(true);
+  };
+
+  const closeHostEditor = () => {
+    setHostEditorOpen(false);
+    setEditingHost(null);
+  };
+
+  const openDeleteExport = () => {
+    setDeletePhrase('');
+    setDeleteOpen(true);
+  };
+
+  const closeDeleteExport = () => {
+    setDeleteOpen(false);
+    setDeletePhrase('');
+  };
+
+  const openDeleteHost = (host: ExportHost) => {
+    setDeleteHostPhrase('');
+    setDeleteHost(host);
+  };
+
+  const closeDeleteHost = () => {
+    setDeleteHost(null);
+    setDeleteHostPhrase('');
   };
 
   async function invalidateAll() {
@@ -207,7 +199,7 @@ export function ExportDetailPage() {
     if (datasetRef) chrome.releaseLocalLock(datasetRef);
   }
 
-  function trackFromMeta(meta: any, actionLabel: string) {
+  function trackFromMeta(meta: unknown, actionLabel: string) {
     const actionStateId = getMetaActionStateId(meta);
     if (actionStateId && datasetRef) {
       chrome.trackActionState(actionStateId, {
@@ -221,27 +213,16 @@ export function ExportDetailPage() {
   const updateExportM = useMutation({
     mutationFn: async () => {
       if (id === null) throw new Error('invalid export id');
-      const threadsN = parsePositiveInt(editForm.threads);
-      return await updateExport(id, {
-        all_vps: editForm.all_vps,
-        rw: editForm.rw,
-        sync: editForm.sync,
-        subtree_check: editForm.subtree_check,
-        root_squash: editForm.root_squash,
-        threads: mode === 'admin' ? threadsN ?? undefined : undefined,
-        enabled: editForm.enabled,
-      });
+      return await updateExport(id, buildUpdateExportPayload(editForm, mode === 'admin'));
     },
     onMutate: onMutateLock,
     onSuccess: async (res) => {
-      trackFromMeta((res as any).meta, t('exports.action.update'));
+      trackFromMeta(res.meta, t('exports.action.update'));
       await invalidateAll();
       setEditOpen(false);
       pushToast({ variant: 'ok', title: t('exports.update.success') });
     },
-    onError: (err: any) => {
-      pushToast({ variant: 'danger', title: t('exports.update.error'), body: String(err?.message ?? err ?? '') });
-    },
+    onError: (err: unknown) => pushToast({ variant: 'danger', title: t('exports.update.error'), body: errorMessage(err) }),
     onSettled: onSettledLock,
   });
 
@@ -252,14 +233,12 @@ export function ExportDetailPage() {
     },
     onMutate: onMutateLock,
     onSuccess: async (res) => {
-      trackFromMeta((res as any).meta, t('exports.action.delete'));
+      trackFromMeta(res.meta, t('exports.action.delete'));
       await invalidateAll();
       pushToast({ variant: 'ok', title: t('exports.delete.success') });
       navigate(`${basePath}/exports`);
     },
-    onError: (err: any) => {
-      pushToast({ variant: 'danger', title: t('exports.delete.error'), body: String(err?.message ?? err ?? '') });
-    },
+    onError: (err: unknown) => pushToast({ variant: 'danger', title: t('exports.delete.error'), body: errorMessage(err) }),
     onSettled: onSettledLock,
   });
 
@@ -267,7 +246,7 @@ export function ExportDetailPage() {
     mutationFn: async () => {
       if (id === null) throw new Error('invalid export id');
       if (editingHost) {
-        const hostId = parsePositiveInt((editingHost as any)?.id);
+        const hostId = parsePositiveInt(editingHost.id);
         if (!hostId) throw new Error('invalid host id');
         return await updateExportHost(id, hostId, {
           rw: hostForm.rw,
@@ -287,36 +266,32 @@ export function ExportDetailPage() {
     },
     onMutate: onMutateLock,
     onSuccess: async (res) => {
-      trackFromMeta((res as any).meta, editingHost ? t('exports.host.update.success') : t('exports.host.create.success'));
+      trackFromMeta(res.meta, editingHost ? t('exports.host.update.success') : t('exports.host.create.success'));
       await invalidateAll();
-      setHostEditorOpen(false);
-      setEditingHost(null);
+      closeHostEditor();
       pushToast({ variant: 'ok', title: editingHost ? t('exports.host.update.success') : t('exports.host.create.success') });
     },
-    onError: (err: any) => {
-      pushToast({ variant: 'danger', title: editingHost ? t('exports.host.update.error') : t('exports.host.create.error'), body: String(err?.message ?? err ?? '') });
+    onError: (err: unknown) => {
+      pushToast({ variant: 'danger', title: editingHost ? t('exports.host.update.error') : t('exports.host.create.error'), body: errorMessage(err) });
     },
     onSettled: onSettledLock,
   });
 
-  const [deleteHost, setDeleteHost] = useState<ExportHost | null>(null);
   const deleteHostM = useMutation({
     mutationFn: async () => {
       if (id === null) throw new Error('invalid export id');
-      const hostId = parsePositiveInt((deleteHost as any)?.id);
+      const hostId = parsePositiveInt(deleteHost?.id);
       if (!hostId) throw new Error('invalid host id');
       return await deleteExportHost(id, hostId);
     },
     onMutate: onMutateLock,
     onSuccess: async (res) => {
-      trackFromMeta((res as any).meta, t('exports.host.delete.success'));
+      trackFromMeta(res.meta, t('exports.host.delete.success'));
       await invalidateAll();
-      setDeleteHost(null);
+      closeDeleteHost();
       pushToast({ variant: 'ok', title: t('exports.host.delete.success') });
     },
-    onError: (err: any) => {
-      pushToast({ variant: 'danger', title: t('exports.host.delete.error'), body: String(err?.message ?? err ?? '') });
-    },
+    onError: (err: unknown) => pushToast({ variant: 'danger', title: t('exports.host.delete.error'), body: errorMessage(err) }),
     onSettled: onSettledLock,
   });
 
@@ -349,12 +324,14 @@ export function ExportDetailPage() {
     );
   }
 
-  const badgeVariant = ex.enabled === false ? 'warn' as const : 'ok' as const;
+  const badgeVariant = ex.enabled === false ? 'warn' : 'ok';
   const mountCommand = snippetMountCommand(address, path, mountPoint);
   const fstabLine = snippetFstab(address, path, mountPoint, rw);
   const systemdUnit = snippetSystemd(address, path, mountPoint, rw);
   const nixSnippet = snippetNix(address, path, mountPoint, rw);
-  const hasHosts = hosts.length > 0;
+  const editDiff = buildExportDiff(ex, editForm, mode === 'admin');
+  const adminThreadsInvalid = mode === 'admin' && editForm.threads.trim() !== '' && parsePositiveInt(editForm.threads) === null;
+  const hostDiff = editingHost ? buildExportHostDiff(editingHost, hostForm) : [];
 
   return (
     <DetailShell
@@ -366,7 +343,7 @@ export function ExportDetailPage() {
           description={sourceLabel(ex)}
           meta={
             <span className="flex flex-wrap items-center gap-2">
-              <Badge variant={badgeVariant} testId="exports.detail.badge.enabled">{boolBadgeLabel(Boolean(ex.enabled), t as any)}</Badge>
+              <Badge variant={badgeVariant} testId="exports.detail.badge.enabled">{boolBadgeLabel(Boolean(ex.enabled), t)}</Badge>
               <Badge variant={sourceIsSnapshot ? 'info' : 'neutral'}>{sourceIsSnapshot ? t('common.snapshot') : t('common.dataset')}</Badge>
               <span>#{id}</span>
             </span>
@@ -374,7 +351,7 @@ export function ExportDetailPage() {
           actions={
             <>
               <Button variant="secondary" onClick={() => setEditOpen(true)} testId="exports.detail.edit.open">{t('common.edit')}</Button>
-              <Button variant="danger" onClick={() => setDeleteOpen(true)} testId="exports.detail.delete.open">{t('common.delete')}</Button>
+              <Button variant="danger" onClick={openDeleteExport} testId="exports.detail.delete.open">{t('common.delete')}</Button>
             </>
           }
         />
@@ -408,16 +385,16 @@ export function ExportDetailPage() {
                   <div className="text-xs font-semibold text-muted">{t('exports.field.mode')}</div>
                   <div className="mt-1 flex flex-wrap gap-2">
                     <Badge variant={rw ? 'ok' : 'neutral'}>{rw ? t('exports.mode.rw') : t('exports.mode.ro')}</Badge>
-                    <Badge variant={Boolean((ex as any).sync) ? 'ok' : 'warn'}>{t('exports.field.sync')}</Badge>
-                    <Badge variant={Boolean((ex as any).subtree_check) ? 'info' : 'neutral'}>{t('exports.field.subtree_check')}</Badge>
-                    <Badge variant={Boolean((ex as any).root_squash) ? 'info' : 'neutral'}>{t('exports.field.root_squash')}</Badge>
+                    <Badge variant={Boolean(ex.sync) ? 'ok' : 'warn'}>{t('exports.field.sync')}</Badge>
+                    <Badge variant={Boolean(ex.subtree_check) ? 'info' : 'neutral'}>{t('exports.field.subtree_check')}</Badge>
+                    <Badge variant={Boolean(ex.root_squash) ? 'info' : 'neutral'}>{t('exports.field.root_squash')}</Badge>
                   </div>
                 </div>
                 <div>
                   <div className="text-xs font-semibold text-muted">{t('exports.field.scope')}</div>
                   <div className="mt-1 flex flex-wrap gap-2">
                     <Badge variant={allVps ? 'info' : 'neutral'}>{allVps ? t('exports.field.all_vps') : t('exports.field.selected_hosts')}</Badge>
-                    {mode === 'admin' ? <Badge variant="neutral">{t('exports.field.threads_label', { count: String((ex as any).threads ?? 0) })}</Badge> : null}
+                    {mode === 'admin' ? <Badge variant="neutral">{t('exports.field.threads_label', { count: String(ex.threads ?? 0) })}</Badge> : null}
                   </div>
                 </div>
               </div>
@@ -478,146 +455,58 @@ export function ExportDetailPage() {
         </div>
 
         <div className="space-y-4">
-          <Card testId="exports.detail.hosts">
-            <CardHeader
-              title={t('exports.detail.hosts.title')}
-              subtitle={allVps ? t('exports.detail.hosts.all_vps_subtitle') : t('exports.detail.hosts.subtitle')}
-              actions={
-                <Button size="sm" variant="primary" onClick={openCreateHost} disabled={allVps} testId="exports.detail.hosts.add">
-                  {t('exports.host.add')}
-                </Button>
-              }
-            />
-            <CardBody>
-              {allVps ? (
-                <Alert title={t('exports.detail.hosts.all_vps_title')} variant="info">
-                  {t('exports.detail.hosts.all_vps_body')}
-                </Alert>
-              ) : null}
-
-              {hostsQ.isLoading ? <LoadingState testId="exports.detail.hosts.loading" /> : null}
-              {hostsQ.isError ? <ErrorState testId="exports.detail.hosts.error" title={t('exports.host.load_error')} error={hostsQ.error} onRetry={() => void hostsQ.refetch()} /> : null}
-              {!hostsQ.isLoading && !hostsQ.isError && !hasHosts ? (
-                <div className="text-sm text-muted" data-testid="exports.detail.hosts.empty">{t('exports.detail.hosts.empty')}</div>
-              ) : null}
-              {!hostsQ.isLoading && !hostsQ.isError && hasHosts ? (
-                <TableCard testId="exports.detail.hosts.table" variant="plain" minWidth="full">
-                  <thead>
-                    <tr>
-                      <th className="px-2 py-2 text-left text-xs font-semibold text-muted">{t('exports.detail.hosts.address')}</th>
-                      <th className="px-2 py-2 text-left text-xs font-semibold text-muted">{t('exports.field.mode')}</th>
-                      <th className="px-2 py-2 text-left text-xs font-semibold text-muted">{t('common.state')}</th>
-                      <th className="px-2 py-2 text-right text-xs font-semibold text-muted">{t('common.actions')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {hosts.map((host) => {
-                      const hostId = parsePositiveInt((host as any).id) ?? 0;
-                      return (
-                        <tr key={hostId} data-testid={`exports.detail.hosts.row.${hostId}`} className={clsx('border-t border-border/80')}>
-                          <td className="px-2 py-2 font-mono text-xs text-fg">{hostLabel(host)}</td>
-                          <td className="px-2 py-2 text-sm text-fg">{Boolean((host as any).rw) ? t('exports.mode.rw') : t('exports.mode.ro')}</td>
-                          <td className="px-2 py-2">
-                            <div className="flex flex-wrap gap-1">
-                              <Badge variant={Boolean((host as any).sync) ? 'ok' : 'warn'}>{t('exports.field.sync')}</Badge>
-                              <Badge variant={Boolean((host as any).subtree_check) ? 'info' : 'neutral'}>{t('exports.field.subtree_check')}</Badge>
-                              <Badge variant={Boolean((host as any).root_squash) ? 'info' : 'neutral'}>{t('exports.field.root_squash')}</Badge>
-                            </div>
-                          </td>
-                          <td className="px-2 py-2 text-right">
-                            <div className="flex justify-end gap-2" data-row-no-nav>
-                              <Button size="sm" variant="secondary" onClick={() => openEditHost(host)} testId={`exports.detail.hosts.row.${hostId}.edit`}>{t('common.edit')}</Button>
-                              <Button size="sm" variant="danger" onClick={() => setDeleteHost(host)} testId={`exports.detail.hosts.row.${hostId}.delete`}>{t('common.delete')}</Button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </TableCard>
-              ) : null}
-            </CardBody>
-          </Card>
-
-          {!allVps && !hasHosts ? (
-            <Alert title={t('exports.detail.hosts.warning_title')} variant="warn">
-              {t('exports.detail.hosts.warning_body')}
-            </Alert>
-          ) : null}
+          <ExportHostsCard
+            allVps={allVps}
+            hosts={hosts}
+            loading={hostsQ.isLoading}
+            error={hostsQ.isError ? hostsQ.error : null}
+            onRetry={() => void hostsQ.refetch()}
+            onCreateHost={openCreateHost}
+            onEditHost={openEditHost}
+            onDeleteHost={openDeleteHost}
+          />
         </div>
       </div>
 
-      <Drawer open={editOpen} onClose={() => setEditOpen(false)} title={t('exports.update.title')} width="lg" testId="exports.detail.edit.drawer">
-        <div className="space-y-4">
-          <Checkbox checked={editForm.enabled} onChange={(checked) => setEditForm((prev) => ({ ...prev, enabled: checked }))} testId="exports.edit.enabled">{t('common.enabled')}</Checkbox>
-          <Checkbox checked={editForm.all_vps} onChange={(checked) => setEditForm((prev) => ({ ...prev, all_vps: checked }))} testId="exports.edit.all_vps">{t('exports.field.all_vps')}</Checkbox>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Checkbox checked={editForm.rw} onChange={(checked) => setEditForm((prev) => ({ ...prev, rw: checked }))} testId="exports.edit.rw">{t('exports.field.rw')}</Checkbox>
-            <Checkbox checked={editForm.sync} onChange={(checked) => setEditForm((prev) => ({ ...prev, sync: checked }))} testId="exports.edit.sync">{t('exports.field.sync')}</Checkbox>
-            <Checkbox checked={editForm.subtree_check} onChange={(checked) => setEditForm((prev) => ({ ...prev, subtree_check: checked }))} testId="exports.edit.subtree_check">{t('exports.field.subtree_check')}</Checkbox>
-            <Checkbox checked={editForm.root_squash} onChange={(checked) => setEditForm((prev) => ({ ...prev, root_squash: checked }))} testId="exports.edit.root_squash">{t('exports.field.root_squash')}</Checkbox>
-          </div>
-          {mode === 'admin' ? (
-            <div>
-              <div className="mb-1 text-sm font-medium text-fg">{t('exports.field.threads')}</div>
-              <Input value={editForm.threads} onChange={(e) => setEditForm((prev) => ({ ...prev, threads: e.target.value }))} testId="exports.edit.threads" ariaLabel={t('exports.field.threads')} />
-            </div>
-          ) : null}
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setEditOpen(false)}>{t('common.cancel')}</Button>
-            <Button variant="primary" loading={updateExportM.isPending} onClick={() => void updateExportM.mutateAsync()} testId="exports.edit.submit">{t('common.save')}</Button>
-          </div>
-        </div>
-      </Drawer>
-
-      <Drawer open={hostEditorOpen} onClose={() => { setHostEditorOpen(false); setEditingHost(null); }} title={editingHost ? t('exports.host.edit_title') : t('exports.host.add_title')} width="lg" testId="exports.detail.host.editor">
-        <div className="space-y-4">
-          {!editingHost ? (
-            <div>
-              <div className="mb-1 text-sm font-medium text-fg">{t('exports.detail.hosts.address')}</div>
-              <IpAddressLookupInput value={hostForm.ip_address} onChange={(v) => setHostForm((prev) => ({ ...prev, ip_address: v }))} userId={userId ?? undefined} placeholder={t('exports.host.address.placeholder')} ariaLabel={t('exports.detail.hosts.address')} testId="exports.host.ip_address" disabled={allVps} />
-            </div>
-          ) : (
-            <div>
-              <div className="text-xs font-semibold text-muted">{t('exports.detail.hosts.address')}</div>
-              <div className="mt-1 font-mono text-xs text-fg">{hostLabel(editingHost)}</div>
-            </div>
-          )}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Checkbox checked={hostForm.rw} onChange={(checked) => setHostForm((prev) => ({ ...prev, rw: checked }))} testId="exports.host.rw">{t('exports.field.rw')}</Checkbox>
-            <Checkbox checked={hostForm.sync} onChange={(checked) => setHostForm((prev) => ({ ...prev, sync: checked }))} testId="exports.host.sync">{t('exports.field.sync')}</Checkbox>
-            <Checkbox checked={hostForm.subtree_check} onChange={(checked) => setHostForm((prev) => ({ ...prev, subtree_check: checked }))} testId="exports.host.subtree_check">{t('exports.field.subtree_check')}</Checkbox>
-            <Checkbox checked={hostForm.root_squash} onChange={(checked) => setHostForm((prev) => ({ ...prev, root_squash: checked }))} testId="exports.host.root_squash">{t('exports.field.root_squash')}</Checkbox>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => { setHostEditorOpen(false); setEditingHost(null); }}>{t('common.cancel')}</Button>
-            <Button variant="primary" loading={saveHostM.isPending} onClick={() => void saveHostM.mutateAsync()} disabled={!editingHost && !hostForm.ip_address} testId="exports.host.submit">{editingHost ? t('common.save') : t('exports.host.add')}</Button>
-          </div>
-        </div>
-      </Drawer>
-
-      <ConfirmDialog
-        open={deleteOpen}
-        onCancel={() => setDeleteOpen(false)}
-        onConfirm={() => void deleteExportM.mutateAsync()}
-        danger
-        title={t('exports.delete.title')}
-        description={t('exports.delete.body', { source: sourceLabel(ex) })}
-        confirmLabel={t('common.delete')}
-        confirmLoading={deleteExportM.isPending}
-        testId="exports.detail.delete.dialog"
+      <ExportEditDrawer
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        isAdmin={mode === 'admin'}
+        form={editForm}
+        setForm={setEditForm}
+        diff={editDiff}
+        invalidThreads={adminThreadsInvalid}
+        pending={updateExportM.isPending}
+        onSubmit={() => void updateExportM.mutateAsync()}
       />
 
-      <ConfirmDialog
-        open={deleteHost !== null}
-        onCancel={() => setDeleteHost(null)}
-        onConfirm={() => void deleteHostM.mutateAsync()}
-        danger
-        title={t('exports.host.delete.title')}
-        description={t('exports.host.delete.body', { host: deleteHost ? hostLabel(deleteHost) : '—' })}
-        confirmLabel={t('common.delete')}
-        confirmLoading={deleteHostM.isPending}
-        testId="exports.detail.host.delete.dialog"
+      <ExportHostEditorDrawer
+        open={hostEditorOpen}
+        onClose={closeHostEditor}
+        editingHost={editingHost}
+        form={hostForm}
+        setForm={setHostForm}
+        userId={userId ?? undefined}
+        allVps={allVps}
+        diff={hostDiff}
+        pending={saveHostM.isPending}
+        onSubmit={() => void saveHostM.mutateAsync()}
+      />
+
+      <ExportDeleteDialogs
+        exportOpen={deleteOpen}
+        exportItem={ex}
+        exportPending={deleteExportM.isPending}
+        exportPhrase={deletePhrase}
+        onExportPhraseChange={setDeletePhrase}
+        onCancelExport={closeDeleteExport}
+        onConfirmExport={() => void deleteExportM.mutateAsync()}
+        host={deleteHost}
+        hostPending={deleteHostM.isPending}
+        hostPhrase={deleteHostPhrase}
+        onHostPhraseChange={setDeleteHostPhrase}
+        onCancelHost={closeDeleteHost}
+        onConfirmHost={() => void deleteHostM.mutateAsync()}
       />
     </DetailShell>
   );
