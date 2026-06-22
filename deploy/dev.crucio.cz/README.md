@@ -64,6 +64,16 @@ Real snapshot archives still depend on the upstream-style
 `<pool>/vpsadmin/download` dataset over NFS and the host has to mount those
 exports below `/var/lib/web/download/<node-domain>/<pool-id>`.
 
+The dev NAS lab's primary dataset pool can be mounted explicitly with:
+
+```sh
+deploy/dev.crucio.cz/mount-snapshot-downloads.sh
+```
+
+This mounts `10.0.0.5:/tank/nas/vpsadmin/download` below
+`/var/lib/web/download/vpsadmin-nas-storage1.nas-lab.vpsadmin.test/105` and
+checks that nginx can serve the healthcheck file.
+
 The BFF environment lives on the server in:
 
 ```sh
