@@ -69,6 +69,15 @@ function ynBadge(t: (k: string) => string, v: boolean | undefined): { variant: R
   return { variant: 'neutral', label: '—' };
 }
 
+function FieldLabel(props: { label: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-semibold text-muted">{props.label}</span>
+      {props.children}
+    </label>
+  );
+}
+
 type LnEditorState =
   | null
   | {
@@ -600,27 +609,30 @@ export function NetworkDetailPage() {
           <Alert title={t('admin.cluster.network_detail.add_addresses.notice.title')} variant="warn">
             {t('admin.cluster.network_detail.add_addresses.notice.body')}
           </Alert>
-          <Input
-            testId="admin.cluster.network_detail.add_addresses.count"
-            label={t('admin.cluster.network_detail.add_addresses.count')}
-            value={addAddressesForm.count}
-            onChange={(e) => setAddAddressesForm((p) => ({ ...p, count: e.target.value }))}
-            inputMode="numeric"
-          />
-          <Input
-            testId="admin.cluster.network_detail.add_addresses.user"
-            label={t('admin.cluster.network_detail.add_addresses.user')}
-            value={addAddressesForm.user}
-            onChange={(e) => setAddAddressesForm((p) => ({ ...p, user: e.target.value }))}
-            inputMode="numeric"
-          />
-          <Input
-            testId="admin.cluster.network_detail.add_addresses.environment"
-            label={t('admin.cluster.network_detail.add_addresses.environment')}
-            value={addAddressesForm.environment}
-            onChange={(e) => setAddAddressesForm((p) => ({ ...p, environment: e.target.value }))}
-            inputMode="numeric"
-          />
+          <FieldLabel label={t('admin.cluster.network_detail.add_addresses.count')}>
+            <Input
+              testId="admin.cluster.network_detail.add_addresses.count"
+              value={addAddressesForm.count}
+              onChange={(e) => setAddAddressesForm((p) => ({ ...p, count: e.target.value }))}
+              inputMode="numeric"
+            />
+          </FieldLabel>
+          <FieldLabel label={t('admin.cluster.network_detail.add_addresses.user')}>
+            <Input
+              testId="admin.cluster.network_detail.add_addresses.user"
+              value={addAddressesForm.user}
+              onChange={(e) => setAddAddressesForm((p) => ({ ...p, user: e.target.value }))}
+              inputMode="numeric"
+            />
+          </FieldLabel>
+          <FieldLabel label={t('admin.cluster.network_detail.add_addresses.environment')}>
+            <Input
+              testId="admin.cluster.network_detail.add_addresses.environment"
+              value={addAddressesForm.environment}
+              onChange={(e) => setAddAddressesForm((p) => ({ ...p, environment: e.target.value }))}
+              inputMode="numeric"
+            />
+          </FieldLabel>
         </div>
       </Modal>
     </div>

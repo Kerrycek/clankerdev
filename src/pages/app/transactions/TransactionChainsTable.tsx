@@ -7,6 +7,14 @@ import { extractConcernRefs } from '../../../lib/concerns';
 import { directConcernLink, txItemsFilterForConcern } from '../../../lib/concernLinks';
 import { chainBadgeFromState, chainProgressLabel, chainProgressPercent } from '../../../lib/taskStatus';
 import { extractRelatedActionStateIdFromTransactionChain } from '../../../lib/taskLinks';
+import {
+  classifyTransactionChain,
+  operationBadgeVariant,
+  operationCategoryLabel,
+  operationLabel,
+  operationSeverityLabel,
+  operationVisibilityLabel,
+} from '../../../lib/operationTaxonomy';
 import type { KeysetPaginationState } from '../../../lib/hooks/useKeysetPagination';
 
 import { Badge } from '../../../components/ui/Badge';
@@ -43,6 +51,7 @@ interface TransactionChainsTableProps {
   canNext: boolean;
   pageCursor: number | null;
   onTogglePinned: (id: number) => void;
+  showPagination?: boolean;
 }
 
 export function TransactionChainsTable({
@@ -59,13 +68,14 @@ export function TransactionChainsTable({
   canNext,
   pageCursor,
   onTogglePinned,
+  showPagination = true,
 }: TransactionChainsTableProps) {
   return (
     <TableCard
       testId="transactions.table"
       minWidth="lg"
       footer={
-        !queryId ? (
+        showPagination && !queryId ? (
           <KeysetPagination
             page={pagination.page}
             pageCount={pagination.stack.length}
@@ -106,6 +116,8 @@ export function TransactionChainsTable({
           const rowVariant = chainRowVariantFromState(stateValue);
           const dotVariant = chainDotVariantFromState(stateValue);
           const label = getChainLabel(chain) ?? `#${id}`;
+          const operation = classifyTransactionChain(chain);
+          const operationName = operationLabel(operation, t);
           const concerns = extractConcernRefs(chain.concerns, { maxDepth: 3 });
           const shownConcerns = concerns.slice(0, 3);
           const actionStateId = extractRelatedActionStateIdFromTransactionChain(chain);
@@ -138,11 +150,17 @@ export function TransactionChainsTable({
               <td className="px-4 py-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <Link className="font-medium underline" to={`${basePath}/transactions/${id}`}>
-                    {label}
+                    {operationName}
                   </Link>
                   <ChipLink to={`${basePath}/transactions/items?transaction_chain=${id}`} title={t('transactions.chains.row.open_items_title', { id })}>
                     {t('transactions.items.short')}
                   </ChipLink>
+                </div>
+                {label !== operationName ? <div className="mt-1 text-xs text-faint">{t('operation.raw_name', { name: label })}</div> : null}
+                <div className="mt-2 flex flex-wrap gap-1">
+                  <Badge variant={operationBadgeVariant(operation)}>{operationCategoryLabel(operation, t)}</Badge>
+                  {operation.severity !== 'normal' ? <Badge variant={operationBadgeVariant(operation)}>{operationSeverityLabel(operation, t)}</Badge> : null}
+                  {operation.visibility !== 'user' ? <Badge variant="info">{operationVisibilityLabel(operation, t)}</Badge> : null}
                 </div>
                 {shownConcerns.length > 0 ? (
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">

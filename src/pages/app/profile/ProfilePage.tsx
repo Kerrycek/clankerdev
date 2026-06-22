@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../../../app/auth';
 import { useI18n } from '../../../app/i18n';
-import { useUiSettings } from '../../../app/uiSettings';
+import { useUiSettings, type UiLanguagePreference, type UiThemePreference } from '../../../app/uiSettings';
 import { useAppMode } from '../../../app/appMode';
 import { useToasts } from '../../../app/toasts';
 
@@ -20,6 +20,14 @@ import { Select } from '../../../components/ui/Select';
 import { formatDateTime } from '../../../lib/time';
 import { computeOtherModeUrl } from '../../../lib/modeSwitch';
 import { queueScopeAllObjectsWarning } from '../../../lib/pendingToasts';
+
+function isUiThemePreference(value: string): value is UiThemePreference {
+  return value === 'system' || value === 'light' || value === 'dark';
+}
+
+function isUiLanguagePreference(value: string): value is UiLanguagePreference {
+  return value === 'system' || value === 'en' || value === 'cs';
+}
 
 export function ProfilePage() {
   const auth = useAuth();
@@ -192,7 +200,10 @@ export function ProfilePage() {
                 <div className="mt-1">
                   <Select
                     value={ui.settings.theme}
-                    onChange={(e) => ui.setTheme(e.target.value as any)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (isUiThemePreference(value)) ui.setTheme(value);
+                    }}
                     options={[
                       { value: 'system', label: t('settings.theme.system') },
                       { value: 'light', label: t('settings.theme.light') },
@@ -208,7 +219,10 @@ export function ProfilePage() {
                 <div className="mt-1">
                   <Select
                     value={ui.settings.language}
-                    onChange={(e) => ui.setLanguage(e.target.value as any)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (isUiLanguagePreference(value)) ui.setLanguage(value);
+                    }}
                     options={[
                       { value: 'system', label: t('settings.language.system') },
                       { value: 'en', label: t('settings.language.en') },

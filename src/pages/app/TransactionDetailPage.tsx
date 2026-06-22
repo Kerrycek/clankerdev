@@ -10,6 +10,14 @@ import { useChrome } from '../../components/layout/ChromeContext';
 import { DetailShell } from '../../components/layout/DetailShell';
 
 import { transactionBadge } from '../../lib/taskStatus';
+import {
+  classifyTransaction,
+  operationBadgeVariant,
+  operationCategoryLabel,
+  operationLabel,
+  operationSeverityLabel,
+  operationVisibilityLabel,
+} from '../../lib/operationTaxonomy';
 import { useTierAIntervalMs } from '../../lib/refreshTiers';
 import { formatDateTime } from '../../lib/format';
 import { resourceId, refLabel } from '../../lib/resources';
@@ -53,12 +61,13 @@ export function TransactionDetailPage() {
 
   const tx = txQ.data;
   const txDone = tx ? String((tx as any).done ?? '') === 'done' : false;
+  const operation = useMemo(() => (tx ? classifyTransaction(tx) : null), [tx]);
+  const rawName = tx?.name ? String(tx.name) : '';
 
   const title = useMemo(() => {
     if (!txIdValid) return t('transactions.items.detail.invalid_title');
-    const name = tx?.name ? String(tx.name) : '';
-    return name || t('transactions.items.row.fallback_name');
-  }, [tx, txIdValid, t]);
+    return operation ? operationLabel(operation, t) : t('transactions.items.row.fallback_name');
+  }, [operation, txIdValid, t]);
 
   const badge = useMemo(() => {
     if (!tx) return null;
@@ -107,10 +116,11 @@ export function TransactionDetailPage() {
         titleAfter={
           <span className="inline-flex items-center gap-2">
             {badge}
+            {operation ? <Badge variant={operationBadgeVariant(operation)}>{operationCategoryLabel(operation, t)}</Badge> : null}
+            {operation && operation.severity !== 'normal' ? <Badge variant={operationBadgeVariant(operation)}>{operationSeverityLabel(operation, t)}</Badge> : null}
+            {operation && operation.visibility !== 'user' ? <Badge variant={operationBadgeVariant(operation)}>{operationVisibilityLabel(operation, t)}</Badge> : null}
             {urgent ? <Badge variant="warn">{t('transactions.tx.urgent')}</Badge> : null}
-            {type !== undefined ? (
-                      <Badge variant="neutral">{t('transactions.items.row.type_chip', { type })}</Badge>
-                    ) : null}
+            {type !== undefined ? <Badge variant="neutral">{t('transactions.items.row.type_chip', { type })}</Badge> : null}
           </span>
         }
         meta={txIdValid ? `#${txIdNum}` : undefined}
@@ -177,6 +187,14 @@ export function TransactionDetailPage() {
                 <div>
                   <div className="text-xs text-muted">{t('common.state')}</div>
                   <div className="mt-1">{badge ?? <span className="text-sm text-muted">{t('common.na')}</span>}</div>
+                </div>
+
+                <div>
+                  <div className="text-xs text-muted">{t('common.name')}</div>
+                  <div className="mt-1 text-sm">
+                    {title}
+                    {rawName && rawName !== title ? <div className="mt-1 text-xs text-faint">{t('operation.raw_name', { name: rawName })}</div> : null}
+                  </div>
                 </div>
 
                 <div>

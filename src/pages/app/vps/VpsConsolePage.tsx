@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ExternalLink, Maximize2, Minimize2, PlugZap, RotateCw } from 'lucide-react';
+import { ExternalLink, Maximize2, Minimize2, PlugZap, RotateCw, Trash2 } from 'lucide-react';
 
 import { useI18n } from '../../../app/i18n';
 import { createConsoleToken, deleteConsoleToken } from '../../../lib/api/vps';
@@ -11,11 +11,14 @@ import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { CopyButton } from '../../../components/ui/CopyButton';
 import { Spinner } from '../../../components/ui/Spinner';
 import { clsx } from '../../../components/ui/clsx';
+import {
+  buildConsoleUrl,
+  isConsoleTokenExpired,
+  millisecondsUntilConsoleTokenExpiry,
+  normalizeConsoleToken,
+  normalizeRemoteConsoleServer,
+} from '../../../lib/consoleToken';
 import { useVps } from './VpsContext';
-
-function normalizeServerUrl(url: string) {
-  return url.replace(/\/+$/, '');
-}
 
 type ConsoleConnectionState =
   | 'connecting'
@@ -24,14 +27,8 @@ type ConsoleConnectionState =
   | 'failed'
   | 'reconnecting'
   | 'expired'
+  | 'revoked'
   | 'unavailable';
-
-function isExpired(expiration: string | null | undefined) {
-  if (!expiration) return false;
-  const expires = Date.parse(expiration);
-  if (Number.isNaN(expires)) return false;
-  return expires <= Date.now();
-}
 
 export function VpsConsolePage() {
   const { vps, sshCommand } = useVps();
@@ -39,53 +36,106 @@ export function VpsConsolePage() {
   const qc = useQueryClient();
 
   const [newSessionConfirmOpen, setNewSessionConfirmOpen] = useState(false);
+  const [revokeSessionConfirmOpen, setRevokeSessionConfirmOpen] = useState(false);
   const [focused, setFocused] = useState(false);
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [iframeProblem, setIframeProblem] = useState(false);
   const [frameNonce, setFrameNonce] = useState(0);
   const [manualReconnect, setManualReconnect] = useState(false);
+  const [sessionSuspended, setSessionSuspended] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
-  const server = (vps.node as any)?.location?.remote_console_server as string | undefined;
+  const tokenQueryKey = ['vps', vps.id, 'consoleToken'] as const;
+  const server = normalizeRemoteConsoleServer((vps.node as any)?.location?.remote_console_server);
   const canCreateSession = Boolean(server);
 
+  const createFreshConsoleToken = async () => {
+    const normalized = normalizeConsoleToken((await createConsoleToken(vps.id)).data);
+    if (!normalized) throw new Error('Console token response did not include a usable token.');
+    return normalized;
+  };
+
   const tokenQ = useQuery({
-    queryKey: ['vps', vps.id, 'consoleToken'],
-    queryFn: async () => (await createConsoleToken(vps.id)).data,
-    enabled: canCreateSession,
+    queryKey: tokenQueryKey,
+    queryFn: createFreshConsoleToken,
+    enabled: canCreateSession && !sessionSuspended,
     retry: false,
     refetchOnWindowFocus: false,
   });
+
+  const resetFrameState = () => {
+    setFrameNonce((value) => value + 1);
+    setIframeLoaded(false);
+    setIframeProblem(false);
+    setManualReconnect(false);
+  };
 
   const newSessionM = useMutation({
     mutationFn: async () => {
       // Creating a new token may require invalidating the existing one first.
       // The backend `Create` can return an existing valid token.
+      let revokedBeforeCreate = false;
       try {
         await deleteConsoleToken(vps.id);
+        revokedBeforeCreate = true;
       } catch {
         // ignore (e.g. no prior token)
       }
-      return (await createConsoleToken(vps.id)).data;
+
+      try {
+        return await createFreshConsoleToken();
+      } catch (error) {
+        if (revokedBeforeCreate && error && typeof error === 'object') {
+          (error as Record<string, unknown>)['sessionRevokedBeforeFailure'] = true;
+        }
+        throw error;
+      }
     },
     onSuccess: (data) => {
-      qc.setQueryData(['vps', vps.id, 'consoleToken'], data);
-      setFrameNonce((value) => value + 1);
-      setManualReconnect(false);
+      qc.setQueryData(tokenQueryKey, data);
+      setSessionSuspended(false);
+      resetFrameState();
+    },
+    onError: (error) => {
+      if ((error as any)?.sessionRevokedBeforeFailure) {
+        qc.setQueryData(tokenQueryKey, null);
+        setSessionSuspended(true);
+        resetFrameState();
+      }
     },
   });
 
-  const consoleUrl = useMemo(() => {
-    if (!server) return null;
-    if (!tokenQ.data?.token) return null;
+  const revokeSessionM = useMutation({
+    mutationFn: async () => deleteConsoleToken(vps.id),
+    onSuccess: () => {
+      qc.setQueryData(tokenQueryKey, null);
+      setSessionSuspended(true);
+      resetFrameState();
+    },
+  });
 
-    const s = normalizeServerUrl(server);
-    return `${s}/console/${vps.id}?session=${encodeURIComponent(tokenQ.data.token)}`;
-  }, [server, tokenQ.data, vps.id]);
+  const activeToken = sessionSuspended ? null : (tokenQ.data ?? null);
+
+  const consoleUrl = useMemo(
+    () => buildConsoleUrl(server, vps.id, activeToken?.token),
+    [activeToken?.token, server, vps.id]
+  );
 
   useEffect(() => {
     setIframeLoaded(false);
     setIframeProblem(false);
   }, [consoleUrl]);
+
+  useEffect(() => {
+    const currentNow = Date.now();
+    setNow(currentNow);
+
+    const msUntilExpiry = millisecondsUntilConsoleTokenExpiry(activeToken?.expiration, currentNow);
+    if (msUntilExpiry === null) return undefined;
+
+    const timer = window.setTimeout(() => setNow(Date.now()), Math.min(msUntilExpiry + 250, 2_147_483_647));
+    return () => window.clearTimeout(timer);
+  }, [activeToken?.expiration, activeToken?.token]);
 
   useEffect(() => {
     if (!consoleUrl || iframeLoaded) return;
@@ -101,9 +151,12 @@ export function VpsConsolePage() {
 
   const techError = tokenQ.error instanceof HaveApiError ? tokenQ.error : null;
 
-  const disabledNewSession = !canCreateSession || tokenQ.isFetching || newSessionM.isPending;
-  const tokenExpired = isExpired(tokenQ.data?.expiration);
+  const tokenExpired = isConsoleTokenExpired(activeToken?.expiration, now);
+  const hasActiveLiveToken = Boolean(activeToken?.token && !tokenExpired);
   const hasConsoleUrl = Boolean(consoleUrl && !tokenExpired);
+  const sessionActionPending = newSessionM.isPending || revokeSessionM.isPending;
+  const disabledNewSession = !canCreateSession || tokenQ.isFetching || sessionActionPending;
+  const disabledRevokeSession = !hasActiveLiveToken || sessionActionPending;
 
   const reconnect = () => {
     setManualReconnect(true);
@@ -114,19 +167,21 @@ export function VpsConsolePage() {
 
   const connectionState: ConsoleConnectionState = !server
     ? 'unavailable'
-    : tokenQ.isError
-      ? 'failed'
-      : newSessionM.isPending || manualReconnect
-        ? 'reconnecting'
-        : tokenExpired
-          ? 'expired'
-          : tokenQ.isLoading || tokenQ.isFetching
-            ? 'connecting'
-            : iframeProblem
-              ? 'disconnected'
-              : iframeLoaded
-                ? 'connected'
-                : 'connecting';
+    : sessionActionPending || manualReconnect
+      ? 'reconnecting'
+      : tokenQ.isError
+        ? 'failed'
+        : sessionSuspended
+          ? 'revoked'
+          : tokenExpired
+            ? 'expired'
+            : tokenQ.isLoading || tokenQ.isFetching
+              ? 'connecting'
+              : iframeProblem
+                ? 'disconnected'
+                : iframeLoaded
+                  ? 'connected'
+                  : 'connecting';
 
   const stateVariant: Record<ConsoleConnectionState, string> = {
     connecting: 'bg-info',
@@ -135,15 +190,18 @@ export function VpsConsolePage() {
     failed: 'bg-danger',
     reconnecting: 'bg-info',
     expired: 'bg-warn',
+    revoked: 'bg-neutral',
     unavailable: 'bg-neutral',
   };
 
   const expiresAt =
-    tokenQ.data?.expiration && !Number.isNaN(Date.parse(tokenQ.data.expiration))
+    activeToken?.expiration && !Number.isNaN(Date.parse(activeToken.expiration))
       ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(
-          new Date(tokenQ.data.expiration)
+          new Date(activeToken.expiration)
         )
       : null;
+
+  const mutationErrorMessage = (error: unknown): string => String((error as any)?.message ?? error);
 
   return (
     <div className="space-y-3" data-testid="vps.console.page">
@@ -169,7 +227,7 @@ export function VpsConsolePage() {
             size="sm"
             testId="vps.console.new_session"
             onClick={() => {
-              if (tokenQ.data?.token) {
+              if (hasActiveLiveToken) {
                 setNewSessionConfirmOpen(true);
               } else {
                 newSessionM.mutate();
@@ -192,6 +250,17 @@ export function VpsConsolePage() {
               >
                 <PlugZap className="h-4 w-4" aria-hidden="true" />
                 {t('vps.console.reconnect.label')}
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setRevokeSessionConfirmOpen(true)}
+                testId="vps.console.revoke_session"
+                title={t('vps.console.revoke_session.title_hint')}
+                disabled={disabledRevokeSession}
+              >
+                <Trash2 className="h-4 w-4" aria-hidden="true" />
+                {t('vps.console.revoke_session.label')}
               </Button>
               <Button
                 variant={focused ? 'primary' : 'secondary'}
@@ -248,6 +317,48 @@ export function VpsConsolePage() {
             {t('vps.console.server_missing.body')}
           </Alert>
         </div>
+      ) : null}
+
+      {hasConsoleUrl ? (
+        <Alert variant="neutral" testId="vps.console.token_hint">
+          {t('vps.console.basic_hint')}
+        </Alert>
+      ) : null}
+
+      {sessionSuspended ? (
+        <Alert variant="ok" title={t('vps.console.revoked.title')} testId="vps.console.revoked">
+          <div className="space-y-3">
+            <div>{t('vps.console.revoked.body')}</div>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => newSessionM.mutate()}
+              disabled={disabledNewSession}
+              loading={newSessionM.isPending}
+              testId="vps.console.revoked.new_session"
+            >
+              {t('vps.console.new_session.label')}
+            </Button>
+          </div>
+        </Alert>
+      ) : null}
+
+      {newSessionM.isError ? (
+        <Alert variant="danger" title={t('vps.console.new_session.error_title')} testId="vps.console.new_session_error">
+          <div className="space-y-1">
+            <div>{t('vps.console.new_session.error_body')}</div>
+            <div className="font-mono text-xs">{mutationErrorMessage(newSessionM.error)}</div>
+          </div>
+        </Alert>
+      ) : null}
+
+      {revokeSessionM.isError ? (
+        <Alert variant="danger" title={t('vps.console.revoke_error.title')} testId="vps.console.revoke_error">
+          <div className="space-y-1">
+            <div>{t('vps.console.revoke_error.body')}</div>
+            <div className="font-mono text-xs">{mutationErrorMessage(revokeSessionM.error)}</div>
+          </div>
+        </Alert>
       ) : null}
 
       {tokenQ.isLoading ? (
@@ -312,7 +423,7 @@ export function VpsConsolePage() {
                 size="sm"
                 testId="vps.console.expired.new_session"
                 onClick={() => newSessionM.mutate()}
-                disabled={newSessionM.isPending}
+                disabled={disabledNewSession}
                 loading={newSessionM.isPending}
               >
                 {t('vps.console.new_session.label')}
@@ -411,6 +522,26 @@ export function VpsConsolePage() {
         onConfirm={() => {
           newSessionM.mutate(undefined, {
             onSettled: () => setNewSessionConfirmOpen(false),
+          });
+        }}
+      />
+
+      <ConfirmDialog
+        open={revokeSessionConfirmOpen}
+        testId="vps.console.revoke_session_dialog"
+        title={t('vps.console.revoke_session.confirm_title')}
+        description={t('vps.console.revoke_session.confirm_body')}
+        confirmLabel={t('vps.console.revoke_session.confirm')}
+        confirmVariant="danger"
+        confirmLoading={revokeSessionM.isPending}
+        cancelDisabled={revokeSessionM.isPending}
+        onCancel={() => {
+          if (revokeSessionM.isPending) return;
+          setRevokeSessionConfirmOpen(false);
+        }}
+        onConfirm={() => {
+          revokeSessionM.mutate(undefined, {
+            onSettled: () => setRevokeSessionConfirmOpen(false),
           });
         }}
       />

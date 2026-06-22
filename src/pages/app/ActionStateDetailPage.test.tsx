@@ -55,6 +55,7 @@ vi.mock('../../app/i18n', () => ({
     preference: 'en',
     preferredLanguageCodes: ['en', 'cs'],
     t: (key: string, vars?: Record<string, unknown>) => {
+      if (key === 'operation.raw_name' && vars?.['name']) return `Backend name: ${vars['name']}`;
       let out = key;
       for (const [k, v] of Object.entries(vars ?? {})) out = out.replace(`{${k}}`, String(v));
       return out;
@@ -127,7 +128,7 @@ describe('ActionStateDetailPage', () => {
     expect(mocks.fetchActionState).toHaveBeenCalledWith(900);
     expect(mocks.fetchTransactionChain).toHaveBeenCalledWith(42);
     expect(mocks.fetchTransactions).toHaveBeenCalledWith({ transactionChainId: 42, limit: 500 });
-    expect(await screen.findByText('Vps::Start')).toBeInTheDocument();
+    expect(await screen.findByText(/Vps::Start/)).toBeInTheDocument();
     expect(screen.getByTestId('action_state.detail.transactions.table')).toBeInTheDocument();
 
     await userEvent.click(screen.getByTestId('action_state.detail.tx.toggle.501'));

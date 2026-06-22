@@ -1,6 +1,8 @@
 // Ops locale chunk: action_state
 export const enOps_action_state = {
   "action_state.field.can_cancel": "Can cancel",
+  "action_state.field.operation": "Operation",
+  "action_state.field.backend_label": "Backend label",
   "action_state.field.transaction_chain": "Transaction chain",
   "action_state.invalid_id.body": "Bad action state ID.",
   "action_state.invalid_id.title": "Invalid action state",

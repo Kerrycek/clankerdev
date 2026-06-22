@@ -11,12 +11,12 @@ import {
   createUserPayment,
   fetchIncomingPayment,
   type IncomingPayment,
-  type IncomingPaymentState,
   updateIncomingPaymentState,
 } from '../../../lib/api/payments';
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
 
 import { formatDateTime } from '../../../lib/format';
+import { formatErrorMessage } from '../../../lib/errors';
 import {
   getPaidUntilStatus,
   incomingPaymentBadgeVariant,
@@ -39,42 +39,16 @@ import { LoadingState } from '../../../components/ui/LoadingState';
 import { Modal } from '../../../components/ui/Modal';
 import { Select } from '../../../components/ui/Select';
 import { StatusDot } from '../../../components/ui/StatusDot';
-
-function safeNumber(value: string | undefined): number | undefined {
-  const t = String(value ?? '').trim();
-  if (!t) return undefined;
-  const n = Number(t);
-  if (!Number.isFinite(n)) return undefined;
-  const i = Math.floor(n);
-  if (i <= 0) return undefined;
-  return i;
-}
-
-function formatMoney(amount?: number | null, currency?: string | null): string {
-  if (amount === undefined || amount === null) return '—';
-  const c = String(currency ?? '').trim();
-
-  try {
-    if (c) return new Intl.NumberFormat(undefined, { style: 'currency', currency: c }).format(amount);
-  } catch {
-    // ignore Intl formatting errors
-  }
-
-  const fixed = Math.abs(amount) >= 10 ? amount.toFixed(0) : amount.toFixed(2);
-  return c ? `${fixed} ${c}` : fixed;
-}
-
-function userLabel(u: any): string {
-  if (!u) return '—';
-  if (typeof u.login === 'string') return u.login;
-  if (typeof u.label === 'string') return u.label;
-  if (typeof u.id === 'number') return `#${u.id}`;
-  return String(u);
-}
-
-function stateOptions(): IncomingPaymentState[] {
-  return ['queued', 'unmatched', 'processed', 'ignored'];
-}
+import { IncomingPaymentAssignReviewCard, IncomingPaymentStateReviewCard } from './IncomingPaymentReviewCards';
+import {
+  buildIncomingPaymentAssignReview,
+  buildIncomingPaymentStateReview,
+  incomingPaymentAccountedAmountLabel,
+  incomingPaymentReceivedAmountLabel,
+  incomingPaymentStateOptions,
+  incomingPaymentUserLabel,
+  parsePositivePaymentId,
+} from './IncomingPaymentsModel';
 
 export function IncomingPaymentDetailPage() {
   const { basePath } = useAppMode();
@@ -84,7 +58,7 @@ export function IncomingPaymentDetailPage() {
   const qc = useQueryClient();
 
   const params = useParams();
-  const paymentId = safeNumber(params['paymentId']);
+  const paymentId = parsePositivePaymentId(params['paymentId']);
 
   const q = useQuery({
     queryKey: ['incoming_payments', 'show', paymentId],
@@ -98,11 +72,11 @@ export function IncomingPaymentDetailPage() {
   const payment = q.data as IncomingPayment | undefined;
 
   const st = String(payment?.state ?? '').trim();
-  const acctStatus = (payment as any)?.user ? getPaidUntilStatus((payment as any)?.user_paid_until) : null;
+  const acctStatus = payment?.user ? getPaidUntilStatus(payment.user_paid_until) : null;
   const primaryVar = incomingPaymentPrimaryVariant({
     state: st,
-    user: (payment as any)?.user,
-    user_paid_until: (payment as any)?.user_paid_until,
+    user: payment?.user,
+    user_paid_until: payment?.user_paid_until,
   });
   const dotVar = dotVariantFromBadgeVariant(primaryVar);
 
@@ -112,23 +86,25 @@ export function IncomingPaymentDetailPage() {
   const [assignOpen, setAssignOpen] = useState(false);
   const [assignUserId, setAssignUserId] = useState('');
 
-  const isAssigned = Boolean((payment as any)?.user);
+  const isAssigned = Boolean(payment?.user);
 
-  const recvAmount = useMemo(() => {
-    if (!payment) return '—';
-    return formatMoney(payment.src_amount ?? payment.amount, payment.src_currency ?? payment.currency);
-  }, [payment]);
+  const recvAmount = useMemo(() => incomingPaymentReceivedAmountLabel(payment), [payment]);
+  const acctAmount = useMemo(() => incomingPaymentAccountedAmountLabel(payment), [payment]);
 
-  const acctAmount = useMemo(() => {
-    if (!payment) return null;
-    if (payment.src_amount === undefined || payment.src_amount === null) return null;
-    return formatMoney(payment.amount, payment.currency);
-  }, [payment]);
+  const stateReview = useMemo(
+    () => buildIncomingPaymentStateReview({ payment, nextState: effectiveStateEdit }),
+    [effectiveStateEdit, payment]
+  );
+
+  const assignReview = useMemo(
+    () => buildIncomingPaymentAssignReview({ payment, rawUserId: assignUserId }),
+    [assignUserId, payment]
+  );
 
   async function saveState() {
-    if (!paymentId) return;
+    if (!paymentId || !stateReview.canSubmit) return;
 
-    const next = String(effectiveStateEdit).trim();
+    const next = String(stateReview.nextState).trim();
     if (!next) return;
 
     try {
@@ -143,11 +119,11 @@ export function IncomingPaymentDetailPage() {
       setStateEdit('');
       q.refetch();
       qc.invalidateQueries({ queryKey: ['incoming_payments', 'index'] });
-    } catch (e: any) {
+    } catch (e: unknown) {
       toasts.pushToast({
         variant: 'danger',
         title: t('payments.incoming.detail.toast.state_updated.error.title'),
-        body: e?.message ?? String(e),
+        body: formatErrorMessage(e),
       });
     }
   }
@@ -155,12 +131,12 @@ export function IncomingPaymentDetailPage() {
   async function submitAssign() {
     if (!paymentId) return;
 
-    const userId = safeNumber(assignUserId);
-    if (!userId) {
+    const userId = assignReview.userId;
+    if (!assignReview.canSubmit || !userId) {
       toasts.pushToast({
         variant: 'danger',
         title: t('payments.incoming.assign.toast.invalid_user.title'),
-        body: t('payments.incoming.assign.toast.invalid_user.message'),
+        body: t(assignReview.validationKey ?? 'payments.incoming.assign.toast.invalid_user.message'),
       });
       return;
     }
@@ -174,11 +150,11 @@ export function IncomingPaymentDetailPage() {
       if (String(st).trim() !== 'processed') {
         try {
           await updateIncomingPaymentState(paymentId, 'processed');
-        } catch (e: any) {
+        } catch (e: unknown) {
           toasts.pushToast({
             variant: 'warn',
             title: t('payments.incoming.assign.toast.state_update_failed.title'),
-            body: `${t('payments.incoming.assign.toast.state_update_failed.message')}${e?.message ? ` (${e.message})` : ''}`,
+            body: `${t('payments.incoming.assign.toast.state_update_failed.message')} (${formatErrorMessage(e)})`,
           });
         }
       }
@@ -191,14 +167,15 @@ export function IncomingPaymentDetailPage() {
 
       setAssignOpen(false);
       setAssignUserId('');
+      setStateEdit('');
 
       await q.refetch();
       qc.invalidateQueries({ queryKey: ['incoming_payments', 'index'] });
-    } catch (e: any) {
+    } catch (e: unknown) {
       toasts.pushToast({
         variant: 'danger',
         title: t('payments.incoming.assign.toast.error.title'),
-        body: e?.message ?? String(e),
+        body: formatErrorMessage(e),
       });
     }
   }
@@ -206,7 +183,7 @@ export function IncomingPaymentDetailPage() {
   if (!paymentId) {
     return (
       <ListShell>
-        <ErrorState title={t('payments.incoming.detail.invalid')} error={{ message: t('payments.incoming.detail.invalid.body') } as any} />
+        <ErrorState title={t('payments.incoming.detail.invalid')} error={{ message: t('payments.incoming.detail.invalid.body') }} />
       </ListShell>
     );
   }
@@ -222,7 +199,7 @@ export function IncomingPaymentDetailPage() {
   if (q.isError) {
     return (
       <ListShell>
-        <ErrorState title={t('payments.incoming.detail.load_error.title')} error={q.error as any} />
+        <ErrorState title={t('payments.incoming.detail.load_error.title')} error={q.error} />
       </ListShell>
     );
   }
@@ -230,7 +207,7 @@ export function IncomingPaymentDetailPage() {
   if (!payment) {
     return (
       <ListShell>
-        <ErrorState title={t('payments.incoming.detail.load_error.title')} error={{ message: t('payments.incoming.detail.not_found') } as any} />
+        <ErrorState title={t('payments.incoming.detail.load_error.title')} error={{ message: t('payments.incoming.detail.not_found') }} />
       </ListShell>
     );
   }
@@ -321,9 +298,9 @@ export function IncomingPaymentDetailPage() {
             <CardBody>
               <div className="text-xs text-muted">{t('common.user')}</div>
               <div className="text-sm">
-                {(payment as any).user ? (
-                  <Link className="text-accent hover:underline" to={`${basePath}/users/${(payment as any).user.id}`}>
-                    {userLabel((payment as any).user)}
+                {payment.user ? (
+                  <Link className="text-accent hover:underline" to={`${basePath}/users/${payment.user.id}`}>
+                    {incomingPaymentUserLabel(payment.user)}
                   </Link>
                 ) : (
                   '—'
@@ -337,7 +314,6 @@ export function IncomingPaymentDetailPage() {
                   <Badge variant={paidUntilBadgeVariant(acctStatus.status)}>{t(paidUntilStatusLabelKey(acctStatus.status))}</Badge>
                 </div>
               ) : null}
-
 
               {isAssigned ? null : (
                 <div className="mt-4 text-xs text-muted">{t('payments.incoming.detail.unassigned_hint')}</div>
@@ -353,17 +329,27 @@ export function IncomingPaymentDetailPage() {
                 <Badge variant={incomingPaymentBadgeVariant(st)} testId={`admin.payments.incoming.detail.${paymentId}.state.card`}>{t(incomingPaymentStateLabelKey(st))}</Badge>
               </div>
 
-              <div className="mt-3">
-                <div className="text-xs text-muted">{t('payments.incoming.detail.change_state')}</div>
-                <Select value={effectiveStateEdit} onChange={(e) => setStateEdit(e.target.value)}>
-                  {stateOptions().map((s) => (
-                    <option key={s} value={s}>
-                      {t(incomingPaymentStateLabelKey(s))}
-                    </option>
-                  ))}
-                </Select>
-                <div className="mt-2">
-                  <Button variant="secondary" onClick={saveState} testId="admin.payments.incoming.state.save">
+              <div className="mt-3 space-y-3">
+                <div>
+                  <div className="text-xs text-muted">{t('payments.incoming.detail.change_state')}</div>
+                  <Select value={effectiveStateEdit} onChange={(e) => setStateEdit(e.target.value)} testId="admin.payments.incoming.state.select">
+                    {incomingPaymentStateOptions().map((s) => (
+                      <option key={s} value={s}>
+                        {t(incomingPaymentStateLabelKey(s))}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+
+                <IncomingPaymentStateReviewCard payment={payment} review={stateReview} />
+
+                <div>
+                  <Button
+                    variant="secondary"
+                    onClick={saveState}
+                    disabled={!stateReview.canSubmit}
+                    testId="admin.payments.incoming.state.save"
+                  >
                     {t('common.save')}
                   </Button>
                 </div>
@@ -383,7 +369,12 @@ export function IncomingPaymentDetailPage() {
             <Button variant="secondary" onClick={() => setAssignOpen(false)}>
               {t('common.cancel')}
             </Button>
-            <Button variant="primary" onClick={submitAssign} testId="admin.payments.incoming.assign.submit">
+            <Button
+              variant="primary"
+              onClick={submitAssign}
+              disabled={!assignReview.canSubmit}
+              testId="admin.payments.incoming.assign.submit"
+            >
               {t('payments.incoming.assign.modal.submit')}
             </Button>
           </div>
@@ -402,6 +393,8 @@ export function IncomingPaymentDetailPage() {
               noResultsLabel={t('empty.list.no_matches.title')}
             />
           </div>
+
+          <IncomingPaymentAssignReviewCard payment={payment} review={assignReview} />
 
           <div className="rounded-md border border-border bg-surface-2 p-3 text-xs text-muted">
             <div>{t('payments.incoming.assign.hint.title')}</div>

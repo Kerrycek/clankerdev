@@ -53,19 +53,31 @@ describe('uiSettingsModel', () => {
 
   it('round-trips through JSON helpers', () => {
     const json = toUiSettingsJson({
+      ...DEFAULT_SETTINGS,
       sidebarCollapsed: true,
       theme: 'dark',
       language: 'cs',
       tips: {
         sidebarTimeZone: 'dismissed',
       },
+      dashboard: {
+        ...DEFAULT_SETTINGS.dashboard,
+        density: 'compact',
+        hiddenWidgets: ['news'],
+      },
     });
     expect(parseUiSettingsJson(json)).toEqual({
+      ...DEFAULT_SETTINGS,
       sidebarCollapsed: true,
       theme: 'dark',
       language: 'cs',
       tips: {
         sidebarTimeZone: 'dismissed',
+      },
+      dashboard: {
+        ...DEFAULT_SETTINGS.dashboard,
+        density: 'compact',
+        hiddenWidgets: ['news'],
       },
     });
   });
@@ -79,6 +91,26 @@ describe('uiSettingsModel', () => {
     expect(parseUiSettingsJson('{"mode":"classic","theme":"dark"}')).toEqual({
       ...DEFAULT_SETTINGS,
       theme: 'dark',
+    });
+  });
+
+
+
+  it('normalizes dashboard preferences alongside global UI preferences', () => {
+    expect(
+      normalizeUiSettings({
+        dashboard: {
+          density: 'compact',
+          widgetOrder: ['news', 'security'],
+          hiddenWidgets: ['outages', 'security'],
+          collapsedWidgets: ['cluster'],
+        },
+      }).dashboard,
+    ).toEqual({
+      density: 'compact',
+      widgetOrder: ['news', 'security', 'outages', 'cluster'],
+      hiddenWidgets: ['outages'],
+      collapsedWidgets: ['cluster'],
     });
   });
 

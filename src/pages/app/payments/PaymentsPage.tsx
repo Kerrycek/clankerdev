@@ -13,6 +13,7 @@ import { formatDateTime } from '../../../lib/format';
 import { cursorFromDescendingPage } from '../../../lib/lockIndex';
 import { getPaidUntilStatus, paidUntilBadgeVariant, paidUntilStatusLabelKey } from '../../../lib/paymentsBadges';
 import { formatMoneyLike, safeInt } from '../../../lib/paymentsFormat';
+import { normalizePaymentInstructions, paidUntilSubtitleToken } from './PaymentsModel';
 
 import { ListShell } from '../../../components/layout/ListShell';
 import { PageHeader } from '../../../components/layout/PageHeader';
@@ -42,18 +43,8 @@ export function PaymentsPage() {
   const status = getPaidUntilStatus(paidUntil, now);
 
   const paidUntilSubtitle = (() => {
-    if (status.status === 'overdue' && status.days === undefined) return t('payments.my.stat.paid_until.missing');
-    if (status.status === 'unknown' || status.days === undefined) return t('common.na');
-
-    if (status.status === 'overdue') {
-      const overdueDays = Math.max(0, Math.abs(status.days));
-      if (overdueDays === 0) return t('payments.my.stat.paid_until.today');
-      return tc('payments.my.stat.paid_until.expired', overdueDays);
-    }
-
-    const daysLeft = Math.max(0, status.days);
-    if (daysLeft === 0) return t('payments.my.stat.paid_until.today');
-    return tc('payments.my.stat.paid_until.in_days', daysLeft);
+    const token = paidUntilSubtitleToken(status);
+    return token.kind === 'plural' ? tc(token.key, token.count) : t(token.key);
   })();
 
   const pagination = useKeysetPagination({
@@ -84,7 +75,7 @@ export function PaymentsPage() {
   const canNext = (historyQ.data?.length ?? 0) >= pagination.limit;
   const cursor = cursorFromDescendingPage(historyQ.data);
 
-  const instructions = String(instructionsQ.data?.instructions ?? '').trim();
+  const instructions = normalizePaymentInstructions(instructionsQ.data);
 
   return (
     <ListShell>

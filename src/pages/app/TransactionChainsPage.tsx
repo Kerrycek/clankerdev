@@ -11,15 +11,7 @@ import { useAppMode } from '../../app/appMode';
 import { useI18n } from '../../app/i18n';
 import { useObjectScope } from '../../app/objectScope';
 import { useToasts } from '../../app/toasts';
-import { Alert } from '../../components/ui/Alert';
-import { Button } from '../../components/ui/Button';
-import { Card } from '../../components/ui/Card';
-import { EmptyState } from '../../components/ui/EmptyState';
-import { ErrorState } from '../../components/ui/ErrorState';
-import { KeysetPagination } from '../../components/ui/KeysetPagination';
 import { LinkButton } from '../../components/ui/LinkButton';
-import { LoadingState } from '../../components/ui/LoadingState';
-import { formatErrorMessage } from '../../lib/errors';
 import {
   chainFilterToneFromState,
   chainMatchesConcern,
@@ -40,8 +32,9 @@ import {
   type TransactionChainRow,
 } from './transactions/transactionChainSemantics';
 import { TransactionChainsFilters } from './transactions/TransactionChainsFilters';
-import { TransactionChainsTable } from './transactions/TransactionChainsTable';
+import { TransactionChainsListContent } from './transactions/TransactionChainsListContent';
 import { buildTransactionChainActiveFilterChips, buildTransactionChainSmartSuggestions } from './transactions/transactionChainSmartFilter';
+import { splitTransactionActivityRows } from './transactions/transactionActivityVisibility';
 import { useChrome } from '../../components/layout/ChromeContext';
 import { useKeysetPagination } from '../../lib/hooks/useKeysetPagination';
 import { cursorFromDescendingPage } from '../../lib/lockIndex';
@@ -71,6 +64,7 @@ export function TransactionChainsPage() {
   const [smartErrors, setSmartErrors] = useState<string[]>([]);
   const [helpOpen, setHelpOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [systemActivityOpen, setSystemActivityOpen] = useState(false);
 
   const smartInputRef = useRef<HTMLInputElement>(null);
   const smartNeedle = smart.trim();
@@ -642,6 +636,12 @@ export function TransactionChainsPage() {
     return arr;
   }, [classNameNorm, errorsOnly, idQ.data, pinnedIds, pinnedQs, pinnedSet, q.data, queryId, queryLower, queryTrim, rowIdNum, state, userIdNum, userSessionNum]);
 
+  const collapseSystemActivity = uiMode !== 'admin' && !filtersActive;
+  const { visibleRows, systemRows } = useMemo(
+    () => splitTransactionActivityRows(rows, collapseSystemActivity),
+    [collapseSystemActivity, rows]
+  );
+
   const pageCursor = useMemo(() => cursorFromDescendingPage(q.data as TransactionChain[] | undefined), [q.data]);
   const hasMore = (q.data ?? []).length >= pagination.limit;
 
@@ -708,98 +708,38 @@ export function TransactionChainsPage() {
         />
       }
     >
-      {pinnedMissing.length > 0 ? (
-        <Alert variant="warn" title={t('transactions.chains.pinned_missing.title')}>
-          <div className="mt-2 space-y-2">
-            {pinnedMissing.map((id) => (
-              <div key={id} className="flex items-center justify-between gap-3">
-                <span>#{id}</span>
-                <Button size="sm" variant="secondary" onClick={() => chrome.togglePinnedTransactionChain(id)} title={t('tasks.action.unpin')}>
-                  {t('tasks.action.unpin')}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </Alert>
-      ) : null}
-
-      {q.isError ? (
-        <Alert variant="warn" title={t('transactions.chains.refresh_error.title')}>
-          {t('transactions.chains.refresh_error.body')}
-        </Alert>
-      ) : null}
-
-      {anyLoading && rows.length === 0 ? <LoadingState testId="transactions.list.loading" /> : null}
-
-      {anyError && rows.length === 0 ? (
-        <>
-          <ErrorState
-            testId="transactions.list.error"
-            title={t('transactions.chains.load_error.title')}
-            body={
-              queryId && idQ.isError
-                ? t('transactions.chains.load_error.chain_prefix', {
-                    id: queryId,
-                    error: formatErrorMessage(idQ.error),
-                  })
-                : undefined
-            }
-            error={queryId ? idQ.error : q.error}
-            onRetry={() => {
-              if (queryId) void idQ.refetch();
-              else void q.refetch();
-            }}
-            showBack={false}
-            detailsExtra={{ page: 'transactions.chains.list', scope: basePath }}
-          />
-
-          {!queryId ? (
-            <Card className="mt-4">
-              <KeysetPagination
-                page={pagination.page}
-                pageCount={pagination.stack.length}
-                canPrev={pagination.canPrev}
-                canNext={pagination.hasForward || (hasMore && pageCursor !== null)}
-                onPrev={() => pagination.goPrev()}
-                onNext={() => pagination.goNext(pageCursor)}
-                onGoToPage={(p) => pagination.goToPage(p)}
-                limit={pagination.limit}
-                allowedLimits={pagination.allowedLimits}
-                onLimitChange={(lim) => pagination.setLimit(lim)}
-                testId="transactions.pagination"
-              />
-            </Card>
-          ) : null}
-        </>
-      ) : null}
-
-      {!anyLoading && !anyError && rows.length === 0 ? (
-        <EmptyState
-          testId="transactions.list.empty"
-          title={t('transactions.chains.empty.title')}
-          body={t('transactions.chains.empty.body')}
-          actionLabel={filtersActive ? t('common.clear_filters') : undefined}
-          onAction={filtersActive ? clearFilters : undefined}
-        />
-      ) : null}
-
-      {rows.length > 0 ? (
-        <TransactionChainsTable
-          rows={rows}
-          basePath={basePath}
-          t={t}
-          queryId={queryId}
-          queryTrim={queryTrim}
-          errorsOnly={errorsOnly}
-          state={state}
-          userId={userId}
-          userSessionId={userSessionId}
-          pagination={pagination}
-          canNext={pagination.hasForward || (hasMore && pageCursor !== null)}
-          pageCursor={pageCursor}
-          onTogglePinned={(id) => chrome.togglePinnedTransactionChain(id)}
-        />
-      ) : null}
+      <TransactionChainsListContent
+        t={t}
+        basePath={basePath}
+        pinnedMissing={pinnedMissing}
+        onUnpin={(id) => chrome.togglePinnedTransactionChain(id)}
+        refreshWarning={q.isError}
+        anyLoading={anyLoading}
+        anyError={anyError}
+        rows={rows}
+        visibleRows={visibleRows}
+        systemRows={systemRows}
+        filtersActive={filtersActive}
+        clearFilters={clearFilters}
+        queryId={queryId}
+        queryTrim={queryTrim}
+        errorsOnly={errorsOnly}
+        state={state}
+        userId={userId}
+        userSessionId={userSessionId}
+        pagination={pagination}
+        hasMore={hasMore}
+        pageCursor={pageCursor}
+        idError={idQ.error}
+        listError={q.error}
+        onRetry={() => {
+          if (queryId) void idQ.refetch();
+          else void q.refetch();
+        }}
+        systemActivityOpen={systemActivityOpen}
+        onToggleSystemActivity={() => setSystemActivityOpen((open) => !open)}
+        onTogglePinned={(id) => chrome.togglePinnedTransactionChain(id)}
+      />
     </ListShell>
   );
 }

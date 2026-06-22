@@ -83,6 +83,8 @@ export function LifecyclePanel(props: {
   const isAdminUi = mode === 'admin';
   const st = String(props.objectState ?? '').trim() || 'unknown';
 
+  const lifetimeObjectRef = useMemo(() => objectRef(props.kind === 'vps' ? 'Vps' : 'User', props.id), [props.id, props.kind]);
+
   const stBadge = objectStateBadge(st, t);
   const helpKey = stateHelpKey(st);
 
@@ -106,6 +108,9 @@ export function LifecyclePanel(props: {
       if (props.kind !== 'vps') throw new Error('Snooze is only supported for VPS');
       if (!snooze.valid || !snooze.iso) throw new Error('Invalid remind-after date');
       return await updateVps(props.id, { remind_after_date: snooze.iso });
+    },
+    onMutate: () => {
+      chrome.acquireLocalLock(lifetimeObjectRef);
     },
     onSuccess: (res) => {
       setSnoozeOpen(false);
@@ -132,6 +137,9 @@ export function LifecyclePanel(props: {
         body: formatErrorMessage(err),
         autoDismissMs: false,
       });
+    },
+    onSettled: () => {
+      chrome.releaseLocalLock(lifetimeObjectRef);
     },
   });
 
@@ -226,6 +234,9 @@ export function LifecyclePanel(props: {
       if (props.kind === 'vps') return await updateVps(props.id, adminPayload);
       return await updateUser(props.id, adminPayload);
     },
+    onMutate: () => {
+      chrome.acquireLocalLock(lifetimeObjectRef);
+    },
     onSuccess: (res) => {
       setAdminOpen(false);
       setConfirmDeleteOpen(false);
@@ -259,6 +270,9 @@ export function LifecyclePanel(props: {
         body: formatErrorMessage(err),
         autoDismissMs: false,
       });
+    },
+    onSettled: () => {
+      chrome.releaseLocalLock(lifetimeObjectRef);
     },
   });
 

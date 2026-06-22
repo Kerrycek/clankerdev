@@ -26,6 +26,15 @@ import {
   transactionBadge,
 } from '../../lib/taskStatus';
 import { resourceId, refLabel } from '../../lib/resources';
+import {
+  classifyTransactionChain,
+  operationBadgeVariant,
+  operationCategoryLabel,
+  operationLabel,
+  operationSeverityLabel,
+  operationVisibilityLabel,
+  shouldCollapseSystemOperation,
+} from '../../lib/operationTaxonomy';
 import { TransactionInlineDetails } from '../ui/TransactionInlineDetails';
 
 function formatConcerns(chain: TransactionChain): string | null {
@@ -69,11 +78,12 @@ export function TransactionChainsPanel(props: {
   pinnedIds?: number[];
   onTogglePin?: (chainId: number) => void;
 }) {
-  const { basePath } = useAppMode();
+  const { basePath, mode } = useAppMode();
   const i18n = useI18n();
   const tierARefetchMs = useTierAIntervalMs();
   const [expandedChainId, setExpandedChainId] = useState<number | null>(null);
   const [expandedTransactionIds, setExpandedTransactionIds] = useState<Set<number>>(() => new Set());
+  const [systemOpen, setSystemOpen] = useState(false);
 
   const pinnedIds = useMemo(() => parseIds(props.pinnedIds, 50), [props.pinnedIds]);
   const pinnedSet = useMemo(() => new Set<number>(pinnedIds), [pinnedIds]);
@@ -163,9 +173,16 @@ export function TransactionChainsPanel(props: {
   const pinned = mergedRows.filter((x) => x.pinned);
   const rest = mergedRows.filter((x) => !x.pinned);
 
-  const failed = rest.filter((x) => isFailedChainState(x.c.state));
-  const active = rest.filter((x) => !isFinishedChainState(x.c.state));
-  const recent = rest.filter((x) => isFinishedChainState(x.c.state) && !isFailedChainState(x.c.state));
+  const systemRows = mode === 'admin'
+    ? []
+    : rest.filter((x) => shouldCollapseSystemOperation(classifyTransactionChain(x.c), x.c.state));
+  const userRows = mode === 'admin'
+    ? rest
+    : rest.filter((x) => !shouldCollapseSystemOperation(classifyTransactionChain(x.c), x.c.state));
+
+  const failed = userRows.filter((x) => isFailedChainState(x.c.state));
+  const active = userRows.filter((x) => !isFinishedChainState(x.c.state));
+  const recent = userRows.filter((x) => isFinishedChainState(x.c.state) && !isFailedChainState(x.c.state));
 
   const anyLoading = q.isLoading && mergedRows.length === 0 && pinnedQs.every((x) => x.isLoading || !x.data);
   const anyError = q.isError && mergedRows.length === 0;
@@ -230,6 +247,8 @@ export function TransactionChainsPanel(props: {
     })();
     const dotVariant = toneVariant && toneVariant !== 'muted' ? toneVariant : 'neutral';
     const label = c.label ? String(c.label) : `#${c.id}`;
+    const operation = classifyTransactionChain(c);
+    const operationName = operationLabel(operation, i18n.t);
     const concerns = formatConcerns(c);
 
     const pct = chainProgressPercent(c);
@@ -255,9 +274,15 @@ export function TransactionChainsPanel(props: {
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-sm font-medium">
               <StatusDot variant={dotVariant} title={badge.label} />
-              <Link className="underline" to={`${basePath}/transactions/${c.id}`}>
-                {label}
+              <Link className="underline" to={`${basePath}/transactions/${c.id}`} data-testid={`tasks.chain.open.${c.id}`}>
+                {operationName}
               </Link>
+            </div>
+            {label !== operationName ? <div className="mt-1 text-xs text-faint">{i18n.t('operation.raw_name', { name: label })}</div> : null}
+            <div className="mt-2 flex flex-wrap gap-1">
+              <Badge variant={operationBadgeVariant(operation)}>{operationCategoryLabel(operation, i18n.t)}</Badge>
+              {operation.severity !== 'normal' ? <Badge variant={operationBadgeVariant(operation)}>{operationSeverityLabel(operation, i18n.t)}</Badge> : null}
+              {operation.visibility !== 'user' ? <Badge variant="info">{operationVisibilityLabel(operation, i18n.t)}</Badge> : null}
             </div>
             <div className="mt-1 text-xs text-faint">
               {meta.map((p, i) => (
@@ -424,38 +449,38 @@ export function TransactionChainsPanel(props: {
     );
   };
 
+  const renderSection = (titleKey: string, items: typeof mergedRows) =>
+    items.length > 0 ? (
+      <div className="space-y-2">
+        <div className="text-xs font-semibold text-faint">{i18n.t(titleKey)}</div>
+        {items.map(renderChain)}
+      </div>
+    ) : null;
+
   return (
     <div>
       {header}
 
       <div className="mt-3 space-y-3">
-      {pinned.length > 0 ? (
-        <div className="space-y-2">
-          <div className="text-xs font-semibold text-faint">{i18n.t('tasks.section.pinned')}</div>
-          {pinned.map(renderChain)}
-        </div>
-      ) : null}
+        {renderSection('tasks.section.pinned', pinned)}
+        {renderSection('tasks.section.failed', failed)}
+        {renderSection('tasks.section.active', active)}
+        {renderSection('tasks.section.recent', recent)}
 
-      {failed.length > 0 ? (
-        <div className="space-y-2">
-          <div className="text-xs font-semibold text-faint">{i18n.t('tasks.section.failed')}</div>
-          {failed.map(renderChain)}
-        </div>
-      ) : null}
-
-      {active.length > 0 ? (
-        <div className="space-y-2">
-          <div className="text-xs font-semibold text-faint">{i18n.t('tasks.section.active')}</div>
-          {active.map(renderChain)}
-        </div>
-      ) : null}
-
-      {recent.length > 0 ? (
-        <div className="space-y-2">
-          <div className="text-xs font-semibold text-faint">{i18n.t('tasks.section.recent')}</div>
-          {recent.map(renderChain)}
-        </div>
-      ) : null}
+        {systemRows.length > 0 ? (
+          <div className="space-y-2 rounded-md border border-border bg-surface-2 p-3" data-testid="tasks.system_activity">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-xs font-semibold text-faint">{i18n.t('operation.system_activity.title', { count: systemRows.length })}</div>
+                <div className="mt-1 text-xs text-muted">{i18n.t('operation.system_activity.body')}</div>
+              </div>
+              <Button size="sm" variant="secondary" onClick={() => setSystemOpen((open) => !open)} testId="tasks.system_activity.toggle">
+                {systemOpen ? i18n.t('operation.system_activity.hide') : i18n.t('operation.system_activity.show')}
+              </Button>
+            </div>
+            {systemOpen ? <div className="space-y-2">{systemRows.map(renderChain)}</div> : null}
+          </div>
+        ) : null}
       </div>
     </div>
   );

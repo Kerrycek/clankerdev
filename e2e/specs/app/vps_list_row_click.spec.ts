@@ -40,7 +40,7 @@ test.describe('@workflow-matrix @smoke VPS list row navigation', () => {
     await expect(page.getByTestId('vps.header')).toBeVisible();
   });
 
-  test('clicking an action button inside a row does not trigger row navigation', async ({ page }) => {
+  test('using the row stop icon does not trigger row navigation', async ({ page }) => {
     const vps = makeVps(300);
 
     await installHaveApiMock(page, {
@@ -89,6 +89,8 @@ test.describe('@workflow-matrix @smoke VPS list row navigation', () => {
       (r) => r.method() === 'DELETE' && r.url().includes('/api/v7.0/vpses/300')
     );
 
+    await page.getByTestId('vps.list.delete_confirm.confirm_text').fill('vps300.example');
+
     await page.getByTestId('vps.list.delete_confirm.confirm').click();
 
     const req = await reqPromise;
@@ -123,6 +125,8 @@ test.describe('@workflow-matrix @smoke VPS list row navigation', () => {
     const reqPromise = page.waitForRequest(
       (r) => r.method() === 'DELETE' && r.url().includes('/api/v7.0/vpses/300')
     );
+
+    await page.getByTestId('vps.list.delete_confirm.confirm_text').fill('vps300.example');
 
     await page.getByTestId('vps.list.delete_confirm.confirm').click();
 

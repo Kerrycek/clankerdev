@@ -7,6 +7,7 @@ import { csOps_incidents } from './ops/incidents';
 import { csOps_monitoring } from './ops/monitoring';
 import { csOps_oom } from './ops/oom';
 import { csOps_outage } from './ops/outage';
+import { csOps_operation } from './ops/operation';
 import { csOps_tasks } from './ops/tasks';
 import { csOps_transactions } from './ops/transactions';
 
@@ -19,6 +20,7 @@ export const csOps = {
   ...csOps_monitoring,
   ...csOps_oom,
   ...csOps_outage,
+  ...csOps_operation,
   ...csOps_tasks,
   ...csOps_transactions,
 } as const;

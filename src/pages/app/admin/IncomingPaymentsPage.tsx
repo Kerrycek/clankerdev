@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { CircleHelp, SlidersHorizontal } from 'lucide-react';
 
@@ -7,119 +7,36 @@ import { useAppMode } from '../../../app/appMode';
 import { useI18n } from '../../../app/i18n';
 import { useToasts } from '../../../app/toasts';
 
-import { fetchIncomingPayments, type IncomingPayment } from '../../../lib/api/payments';
+import { fetchIncomingPayments } from '../../../lib/api/payments';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 import { cursorFromDescendingPage } from '../../../lib/lockIndex';
 import { useTierSlowIntervalMs } from '../../../lib/refreshTiers';
 import { splitKeyValueToken, tokenizeSmartInput, unquoteSmartValue, parseNumericToken } from '../../../lib/smartFilter';
-import { dotVariantFromBadgeVariant, tableVariantFromBadgeVariant } from '../../../lib/variantMap';
-import { formatDateTime } from '../../../lib/format';
-import {
-  getPaidUntilStatus,
-  incomingPaymentBadgeVariant,
-  incomingPaymentPrimaryVariant,
-  incomingPaymentRowVariantWithAccount,
-  incomingPaymentStateLabelKey,
-  paidUntilBadgeVariant,
-  paidUntilStatusLabelKey,
-} from '../../../lib/paymentsBadges';
+import { tableVariantFromBadgeVariant } from '../../../lib/variantMap';
+import { incomingPaymentBadgeVariant, incomingPaymentStateLabelKey } from '../../../lib/paymentsBadges';
 
 import { FilterBar } from '../../../components/layout/FilterBar';
 import { ListShell } from '../../../components/layout/ListShell';
 import { PageHeader } from '../../../components/layout/PageHeader';
 
-import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
-import { Card } from '../../../components/ui/Card';
 import { CopyButton } from '../../../components/ui/CopyButton';
 import { Drawer } from '../../../components/ui/Drawer';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { ErrorState } from '../../../components/ui/ErrorState';
 import { FilterChip } from '../../../components/ui/FilterChip';
-import { KeysetPagination } from '../../../components/ui/KeysetPagination';
 import { LoadingState } from '../../../components/ui/LoadingState';
 import { Select } from '../../../components/ui/Select';
 import { SmartFilterInput, type SmartFilterSuggestion } from '../../../components/ui/SmartFilterInput';
 import { SmartInputHelp } from '../../../components/ui/SmartInputHelp';
-import { StatusDot } from '../../../components/ui/StatusDot';
-import { TableCard } from '../../../components/ui/TableCard';
-import { TableRowLink } from '../../../components/ui/TableRowLink';
 import { UserLookupInput } from '../../../components/ui/UserLookupInput';
-
-function stateOptions(): string[] {
-  return ['', 'queued', 'unmatched', 'processed', 'ignored'];
-}
-
-function formatMoney(amount?: number | null, currency?: string | null): string {
-  if (amount === undefined || amount === null) return '—';
-
-  const c = String(currency ?? '').trim();
-  try {
-    if (c) {
-      return new Intl.NumberFormat(undefined, { style: 'currency', currency: c }).format(amount);
-    }
-  } catch {
-    // ignore Intl formatting errors
-  }
-
-  const fixed = Math.abs(amount) >= 10 ? amount.toFixed(0) : amount.toFixed(2);
-  return c ? `${fixed} ${c}` : fixed;
-}
-
-function userLabel(u: any): string {
-  if (!u) return '—';
-  if (typeof u.login === 'string') return u.login;
-  if (typeof u.label === 'string') return u.label;
-  if (typeof u.id === 'number') return `#${u.id}`;
-  return String(u);
-}
-
-type SmartKey = 'id' | 'state' | 'user' | 'q';
-
-function canonicalKey(raw: string): SmartKey | null {
-  const k = String(raw ?? '').trim().toLowerCase();
-  if (!k) return null;
-
-  if (k === 'id') return 'id';
-  if (k === 'state' || k === 'st') return 'state';
-  if (k === 'user' || k === 'u') return 'user';
-
-  // Free-text search (server-side)
-  if (
-    k === 'q' ||
-    k === 'search' ||
-    k === 's' ||
-    k === 'tx' ||
-    k === 'transaction' ||
-    k === 'transaction_id' ||
-    k === 'vs' ||
-    k === 'account' ||
-    k === 'acct' ||
-    k === 'ident' ||
-    k === 'msg' ||
-    k === 'message'
-  ) {
-    return 'q';
-  }
-
-  return null;
-}
-
-function parseStateValue(raw: string): string | null {
-  const v = String(raw ?? '').trim().toLowerCase();
-  if (!v) return '';
-  if (v === 'all' || v === 'any' || v === '*') return '';
-  if (stateOptions().includes(v)) return v;
-  return null;
-}
-
-function safePositiveInt(s: string): number | undefined {
-  const trimmed = String(s ?? '').trim();
-  if (!trimmed) return undefined;
-  const n = Number(trimmed);
-  if (!Number.isFinite(n) || n <= 0) return undefined;
-  return Math.floor(n);
-}
+import { IncomingPaymentsListContent } from './IncomingPaymentsListContent';
+import {
+  canonicalIncomingPaymentSmartKey,
+  incomingPaymentStateFilterOptions,
+  parseIncomingPaymentStateValue,
+  parsePositiveIntInput,
+} from './IncomingPaymentsModel';
 
 export function IncomingPaymentsPage() {
   const { basePath } = useAppMode();
@@ -133,7 +50,7 @@ export function IncomingPaymentsPage() {
   const state = useMemo(() => {
     const raw = String(sp.get('state') ?? '').trim().toLowerCase();
     if (!raw) return '';
-    return stateOptions().includes(raw) ? raw : '';
+    return incomingPaymentStateFilterOptions().includes(raw) ? raw : '';
   }, [sp]);
 
   const qText = useMemo(() => String(sp.get('q') ?? ''), [sp]);
@@ -145,7 +62,7 @@ export function IncomingPaymentsPage() {
     setUserId(urlUser);
   }, [urlUser]);
 
-  const userIdNum = useMemo(() => safePositiveInt(userId), [userId]);
+  const userIdNum = useMemo(() => parsePositiveIntInput(userId), [userId]);
 
   useEffect(() => {
     // Keep URL in sync while allowing the lookup input to hold a non-numeric query.
@@ -160,7 +77,7 @@ export function IncomingPaymentsPage() {
     const st = String(nextState ?? '').trim().toLowerCase();
     setSp((prev) => {
       const p = new URLSearchParams(prev);
-      if (st && stateOptions().includes(st)) p.set('state', st);
+      if (st && incomingPaymentStateFilterOptions().includes(st)) p.set('state', st);
       else p.delete('state');
       return p;
     });
@@ -239,7 +156,7 @@ export function IncomingPaymentsPage() {
     for (const token of tokens) {
       const kv = splitKeyValueToken(token);
       if (kv) {
-        const key = canonicalKey(kv.rawKey);
+        const key = canonicalIncomingPaymentSmartKey(kv.rawKey);
         const value = unquoteSmartValue(kv.rawValue);
 
         if (!key) {
@@ -265,7 +182,7 @@ export function IncomingPaymentsPage() {
         }
 
         if (key === 'state') {
-          const st = parseStateValue(value);
+          const st = parseIncomingPaymentStateValue(value);
           if (st === null) errs.push(t('payments.incoming.smart.error.invalid_state', { value }));
           else nextState = st;
           continue;
@@ -294,7 +211,7 @@ export function IncomingPaymentsPage() {
       const low = plain.trim().toLowerCase();
 
       // Common triage shortcut: allow plain state tokens.
-      if (stateOptions().includes(low)) {
+      if (incomingPaymentStateFilterOptions().includes(low)) {
         nextState = low;
         continue;
       }
@@ -362,7 +279,7 @@ export function IncomingPaymentsPage() {
     const low = needle.trim().toLowerCase();
 
     // State suggestions (exact or prefix).
-    const sts = stateOptions().filter((x) => x).filter((s) => s.startsWith(low) || low === s);
+    const sts = incomingPaymentStateFilterOptions().filter((x) => x).filter((s) => s.startsWith(low) || low === s);
     if (sts.length > 0 && low.length >= 2) {
       for (const st of sts.slice(0, 4)) {
         suggestions.push({
@@ -530,7 +447,7 @@ export function IncomingPaymentsPage() {
 
   const rows = paymentsQ.data ?? [];
 
-  const pageCursor = useMemo(() => cursorFromDescendingPage(rows as any), [rows]);
+  const pageCursor = useMemo(() => cursorFromDescendingPage(rows, (row) => row.id), [rows]);
   const canNext = rows.length === pagination.limit;
 
   const shareUrl = useMemo(() => (typeof window !== 'undefined' ? window.location.href : ''), [sp]);
@@ -576,7 +493,7 @@ export function IncomingPaymentsPage() {
               testId="admin.payments.incoming.filter.state"
             >
               <option value="">{t('common.all')}</option>
-              {stateOptions()
+              {incomingPaymentStateFilterOptions()
                 .filter((x) => x)
                 .map((s) => (
                   <option key={s} value={s}>
@@ -725,189 +642,18 @@ export function IncomingPaymentsPage() {
         <ErrorState
           testId="admin.payments.incoming.error"
           title={t('payments.incoming.list.load_error.title')}
-          error={paymentsQ.error as any}
+          error={paymentsQ.error}
         />
       ) : rows.length === 0 ? (
         <EmptyState testId="admin.payments.incoming.empty" title={t('payments.incoming.list.empty')} />
       ) : (
-        <>
-          {/* Mobile */}
-          <div className="space-y-2 md:hidden">
-            {rows.map((p: IncomingPayment) => {
-              const st = String(p.state ?? '').trim();
-              const acctStatus = (p as any).user ? getPaidUntilStatus(p.user_paid_until) : null;
-              const primaryVar = incomingPaymentPrimaryVariant({
-                state: st,
-                user: (p as any).user,
-                user_paid_until: p.user_paid_until,
-              });
-              const dotVar = dotVariantFromBadgeVariant(primaryVar);
-
-              const recvAmount = formatMoney(p.src_amount ?? p.amount, p.src_currency ?? p.currency);
-              const acctAmount =
-                p.src_amount !== undefined && p.src_amount !== null ? formatMoney(p.amount, p.currency) : null;
-
-              return (
-                <Card key={p.id} className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <StatusDot variant={dotVar} testId={`admin.payments.incoming.row.${p.id}.dot`} />
-                        <div className="text-sm font-semibold">#{p.id}</div>
-                        <Badge variant={incomingPaymentBadgeVariant(st)}>{t(incomingPaymentStateLabelKey(st))}</Badge>
-                      </div>
-                      <div className="mt-1 text-xs text-muted">{formatDateTime(p.date)}</div>
-                      <div className="mt-2 text-sm font-medium tabular-nums">{recvAmount}</div>
-                      {acctAmount ? (
-                        <div className="mt-1 text-xs text-muted">
-                          {t('payments.incoming.list.accounted')}: {acctAmount}
-                        </div>
-                      ) : null}
-                      <div className="mt-2 text-xs text-muted">
-                        <span className="text-faint">VS:</span> {String(p.vs ?? '—')} <span className="text-faint">TX:</span>{' '}
-                        {String(p.transaction_id ?? '—')}
-                      </div>
-                      <div className="mt-1 text-xs text-muted">
-                        <span className="text-faint">{t('common.user')}:</span> {userLabel((p as any).user)}
-                      </div>
-                      {(p as any).user ? (
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
-                          <span className="text-faint">{t('payments.incoming.list.col.paid_until')}:</span>{' '}
-                          {p.user_paid_until ? formatDateTime(p.user_paid_until) : '—'}
-                          {acctStatus && (acctStatus.status === 'due_soon' || acctStatus.status === 'overdue') ? (
-                            <Badge variant={paidUntilBadgeVariant(acctStatus.status)}>
-                              {t(paidUntilStatusLabelKey(acctStatus.status))}
-                            </Badge>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </div>
-                    <Link
-                      className="text-xs font-medium text-accent hover:underline"
-                      to={`${basePath}/payments/incoming/${p.id}`}
-                    >
-                      {t('common.open')}
-                    </Link>
-                  </div>
-                </Card>
-              );
-            })}
-
-            <Card>
-              <KeysetPagination
-                page={pagination.page}
-                pageCount={pagination.stack.length}
-                canPrev={pagination.canPrev}
-                canNext={canNext}
-                onPrev={pagination.goPrev}
-                onNext={() => pagination.goNext(pageCursor)}
-                onGoToPage={pagination.goToPage}
-                limit={pagination.limit}
-                allowedLimits={pagination.allowedLimits}
-                onLimitChange={pagination.setLimit}
-                testId="admin.payments.incoming.pagination.mobile"
-              />
-            </Card>
-          </div>
-
-          {/* Desktop */}
-          <TableCard
-            className="hidden md:block"
-            minWidth="lg"
-            tableTestId="admin.payments.incoming.table"
-            footer={
-              <KeysetPagination
-                page={pagination.page}
-                pageCount={pagination.stack.length}
-                canPrev={pagination.canPrev}
-                canNext={canNext}
-                onPrev={pagination.goPrev}
-                onNext={() => pagination.goNext(pageCursor)}
-                onGoToPage={pagination.goToPage}
-                limit={pagination.limit}
-                allowedLimits={pagination.allowedLimits}
-                onLimitChange={pagination.setLimit}
-                testId="admin.payments.incoming.pagination.desktop"
-              />
-            }
-          >
-            <thead>
-              <tr className="border-b border-border text-left text-xs text-muted">
-                <th className="px-4 py-2">{t('common.id')}</th>
-                <th className="px-4 py-2">{t('common.date')}</th>
-                <th className="px-4 py-2">{t('payments.incoming.list.col.amount')}</th>
-                <th className="px-4 py-2">{t('payments.incoming.list.col.vs')}</th>
-                <th className="px-4 py-2">{t('payments.incoming.list.col.account')}</th>
-                <th className="px-4 py-2">{t('common.user')}</th>
-                <th className="px-4 py-2">{t('payments.incoming.list.col.paid_until')}</th>
-                <th className="px-4 py-2">{t('common.state')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((p: IncomingPayment) => {
-                const st = String(p.state ?? '').trim();
-                const acctStatus = (p as any).user ? getPaidUntilStatus(p.user_paid_until) : null;
-                const rowVar = incomingPaymentRowVariantWithAccount({
-                  state: st,
-                  user: (p as any).user,
-                  user_paid_until: p.user_paid_until,
-                });
-                const primaryVar = incomingPaymentPrimaryVariant({
-                  state: st,
-                  user: (p as any).user,
-                  user_paid_until: p.user_paid_until,
-                });
-                const dotVar = dotVariantFromBadgeVariant(primaryVar);
-
-                const recvAmount = formatMoney(p.src_amount ?? p.amount, p.src_currency ?? p.currency);
-                const acctAmount =
-                  p.src_amount !== undefined && p.src_amount !== null ? formatMoney(p.amount, p.currency) : null;
-
-                return (
-                  <TableRowLink
-                    key={p.id}
-                    testId={`admin.payments.incoming.row.${p.id}`}
-                    to={`${basePath}/payments/incoming/${p.id}`}
-                    variant={rowVar}
-                    className="border-b border-border/60 last:border-b-0"
-                  >
-                    <td className="px-4 py-2">
-                      <div className="flex items-center gap-2">
-                        <StatusDot variant={dotVar} testId={`admin.payments.incoming.row.${p.id}.dot`} />
-                        <span className="font-medium text-accent">#{p.id}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-2 text-xs text-muted">{formatDateTime(p.date)}</td>
-                    <td className="px-4 py-2">
-                      <div className="text-sm font-medium tabular-nums">{recvAmount}</div>
-                      {acctAmount ? <div className="text-xs text-muted">{acctAmount}</div> : null}
-                    </td>
-                    <td className="px-4 py-2 text-xs text-muted tabular-nums">{String(p.vs ?? '—')}</td>
-                    <td className="px-4 py-2 text-xs text-muted">{String(p.account_name ?? '—')}</td>
-                    <td className="px-4 py-2 text-xs text-muted">{userLabel((p as any).user)}</td>
-                    <td className="px-4 py-2 text-xs text-muted">
-                      {(p as any).user ? (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="tabular-nums">{p.user_paid_until ? formatDateTime(p.user_paid_until) : '—'}</span>
-                          {acctStatus && (acctStatus.status === 'due_soon' || acctStatus.status === 'overdue') ? (
-                            <Badge variant={paidUntilBadgeVariant(acctStatus.status)}>
-                              {t(paidUntilStatusLabelKey(acctStatus.status))}
-                            </Badge>
-                          ) : null}
-                        </div>
-                      ) : (
-                        <span className="text-faint">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2">
-                      <Badge variant={incomingPaymentBadgeVariant(st)}>{t(incomingPaymentStateLabelKey(st))}</Badge>
-                    </td>
-                  </TableRowLink>
-                );
-              })}
-            </tbody>
-          </TableCard>
-        </>
+        <IncomingPaymentsListContent
+          rows={rows}
+          basePath={basePath}
+          pagination={pagination}
+          pageCursor={pageCursor}
+          canNext={canNext}
+        />
       )}
     </ListShell>
   );

@@ -9,6 +9,7 @@ import { KeysetPagination } from '../../../components/ui/KeysetPagination';
 import { StatusDot } from '../../../components/ui/StatusDot';
 import { TableCard } from '../../../components/ui/TableCard';
 import { TableRowLink } from '../../../components/ui/TableRowLink';
+import { operationBadgeVariant, operationCategoryLabel, operationSeverityLabel, operationVisibilityLabel } from '../../../lib/operationTaxonomy';
 
 import {
   buildTransactionItemsFilterHref,
@@ -101,11 +102,19 @@ export function TransactionItemsTable({ rows, basePath, t, mode, pagination, can
               <div className="font-medium">
                 {row.id ? (
                   <Link className="text-accent hover:underline" to={`${basePath}/transactions/items/${row.id}`}>
-                    {row.name}
+                    {row.displayName}
                   </Link>
                 ) : (
                   row.name
                 )}
+              </div>
+              {row.name !== row.displayName ? (
+                <div className="mt-1 text-xs text-faint">{t('operation.raw_name', { name: row.name })}</div>
+              ) : null}
+              <div className="mt-2 flex flex-wrap gap-1">
+                <Badge variant={operationBadgeVariant(row.operation)}>{operationCategoryLabel(row.operation, t)}</Badge>
+                {row.operation.severity !== 'normal' ? <Badge variant={operationBadgeVariant(row.operation)}>{operationSeverityLabel(row.operation, t)}</Badge> : null}
+                {row.operation.visibility !== 'user' ? <Badge variant="info">{operationVisibilityLabel(row.operation, t)}</Badge> : null}
               </div>
               {typeof row.type === 'number' ? (
                 <div className="mt-1">

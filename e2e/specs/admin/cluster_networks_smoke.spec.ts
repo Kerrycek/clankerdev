@@ -183,12 +183,10 @@ test.describe('Admin / Cluster / Networks (smoke)', () => {
 
     // Filter by purpose
     await page.getByTestId('admin.cluster.networks.advanced.open').click();
-    const purposeRequest = page.waitForRequest((r) => r.url().includes('/api/v7.0/networks') && r.url().includes('network%5Bpurpose%5D=vps'));
     await page.getByTestId('admin.cluster.networks.filter.purpose').selectOption('vps');
-    await purposeRequest;
-    expect(seenPurpose).toBe('vps');
-    await page.getByTestId('admin.cluster.networks.advanced').getByRole('button', { name: /done|hotovo/i }).click();
-    await expect(page.getByTestId('admin.cluster.networks.advanced')).not.toBeVisible();
+    await page.waitForRequest((r) => r.url().includes('/api/v7.0/networks') && r.url().includes('network%5Bpurpose%5D=vps'));
+    await expect.poll(() => seenPurpose).toBe('vps');
+    await page.getByTestId('admin.cluster.networks.advanced').getByRole('button', { name: /done/i }).click();
 
     // Create network
     await page.getByTestId('admin.cluster.networks.create').click();

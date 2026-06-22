@@ -1,0 +1,616 @@
+{
+  "version": 1,
+  "root": "src",
+  "limits": {
+    "asAny": 1243,
+    "filesOver500": 61,
+    "filesOver1000": 11
+  },
+  "note": "Structural debt ratchet baseline. Lower counts are allowed; any new or expanded over-budget file, or added as-any cast, fails audit:structural.",
+  "files": {
+    "src/app/auth.tsx": {
+      "lines": 225,
+      "asAny": 3
+    },
+    "src/app/config.ts": {
+      "lines": 324,
+      "asAny": 4
+    },
+    "src/app/designSandbox.ts": {
+      "lines": 26,
+      "asAny": 2
+    },
+    "src/app/i18n.tsx": {
+      "lines": 111,
+      "asAny": 5
+    },
+    "src/app/uiSettings.test.tsx": {
+      "lines": 268,
+      "asAny": 1
+    },
+    "src/app/uiSettings.tsx": {
+      "lines": 310,
+      "asAny": 1
+    },
+    "src/components/layout/ActionStatesPanel.tsx": {
+      "lines": 789,
+      "asAny": 45
+    },
+    "src/components/layout/AppLayout.tsx": {
+      "lines": 757,
+      "asAny": 8
+    },
+    "src/components/layout/BlockingActionProgressModal.tsx": {
+      "lines": 155,
+      "asAny": 5
+    },
+    "src/components/layout/CommandPalette.tsx": {
+      "lines": 906,
+      "asAny": 7
+    },
+    "src/components/layout/SessionTokenKeepalive.tsx": {
+      "lines": 119,
+      "asAny": 1
+    },
+    "src/components/layout/SidebarTips.tsx": {
+      "lines": 190,
+      "asAny": 2
+    },
+    "src/components/layout/TransactionChainsPanel.test.tsx": {
+      "lines": 144,
+      "asAny": 3
+    },
+    "src/components/layout/TransactionChainsPanel.tsx": {
+      "lines": 488,
+      "asAny": 22
+    },
+    "src/components/layout/useTaskCompletionToasts.ts": {
+      "lines": 303,
+      "asAny": 6
+    },
+    "src/components/lifetimes/LifecyclePanel.tsx": {
+      "lines": 666,
+      "asAny": 7
+    },
+    "src/components/ui/TransactionInlineDetails.tsx": {
+      "lines": 175,
+      "asAny": 2
+    },
+    "src/components/user/UserDataTemplatesPanel.tsx": {
+      "lines": 939,
+      "asAny": 9
+    },
+    "src/components/user/UserKnownDevicesPanel.tsx": {
+      "lines": 368,
+      "asAny": 1
+    },
+    "src/components/user/UserMailPreferencesPanel.tsx": {
+      "lines": 688,
+      "asAny": 7
+    },
+    "src/components/user/UserMfaMasterPanel.tsx": {
+      "lines": 160,
+      "asAny": 1
+    },
+    "src/components/user/UserSecurityPanel.tsx": {
+      "lines": 678,
+      "asAny": 4
+    },
+    "src/components/user/UserSessionsPanel.tsx": {
+      "lines": 498,
+      "asAny": 4
+    },
+    "src/components/user/UserTotpDevicesPanel.tsx": {
+      "lines": 733,
+      "asAny": 1
+    },
+    "src/components/user/UserWebauthnCredentialsPanel.tsx": {
+      "lines": 462,
+      "asAny": 4
+    },
+    "src/components/userNamespaces/UserNamespaceDetail.tsx": {
+      "lines": 83,
+      "asAny": 8
+    },
+    "src/components/userNamespaces/UserNamespaceList.tsx": {
+      "lines": 526,
+      "asAny": 3
+    },
+    "src/components/userNamespaces/UserNamespaceMapDetail.tsx": {
+      "lines": 770,
+      "asAny": 11
+    },
+    "src/components/userNamespaces/UserNamespaceMapList.tsx": {
+      "lines": 675,
+      "asAny": 3
+    },
+    "src/lib/api/clusterResourcePackages.test.ts": {
+      "lines": 40,
+      "asAny": 2
+    },
+    "src/lib/api/dns.ts": {
+      "lines": 506,
+      "asAny": 0
+    },
+    "src/lib/api/haveapi.ts": {
+      "lines": 439,
+      "asAny": 7
+    },
+    "src/lib/api/incidents.test.ts": {
+      "lines": 47,
+      "asAny": 2
+    },
+    "src/lib/api/ipAddresses.test.ts": {
+      "lines": 130,
+      "asAny": 6
+    },
+    "src/lib/api/mailer.test.ts": {
+      "lines": 91,
+      "asAny": 4
+    },
+    "src/lib/api/mailer.ts": {
+      "lines": 515,
+      "asAny": 0
+    },
+    "src/lib/api/migrations.test.ts": {
+      "lines": 28,
+      "asAny": 2
+    },
+    "src/lib/api/networkInterfaces.test.ts": {
+      "lines": 72,
+      "asAny": 4
+    },
+    "src/lib/api/nodes.test.ts": {
+      "lines": 43,
+      "asAny": 2
+    },
+    "src/lib/api/oom.test.ts": {
+      "lines": 51,
+      "asAny": 2
+    },
+    "src/lib/api/outages.test.ts": {
+      "lines": 233,
+      "asAny": 12
+    },
+    "src/lib/api/outages.ts": {
+      "lines": 284,
+      "asAny": 2
+    },
+    "src/lib/api/payments.test.ts": {
+      "lines": 85,
+      "asAny": 6
+    },
+    "src/lib/api/requests.test.ts": {
+      "lines": 181,
+      "asAny": 7
+    },
+    "src/lib/api/transactions.test.ts": {
+      "lines": 86,
+      "asAny": 5
+    },
+    "src/lib/api/userDossier.ts": {
+      "lines": 478,
+      "asAny": 2
+    },
+    "src/lib/api/users.test.ts": {
+      "lines": 268,
+      "asAny": 4
+    },
+    "src/lib/api/vps.test.ts": {
+      "lines": 463,
+      "asAny": 18
+    },
+    "src/lib/api/vpsUserData.ts": {
+      "lines": 111,
+      "asAny": 6
+    },
+    "src/lib/auditUi.ts": {
+      "lines": 72,
+      "asAny": 8
+    },
+    "src/lib/auth/oauth2Client.ts": {
+      "lines": 272,
+      "asAny": 1
+    },
+    "src/lib/concerns.ts": {
+      "lines": 98,
+      "asAny": 1
+    },
+    "src/lib/focusTrapStack.ts": {
+      "lines": 188,
+      "asAny": 2
+    },
+    "src/lib/gates/dataset.ts": {
+      "lines": 103,
+      "asAny": 2
+    },
+    "src/lib/gates/migrationPlan.test.ts": {
+      "lines": 43,
+      "asAny": 5
+    },
+    "src/lib/gates/migrationPlan.ts": {
+      "lines": 83,
+      "asAny": 1
+    },
+    "src/lib/gates/vps.test.ts": {
+      "lines": 81,
+      "asAny": 1
+    },
+    "src/lib/gates/vps.ts": {
+      "lines": 94,
+      "asAny": 2
+    },
+    "src/lib/hooks/useFocusTrap.ts": {
+      "lines": 49,
+      "asAny": 1
+    },
+    "src/lib/localLocks.ts": {
+      "lines": 182,
+      "asAny": 1
+    },
+    "src/lib/lockIndex.ts": {
+      "lines": 130,
+      "asAny": 5
+    },
+    "src/lib/lockState.test.ts": {
+      "lines": 94,
+      "asAny": 5
+    },
+    "src/lib/lockState.ts": {
+      "lines": 99,
+      "asAny": 2
+    },
+    "src/lib/objectRef.ts": {
+      "lines": 85,
+      "asAny": 1
+    },
+    "src/lib/pendingToasts.ts": {
+      "lines": 68,
+      "asAny": 1
+    },
+    "src/lib/resources.ts": {
+      "lines": 75,
+      "asAny": 2
+    },
+    "src/lib/taskLinks.ts": {
+      "lines": 123,
+      "asAny": 4
+    },
+    "src/lib/taskStatus.ts": {
+      "lines": 271,
+      "asAny": 15
+    },
+    "src/pages/app/ActionStateDetailPage.test.tsx": {
+      "lines": 142,
+      "asAny": 2
+    },
+    "src/pages/app/ActionStateDetailPage.tsx": {
+      "lines": 489,
+      "asAny": 14
+    },
+    "src/pages/app/ActionStatesPage.tsx": {
+      "lines": 973,
+      "asAny": 14
+    },
+    "src/pages/app/admin/AdminOutagesPage.tsx": {
+      "lines": 821,
+      "asAny": 10
+    },
+    "src/pages/app/admin/AuditEventPage.tsx": {
+      "lines": 214,
+      "asAny": 1
+    },
+    "src/pages/app/admin/AuditPage.tsx": {
+      "lines": 822,
+      "asAny": 6
+    },
+    "src/pages/app/admin/cluster/DnsResolversPage.tsx": {
+      "lines": 787,
+      "asAny": 5
+    },
+    "src/pages/app/admin/cluster/DnsServersPage.tsx": {
+      "lines": 151,
+      "asAny": 2
+    },
+    "src/pages/app/admin/cluster/DnsTsigKeysPage.tsx": {
+      "lines": 103,
+      "asAny": 3
+    },
+    "src/pages/app/admin/cluster/EnvironmentsPage.tsx": {
+      "lines": 773,
+      "asAny": 8
+    },
+    "src/pages/app/admin/cluster/LocationsPage.tsx": {
+      "lines": 978,
+      "asAny": 5
+    },
+    "src/pages/app/admin/cluster/NetworkDetailPage.tsx": {
+      "lines": 641,
+      "asAny": 7
+    },
+    "src/pages/app/admin/cluster/NetworksPage.tsx": {
+      "lines": 1000,
+      "asAny": 2
+    },
+    "src/pages/app/admin/cluster/OsTemplatesPage.tsx": {
+      "lines": 1040,
+      "asAny": 7
+    },
+    "src/pages/app/admin/cluster/ResourcePackageDetailPage.tsx": {
+      "lines": 906,
+      "asAny": 19
+    },
+    "src/pages/app/admin/cluster/ResourcePackagesPage.tsx": {
+      "lines": 656,
+      "asAny": 5
+    },
+    "src/pages/app/admin/cluster/SystemConfigPage.tsx": {
+      "lines": 592,
+      "asAny": 7
+    },
+    "src/pages/app/admin/content/AdminHelpBoxesPage.tsx": {
+      "lines": 516,
+      "asAny": 0
+    },
+    "src/pages/app/admin/IncidentReportNewPage.tsx": {
+      "lines": 329,
+      "asAny": 8
+    },
+    "src/pages/app/admin/IncomingPaymentsPage.tsx": {
+      "lines": 661,
+      "asAny": 0
+    },
+    "src/pages/app/admin/IpAddressDetailPage.tsx": {
+      "lines": 751,
+      "asAny": 24
+    },
+    "src/pages/app/admin/IpAddressesPage.tsx": {
+      "lines": 625,
+      "asAny": 0
+    },
+    "src/pages/app/admin/mailer/MailboxDetailPage.tsx": {
+      "lines": 813,
+      "asAny": 29
+    },
+    "src/pages/app/admin/mailer/MailboxesPage.tsx": {
+      "lines": 662,
+      "asAny": 9
+    },
+    "src/pages/app/admin/mailer/MailLogDetailPage.tsx": {
+      "lines": 376,
+      "asAny": 2
+    },
+    "src/pages/app/admin/mailer/MailLogsPage.tsx": {
+      "lines": 1086,
+      "asAny": 40
+    },
+    "src/pages/app/admin/mailer/MailRecipientsPage.tsx": {
+      "lines": 742,
+      "asAny": 22
+    },
+    "src/pages/app/admin/mailer/MailTemplateDetailPage.tsx": {
+      "lines": 870,
+      "asAny": 31
+    },
+    "src/pages/app/admin/mailer/MailTemplatesPage.tsx": {
+      "lines": 692,
+      "asAny": 29
+    },
+    "src/pages/app/admin/mailer/MailTemplateTranslationPage.tsx": {
+      "lines": 433,
+      "asAny": 14
+    },
+    "src/pages/app/admin/MigrationPlanDetailPage.tsx": {
+      "lines": 1201,
+      "asAny": 4
+    },
+    "src/pages/app/admin/MigrationPlansPage.tsx": {
+      "lines": 1039,
+      "asAny": 30
+    },
+    "src/pages/app/admin/networking/HostIpAddressesPage.tsx": {
+      "lines": 435,
+      "asAny": 19
+    },
+    "src/pages/app/admin/networking/IpAssignmentsPage.tsx": {
+      "lines": 157,
+      "asAny": 1
+    },
+    "src/pages/app/admin/NodeDetailPage.tsx": {
+      "lines": 603,
+      "asAny": 0
+    },
+    "src/pages/app/admin/NodesPage.tsx": {
+      "lines": 1135,
+      "asAny": 15
+    },
+    "src/pages/app/admin/RequestDetailPage.tsx": {
+      "lines": 367,
+      "asAny": 39
+    },
+    "src/pages/app/admin/RequestsPage.tsx": {
+      "lines": 885,
+      "asAny": 0
+    },
+    "src/pages/app/admin/user/AdminUserHistoryPage.tsx": {
+      "lines": 918,
+      "asAny": 3
+    },
+    "src/pages/app/admin/user/AdminUserOverviewPage.tsx": {
+      "lines": 323,
+      "asAny": 9
+    },
+    "src/pages/app/admin/user/AdminUserUserDataPage.tsx": {
+      "lines": 25,
+      "asAny": 1
+    },
+    "src/pages/app/admin/UsersPage.tsx": {
+      "lines": 1096,
+      "asAny": 1
+    },
+    "src/pages/app/datasets/DatasetExpansionPage.tsx": {
+      "lines": 635,
+      "asAny": 16
+    },
+    "src/pages/app/datasets/DatasetLayout.tsx": {
+      "lines": 205,
+      "asAny": 6
+    },
+    "src/pages/app/datasets/DatasetOverviewPage.tsx": {
+      "lines": 839,
+      "asAny": 35
+    },
+    "src/pages/app/datasets/DatasetPlansPage.tsx": {
+      "lines": 349,
+      "asAny": 4
+    },
+    "src/pages/app/datasets/DatasetsListPage.tsx": {
+      "lines": 958,
+      "asAny": 15
+    },
+    "src/pages/app/datasets/DatasetSnapshotsPage.tsx": {
+      "lines": 832,
+      "asAny": 10
+    },
+    "src/pages/app/DesignSandboxPage.tsx": {
+      "lines": 851,
+      "asAny": 4
+    },
+    "src/pages/app/dns/dnsPreflight.ts": {
+      "lines": 132,
+      "asAny": 2
+    },
+    "src/pages/app/dns/DnsZoneLogsPage.tsx": {
+      "lines": 293,
+      "asAny": 4
+    },
+    "src/pages/app/dns/DnsZoneServersPage.tsx": {
+      "lines": 205,
+      "asAny": 18
+    },
+    "src/pages/app/dns/DnsZoneSettingsPage.tsx": {
+      "lines": 294,
+      "asAny": 12
+    },
+    "src/pages/app/dns/DnsZonesPage.tsx": {
+      "lines": 1159,
+      "asAny": 1
+    },
+    "src/pages/app/dns/DnsZoneTransfersPage.tsx": {
+      "lines": 235,
+      "asAny": 10
+    },
+    "src/pages/app/dns/useDnsZoneTransactionChains.ts": {
+      "lines": 227,
+      "asAny": 11
+    },
+    "src/pages/app/exports/ExportDetailPage.tsx": {
+      "lines": 514,
+      "asAny": 0
+    },
+    "src/pages/app/incidents/IncidentReportDetailPage.tsx": {
+      "lines": 265,
+      "asAny": 28
+    },
+    "src/pages/app/incidents/IncidentsPage.tsx": {
+      "lines": 1225,
+      "asAny": 26
+    },
+    "src/pages/app/MonitoringEventDetailPage.tsx": {
+      "lines": 647,
+      "asAny": 26
+    },
+    "src/pages/app/MonitoringEventsPage.tsx": {
+      "lines": 1109,
+      "asAny": 21
+    },
+    "src/pages/app/oom/OomReportLayout.tsx": {
+      "lines": 177,
+      "asAny": 10
+    },
+    "src/pages/app/oom/OomReportOverviewPage.tsx": {
+      "lines": 146,
+      "asAny": 3
+    },
+    "src/pages/app/oom/OomReportRulesPage.tsx": {
+      "lines": 366,
+      "asAny": 4
+    },
+    "src/pages/app/oom/OomReportsPage.tsx": {
+      "lines": 1211,
+      "asAny": 24
+    },
+    "src/pages/app/TransactionChainDetailPage.tsx": {
+      "lines": 587,
+      "asAny": 49
+    },
+    "src/pages/app/TransactionChainsPage.tsx": {
+      "lines": 746,
+      "asAny": 0
+    },
+    "src/pages/app/TransactionDetailPage.tsx": {
+      "lines": 357,
+      "asAny": 31
+    },
+    "src/pages/app/TransactionsListPage.tsx": {
+      "lines": 568,
+      "asAny": 0
+    },
+    "src/pages/app/vps/VpsConsolePage.tsx": {
+      "lines": 551,
+      "asAny": 6
+    },
+    "src/pages/app/vps/VpsFeaturesPage.tsx": {
+      "lines": 227,
+      "asAny": 4
+    },
+    "src/pages/app/vps/VpsLayout.tsx": {
+      "lines": 796,
+      "asAny": 15
+    },
+    "src/pages/app/vps/VpsLifecyclePage.tsx": {
+      "lines": 862,
+      "asAny": 24
+    },
+    "src/pages/app/vps/VpsMaintenancePage.tsx": {
+      "lines": 431,
+      "asAny": 6
+    },
+    "src/pages/app/vps/VpsNetworkPage.tsx": {
+      "lines": 1172,
+      "asAny": 0
+    },
+    "src/pages/app/vps/vpsPreflight.test.ts": {
+      "lines": 38,
+      "asAny": 2
+    },
+    "src/pages/public/OutageDetailPage.test.tsx": {
+      "lines": 133,
+      "asAny": 4
+    },
+    "src/pages/public/OutageDetailPage.tsx": {
+      "lines": 251,
+      "asAny": 8
+    },
+    "src/pages/public/OutagesPage.test.tsx": {
+      "lines": 76,
+      "asAny": 1
+    },
+    "src/pages/public/OutagesPage.tsx": {
+      "lines": 209,
+      "asAny": 3
+    },
+    "src/pages/public/OverviewPage.tsx": {
+      "lines": 502,
+      "asAny": 8
+    },
+    "src/pages/public/RegistrationCorrectionPage.test.tsx": {
+      "lines": 164,
+      "asAny": 5
+    },
+    "src/pages/public/RegistrationCorrectionPage.tsx": {
+      "lines": 377,
+      "asAny": 7
+    }
+  }
+}

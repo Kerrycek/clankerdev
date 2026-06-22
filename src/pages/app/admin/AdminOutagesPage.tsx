@@ -215,6 +215,15 @@ function ErrorText({ message }: { message?: string }) {
   return <div className="mt-1 text-xs text-danger">{message}</div>;
 }
 
+function FieldLabel(props: { label: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-semibold text-muted">{props.label}</span>
+      {props.children}
+    </label>
+  );
+}
+
 function OutageForm(props: {
   form: OutageFormState;
   setForm: React.Dispatch<React.SetStateAction<OutageFormState>>;
@@ -227,15 +236,39 @@ function OutageForm(props: {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-2">
-        <div><Input testId="admin.outages.form.begins_at" type="datetime-local" value={form.beginsAt} onChange={(e) => setForm((p) => ({ ...p, beginsAt: e.target.value }))} label={t('admin.outages.field.begins_at')} /><ErrorText message={errors.beginsAt} /></div>
-        <Input testId="admin.outages.form.finished_at" type="datetime-local" value={form.finishedAt} onChange={(e) => setForm((p) => ({ ...p, finishedAt: e.target.value }))} label={t('admin.outages.field.finished_at')} />
-        <div><Input testId="admin.outages.form.duration" inputMode="numeric" value={form.duration} onChange={(e) => setForm((p) => ({ ...p, duration: e.target.value }))} label={t('admin.outages.field.duration')} /><ErrorText message={errors.duration} /></div>
-        <div><Select testId="admin.outages.form.impact" value={form.impact} onChange={(e) => setForm((p) => ({ ...p, impact: e.target.value }))} label={t('admin.outages.field.impact')} options={IMPACTS.map((v) => ({ value: v, label: t(`outage.impact.${v}` as any) }))} /><ErrorText message={errors.impact} /></div>
+        <div>
+          <FieldLabel label={t('admin.outages.field.begins_at')}>
+            <Input testId="admin.outages.form.begins_at" type="datetime-local" value={form.beginsAt} onChange={(e) => setForm((p) => ({ ...p, beginsAt: e.target.value }))} />
+          </FieldLabel>
+          <ErrorText message={errors.beginsAt} />
+        </div>
+        <FieldLabel label={t('admin.outages.field.finished_at')}>
+          <Input testId="admin.outages.form.finished_at" type="datetime-local" value={form.finishedAt} onChange={(e) => setForm((p) => ({ ...p, finishedAt: e.target.value }))} />
+        </FieldLabel>
+        <div>
+          <FieldLabel label={t('admin.outages.field.duration')}>
+            <Input testId="admin.outages.form.duration" inputMode="numeric" value={form.duration} onChange={(e) => setForm((p) => ({ ...p, duration: e.target.value }))} />
+          </FieldLabel>
+          <ErrorText message={errors.duration} />
+        </div>
+        <div>
+          <FieldLabel label={t('admin.outages.field.impact')}>
+            <Select testId="admin.outages.form.impact" value={form.impact} onChange={(e) => setForm((p) => ({ ...p, impact: e.target.value }))} options={IMPACTS.map((v) => ({ value: v, label: t(`outage.impact.${v}` as any) }))} />
+          </FieldLabel>
+          <ErrorText message={errors.impact} />
+        </div>
         {!props.updateMode ? (
-          <div><Select testId="admin.outages.form.type" value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))} label={t('admin.outages.field.type')} options={OUTAGE_TYPES.map((v) => ({ value: v, label: t(`outage.type.${v}` as any) }))} /><ErrorText message={errors.type} /></div>
+          <div>
+            <FieldLabel label={t('admin.outages.field.type')}>
+              <Select testId="admin.outages.form.type" value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))} options={OUTAGE_TYPES.map((v) => ({ value: v, label: t(`outage.type.${v}` as any) }))} />
+            </FieldLabel>
+            <ErrorText message={errors.type} />
+          </div>
         ) : null}
         {props.includeState ? (
-          <Select testId="admin.outages.form.state" value={form.state} onChange={(e) => setForm((p) => ({ ...p, state: e.target.value }))} label={t('admin.outages.field.state')} options={STATES.map((v) => ({ value: v, label: t(`admin.outages.state.${v}`) }))} />
+          <FieldLabel label={t('admin.outages.field.state')}>
+            <Select testId="admin.outages.form.state" value={form.state} onChange={(e) => setForm((p) => ({ ...p, state: e.target.value }))} options={STATES.map((v) => ({ value: v, label: t(`admin.outages.state.${v}`) }))} />
+          </FieldLabel>
         ) : null}
       </div>
       {!props.updateMode ? (
@@ -250,8 +283,18 @@ function OutageForm(props: {
         </label>
       )}
       <div className="grid gap-3 md:grid-cols-2">
-        <div><Input testId="admin.outages.form.en_summary" value={form.enSummary} onChange={(e) => setForm((p) => ({ ...p, enSummary: e.target.value }))} label={t('admin.outages.field.en_summary')} /><ErrorText message={errors.enSummary} /></div>
-        <div><Input testId="admin.outages.form.cs_summary" value={form.csSummary} onChange={(e) => setForm((p) => ({ ...p, csSummary: e.target.value }))} label={t('admin.outages.field.cs_summary')} /><ErrorText message={errors.csSummary} /></div>
+        <div>
+          <FieldLabel label={t('admin.outages.field.en_summary')}>
+            <Input testId="admin.outages.form.en_summary" value={form.enSummary} onChange={(e) => setForm((p) => ({ ...p, enSummary: e.target.value }))} />
+          </FieldLabel>
+          <ErrorText message={errors.enSummary} />
+        </div>
+        <div>
+          <FieldLabel label={t('admin.outages.field.cs_summary')}>
+            <Input testId="admin.outages.form.cs_summary" value={form.csSummary} onChange={(e) => setForm((p) => ({ ...p, csSummary: e.target.value }))} />
+          </FieldLabel>
+          <ErrorText message={errors.csSummary} />
+        </div>
         <Textarea testId="admin.outages.form.en_description" value={form.enDescription} onChange={(e) => setForm((p) => ({ ...p, enDescription: e.target.value }))} label={t('admin.outages.field.en_description')} rows={4} />
         <Textarea testId="admin.outages.form.cs_description" value={form.csDescription} onChange={(e) => setForm((p) => ({ ...p, csDescription: e.target.value }))} label={t('admin.outages.field.cs_description')} rows={4} />
       </div>
@@ -291,17 +334,21 @@ function SystemsEditor(props: {
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-2">
         <div>
-          <Select testId="admin.outages.systems.environments.select" label={t('admin.outages.systems.environments')} value="" onChange={(e) => {
-            const id = parsePositiveInt(e.target.value);
-            if (id) props.setForm((p) => ({ ...p, environments: appendIdList(p.environments, id) }));
-          }} options={envOptions} />
+          <FieldLabel label={t('admin.outages.systems.environments')}>
+            <Select testId="admin.outages.systems.environments.select" value="" onChange={(e) => {
+              const id = parsePositiveInt(e.target.value);
+              if (id) props.setForm((p) => ({ ...p, environments: appendIdList(p.environments, id) }));
+            }} options={envOptions} />
+          </FieldLabel>
           <div className="mt-1 text-xs text-muted">{props.form.environments || t('admin.outages.systems.none_selected')}</div>
         </div>
         <div>
-          <Select testId="admin.outages.systems.locations.select" label={t('admin.outages.systems.locations')} value="" onChange={(e) => {
-            const id = parsePositiveInt(e.target.value);
-            if (id) props.setForm((p) => ({ ...p, locations: appendIdList(p.locations, id) }));
-          }} options={locationOptions} />
+          <FieldLabel label={t('admin.outages.systems.locations')}>
+            <Select testId="admin.outages.systems.locations.select" value="" onChange={(e) => {
+              const id = parsePositiveInt(e.target.value);
+              if (id) props.setForm((p) => ({ ...p, locations: appendIdList(p.locations, id) }));
+            }} options={locationOptions} />
+          </FieldLabel>
           <div className="mt-1 text-xs text-muted">{props.form.locations || t('admin.outages.systems.none_selected')}</div>
         </div>
         <div>
@@ -339,11 +386,15 @@ function SystemsEditor(props: {
           <div className="mt-1 text-xs text-muted">{props.form.handlers || t('admin.outages.systems.none_selected')}</div>
         </div>
         <div>
-          <Input testId="admin.outages.systems.vpsadmin" label={t('admin.outages.systems.vpsadmin')} value={props.form.vpsadmin} onChange={(e) => props.setForm((p) => ({ ...p, vpsadmin: e.target.value }))} />
+          <FieldLabel label={t('admin.outages.systems.vpsadmin')}>
+            <Input testId="admin.outages.systems.vpsadmin" value={props.form.vpsadmin} onChange={(e) => props.setForm((p) => ({ ...p, vpsadmin: e.target.value }))} />
+          </FieldLabel>
           <div className="mt-1 text-xs text-muted">{t('admin.outages.systems.vpsadmin_help')}</div>
         </div>
         <div>
-          <Input testId="admin.outages.systems.additional" label={t('admin.outages.systems.additional')} value={props.form.additional} onChange={(e) => props.setForm((p) => ({ ...p, additional: e.target.value }))} />
+          <FieldLabel label={t('admin.outages.systems.additional')}>
+            <Input testId="admin.outages.systems.additional" value={props.form.additional} onChange={(e) => props.setForm((p) => ({ ...p, additional: e.target.value }))} />
+          </FieldLabel>
           <div className="mt-1 text-xs text-muted">{t('admin.outages.systems.additional_help')}</div>
         </div>
       </div>
@@ -418,8 +469,12 @@ function AdminOutageListPage() {
         <CardBody>
           {vpsFilter ? <Alert title={t('admin.outages.filter.vps', { id: vpsFilter })} variant="info" /> : null}
           <div className="grid gap-3 md:grid-cols-3">
-            <Select value={state} onChange={(e) => setState(e.target.value)} label={t('admin.outages.field.state')} options={[{ value: '', label: t('common.all') }, ...STATES.map((v) => ({ value: v, label: t(`admin.outages.state.${v}`) }))]} />
-            <Select value={type} onChange={(e) => setType(e.target.value)} label={t('admin.outages.field.type')} options={[{ value: '', label: t('common.all') }, ...OUTAGE_TYPES.map((v) => ({ value: v, label: t(`outage.type.${v}` as any) }))]} />
+            <FieldLabel label={t('admin.outages.field.state')}>
+              <Select value={state} onChange={(e) => setState(e.target.value)} options={[{ value: '', label: t('common.all') }, ...STATES.map((v) => ({ value: v, label: t(`admin.outages.state.${v}`) }))]} />
+            </FieldLabel>
+            <FieldLabel label={t('admin.outages.field.type')}>
+              <Select value={type} onChange={(e) => setType(e.target.value)} options={[{ value: '', label: t('common.all') }, ...OUTAGE_TYPES.map((v) => ({ value: v, label: t(`outage.type.${v}` as any) }))]} />
+            </FieldLabel>
             <div className="flex items-end">
               <Button variant="secondary" onClick={() => outagesQ.refetch()}>{t('common.refresh')}</Button>
             </div>

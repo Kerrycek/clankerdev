@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 
@@ -52,6 +52,11 @@ const ips = [
 ];
 
 const acct = [{ id: 1, bytes_in: 1024, bytes_out: 2048 }];
+
+
+async function openAdvancedNetworkOptions(page: Page) {
+  await page.getByTestId('vps.network.advanced.toggle').click();
+}
 
 test.describe('@pr-smoke VPS network tab', () => {
   test('edits interface and sends PUT', async ({ page }) => {
@@ -130,6 +135,7 @@ test.describe('@pr-smoke VPS network tab', () => {
 
     await page.goto('/app/vps/123/network');
 
+    await openAdvancedNetworkOptions(page);
     await expect(page.getByTestId('vps.network.disable')).toBeVisible();
     await page.getByTestId('vps.network.disable').click();
 
@@ -230,6 +236,7 @@ test.describe('@pr-smoke VPS network tab', () => {
 
     await page.goto('/admin/vps/123/network');
     await expect(page.getByTestId('vps.network.page')).toBeVisible();
+    await openAdvancedNetworkOptions(page);
 
     await page.getByTestId('vps.network.ip_addresses.unassigned.2.assign').click();
     await expect(page.getByTestId('vps.network.ip_addresses.assign_route')).toBeVisible();
@@ -319,6 +326,83 @@ test.describe('@pr-smoke VPS network tab', () => {
     expect((await freeRouteReq).postData()).toBe('{}');
   });
 
+  test('busy VPS transaction gates networking mutations with an explanation', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 90 },
+      handlers: {
+        'GET vpses/123': () => ({ vps }),
+        'GET ip_addresses': () => ({ ip_addresses: ips }),
+        'GET network_interfaces': () => ({ network_interfaces: netifs }),
+        'GET network_interface_accountings': () => ({ network_interface_accountings: acct }),
+        'GET host_ip_addresses': () => ({
+          host_ip_addresses: [
+            {
+              id: 50,
+              addr: '198.51.100.10',
+              assigned: true,
+              reverse_record_value: 'old.example.test.',
+              user_created: true,
+              ip_address: { id: 1, addr: '198.51.100.10' },
+            },
+            {
+              id: 51,
+              addr: '198.51.100.11',
+              assigned: false,
+              user_created: true,
+              ip_address: { id: 1, addr: '198.51.100.10' },
+            },
+          ],
+        }),
+        'GET environments': () => ({ environments: [{ id: 3, label: 'env-test' }] }),
+        'GET transaction_chains': (ctx) => {
+          const cls = ctx.searchParams.get('transaction_chain[class_name]');
+          const rowId = ctx.searchParams.get('transaction_chain[row_id]');
+
+          if (cls === 'Vps' && rowId === '123') {
+            return {
+              transaction_chains: [
+                {
+                  id: 919,
+                  state: 'running',
+                  name: 'Vps#123 network operation',
+                  progress: 0,
+                  size: 1,
+                },
+              ],
+            };
+          }
+
+          return { transaction_chains: [] };
+        },
+        'PUT ip_addresses/1': () => {
+          throw new Error('owner update should be blocked by busy gate');
+        },
+        'POST host_ip_addresses/50/free': () => {
+          throw new Error('host address free should be blocked by busy gate');
+        },
+      },
+    });
+
+    await page.goto('/admin/vps/123/network');
+    await expect(page.getByTestId('vps.network.page')).toBeVisible();
+    await openAdvancedNetworkOptions(page);
+
+    const disable = page.getByTestId('vps.network.disable');
+    await expect(disable).toHaveAttribute('aria-disabled', 'true');
+    await expect(disable).toHaveAttribute('title', 'Operation in progress');
+
+    await expect(page.getByTestId('vps.network.ip_addresses.item.1.host_create')).toHaveAttribute('aria-disabled', 'true');
+    await expect(page.getByTestId('vps.network.ip_addresses.item.1.owner')).toHaveAttribute('aria-disabled', 'true');
+    await expect(page.getByTestId('vps.network.ip_addresses.item.1.free_route')).toHaveAttribute('aria-disabled', 'true');
+    await expect(page.getByTestId('vps.network.ip_addresses.unassigned.2.assign')).toHaveAttribute('aria-disabled', 'true');
+    await expect(page.getByTestId('vps.network.host_addresses.row.50.ptr')).toHaveAttribute('aria-disabled', 'true');
+    await expect(page.getByTestId('vps.network.host_addresses.row.50.free')).toHaveAttribute('aria-disabled', 'true');
+    await expect(page.getByTestId('vps.network.host_addresses.row.51.assign')).toHaveAttribute('aria-disabled', 'true');
+    await expect(page.getByTestId('vps.network.host_addresses.row.51.delete')).toHaveAttribute('aria-disabled', 'true');
+  });
+
   test('keeps admin-only networking actions hidden for normal users', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
@@ -347,6 +431,7 @@ test.describe('@pr-smoke VPS network tab', () => {
 
     await page.goto('/app/vps/123/network');
     await expect(page.getByTestId('vps.network.page')).toBeVisible();
+    await openAdvancedNetworkOptions(page);
     await expect(page.getByTestId('vps.network.host_addresses')).toBeVisible();
     await expect(page.getByTestId('vps.network.host_addresses.row.50.ptr')).toBeVisible();
     await expect(page.getByTestId('vps.network.ip_addresses.item.1.host_create')).toBeVisible();

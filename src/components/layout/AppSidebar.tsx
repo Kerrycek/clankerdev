@@ -59,7 +59,6 @@ export function buildSidebarNavItems(opts: {
 
   if (appMode === 'user') {
     items.push({ id: 'payments', to: `${basePath}/payments`, label: t('nav.payments'), icon: <CreditCard size={18} /> });
-    items.push({ id: 'requests', to: `${basePath}/requests`, label: t('nav.requests'), icon: <Inbox size={18} /> });
   }
 
   if (appMode === 'admin') {

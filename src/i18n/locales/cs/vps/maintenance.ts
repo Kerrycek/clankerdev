@@ -1,0 +1,23 @@
+// VPS maintenance tab copy
+export const csVps_maintenance = {
+  'vps.maintenance.title': 'Okno údržby',
+  'vps.maintenance.subtitle_basic': 'Vyber, kdy jsou povoleny údržbové operace.',
+  'vps.maintenance.subtitle_advanced': 'Nastav týdenní plán údržby pro tuto VPS.',
+  'vps.maintenance.save_changes': 'Uložit ({n})',
+  'vps.maintenance.save_changes_empty': 'Uložit',
+  'vps.maintenance.unsaved': 'Neuložené dny: {n}',
+  'vps.maintenance.saved': 'Žádné neuložené změny.',
+  'vps.maintenance.allow_anytime': 'Povolit kdykoli',
+  'vps.maintenance.disallow_all': 'Zakázat vše',
+  'vps.maintenance.load_error': 'Nepodařilo se načíst okna údržby.',
+  'vps.maintenance.save_error': 'Nepodařilo se uložit okna údržby.',
+  'vps.maintenance.field.day': 'Den',
+  'vps.maintenance.field.open': 'Otevřeno',
+  'vps.maintenance.field.opens': 'Od',
+  'vps.maintenance.field.closes': 'Do',
+  'vps.maintenance.field.summary': 'Souhrn',
+  'vps.maintenance.open': 'Otevřeno',
+  'vps.maintenance.closed': 'Zavřeno',
+  'vps.maintenance.summary_open': '{opens}–{closes}',
+  'vps.maintenance.summary_closed': 'Zavřeno',
+} as const;

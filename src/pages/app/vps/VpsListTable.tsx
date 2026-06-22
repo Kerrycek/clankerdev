@@ -1,11 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Play, RotateCw, Square, Trash2 } from 'lucide-react';
 
 import type { KeysetPaginationState } from '../../../lib/hooks/useKeysetPagination';
 import { formatMiB, formatUptimeSeconds } from '../../../lib/format';
 
-import { ActionButton } from '../../../components/ui/ActionButton';
 import { Badge } from '../../../components/ui/Badge';
 import { KeysetPagination } from '../../../components/ui/KeysetPagination';
 import { LockBadge } from '../../../components/ui/LockBadge';
@@ -14,6 +12,7 @@ import { TableCard } from '../../../components/ui/TableCard';
 import { TableRowLink } from '../../../components/ui/TableRowLink';
 import { UsageBar } from '../../../components/ui/UsageBar';
 
+import { VpsListRowActions } from './VpsListRowActions';
 import type { VpsListRecord, VpsListTranslator } from './vpsListSemantics';
 
 interface VpsListTableProps {
@@ -69,18 +68,19 @@ export function VpsListTable({
       <thead>
         <tr className="border-b border-border text-left text-xs text-muted">
           <th className="w-8 px-4 py-2"><span className="sr-only">{t('common.state')}</span></th>
-          <th className="px-4 py-2">{t('common.id')}</th>
-          <th className="px-4 py-2">{t('common.hostname')}</th>
+          <th className="px-4 py-2">{t('vps.list.col.vps')}</th>
           <th className="px-4 py-2">{t('common.state')}</th>
-          <th className="px-4 py-2">{t('common.node')}</th>
+          <th className="px-4 py-2">{t('vps.list.col.owner_location')}</th>
           <th className="px-4 py-2">{t('vps.overview.resources.title')}</th>
-          <th className="px-4 py-2">{t('vps.overview.usage.uptime')}</th>
+          <th className="px-4 py-2">{t('vps.list.col.activity')}</th>
           <th className="px-4 py-2">{t('common.actions')}</th>
         </tr>
       </thead>
       <tbody>
         {rows.map((row) => {
           const { vps } = row;
+          const failureId = row.recentFailureChainIds[0];
+
           return (
             <TableRowLink
               key={vps.id}
@@ -92,11 +92,13 @@ export function VpsListTable({
               <td className="px-4 py-2 align-top">
                 <StatusDot variant={row.dotVariant} testId={`vps.row.${vps.id}.dot`} ariaLabel={row.runtimeBadge.label} />
               </td>
-              <td className="px-4 py-2 align-top text-xs text-muted">{vps.id}</td>
               <td className="px-4 py-2 align-top">
-                <Link to={`${basePath}/vps/${vps.id}`} className="font-medium text-fg underline">
-                  {vps.hostname}
-                </Link>
+                <div className="flex flex-col gap-1">
+                  <Link to={`${basePath}/vps/${vps.id}`} className="font-medium text-fg underline">
+                    {vps.hostname}
+                  </Link>
+                  <div className="text-xs text-muted">{t('common.id')} {vps.id}</div>
+                </div>
               </td>
               <td className="px-4 py-2 align-top">
                 <div className="flex flex-wrap items-center gap-2" data-testid={`vps.row.${vps.id}.state`}>
@@ -104,6 +106,7 @@ export function VpsListTable({
                   <Badge variant={row.objectBadge.variant}>{row.objectBadge.label}</Badge>
                   {row.memoryRisk ? <Badge variant={row.memoryRisk}>{t('vps.list.state.ram_high')}</Badge> : null}
                   {row.diskRisk ? <Badge variant={row.diskRisk}>{t('vps.list.state.disk_high')}</Badge> : null}
+                  {failureId !== undefined ? <Badge variant="danger">{t('vps.list.state.recent_failure', { id: failureId })}</Badge> : null}
                   {row.busyTx ? (
                     <LockBadge kind="transaction" t={t} chainIds={row.busyChains} showDetails />
                   ) : row.busyLocalLock ? (
@@ -111,7 +114,13 @@ export function VpsListTable({
                   ) : null}
                 </div>
               </td>
-              <td className="px-4 py-2 align-top">{row.nodeLabel}</td>
+              <td className="px-4 py-2 align-top text-xs">
+                <div className="flex flex-col gap-1">
+                  <div><span className="text-muted">{t('vps.list.context.owner')}:</span> {row.ownerLabel}</div>
+                  <div><span className="text-muted">{t('vps.list.context.location')}:</span> {row.locationLabel}</div>
+                  <div><span className="text-muted">{t('common.node')}:</span> {row.nodeLabel}</div>
+                </div>
+              </td>
               <td className="px-4 py-2 align-top text-xs text-muted">
                 <div className="flex flex-col gap-1">
                   <div className="text-faint">
@@ -121,72 +130,28 @@ export function VpsListTable({
                   {row.memUsed !== undefined && row.memMax !== undefined && row.memMax > 0 ? (
                     <UsageBar layout="row" label={t('vps.list.usage.ram')} used={row.memUsed} max={row.memMax} formatValue={formatMiB} />
                   ) : null}
-
                   {row.diskUsed !== undefined && row.diskMax !== undefined && row.diskMax > 0 ? (
                     <UsageBar layout="row" label={t('vps.list.usage.disk')} used={row.diskUsed} max={row.diskMax} formatValue={formatMiB} />
                   ) : null}
                 </div>
               </td>
-              <td className="px-4 py-2 align-top text-xs text-muted">{formatUptimeSeconds(vps.uptime)}</td>
-              <td className="px-4 py-2 align-top">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Link to={`${basePath}/vps/${vps.id}/console`} className="text-sm font-medium text-fg underline">
-                    {t('vps.tabs.console')}
-                  </Link>
-                  <span className="text-faint">·</span>
-                  <ActionButton
-                    variant="ok"
-                    size="sm"
-                    testId={`vps.row.${vps.id}.action.start`}
-                    disabled={!row.startGate.allowed}
-                    disabledReason={!row.startGate.allowed ? row.startGate.reason : undefined}
-                    loading={row.inFlightKind === 'start'}
-                    ariaLabel={t('vps.power.aria.start')}
-                    title={t('action.vps.start.label')}
-                    onClick={() => onStart(row)}
-                  >
-                    <Play className="h-4 w-4" />
-                  </ActionButton>
-                  <ActionButton
-                    variant="warn"
-                    size="sm"
-                    testId={`vps.row.${vps.id}.action.restart`}
-                    disabled={!row.restartGate.allowed}
-                    disabledReason={!row.restartGate.allowed ? row.restartGate.reason : undefined}
-                    loading={row.inFlightKind === 'restart'}
-                    ariaLabel={t('vps.power.aria.restart')}
-                    title={t('action.vps.restart.label')}
-                    onClick={() => onRequestRestart(row)}
-                  >
-                    <RotateCw className="h-4 w-4" />
-                  </ActionButton>
-                  <ActionButton
-                    variant="danger"
-                    size="sm"
-                    testId={`vps.row.${vps.id}.action.stop`}
-                    disabled={!row.stopGate.allowed}
-                    disabledReason={!row.stopGate.allowed ? row.stopGate.reason : undefined}
-                    loading={row.inFlightKind === 'stop'}
-                    ariaLabel={t('vps.power.aria.stop')}
-                    title={t('action.vps.stop.label')}
-                    onClick={() => onRequestStop(row)}
-                  >
-                    <Square className="h-4 w-4" />
-                  </ActionButton>
-                  <ActionButton
-                    variant="danger"
-                    size="sm"
-                    testId={`vps.row.${vps.id}.action.delete`}
-                    disabled={!row.deleteGate.allowed}
-                    disabledReason={!row.deleteGate.allowed ? row.deleteGate.reason : undefined}
-                    loading={row.inFlightKind === 'delete'}
-                    ariaLabel={t('vps.list.aria.delete')}
-                    title={t('action.vps.delete.label')}
-                    onClick={() => onRequestDelete(row)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </ActionButton>
+              <td className="px-4 py-2 align-top text-xs text-muted">
+                <div className="flex flex-col gap-1">
+                  <span>{formatUptimeSeconds(vps.uptime)}</span>
+                  {row.busyTx ? <span>{t('vps.list.activity.busy')}</span> : null}
                 </div>
+              </td>
+              <td className="px-4 py-2 align-top">
+                <VpsListRowActions
+                  row={row}
+                  basePath={basePath}
+                  t={t}
+                  testIdPrefix={`vps.row.${vps.id}`}
+                  onStart={onStart}
+                  onRequestStop={onRequestStop}
+                  onRequestRestart={onRequestRestart}
+                  onRequestDelete={onRequestDelete}
+                />
               </td>
             </TableRowLink>
           );

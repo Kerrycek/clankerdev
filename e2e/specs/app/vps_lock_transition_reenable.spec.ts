@@ -146,22 +146,23 @@ test('@smoke VPS busy lock disables actions; completion releases lock and re-ena
   await page.goto('/app/vps/123');
   await expect(page.getByTestId('vps.header')).toBeVisible();
 
-  const startBtn = page.getByTestId('vps.action.start');
-  const stopBtn = page.getByTestId('vps.action.stop');
-  const restartBtn = page.getByTestId('vps.action.restart');
+  const actionsMenu = page.getByTestId('vps.actions.menu');
+  const stopOption = page.locator('[data-testid="vps.actions.menu"] option[value="action:stop"]');
+  const restartOption = page.locator('[data-testid="vps.actions.menu"] option[value="action:restart"]');
 
-  // Initial: running and not busy -> stop/restart available.
-  await expect(stopBtn).toHaveAttribute('aria-disabled', 'false');
-  await expect(restartBtn).toHaveAttribute('aria-disabled', 'false');
+  // Initial: running and not busy -> stop/restart available from the More menu.
+  await expect(actionsMenu).toBeVisible();
+  await expect(stopOption).toBeEnabled();
+  await expect(restartOption).toBeEnabled();
 
   // Trigger stop.
-  await stopBtn.click();
+  await actionsMenu.selectOption('action:stop');
   await expect(page.getByTestId('vps.action.stop_confirm')).toBeVisible();
   await page.getByTestId('vps.action.stop_confirm.confirm').click();
 
   // Busy lock should show up quickly (chainPhase becomes active and chains are refetched).
   await expect(page.getByTestId('modal.action_progress')).toBeVisible();
-  await expect(restartBtn).toHaveAttribute('aria-disabled', 'true');
+  await expect(restartOption).toBeDisabled();
 
   // Allow the mocked action to finish; progress modal closes when action_state finishes.
   shouldFinish = true;
@@ -169,14 +170,10 @@ test('@smoke VPS busy lock disables actions; completion releases lock and re-ena
   // Wait for completion: progress modal closes when action_state finishes.
   await expect(page.getByTestId('modal.action_progress')).toBeHidden();
 
-  // After completion the VPS becomes stopped; start becomes available.
+  // After completion the VPS becomes stopped; start becomes the primary action and stop stays unavailable.
+  const startBtn = page.getByTestId('vps.action.start');
   await expect(startBtn).toHaveAttribute('aria-disabled', 'false');
-  await expect(stopBtn).toHaveAttribute('aria-disabled', 'true');
-
-  // Stop is disabled for a *different* reason now (VPS stopped), still explainable.
-  await stopBtn.click({ force: true });
-  await expect(page.getByTestId('vps.action.stop.reason')).toBeVisible();
-  await page.getByTestId('vps.action.stop.reason.close').click();
+  await expect(stopOption).toBeDisabled();
 
   // Prove the busy lock was released by starting the VPS (preflight would block if still busy).
   const startReq = page.waitForRequest((r) => r.method() === 'POST' && r.url().includes('/api/v7.0/vpses/123/start'));

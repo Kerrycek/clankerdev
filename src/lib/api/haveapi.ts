@@ -247,10 +247,15 @@ export function unwrapSingleResponse<T>(
  */
 export function getMetaActionStateId(meta: unknown): number | undefined {
   if (!meta || typeof meta !== 'object') return undefined;
-  const raw = (meta as any)['action_state_id'] ?? (meta as any)['state_id'];
-  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
-  if (typeof raw === 'string') {
-    const n = Number(raw);
+  const raw =
+    (meta as any)['action_state_id'] ??
+    (meta as any)['state_id'] ??
+    (meta as any)['action_state'] ??
+    (meta as any)['state'];
+  const rawId = raw && typeof raw === 'object' ? (raw as any)['id'] : raw;
+  if (typeof rawId === 'number' && Number.isFinite(rawId)) return rawId;
+  if (typeof rawId === 'string') {
+    const n = Number(rawId);
     if (Number.isFinite(n)) return n;
   }
   return undefined;

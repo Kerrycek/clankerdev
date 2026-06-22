@@ -43,7 +43,7 @@ const dataset = {
   object_state: 'active',
 };
 
-test('@workflow-matrix @smoke VPS detail tabs expose storage, lifecycle, and console routes', async ({ page }) => {
+test('@workflow-matrix @smoke VPS detail tabs expose storage, access, lifecycle, and console routes', async ({ page }) => {
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_USER_SESSION' });
 
   await page.route('**/_console/**', async (route) => {
@@ -94,8 +94,19 @@ test('@workflow-matrix @smoke VPS detail tabs expose storage, lifecycle, and con
   await expect(page).toHaveURL(/\/app\/vps\/123$/);
   await expect(page.getByTestId('vps.header')).toBeVisible();
   await expect(page.getByRole('link', { name: /^Storage$/ })).toHaveAttribute('href', '/app/vps/123/storage');
+  await expect(page.getByRole('link', { name: /^Access$/ })).toHaveAttribute('href', '/app/vps/123/access');
   await expect(page.getByRole('link', { name: /^Lifecycle$/ })).toHaveAttribute('href', '/app/vps/123/lifecycle');
   await expect(page.getByRole('link', { name: /^Console$/ }).first()).toHaveAttribute('href', '/app/vps/123/console');
+
+  await expect(page.getByTestId('vps.overview.management.card')).toBeVisible();
+  await expect(page.getByTestId('vps.overview.management.action.reinstall')).toHaveAttribute('href', '/app/vps/123/lifecycle/reinstall');
+  await expect(page.getByTestId('vps.overview.management.action.clone')).toHaveAttribute('href', '/app/vps/123/lifecycle/clone');
+  await expect(page.getByTestId('vps.overview.management.action.swap')).toHaveAttribute('href', '/app/vps/123/lifecycle/swap');
+  await expect(page.getByTestId('vps.overview.management.action.delete')).toHaveAttribute('href', '/app/vps/123/lifecycle/delete');
+  await expect(page.getByTestId('vps.overview.management.action.migrate')).toHaveCount(0);
+  await expect(page.getByTestId('vps.overview.management.section.storage')).toHaveAttribute('href', '/app/vps/123/storage');
+  await expect(page.getByTestId('vps.overview.management.section.access')).toHaveAttribute('href', '/app/vps/123/access');
+  await expect(page.getByTestId('vps.overview.management.section.console')).toHaveAttribute('href', '/app/vps/123/console');
 
   await page.getByRole('link', { name: /^Storage$/ }).click();
   await expect(page).toHaveURL(/\/app\/vps\/123\/storage$/);

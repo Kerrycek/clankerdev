@@ -284,6 +284,8 @@ export function SandboxedHtml(props: {
       title={props.title ?? staticT('common.html_preview')}
       // allow-same-origin lets us render srcDoc with predictable sizing/behavior while still disallowing scripts.
       sandbox="allow-same-origin"
+      referrerPolicy="no-referrer"
+      allow=""
       srcDoc={srcDoc}
       className={clsx(
         props.autoHeight

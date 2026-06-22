@@ -7,6 +7,7 @@ import { enOps_incidents } from './ops/incidents';
 import { enOps_monitoring } from './ops/monitoring';
 import { enOps_oom } from './ops/oom';
 import { enOps_outage } from './ops/outage';
+import { enOps_operation } from './ops/operation';
 import { enOps_tasks } from './ops/tasks';
 import { enOps_transactions } from './ops/transactions';
 
@@ -19,6 +20,7 @@ export const enOps = {
   ...enOps_monitoring,
   ...enOps_oom,
   ...enOps_outage,
+  ...enOps_operation,
   ...enOps_tasks,
   ...enOps_transactions,
 } as const;

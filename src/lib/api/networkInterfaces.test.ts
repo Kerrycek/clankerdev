@@ -1,0 +1,71 @@
+import { describe, expect, test, vi } from 'vitest';
+
+import {
+  fetchNetworkInterfaceAccountingForVps,
+  fetchNetworkInterfaces,
+  updateNetworkInterface,
+} from './networkInterfaces';
+
+function mockFetchOk(response: any) {
+  return vi.fn().mockResolvedValue({ ok: true, json: async () => ({ status: true, response }) });
+}
+
+function lastFetchCall() {
+  const calls = (globalThis.fetch as any).mock.calls;
+  return calls[calls.length - 1] as [string, RequestInit?];
+}
+
+describe('network interface API wrappers', () => {
+  test('fetchNetworkInterfaces filters interfaces by VPS id', async () => {
+    globalThis.fetch = mockFetchOk({ network_interfaces: [{ id: 1, name: 'eth0' }] }) as any;
+
+    const res = await fetchNetworkInterfaces(123, { limit: 25 });
+
+    expect(res.data).toEqual([{ id: 1, name: 'eth0' }]);
+    const [url, init] = lastFetchCall();
+    const u = new URL(url);
+    expect(u.pathname).toBe('/v7.0/network_interfaces');
+    expect(init?.method).toBe('GET');
+    expect(u.searchParams.get('network_interface[vps]')).toBe('123');
+    expect(u.searchParams.get('network_interface[limit]')).toBe('25');
+  });
+
+  test('updateNetworkInterface sends editable fields through the network_interface namespace', async () => {
+    globalThis.fetch = mockFetchOk({ network_interface: { id: 1, name: 'eth0-renamed' } }) as any;
+
+    await updateNetworkInterface(1, {
+      name: 'eth0-renamed',
+      enable: false,
+      max_tx: 500 * 1024 * 1024,
+      max_rx: 600 * 1024 * 1024,
+    });
+
+    const [url, init] = lastFetchCall();
+    expect(new URL(url).pathname).toBe('/v7.0/network_interfaces/1');
+    expect(init?.method).toBe('PUT');
+    expect(JSON.parse(String(init?.body))).toEqual({
+      network_interface: {
+        name: 'eth0-renamed',
+        enable: false,
+        max_tx: 500 * 1024 * 1024,
+        max_rx: 600 * 1024 * 1024,
+      },
+    });
+  });
+
+  test('fetchNetworkInterfaceAccountingForVps scopes accounting by VPS and month', async () => {
+    globalThis.fetch = mockFetchOk({ network_interface_accountings: [{ id: 9, bytes_in: 1024, bytes_out: 2048 }] }) as any;
+
+    const res = await fetchNetworkInterfaceAccountingForVps(123, 2026, 6);
+
+    expect(res.data).toEqual([{ id: 9, bytes_in: 1024, bytes_out: 2048 }]);
+    const [url, init] = lastFetchCall();
+    const u = new URL(url);
+    expect(u.pathname).toBe('/v7.0/network_interface_accountings');
+    expect(init?.method).toBe('GET');
+    expect(u.searchParams.get('network_interface_accounting[vps]')).toBe('123');
+    expect(u.searchParams.get('network_interface_accounting[year]')).toBe('2026');
+    expect(u.searchParams.get('network_interface_accounting[month]')).toBe('6');
+    expect(u.searchParams.get('network_interface_accounting[limit]')).toBe('250');
+  });
+});

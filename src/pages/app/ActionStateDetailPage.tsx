@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { ChevronDown, ChevronUp, Pin, PinOff } from 'lucide-react';
+import { Pin, PinOff } from 'lucide-react';
 
 import { cancelActionState, fetchActionState, type ActionState } from '../../lib/api/actionStates';
 import { fetchTransactionChain, fetchTransactions, type Transaction } from '../../lib/api/transactions';
@@ -18,12 +18,17 @@ import { ErrorState } from '../../components/ui/ErrorState';
 import { LinkButton } from '../../components/ui/LinkButton';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { ObjectHeader } from '../../components/ui/ObjectHeader';
-import { Table } from '../../components/ui/Table';
-import { TransactionInlineDetails } from '../../components/ui/TransactionInlineDetails';
 import { formatDateTime } from '../../lib/format';
 import { formatErrorMessage } from '../../lib/errors';
-import { resourceId, refLabel } from '../../lib/resources';
-import { durationSec, safeJson, transactionErrorText } from '../../lib/txFormat';
+import {
+  classifyActionState,
+  operationBadgeVariant,
+  operationCategoryLabel,
+  operationLabel,
+  operationSeverityLabel,
+  operationVisibilityLabel,
+} from '../../lib/operationTaxonomy';
+import { safeJson } from '../../lib/txFormat';
 import { extractRelatedTransactionChainIdFromActionState } from '../../lib/taskLinks';
 import {
   actionStateBadge,
@@ -33,6 +38,7 @@ import {
   transactionBadge,
 } from '../../lib/taskStatus';
 import { useActionStatePollIntervalMs, useTierAIntervalMs } from '../../lib/refreshTiers';
+import { ActionStateTransactionsTable } from './ActionStateTransactionsTable';
 
 function pickedActionStateDebugPayload(s: ActionState): string {
   const keys = ['error', 'errors', 'exception', 'message', 'output', 'result', 'response', 'stderr', 'stdout', 'backtrace'];
@@ -176,6 +182,10 @@ export function ActionStateDetailPage() {
   }
 
   const badge = actionStateBadge(s);
+  const op = classifyActionState(s);
+  const rawActionLabel = s.label ? String(s.label) : t('action_state.title_fallback', { id });
+  const actionTitle = op.key.endsWith('.unknown') ? rawActionLabel : operationLabel(op, t);
+  const rawActionDiffers = op.rawLabel && op.rawLabel !== actionTitle;
   const pct = actionStateProgressPercent(s);
   const pLabel = actionStateProgressLabel(s);
 
@@ -205,7 +215,7 @@ export function ActionStateDetailPage() {
     <DetailShell testId="action_state.detail">
       <ObjectHeader
         testId="action_state.detail.header"
-        title={s.label ? String(s.label) : t('action_state.title_fallback', { id })}
+        title={actionTitle}
         kicker={
           <>
             <Link className="underline" to={`${basePath}/action-states`}>
@@ -214,7 +224,14 @@ export function ActionStateDetailPage() {
             {` / #${id}`}
           </>
         }
-        badges={<Badge variant={badge.variant}>{badge.label}</Badge>}
+        badges={
+          <div className="flex flex-wrap gap-2">
+            <Badge variant={badge.variant}>{badge.label}</Badge>
+            <Badge variant="neutral">{operationCategoryLabel(op, t)}</Badge>
+            <Badge variant={operationBadgeVariant(op)}>{operationSeverityLabel(op, t)}</Badge>
+            <Badge variant="neutral">{operationVisibilityLabel(op, t)}</Badge>
+          </div>
+        }
         meta={
           <>
             {createdAt ? <span>{t('tasks.meta.created', { time: createdAt })}</span> : null}
@@ -272,8 +289,10 @@ export function ActionStateDetailPage() {
           }
         />
         <CardBody>
-          <div className="mb-4 grid gap-3 md:grid-cols-3">
+          <div className="mb-4 grid gap-3 md:grid-cols-4">
             <DebugSummaryTile label={t('common.state')} value={<Badge variant={badge.variant}>{badge.label}</Badge>} />
+            <DebugSummaryTile label={t('action_state.field.operation')} value={actionTitle} />
+            <DebugSummaryTile label={t('common.type')} value={operationCategoryLabel(op, t)} />
             <DebugSummaryTile label={t('common.progress')} value={pLabel ? `${pLabel}${pct !== null ? ` · ${pct}%` : ''}` : t('common.na')} />
             <DebugSummaryTile
               label={failedTxId ? t('transactions.tx.failed_here') : t('transactions.tx.current_step')}
@@ -299,6 +318,20 @@ export function ActionStateDetailPage() {
             <div>
               <span className="text-muted">{t('common.id')}:</span> <span className="font-medium">#{id}</span>
             </div>
+            <div>
+              <span className="text-muted">{t('action_state.field.operation')}:</span> {actionTitle}
+            </div>
+            <div>
+              <span className="text-muted">{t('common.type')}:</span> {operationCategoryLabel(op, t)}
+            </div>
+            <div>
+              <span className="text-muted">{t('action_states.visibility.label')}:</span> {operationVisibilityLabel(op, t)}
+            </div>
+            {rawActionDiffers ? (
+              <div className="sm:col-span-2">
+                <span className="text-muted">{t('action_state.field.backend_label')}:</span> {op.rawLabel}
+              </div>
+            ) : null}
             <div>
               <span className="text-muted">{t('action_state.field.can_cancel')}:</span>{' '}
               {Boolean((s as any).can_cancel) ? t('common.yes') : t('common.no')}
@@ -409,125 +442,14 @@ export function ActionStateDetailPage() {
               <div className="mt-1 text-sm text-muted">{t('transactions.chain.detail.empty.body')}</div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table testId="action_state.detail.transactions.table" minWidth="lg" variant="list">
-                <thead>
-                  <tr className="border-b border-border text-left text-xs text-muted">
-                    <th className="px-4 py-2">{t('common.id')}</th>
-                    <th className="px-4 py-2">{t('common.state')}</th>
-                    <th className="px-4 py-2">{t('common.name')}</th>
-                    <th className="px-4 py-2">{t('common.node')}</th>
-                    <th className="px-4 py-2">{t('common.vps')}</th>
-                    <th className="px-4 py-2">{t('common.created')}</th>
-                    <th className="px-4 py-2">{t('common.started')}</th>
-                    <th className="px-4 py-2">{t('common.finished')}</th>
-                    <th className="px-4 py-2">{t('transactions.tx.success_label')}</th>
-                    <th className="px-4 py-2">
-                      <span className="sr-only">{t('transactions.tx.details')}</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(txQ.data ?? []).map((tx: Transaction) => {
-                    const txId = Number((tx as any).id);
-                    const hasTxId = Number.isFinite(txId) && txId > 0;
-                    const badge = transactionBadge(tx);
-                    const name = tx.name ? String(tx.name) : t('transactions.items.row.fallback_name');
-                    const nodeId = resourceId((tx as any).node);
-                    const vpsId = resourceId((tx as any).vps);
-                    const started = (tx as any).started_at as string | null | undefined;
-                    const finished = (tx as any).finished_at as string | null | undefined;
-                    const sec = durationSec(started, finished);
-                    const expanded = hasTxId && expandedTx.has(txId);
-                    const success = typeof (tx as any).success === 'number' ? String((tx as any).success) : null;
-                    const isCurrent = hasTxId && currentTxId === txId;
-                    const isFailed = hasTxId && failedTxId === txId;
-
-                    return (
-                      <React.Fragment key={hasTxId ? txId : name}>
-                        <tr className="border-b border-border">
-                          <td className="px-4 py-2 text-xs text-muted">
-                            {hasTxId ? (
-                              <Link className="text-accent hover:underline" to={`${basePath}/transactions/items/${txId}`}>
-                                #{txId}
-                              </Link>
-                            ) : (
-                              t('common.na')
-                            )}
-                          </td>
-                          <td className="px-4 py-2">
-                            <div className="flex flex-wrap gap-2">
-                              <Badge variant={badge.variant}>{badge.label}</Badge>
-                              {isFailed ? <Badge variant="danger">{t('transactions.tx.failed_here')}</Badge> : null}
-                              {!isFailed && isCurrent ? <Badge variant="warn">{t('transactions.tx.current_step')}</Badge> : null}
-                            </div>
-                          </td>
-                          <td className="px-4 py-2">
-                            <div className="font-medium">{name}</div>
-                            <div className="mt-1 text-xs text-muted">
-                              {typeof (tx as any).type === 'number' ? t('transactions.items.row.type_chip', { type: (tx as any).type }) : null}
-                            </div>
-                          </td>
-                          <td className="px-4 py-2 text-xs">
-                            {nodeId && basePath === '/admin' ? (
-                              <Link className="text-accent hover:underline" to={`${basePath}/nodes/${nodeId}`}>
-                                {refLabel((tx as any).node) || `#${nodeId}`}
-                              </Link>
-                            ) : nodeId ? (
-                              <span className="text-muted">{refLabel((tx as any).node) || `#${nodeId}`}</span>
-                            ) : (
-                              <span className="text-faint">{t('common.na')}</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-2 text-xs">
-                            {vpsId ? (
-                              <Link className="text-accent hover:underline" to={`${basePath}/vps/${vpsId}`}>
-                                {refLabel((tx as any).vps) || `#${vpsId}`}
-                              </Link>
-                            ) : (
-                              <span className="text-faint">{t('common.na')}</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-2 text-xs text-muted">{formatDateTime((tx as any).created_at)}</td>
-                          <td className="px-4 py-2 text-xs text-muted">{formatDateTime(started)}</td>
-                          <td className="px-4 py-2 text-xs text-muted">{formatDateTime(finished)}</td>
-                          <td className="px-4 py-2 text-xs text-muted">{success ?? t('common.na')}</td>
-                          <td className="px-4 py-2">
-                            {hasTxId ? (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 px-0"
-                                ariaLabel={expanded ? t('common.collapse') : t('common.expand')}
-                                title={t('transactions.tx.details')}
-                                testId={`action_state.detail.tx.toggle.${txId}`}
-                                onClick={() => toggleExpandedTx(txId)}
-                              >
-                                {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                              </Button>
-                            ) : null}
-                          </td>
-                        </tr>
-
-                        {expanded ? (
-                          <tr className="border-b border-border bg-surface-2" data-testid={`action_state.detail.tx.expanded.${txId}`}>
-                            <td colSpan={10} className="px-4 py-4">
-                              <TransactionInlineDetails
-                                tx={tx}
-                                t={t}
-                                basePath={basePath}
-                                raw={tx}
-                                maxHeightClass="max-h-80"
-                              />
-                            </td>
-                          </tr>
-                        ) : null}
-                      </React.Fragment>
-                    );
-                  })}
-                </tbody>
-              </Table>
-            </div>
+            <ActionStateTransactionsTable
+              transactions={txQ.data ?? []}
+              basePath={basePath}
+              expandedTx={expandedTx}
+              currentTxId={currentTxId}
+              failedTxId={failedTxId}
+              onToggleExpandedTx={toggleExpandedTx}
+            />
           )}
         </CardBody>
       </Card>

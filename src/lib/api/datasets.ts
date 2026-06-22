@@ -108,6 +108,11 @@ export interface SnapshotDownload {
   format?: SnapshotDownloadFormat;
   file_name?: string;
   url?: string;
+  download_url?: string;
+  download_link?: string;
+  href?: string;
+  link?: string;
+  file_url?: string;
   size?: number; // MiB
   sha256sum?: string;
   ready?: boolean;

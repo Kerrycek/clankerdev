@@ -10,6 +10,9 @@ interface LoginState {
 }
 
 const LOGIN_STATE_KEY = 'vpsadmin_ui_next.oauth2.login_state';
+const LOGIN_STATE_MAX_AGE_MS = 10 * 60 * 1000;
+const LOGIN_STATE_CLOCK_SKEW_MS = 60 * 1000;
+const DEFAULT_NEXT_PATH = '/app';
 
 function getSessionStorage(): Storage | undefined {
   if (typeof window === 'undefined') return undefined;
@@ -34,15 +37,12 @@ function base64UrlEncodeBytes(bytes: Uint8Array): string {
 }
 
 function randomBase64Url(bytesLen: number): string {
-  const bytes = new Uint8Array(bytesLen);
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    crypto.getRandomValues(bytes);
-  } else {
-    // Very old environments only; fall back to Math.random.
-    for (let i = 0; i < bytes.length; i++) {
-      bytes[i] = Math.floor(Math.random() * 256);
-    }
+  if (typeof crypto === 'undefined' || !crypto.getRandomValues) {
+    throw new Error('WebCrypto (crypto.getRandomValues) is required for OAuth2 state generation');
   }
+
+  const bytes = new Uint8Array(bytesLen);
+  crypto.getRandomValues(bytes);
   return base64UrlEncodeBytes(bytes);
 }
 
@@ -66,6 +66,26 @@ function getRedirectUri(cfg: RuntimeConfig): string {
   return `${window.location.origin}${cfg.oauth2.redirectPath}`;
 }
 
+function sanitizeOAuthNextPath(nextPath: string | null | undefined): string {
+  const trimmed = typeof nextPath === 'string' ? nextPath.trim() : '';
+  if (!trimmed || !trimmed.startsWith('/') || trimmed.startsWith('//')) return DEFAULT_NEXT_PATH;
+  if (/[\u0000-\u001f\u007f]/.test(trimmed)) return DEFAULT_NEXT_PATH;
+
+  try {
+    const parsed = new URL(trimmed, window.location.origin);
+    if (parsed.origin !== window.location.origin) return DEFAULT_NEXT_PATH;
+    return `${parsed.pathname}${parsed.search}${parsed.hash}` || DEFAULT_NEXT_PATH;
+  } catch {
+    return DEFAULT_NEXT_PATH;
+  }
+}
+
+function isLoginStateFresh(createdAt: number, now = Date.now()): boolean {
+  if (!Number.isFinite(createdAt)) return false;
+  const age = now - createdAt;
+  return age >= -LOGIN_STATE_CLOCK_SKEW_MS && age <= LOGIN_STATE_MAX_AGE_MS;
+}
+
 function loadLoginState(): LoginState | null {
   const st = getSessionStorage();
   if (!st) return null;
@@ -76,11 +96,12 @@ function loadLoginState(): LoginState | null {
   try {
     const parsed = JSON.parse(raw) as LoginState;
     if (!parsed || typeof parsed !== 'object') return null;
+    if (typeof parsed.createdAt !== 'number' || !isLoginStateFresh(parsed.createdAt)) return null;
     if (typeof parsed.state !== 'string' || !parsed.state) return null;
     if (typeof parsed.nextPath !== 'string' || !parsed.nextPath) return null;
     if (parsed.flow !== 'pkce' && parsed.flow !== 'implicit') return null;
     if (parsed.flow === 'pkce' && (!parsed.codeVerifier || typeof parsed.codeVerifier !== 'string')) return null;
-    return parsed;
+    return { ...parsed, nextPath: sanitizeOAuthNextPath(parsed.nextPath) };
   } catch {
     return null;
   }
@@ -142,7 +163,7 @@ export async function startOAuth2Login(cfg: RuntimeConfig, nextPath: string): Pr
   const state: LoginState = {
     createdAt: Date.now(),
     state: randomBase64Url(24),
-    nextPath: nextPath || '/app',
+    nextPath: sanitizeOAuthNextPath(nextPath),
     flow: cfg.oauth2.flow,
   };
 
@@ -209,14 +230,16 @@ export async function completeOAuth2Login(cfg: RuntimeConfig, currentUrl: string
 
   const u = new URL(currentUrl);
 
-  const error = u.searchParams.get('error');
-  const errorDescription = u.searchParams.get('error_description');
+  const hashParams = parseHashParams(u.hash);
+
+  const error = u.searchParams.get('error') ?? hashParams.get('error');
+  const errorDescription = u.searchParams.get('error_description') ?? hashParams.get('error_description');
   if (error) {
     clearLoginState();
     throw new Error(errorDescription || error);
   }
 
-  const stateParam = u.searchParams.get('state') ?? undefined;
+  const stateParam = u.searchParams.get('state') ?? hashParams.get('state') ?? undefined;
   if (!stateParam) {
     clearLoginState();
     throw new Error('Missing OAuth2 state parameter');
@@ -228,15 +251,14 @@ export async function completeOAuth2Login(cfg: RuntimeConfig, currentUrl: string
     throw new Error('OAuth2 state mismatch');
   }
 
-  const nextPath = storedState.nextPath || '/app';
+  const nextPath = sanitizeOAuthNextPath(storedState.nextPath);
 
   // Implicit flow: access_token in the URL hash.
   if (storedState.flow === 'implicit') {
-    const hash = parseHashParams(u.hash);
-    const accessToken = hash.get('access_token');
-    const tokenType = hash.get('token_type') ?? undefined;
-    const scope = hash.get('scope') ?? undefined;
-    const expiresInRaw = hash.get('expires_in');
+    const accessToken = hashParams.get('access_token');
+    const tokenType = hashParams.get('token_type') ?? undefined;
+    const scope = hashParams.get('scope') ?? undefined;
+    const expiresInRaw = hashParams.get('expires_in');
     const expiresIn = expiresInRaw ? Number(expiresInRaw) : undefined;
     const expiresAt = expiresIn && Number.isFinite(expiresIn) ? Date.now() + Math.max(0, expiresIn - 30) * 1000 : undefined;
 

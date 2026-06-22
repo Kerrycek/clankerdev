@@ -15,6 +15,21 @@ export interface VpsGeneratedPassword {
 export type UserIdentity = User;
 export type VpsPublicKey = UserPublicKey;
 
+export interface VpsSshHostKey {
+  id?: number | string;
+  key_type?: string;
+  type?: string;
+  algorithm?: string;
+  bits?: number | string;
+  fingerprint?: string;
+  sha256_fingerprint?: string;
+  md5_fingerprint?: string;
+  public_key?: string;
+  key?: string;
+  host_key?: string;
+  created_at?: string;
+}
+
 export interface ApiResult<T> {
   data: T;
   meta?: Record<string, unknown>;
@@ -54,4 +69,13 @@ export async function deployVpsPublicKey(vpsId: number, publicKeyId: number): Pr
   });
 
   return withRaw(res);
+}
+
+export async function listVpsSshHostKeys(vpsId: number): Promise<ApiResult<VpsSshHostKey[]>> {
+  const res = await haveApiCall<VpsSshHostKey[]>({
+    method: 'GET',
+    path: `/vpses/${vpsId}/ssh_host_keys`,
+  });
+
+  return { ...withRaw(res), data: expectArray<VpsSshHostKey>(res.data, `vpses/${vpsId}/ssh_host_keys`) };
 }

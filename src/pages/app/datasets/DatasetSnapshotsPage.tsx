@@ -2,7 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
+import { useAppMode } from '../../../app/appMode';
 import { useAuth } from '../../../app/auth';
+import { getRuntimeConfig } from '../../../app/config';
 import { useI18n } from '../../../app/i18n';
 
 import { useChrome } from '../../../components/layout/ChromeContext';
@@ -12,14 +14,12 @@ import { Badge } from '../../../components/ui/Badge';
 import { ActionButton } from '../../../components/ui/ActionButton';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
-import { Checkbox } from '../../../components/ui/Checkbox';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { ErrorState } from '../../../components/ui/ErrorState';
 import { Input } from '../../../components/ui/Input';
 import { KeysetPagination } from '../../../components/ui/KeysetPagination';
 import { LoadingState } from '../../../components/ui/LoadingState';
 import { Modal } from '../../../components/ui/Modal';
-import { Select } from '../../../components/ui/Select';
 
 import { fetchTransactionChains } from '../../../lib/api/transactions';
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
@@ -30,7 +30,7 @@ import {
   fetchDatasetSnapshots,
   rollbackDatasetSnapshot,
   type Snapshot,
-  type SnapshotDownloadFormat,
+  type SnapshotDownload,
 } from '../../../lib/api/datasets';
 
 import { formatErrorMessage } from '../../../lib/errors';
@@ -41,20 +41,21 @@ import { cursorFromDescendingPage } from '../../../lib/lockIndex';
 import { hasActiveChains } from '../../../lib/taskStatus';
 
 import { useDatasetContext } from './DatasetContext';
+import {
+  snapshotDownloadCanOpen,
+  snapshotDownloadHref,
+  snapshotDownloadStatus,
+} from './DatasetDownloadModel';
+import {
+  DatasetDownloadOpenButton,
+  DatasetDownloadStateBadge,
+  datasetDownloadStatusHelp,
+} from './DatasetDownloadStatusView';
 
 function snapshotLabel(s: Snapshot): string {
   return String(s.label ?? s.name ?? `#${s.id}`);
 }
 
-function uniqSnapshots(input: Snapshot[]): Snapshot[] {
-  const byId = new Map<number, Snapshot>();
-  for (const s of input) {
-    const id = Number((s as any).id);
-    if (!Number.isFinite(id) || id <= 0) continue;
-    if (!byId.has(id)) byId.set(id, s);
-  }
-  return [...byId.values()];
-}
 
 type ConfirmState =
   | null
@@ -73,6 +74,7 @@ export function DatasetSnapshotsPage() {
     busyLocalLock,
   } = useDatasetContext();
   const chrome = useChrome();
+  const { basePath } = useAppMode();
   const { t } = useI18n();
   const { role } = useAuth();
   const isAdmin = role === 'admin';
@@ -112,22 +114,7 @@ export function DatasetSnapshotsPage() {
     }, { replace: true });
   }, [searchParams, setSearchParams]);
 
-  const [downloadOpen, setDownloadOpen] = useState(false);
-  const [downloadSnapshot, setDownloadSnapshot] = useState<Snapshot | null>(null);
-  const [downloadFormat, setDownloadFormat] = useState<SnapshotDownloadFormat>('archive');
-  const [downloadFromId, setDownloadFromId] = useState<string>('');
-  const [downloadSendMail, setDownloadSendMail] = useState(true);
-
-  // Candidate snapshot list for selecting a base snapshot (incremental streams).
-  // This is separate from the paginated list view, because users may need to select snapshots
-  // outside of the currently loaded page.
-  const [candDatasetId, setCandDatasetId] = useState<number | null>(null);
-  const [candSnaps, setCandSnaps] = useState<Snapshot[]>([]);
-  const [candCursor, setCandCursor] = useState<number | null>(null);
-  const [candHasMore, setCandHasMore] = useState(false);
-  const [candBusy, setCandBusy] = useState(false);
-  const [candError, setCandError] = useState<string | null>(null);
-  const candBatchSize = 100;
+  const [createdDownload, setCreatedDownload] = useState<SnapshotDownload | null>(null);
 
   const [confirm, setConfirm] = useState<ConfirmState>(null);
   const [confirmPhrase, setConfirmPhrase] = useState('');
@@ -245,22 +232,17 @@ export function DatasetSnapshotsPage() {
   });
 
   const createDl = useMutation({
-    mutationFn: async (payload: {
-      snapshotId: number;
-      fromSnapshotId?: number;
-      format: SnapshotDownloadFormat;
-      sendMail: boolean;
-    }) => {
+    mutationFn: async (snapshot: Snapshot) => {
       await preflightDatasetNotBusy();
       return createSnapshotDownload({
-        snapshot: payload.snapshotId,
-        from_snapshot: payload.fromSnapshotId,
-        format: payload.format,
-        send_mail: payload.sendMail,
+        snapshot: snapshot.id,
+        format: 'archive',
+        send_mail: true,
       });
     },
     onMutate: () => {
       chrome.acquireLocalLock(datasetRef);
+      setCreatedDownload(null);
     },
     onSuccess: (r) => {
       const asId = getMetaActionStateId(r.meta);
@@ -272,11 +254,7 @@ export function DatasetSnapshotsPage() {
           progressTitleKey: 'modal.dataset.download.create.title',
         });
 
-      setDownloadOpen(false);
-      setDownloadSnapshot(null);
-      setDownloadFromId('');
-      setDownloadFormat('archive');
-      setDownloadSendMail(true);
+      setCreatedDownload(r.data ?? null);
       refetchChains();
     },
     onSettled: () => {
@@ -296,12 +274,8 @@ export function DatasetSnapshotsPage() {
   const hasMore = pageData.length >= pagination.limit;
   const filtersActive = Boolean(qstr.trim());
 
-  function openDownloadModal(s: Snapshot) {
-    setDownloadSnapshot(s);
-    setDownloadFormat('archive');
-    setDownloadFromId('');
-    setDownloadSendMail(true);
-    setDownloadOpen(true);
+  function requestSnapshotDownload(s: Snapshot) {
+    createDl.mutate(s);
   }
 
   function openConfirm(next: NonNullable<ConfirmState>) {
@@ -309,69 +283,6 @@ export function DatasetSnapshotsPage() {
     setConfirmError(null);
     setConfirm(next);
   }
-
-  async function ensureCandidateSnapshots(mode: 'reset' | 'load-more') {
-    if (candBusy) return;
-
-    const isReset = mode === 'reset';
-    const datasetChanged = candDatasetId !== dataset.id;
-    if (isReset || datasetChanged) {
-      setCandDatasetId(dataset.id);
-      setCandSnaps([]);
-      setCandCursor(null);
-      setCandHasMore(false);
-      setCandError(null);
-    }
-
-    const cursor = isReset || datasetChanged ? undefined : candCursor ?? undefined;
-    if (!isReset && !datasetChanged && !candHasMore) return;
-
-    setCandBusy(true);
-    setCandError(null);
-    try {
-      const fetched = (await fetchDatasetSnapshots(dataset.id, { limit: candBatchSize, fromId: cursor })).data;
-      const merged = uniqSnapshots([...(isReset || datasetChanged ? [] : candSnaps), ...fetched]);
-      merged.sort((a, b) => Number(b.id) - Number(a.id));
-      setCandSnaps(merged);
-      setCandCursor(cursorFromDescendingPage(merged as any));
-      setCandHasMore(fetched.length >= candBatchSize);
-    } catch (e) {
-      setCandError(formatErrorMessage(e));
-    } finally {
-      setCandBusy(false);
-    }
-  }
-
-  // When opening the download modal, ensure candidates are loaded.
-  useEffect(() => {
-    if (!downloadOpen) return;
-    // Reset to include newest candidates first.
-    ensureCandidateSnapshots('reset');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [downloadOpen, dataset.id]);
-
-  function onCreateDownload() {
-    if (!downloadSnapshot) return;
-    const fromIdRaw = downloadFormat === 'incremental_stream' ? Number(downloadFromId) : undefined;
-    const fromId = Number.isFinite(fromIdRaw as any) && (fromIdRaw as any) > 0 ? fromIdRaw : undefined;
-    createDl.mutate({
-      snapshotId: downloadSnapshot.id,
-      fromSnapshotId: fromId,
-      format: downloadFormat,
-      sendMail: downloadSendMail,
-    });
-  }
-
-  const baseCandidates = useMemo(() => {
-    const targetId = downloadSnapshot ? Number(downloadSnapshot.id) : NaN;
-    const filtered = candSnaps.filter((s) => {
-      const id = Number((s as any).id);
-      if (!Number.isFinite(targetId)) return true;
-      // Base snapshot should be older than the selected snapshot.
-      return Number.isFinite(id) ? id < targetId : true;
-    });
-    return filtered;
-  }, [candSnaps, downloadSnapshot]);
 
   const busyLocal =
     busyLocalLock ||
@@ -393,6 +304,24 @@ export function DatasetSnapshotsPage() {
       : confirm?.kind === 'delete'
         ? 'dataset.snapshots.delete_confirm'
         : undefined;
+
+  const cfg = useMemo(() => getRuntimeConfig(), []);
+  const downloadHrefOptions = useMemo(
+    () => ({
+      webuiUrl: cfg.webuiUrl,
+      origin: typeof window !== 'undefined' ? window.location.origin : undefined,
+    }),
+    [cfg.webuiUrl]
+  );
+  const createdDownloadHref = createdDownload ? snapshotDownloadHref(createdDownload, downloadHrefOptions) : undefined;
+  const createdDownloadStatus = createdDownload
+    ? snapshotDownloadStatus(createdDownload, { href: createdDownloadHref })
+    : null;
+  const createdDownloadCanOpen = createdDownloadStatus
+    ? snapshotDownloadCanOpen(createdDownloadStatus, createdDownloadHref)
+    : false;
+  const pendingDownloadSnapshotId = createDl.isPending ? Number((createDl.variables as Snapshot | undefined)?.id) : null;
+  const downloadsPath = `${basePath}/datasets/${dataset.id}/downloads`;
 
   return (
     <div className="space-y-6" data-testid="dataset.snapshots.list">
@@ -437,6 +366,12 @@ export function DatasetSnapshotsPage() {
         </div>
       </div>
 
+      {createDl.isError ? (
+        <Alert title={t('dataset.download.create.error.title')} variant="danger">
+          {formatErrorMessage(createDl.error)}
+        </Alert>
+      ) : null}
+
       {snapsQ.isLoading ? (
         <Card>
           <LoadingState testId="dataset.snapshots.loading" />
@@ -478,8 +413,9 @@ export function DatasetSnapshotsPage() {
                       <ActionButton
                         size="sm"
                         variant="secondary"
-                        onClick={() => openDownloadModal(s)}
-                        disabled={!downloadGate.allowed}
+                        onClick={() => requestSnapshotDownload(s)}
+                        loading={pendingDownloadSnapshotId === s.id}
+                        disabled={createDl.isPending || !downloadGate.allowed}
                         disabledReason={!downloadGate.allowed ? downloadGate.reason : undefined}
                         testId={`dataset.snapshots.card.${s.id}.download`}
                       >
@@ -551,8 +487,9 @@ export function DatasetSnapshotsPage() {
                             <ActionButton
                               size="sm"
                               variant="secondary"
-                              onClick={() => openDownloadModal(s)}
-                              disabled={!downloadGate.allowed}
+                              onClick={() => requestSnapshotDownload(s)}
+                              loading={pendingDownloadSnapshotId === s.id}
+                              disabled={createDl.isPending || !downloadGate.allowed}
                               disabledReason={!downloadGate.allowed ? downloadGate.reason : undefined}
                               testId={`dataset.snapshots.row.${s.id}.download`}
                             >
@@ -669,95 +606,45 @@ export function DatasetSnapshotsPage() {
         </div>
       </Modal>
 
-      <Modal open={downloadOpen} onClose={() => setDownloadOpen(false)} title={t('dataset.download.modal_title')}>
-        <div className="space-y-4" data-testid="dataset.snapshots.download.modal">
-          <div className="text-sm text-muted">
-            {t('dataset.download.modal_help', {
-              snapshot: downloadSnapshot ? snapshotLabel(downloadSnapshot) : t('common.na'),
-            })}
-          </div>
-          <div className="rounded-md border border-border bg-surface-2 p-3 text-xs text-muted">
-            {t('dataset.download.scope', { dataset: datasetLabelForToast })}
-          </div>
-
-          <div>
-            <div className="mb-1 text-xs font-medium text-muted">{t('dataset.download.field.format')}</div>
-            <Select
-              value={downloadFormat}
-              onChange={(e) => setDownloadFormat(e.target.value as SnapshotDownloadFormat)}
-              testId="dataset.snapshots.download.format"
-            >
-              <option value="archive">{t('dataset.download.format.archive')}</option>
-              <option value="stream">{t('dataset.download.format.stream')}</option>
-              <option value="incremental_stream">{t('dataset.download.format.incremental_stream')}</option>
-            </Select>
-          </div>
-
-          {downloadFormat === 'incremental_stream' ? (
-            <div>
-              <div className="mb-1 text-xs font-medium text-muted">{t('dataset.download.field.from_snapshot')}</div>
-              <Select
-                value={downloadFromId}
-                onChange={(e) => setDownloadFromId(e.target.value)}
-                testId="dataset.snapshots.download.from_snapshot"
-              >
-                <option value="">{t('dataset.download.from_snapshot.none')}</option>
-                {baseCandidates.map((s) => (
-                  <option key={s.id} value={String(s.id)}>
-                    {snapshotLabel(s)} (#{s.id})
-                  </option>
-                ))}
-              </Select>
-              <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
-                <div className="text-xs text-faint">{t('dataset.download.from_snapshot.help')}</div>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => ensureCandidateSnapshots('load-more')}
-                  disabled={candBusy || !candHasMore}
-                  testId="dataset.snapshots.download.load_more"
-                >
-                  {candBusy ? t('common.loading') : candHasMore ? t('dataset.download.load_older') : t('dataset.download.no_more')}
-                </Button>
-              </div>
-              {candError ? (
-                <div className="mt-2">
-                  <Alert title={t('dataset.download.candidates.error.title')} variant="danger">
-                    {candError}
-                  </Alert>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          <Checkbox
-            checked={downloadSendMail}
-            onChange={setDownloadSendMail}
-            label={t('dataset.download.send_mail.label')}
-            testId="dataset.snapshots.download.send_mail"
-          />
-
-          {createDl.isError ? (
-            <Alert title={t('dataset.download.create.error.title')} variant="danger">
-              {formatErrorMessage(createDl.error)}
-            </Alert>
-          ) : null}
-
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setDownloadOpen(false)} testId="dataset.snapshots.download.cancel">
-              {t('common.cancel')}
+      <Modal
+        open={createdDownload !== null}
+        onClose={() => setCreatedDownload(null)}
+        title={t('dataset.download.created.title')}
+        footer={
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {createdDownload && createdDownloadStatus ? (
+              <DatasetDownloadOpenButton
+                href={createdDownloadHref}
+                canOpen={createdDownloadCanOpen}
+                disabledTitle={datasetDownloadStatusHelp(createdDownloadStatus, createdDownload, t)}
+                testId="dataset.snapshots.download.created.open"
+              />
+            ) : null}
+            <Button to={downloadsPath} variant="secondary" testId="dataset.snapshots.download.created.downloads">
+              {t('dataset.download.created.open_downloads')}
             </Button>
-            <ActionButton
-              onClick={onCreateDownload}
-              loading={createDl.isPending}
-              disabled={!downloadSnapshot || !downloadGate.allowed}
-              disabledReason={!downloadGate.allowed ? downloadGate.reason : undefined}
-              testId="dataset.snapshots.download.submit"
-            >
-              {createDl.isPending ? t('common.creating') : t('dataset.download.create_link')}
-            </ActionButton>
+            <Button variant="secondary" onClick={() => setCreatedDownload(null)} testId="dataset.snapshots.download.created.close">
+              {t('common.close')}
+            </Button>
           </div>
-        </div>
+        }
+      >
+        {createdDownload && createdDownloadStatus ? (
+          <div className="space-y-4" data-testid="dataset.snapshots.download.created">
+            <div className="text-sm text-muted">{t('dataset.download.created.body')}</div>
+            <div className="rounded-md border border-border bg-surface-2 p-3 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <DatasetDownloadStateBadge status={createdDownloadStatus} t={t} />
+                <span className="text-muted">
+                  {t('dataset.downloads.item_title', { id: createdDownload.id })}
+                </span>
+              </div>
+              <div className="mt-2 text-xs text-muted">
+                {datasetDownloadStatusHelp(createdDownloadStatus, createdDownload, t)}
+              </div>
+            </div>
+          </div>
+        ) : null}
       </Modal>
 
       <ConfirmDialog
