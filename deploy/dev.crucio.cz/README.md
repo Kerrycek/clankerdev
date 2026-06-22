@@ -39,6 +39,31 @@ rsync -az deploy/dev.crucio.cz/nginx-dev.crucio.cz.conf \
 The `/v7.0` proxy strips `WWW-Authenticate` from unauthenticated API responses.
 The API still returns `401`, but browsers do not show a native Basic Auth prompt.
 
+Snapshot download links are served from:
+
+```sh
+/var/lib/web/download
+```
+
+The nginx vhost must keep `/download/` out of the SPA fallback. Otherwise a
+missing or unmounted snapshot archive is returned as `index.html` with HTTP
+200, which makes dataset snapshot downloads look broken in the browser instead
+of failing as a normal missing file.
+
+The local API also needs:
+
+```sql
+UPDATE sysconfig
+SET value = '"https://dev.crucio.cz/download"'
+WHERE category = 'core'
+  AND name = 'snapshot_download_base_url';
+```
+
+Real snapshot archives still depend on the upstream-style
+`vpsadmin-download-mounter`: each dev storage/hypervisor node has to export its
+`<pool>/vpsadmin/download` dataset over NFS and the host has to mount those
+exports below `/var/lib/web/download/<node-domain>/<pool-id>`.
+
 The BFF environment lives on the server in:
 
 ```sh
