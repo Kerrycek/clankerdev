@@ -12,47 +12,40 @@ import type { Outage } from '../../lib/api/public';
 import { Alert } from '../../components/ui/Alert';
 import { Badge } from '../../components/ui/Badge';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
-import { GaugeRing } from '../../components/ui/GaugeRing';
-import { StackedBar } from '../../components/ui/StackedBar';
-import { StatCard } from '../../components/ui/StatCard';
 import { Spinner } from '../../components/ui/Spinner';
-import { StatusLandingMark } from '../../components/branding/StatusLandingMark';
 import { categorizeOutage, sortOutagesNewestFirst } from '../../lib/outage';
 import { formatDateTime } from '../../lib/time';
 import { pickTranslation } from '../../lib/translations';
 import { useI18n } from '../../app/i18n';
-import { SummaryGrid } from '../../components/layout/SummaryGrid';
 import { getRuntimeConfig } from '../../app/config';
 import { Table } from '../../components/ui/Table';
 import { StatusDot } from '../../components/ui/StatusDot';
 import { outageBadges } from '../../lib/outageBadges';
-import { dotVariantFromBadgeVariant } from '../../lib/variantMap';
 
-function OutageSummary(props: { outage: Outage }) {
-  const i18n = useI18n();
-  const summary = pickTranslation(props.outage as any, 'summary', i18n.preferredLanguageCodes);
-  const badges = outageBadges(props.outage, i18n.t);
-  const dotVariant = dotVariantFromBadgeVariant(badges.primaryVariant);
-
+function CompactMetric(props: {
+  title: React.ReactNode;
+  value: React.ReactNode;
+  detail?: React.ReactNode;
+  testId?: string;
+}) {
   return (
-    <div className="space-y-1">
-      <div className="flex items-center gap-2">
-        <StatusDot variant={dotVariant} ariaLabel={badges.lifecycle.label} />
-        <div className="font-medium">
-          <Link to={`/outages/${props.outage.id}`} className="hover:underline">
-            {summary ?? i18n.t('public.outage.fallback_title', { id: props.outage.id })}
-          </Link>
-        </div>
-        <Badge variant={badges.lifecycle.variant}>{badges.lifecycle.label}</Badge>
-      </div>
-      <div className="text-xs text-muted">
-        {i18n.t('public.outage.field.begins')}: {formatDateTime(props.outage.begins_at)}
-        {props.outage.finished_at
-          ? ` · ${i18n.t('public.outage.field.finished')}: ${formatDateTime(props.outage.finished_at as any)}`
-          : null}
-      </div>
+    <div data-testid={props.testId} className="min-w-0 px-4 py-3">
+      <div className="text-xs font-medium uppercase tracking-wide text-muted">{props.title}</div>
+      <div className="mt-1 text-xl font-semibold text-fg">{props.value}</div>
+      {props.detail ? <div className="mt-1 text-xs text-muted">{props.detail}</div> : null}
     </div>
   );
+}
+
+function compactPlainText(value: string): string {
+  return value
+    .replace(/<a\b[^>]*>(.*?)<\/a>/gi, '$1')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 export function OverviewPage() {
@@ -147,6 +140,17 @@ export function OverviewPage() {
     return { ok, down, total };
   }, [nodesByLocation]);
 
+  const nodeRows = useMemo(
+    () => nodesByLocation.flatMap(([location, group]) => group.nodes.map((node) => ({ location, node }))),
+    [nodesByLocation],
+  );
+
+  const visibleOutages = useMemo(() => {
+    if (outagesByCategory.current.length > 0) return outagesByCategory.current.slice(0, 5);
+    if (outagesByCategory.planned.length > 0) return outagesByCategory.planned.slice(0, 5);
+    return outagesByCategory.resolved.slice(0, 5);
+  }, [outagesByCategory]);
+
   const ipv4Left: number | null =
     statsQ.data && typeof (statsQ.data as any).ipv4_left === 'number'
       ? Number((statsQ.data as any).ipv4_left)
@@ -168,222 +172,188 @@ export function OverviewPage() {
     ipv4Left == null ? 'neutral' : ipv4Level === 'critical' ? 'danger' : ipv4Level === 'warn' ? 'warn' : 'neutral';
 
   return (
-    <div className="space-y-6" data-testid="public.overview.page">
-      <div className="flex items-start gap-4">
-        <div className="shrink-0">
-          <StatusLandingMark className="text-accent/80" title={i18n.t('public.overview.title')} />
-        </div>
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight">{i18n.t('public.overview.title')}</h1>
-          <p className="mt-1 text-sm text-muted">{i18n.t('public.overview.subtitle')}</p>
-        </div>
+    <div className="space-y-5" data-testid="public.overview.page">
+      <div className="border-b border-border pb-4">
+        <h1 className="text-xl font-semibold tracking-tight">{i18n.t('public.overview.title')}</h1>
+        <p className="mt-1 max-w-3xl text-sm text-muted">{i18n.t('public.overview.subtitle')}</p>
       </div>
 
-      {showSessionExpired ? (
-        <Alert title={i18n.t('auth.session_expired.title')} variant="warn" testId="auth.session-expired.notice">
-          {i18n.t('auth.session_expired.body')}
-        </Alert>
-      ) : null}
+      <div className="space-y-3">
+        {showSessionExpired ? (
+          <Alert title={i18n.t('auth.session_expired.title')} variant="warn" testId="auth.session-expired.notice">
+            {i18n.t('auth.session_expired.body')}
+          </Alert>
+        ) : null}
 
-      {outagesByCategory.current.length > 0 ? (
-        <Alert title={i18n.tc('public.overview.outage_alert.title', outagesByCategory.current.length)} variant="danger">
-          {i18n.tc('public.overview.outage_alert.body', outagesByCategory.current.length)}
-          <span className="ml-2">
-            <Link to="/outages" className="underline">
-              {i18n.t('public.overview.outage_alert.link')}
-            </Link>
-          </span>
-        </Alert>
-      ) : (
-        <Alert title={i18n.t('public.overview.nominal.title')} variant="info">
-          {i18n.t('public.overview.nominal.body')}
-        </Alert>
-      )}
-
-      {ipv4Level === 'critical' ? (
-        <Alert title={i18n.t('public.overview.ipv4_critical.title')} variant="danger" testId="public.ipv4.alert">
-          {i18n.t('public.overview.ipv4_critical.body', { count: ipv4Left ?? 0 })}
-        </Alert>
-      ) : null}
-
-      <SummaryGrid testId="public.summary-grid">
-        <div className="md:col-span-6">
-          <StatCard
-            testId="public.stats.members"
-            variant="featured"
-            title={i18n.t('public.overview.stats.members.title')}
-            subtitle={i18n.t('public.overview.stats.members.subtitle')}
-            value={
-              statsQ.isLoading ? (
-                <span className="text-muted">…</span>
-              ) : statsQ.isError ? (
-                '—'
-              ) : (
-                statsQ.data?.user_count ?? '—'
-              )
-            }
-          />
+        <div
+          className={
+            outagesByCategory.current.length > 0
+              ? 'rounded-md border border-danger-border bg-danger-bg px-3 py-2'
+              : 'rounded-md border border-ok-border bg-ok-bg px-3 py-2'
+          }
+        >
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+            <span className="inline-flex items-center gap-2 font-semibold">
+              <StatusDot
+                variant={outagesByCategory.current.length > 0 ? 'danger' : 'ok'}
+                ariaLabel={
+                  outagesByCategory.current.length > 0
+                    ? i18n.tc('public.overview.outage_alert.title', outagesByCategory.current.length)
+                    : i18n.t('public.overview.nominal.title')
+                }
+              />
+              {outagesByCategory.current.length > 0
+                ? i18n.tc('public.overview.outage_alert.title', outagesByCategory.current.length)
+                : i18n.t('public.overview.nominal.title')}
+            </span>
+            <span className="text-muted">
+              {outagesByCategory.current.length > 0
+                ? i18n.tc('public.overview.outage_alert.body', outagesByCategory.current.length)
+                : i18n.t('public.overview.nominal.body')}
+            </span>
+            {outagesByCategory.current.length > 0 ? (
+              <Link to="/outages" className="underline">
+                {i18n.t('public.overview.outage_alert.link')}
+              </Link>
+            ) : null}
+          </div>
         </div>
 
-        <div className="md:col-span-3">
-          <StatCard
-            testId="public.stats.nodes"
-            title={i18n.t('public.overview.stats.nodes.title')}
-            subtitle={i18n.t('public.overview.stats.nodes.subtitle')}
-            value={
-              nodesQ.isLoading ? (
-                <span className="text-muted">…</span>
-              ) : nodesQ.isError ? (
-                '—'
-              ) : nodeSummary.total > 0 ? (
-                `${Math.round((nodeSummary.ok / nodeSummary.total) * 100)}%`
-              ) : (
-                '—'
-              )
-            }
-            footer={
-              nodesQ.isLoading || nodesQ.isError
-                ? null
-                : nodeSummary.total > 0
-                  ? i18n.t('public.overview.stats.nodes.footer', {
+        {ipv4Level === 'critical' ? (
+          <Alert title={i18n.t('public.overview.ipv4_critical.title')} variant="danger" testId="public.ipv4.alert">
+            {i18n.t('public.overview.ipv4_critical.body', { count: ipv4Left ?? 0 })}
+          </Alert>
+        ) : null}
+      </div>
+
+      <Card>
+        <CardBody className="p-0">
+          <div className="grid grid-cols-2 divide-y divide-border sm:grid-cols-4 sm:divide-x sm:divide-y-0">
+            <CompactMetric
+              testId="public.stats.members"
+              title={i18n.t('public.overview.stats.members.title')}
+              value={statsQ.isLoading ? <span className="text-muted">…</span> : statsQ.isError ? '—' : statsQ.data?.user_count ?? '—'}
+              detail={i18n.t('public.overview.stats.members.subtitle')}
+            />
+            <CompactMetric
+              testId="public.stats.vps"
+              title={i18n.t('public.overview.stats.vps.title')}
+              value={statsQ.isLoading ? <span className="text-muted">…</span> : statsQ.isError ? '—' : statsQ.data?.vps_count ?? '—'}
+              detail={i18n.t('public.overview.stats.vps.subtitle')}
+            />
+            <CompactMetric
+              testId="public.stats.nodes"
+              title={i18n.t('public.overview.stats.nodes.title')}
+              value={nodesQ.isLoading ? <span className="text-muted">…</span> : nodesQ.isError ? '—' : nodeSummary.total}
+              detail={
+                nodesQ.isLoading || nodesQ.isError || nodeSummary.total <= 0
+                  ? i18n.t('public.overview.stats.nodes.footer.none')
+                  : i18n.t('public.overview.stats.nodes.footer', {
                       ok: nodeSummary.ok,
                       down: nodeSummary.down,
                       total: nodeSummary.total,
                     })
-                  : i18n.t('public.overview.stats.nodes.footer.none')
-            }
-            visual={
-              nodesQ.isLoading || nodesQ.isError || nodeSummary.total <= 0 ? null : (
-                <GaugeRing
-                  ariaLabel={i18n.t('public.overview.stats.nodes.gauge_aria')}
-                  value={nodeSummary.ok}
-                  max={nodeSummary.total}
-                  variant={nodeSummary.down > 0 ? 'danger' : 'ok'}
-                  center={`${Math.round((nodeSummary.ok / nodeSummary.total) * 100)}%`}
-                />
-              )
-            }
-          />
-        </div>
+              }
+            />
+            <CompactMetric
+              title={i18n.t('public.overview.stats.vps.ipv4_free')}
+              value={<Badge variant={ipv4BadgeVariant}>{ipv4Left == null ? '—' : ipv4Left}</Badge>}
+              detail={ipv4Level === 'warn' ? i18n.t('public.overview.ipv4_warn.hint') : null}
+            />
+          </div>
+        </CardBody>
+      </Card>
 
-        <div className="md:col-span-3">
-          <StatCard
-            testId="public.stats.vps"
-            title={i18n.t('public.overview.stats.vps.title')}
-            subtitle={i18n.t('public.overview.stats.vps.subtitle')}
-            value={
-              statsQ.isLoading ? (
-                <span className="text-muted">…</span>
-              ) : statsQ.isError ? (
-                '—'
-              ) : (
-                statsQ.data?.vps_count ?? '—'
-              )
-            }
-            footer={
-              <span className="inline-flex items-center gap-2">
-                <span>{i18n.t('public.overview.stats.vps.ipv4_free')}</span>
-                <Badge variant={ipv4BadgeVariant}>
-                  {ipv4Left == null ? '—' : ipv4Left}
-                </Badge>
-                {ipv4Level === 'warn' ? (
-                  <span className="hidden sm:inline text-warn">{i18n.t('public.overview.ipv4_warn.hint')}</span>
-                ) : null}
-              </span>
-            }
-          />
-        </div>
-      </SummaryGrid>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div data-testid="public.outages.card">
           <Card>
-          <CardHeader
-            title={i18n.t('public.overview.outages.title')}
-            subtitle={i18n.t('public.overview.outages.subtitle', {
-              current: outagesByCategory.current.length,
-              planned: outagesByCategory.planned.length,
-              resolved: outagesByCategory.resolved.length,
-            })}
-            actions={<Link to="/outages" className="text-sm underline">{i18n.t('public.overview.outages.all')}</Link>}
-          />
-          <CardBody>
-            {outagesQ.isLoading ? (
-              <Spinner label={i18n.t('public.overview.outages.loading')} />
-            ) : outagesQ.isError ? (
-              <Alert title={i18n.t('public.overview.outages.error')} variant="danger" />
-            ) : (outagesQ.data?.length ?? 0) === 0 ? (
-              <div className="text-sm text-muted">{i18n.t('public.overview.outages.empty')}</div>
-            ) : (
-              <div className="space-y-4">
-                <StackedBar
-                  ariaLabel={i18n.t('public.overview.outages.distribution_aria')}
-                  segments={[
-                    {
-                      value: outagesByCategory.current.length,
-                      variant: 'danger',
-                      title: i18n.t('public.overview.outages.segment.ongoing'),
-                    },
-                    {
-                      value: outagesByCategory.planned.length,
-                      variant: 'warn',
-                      title: i18n.t('public.overview.outages.segment.planned'),
-                    },
-                    {
-                      value: outagesByCategory.resolved.length,
-                      variant: 'ok',
-                      title: i18n.t('public.overview.outages.segment.resolved'),
-                    },
-                    {
-                      value: outagesByCategory.unknown.length,
-                      variant: 'neutral',
-                      title: i18n.t('public.overview.outages.segment.other'),
-                    },
-                  ]}
-                />
-
-                {outagesByCategory.current.slice(0, 3).map((o) => (
-                  <OutageSummary key={o.id} outage={o} />
-                ))}
-
-                {outagesByCategory.current.length === 0 && outagesByCategory.planned.slice(0, 3).map((o) => (
-                  <OutageSummary key={o.id} outage={o} />
-                ))}
-
-                {outagesByCategory.current.length === 0 && outagesByCategory.planned.length === 0 && outagesByCategory.resolved.slice(0, 3).map((o) => (
-                  <OutageSummary key={o.id} outage={o} />
-                ))}
-              </div>
-            )}
-          </CardBody>
+            <CardHeader
+              title={i18n.t('public.overview.outages.title')}
+              subtitle={i18n.t('public.overview.outages.subtitle', {
+                current: outagesByCategory.current.length,
+                planned: outagesByCategory.planned.length,
+                resolved: outagesByCategory.resolved.length,
+              })}
+              actions={<Link to="/outages" className="text-sm underline">{i18n.t('public.overview.outages.all')}</Link>}
+            />
+            <CardBody className="p-0">
+              {outagesQ.isLoading ? (
+                <div className="p-4"><Spinner label={i18n.t('public.overview.outages.loading')} /></div>
+              ) : outagesQ.isError ? (
+                <div className="p-4"><Alert title={i18n.t('public.overview.outages.error')} variant="danger" /></div>
+              ) : visibleOutages.length === 0 ? (
+                <div className="p-4 text-sm text-muted">{i18n.t('public.overview.outages.empty')}</div>
+              ) : (
+                <>
+                  <div className="divide-y divide-border md:hidden">
+                    {visibleOutages.map((o) => {
+                      const summary = pickTranslation(o as any, 'summary', i18n.preferredLanguageCodes);
+                      const badges = outageBadges(o, i18n.t);
+                      return (
+                        <div key={o.id} className="px-4 py-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="text-xs text-muted">{formatDateTime(o.begins_at)}</div>
+                            <Badge variant={badges.lifecycle.variant}>{badges.lifecycle.label}</Badge>
+                          </div>
+                          <Link to={`/outages/${o.id}`} className="mt-1 block text-sm font-medium hover:underline">
+                            {summary ?? i18n.t('public.outage.fallback_title', { id: o.id })}
+                          </Link>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="hidden overflow-auto md:block">
+                    <Table minWidth="md" testId="public.outages.table">
+                    <tbody>
+                      {visibleOutages.map((o) => {
+                        const summary = pickTranslation(o as any, 'summary', i18n.preferredLanguageCodes);
+                        const badges = outageBadges(o, i18n.t);
+                        return (
+                          <tr key={o.id} className="border-t border-border first:border-t-0">
+                            <td className="w-32 px-4 py-3 text-xs text-muted">{formatDateTime(o.begins_at)}</td>
+                            <td className="w-24 px-3 py-3"><Badge variant={badges.lifecycle.variant}>{badges.lifecycle.label}</Badge></td>
+                            <td className="px-3 py-3 text-sm">
+                              <Link to={`/outages/${o.id}`} className="font-medium hover:underline">
+                                {summary ?? i18n.t('public.outage.fallback_title', { id: o.id })}
+                              </Link>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    </Table>
+                  </div>
+                </>
+              )}
+            </CardBody>
           </Card>
         </div>
 
         <div data-testid="public.news.card">
           <Card>
-          <CardHeader
-            title={i18n.t('public.overview.news.title')}
-            subtitle={i18n.t('public.overview.news.subtitle')}
-            actions={<Link to="/news" className="text-sm underline">{i18n.t('public.overview.news.all')}</Link>}
-          />
-          <CardBody>
-            {newsQ.isLoading ? (
-              <Spinner label={i18n.t('public.overview.news.loading')} />
-            ) : newsQ.isError ? (
-              <Alert title={i18n.t('public.overview.news.error')} variant="danger" />
-            ) : (newsQ.data?.length ?? 0) === 0 ? (
-              <div className="text-sm text-muted">{i18n.t('public.overview.news.empty')}</div>
-            ) : (
-              <div className="space-y-3">
-                {newsQ.data?.slice(0, 5).map((n) => (
-                  <div key={n.id} className="space-y-1">
-                    <div className="text-xs text-muted">{formatDateTime(n.published_at)}</div>
-                    <div className="text-sm whitespace-pre-wrap">{n.message}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardBody>
+            <CardHeader
+              title={i18n.t('public.overview.news.title')}
+              subtitle={i18n.t('public.overview.news.subtitle')}
+              actions={<Link to="/news" className="text-sm underline">{i18n.t('public.overview.news.all')}</Link>}
+            />
+            <CardBody className="p-0">
+              {newsQ.isLoading ? (
+                <div className="p-4"><Spinner label={i18n.t('public.overview.news.loading')} /></div>
+              ) : newsQ.isError ? (
+                <div className="p-4"><Alert title={i18n.t('public.overview.news.error')} variant="danger" /></div>
+              ) : (newsQ.data?.length ?? 0) === 0 ? (
+                <div className="p-4 text-sm text-muted">{i18n.t('public.overview.news.empty')}</div>
+              ) : (
+                <div className="divide-y divide-border">
+                  {newsQ.data?.slice(0, 5).map((n) => (
+                    <div key={n.id} className="px-4 py-3">
+                      <div className="text-xs text-muted">{formatDateTime(n.published_at)}</div>
+                      <div className="mt-1 line-clamp-2 text-sm">{compactPlainText(n.message)}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardBody>
           </Card>
         </div>
       </div>
@@ -391,107 +361,68 @@ export function OverviewPage() {
       <div data-testid="public.nodes.section">
         <Card>
           <CardHeader title={i18n.t('public.overview.nodes.title')} subtitle={i18n.t('public.overview.nodes.subtitle')} />
-          <CardBody>
+          <CardBody className="p-0">
           {nodesQ.isLoading ? (
-            <Spinner label={i18n.t('public.overview.nodes.loading')} />
+            <div className="p-4"><Spinner label={i18n.t('public.overview.nodes.loading')} /></div>
           ) : nodesQ.isError ? (
-            <Alert title={i18n.t('public.overview.nodes.error')} variant="danger" />
+            <div className="p-4"><Alert title={i18n.t('public.overview.nodes.error')} variant="danger" /></div>
           ) : nodesByLocation.length === 0 ? (
-            <div className="text-sm text-muted">{i18n.t('public.overview.nodes.empty')}</div>
+            <div className="p-4 text-sm text-muted">{i18n.t('public.overview.nodes.empty')}</div>
           ) : (
-            <div className="space-y-6">
-              {nodesByLocation.map(([loc, g], idx) => {
-                // Mobile default expansion rules:
-                // - groups with down nodes: expanded
-                // - otherwise: first group expanded
-                const openMobile = g.down > 0 || (nodeSummary.down === 0 && idx === 0);
-
-                const header = (
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="font-medium">{loc}</div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-24">
-                        <StackedBar
-                          ariaLabel={i18n.t('public.overview.nodes.location_bar_aria', { location: loc })}
-                          segments={[
-                            { value: g.ok, variant: 'ok', title: i18n.t('state.up') },
-                            { value: g.down, variant: 'danger', title: i18n.t('state.down') },
-                          ]}
-                        />
+            <>
+              <div className="divide-y divide-border md:hidden">
+                {nodeRows.map(({ location, node }: any) => (
+                  <div key={`${location}-${node.name}`} className="px-4 py-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-medium">{node.name}</div>
+                        <div className="mt-0.5 text-xs text-muted">{location}</div>
                       </div>
-                      <div className="text-xs text-muted">
-                        {i18n.t('public.overview.nodes.location_summary', { ok: g.ok, down: g.down, total: g.total })}
-                      </div>
+                      {node.status ? <Badge variant="ok">{i18n.t('state.up')}</Badge> : <Badge variant="danger">{i18n.t('state.down')}</Badge>}
+                    </div>
+                    <div className="mt-2 text-xs text-muted">
+                      {i18n.t('public.overview.nodes.vps')}: {typeof node.vps_count === 'number' ? node.vps_count : '—'}
+                      {typeof node.cpu_idle === 'number' ? ` · ${i18n.t('public.overview.nodes.cpu_idle')}: ${node.cpu_idle.toFixed(1)}%` : null}
                     </div>
                   </div>
-                );
-
-                return (
-                  <div key={loc} className="space-y-2">
-                    {/* Mobile: cards + accordion (avoid horizontal scroll) */}
-                    <details className="rounded-lg border border-border bg-surface md:hidden" open={openMobile}>
-                      <summary className="cursor-pointer select-none px-3 py-2">{header}</summary>
-                      <div className="space-y-2 p-3 pt-0">
-                        {g.nodes.map((n: any) => (
-                          <div key={n.name} className="rounded-md border border-border bg-surface-2 p-3">
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="font-medium">{n.name}</div>
-                              {n.status ? <Badge variant="ok">{i18n.t('state.up')}</Badge> : <Badge variant="danger">{i18n.t('state.down')}</Badge>}
-                            </div>
-                            <div className="mt-2 text-xs text-muted">{i18n.t('public.overview.nodes.last_report')}: {formatDateTime(n.last_report)}</div>
-                            <div className="mt-1 text-xs text-muted">
-                              {i18n.t('public.overview.nodes.vps')}: {typeof n.vps_count === 'number' ? n.vps_count : '—'}
-                              {typeof n.vps_free === 'number' ? ` · ${i18n.t('public.overview.nodes.vps_free', { count: n.vps_free })}` : null}
-                            </div>
-                            <div className="mt-1 text-xs text-muted">
-                              {i18n.t('public.overview.nodes.cpu_idle')}: {typeof n.cpu_idle === 'number' ? `${n.cpu_idle.toFixed(1)}%` : '—'}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </details>
-
-                    {/* Desktop: dense table */}
-                    <div className="hidden space-y-2 md:block">
-                      {header}
-                      <div className="overflow-auto rounded-lg border border-border">
-                        <Table minWidth="md" testId={`public.nodes.table.${loc}`}>
-                          <thead className="bg-surface-2 text-left text-xs text-muted">
-                            <tr>
-                              <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.node')}</th>
-                              <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.status')}</th>
-                              <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.last_report')}</th>
-                              <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.vps')}</th>
-                              <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.cpu_idle')}</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {g.nodes.map((n: any) => (
-                              <tr key={n.name} className="border-t border-border" data-row-variant={n.status ? undefined : 'danger'}>
-                                <td className="px-3 py-2 font-medium">{n.name}</td>
-                                <td className="px-3 py-2">
-                                  {n.status ? <Badge variant="ok">{i18n.t('state.up')}</Badge> : <Badge variant="danger">{i18n.t('state.down')}</Badge>}
-                                </td>
-                                <td className="px-3 py-2 text-muted">{formatDateTime(n.last_report)}</td>
-                                <td className="px-3 py-2 text-muted">
-                                  {typeof n.vps_count === 'number' ? n.vps_count : '—'}
-                                  {typeof n.vps_free === 'number'
-                                    ? ` · ${i18n.t('public.overview.nodes.vps_free', { count: n.vps_free })}`
-                                    : null}
-                                </td>
-                                <td className="px-3 py-2 text-muted">
-                                  {typeof n.cpu_idle === 'number' ? `${n.cpu_idle.toFixed(1)}%` : '—'}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </Table>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                ))}
+              </div>
+              <div className="hidden overflow-auto md:block">
+                <Table minWidth="lg" testId="public.nodes.table">
+                <thead className="bg-surface-2 text-left text-xs text-muted">
+                  <tr>
+                    <th className="px-4 py-2 font-medium">{i18n.t('public.overview.nodes.table.node')}</th>
+                    <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.location')}</th>
+                    <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.status')}</th>
+                    <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.last_report')}</th>
+                    <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.vps')}</th>
+                    <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.cpu_idle')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {nodeRows.map(({ location, node }: any) => (
+                    <tr key={`${location}-${node.name}`} className="border-t border-border" data-row-variant={node.status ? undefined : 'danger'}>
+                      <td className="px-4 py-2 font-medium">{node.name}</td>
+                      <td className="px-3 py-2 text-muted">{location}</td>
+                      <td className="px-3 py-2">
+                        {node.status ? <Badge variant="ok">{i18n.t('state.up')}</Badge> : <Badge variant="danger">{i18n.t('state.down')}</Badge>}
+                      </td>
+                      <td className="px-3 py-2 text-muted">{formatDateTime(node.last_report)}</td>
+                      <td className="px-3 py-2 text-muted">
+                        {typeof node.vps_count === 'number' ? node.vps_count : '—'}
+                        {typeof node.vps_free === 'number'
+                          ? ` · ${i18n.t('public.overview.nodes.vps_free', { count: node.vps_free })}`
+                          : null}
+                      </td>
+                      <td className="px-3 py-2 text-muted">
+                        {typeof node.cpu_idle === 'number' ? `${node.cpu_idle.toFixed(1)}%` : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                </Table>
+              </div>
+            </>
           )}
           </CardBody>
         </Card>

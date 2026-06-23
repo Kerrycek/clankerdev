@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
@@ -94,8 +94,10 @@ describe('VpsDeleteCard', () => {
 
     expect(submit).toBeDisabled();
 
-    await user.type(screen.getByTestId('vps.list.delete_confirm.confirm_text'), 'vps123.example');
-    expect(submit).not.toBeDisabled();
+    fireEvent.change(screen.getByTestId('vps.list.delete_confirm.confirm_text'), {
+      target: { value: 'vps123.example' },
+    });
+    await waitFor(() => expect(submit).not.toBeDisabled());
 
     await user.click(submit);
     expect(onConfirm).toHaveBeenCalledWith({
