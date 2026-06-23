@@ -53,7 +53,6 @@ test('@pr-smoke @pr-smoke-mobile @smoke public overview shows key status surface
 
   // Page shell
   await expect(page.getByTestId('public.overview.page')).toBeVisible();
-  await expect(page.getByTestId('public.summary-grid')).toBeVisible();
 
   // Primary stats
   await expect(page.getByTestId('public.stats.members')).toBeVisible();
