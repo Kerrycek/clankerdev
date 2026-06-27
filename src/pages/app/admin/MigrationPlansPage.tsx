@@ -181,7 +181,7 @@ export function MigrationPlansPage() {
   const pageData = listQ.data ?? [];
   const rows = pageData;
 
-  const pageCursor = useMemo(() => cursorFromDescendingPage(pageData as any), [pageData]);
+  const pageCursor = useMemo(() => cursorFromDescendingPage(pageData as LegacyAny), [pageData]);
   const hasMore = pageData.length >= pagination.limit;
   const canNext = pagination.hasForward || (hasMore && pageCursor !== null);
   const canPaginate = pagination.stack.length > 1 || pageData.length > 0;
@@ -211,7 +211,7 @@ export function MigrationPlansPage() {
       setNotice('');
     },
     onSuccess: (res) => {
-      const planId = (res.data as any)?.id as number | undefined;
+      const planId = (res.data as LegacyAny)?.id as number | undefined;
 
       const asId = getMetaActionStateId(res.meta);
       if (asId !== undefined) {
@@ -860,19 +860,19 @@ export function MigrationPlansPage() {
           {/* Mobile: cards */}
           <div className="space-y-3 md:hidden">
             {rows.map((p) => {
-                const st = badgeForState((p as any).state);
-                const rowVariant = rowVariantForState((p as any).state);
-                const dotVariant = dotVariantForState((p as any).state);
-                const id = Number((p as any).id);
-                const label = String((p as any).label ?? '').trim() || na;
-                const userLabel = formatRef((p as any).user, na);
-                const nodeLabel = formatRef((p as any).node, na);
-                const vpsCount = (p as any).vps_count;
+                const st = badgeForState((p as LegacyAny).state);
+                const rowVariant = rowVariantForState((p as LegacyAny).state);
+                const dotVariant = dotVariantForState((p as LegacyAny).state);
+                const id = Number((p as LegacyAny).id);
+                const label = String((p as LegacyAny).label ?? '').trim() || na;
+                const userLabel = formatRef((p as LegacyAny).user, na);
+                const nodeLabel = formatRef((p as LegacyAny).node, na);
+                const vpsCount = (p as LegacyAny).vps_count;
                 const vpsCountStr = vpsCount === undefined || vpsCount === null ? na : String(vpsCount);
                 const asId =
-                  (typeof (p as any).action_state_id === 'number' && Number.isFinite((p as any).action_state_id)
-                    ? Number((p as any).action_state_id)
-                    : undefined) ?? getMetaActionStateId((p as any)._meta);
+                  (typeof (p as LegacyAny).action_state_id === 'number' && Number.isFinite((p as LegacyAny).action_state_id)
+                    ? Number((p as LegacyAny).action_state_id)
+                    : undefined) ?? getMetaActionStateId((p as LegacyAny)._meta);
 
                 return (
                   <Card key={id} testId={`admin.migration_plans.card.${id}`} className={toneSurfaceClass(rowVariant)}>
@@ -903,9 +903,9 @@ export function MigrationPlansPage() {
                         <div>
                           <span className="text-faint">{t('common.vps_count')}:</span> {vpsCountStr}
                         </div>
-                        {(p as any).created_at ? (
+                        {(p as LegacyAny).created_at ? (
                           <div>
-                            <span className="text-faint">{t('common.created')}:</span> {formatDateTime(String((p as any).created_at))}
+                            <span className="text-faint">{t('common.created')}:</span> {formatDateTime(String((p as LegacyAny).created_at))}
                           </div>
                         ) : null}
                       </div>
@@ -979,19 +979,19 @@ export function MigrationPlansPage() {
             </thead>
             <tbody>
               {rows.map((p) => {
-                const st = badgeForState((p as any).state);
-                const rowVariant = rowVariantForState((p as any).state);
-                const dotVariant = dotVariantForState((p as any).state);
-                const id = Number((p as any).id);
-                const label = String((p as any).label ?? '').trim() || na;
-                const userLabel = formatRef((p as any).user, na);
-                const nodeLabel = formatRef((p as any).node, na);
-                const vpsCount = (p as any).vps_count;
+                const st = badgeForState((p as LegacyAny).state);
+                const rowVariant = rowVariantForState((p as LegacyAny).state);
+                const dotVariant = dotVariantForState((p as LegacyAny).state);
+                const id = Number((p as LegacyAny).id);
+                const label = String((p as LegacyAny).label ?? '').trim() || na;
+                const userLabel = formatRef((p as LegacyAny).user, na);
+                const nodeLabel = formatRef((p as LegacyAny).node, na);
+                const vpsCount = (p as LegacyAny).vps_count;
                 const vpsCountStr = vpsCount === undefined || vpsCount === null ? na : String(vpsCount);
                 const asId =
-                  (typeof (p as any).action_state_id === 'number' && Number.isFinite((p as any).action_state_id)
-                    ? Number((p as any).action_state_id)
-                    : undefined) ?? getMetaActionStateId((p as any)._meta);
+                  (typeof (p as LegacyAny).action_state_id === 'number' && Number.isFinite((p as LegacyAny).action_state_id)
+                    ? Number((p as LegacyAny).action_state_id)
+                    : undefined) ?? getMetaActionStateId((p as LegacyAny)._meta);
 
                 return (
                   <TableRowLink
@@ -1016,7 +1016,7 @@ export function MigrationPlansPage() {
                     <td className="px-4 py-2 text-xs text-muted">{userLabel}</td>
                     <td className="px-4 py-2 text-xs text-muted">{nodeLabel}</td>
                     <td className="px-4 py-2 text-xs text-muted">{vpsCountStr}</td>
-                    <td className="px-4 py-2 text-xs text-muted">{(p as any).created_at ? formatDateTime(String((p as any).created_at)) : na}</td>
+                    <td className="px-4 py-2 text-xs text-muted">{(p as LegacyAny).created_at ? formatDateTime(String((p as LegacyAny).created_at)) : na}</td>
                     <td className="px-4 py-2 text-xs">
                       {asId ? (
                         <Link className="text-accent hover:underline" to={`${basePath}/action-states?id=${String(asId)}`}>

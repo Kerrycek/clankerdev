@@ -62,19 +62,19 @@ function snapshotLabel(s: Snapshot): string {
 
 function refLabel(ref: unknown, t: (k: any) => string): string {
   if (!ref || typeof ref !== 'object') return t('common.na');
-  const r = ref as any;
+  const r = ref as LegacyAny;
   return String(r.label ?? r.name ?? (r.id ? `#${r.id}` : t('common.na')));
 }
 
 function downloadExpiration(dl: SnapshotDownload): string | undefined {
-  const raw = (dl as any).expiration_date ?? (dl as any).expires_at;
+  const raw = (dl as LegacyAny).expiration_date ?? (dl as LegacyAny).expires_at;
   return typeof raw === 'string' && raw.trim() ? raw : undefined;
 }
 
 function uniqSnapshots(input: Snapshot[]): Snapshot[] {
   const byId = new Map<number, Snapshot>();
   for (const s of input) {
-    const id = Number((s as any).id);
+    const id = Number((s as LegacyAny).id);
     if (!Number.isFinite(id) || id <= 0) continue;
     if (!byId.has(id)) byId.set(id, s);
   }
@@ -95,7 +95,7 @@ export function DatasetDownloadsPage() {
   const { role } = useAuth();
   const isAdmin = role === 'admin';
 
-  const datasetLabelForToast = String((dataset as any).label ?? (dataset as any).name ?? `Dataset #${dataset.id}`);
+  const datasetLabelForToast = String((dataset as LegacyAny).label ?? (dataset as LegacyAny).name ?? `Dataset #${dataset.id}`);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [qstr, setQstr] = useState(() => searchParams.get('q') ?? '');
@@ -243,7 +243,7 @@ export function DatasetDownloadsPage() {
     typeof dlsQ.data?.meta?.['total_count'] === 'number' ? Number(dlsQ.data.meta['total_count']) : pageData.length;
   const rows = pageData;
 
-  const pageCursor = useMemo(() => cursorFromDescendingPage(pageData as any), [pageData]);
+  const pageCursor = useMemo(() => cursorFromDescendingPage(pageData as LegacyAny), [pageData]);
   const hasMore = pageData.length >= pagination.limit;
   const filtersActive = Boolean(qstr.trim());
 
@@ -288,7 +288,7 @@ export function DatasetDownloadsPage() {
       const merged = uniqSnapshots([...(isReset || datasetChanged ? [] : candSnaps), ...fetched]);
       merged.sort((a, b) => Number(b.id) - Number(a.id));
       setCandSnaps(merged);
-      setCandCursor(cursorFromDescendingPage(merged as any));
+      setCandCursor(cursorFromDescendingPage(merged as LegacyAny));
       setCandHasMore(fetched.length >= candBatchSize);
     } catch (e) {
       setCandError(formatErrorMessage(e));
@@ -386,12 +386,12 @@ export function DatasetDownloadsPage() {
               </Card>
             ) : (
               rows.map((dl) => {
-                const snap = dl.snapshot as any;
+                const snap = dl.snapshot as LegacyAny;
                 const snapId = typeof snap?.id === 'number' ? Number(snap.id) : undefined;
-                const fromSnap = (dl as any).from_snapshot;
+                const fromSnap = (dl as LegacyAny).from_snapshot;
                 const fromSnapId = typeof fromSnap?.id === 'number' ? Number(fromSnap.id) : undefined;
                 const expiration = downloadExpiration(dl);
-                const sha = (dl as any).sha256sum ?? (dl as any).sha256;
+                const sha = (dl as LegacyAny).sha256sum ?? (dl as LegacyAny).sha256;
                 return (
                   <Card key={dl.id} testId={`dataset.downloads.card.${dl.id}`}>
                     <div className="p-4">
@@ -409,7 +409,7 @@ export function DatasetDownloadsPage() {
                           </div>
                           {expiration ? (
                             <div className="mt-1 text-xs text-faint">
-                              {t('dataset.downloads.expires_at', { dt: formatDateTime(expiration as any) })}
+                              {t('dataset.downloads.expires_at', { dt: formatDateTime(expiration as LegacyAny) })}
                             </div>
                           ) : null}
                           {sha ? <div className="mt-1 break-words text-xs text-faint">sha256: {String(sha)}</div> : null}
@@ -487,10 +487,10 @@ export function DatasetDownloadsPage() {
                     </tr>
                   ) : (
                     rows.map((dl) => {
-                      const snap = dl.snapshot as any;
+                      const snap = dl.snapshot as LegacyAny;
                       const snapId = typeof snap?.id === 'number' ? Number(snap.id) : undefined;
                       const expiration = downloadExpiration(dl);
-                      const sha = (dl as any).sha256sum ?? (dl as any).sha256;
+                      const sha = (dl as LegacyAny).sha256sum ?? (dl as LegacyAny).sha256;
 
                       return (
                         <tr key={dl.id} className="border-t border-border" data-testid={`dataset.downloads.row.${dl.id}`}>
@@ -502,10 +502,10 @@ export function DatasetDownloadsPage() {
                             {snapId ? (
                               <div className="mt-1 text-xs text-faint">{t('dataset.downloads.snapshot_ref', { id: snapId })}</div>
                             ) : null}
-                            {(dl as any).from_snapshot ? (
+                            {(dl as LegacyAny).from_snapshot ? (
                               <div className="mt-1 text-xs text-faint">
                                 {t('dataset.downloads.from_snapshot', {
-                                  snapshot: refLabel((dl as any).from_snapshot, t),
+                                  snapshot: refLabel((dl as LegacyAny).from_snapshot, t),
                                 })}
                               </div>
                             ) : null}
@@ -517,7 +517,7 @@ export function DatasetDownloadsPage() {
                           <td className="py-2 pr-3">{formatLabel(dl.format, t)}</td>
                           <td className="py-2 pr-3">{readyBadge(dl, t)}</td>
                           <td className="py-2 pr-3">
-                            {expiration ? formatDateTime(expiration as any) : <span className="text-faint">{t('common.na')}</span>}
+                            {expiration ? formatDateTime(expiration as LegacyAny) : <span className="text-faint">{t('common.na')}</span>}
                           </td>
                           <td className="py-2 pr-4">
                             <div className="flex flex-wrap items-center gap-2">

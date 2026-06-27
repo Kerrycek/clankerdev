@@ -96,7 +96,8 @@ export async function fetchOomReports(opts?: {
   if (q) params['q'] = q;
 
   if (opts?.vpsId !== undefined) params['vps'] = opts.vpsId;
-  if (opts?.userId !== undefined) params['user'] = opts.userId;
+  // Legacy oom_report#index rejects user; list pages keep owner filtering current-page only.
+  void opts?.userId;
   if (opts?.nodeId !== undefined) params['node'] = opts.nodeId;
   if (opts?.locationId !== undefined) params['location'] = opts.locationId;
   if (opts?.environmentId !== undefined) params['environment'] = opts.environmentId;

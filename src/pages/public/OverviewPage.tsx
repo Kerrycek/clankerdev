@@ -8,7 +8,7 @@ import {
   fetchPublicNodeStatus,
   fetchPublicStats,
 } from '../../lib/api/public';
-import type { Outage } from '../../lib/api/public';
+import type { Outage, PublicNodeStatus } from '../../lib/api/public';
 import { Alert } from '../../components/ui/Alert';
 import { Badge } from '../../components/ui/Badge';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
@@ -23,14 +23,90 @@ import { pickTranslation } from '../../lib/translations';
 import { useI18n } from '../../app/i18n';
 import { SummaryGrid } from '../../components/layout/SummaryGrid';
 import { getRuntimeConfig } from '../../app/config';
-import { Table } from '../../components/ui/Table';
 import { StatusDot } from '../../components/ui/StatusDot';
 import { outageBadges } from '../../lib/outageBadges';
 import { dotVariantFromBadgeVariant } from '../../lib/variantMap';
+import { fetchSecurityAdvisoriesWithCves } from '../../lib/api/securityAdvisories';
+import { SecurityAdvisoryRow } from './SecurityAdvisoriesPage';
+import { useTierSlowIntervalMs } from '../../lib/refreshTiers';
+
+type PublicNodeLocationGroup = {
+  ok: number;
+  down: number;
+  total: number;
+  nodes: PublicNodeStatus[];
+};
+
+function nodeDisplayName(node: PublicNodeStatus): string {
+  return String(node.name || node.fqdn || node.type || 'node');
+}
+
+function nodeSortKey(node: PublicNodeStatus): string {
+  return nodeDisplayName(node).toLocaleLowerCase();
+}
+
+function nodeTestIdKey(node: PublicNodeStatus, index: number): string {
+  return nodeDisplayName(node)
+    .replace(/[^a-zA-Z0-9_.-]+/g, '-')
+    .replace(/^-+|-+$/g, '') || String(index);
+}
+
+function formatPublicNodeVps(node: PublicNodeStatus, t: ReturnType<typeof useI18n>['t']): string {
+  const total = typeof node.vps_count === 'number' && Number.isFinite(node.vps_count) ? node.vps_count : undefined;
+  const free = typeof node.vps_free === 'number' && Number.isFinite(node.vps_free) ? node.vps_free : undefined;
+
+  if (total === undefined) return t('common.na');
+  if (free === undefined) return String(total);
+  return `${total} · ${t('public.overview.nodes.vps_free', { count: free })}`;
+}
+
+function formatPublicNodeCpuIdle(node: PublicNodeStatus, t: ReturnType<typeof useI18n>['t']): string {
+  return typeof node.cpu_idle === 'number' && Number.isFinite(node.cpu_idle) ? `${node.cpu_idle}%` : t('common.na');
+}
+
+function PublicNodeCard(props: { node: PublicNodeStatus; index: number }) {
+  const i18n = useI18n();
+  const node = props.node;
+  const isUp = node.status === true;
+  const statusLabel = i18n.t(isUp ? 'state.up' : 'state.down');
+
+  return (
+    <article
+      className="rounded-lg border border-border bg-surface p-3"
+      data-testid={`public.node.row.${nodeTestIdKey(node, props.index)}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <StatusDot variant={isUp ? 'ok' : 'danger'} ariaLabel={statusLabel} />
+            <h3 className="truncate text-sm font-medium">{nodeDisplayName(node)}</h3>
+          </div>
+          {node.fqdn && node.fqdn !== node.name ? <div className="mt-1 truncate text-xs text-muted">{node.fqdn}</div> : null}
+        </div>
+        <Badge variant={isUp ? 'ok' : 'danger'}>{statusLabel}</Badge>
+      </div>
+
+      <dl className="mt-3 grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
+        <div>
+          <dt className="text-muted">{i18n.t('public.overview.nodes.last_report')}</dt>
+          <dd className="mt-0.5 text-fg">{node.last_report ? formatDateTime(node.last_report) : i18n.t('common.na')}</dd>
+        </div>
+        <div>
+          <dt className="text-muted">{i18n.t('public.overview.nodes.vps')}</dt>
+          <dd className="mt-0.5 text-fg">{formatPublicNodeVps(node, i18n.t)}</dd>
+        </div>
+        <div>
+          <dt className="text-muted">{i18n.t('public.overview.nodes.cpu_idle')}</dt>
+          <dd className="mt-0.5 text-fg">{formatPublicNodeCpuIdle(node, i18n.t)}</dd>
+        </div>
+      </dl>
+    </article>
+  );
+}
 
 function OutageSummary(props: { outage: Outage }) {
   const i18n = useI18n();
-  const summary = pickTranslation(props.outage as any, 'summary', i18n.preferredLanguageCodes);
+  const summary = pickTranslation(props.outage as LegacyAny, 'summary', i18n.preferredLanguageCodes);
   const badges = outageBadges(props.outage, i18n.t);
   const dotVariant = dotVariantFromBadgeVariant(badges.primaryVariant);
 
@@ -48,7 +124,7 @@ function OutageSummary(props: { outage: Outage }) {
       <div className="text-xs text-muted">
         {i18n.t('public.outage.field.begins')}: {formatDateTime(props.outage.begins_at)}
         {props.outage.finished_at
-          ? ` · ${i18n.t('public.outage.field.finished')}: ${formatDateTime(props.outage.finished_at as any)}`
+          ? ` · ${i18n.t('public.outage.field.finished')}: ${formatDateTime(props.outage.finished_at as LegacyAny)}`
           : null}
       </div>
     </div>
@@ -58,6 +134,7 @@ function OutageSummary(props: { outage: Outage }) {
 export function OverviewPage() {
   const i18n = useI18n();
   const cfg = useMemo(() => getRuntimeConfig(), []);
+  const tierSlowRefetchMs = useTierSlowIntervalMs();
   const [searchParams] = useSearchParams();
   const showSessionExpired = searchParams.get('session') === 'expired';
 
@@ -66,21 +143,37 @@ export function OverviewPage() {
   const statsQ = useQuery({
     queryKey: ['cluster', 'public_stats'],
     queryFn: async () => (await fetchPublicStats()).data,
+    refetchInterval: tierSlowRefetchMs,
   });
 
   const nodesQ = useQuery({
     queryKey: ['nodes', 'public_status'],
     queryFn: async () => (await fetchPublicNodeStatus()).data,
+    refetchInterval: tierSlowRefetchMs,
   });
 
   const outagesQ = useQuery({
     queryKey: ['outages', 'index'],
     queryFn: async () => (await fetchOutages()).data,
+    refetchInterval: tierSlowRefetchMs,
   });
 
   const newsQ = useQuery({
     queryKey: ['news_logs', 'index'],
     queryFn: async () => (await fetchNews()).data,
+    refetchInterval: tierSlowRefetchMs,
+  });
+
+  const securityQ = useQuery({
+    queryKey: ['security_advisories', 'public', 'overview'],
+    queryFn: async () => (
+      await fetchSecurityAdvisoriesWithCves({
+        limit: 5,
+        state: 'published',
+        order: 'newest',
+      })
+    ).data,
+    refetchInterval: tierSlowRefetchMs,
   });
 
   const outagesByCategory = useMemo(() => {
@@ -112,11 +205,11 @@ export function OverviewPage() {
   }, [outagesQ.data]);
 
   const nodesByLocation = useMemo(() => {
-    const groups: Record<string, { ok: number; down: number; total: number; nodes: any[] }> = {};
+    const groups: Record<string, PublicNodeLocationGroup> = {};
 
-    const nodesList: any[] = Array.isArray(nodesQ.data)
-      ? (nodesQ.data as any[])
-      : (((nodesQ.data as any) && (nodesQ.data as any).nodes) ? (nodesQ.data as any).nodes : []);
+    const nodesList: PublicNodeStatus[] = Array.isArray(nodesQ.data)
+      ? (nodesQ.data as PublicNodeStatus[])
+      : (((nodesQ.data as LegacyAny) && (nodesQ.data as LegacyAny).nodes) ? (nodesQ.data as LegacyAny).nodes : []);
 
     for (const n of nodesList) {
       const loc =
@@ -128,6 +221,14 @@ export function OverviewPage() {
       groups[loc].nodes.push(n);
       if (n.status) groups[loc].ok += 1;
       else groups[loc].down += 1;
+    }
+
+    for (const group of Object.values(groups)) {
+      group.nodes.sort((a, b) => {
+        const stateDiff = Number(a.status === true) - Number(b.status === true);
+        if (stateDiff !== 0) return stateDiff;
+        return nodeSortKey(a).localeCompare(nodeSortKey(b));
+      });
     }
 
     return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
@@ -148,8 +249,8 @@ export function OverviewPage() {
   }, [nodesByLocation]);
 
   const ipv4Left: number | null =
-    statsQ.data && typeof (statsQ.data as any).ipv4_left === 'number'
-      ? Number((statsQ.data as any).ipv4_left)
+    statsQ.data && typeof (statsQ.data as LegacyAny).ipv4_left === 'number'
+      ? Number((statsQ.data as LegacyAny).ipv4_left)
       : null;
 
   const ipv4WarnThreshold = cfg.publicStatus.ipv4Warn;
@@ -295,7 +396,7 @@ export function OverviewPage() {
         </div>
       </SummaryGrid>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div data-testid="public.outages.card">
           <Card>
           <CardHeader
@@ -359,6 +460,31 @@ export function OverviewPage() {
           </Card>
         </div>
 
+        <div data-testid="public.security.card">
+          <Card>
+          <CardHeader
+            title={i18n.t('public.overview.security.title')}
+            subtitle={i18n.t('public.overview.security.subtitle')}
+            actions={<Link to="/security-advisories" className="text-sm underline">{i18n.t('public.overview.security.all')}</Link>}
+          />
+          <CardBody>
+            {securityQ.isLoading ? (
+              <Spinner label={i18n.t('public.overview.security.loading')} />
+            ) : securityQ.isError ? (
+              <Alert title={i18n.t('public.overview.security.error')} variant="danger" />
+            ) : (securityQ.data?.length ?? 0) === 0 ? (
+              <div className="text-sm text-muted">{i18n.t('public.overview.security.empty')}</div>
+            ) : (
+              <div className="space-y-3">
+                {securityQ.data?.slice(0, 3).map((advisory) => (
+                  <SecurityAdvisoryRow key={advisory.id} advisory={advisory} compact />
+                ))}
+              </div>
+            )}
+          </CardBody>
+          </Card>
+        </div>
+
         <div data-testid="public.news.card">
           <Card>
           <CardHeader
@@ -388,10 +514,12 @@ export function OverviewPage() {
         </div>
       </div>
 
-      <div data-testid="public.nodes.section">
-        <Card>
-          <CardHeader title={i18n.t('public.overview.nodes.title')} subtitle={i18n.t('public.overview.nodes.subtitle')} />
-          <CardBody>
+      <Card testId="public.nodes.section">
+        <CardHeader
+          title={i18n.t('public.overview.nodes.title')}
+          subtitle={i18n.t('public.overview.nodes.subtitle')}
+        />
+        <CardBody>
           {nodesQ.isLoading ? (
             <Spinner label={i18n.t('public.overview.nodes.loading')} />
           ) : nodesQ.isError ? (
@@ -399,103 +527,62 @@ export function OverviewPage() {
           ) : nodesByLocation.length === 0 ? (
             <div className="text-sm text-muted">{i18n.t('public.overview.nodes.empty')}</div>
           ) : (
-            <div className="space-y-6">
-              {nodesByLocation.map(([loc, g], idx) => {
-                // Mobile default expansion rules:
-                // - groups with down nodes: expanded
-                // - otherwise: first group expanded
-                const openMobile = g.down > 0 || (nodeSummary.down === 0 && idx === 0);
+            <div className="space-y-3">
+              {nodesByLocation.map(([location, group], locationIndex) => {
+                const hasProblem = group.down > 0;
+                const detailsOpen = hasProblem || locationIndex === 0;
 
-                const header = (
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="font-medium">{loc}</div>
-                    <div className="flex items-center gap-3">
-                      <div className="w-24">
+                return (
+                  <details
+                    key={location}
+                    open={detailsOpen}
+                    className="rounded-lg border border-border bg-surface-2"
+                    data-testid={`public.nodes.location.${locationIndex}`}
+                  >
+                    <summary className="cursor-pointer list-none p-4 marker:hidden">
+                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h2 className="text-sm font-semibold">{location}</h2>
+                            {hasProblem ? (
+                              <Badge variant="danger">{i18n.t('state.down')}: {group.down}</Badge>
+                            ) : (
+                              <Badge variant="ok">{i18n.t('state.up')}</Badge>
+                            )}
+                          </div>
+                          <div className="mt-1 text-xs text-muted">
+                            {i18n.t('public.overview.nodes.location_summary', {
+                              ok: group.ok,
+                              down: group.down,
+                              total: group.total,
+                            })}
+                          </div>
+                        </div>
                         <StackedBar
-                          ariaLabel={i18n.t('public.overview.nodes.location_bar_aria', { location: loc })}
+                          className="md:w-48 md:shrink-0"
+                          ariaLabel={i18n.t('public.overview.nodes.location_bar_aria', { location })}
                           segments={[
-                            { value: g.ok, variant: 'ok', title: i18n.t('state.up') },
-                            { value: g.down, variant: 'danger', title: i18n.t('state.down') },
+                            { value: group.ok, variant: 'ok', title: i18n.t('state.up') },
+                            { value: group.down, variant: 'danger', title: i18n.t('state.down') },
                           ]}
                         />
                       </div>
-                      <div className="text-xs text-muted">
-                        {i18n.t('public.overview.nodes.location_summary', { ok: g.ok, down: g.down, total: g.total })}
-                      </div>
-                    </div>
-                  </div>
-                );
+                    </summary>
 
-                return (
-                  <div key={loc} className="space-y-2">
-                    {/* Mobile: cards + accordion (avoid horizontal scroll) */}
-                    <details className="rounded-lg border border-border bg-surface md:hidden" open={openMobile}>
-                      <summary className="cursor-pointer select-none px-3 py-2">{header}</summary>
-                      <div className="space-y-2 p-3 pt-0">
-                        {g.nodes.map((n: any) => (
-                          <div key={n.name} className="rounded-md border border-border bg-surface-2 p-3">
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="font-medium">{n.name}</div>
-                              {n.status ? <Badge variant="ok">{i18n.t('state.up')}</Badge> : <Badge variant="danger">{i18n.t('state.down')}</Badge>}
-                            </div>
-                            <div className="mt-2 text-xs text-muted">{i18n.t('public.overview.nodes.last_report')}: {formatDateTime(n.last_report)}</div>
-                            <div className="mt-1 text-xs text-muted">
-                              {i18n.t('public.overview.nodes.vps')}: {typeof n.vps_count === 'number' ? n.vps_count : '—'}
-                              {typeof n.vps_free === 'number' ? ` · ${i18n.t('public.overview.nodes.vps_free', { count: n.vps_free })}` : null}
-                            </div>
-                            <div className="mt-1 text-xs text-muted">
-                              {i18n.t('public.overview.nodes.cpu_idle')}: {typeof n.cpu_idle === 'number' ? `${n.cpu_idle.toFixed(1)}%` : '—'}
-                            </div>
-                          </div>
+                    <div className="border-t border-border p-4">
+                      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+                        {group.nodes.map((node, nodeIndex) => (
+                          <PublicNodeCard key={`${nodeDisplayName(node)}-${nodeIndex}`} node={node} index={nodeIndex} />
                         ))}
                       </div>
-                    </details>
-
-                    {/* Desktop: dense table */}
-                    <div className="hidden space-y-2 md:block">
-                      {header}
-                      <div className="overflow-auto rounded-lg border border-border">
-                        <Table minWidth="md" testId={`public.nodes.table.${loc}`}>
-                          <thead className="bg-surface-2 text-left text-xs text-muted">
-                            <tr>
-                              <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.node')}</th>
-                              <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.status')}</th>
-                              <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.last_report')}</th>
-                              <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.vps')}</th>
-                              <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.cpu_idle')}</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {g.nodes.map((n: any) => (
-                              <tr key={n.name} className="border-t border-border" data-row-variant={n.status ? undefined : 'danger'}>
-                                <td className="px-3 py-2 font-medium">{n.name}</td>
-                                <td className="px-3 py-2">
-                                  {n.status ? <Badge variant="ok">{i18n.t('state.up')}</Badge> : <Badge variant="danger">{i18n.t('state.down')}</Badge>}
-                                </td>
-                                <td className="px-3 py-2 text-muted">{formatDateTime(n.last_report)}</td>
-                                <td className="px-3 py-2 text-muted">
-                                  {typeof n.vps_count === 'number' ? n.vps_count : '—'}
-                                  {typeof n.vps_free === 'number'
-                                    ? ` · ${i18n.t('public.overview.nodes.vps_free', { count: n.vps_free })}`
-                                    : null}
-                                </td>
-                                <td className="px-3 py-2 text-muted">
-                                  {typeof n.cpu_idle === 'number' ? `${n.cpu_idle.toFixed(1)}%` : '—'}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </Table>
-                      </div>
                     </div>
-                  </div>
+                  </details>
                 );
               })}
             </div>
           )}
-          </CardBody>
-        </Card>
-      </div>
+        </CardBody>
+      </Card>
     </div>
   );
 }

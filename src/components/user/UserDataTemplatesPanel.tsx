@@ -332,7 +332,7 @@ export function UserDataTemplatesPanel(props: {
   const rows = listQ.data ?? [];
 
   const canNext = rows.length >= pagination.limit;
-  const cursor = useMemo(() => cursorFromDescendingPage(rows as any), [rows]);
+  const cursor = useMemo(() => cursorFromDescendingPage(rows as LegacyAny), [rows]);
 
   const formatOptions = useMemo<SelectOption[]>(() => {
     return [
@@ -496,7 +496,7 @@ export function UserDataTemplatesPanel(props: {
       return { lockRef: ref };
     },
     onSettled: (_data, _err, _vars, ctx) => {
-      if ((ctx as any)?.lockRef) chrome.releaseLocalLock((ctx as any).lockRef);
+      if ((ctx as LegacyAny)?.lockRef) chrome.releaseLocalLock((ctx as LegacyAny).lockRef);
     },
     onSuccess: (res) => {
       const asId = getMetaActionStateId(res.meta);
@@ -579,7 +579,7 @@ export function UserDataTemplatesPanel(props: {
         {filtersActive ? (
           <div className="flex flex-wrap gap-2" data-testid={`${prefix}.filters.chips`}>
             {qTrim ? <FilterChip label={qTrim.startsWith('#') || /^\d+$/.test(qTrim) ? `#${qTrim.replace(/^#/, '')}` : qTrim} onRemove={() => setFilters({ q: '', format: formatFilter })} /> : null}
-            {formatFilter ? <FilterChip label={`${t('user_data.filters.format')}: ${t(formatLabelKey(formatFilter) as any)}`} onRemove={() => setFilters({ q: qTrim, format: '' })} /> : null}
+            {formatFilter ? <FilterChip label={`${t('user_data.filters.format')}: ${t(formatLabelKey(formatFilter) as LegacyAny)}`} onRemove={() => setFilters({ q: qTrim, format: '' })} /> : null}
             {smartErrors.map((err, idx) => <FilterChip key={`${err}-${idx}`} label={err} tone="danger" onRemove={() => setSmartErrors((cur) => cur.filter((_, i) => i !== idx))} />)}
           </div>
         ) : null}
@@ -704,7 +704,7 @@ export function UserDataTemplatesPanel(props: {
                 const id = safeId(item.id);
                 const label = safeString(item.label) || `#${id}`;
                 const fmt = safeString(item.format);
-                const updatedAt = (item as any).updated_at ?? (item as any).created_at;
+                const updatedAt = (item as LegacyAny).updated_at ?? (item as LegacyAny).created_at;
 
                 return (
                   <tr key={id} data-testid={`${prefix}.row.${id}`}>
@@ -717,7 +717,7 @@ export function UserDataTemplatesPanel(props: {
                     <td className="px-3 py-2">
                       <div className="flex items-center gap-2">
                         <StatusDot variant="neutral" />
-                        <Badge variant="neutral">{t(formatLabelKey(fmt) as any)}</Badge>
+                        <Badge variant="neutral">{t(formatLabelKey(fmt) as LegacyAny)}</Badge>
                       </div>
                     </td>
                     <td className="px-3 py-2 text-right">
@@ -772,7 +772,7 @@ export function UserDataTemplatesPanel(props: {
         testId={`${prefix}.editor.drawer`}
       >
         <div className="space-y-4">
-          {hintKey ? <Alert variant="info" title={t('user_data.hint.title')}>{t(hintKey as any)}</Alert> : null}
+          {hintKey ? <Alert variant="info" title={t('user_data.hint.title')}>{t(hintKey as LegacyAny)}</Alert> : null}
 
           <div className="grid gap-3 md:grid-cols-2">
             <div>
@@ -877,7 +877,7 @@ export function UserDataTemplatesPanel(props: {
               <div className="text-xs font-semibold text-muted">{t('user_data.deploy.fields.template')}</div>
               <div className="mt-1 font-medium text-fg">{safeString(editor.item.label) || `#${safeId(editor.item.id)}`}</div>
               <div className="mt-1 text-xs text-faint">
-                #{safeId(editor.item.id)} · {t(formatLabelKey(safeString(editor.item.format)) as any)}
+                #{safeId(editor.item.id)} · {t(formatLabelKey(safeString(editor.item.format)) as LegacyAny)}
               </div>
             </div>
           ) : null}

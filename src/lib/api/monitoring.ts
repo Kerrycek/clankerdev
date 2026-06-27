@@ -52,7 +52,8 @@ export async function fetchMonitoredEvents(opts?: {
   if (opts?.objectName) params['object_name'] = opts.objectName;
   if (opts?.objectId !== undefined) params['object_id'] = opts.objectId;
   if (opts?.state) params['state'] = opts.state;
-  if (opts?.userId !== undefined) params['user'] = opts.userId;
+  // Legacy monitored_event#index rejects user; admin list applies it client-side.
+  void opts?.userId;
 
   // Cursor depends on order.
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
@@ -63,6 +64,7 @@ export async function fetchMonitoredEvents(opts?: {
     path: '/monitored_events',
     namespace: 'monitored_event',
     params,
+    meta: { includes: 'user' },
   });
 
   return { ...res, data: expectArray<MonitoredEvent>(res.data, 'monitored_events#index') };

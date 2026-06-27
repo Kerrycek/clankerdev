@@ -15,7 +15,7 @@ import { Card, CardBody, CardHeader } from '../ui/Card';
 import { SwitchRow } from '../ui/SwitchRow';
 
 function boolField(user: User | undefined, key: string, fallback: boolean): boolean {
-  const v = user ? (user as any)[key] : undefined;
+  const v = user ? (user as LegacyAny)[key] : undefined;
   if (typeof v === 'boolean') return v;
   if (typeof v === 'number') return v !== 0;
   return fallback;

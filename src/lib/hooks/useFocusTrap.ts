@@ -34,7 +34,7 @@ export function useFocusTrap(open: boolean, container: HTMLElement | null) {
       const el = prevFocusedRef.current;
       if (el && document.contains(el)) {
         try {
-          (el as any).focus?.({ preventScroll: true });
+          (el as LegacyAny).focus?.({ preventScroll: true });
         } catch {
           try {
             el.focus();

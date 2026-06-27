@@ -60,7 +60,7 @@ function resourceId(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
   if (typeof value === 'string' && /^\d+$/.test(value.trim())) return Number(value.trim());
   if (value && typeof value === 'object') {
-    const raw = (value as any).id;
+    const raw = (value as LegacyAny).id;
     if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
     if (typeof raw === 'string' && /^\d+$/.test(raw.trim())) return Number(raw.trim());
   }
@@ -162,7 +162,7 @@ function currentResourceLabel(value: unknown, fallback: string): string {
   if (typeof value === 'string') return value;
   if (typeof value === 'number') return `#${value}`;
   if (typeof value === 'object') {
-    const obj = value as any;
+    const obj = value as LegacyAny;
     return String(obj.label ?? obj.name ?? obj.login ?? obj.ip_addr ?? (obj.id ? `#${obj.id}` : fallback));
   }
   return fallback;
@@ -177,7 +177,7 @@ function dnsResolverLabel(resolver: DnsResolver): string {
 
 function userNamespaceMapLabel(map: UserNamespaceMap): string {
   const label = String(map.label ?? '').trim();
-  const ns = map.user_namespace as any;
+  const ns = map.user_namespace as LegacyAny;
   const nsLabel = currentResourceLabel(ns, '');
   return [label || `#${map.id}`, nsLabel && nsLabel !== '—' ? nsLabel : ''].filter(Boolean).join(' · ');
 }
@@ -363,7 +363,7 @@ export function VpsConfigurationPage() {
   const { t } = useI18n();
   const { vps, refetch, refetchChains, vpsRef, busyTransaction, busyLocalLock } = useVps();
   const vpsId = Number(vps.id);
-  const objectLabel = String((vps as any).hostname ?? '') || `#${vpsId}`;
+  const objectLabel = String((vps as LegacyAny).hostname ?? '') || `#${vpsId}`;
 
   const baseline = useMemo(() => normalizeDraft(vps), [vps]);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -380,7 +380,7 @@ export function VpsConfigurationPage() {
     refetchOnWindowFocus: false,
   });
 
-  const ownerId = resourceId((vps as any).user) ?? undefined;
+  const ownerId = resourceId((vps as LegacyAny).user) ?? undefined;
   const userNamespaceMapsQ = useQuery({
     queryKey: ['user_namespace_map', 'list', { limit: 250, userId: ownerId ?? null }],
     queryFn: async () => (await fetchUserNamespaceMaps({ limit: 250, userId: ownerId })).data,
@@ -439,7 +439,7 @@ export function VpsConfigurationPage() {
     return ensureCurrentOption(
       options,
       baseline.dnsResolver,
-      currentResourceLabel((vps as any).dns_resolver, t('vps.config.option.current_dns_resolver'))
+      currentResourceLabel((vps as LegacyAny).dns_resolver, t('vps.config.option.current_dns_resolver'))
     );
   }, [baseline.dnsResolver, dnsResolversQ.data, t, vps]);
 
@@ -448,7 +448,7 @@ export function VpsConfigurationPage() {
     const withCurrent = ensureCurrentOption(
       listed,
       baseline.userNamespaceMap,
-      currentResourceLabel((vps as any).user_namespace_map, t('vps.config.option.current_user_namespace_map'))
+      currentResourceLabel((vps as LegacyAny).user_namespace_map, t('vps.config.option.current_user_namespace_map'))
     );
     return withCurrent.length > 0 ? withCurrent : [{ value: '', label: t('vps.config.option.no_user_namespace_maps_available') }];
   }, [baseline.userNamespaceMap, t, userNamespaceMapsQ.data, vps]);
@@ -504,7 +504,7 @@ export function VpsConfigurationPage() {
       ) : null}
 
       {result.validationError ? <Alert variant="danger">{result.validationError}</Alert> : null}
-      {saveM.error ? <Alert variant="danger">{String((saveM.error as any)?.message ?? saveM.error)}</Alert> : null}
+      {saveM.error ? <Alert variant="danger">{String((saveM.error as LegacyAny)?.message ?? saveM.error)}</Alert> : null}
 
       <Card>
         <CardHeader title={t('vps.config.section.identity')} subtitle={t('vps.config.section.identity_help')} />
@@ -596,7 +596,7 @@ export function VpsConfigurationPage() {
             {dnsResolversQ.isLoading ? (
               <Spinner />
             ) : dnsResolversQ.isError ? (
-              <Alert variant="danger">{String((dnsResolversQ.error as any)?.message ?? dnsResolversQ.error)}</Alert>
+              <Alert variant="danger">{String((dnsResolversQ.error as LegacyAny)?.message ?? dnsResolversQ.error)}</Alert>
             ) : (
               <Select value={effective.dnsResolver} onChange={(e) => patchDraft({ dnsResolver: e.target.value })} disabled={saveM.isPending} options={dnsOptions} />
             )}
@@ -605,7 +605,7 @@ export function VpsConfigurationPage() {
             {userNamespaceMapsQ.isLoading ? (
               <Spinner />
             ) : userNamespaceMapsQ.isError ? (
-              <Alert variant="danger">{String((userNamespaceMapsQ.error as any)?.message ?? userNamespaceMapsQ.error)}</Alert>
+              <Alert variant="danger">{String((userNamespaceMapsQ.error as LegacyAny)?.message ?? userNamespaceMapsQ.error)}</Alert>
             ) : (
               <Select
                 value={effective.userNamespaceMap}

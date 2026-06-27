@@ -38,23 +38,23 @@ function pickedActionStateDebugPayload(s: ActionState): string {
   const keys = ['error', 'errors', 'exception', 'message', 'output', 'result', 'response', 'stderr', 'stdout', 'backtrace'];
   const picked: Record<string, unknown> = {};
   for (const key of keys) {
-    if (Object.prototype.hasOwnProperty.call(s as any, key)) picked[key] = (s as any)[key];
+    if (Object.prototype.hasOwnProperty.call(s as LegacyAny, key)) picked[key] = (s as LegacyAny)[key];
   }
   return Object.keys(picked).length > 0 ? safeJson(picked) : safeJson(s);
 }
 
 function firstCurrentTransactionId(transactions: Transaction[] | undefined): number | null {
   for (const tx of transactions ?? []) {
-    const txId = Number((tx as any).id);
+    const txId = Number((tx as LegacyAny).id);
     if (!Number.isFinite(txId) || txId <= 0) continue;
-    if (String((tx as any).done ?? '') !== 'done') return txId;
+    if (String((tx as LegacyAny).done ?? '') !== 'done') return txId;
   }
   return null;
 }
 
 function firstFailedTransactionId(transactions: Transaction[] | undefined): number | null {
   for (const tx of transactions ?? []) {
-    const txId = Number((tx as any).id);
+    const txId = Number((tx as LegacyAny).id);
     if (!Number.isFinite(txId) || txId <= 0) continue;
     if (transactionBadge(tx).variant === 'danger') return txId;
   }
@@ -76,10 +76,10 @@ export function ActionStateDetailPage() {
     queryKey: ['action_state', 'show', { id }],
     queryFn: async () => (await fetchActionState(id)).data,
     enabled: Number.isFinite(id) && id > 0,
-    refetchInterval: (data) => (data && isFinishedActionState(data as any) ? false : actionPollMs),
+    refetchInterval: (data) => (data && isFinishedActionState(data as LegacyAny) ? false : actionPollMs),
   });
 
-  const s = q.data as any as ActionState | undefined;
+  const s = q.data as LegacyAny as ActionState | undefined;
   const relatedChainId = s ? extractRelatedTransactionChainIdFromActionState(s) : null;
 
   const chainQ = useQuery({
@@ -181,10 +181,10 @@ export function ActionStateDetailPage() {
 
   const pinLabel = pinned ? t('tasks.action.unpin') : t('tasks.action.pin');
 
-  const createdAt = (s as any).created_at ? formatDateTime(String((s as any).created_at)) : null;
-  const updatedAt = (s as any).updated_at ? formatDateTime(String((s as any).updated_at)) : null;
+  const createdAt = (s as LegacyAny).created_at ? formatDateTime(String((s as LegacyAny).created_at)) : null;
+  const updatedAt = (s as LegacyAny).updated_at ? formatDateTime(String((s as LegacyAny).updated_at)) : null;
   const transactionIds = (txQ.data ?? [])
-    .map((tx) => Number((tx as any).id))
+    .map((tx) => Number((tx as LegacyAny).id))
     .filter((txId) => Number.isFinite(txId) && txId > 0);
   const currentTxId = firstCurrentTransactionId(txQ.data);
   const failedTxId = firstFailedTransactionId(txQ.data);
@@ -301,7 +301,7 @@ export function ActionStateDetailPage() {
             </div>
             <div>
               <span className="text-muted">{t('action_state.field.can_cancel')}:</span>{' '}
-              {Boolean((s as any).can_cancel) ? t('common.yes') : t('common.no')}
+              {Boolean((s as LegacyAny).can_cancel) ? t('common.yes') : t('common.no')}
             </div>
             {createdAt ? (
               <div>
@@ -329,7 +329,7 @@ export function ActionStateDetailPage() {
             </div>
           ) : null}
 
-          {Boolean((s as any).can_cancel) && !isFinishedActionState(s) ? (
+          {Boolean((s as LegacyAny).can_cancel) && !isFinishedActionState(s) ? (
             <div className="pt-4">
               <Button
                 variant="danger"
@@ -429,23 +429,23 @@ export function ActionStateDetailPage() {
                 </thead>
                 <tbody>
                   {(txQ.data ?? []).map((tx: Transaction) => {
-                    const txId = Number((tx as any).id);
+                    const txId = Number((tx as LegacyAny).id);
                     const hasTxId = Number.isFinite(txId) && txId > 0;
                     const badge = transactionBadge(tx);
                     const name = tx.name ? String(tx.name) : t('transactions.items.row.fallback_name');
-                    const nodeId = resourceId((tx as any).node);
-                    const vpsId = resourceId((tx as any).vps);
-                    const userId = resourceId((tx as any).user);
-                    const started = (tx as any).started_at as string | null | undefined;
-                    const finished = (tx as any).finished_at as string | null | undefined;
+                    const nodeId = resourceId((tx as LegacyAny).node);
+                    const vpsId = resourceId((tx as LegacyAny).vps);
+                    const userId = resourceId((tx as LegacyAny).user);
+                    const started = (tx as LegacyAny).started_at as string | null | undefined;
+                    const finished = (tx as LegacyAny).finished_at as string | null | undefined;
                     const sec = durationSec(started, finished);
                     const expanded = hasTxId && expandedTx.has(txId);
-                    const input = formatPayload((tx as any).input);
-                    const output = formatPayload((tx as any).output);
+                    const input = formatPayload((tx as LegacyAny).input);
+                    const output = formatPayload((tx as LegacyAny).output);
                     const errorText = transactionErrorText(tx);
-                    const progress = typeof (tx as any).progress === 'number' ? String((tx as any).progress) : null;
-                    const done = (tx as any).done ? String((tx as any).done) : null;
-                    const success = typeof (tx as any).success === 'number' ? String((tx as any).success) : null;
+                    const progress = typeof (tx as LegacyAny).progress === 'number' ? String((tx as LegacyAny).progress) : null;
+                    const done = (tx as LegacyAny).done ? String((tx as LegacyAny).done) : null;
+                    const success = typeof (tx as LegacyAny).success === 'number' ? String((tx as LegacyAny).success) : null;
                     const isCurrent = hasTxId && currentTxId === txId;
                     const isFailed = hasTxId && failedTxId === txId;
 
@@ -471,16 +471,16 @@ export function ActionStateDetailPage() {
                           <td className="px-4 py-2">
                             <div className="font-medium">{name}</div>
                             <div className="mt-1 text-xs text-muted">
-                              {typeof (tx as any).type === 'number' ? t('transactions.items.row.type_chip', { type: (tx as any).type }) : null}
+                              {typeof (tx as LegacyAny).type === 'number' ? t('transactions.items.row.type_chip', { type: (tx as LegacyAny).type }) : null}
                             </div>
                           </td>
                           <td className="px-4 py-2 text-xs">
                             {nodeId && basePath === '/admin' ? (
                               <Link className="text-accent hover:underline" to={`${basePath}/nodes/${nodeId}`}>
-                                {refLabel((tx as any).node) || `#${nodeId}`}
+                                {refLabel((tx as LegacyAny).node) || `#${nodeId}`}
                               </Link>
                             ) : nodeId ? (
-                              <span className="text-muted">{refLabel((tx as any).node) || `#${nodeId}`}</span>
+                              <span className="text-muted">{refLabel((tx as LegacyAny).node) || `#${nodeId}`}</span>
                             ) : (
                               <span className="text-faint">{t('common.na')}</span>
                             )}
@@ -488,13 +488,13 @@ export function ActionStateDetailPage() {
                           <td className="px-4 py-2 text-xs">
                             {vpsId ? (
                               <Link className="text-accent hover:underline" to={`${basePath}/vps/${vpsId}`}>
-                                {refLabel((tx as any).vps) || `#${vpsId}`}
+                                {refLabel((tx as LegacyAny).vps) || `#${vpsId}`}
                               </Link>
                             ) : (
                               <span className="text-faint">{t('common.na')}</span>
                             )}
                           </td>
-                          <td className="px-4 py-2 text-xs text-muted">{formatDateTime((tx as any).created_at)}</td>
+                          <td className="px-4 py-2 text-xs text-muted">{formatDateTime((tx as LegacyAny).created_at)}</td>
                           <td className="px-4 py-2 text-xs text-muted">{formatDateTime(started)}</td>
                           <td className="px-4 py-2 text-xs text-muted">{formatDateTime(finished)}</td>
                           <td className="px-4 py-2 text-xs text-muted">{success ?? t('common.na')}</td>
@@ -530,7 +530,7 @@ export function ActionStateDetailPage() {
                                   input={input}
                                   output={output}
                                   errorText={errorText}
-                                  source={tx as any}
+                                  source={tx as LegacyAny}
                                   raw={tx}
                                   maxHeightClass="max-h-80"
                                 />

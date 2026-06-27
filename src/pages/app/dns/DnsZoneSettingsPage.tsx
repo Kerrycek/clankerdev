@@ -31,15 +31,15 @@ export function DnsZoneSettingsPage() {
   const { zone, refetch: refetchZone, refetchChains, zoneRef, busyLocalLock, busyTransaction, concernClasses } =
     useDnsZoneContext();
 
-  const zoneLabelForToast = String((zone as any).name ?? (zone as any).label ?? `Zone #${zone.id}`);
+  const zoneLabelForToast = String((zone as LegacyAny).name ?? (zone as LegacyAny).label ?? `Zone #${zone.id}`);
 
   const zoneDefaults = useMemo(
     () => ({
-      label: String((zone as any).label ?? ''),
-      email: String((zone as any).email ?? ''),
-      defaultTtl: (zone as any).default_ttl != null ? String((zone as any).default_ttl) : '',
-      enabled: (zone as any).enabled !== false,
-      dnssec: (zone as any).dnssec_enabled === true,
+      label: String((zone as LegacyAny).label ?? ''),
+      email: String((zone as LegacyAny).email ?? ''),
+      defaultTtl: (zone as LegacyAny).default_ttl != null ? String((zone as LegacyAny).default_ttl) : '',
+      enabled: (zone as LegacyAny).enabled !== false,
+      dnssec: (zone as LegacyAny).dnssec_enabled === true,
     }),
     [zone]
   );
@@ -73,7 +73,7 @@ export function DnsZoneSettingsPage() {
       chrome.acquireLocalLock(zoneRef);
     },
     onSuccess: (r) => {
-      const asId = getMetaActionStateId((r as any)?.meta);
+      const asId = getMetaActionStateId((r as LegacyAny)?.meta);
       if (asId !== undefined) {
         chrome.trackActionState(asId, {
           actionLabelKey: 'action.dns.zone.update.label',
@@ -106,7 +106,7 @@ export function DnsZoneSettingsPage() {
       chrome.acquireLocalLock(zoneRef);
     },
     onSuccess: (r) => {
-      const asId = getMetaActionStateId((r as any)?.meta);
+      const asId = getMetaActionStateId((r as LegacyAny)?.meta);
       if (asId !== undefined) {
         chrome.trackActionState(asId, {
           actionLabelKey: 'action.dns.zone.delete.label',
@@ -284,7 +284,7 @@ export function DnsZoneSettingsPage() {
         ) : null}
         <div className="text-sm">
           {t('dns.zone.settings.delete_confirm.prompt', {
-            name: String((zone as any).name ?? (zone as any).label ?? zone.id),
+            name: String((zone as LegacyAny).name ?? (zone as LegacyAny).label ?? zone.id),
           })}
         </div>
       </ConfirmDialog>

@@ -130,10 +130,10 @@ export function VpsOverviewPage() {
     setSearchParams(next, { replace: true });
   };
 
-  const osLabel = (vps.os_template as any)?.label ?? (vps.os_template as any)?.name;
-  const dnsLabel = (vps.dns_resolver as any)?.label ?? (vps.dns_resolver as any)?.name;
-  const owner = (vps.user as any)?.login ?? (vps.user as any)?.id;
-  const ownerId = typeof (vps.user as any)?.id === 'number' ? (vps.user as any).id : null;
+  const osLabel = (vps.os_template as LegacyAny)?.label ?? (vps.os_template as LegacyAny)?.name;
+  const dnsLabel = (vps.dns_resolver as LegacyAny)?.label ?? (vps.dns_resolver as LegacyAny)?.name;
+  const owner = (vps.user as LegacyAny)?.login ?? (vps.user as LegacyAny)?.id;
+  const ownerId = typeof (vps.user as LegacyAny)?.id === 'number' ? (vps.user as LegacyAny).id : null;
 
   const chainsQ = useQuery({
     queryKey: ['transaction_chains', 'list', { className: 'Vps', rowId: vps.id, limit: 5 }],
@@ -262,16 +262,16 @@ export function VpsOverviewPage() {
       return <div className="text-sm text-muted">{t('vps.overview.metrics.empty')}</div>;
     }
 
-    const memUsedNow = (metricsLast as any)?.used_memory ?? (vps as any).used_memory;
-    const memTotal = (metricsLast as any)?.total_memory ?? (vps as any).memory;
+    const memUsedNow = (metricsLast as LegacyAny)?.used_memory ?? (vps as LegacyAny).used_memory;
+    const memTotal = (metricsLast as LegacyAny)?.total_memory ?? (vps as LegacyAny).memory;
     const memPct = safePercent(memUsedNow, memTotal);
 
-    const diskUsedNow = (metricsLast as any)?.used_diskspace ?? (vps as any).used_diskspace;
-    const diskTotal = (metricsLast as any)?.total_diskspace ?? (vps as any).diskspace;
+    const diskUsedNow = (metricsLast as LegacyAny)?.used_diskspace ?? (vps as LegacyAny).used_diskspace;
+    const diskTotal = (metricsLast as LegacyAny)?.total_diskspace ?? (vps as LegacyAny).diskspace;
     const diskPct = safePercent(diskUsedNow, diskTotal);
 
-    const loadNow1 = (metricsLast as any)?.loadavg1 ?? (vps as any).loadavg1;
-    const loadNow5 = (metricsLast as any)?.loadavg5 ?? (vps as any).loadavg5;
+    const loadNow1 = (metricsLast as LegacyAny)?.loadavg1 ?? (vps as LegacyAny).loadavg1;
+    const loadNow5 = (metricsLast as LegacyAny)?.loadavg5 ?? (vps as LegacyAny).loadavg5;
 
     return (
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-4" data-testid="vps.overview.metrics.grid">
@@ -381,10 +381,10 @@ export function VpsOverviewPage() {
             ),
           )}
           {field(t('vps.overview.config.cpu'), typeof vps.cpu === 'number' ? `${vps.cpu} vCPU` : '—')}
-          {field(t('vps.overview.config.memory'), formatMiB(vps.memory as any))}
-          {field(t('vps.overview.config.swap'), formatMiB(vps.swap as any))}
-          {field(t('vps.overview.config.diskspace'), formatMiB(vps.diskspace as any))}
-          {field(t('vps.overview.config.created'), formatDateTime(vps.created_at as any))}
+          {field(t('vps.overview.config.memory'), formatMiB(vps.memory as LegacyAny))}
+          {field(t('vps.overview.config.swap'), formatMiB(vps.swap as LegacyAny))}
+          {field(t('vps.overview.config.diskspace'), formatMiB(vps.diskspace as LegacyAny))}
+          {field(t('vps.overview.config.created'), formatDateTime(vps.created_at as LegacyAny))}
         </CardBody>
       </Card>
 
@@ -395,7 +395,7 @@ export function VpsOverviewPage() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <div className="text-xs text-faint">{t('vps.overview.usage.uptime')}</div>
-                <div className="text-sm font-medium text-fg">{formatDurationSeconds(vps.uptime as any) ?? '—'}</div>
+                <div className="text-sm font-medium text-fg">{formatDurationSeconds(vps.uptime as LegacyAny) ?? '—'}</div>
               </div>
               <div>
                 <div className="text-xs text-faint">{t('vps.overview.usage.load')}</div>
@@ -407,20 +407,20 @@ export function VpsOverviewPage() {
               <UsageMetric
                 testId="vps.overview.usage.memory"
                 label={t('vps.overview.usage.memory_used')}
-                used={(vps as any).used_memory}
-                max={(vps as any).memory}
+                used={(vps as LegacyAny).used_memory}
+                max={(vps as LegacyAny).memory}
               />
               <UsageMetric
                 testId="vps.overview.usage.swap"
                 label={t('vps.overview.usage.swap_used')}
-                used={(vps as any).used_swap}
-                max={(vps as any).swap}
+                used={(vps as LegacyAny).used_swap}
+                max={(vps as LegacyAny).swap}
               />
               <UsageMetric
                 testId="vps.overview.usage.disk"
                 label={t('vps.overview.usage.disk_used')}
-                used={(vps as any).used_diskspace}
-                max={(vps as any).diskspace}
+                used={(vps as LegacyAny).used_diskspace}
+                max={(vps as LegacyAny).diskspace}
               />
             </div>
           </div>
@@ -432,9 +432,9 @@ export function VpsOverviewPage() {
           kind="vps"
           id={vps.id}
           objectLabel={vps.hostname}
-          objectState={(vps as any).object_state as any}
-          expirationDate={(vps as any).expiration_date as any}
-          remindAfterDate={(vps as any).remind_after_date as any}
+          objectState={(vps as LegacyAny).object_state as LegacyAny}
+          expirationDate={(vps as LegacyAny).expiration_date as LegacyAny}
+          remindAfterDate={(vps as LegacyAny).remind_after_date as LegacyAny}
           onUpdated={refetch}
           testId="vps.overview.lifecycle"
         />

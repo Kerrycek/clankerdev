@@ -19,7 +19,7 @@ function baseBlockers(ctx: VpsGateContext): GateDecision | null {
     return deny({ titleKey: 'gate.busy.transaction.title', descriptionKey: 'gate.busy.transaction.body' });
   }
 
-  const st = String((ctx.vps as any).object_state ?? '').toLowerCase().trim();
+  const st = String((ctx.vps as LegacyAny).object_state ?? '').toLowerCase().trim();
   if (!st) {
     return deny({
       titleKey: 'gate.blocked.vps.unknown_state.title',
@@ -58,7 +58,7 @@ export function gateVpsAction(action: 'start' | 'stop' | 'restart' | 'passwd', c
   const base = baseBlockers(ctx);
   if (base) return base;
 
-  const runningRaw = (ctx.vps as any).is_running as unknown;
+  const runningRaw = (ctx.vps as LegacyAny).is_running as unknown;
   const runningKnown = runningRaw === true || runningRaw === false;
 
   if ((action === 'start' || action === 'stop' || action === 'restart') && !runningKnown) {

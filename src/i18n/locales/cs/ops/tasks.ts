@@ -24,6 +24,7 @@ export const csOps_tasks = {
   "tasks.error.load_chains": "Nepodařilo se načíst transakční řetězce",
   "tasks.error.load_items": "Nepodařilo se načíst transakce",
   "tasks.filter.placeholder": "Filtrovat úlohy…",
+  "tasks.filter.label": "Filtrovat úlohy",
   "tasks.inspect.action_state_id": "ID stavu akce",
   "tasks.inspect.backend_details": "Detaily / výstup z backendu",
   "tasks.inspect.collapse_all": "Sbalit vše",

@@ -27,7 +27,7 @@ test.describe('@smoke Admin user history', () => {
               id: 5001,
               created_at: '2026-02-10T12:00:00.000Z',
               event_type: 'user.update',
-              user: { id: 1, login: 'admin' },
+              user: { id: 42, login: 'alice' },
               user_session: { id: 100, api_ip_addr: '1.2.3.4' },
               object: 'User',
               object_id: 42,

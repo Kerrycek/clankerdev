@@ -54,10 +54,10 @@ export function OomReportLayout() {
 
     const createdAt = r.created_at ? formatDateTime(r.created_at) : t('common.na');
 
-    const vpsIdRow = (r.vps as any)?.id ? Number((r.vps as any).id) : undefined;
-    const vpsHost = (r.vps as any)?.hostname ? String((r.vps as any).hostname) : undefined;
+    const vpsIdRow = (r.vps as LegacyAny)?.id ? Number((r.vps as LegacyAny).id) : undefined;
+    const vpsHost = (r.vps as LegacyAny)?.hostname ? String((r.vps as LegacyAny).hostname) : undefined;
 
-    const nodeName = (r.vps as any)?.node?.domain_name ? String((r.vps as any).node.domain_name) : undefined;
+    const nodeName = (r.vps as LegacyAny)?.node?.domain_name ? String((r.vps as LegacyAny).node.domain_name) : undefined;
 
     const killed = r.killed_name ? `${r.killed_name}${r.killed_pid ? ` (${r.killed_pid})` : ''}` : '—';
     const invoked = r.invoked_by_name ? `${r.invoked_by_name}${r.invoked_by_pid ? ` (${r.invoked_by_pid})` : ''}` : '—';
@@ -118,9 +118,9 @@ export function OomReportLayout() {
     );
   }
 
-  const action = (r.oom_report_rule as any)?.action ? String((r.oom_report_rule as any).action) : undefined;
+  const action = (r.oom_report_rule as LegacyAny)?.action ? String((r.oom_report_rule as LegacyAny).action) : undefined;
 
-  const vpsIdRow = (r.vps as any)?.id ? Number((r.vps as any).id) : undefined;
+  const vpsIdRow = (r.vps as LegacyAny)?.id ? Number((r.vps as LegacyAny).id) : undefined;
 
   const tabs = [
     { label: t('oom.detail.tab.overview'), to: `${basePath}/oom-reports/${id}` },

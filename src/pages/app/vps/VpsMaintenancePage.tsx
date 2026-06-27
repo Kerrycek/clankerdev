@@ -133,7 +133,7 @@ export function VpsMaintenancePage() {
 
   const { vps, refetchChains, vpsRef, busyTransaction, busyLocalLock } = useVps();
   const vpsId = vps.id;
-  const objectLabel = String((vps as any).hostname ?? '') || `#${vpsId}`;
+  const objectLabel = String((vps as LegacyAny).hostname ?? '') || `#${vpsId}`;
 
   const q = useQuery({
     queryKey: ['vps', vpsId, 'maintenance_windows'],
@@ -144,8 +144,8 @@ export function VpsMaintenancePage() {
   const baselineByWeekday = useMemo(() => {
     const map = new Map<number, VpsMaintenanceWindow>();
     for (const w of q.data ?? []) {
-      if (typeof (w as any).weekday !== 'number') continue;
-      map.set((w as any).weekday, w);
+      if (typeof (w as LegacyAny).weekday !== 'number') continue;
+      map.set((w as LegacyAny).weekday, w);
     }
     return map;
   }, [q.data]);
@@ -205,7 +205,7 @@ export function VpsMaintenancePage() {
         }
 
         const r = await updateVpsMaintenanceWindow(vpsId, d.weekday, params);
-        results.push({ weekday: d.weekday, meta: (r as any).meta });
+        results.push({ weekday: d.weekday, meta: (r as LegacyAny).meta });
       }
 
       return results;
@@ -336,7 +336,7 @@ export function VpsMaintenancePage() {
               </div>
             ) : q.error ? (
               <Alert title={t('vps.maintenance.load_error')} variant="danger" className="mt-4">
-                {String((q.error as any)?.message ?? q.error)}
+                {String((q.error as LegacyAny)?.message ?? q.error)}
               </Alert>
             ) : (
               <div className="mt-4 overflow-x-auto">
@@ -419,7 +419,7 @@ export function VpsMaintenancePage() {
 
             {saveM.error ? (
               <Alert title={t('vps.maintenance.save_error')} variant="danger" className="mt-4">
-                {String((saveM.error as any)?.message ?? saveM.error)}
+                {String((saveM.error as LegacyAny)?.message ?? saveM.error)}
               </Alert>
             ) : null}
           </div>

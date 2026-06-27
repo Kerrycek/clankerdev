@@ -39,7 +39,7 @@ describe('gateVpsAction', () => {
   });
 
   it('blocks power actions when runtime is unknown', () => {
-    const r = gateVpsAction('start', { vps: { ...baseVps, is_running: undefined as any } });
+    const r = gateVpsAction('start', { vps: { ...baseVps, is_running: undefined as LegacyAny } });
     expect(r.allowed).toBe(false);
     if (!r.allowed) {
       expect(r.reason.titleKey).toBe('gate.blocked.vps.unknown_state.title');

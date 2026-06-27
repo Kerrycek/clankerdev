@@ -47,9 +47,9 @@ function recordName(r: DnsRecord): string {
 
 function recordDynamicEnabled(r: DnsRecord): boolean {
   // Historical e2e fixtures used `dynamic`; production uses `dynamic_update_enabled`.
-  const v = (r as any).dynamic_update_enabled;
+  const v = (r as LegacyAny).dynamic_update_enabled;
   if (v !== undefined) return v === true;
-  return (r as any).dynamic === true;
+  return (r as LegacyAny).dynamic === true;
 }
 
 export function DnsZoneRecordsPage() {
@@ -68,7 +68,7 @@ export function DnsZoneRecordsPage() {
       <Badge variant="warn">{t('common.disabled')}</Badge>
     );
 
-  const zoneLabelForToast = String((zone as any).name ?? (zone as any).label ?? `Zone #${zone.id}`);
+  const zoneLabelForToast = String((zone as LegacyAny).name ?? (zone as LegacyAny).label ?? `Zone #${zone.id}`);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [qstr, setQstr] = useState(() => searchParams.get('q') ?? '');
@@ -140,7 +140,7 @@ export function DnsZoneRecordsPage() {
       chrome.acquireLocalLock(zoneRef);
     },
     onSuccess: (r) => {
-      const asId = getMetaActionStateId((r as any)?.meta);
+      const asId = getMetaActionStateId((r as LegacyAny)?.meta);
       if (asId !== undefined) {
         chrome.trackActionState(asId, {
           actionLabelKey: 'action.dns.record.create.label',
@@ -187,7 +187,7 @@ export function DnsZoneRecordsPage() {
       chrome.acquireLocalLock(zoneRef);
     },
     onSuccess: (r) => {
-      const asId = getMetaActionStateId((r as any)?.meta);
+      const asId = getMetaActionStateId((r as LegacyAny)?.meta);
       if (asId !== undefined) {
         chrome.trackActionState(asId, {
           actionLabelKey: 'action.dns.record.update.label',
@@ -218,7 +218,7 @@ export function DnsZoneRecordsPage() {
       chrome.acquireLocalLock(zoneRef);
     },
     onSuccess: (r) => {
-      const asId = getMetaActionStateId((r as any)?.meta);
+      const asId = getMetaActionStateId((r as LegacyAny)?.meta);
       if (asId !== undefined) {
         chrome.trackActionState(asId, {
           actionLabelKey: 'action.dns.record.delete.label',
@@ -244,7 +244,7 @@ export function DnsZoneRecordsPage() {
     typeof recordsQ.data?.meta?.['total_count'] === 'number' ? Number(recordsQ.data.meta['total_count']) : pageData.length;
   const rows = pageData;
 
-  const pageCursor = useMemo(() => cursorFromDescendingPage(pageData as any), [pageData]);
+  const pageCursor = useMemo(() => cursorFromDescendingPage(pageData as LegacyAny), [pageData]);
   const hasMore = pageData.length >= pagination.limit;
   const filtersActive = Boolean(qstr.trim());
 

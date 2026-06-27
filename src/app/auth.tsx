@@ -74,9 +74,9 @@ export function AuthProvider(props: { children: React.ReactNode; nextPath: strin
     const currentCfg = getRuntimeConfig();
     clearStoredOAuthToken(currentCfg.oauth2.storage);
 
-    if ((window as any).vpsAdmin) {
-      (window as any).vpsAdmin.accessToken = undefined;
-      (window as any).vpsAdmin.sessionToken = undefined;
+    if ((window as LegacyAny).vpsAdmin) {
+      (window as LegacyAny).vpsAdmin.accessToken = undefined;
+      (window as LegacyAny).vpsAdmin.sessionToken = undefined;
     }
 
     setSessionExpired(true);

@@ -35,10 +35,10 @@ export function OomReportOverviewPage() {
     queryFn: async () => (await fetchOomReportUsages(report.id, { limit: 50 })).data,
   });
 
-  const action = (report.oom_report_rule as any)?.action ? String((report.oom_report_rule as any).action) : undefined;
+  const action = (report.oom_report_rule as LegacyAny)?.action ? String((report.oom_report_rule as LegacyAny).action) : undefined;
 
   const ruleMeta = useMemo(() => {
-    const rule = report.oom_report_rule as any;
+    const rule = report.oom_report_rule as LegacyAny;
     if (!rule) {
       return (
         <div className="flex items-center gap-2">

@@ -55,16 +55,16 @@ export function IncidentReportDetailPage() {
     const det = r.detected_at ? formatDateTime(r.detected_at) : t('common.na');
     const rep = r.reported_at ? formatDateTime(r.reported_at) : t('common.na');
 
-    const vpsIdRow = (r.vps as any)?.id ? Number((r.vps as any).id) : undefined;
-    const vpsHost = (r.vps as any)?.hostname ? String((r.vps as any).hostname) : undefined;
+    const vpsIdRow = (r.vps as LegacyAny)?.id ? Number((r.vps as LegacyAny).id) : undefined;
+    const vpsHost = (r.vps as LegacyAny)?.hostname ? String((r.vps as LegacyAny).hostname) : undefined;
 
-    const userIdRow = (r.user as any)?.id ? Number((r.user as any).id) : undefined;
-    const userLogin = (r.user as any)?.login ? String((r.user as any).login) : undefined;
+    const userIdRow = (r.user as LegacyAny)?.id ? Number((r.user as LegacyAny).id) : undefined;
+    const userLogin = (r.user as LegacyAny)?.login ? String((r.user as LegacyAny).login) : undefined;
 
-    const filedId = (r.filed_by as any)?.id ? Number((r.filed_by as any).id) : undefined;
-    const filedLogin = (r.filed_by as any)?.login ? String((r.filed_by as any).login) : undefined;
+    const filedId = (r.filed_by as LegacyAny)?.id ? Number((r.filed_by as LegacyAny).id) : undefined;
+    const filedLogin = (r.filed_by as LegacyAny)?.login ? String((r.filed_by as LegacyAny).login) : undefined;
 
-    const ip = (r.ip_address_assignment as any)?.ip_addr ? String((r.ip_address_assignment as any).ip_addr) : undefined;
+    const ip = (r.ip_address_assignment as LegacyAny)?.ip_addr ? String((r.ip_address_assignment as LegacyAny).ip_addr) : undefined;
 
     const action = String(r.vps_action ?? 'none');
     const cpu = typeof r.cpu_limit === 'number' && Number.isFinite(r.cpu_limit) ? Math.floor(r.cpu_limit) : null;
@@ -134,8 +134,8 @@ export function IncidentReportDetailPage() {
 
   const action = String(r.vps_action ?? 'none');
 
-  const vpsIdRow = (r.vps as any)?.id ? Number((r.vps as any).id) : undefined;
-  const vpsHost = (r.vps as any)?.hostname ? String((r.vps as any).hostname) : undefined;
+  const vpsIdRow = (r.vps as LegacyAny)?.id ? Number((r.vps as LegacyAny).id) : undefined;
+  const vpsHost = (r.vps as LegacyAny)?.hostname ? String((r.vps as LegacyAny).hostname) : undefined;
 
   const titleAfter = action !== 'none' ? <Badge variant={vpsActionVariant(action)}>{t(vpsActionLabelKey(action))}</Badge> : undefined;
 
@@ -200,9 +200,9 @@ export function IncidentReportDetailPage() {
                   <div>
                     <div className="text-xs text-muted">{t('common.user')}</div>
                     <div className="mt-0.5 text-sm">
-                      {(r.user as any)?.id ? (
-                        <ChipLink to={`${basePath}/users/${Number((r.user as any).id)}`}>
-                          {String((r.user as any).login ?? `#${Number((r.user as any).id)}`)}
+                      {(r.user as LegacyAny)?.id ? (
+                        <ChipLink to={`${basePath}/users/${Number((r.user as LegacyAny).id)}`}>
+                          {String((r.user as LegacyAny).login ?? `#${Number((r.user as LegacyAny).id)}`)}
                         </ChipLink>
                       ) : (
                         t('common.na')
@@ -213,9 +213,9 @@ export function IncidentReportDetailPage() {
                   <div>
                     <div className="text-xs text-muted">{t('incidents.field.mailbox')}</div>
                     <div className="mt-0.5 text-sm">
-                      {(r.mailbox as any)?.id ? (
-                        <ChipLink to={`${basePath}/mailer/mailboxes/${Number((r.mailbox as any).id)}`}>
-                          {String((r.mailbox as any).label ?? `#${Number((r.mailbox as any).id)}`)}
+                      {(r.mailbox as LegacyAny)?.id ? (
+                        <ChipLink to={`${basePath}/mailer/mailboxes/${Number((r.mailbox as LegacyAny).id)}`}>
+                          {String((r.mailbox as LegacyAny).label ?? `#${Number((r.mailbox as LegacyAny).id)}`)}
                         </ChipLink>
                       ) : (
                         t('common.na')
@@ -241,8 +241,8 @@ export function IncidentReportDetailPage() {
               <div>
                 <div className="text-xs text-muted">{t('incidents.field.ip')}</div>
                 <div className="mt-0.5 font-mono text-xs">
-                  {(r.ip_address_assignment as any)?.ip_addr
-                    ? String((r.ip_address_assignment as any).ip_addr)
+                  {(r.ip_address_assignment as LegacyAny)?.ip_addr
+                    ? String((r.ip_address_assignment as LegacyAny).ip_addr)
                     : t('common.na')}
                 </div>
               </div>

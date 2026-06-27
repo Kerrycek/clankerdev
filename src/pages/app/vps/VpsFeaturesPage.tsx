@@ -17,7 +17,7 @@ import { preflightVpsNotBusy } from './vpsPreflight';
 import { useVps } from './VpsContext';
 
 function featureLabel(f: VpsFeature): string {
-  return (f.label as any) ?? f.name;
+  return (f.label as LegacyAny) ?? f.name;
 }
 
 function mapFeatures(list: VpsFeature[] | undefined): Record<string, boolean> {
@@ -45,7 +45,7 @@ export function VpsFeaturesPage() {
 
   const { vps, refetchChains, vpsRef, busyTransaction, busyLocalLock } = useVps();
   const vpsId = vps.id;
-  const objectLabel = String((vps as any).hostname ?? '') || `#${vpsId}`;
+  const objectLabel = String((vps as LegacyAny).hostname ?? '') || `#${vpsId}`;
 
   const q = useQuery({
     queryKey: ['vps_feature', 'list', { vpsId }],
@@ -167,7 +167,7 @@ export function VpsFeaturesPage() {
             </div>
           ) : q.error ? (
             <Alert title={t('vps.features.load_error')} variant="danger" className={!gate.allowed ? 'mt-4' : ''}>
-              {String((q.error as any)?.message ?? q.error)}
+              {String((q.error as LegacyAny)?.message ?? q.error)}
             </Alert>
           ) : list.length === 0 ? (
             <div className={!gate.allowed ? 'mt-4' : ''}>
@@ -198,7 +198,7 @@ export function VpsFeaturesPage() {
           {dirty ? <div className="mt-3 text-xs text-muted">{t('vps.features.unsaved', { n: dirtyCount })}</div> : null}
           {m.error ? (
             <Alert title={t('vps.features.apply_error')} variant="danger" className="mt-3">
-              {String((m.error as any)?.message ?? m.error)}
+              {String((m.error as LegacyAny)?.message ?? m.error)}
             </Alert>
           ) : null}
         </CardBody>

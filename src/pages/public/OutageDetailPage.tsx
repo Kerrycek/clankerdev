@@ -84,9 +84,9 @@ export function OutageDetailPage() {
   }
 
   const summary =
-    pickTranslation(outage as any, 'summary', langs) ??
+    pickTranslation(outage as LegacyAny, 'summary', langs) ??
     i18n.t('public.outage.fallback_title', { id: outage.id });
-  const description = pickTranslation(outage as any, 'description', langs);
+  const description = pickTranslation(outage as LegacyAny, 'description', langs);
   const now = new Date();
   const badges = outageBadges(outage, i18n.t, now);
   const dotVariant = dotVariantFromBadgeVariant(badges.primaryVariant);
@@ -108,10 +108,10 @@ export function OutageDetailPage() {
         <div className="text-sm text-muted">
           {i18n.t('public.outage.field.begins')}: {formatDateTime(outage.begins_at)}
           {outage.duration != null
-            ? ` · ${i18n.t('public.outage.field.duration')}: ${formatDurationMinutes(outage.duration as any)}`
+            ? ` · ${i18n.t('public.outage.field.duration')}: ${formatDurationMinutes(outage.duration as LegacyAny)}`
             : ''}
           {outage.finished_at
-            ? ` · ${i18n.t('public.outage.field.finished')}: ${formatDateTime(outage.finished_at as any)}`
+            ? ` · ${i18n.t('public.outage.field.finished')}: ${formatDateTime(outage.finished_at as LegacyAny)}`
             : ''}
         </div>
       </div>
@@ -197,8 +197,8 @@ export function OutageDetailPage() {
           ) : (
             <div className="space-y-4">
               {updates.map((u) => {
-                const uSummary = pickTranslation(u as any, 'summary', langs);
-                const uDescription = pickTranslation(u as any, 'description', langs);
+                const uSummary = pickTranslation(u as LegacyAny, 'summary', langs);
+                const uDescription = pickTranslation(u as LegacyAny, 'description', langs);
 
                 const ub = outageUpdateBadges(u, i18n.t, now);
                 const uDotVariant = dotVariantFromBadgeVariant(ub.primaryVariant);
@@ -229,10 +229,10 @@ export function OutageDetailPage() {
                       {i18n.t('public.outage_detail.updates.reported')}: {formatDateTime(u.created_at)}
                       {u.begins_at ? ` · ${i18n.t('public.outage.field.begins')}: ${formatDateTime(u.begins_at)}` : ''}
                       {u.duration != null
-                        ? ` · ${i18n.t('public.outage.field.duration')}: ${formatDurationMinutes(u.duration as any)}`
+                        ? ` · ${i18n.t('public.outage.field.duration')}: ${formatDurationMinutes(u.duration as LegacyAny)}`
                         : ''}
                       {u.finished_at
-                        ? ` · ${i18n.t('public.outage.field.finished')}: ${formatDateTime(u.finished_at as any)}`
+                        ? ` · ${i18n.t('public.outage.field.finished')}: ${formatDateTime(u.finished_at as LegacyAny)}`
                         : ''}
                     </div>
                     {uDescription ? (

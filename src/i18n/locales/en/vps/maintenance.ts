@@ -1,0 +1,23 @@
+// VPS locale chunk: maintenance
+export const enVps_maintenance = {
+  'vps.maintenance.title': 'Maintenance window',
+  'vps.maintenance.subtitle_basic': 'Choose when maintenance operations are allowed.',
+  'vps.maintenance.subtitle_advanced': 'Configure a weekly maintenance schedule for this VPS.',
+  'vps.maintenance.save_changes': 'Save ({n})',
+  'vps.maintenance.save_changes_empty': 'Save',
+  'vps.maintenance.unsaved': 'Unsaved days: {n}',
+  'vps.maintenance.saved': 'No unsaved changes.',
+  'vps.maintenance.allow_anytime': 'Allow anytime',
+  'vps.maintenance.disallow_all': 'Disallow all',
+  'vps.maintenance.load_error': 'Failed to load maintenance windows.',
+  'vps.maintenance.save_error': 'Failed to save maintenance windows.',
+  'vps.maintenance.field.day': 'Day',
+  'vps.maintenance.field.open': 'Open',
+  'vps.maintenance.field.opens': 'Opens',
+  'vps.maintenance.field.closes': 'Closes',
+  'vps.maintenance.field.summary': 'Summary',
+  'vps.maintenance.open': 'Open',
+  'vps.maintenance.closed': 'Closed',
+  'vps.maintenance.summary_open': '{opens}–{closes}',
+  'vps.maintenance.summary_closed': 'Closed',
+} as const;

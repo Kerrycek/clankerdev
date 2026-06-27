@@ -80,7 +80,7 @@ export function AuditEventPage() {
     queryFn: async () => (await fetchObjectHistoryEvent(historyId as number)).data,
   });
 
-  const ev = q.data as any;
+  const ev = q.data as LegacyAny;
   const createdAt = typeof ev?.created_at === 'string' ? ev.created_at : undefined;
 
   const userId = refId(ev?.user);

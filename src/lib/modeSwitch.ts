@@ -35,6 +35,8 @@ function rewriteAdminPathForUserScope(rest: string): string {
   if (matchesPathPrefix(rest, '/payments/incoming')) return '/payments';
 
   const adminOnlyPrefixes = [
+    '/outages',
+    '/requests',
     '/nodes',
     '/migration-plans',
     '/admin-info',

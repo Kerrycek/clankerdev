@@ -104,7 +104,7 @@ export function MailRecipientsPage() {
   });
 
   const rows: MailRecipient[] = listQ.data ?? [];
-  const pageCursor = useMemo(() => cursorFromDescendingPage(rows as any), [rows]);
+  const pageCursor = useMemo(() => cursorFromDescendingPage(rows as LegacyAny), [rows]);
   const hasMore = rows.length >= pagination.limit;
   const canNext = pagination.hasForward || (hasMore && pageCursor !== null);
   const canPaginate = pagination.stack.length > 1 || rows.length > 0;
@@ -146,7 +146,7 @@ export function MailRecipientsPage() {
       const firstToken = tokens[0];
       const id = firstToken ? parseNumericToken(firstToken) : null;
       if (id !== null) {
-        const exact = rows.find((r) => Number((r as any).id) === id);
+        const exact = rows.find((r) => Number((r as LegacyAny).id) === id);
         if (exact) {
           openEdit(exact);
           setSmart('');
@@ -182,7 +182,7 @@ export function MailRecipientsPage() {
         const id = parseNumericToken(value);
         if (id === null) nextErrors.push(t('mailer.recipients.smart.error.id_numeric_only', { value }));
         else {
-          const exact = rows.find((r) => Number((r as any).id) === id);
+          const exact = rows.find((r) => Number((r as LegacyAny).id) === id);
           if (exact) {
             openEdit(exact);
             setSmart('');
@@ -223,7 +223,7 @@ export function MailRecipientsPage() {
     }
     const numeric = parseNumericToken(smartNeedle);
     if (numeric !== null) {
-      const exact = rows.find((r) => Number((r as any).id) === numeric);
+      const exact = rows.find((r) => Number((r as LegacyAny).id) === numeric);
       if (exact) {
         s.push({
           id: 'edit',
@@ -288,10 +288,10 @@ export function MailRecipientsPage() {
   const openEdit = (r: MailRecipient) => {
     setEditing(r);
     setForm({
-      label: String((r as any).label ?? ''),
-      to: String((r as any).to ?? ''),
-      cc: String((r as any).cc ?? ''),
-      bcc: String((r as any).bcc ?? ''),
+      label: String((r as LegacyAny).label ?? ''),
+      to: String((r as LegacyAny).to ?? ''),
+      cc: String((r as LegacyAny).cc ?? ''),
+      bcc: String((r as LegacyAny).bcc ?? ''),
     });
     setEditorOpen(true);
   };
@@ -313,7 +313,7 @@ export function MailRecipientsPage() {
   const updateM = useMutation({
     mutationFn: async () => {
       if (!editing) throw new Error('no recipient');
-      const id = Number((editing as any).id);
+      const id = Number((editing as LegacyAny).id);
       return (
         await updateMailRecipient(id, {
           label: form.label.trim() || undefined,
@@ -545,11 +545,11 @@ export function MailRecipientsPage() {
           {/* Mobile */}
           <div className="grid gap-3 md:hidden">
             {rows.map((r) => {
-              const id = Number((r as any).id);
-              const label = String((r as any).label ?? `#${id}`);
-              const to = String((r as any).to ?? '');
-              const cc = String((r as any).cc ?? '');
-              const bcc = String((r as any).bcc ?? '');
+              const id = Number((r as LegacyAny).id);
+              const label = String((r as LegacyAny).label ?? `#${id}`);
+              const to = String((r as LegacyAny).to ?? '');
+              const cc = String((r as LegacyAny).cc ?? '');
+              const bcc = String((r as LegacyAny).bcc ?? '');
 
               return (
                 <Card key={id} className="p-4" testId={`admin.mailer.recipients.card.${id}`}>
@@ -577,7 +577,7 @@ export function MailRecipientsPage() {
                       </Button>
                     </div>
                   </div>
-                  <div className="mt-3 text-xs text-faint">{formatDateTime((r as any).updated_at)}</div>
+                  <div className="mt-3 text-xs text-faint">{formatDateTime((r as LegacyAny).updated_at)}</div>
                 </Card>
               );
             })}
@@ -636,11 +636,11 @@ export function MailRecipientsPage() {
             </thead>
             <tbody>
               {rows.map((r) => {
-                const id = Number((r as any).id);
-                const label = String((r as any).label ?? `#${id}`);
-                const to = String((r as any).to ?? '');
-                const cc = String((r as any).cc ?? '');
-                const bcc = String((r as any).bcc ?? '');
+                const id = Number((r as LegacyAny).id);
+                const label = String((r as LegacyAny).label ?? `#${id}`);
+                const to = String((r as LegacyAny).to ?? '');
+                const cc = String((r as LegacyAny).cc ?? '');
+                const bcc = String((r as LegacyAny).bcc ?? '');
 
                 return (
                   <tr key={id} className="border-b border-border" data-testid={`admin.mailer.recipients.row.${id}`}>
@@ -654,7 +654,7 @@ export function MailRecipientsPage() {
                     <td className="max-w-sm truncate px-4 py-2 text-sm font-mono" title={bcc}>
                       {bcc || <span className="text-muted">{t('common.na')}</span>}
                     </td>
-                    <td className="px-4 py-2 text-sm">{formatDateTime((r as any).updated_at)}</td>
+                    <td className="px-4 py-2 text-sm">{formatDateTime((r as LegacyAny).updated_at)}</td>
                     <td className="px-4 py-2 text-right">
                       <div className="flex justify-end gap-2">
                         <Button variant="secondary" size="sm" onClick={() => openEdit(r)} testId={`admin.mailer.recipients.edit.${id}`}>
@@ -719,7 +719,7 @@ export function MailRecipientsPage() {
 
           {(createM.isError || updateM.isError) ? (
             <Alert variant="danger" title={t('mailer.recipients.editor.save_error')}>
-              {String(((createM.error || updateM.error) as any)?.message ?? createM.error ?? updateM.error)}
+              {String(((createM.error || updateM.error) as LegacyAny)?.message ?? createM.error ?? updateM.error)}
             </Alert>
           ) : null}
         </div>

@@ -57,7 +57,7 @@ function sortedHandlers(list: MailboxHandler[]): MailboxHandler[] {
  * IMPORTANT: do not sort here. Reordering is expressed by array order.
  */
 function normalizeHandlerOrders(list: MailboxHandler[]): Array<MailboxHandler & { order: number }> {
-  return list.map((h, i) => ({ ...(h as any), order: i + 1 }));
+  return list.map((h, i) => ({ ...(h as LegacyAny), order: i + 1 }));
 }
 
 const KNOWN_HANDLER_SUGGESTIONS: Array<{ class_name: string; labelKey: string }> = [
@@ -88,16 +88,16 @@ export function MailboxDetailPage() {
     staleTime: 10_000,
   });
 
-  const mailbox: Mailbox | null = (mailboxQ.data as any) ?? null;
-  const label = String((mailbox as any)?.label ?? (id ? `#${id}` : ''));
-  const server = String((mailbox as any)?.server ?? '');
-  const port = Number((mailbox as any)?.port ?? 0);
-  const user = String((mailbox as any)?.user ?? '');
-  const ssl = Boolean((mailbox as any)?.enable_ssl);
-  const createdAt = (mailbox as any)?.created_at;
-  const updatedAt = (mailbox as any)?.updated_at;
+  const mailbox: Mailbox | null = (mailboxQ.data as LegacyAny) ?? null;
+  const label = String((mailbox as LegacyAny)?.label ?? (id ? `#${id}` : ''));
+  const server = String((mailbox as LegacyAny)?.server ?? '');
+  const port = Number((mailbox as LegacyAny)?.port ?? 0);
+  const user = String((mailbox as LegacyAny)?.user ?? '');
+  const ssl = Boolean((mailbox as LegacyAny)?.enable_ssl);
+  const createdAt = (mailbox as LegacyAny)?.created_at;
+  const updatedAt = (mailbox as LegacyAny)?.updated_at;
 
-  const handlersRaw: MailboxHandler[] = (handlersQ.data as any) ?? [];
+  const handlersRaw: MailboxHandler[] = (handlersQ.data as LegacyAny) ?? [];
   const handlers = useMemo(() => sortedHandlers(handlersRaw), [handlersRaw]);
 
   // --- Edit mailbox modal ---
@@ -114,12 +114,12 @@ export function MailboxDetailPage() {
   useEffect(() => {
     if (!mailbox) return;
     setEditForm({
-      label: String((mailbox as any).label ?? ''),
-      server: String((mailbox as any).server ?? ''),
-      port: String((mailbox as any).port ?? 993),
-      user: String((mailbox as any).user ?? ''),
+      label: String((mailbox as LegacyAny).label ?? ''),
+      server: String((mailbox as LegacyAny).server ?? ''),
+      port: String((mailbox as LegacyAny).port ?? 993),
+      user: String((mailbox as LegacyAny).user ?? ''),
       password: '',
-      enable_ssl: Boolean((mailbox as any).enable_ssl),
+      enable_ssl: Boolean((mailbox as LegacyAny).enable_ssl),
     });
   }, [mailbox]);
 
@@ -193,7 +193,7 @@ export function MailboxDetailPage() {
   const [handlerForm, setHandlerForm] = useState({ class_name: '', order: '1', continue: false });
 
   const openAddHandler = () => {
-    const nextOrder = handlers.length ? Number((handlers[handlers.length - 1] as any).order ?? handlers.length) + 1 : 1;
+    const nextOrder = handlers.length ? Number((handlers[handlers.length - 1] as LegacyAny).order ?? handlers.length) + 1 : 1;
     setEditingHandler(null);
     setHandlerForm({ class_name: '', order: String(nextOrder), continue: false });
     setHandlerModalOpen(true);
@@ -202,9 +202,9 @@ export function MailboxDetailPage() {
   const openEditHandler = (h: MailboxHandler) => {
     setEditingHandler(h);
     setHandlerForm({
-      class_name: String((h as any).class_name ?? ''),
-      order: String((h as any).order ?? 1),
-      continue: Boolean((h as any).continue),
+      class_name: String((h as LegacyAny).class_name ?? ''),
+      order: String((h as LegacyAny).order ?? 1),
+      continue: Boolean((h as LegacyAny).continue),
     });
     setHandlerModalOpen(true);
   };
@@ -247,7 +247,7 @@ export function MailboxDetailPage() {
     mutationFn: async () => {
       if (id === null) throw new Error('invalid mailbox id');
       if (!editingHandler) throw new Error('no handler');
-      const handlerId = Number((editingHandler as any).id);
+      const handlerId = Number((editingHandler as LegacyAny).id);
       const cn = handlerForm.class_name.trim();
       const ord = parsePositiveInt(handlerForm.order.trim());
       if (!handlerId || !cn || !ord) throw new Error('invalid handler');
@@ -280,7 +280,7 @@ export function MailboxDetailPage() {
     mutationFn: async () => {
       if (id === null) throw new Error('invalid mailbox id');
       if (!deleteHandler) throw new Error('no handler');
-      const handlerId = Number((deleteHandler as any).id);
+      const handlerId = Number((deleteHandler as LegacyAny).id);
       return await deleteMailboxHandler(id, handlerId);
     },
     onSuccess: async () => {
@@ -305,12 +305,12 @@ export function MailboxDetailPage() {
       // Update only changed items.
       const current = new Map<number, number>();
       for (const h of handlers) {
-        current.set(Number((h as any).id), Number((h as any).order ?? 0));
+        current.set(Number((h as LegacyAny).id), Number((h as LegacyAny).order ?? 0));
       }
 
       for (const h of normalized) {
-        const handlerId = Number((h as any).id);
-        const want = Number((h as any).order);
+        const handlerId = Number((h as LegacyAny).id);
+        const want = Number((h as LegacyAny).order);
         if (!handlerId) continue;
         const have = current.get(handlerId) ?? 0;
         if (have === want) continue;
@@ -493,10 +493,10 @@ export function MailboxDetailPage() {
                 </thead>
                 <tbody>
                   {handlers.map((h, idx) => {
-                    const hid = Number((h as any).id);
-                    const order = Number((h as any).order ?? 0);
-                    const cn = String((h as any).class_name ?? '');
-                    const cont = Boolean((h as any).continue);
+                    const hid = Number((h as LegacyAny).id);
+                    const order = Number((h as LegacyAny).order ?? 0);
+                    const cn = String((h as LegacyAny).class_name ?? '');
+                    const cont = Boolean((h as LegacyAny).continue);
                     const busy = reorderHandlersM.isPending;
                     const isFirst = idx === 0;
                     const isLast = idx === handlers.length - 1;

@@ -22,6 +22,14 @@ export interface ClusterResourcePackageItem {
   [k: string]: unknown;
 }
 
+export interface UserClusterResourcePackageItem {
+  id: number;
+  user_cluster_resource_package?: UserClusterResourcePackage | null;
+  cluster_resource?: ClusterResource | null;
+  value?: number | string | null;
+  [k: string]: unknown;
+}
+
 export interface UserClusterResourcePackage {
   id: number;
   environment?: Environment | null;
@@ -178,12 +186,37 @@ export async function fetchUserClusterResourcePackages(opts?: {
     path: '/user_cluster_resource_packages',
     namespace: 'user_cluster_resource_package',
     params,
-    meta: { includes: 'environment,user,added_by' },
+    meta: { includes: 'environment,user,added_by,cluster_resource_package' },
   });
 
   return {
     ...res,
     data: expectArray<UserClusterResourcePackage>(res.data, 'user_cluster_resource_packages#index'),
+  };
+}
+
+export async function fetchUserClusterResourcePackageItems(
+  userClusterResourcePackageId: number,
+  opts?: { limit?: number; fromId?: number }
+) {
+  const params: Record<string, unknown> = {};
+  if (opts?.limit !== undefined) params['limit'] = opts.limit;
+  if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
+
+  const res = await haveApiCall<UserClusterResourcePackageItem[]>({
+    method: 'GET',
+    path: `/user_cluster_resource_packages/${userClusterResourcePackageId}/items`,
+    namespace: Object.keys(params).length > 0 ? 'item' : undefined,
+    params: Object.keys(params).length > 0 ? params : undefined,
+    meta: { includes: 'cluster_resource' },
+  });
+
+  return {
+    ...res,
+    data: expectArray<UserClusterResourcePackageItem>(
+      res.data,
+      `user_cluster_resource_packages/${userClusterResourcePackageId}/items#index`
+    ),
   };
 }
 

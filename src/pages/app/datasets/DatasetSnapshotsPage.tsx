@@ -49,7 +49,7 @@ function snapshotLabel(s: Snapshot): string {
 function uniqSnapshots(input: Snapshot[]): Snapshot[] {
   const byId = new Map<number, Snapshot>();
   for (const s of input) {
-    const id = Number((s as any).id);
+    const id = Number((s as LegacyAny).id);
     if (!Number.isFinite(id) || id <= 0) continue;
     if (!byId.has(id)) byId.set(id, s);
   }
@@ -77,7 +77,7 @@ export function DatasetSnapshotsPage() {
   const { role } = useAuth();
   const isAdmin = role === 'admin';
 
-  const datasetLabelForToast = String((dataset as any).label ?? (dataset as any).name ?? `Dataset #${dataset.id}`);
+  const datasetLabelForToast = String((dataset as LegacyAny).label ?? (dataset as LegacyAny).name ?? `Dataset #${dataset.id}`);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [qstr, setQstr] = useState(() => searchParams.get('q') ?? '');
@@ -292,7 +292,7 @@ export function DatasetSnapshotsPage() {
     typeof snapsQ.data?.meta?.['total_count'] === 'number' ? Number(snapsQ.data.meta['total_count']) : pageData.length;
   const rows = pageData;
 
-  const pageCursor = useMemo(() => cursorFromDescendingPage(pageData as any), [pageData]);
+  const pageCursor = useMemo(() => cursorFromDescendingPage(pageData as LegacyAny), [pageData]);
   const hasMore = pageData.length >= pagination.limit;
   const filtersActive = Boolean(qstr.trim());
 
@@ -333,7 +333,7 @@ export function DatasetSnapshotsPage() {
       const merged = uniqSnapshots([...(isReset || datasetChanged ? [] : candSnaps), ...fetched]);
       merged.sort((a, b) => Number(b.id) - Number(a.id));
       setCandSnaps(merged);
-      setCandCursor(cursorFromDescendingPage(merged as any));
+      setCandCursor(cursorFromDescendingPage(merged as LegacyAny));
       setCandHasMore(fetched.length >= candBatchSize);
     } catch (e) {
       setCandError(formatErrorMessage(e));
@@ -353,7 +353,7 @@ export function DatasetSnapshotsPage() {
   function onCreateDownload() {
     if (!downloadSnapshot) return;
     const fromIdRaw = downloadFormat === 'incremental_stream' ? Number(downloadFromId) : undefined;
-    const fromId = Number.isFinite(fromIdRaw as any) && (fromIdRaw as any) > 0 ? fromIdRaw : undefined;
+    const fromId = Number.isFinite(fromIdRaw as LegacyAny) && (fromIdRaw as LegacyAny) > 0 ? fromIdRaw : undefined;
     createDl.mutate({
       snapshotId: downloadSnapshot.id,
       fromSnapshotId: fromId,
@@ -365,7 +365,7 @@ export function DatasetSnapshotsPage() {
   const baseCandidates = useMemo(() => {
     const targetId = downloadSnapshot ? Number(downloadSnapshot.id) : NaN;
     const filtered = candSnaps.filter((s) => {
-      const id = Number((s as any).id);
+      const id = Number((s as LegacyAny).id);
       if (!Number.isFinite(targetId)) return true;
       // Base snapshot should be older than the selected snapshot.
       return Number.isFinite(id) ? id < targetId : true;
@@ -468,7 +468,7 @@ export function DatasetSnapshotsPage() {
                         <div className="mt-0.5 text-xs text-faint">#{s.id}</div>
                         {s.label ? <div className="mt-1 text-sm text-muted">{String(s.label)}</div> : null}
                         <div className="mt-1 text-xs text-faint">
-                          {t('dataset.snapshots.created_at', { dt: formatDateTime(s.created_at as any) })}
+                          {t('dataset.snapshots.created_at', { dt: formatDateTime(s.created_at as LegacyAny) })}
                         </div>
                       </div>
                       <Badge variant="neutral">#{s.id}</Badge>
@@ -545,7 +545,7 @@ export function DatasetSnapshotsPage() {
                         <td className="py-2 pr-3">
                           {s.label ? String(s.label) : <span className="text-faint">{t('common.na')}</span>}
                         </td>
-                        <td className="py-2 pr-3">{formatDateTime(s.created_at as any)}</td>
+                        <td className="py-2 pr-3">{formatDateTime(s.created_at as LegacyAny)}</td>
                         <td className="py-2 pr-4">
                           <div className="flex flex-wrap items-center gap-2">
                             <ActionButton

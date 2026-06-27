@@ -78,6 +78,66 @@ function exportAddress(ex: ExportItem): string {
   return String(host?.addr ?? (host?.id ? `#${host.id}` : '—'));
 }
 
+
+function refId(value: unknown): number | undefined {
+  if (!value || typeof value !== 'object' || !('id' in value)) return undefined;
+  const id = Number((value as { id?: unknown }).id);
+  return Number.isFinite(id) && id > 0 ? id : undefined;
+}
+
+function refText(value: unknown, keys: string[] = ['full_name', 'name', 'label', 'login', 'addr', 'ip_addr']): string {
+  if (!value || typeof value !== 'object') return '';
+  const obj = value as Record<string, unknown>;
+  const parts: string[] = [];
+  const id = refId(value);
+  if (id !== undefined) parts.push(String(id));
+  for (const key of keys) {
+    const v = obj[key];
+    if (typeof v === 'string' && v.trim()) parts.push(v.trim());
+  }
+  return parts.join(' ');
+}
+
+function exportDatasetId(ex: ExportItem): number | undefined {
+  return refId(ex.dataset);
+}
+
+function exportUserId(ex: ExportItem): number | undefined {
+  return refId(ex.user);
+}
+
+function exportHaystack(ex: ExportItem): string {
+  return [
+    ex.id,
+    ex.path,
+    ex.enabled,
+    ex.rw,
+    ex.sync,
+    ex.all_vps,
+    refText(ex.dataset),
+    refText(ex.snapshot),
+    refText(ex.user),
+    refText(ex.host_ip_address),
+    refText(ex.ip_address),
+    exportAddress(ex),
+  ]
+    .filter((value) => value !== undefined && value !== null && String(value).trim() !== '')
+    .join(' ')
+    .toLowerCase();
+}
+
+function exportMatchesClientFilters(
+  ex: ExportItem,
+  filters: { q: string; enabled?: boolean; datasetId?: number | null; userId?: number | null }
+): boolean {
+  if (filters.q && !exportHaystack(ex).includes(filters.q.toLowerCase())) return false;
+  if (filters.enabled !== undefined && ex.enabled !== filters.enabled) return false;
+  if (filters.datasetId !== undefined && filters.datasetId !== null && exportDatasetId(ex) !== filters.datasetId) return false;
+  if (filters.userId === null) return false;
+  if (filters.userId !== undefined && exportUserId(ex) !== filters.userId) return false;
+  return true;
+}
+
 type CreateFormState = {
   datasetId: number | null;
   sourceType: 'dataset' | 'snapshot';
@@ -88,7 +148,6 @@ type CreateFormState = {
   sync: boolean;
   subtreeCheck: boolean;
   rootSquash: boolean;
-  threads: string;
   enabled: boolean;
 };
 
@@ -103,7 +162,6 @@ function defaultCreateForm(datasetId: number | null): CreateFormState {
     sync: true,
     subtreeCheck: false,
     rootSquash: false,
-    threads: '8',
     enabled: true,
   };
 }
@@ -136,6 +194,11 @@ export function ExportsListPage(props?: { fixedDatasetId?: number; embedded?: bo
   const userTrim = useMemo(() => userFilter.trim(), [userFilter]);
   const enabledValue = useMemo(() => parseBoolToken(enabledFilter), [enabledFilter]);
   const activeDatasetId = fixedDatasetId ?? datasetFilter;
+  const userFilterId = useMemo(() => {
+    if (mode !== 'admin' || !userTrim) return undefined;
+    return parseNumericToken(userTrim);
+  }, [mode, userTrim]);
+  const clientFiltersActive = Boolean(qTrim || enabledValue !== undefined || activeDatasetId || (mode === 'admin' && userTrim));
 
   useEffect(() => {
     const next = new URLSearchParams(searchParams);
@@ -163,19 +226,20 @@ export function ExportsListPage(props?: { fixedDatasetId?: number; embedded?: bo
     queryFn: async () => (await fetchExports({
       limit: pagination.limit,
       fromId: pagination.fromId,
-      q: qTrim || undefined,
-      enabled: enabledValue,
-      dataset: activeDatasetId ?? undefined,
-      user: mode === 'admin' && userTrim ? Number(userTrim) : undefined,
       includes: 'dataset,snapshot,host_ip_address,user',
     })).data,
     staleTime: 10_000,
   });
 
-  const rows = listQ.data ?? [];
-  const pageCursor = useMemo(() => cursorFromDescendingPage(rows as any), [rows]);
-  const hasMore = rows.length >= pagination.limit;
-  const canPaginate = pagination.stack.length > 1 || rows.length > 0;
+  const rawRows = listQ.data ?? [];
+  const rows = useMemo(
+    () => rawRows.filter((ex) => exportMatchesClientFilters(ex, { q: qTrim, enabled: enabledValue, datasetId: activeDatasetId, userId: userFilterId })),
+    [activeDatasetId, enabledValue, qTrim, rawRows, userFilterId]
+  );
+  const pageCursor = useMemo(() => cursorFromDescendingPage(rawRows as LegacyAny), [rawRows]);
+  const hasMore = rawRows.length >= pagination.limit;
+  const canPaginate = pagination.stack.length > 1 || rawRows.length > 0;
+  const showEmptyState = rawRows.length === 0 || (rows.length === 0 && !clientFiltersActive);
 
   const selectedDatasetQ = useQuery({
     queryKey: ['datasets', 'show', createForm.datasetId, 'for_export_form'],
@@ -200,7 +264,6 @@ export function ExportsListPage(props?: { fixedDatasetId?: number; embedded?: bo
     mutationFn: async () => {
       if (!createForm.datasetId) throw new Error('dataset missing');
       if (!createForm.hostIpId) throw new Error('host ip missing');
-      const threads = Number(createForm.threads);
       return createExport({
         dataset: createForm.sourceType === 'dataset' ? createForm.datasetId : undefined,
         snapshot: createForm.sourceType === 'snapshot' ? Number(createForm.snapshotId) : undefined,
@@ -210,7 +273,6 @@ export function ExportsListPage(props?: { fixedDatasetId?: number; embedded?: bo
         sync: createForm.sync,
         subtree_check: createForm.subtreeCheck,
         root_squash: createForm.rootSquash,
-        threads: mode === 'admin' && Number.isFinite(threads) && threads > 0 ? threads : undefined,
         enabled: createForm.enabled,
       });
     },
@@ -218,7 +280,7 @@ export function ExportsListPage(props?: { fixedDatasetId?: number; embedded?: bo
       if (createForm.datasetId) chrome.acquireLocalLock(objectRef('Dataset', createForm.datasetId));
     },
     onSuccess: async (res) => {
-      const asId = getMetaActionStateId((res as any).meta);
+      const asId = getMetaActionStateId((res as LegacyAny).meta);
       const dsId = createForm.datasetId;
       if (asId !== undefined && dsId) {
         chrome.trackActionState(asId, {
@@ -232,7 +294,7 @@ export function ExportsListPage(props?: { fixedDatasetId?: number; embedded?: bo
       setCreateOpen(false);
       setCreateForm(defaultCreateForm(fixedDatasetId ?? null));
       pushToast({ variant: 'ok', title: t('exports.create.success') });
-      const created: any = (res as any).data ?? res;
+      const created: any = (res as LegacyAny).data ?? res;
       const exportId = Number(created?.id);
       if (Number.isFinite(exportId) && exportId > 0) navigate(`${basePath}/exports/${exportId}`);
     },
@@ -372,20 +434,21 @@ export function ExportsListPage(props?: { fixedDatasetId?: number; embedded?: bo
     s.push({ id: 'search', primary: t('exports.smart.suggest.search', { value: smartNeedle }), secondary: t('exports.smart.suggest.search.secondary'), onPick: () => applySmartText(smartNeedle), testId: 'exports.smart_filter.suggest.search' });
     if (mode === 'admin') {
       for (const u of userSearchQ.data ?? []) {
-        const login = String((u as any).login ?? `#${u.id}`);
+        const login = String((u as LegacyAny).login ?? `#${u.id}`);
         s.push({ id: `user-${u.id}`, primary: t('exports.smart.suggest.user', { login }), secondary: `user:${u.id}`, onPick: () => applySmartText(`user:${u.id}`), testId: `exports.smart_filter.suggest.user.${u.id}` });
       }
     }
     return s;
   }, [smartNeedle, t, navigate, basePath, mode, userSearchQ.data]);
 
-  const filtersActive = Boolean(qTrim || enabledValue !== undefined || (fixedDatasetId === undefined && activeDatasetId) || (mode === 'admin' && userTrim) || smartErrors.length);
+  const filtersActive = Boolean(clientFiltersActive || smartErrors.length);
   const copyUrl = typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}${window.location.search}` : '';
 
   const header = embedded ? undefined : (
     <PageHeader
       title={t('exports.page.title')}
       description={t('exports.page.description')}
+      meta={clientFiltersActive ? t('exports.client_filter_note') : undefined}
       testId="exports.header"
       actions={
         <Button variant="primary" onClick={() => {
@@ -453,7 +516,7 @@ export function ExportsListPage(props?: { fixedDatasetId?: number; embedded?: bo
   return (
     <>
       <ListShell header={header} filters={filters} testId={embedded ? 'dataset.exports.page' : 'exports.page'}>
-        {rows.length === 0 ? (
+        {showEmptyState ? (
           <EmptyState
             testId={embedded ? 'dataset.exports.empty' : 'exports.empty'}
             title={t('exports.empty.title')}
@@ -479,9 +542,15 @@ export function ExportsListPage(props?: { fixedDatasetId?: number; embedded?: bo
                       </tr>
                     </thead>
                     <tbody>
-                      {rows.map((ex) => {
+                      {rows.length === 0 ? (
+                        <tr>
+                          <td colSpan={8} className="px-3 py-10 text-center text-sm text-muted">
+                            {t('empty.list.no_matches.title')}
+                          </td>
+                        </tr>
+                      ) : rows.map((ex) => {
                         const variant = exportRowVariant(ex);
-                        const badge = exportBadge(ex, t as any);
+                        const badge = exportBadge(ex, t as LegacyAny);
                         return (
                           <TableRowLink
                             key={ex.id}
@@ -508,9 +577,15 @@ export function ExportsListPage(props?: { fixedDatasetId?: number; embedded?: bo
             </div>
 
             <div className="space-y-3 md:hidden">
-              {rows.map((ex) => {
+              {rows.length === 0 ? (
+                <Card>
+                  <CardBody>
+                    <div className="text-center text-sm text-muted">{t('empty.list.no_matches.title')}</div>
+                  </CardBody>
+                </Card>
+              ) : rows.map((ex) => {
                 const variant = exportRowVariant(ex);
-                const badge = exportBadge(ex, t as any);
+                const badge = exportBadge(ex, t as LegacyAny);
                 return (
                   <TableCard key={ex.id} testId={`exports.card.${ex.id}`} className={clsx(variant === 'warn' ? 'bg-warn-row border-warn-border' : undefined)}>
                     <Link to={`${basePath}/exports/${ex.id}`} className="block p-4">
@@ -621,7 +696,7 @@ export function ExportsListPage(props?: { fixedDatasetId?: number; embedded?: bo
               <DatasetLookupInput value={createForm.datasetId} onChange={(v) => setCreateForm((prev) => ({ ...prev, datasetId: v, snapshotId: '' }))} testId="exports.create.dataset" ariaLabel={t('common.dataset')} placeholder={t('exports.form.dataset.placeholder')} />
             </div>
           ) : (
-            <Card><CardBody><div className="text-sm text-muted">{selectedDatasetQ.data ? sourceLabel({ dataset: selectedDatasetQ.data } as any) : `#${fixedDatasetId}`}</div></CardBody></Card>
+            <Card><CardBody><div className="text-sm text-muted">{selectedDatasetQ.data ? sourceLabel({ dataset: selectedDatasetQ.data } as LegacyAny) : `#${fixedDatasetId}`}</div></CardBody></Card>
           )}
 
           <div>
@@ -657,14 +732,6 @@ export function ExportsListPage(props?: { fixedDatasetId?: number; embedded?: bo
             <Checkbox checked={createForm.subtreeCheck} onChange={(v) => setCreateForm((prev) => ({ ...prev, subtreeCheck: v }))} label={t('exports.field.subtree_check')} />
             <Checkbox checked={createForm.rootSquash} onChange={(v) => setCreateForm((prev) => ({ ...prev, rootSquash: v }))} label={t('exports.field.root_squash')} />
           </div>
-
-          {mode === 'admin' ? (
-            <div>
-              <div className="mb-1 text-sm font-medium text-fg">{t('exports.field.threads')}</div>
-              <Input value={createForm.threads} onChange={(e) => setCreateForm((prev) => ({ ...prev, threads: e.target.value }))} ariaLabel={t('exports.field.threads')} />
-            </div>
-          ) : null}
-
           <div className="flex justify-end gap-2">
             <Button variant="secondary" onClick={() => setCreateOpen(false)}>{t('common.cancel')}</Button>
             <Button

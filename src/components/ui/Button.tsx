@@ -16,8 +16,15 @@ type BaseProps = {
   title?: string;
   /** Backward-compatible alias surfaced via title for disabled buttons. */
   disabledReason?: string;
+  id?: string;
   ariaLabel?: string;
   'aria-label'?: string;
+  'aria-controls'?: string;
+  'aria-current'?: React.AriaAttributes['aria-current'];
+  'aria-expanded'?: boolean;
+  'aria-haspopup'?: React.AriaAttributes['aria-haspopup'];
+  'aria-pressed'?: boolean;
+  role?: React.AriaRole;
   children: React.ReactNode;
 };
 
@@ -52,10 +59,21 @@ type RouterLinkProps = BaseProps & {
   rel?: never;
 };
 
+function ariaProps(props: BaseProps) {
+  return {
+    'aria-label': props.ariaLabel ?? props['aria-label'],
+    'aria-controls': props['aria-controls'],
+    'aria-current': props['aria-current'],
+    'aria-expanded': props['aria-expanded'],
+    'aria-haspopup': props['aria-haspopup'],
+    'aria-pressed': props['aria-pressed'],
+    role: props.role,
+  };
+}
+
 export function Button(props: ButtonProps | AnchorProps | RouterLinkProps) {
   const cls = buttonClassName({ variant: props.variant, size: props.size, className: props.className });
 
-  const ariaLabel = props.ariaLabel ?? props['aria-label'];
   const title = props.title ?? props.disabledReason;
   const disabled = Boolean(props.disabled || props.loading);
 
@@ -68,17 +86,20 @@ export function Button(props: ButtonProps | AnchorProps | RouterLinkProps) {
     </>
   );
 
+  const sharedAriaProps = ariaProps(props);
+
   const to = 'to' in props ? props.to : undefined;
   if (to) {
     return (
       <Link
+        id={props.id}
         data-testid={props.testId}
         to={to}
         onClick={props.onClick}
         title={title}
-        aria-label={ariaLabel}
         aria-disabled={disabled}
         className={clsx(cls, disabled ? 'pointer-events-none cursor-not-allowed opacity-50' : undefined)}
+        {...sharedAriaProps}
       >
         {content}
       </Link>
@@ -88,15 +109,16 @@ export function Button(props: ButtonProps | AnchorProps | RouterLinkProps) {
   if ('href' in props) {
     return (
       <a
+        id={props.id}
         data-testid={props.testId}
         href={props.href}
         target={props.target}
         rel={props.rel}
         onClick={props.onClick}
         title={title}
-        aria-label={ariaLabel}
         aria-disabled={disabled}
         className={clsx(cls, disabled ? 'pointer-events-none cursor-not-allowed opacity-50' : undefined)}
+        {...sharedAriaProps}
       >
         {content}
       </a>
@@ -105,13 +127,14 @@ export function Button(props: ButtonProps | AnchorProps | RouterLinkProps) {
 
   return (
     <button
+      id={props.id}
       data-testid={props.testId}
       type={props.type ?? 'button'}
       className={cls}
       disabled={disabled}
       onClick={props.onClick}
       title={title}
-      aria-label={ariaLabel}
+      {...sharedAriaProps}
     >
       {content}
     </button>

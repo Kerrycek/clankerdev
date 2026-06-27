@@ -79,7 +79,7 @@ export function MailTemplateTranslationPage() {
 
   useEffect(() => {
     if (!trQ.data) return;
-    const tr = trQ.data as any;
+    const tr = trQ.data as LegacyAny;
     setForm({
       from: String(tr.from ?? ''),
       reply_to: String(tr.reply_to ?? ''),
@@ -141,9 +141,9 @@ export function MailTemplateTranslationPage() {
   const tpl = tplQ.data as MailTemplate | undefined;
   const tr = trQ.data as MailTemplateTranslation | undefined;
 
-  const tplLabel = String((tpl as any)?.label ?? (tpl as any)?.name ?? `#${tplId}`);
-  const lang = (tr as any)?.language;
-  const langLabel = String((lang as any)?.label ?? (lang as any)?.code ?? t('common.na'));
+  const tplLabel = String((tpl as LegacyAny)?.label ?? (tpl as LegacyAny)?.name ?? `#${tplId}`);
+  const lang = (tr as LegacyAny)?.language;
+  const langLabel = String((lang as LegacyAny)?.label ?? (lang as LegacyAny)?.code ?? t('common.na'));
 
   const hasBodyPlain = Boolean(form.text_plain && form.text_plain.trim().length);
   const hasBodyHtml = Boolean(form.text_html && form.text_html.trim().length);
@@ -202,7 +202,7 @@ export function MailTemplateTranslationPage() {
                 variant="secondary"
                 onClick={() => {
                   if (!tr) return;
-                  const tt = tr as any;
+                  const tt = tr as LegacyAny;
                   setForm({
                     from: String(tt.from ?? ''),
                     reply_to: String(tt.reply_to ?? ''),
@@ -276,7 +276,7 @@ export function MailTemplateTranslationPage() {
                   {editingEnabled ? (
                     <Input value={form.from} onChange={(e) => setForm({ ...form, from: e.target.value })} testId="admin.mailer.templates.translation.detail.from" />
                   ) : (
-                    <div className="mt-1 text-sm">{String((tr as any).from ?? t('common.na'))}</div>
+                    <div className="mt-1 text-sm">{String((tr as LegacyAny).from ?? t('common.na'))}</div>
                   )}
                 </div>
                 <div>
@@ -288,7 +288,7 @@ export function MailTemplateTranslationPage() {
                       testId="admin.mailer.templates.translation.detail.reply_to"
                     />
                   ) : (
-                    <div className="mt-1 text-sm">{String((tr as any).reply_to ?? t('common.na'))}</div>
+                    <div className="mt-1 text-sm">{String((tr as LegacyAny).reply_to ?? t('common.na'))}</div>
                   )}
                 </div>
                 <div>
@@ -300,7 +300,7 @@ export function MailTemplateTranslationPage() {
                       testId="admin.mailer.templates.translation.detail.return_path"
                     />
                   ) : (
-                    <div className="mt-1 text-sm">{String((tr as any).return_path ?? t('common.na'))}</div>
+                    <div className="mt-1 text-sm">{String((tr as LegacyAny).return_path ?? t('common.na'))}</div>
                   )}
                 </div>
 
@@ -309,24 +309,24 @@ export function MailTemplateTranslationPage() {
                   {editingEnabled ? (
                     <Input value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} testId="admin.mailer.templates.translation.detail.subject" />
                   ) : (
-                    <div className="mt-1 text-sm">{String((tr as any).subject ?? t('common.na'))}</div>
+                    <div className="mt-1 text-sm">{String((tr as LegacyAny).subject ?? t('common.na'))}</div>
                   )}
                 </div>
 
                 <div>
                   <div className="text-xs text-muted">{t('common.updated')}</div>
-                  <div className="mt-1 text-sm">{formatDateTime((tr as any).updated_at)}</div>
+                  <div className="mt-1 text-sm">{formatDateTime((tr as LegacyAny).updated_at)}</div>
                 </div>
                 <div>
                   <div className="text-xs text-muted">{t('common.created')}</div>
-                  <div className="mt-1 text-sm">{formatDateTime((tr as any).created_at)}</div>
+                  <div className="mt-1 text-sm">{formatDateTime((tr as LegacyAny).created_at)}</div>
                 </div>
               </div>
 
               {saveM.isError ? (
                 <div className="mt-4">
                   <Alert variant="danger" title={t('mailer.translations.detail.save_error')}>
-                    {String((saveM.error as any)?.message ?? saveM.error)}
+                    {String((saveM.error as LegacyAny)?.message ?? saveM.error)}
                   </Alert>
                 </div>
               ) : null}

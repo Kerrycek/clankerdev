@@ -73,6 +73,17 @@ For ascending lists (rare):
 
 (Exact direction must match API defaults per endpoint.)
 
+### Contract-limited current-page filters
+
+Some legacy HaveAPI actions reject filters that the UI still needs for operator workflows. In that case:
+
+- the API wrapper must not send unsupported params;
+- the UI may apply the filter only to the currently loaded page;
+- pagination cursors and `hasMore` must be derived from the raw backend page, not from filtered rows;
+- the page header should show `filters.current_page_contract_note` so admins understand the limitation.
+
+Phase 8 examples include VPS owner filters (`vps[user]`), user filters on object history, monitoring events, OOM reports and user payments, plus text/user filters on IP assignments and network live monitors.
+
 ### Reference implementation
 
 Code:
@@ -82,24 +93,25 @@ Code:
 
 Pages already migrated to the shared implementation:
 
-- VPS list: `src/pages/app/VpsListPage.tsx`
+- VPS list: `src/pages/app/VpsListPage.tsx` (owner/user is current-page because legacy `Vps.Index` rejects `vps[user]`)
 - Transaction chains: `src/pages/app/TransactionChainsPage.tsx`
 - Action states: `src/pages/app/ActionStatesPage.tsx`
-- Datasets list: `src/pages/app/datasets/DatasetsListPage.tsx`
+- Datasets list: `src/pages/app/datasets/DatasetsListPage.tsx` (server-side `q`/`vps`/`role`; owner/user is current-page because legacy `Dataset::Index` blacklists `user`)
 - NAS list alias: `src/pages/app/datasets/NasDatasetsPage.tsx` (same list implementation, fixed `role=primary`, no VPS filter)
-- Exports list: `src/pages/app/exports/ExportsListPage.tsx`
+- Exports list: `src/pages/app/exports/ExportsListPage.tsx` (current-page `q`/state/dataset/user; legacy `Export::Index` only receives `from_id`/`limit`)
 - Dataset snapshots: `src/pages/app/datasets/DatasetSnapshotsPage.tsx` (server-side `q`)
 - Dataset downloads: `src/pages/app/datasets/DatasetDownloadsPage.tsx` (server-side `q`)
-- DNS zones list: `src/pages/app/dns/DnsZonesPage.tsx`
+- DNS zones list: `src/pages/app/dns/DnsZonesPage.tsx` (server-side `role`/`source`/`enabled`; current-page `q`/owner/DNSSEC)
 - DNS zone records: `src/pages/app/dns/DnsZoneRecordsPage.tsx` (server-side `q`)
-- DNS zone logs: `src/pages/app/dns/DnsZoneLogsPage.tsx` (server-side `q`)
+- DNS zone logs: `src/pages/app/dns/DnsZoneLogsPage.tsx` (current-page `q`; legacy server filters remain `dns_zone`/`change_type`/`name`/`type`)
 - Admin node detail (embedded lists): `src/pages/app/admin/NodeDetailPage.tsx`
 - Admin node detail (embedded lists with `paramPrefix`): `src/pages/app/admin/NodeDetailPage.tsx`
-- Monitoring events list: `src/pages/app/MonitoringEventsPage.tsx`
+- Monitoring events list: `src/pages/app/MonitoringEventsPage.tsx` (admin user filter is current-page because legacy index rejects `monitored_event[user]`)
 - Admin requests list: `src/pages/app/admin/RequestsPage.tsx`
 - Admin incoming payments list: `src/pages/app/admin/IncomingPaymentsPage.tsx`
+- Admin audit log: `src/pages/app/admin/AuditPage.tsx` (admin user filter is current-page because legacy object history index rejects `object_history[user]`)
 - Incident reports list: `src/pages/app/incidents/IncidentsPage.tsx`
-- OOM reports list: `src/pages/app/oom/OomReportsPage.tsx`
+- OOM reports list: `src/pages/app/oom/OomReportsPage.tsx` (admin user filter is current-page because legacy index rejects `oom_report[user]`)
 - Profile / Admin user data templates: `src/components/user/UserDataTemplatesPanel.tsx` (server-side `q`, SFI)
 - User namespaces list: `src/components/userNamespaces/UserNamespaceList.tsx` (SFI; numeric-id oriented)
 - User namespace maps list: `src/components/userNamespaces/UserNamespaceMapList.tsx` (server-side `q`, SFI)
@@ -196,6 +208,7 @@ Admin pages follow the same keyset pagination rules (`from_id`, `limit`, numeric
     - `event_type` (`object_history[event_type]`)
     - `user_session` (`object_history[user_session]`)
     - in `actions` view also: `object`, `object_id`
+    - `user` in `actions` view is a current-page filter because legacy `ObjectHistory.Index` rejects `object_history[user]`
 
 - **Users** (`/admin/users`)
   - Index: `User.Index` (`GET /api/v7.0/users`) with `user[from_id]`, `user[limit]`.
@@ -330,6 +343,8 @@ Admin pages follow the same keyset pagination rules (`from_id`, `limit`, numeric
 
 ## DNS family additions
 
+- DNS zones list: keyset pagination by `from_id`; server-side `role`, `source`, `enabled`; current-page `q`, owner and DNSSEC. Cursor calculation uses the raw backend page.
+- DNS zone logs: keyset pagination by `from_id`; server-side `dns_zone`, `change_type`, `name`, `type`; current-page `q`.
 - DNS zone transfers: keyset pagination by `from_id` inside zone detail; no free-text search yet.
 - DNSSEC records: read-only list inside zone detail; no free-text search.
 - DNS zone servers status: keyset pagination by `from_id` inside zone detail; admin add/remove actions.

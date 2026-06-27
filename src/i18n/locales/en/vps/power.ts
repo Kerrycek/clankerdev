@@ -1,0 +1,22 @@
+// VPS locale chunk: power
+export const enVps_power = {
+  'vps.power.aria.start': 'Start VPS',
+  'vps.power.aria.restart': 'Restart VPS',
+  'vps.power.aria.stop': 'Stop VPS',
+  'vps.power.stop.confirm_title': 'Stop VPS',
+  'vps.power.stop.confirm_desc_basic': 'Stopping a VPS powers it off. If you are unsure, consider using Restart instead.',
+  'vps.power.stop.confirm_desc_advanced': 'Stop this VPS?',
+  'vps.power.stop.force.label': 'Force stop',
+  'vps.power.stop.force.help': 'Force stop can be useful if the VPS is not responding, but may increase the risk of filesystem issues.',
+  'vps.power.restart.confirm_title': 'Restart VPS',
+  'vps.power.restart.confirm_desc_basic': 'Restart will reboot the VPS.',
+  'vps.power.restart.confirm_desc_advanced': 'Restart this VPS?',
+  'vps.power.restart.force.label': 'Force restart',
+  'vps.power.restart.force.help': 'Force restart can be useful if the VPS is not responding, but may increase the risk of filesystem issues.',
+  'vps.power.root_password.button': 'Root password',
+  'vps.power.root_password.confirm_desc_basic': 'This will generate a new root password for the VPS and reveal it once. Make sure you store it securely.',
+  'vps.power.root_password.confirm_desc_advanced': 'Generate a new root password and display it?',
+  'vps.power.root_password.type.secure': 'Secure (default)',
+  'vps.power.root_password.type.simple': 'Simple',
+  'vps.power.error.task_failed': 'The operation failed (task #{id}). Check Tasks for details.',
+} as const;

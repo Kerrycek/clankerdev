@@ -89,7 +89,7 @@ function parsePositiveId(raw: string): number | null {
 }
 
 function hostAddr(row: HostIpAddress): string {
-  return String((row as any).addr ?? (row as any).ip_addr ?? `#${row.id}`);
+  return String((row as LegacyAny).addr ?? (row as LegacyAny).ip_addr ?? `#${row.id}`);
 }
 
 export function IpAddressDetailPage() {
@@ -313,18 +313,18 @@ export function IpAddressDetailPage() {
       ) : ip ? (
         <>
           {(() => {
-            const addr = String((ip as any).addr ?? '').trim() || `#${(ip as any).id}`;
-            const prefix = typeof (ip as any).prefix === 'number' ? (ip as any).prefix : undefined;
-            const network = (ip as any).network;
+            const addr = String((ip as LegacyAny).addr ?? '').trim() || `#${(ip as LegacyAny).id}`;
+            const prefix = typeof (ip as LegacyAny).prefix === 'number' ? (ip as LegacyAny).prefix : undefined;
+            const network = (ip as LegacyAny).network;
             const networkStr =
               network && (network.address || network.id)
                 ? `${network.address ?? ''}${network.prefix ? '/' + network.prefix : ''}`.trim()
                 : undefined;
 
-            const vpsId = idFromResourceRef((ip as any).vps);
-            const userId = idFromResourceRef((ip as any).user);
-            const netifId = idFromResourceRef((ip as any).network_interface);
-            const routed = Boolean((ip as any).routed || netifId);
+            const vpsId = idFromResourceRef((ip as LegacyAny).vps);
+            const userId = idFromResourceRef((ip as LegacyAny).user);
+            const netifId = idFromResourceRef((ip as LegacyAny).network_interface);
+            const routed = Boolean((ip as LegacyAny).routed || netifId);
             const hostRows = hostAddrsQ.data ?? [];
 
             const title = `${addr}${prefix ? `/${prefix}` : ''}`;
@@ -336,7 +336,7 @@ export function IpAddressDetailPage() {
                   title={title}
                   titleAfter={
                     <>
-                      <Badge variant="neutral">#{(ip as any).id}</Badge>
+                      <Badge variant="neutral">#{(ip as LegacyAny).id}</Badge>
                       {routed ? <Badge variant="black">{t('admin.ip.routed_badge')}</Badge> : null}
                     </>
                   }
@@ -346,7 +346,7 @@ export function IpAddressDetailPage() {
                         {t('admin.ip_addresses.title')}
                       </Link>
                       <span className="text-faint"> · </span>
-                      <span>#{(ip as any).id}</span>
+                      <span>#{(ip as LegacyAny).id}</span>
                     </>
                   }
                   meta={networkStr ? networkStr : ' '}
@@ -402,16 +402,16 @@ export function IpAddressDetailPage() {
                       </div>
                       <div>
                         <div className="text-xs text-muted">{t('admin.ip.field.interface')}</div>
-                        <div className="text-sm">{labelFromResourceRef((ip as any).network_interface)}</div>
+                        <div className="text-sm">{labelFromResourceRef((ip as LegacyAny).network_interface)}</div>
                       </div>
                       <div>
                         <div className="text-xs text-muted">{t('admin.ip.field.route_via')}</div>
-                        <div className="text-sm">{labelFromResourceRef((ip as any).route_via, ['addr', 'ip_addr', 'label', 'name'])}</div>
+                        <div className="text-sm">{labelFromResourceRef((ip as LegacyAny).route_via, ['addr', 'ip_addr', 'label', 'name'])}</div>
                       </div>
-                      {(ip as any).created_at ? (
+                      {(ip as LegacyAny).created_at ? (
                         <div>
                           <div className="text-xs text-muted">{t('admin.ip.field.created')}</div>
-                          <div className="text-sm">{formatDateTime((ip as any).created_at)}</div>
+                          <div className="text-sm">{formatDateTime((ip as LegacyAny).created_at)}</div>
                         </div>
                       ) : null}
                     </div>
@@ -420,7 +420,7 @@ export function IpAddressDetailPage() {
 
                 {anyMutationError ? (
                   <Alert variant="danger" title={t('admin.ip.action_error')}>
-                    {String((anyMutationError as any)?.message ?? anyMutationError)}
+                    {String((anyMutationError as LegacyAny)?.message ?? anyMutationError)}
                   </Alert>
                 ) : null}
 
@@ -461,7 +461,7 @@ export function IpAddressDetailPage() {
                     <div className="grid gap-4 md:grid-cols-3">
                       <div>
                         <div className="text-xs text-muted">{t('admin.ip.field.interface')}</div>
-                        <div className="text-sm">{labelFromResourceRef((ip as any).network_interface)}</div>
+                        <div className="text-sm">{labelFromResourceRef((ip as LegacyAny).network_interface)}</div>
                       </div>
                       <div>
                         <div className="text-xs text-muted">{t('admin.ip.field.vps_id')}</div>
@@ -469,7 +469,7 @@ export function IpAddressDetailPage() {
                       </div>
                       <div>
                         <div className="text-xs text-muted">{t('admin.ip.field.route_via')}</div>
-                        <div className="text-sm">{labelFromResourceRef((ip as any).route_via, ['addr', 'ip_addr', 'label', 'name'])}</div>
+                        <div className="text-sm">{labelFromResourceRef((ip as LegacyAny).route_via, ['addr', 'ip_addr', 'label', 'name'])}</div>
                       </div>
                     </div>
                   </CardBody>
@@ -535,11 +535,11 @@ export function IpAddressDetailPage() {
                           {hostRows.map((host) => (
                             <tr key={host.id} data-testid={`admin.ip.hosts.row.${host.id}`}>
                               <td className="font-mono text-sm">{hostAddr(host)}</td>
-                              <td className="max-w-80 truncate">{String((host as any).reverse_record_value ?? t('common.na'))}</td>
+                              <td className="max-w-80 truncate">{String((host as LegacyAny).reverse_record_value ?? t('common.na'))}</td>
                               <td>{host.assigned === false ? t('common.no') : t('common.yes')}</td>
                               <td>
                                 <div className="flex flex-wrap gap-1">
-                                  {(host as any).user_created ? <Badge tone="neutral">{t('common.custom')}</Badge> : null}
+                                  {(host as LegacyAny).user_created ? <Badge tone="neutral">{t('common.custom')}</Badge> : null}
                                   {host.assigned === false ? <Badge tone="warn">{t('common.unassigned')}</Badge> : <Badge tone="ok">{t('common.assigned')}</Badge>}
                                 </div>
                               </td>
@@ -551,7 +551,7 @@ export function IpAddressDetailPage() {
                                     testId={`admin.ip.hosts.row.${host.id}.ptr`}
                                     onClick={() => {
                                       setPtrEditor(host);
-                                      setPtrValue(String((host as any).reverse_record_value ?? ''));
+                                      setPtrValue(String((host as LegacyAny).reverse_record_value ?? ''));
                                     }}
                                   >
                                     {t('admin.ip.hosts.ptr')}
@@ -573,7 +573,7 @@ export function IpAddressDetailPage() {
                                       {t('admin.ip.hosts.free')}
                                     </ActionButton>
                                   )}
-                                  {(host as any).user_created && host.assigned === false ? (
+                                  {(host as LegacyAny).user_created && host.assigned === false ? (
                                     <Button size="sm" variant="danger" onClick={() => setDeleteHost(host)}>
                                       {t('common.delete')}
                                     </Button>

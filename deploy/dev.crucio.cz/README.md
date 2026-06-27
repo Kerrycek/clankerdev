@@ -77,6 +77,15 @@ SMOKE_USER_ID=... SMOKE_ENVIRONMENT_ID=... \
 Review the plan, then rerun with `--apply` against the local test API only. See
 `networking-smoke-data.md` for the expected rows and smoke-test checklist.
 
+## Admin workflow smoke runbook
+
+Manual dev-backend checks for the admin workflow phases live in
+`admin-workflows-smoke-runbook.md`. Use
+`admin-workflows-smoke-results-template.md` to capture the run result for PR or
+release notes. These checks are human-run on `dev.crucio.cz` only and focus on
+real HaveAPI responses, request payload/query contracts, and backend side
+effects that local unit tests cannot confirm.
+
 ## Live parity workflow
 
 Real VPS and dataset operation checks are documented in

@@ -19,7 +19,7 @@ import { useI18n } from '../../app/i18n';
 
 function OutageRow(props: { outage: Outage }) {
   const i18n = useI18n();
-  const summary = pickTranslation(props.outage as any, 'summary', i18n.preferredLanguageCodes);
+  const summary = pickTranslation(props.outage as LegacyAny, 'summary', i18n.preferredLanguageCodes);
   const badges = outageBadges(props.outage, i18n.t);
 
   const dotVariant = dotVariantFromBadgeVariant(badges.primaryVariant);
@@ -58,10 +58,10 @@ function OutageRow(props: { outage: Outage }) {
           <div className="mt-2 text-xs text-muted">
             {i18n.t('public.outage.field.begins')}: {formatDateTime(props.outage.begins_at)}
             {props.outage.duration != null
-              ? ` · ${i18n.t('public.outage.field.duration')}: ${formatDurationMinutes(props.outage.duration as any)}`
+              ? ` · ${i18n.t('public.outage.field.duration')}: ${formatDurationMinutes(props.outage.duration as LegacyAny)}`
               : ''}
             {props.outage.finished_at
-              ? ` · ${i18n.t('public.outage.field.finished')}: ${formatDateTime(props.outage.finished_at as any)}`
+              ? ` · ${i18n.t('public.outage.field.finished')}: ${formatDateTime(props.outage.finished_at as LegacyAny)}`
               : ''}
           </div>
         </div>

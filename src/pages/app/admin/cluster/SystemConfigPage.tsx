@@ -155,7 +155,7 @@ export function SystemConfigPage() {
   const categories = useMemo(() => {
     const set = new Set<string>();
     for (const c of configs) {
-      const k = norm((c as any).category).trim();
+      const k = norm((c as LegacyAny).category).trim();
       if (k) set.add(k);
     }
     return [...set].sort((a, b) => a.localeCompare(b));
@@ -404,7 +404,7 @@ export function SystemConfigPage() {
                   <td className="px-3 py-2 font-mono text-xs text-muted">{valuePreview(cfg)}</td>
 
                   <td className="whitespace-nowrap px-3 py-2">
-                    <Badge variant="neutral">{norm((cfg as any).type) || '—'}</Badge>
+                    <Badge variant="neutral">{norm((cfg as LegacyAny).type) || '—'}</Badge>
                   </td>
 
                   <td className="whitespace-nowrap px-3 py-2 text-right">
@@ -441,7 +441,7 @@ export function SystemConfigPage() {
               disabled={!editor || !canSave}
               onClick={() => {
                 if (!editor) return;
-                const tp = norm((editor.cfg as any).type);
+                const tp = norm((editor.cfg as LegacyAny).type);
                 const raw = editor.value;
 
                 // Most sysconfig values are stored as String/Text/YAML. For numeric types, try to coerce.
@@ -482,7 +482,7 @@ export function SystemConfigPage() {
                 {editor.cfg.description ? <p className="text-sm text-muted">{norm(editor.cfg.description)}</p> : null}
 
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Badge variant="neutral">{t('common.type')}: {norm((editor.cfg as any).type) || '—'}</Badge>
+                  <Badge variant="neutral">{t('common.type')}: {norm((editor.cfg as LegacyAny).type) || '—'}</Badge>
                   {typeof editor.cfg.min_user_level === 'number' ? (
                     <Badge variant="neutral">{t('admin.cluster.system_config.badge.min_level', { level: editor.cfg.min_user_level })}</Badge>
                   ) : null}
@@ -545,7 +545,7 @@ export function SystemConfigPage() {
               <Card>
                 <CardHeader title={t('admin.cluster.system_config.edit.value.title')} subtitle={t('admin.cluster.system_config.edit.value.subtitle')} />
                 <CardBody>
-                  {norm((editor.cfg as any).type) === 'Text' || norm((editor.cfg as any).type) === 'Array' || norm((editor.cfg as any).type) === 'Hash' ? (
+                  {norm((editor.cfg as LegacyAny).type) === 'Text' || norm((editor.cfg as LegacyAny).type) === 'Array' || norm((editor.cfg as LegacyAny).type) === 'Hash' ? (
                     <Textarea
                       testId="admin.cluster.system_config.edit.value"
                       value={editor.value}

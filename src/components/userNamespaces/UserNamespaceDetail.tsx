@@ -59,7 +59,7 @@ export function UserNamespaceDetail(props: {
             <Spinner label={t('common.loading')} />
           ) : q.isError ? (
             <Alert title={t('userns.namespace.load_error')} variant="danger">
-              {String((q.error as any)?.message ?? q.error)}
+              {String((q.error as LegacyAny)?.message ?? q.error)}
             </Alert>
           ) : !ns ? (
             <Alert title={t('userns.namespace.not_found')} variant="danger">
@@ -70,9 +70,9 @@ export function UserNamespaceDetail(props: {
               {field(t('common.id'), <span className="font-medium">#{ns.id}</span>)}
               {field(t('userns.namespace.size'), typeof ns.size === 'number' ? ns.size : '—')}
 
-              {(ns as any).user ? field(t('common.user'), <span className="font-medium">{String((ns as any).user?.login ?? (ns as any).user?.id)}</span>) : null}
-              {(ns as any).offset !== undefined ? field(t('userns.namespace.offset'), String((ns as any).offset)) : null}
-              {(ns as any).block_count !== undefined ? field(t('userns.namespace.blocks'), String((ns as any).block_count)) : null}
+              {(ns as LegacyAny).user ? field(t('common.user'), <span className="font-medium">{String((ns as LegacyAny).user?.login ?? (ns as LegacyAny).user?.id)}</span>) : null}
+              {(ns as LegacyAny).offset !== undefined ? field(t('userns.namespace.offset'), String((ns as LegacyAny).offset)) : null}
+              {(ns as LegacyAny).block_count !== undefined ? field(t('userns.namespace.blocks'), String((ns as LegacyAny).block_count)) : null}
             </>
           )}
         </CardBody>

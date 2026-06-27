@@ -401,7 +401,7 @@ export function DnsResolversPage() {
       return { lockRef: ref };
     },
     onSettled: (_data, _err, _vars, ctx) => {
-      if ((ctx as any)?.lockRef) chrome.releaseLocalLock((ctx as any).lockRef);
+      if ((ctx as LegacyAny)?.lockRef) chrome.releaseLocalLock((ctx as LegacyAny).lockRef);
     },
     onSuccess: async (res) => {
       const asId = getMetaActionStateId(res.meta);
@@ -437,7 +437,7 @@ export function DnsResolversPage() {
       return { lockRef: ref };
     },
     onSettled: (_data, _err, _vars, ctx) => {
-      if ((ctx as any)?.lockRef) chrome.releaseLocalLock((ctx as any).lockRef);
+      if ((ctx as LegacyAny)?.lockRef) chrome.releaseLocalLock((ctx as LegacyAny).lockRef);
     },
     onSuccess: async (res) => {
       const asId = getMetaActionStateId(res.meta);
@@ -574,7 +574,7 @@ export function DnsResolversPage() {
                       {uni ? t('admin.cluster.dns_resolvers.badge.universal') : t('admin.cluster.dns_resolvers.badge.location_bound')}
                     </Badge>
                   </td>
-                  <td className="px-3 py-2 text-muted">{uni ? '—' : locLabel((r as any).location ?? null)}</td>
+                  <td className="px-3 py-2 text-muted">{uni ? '—' : locLabel((r as LegacyAny).location ?? null)}</td>
                   <td className="px-3 py-2 text-right">
                     <div className="inline-flex items-center gap-2">
                       <Button

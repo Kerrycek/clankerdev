@@ -131,3 +131,29 @@ This avoids committing credentials and keeps PR tests deterministic.
 
 Real OAuth login against `dev.crucio.cz` is intentionally not part of the default suite. If we add it later, it should
 run as an explicit staging-only job with credentials supplied by CI secrets.
+
+## Local browser fallback and Phase 11 screenshots
+
+Normal CI should use the bundled Playwright browsers from `npm run e2e:install`. For restricted local/container environments where the browser download is unavailable, `playwright.config.ts` also supports a system Chromium fallback:
+
+```bash
+E2E_START_SERVER=1 \
+E2E_CHROMIUM_EXECUTABLE=/usr/bin/chromium \
+E2E_DISABLE_VIDEO=1 \
+E2E_TRACE=off \
+E2E_RETRIES=0 \
+node scripts/playwright.mjs test --pr-smoke --project=chromium --workers=1
+```
+
+The fallback is intended for deterministic mocked checks only. Prefer the normal `npm run e2e:pr` / CI browser install path when Playwright can install its managed browser.
+
+Phase 11 adds an opt-in screenshot audit. It is skipped unless explicitly enabled:
+
+```bash
+E2E_START_SERVER=1 \
+E2E_PHASE11_SCREENSHOTS=1 \
+E2E_PHASE11_SCREENSHOT_DIR=/tmp/phase11_screenshots \
+node scripts/playwright.mjs test e2e/specs/app/phase11_screenshots.spec.ts --project=chromium --workers=1
+```
+
+The spec captures public, authenticated app, admin, drawer/popover, mobile navigation, and design sandbox states and writes a `manifest.json` next to the PNG files.

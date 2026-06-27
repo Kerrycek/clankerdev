@@ -152,10 +152,10 @@ export function AdminUserOverviewPage() {
                 <div className="text-sm whitespace-pre-wrap">{u.address}</div>
               </div>
             ) : null}
-            {typeof (u as any).info === 'string' && String((u as any).info).trim() ? (
+            {typeof (u as LegacyAny).info === 'string' && String((u as LegacyAny).info).trim() ? (
               <div className="sm:col-span-2">
                 <div className="text-xs text-muted">{t('admin.user.edit.field.info')}</div>
-                <div className="text-sm whitespace-pre-wrap">{String((u as any).info)}</div>
+                <div className="text-sm whitespace-pre-wrap">{String((u as LegacyAny).info)}</div>
               </div>
             ) : null}
           </div>
@@ -166,9 +166,9 @@ export function AdminUserOverviewPage() {
         kind="user"
         id={u.id}
         objectLabel={u.login}
-        objectState={(u as any).object_state as any}
-        expirationDate={(u as any).expiration_date as any}
-        remindAfterDate={(u as any).remind_after_date as any}
+        objectState={(u as LegacyAny).object_state as LegacyAny}
+        expirationDate={(u as LegacyAny).expiration_date as LegacyAny}
+        remindAfterDate={(u as LegacyAny).remind_after_date as LegacyAny}
         onUpdated={refetch}
         testId="admin.user.lifecycle"
       />

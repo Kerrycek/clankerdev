@@ -7,13 +7,13 @@ function mockFetchOk(response: any) {
 }
 
 function lastFetchCall() {
-  const calls = (globalThis.fetch as any).mock.calls;
+  const calls = (globalThis.fetch as LegacyAny).mock.calls;
   return calls[calls.length - 1] as [string, RequestInit?];
 }
 
 describe('nodes API wrappers', () => {
   test('fetchNodes forwards q, state, limit, from_id, and node filters', async () => {
-    globalThis.fetch = mockFetchOk({ nodes: [{ id: 12, name: 'node12' }], _meta: { total_count: 1 } }) as any;
+    globalThis.fetch = mockFetchOk({ nodes: [{ id: 12, name: 'node12' }], _meta: { total_count: 1 } }) as LegacyAny;
 
     const res = await fetchNodes({
       q: 'node12',

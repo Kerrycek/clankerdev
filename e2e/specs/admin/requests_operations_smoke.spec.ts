@@ -32,8 +32,9 @@ test('@workflow-matrix @smoke admin requests: pending quick filters and operatio
     user: { id: 1, login: 'admin', level: 100 },
     handlers: {
       'GET user_request/registrations': ({ searchParams }) => {
-        states.push(searchParams.get('registration[state]'));
-        return { registrations: [registration(123, searchParams.get('registration[state]') || 'awaiting')] };
+        const state = searchParams.get('state') || searchParams.get('registration[state]');
+        states.push(state);
+        return { registrations: [registration(123, state || 'awaiting')] };
       },
       'GET user_request/changes': () => ({ changes: [] }),
       'GET user_request/registrations/123': () => ({ registration: registration(123) }),
@@ -44,7 +45,7 @@ test('@workflow-matrix @smoke admin requests: pending quick filters and operatio
   await expect(page.getByTestId('admin.requests.table')).toBeVisible();
 
   await page.getByTestId('admin.requests.quick.awaiting').click();
-  await expect(page).toHaveURL(/state=awaiting/);
+  await expect(page).not.toHaveURL(/state=/);
   await expect.poll(() => states.includes('awaiting')).toBeTruthy();
 
   await page.getByTestId('admin.requests.row.registration.123').click();
@@ -54,4 +55,30 @@ test('@workflow-matrix @smoke admin requests: pending quick filters and operatio
   await expect(page.getByTestId('admin.requests.detail.ops.chain')).toHaveAttribute('href', '/admin/transactions/88');
   await expect(page.getByTestId('admin.requests.detail.ops.transaction')).toHaveAttribute('href', '/admin/transactions/items/99');
   await expect(page.getByTestId('admin.requests.resolve.open')).toBeVisible();
+});
+
+test('@workflow-matrix @smoke admin requests: advanced filters stay inline and closed requests are hidden by default', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100 },
+    handlers: {
+      'GET user_request/registrations': () => ({ registrations: [registration(123, 'awaiting'), registration(124, 'ignored')] }),
+      'GET user_request/changes': () => ({ changes: [] }),
+    },
+  });
+
+  await page.goto('/admin/requests');
+  await expect(page.getByTestId('admin.requests.table')).toBeVisible();
+  await expect(page.getByTestId('admin.requests.row.registration.123')).toBeVisible();
+  await expect(page.getByTestId('admin.requests.row.registration.124')).toHaveCount(0);
+
+  await page.getByRole('button', { name: /pokročilé|advanced/i }).click();
+  const advanced = page.getByTestId('admin.requests.advanced_filters');
+  await expect(advanced).toBeVisible();
+  await expect(advanced).toHaveCSS('position', 'absolute');
+  await expect(page.locator('[data-testid="admin.requests.advanced_filters"] [role="dialog"]')).toHaveCount(0);
+
+  await advanced.getByLabel(/stav|state/i).selectOption('ignored');
+  await expect(page).toHaveURL(/state=ignored/);
 });

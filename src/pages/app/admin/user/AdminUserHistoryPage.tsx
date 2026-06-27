@@ -28,6 +28,7 @@ import { TableRowLink } from '../../../../components/ui/TableRowLink';
 import { fetchObjectHistoryEvents, type ObjectHistoryEvent } from '../../../../lib/api/audit';
 import { eventBadgeVariant, eventDataSummary, eventVariant, sessionLabel, trackedObjectLabel, userLabel } from '../../../../lib/auditUi';
 import { dotVariantFromBadgeVariant } from '../../../../lib/variantMap';
+import { refId } from '../../../../lib/resourceRefs';
 import { formatDateTime } from '../../../../lib/format';
 import { cursorFromDescendingPage } from '../../../../lib/lockIndex';
 import { useKeysetPagination } from '../../../../lib/hooks/useKeysetPagination';
@@ -41,6 +42,10 @@ function safeNumber(value: string): number | undefined {
   const n = Number(trimmed);
   if (!Number.isFinite(n) || n <= 0) return undefined;
   return Math.floor(n);
+}
+
+function objectHistoryMatchesUser(event: ObjectHistoryEvent, userId: number): boolean {
+  return refId(event.user) === userId;
 }
 
 type ViewMode = 'changes' | 'actions';
@@ -197,8 +202,13 @@ export function AdminUserHistoryPage() {
     },
   });
 
-  const pageCursor = useMemo(() => cursorFromDescendingPage(qHistory.data as any), [qHistory.data]);
-  const hasMore = (qHistory.data ?? []).length >= pagination.limit;
+  const rawHistoryRows = qHistory.data ?? [];
+  const historyRows = useMemo(
+    () => (view === 'actions' ? rawHistoryRows.filter((event) => objectHistoryMatchesUser(event, userId)) : rawHistoryRows),
+    [rawHistoryRows, userId, view]
+  );
+  const pageCursor = useMemo(() => cursorFromDescendingPage(rawHistoryRows as LegacyAny), [rawHistoryRows]);
+  const hasMore = rawHistoryRows.length >= pagination.limit;
 
   const shareUrl = useMemo(() => (typeof window !== 'undefined' ? window.location.href : ''), [searchParams]);
   const filtersActive = Boolean(
@@ -499,7 +509,7 @@ export function AdminUserHistoryPage() {
         <FilterChip
           key="event"
           label={`event:${eventTypeTrim}`}
-          tone={eventBadgeVariant(eventTypeTrim) as any}
+          tone={eventBadgeVariant(eventTypeTrim) as LegacyAny}
           onRemove={() => setEventType('')}
           testId="admin.user.history.chip.event"
         />
@@ -868,14 +878,14 @@ export function AdminUserHistoryPage() {
           {qHistory.isError ? (
             <tr>
               <td colSpan={6} className="p-4">
-                <ErrorState title={t('audit.load_error.title')} error={qHistory.error as any} showDetails />
+                <ErrorState title={t('audit.load_error.title')} error={qHistory.error as LegacyAny} showDetails />
               </td>
             </tr>
           ) : null}
 
           {!qHistory.isLoading && !qHistory.isError ? (
-            qHistory.data && qHistory.data.length > 0 ? (
-              qHistory.data.map((ev: ObjectHistoryEvent) => {
+            historyRows.length > 0 ? (
+              historyRows.map((ev: ObjectHistoryEvent) => {
                 const badgeVariant = eventBadgeVariant(ev.event_type);
                 const rowVariant = eventVariant(ev.event_type);
                 const dotVariant = dotVariantFromBadgeVariant(badgeVariant);

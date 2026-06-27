@@ -204,7 +204,7 @@ export async function deleteOutageHandler(outageId: number, handlerId: number) {
 }
 
 export function outageHandlerUserId(h: OutageHandler): number | null {
-  const raw = (h as any).user_id ?? (h as any).user?.id;
+  const raw = (h as LegacyAny).user_id ?? (h as LegacyAny).user?.id;
   return typeof raw === 'number' && Number.isFinite(raw) ? raw : null;
 }
 

@@ -21,7 +21,7 @@ function safeParse(raw: string | null): PendingToastRecord | null {
   try {
     const p = JSON.parse(raw);
     if (!p || typeof p !== 'object') return null;
-    const kind = (p as any).kind;
+    const kind = (p as LegacyAny).kind;
     if (kind !== 'scope_all_objects') return null;
     return { kind };
   } catch {

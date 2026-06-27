@@ -61,7 +61,7 @@ export function SessionTokenKeepalive() {
   }, []);
 
   const intervalMs = useMemo(() => {
-    const raw = typeof window !== 'undefined' ? (window as any).vpsAdmin?.sessionLength : undefined;
+    const raw = typeof window !== 'undefined' ? (window as LegacyAny).vpsAdmin?.sessionLength : undefined;
     return computeTokenKeepaliveIntervalMs(raw);
   }, []);
 

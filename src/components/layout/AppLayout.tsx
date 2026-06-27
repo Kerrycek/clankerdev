@@ -44,6 +44,7 @@ import { ImpersonationBanner } from './ImpersonationBanner';
 import { ContextualHelpPanel } from './ContextualHelpPanel';
 import { AppHeader } from './AppHeader';
 import { AppSidebar, buildSidebarNavItems } from './AppSidebar';
+import { SkipLink } from './SkipLink';
 
 function useOutsideClick(ref: React.RefObject<HTMLElement | null>, onOutside: () => void, enabled: boolean) {
   useEffect(() => {
@@ -112,7 +113,7 @@ export function AppLayout(props: { children: React.ReactNode }) {
   const syncRef = useRef<HTMLDivElement>(null);
 
   const shortcutHint =
-    typeof navigator !== 'undefined' && /mac/i.test(String((navigator as any).platform ?? '')) ? '⌘K · /' : 'Ctrl K · /';
+    typeof navigator !== 'undefined' && /mac/i.test(String((navigator as LegacyAny).platform ?? '')) ? '⌘K · /' : 'Ctrl K · /';
 
   // Global command palette shortcut: Ctrl+K / Cmd+K, and "/".
   useEffect(() => {
@@ -127,7 +128,7 @@ export function AppLayout(props: { children: React.ReactNode }) {
       // Avoid hijacking when the user is typing into a text field.
       const target = e.target as HTMLElement | null;
       const tag = target?.tagName?.toLowerCase();
-      if (tag === 'input' || tag === 'textarea' || (target as any)?.isContentEditable) {
+      if (tag === 'input' || tag === 'textarea' || (target as LegacyAny)?.isContentEditable) {
         return;
       }
 
@@ -371,22 +372,22 @@ export function AppLayout(props: { children: React.ReactNode }) {
 
   const actionActiveCount = useMemo(() => {
     const states = actionStatesQ.data ?? [];
-    return states.filter((s) => !isFinishedActionState(s as any)).length;
+    return states.filter((s) => !isFinishedActionState(s as LegacyAny)).length;
   }, [actionStatesQ.data]);
 
   const actionFailedCount = useMemo(() => {
     const states = actionStatesQ.data ?? [];
-    return states.filter((s) => isFailingActionState(s as any)).length;
+    return states.filter((s) => isFailingActionState(s as LegacyAny)).length;
   }, [actionStatesQ.data]);
 
   const activeCount = useMemo(() => {
     const chains = chainsQ.data ?? [];
-    return chains.filter((c) => !isFinishedChainState((c as any).state)).length;
+    return chains.filter((c) => !isFinishedChainState((c as LegacyAny).state)).length;
   }, [chainsQ.data]);
 
   const failedCount = useMemo(() => {
     const chains = chainsQ.data ?? [];
-    return chains.filter((c) => isFailedChainState((c as any).state)).length;
+    return chains.filter((c) => isFailedChainState((c as LegacyAny).state)).length;
   }, [chainsQ.data]);
 
   const tasksActiveCount = activeCount + actionActiveCount;
@@ -570,7 +571,7 @@ export function AppLayout(props: { children: React.ReactNode }) {
         void (async () => {
           try {
             const chainKey = ['transaction_chains', 'show', { id: chainId }] as const;
-            let chain = qc.getQueryData(chainKey) as any as TransactionChain | undefined;
+            let chain = qc.getQueryData(chainKey) as LegacyAny as TransactionChain | undefined;
             if (!chain) {
               chain = await qc.fetchQuery({
                 queryKey: chainKey,
@@ -580,7 +581,7 @@ export function AppLayout(props: { children: React.ReactNode }) {
             }
 
             if (!chain) return;
-            for (const r of objectRefsFromConcerns((chain as any).concerns, { maxDepth: 3, max: 12 })) {
+            for (const r of objectRefsFromConcerns((chain as LegacyAny).concerns, { maxDepth: 3, max: 12 })) {
               invalidateRef(r);
             }
           } catch {
@@ -623,6 +624,7 @@ export function AppLayout(props: { children: React.ReactNode }) {
   return (
     <ChromeContextProvider value={chrome}>
       <div className="flex min-h-screen bg-bg">
+        <SkipLink targetId="app-main-content" label={i18n.t('accessibility.skip_to_content')} />
         {/*
           Keep the desktop sidebar and the main shell in the same flex row.
           If this wrapper stops being flex, the h-screen sidebar becomes a
@@ -640,6 +642,7 @@ export function AppLayout(props: { children: React.ReactNode }) {
         />
 
         <Drawer
+          id="app-tasks-drawer"
           open={tasksOpen}
           side="right"
           title={i18n.t('tasks.title')}
@@ -656,6 +659,7 @@ export function AppLayout(props: { children: React.ReactNode }) {
                 value={tasksFilter}
                 onChange={(e) => setTasksFilter(e.target.value)}
                 placeholder={i18n.t('tasks.filter.placeholder')}
+                ariaLabel={i18n.t('tasks.filter.label')}
                 className="flex-1"
               />
               {tasksFilter ? (
@@ -711,6 +715,7 @@ export function AppLayout(props: { children: React.ReactNode }) {
               mode={mode}
               canSwitchMode={canSwitchMode}
               shortcutHint={shortcutHint}
+              mobileNavOpen={mobileNavOpen}
               onOpenMobileNav={() => setMobileNavOpen(true)}
               onOpenPalette={() => setPaletteOpen(true)}
               showSyncIndicator={showSyncIndicator}
@@ -724,6 +729,7 @@ export function AppLayout(props: { children: React.ReactNode }) {
               onRetrySync={retrySync}
               tasksFailedCount={tasksFailedCount}
               tasksActiveCount={tasksActiveCount}
+              tasksOpen={tasksOpen}
               onOpenTasks={openTasks}
               userMenuRef={userMenuRef}
               userMenuOpen={userMenuOpen}
@@ -740,7 +746,14 @@ export function AppLayout(props: { children: React.ReactNode }) {
               loginLogoutHref={loginLogoutHref}
             />
 
-            <main className="flex-1 p-4" data-testid="shell.main" data-document-title-region>
+            <main
+              id="app-main-content"
+              className="flex-1 p-4 outline-none"
+              data-testid="shell.main"
+              data-document-title-region
+              tabIndex={-1}
+              aria-label={i18n.t('accessibility.main_region')}
+            >
               <div className="space-y-4">
                 <ContextualHelpPanel pathname={location.pathname} scope={mode} />
                 {props.children}

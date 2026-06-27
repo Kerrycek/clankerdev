@@ -46,7 +46,7 @@ export function MailLogDetailPage() {
     queryFn: () => fetchMailLog(idNum),
   });
 
-  const mail = q.data?.data as any;
+  const mail = q.data?.data as LegacyAny;
 
   const subject = safeStr(mail?.subject) || t('mailer.log.row.no_subject');
 
@@ -61,7 +61,7 @@ export function MailLogDetailPage() {
     staleTime: 10_000,
   });
 
-  const chainId = resourceId((txQ.data as any)?.data?.transaction_chain);
+  const chainId = resourceId((txQ.data as LegacyAny)?.data?.transaction_chain);
 
   const title = subject;
 

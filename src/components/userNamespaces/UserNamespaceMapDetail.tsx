@@ -35,7 +35,7 @@ function parseFieldErrors(err: unknown): Record<string, string[]> | null {
   if (err instanceof HaveApiError) {
     const e = err.envelope?.errors;
     if (e && typeof e === 'object' && !Array.isArray(e)) {
-      return e as any;
+      return e as LegacyAny;
     }
   }
   return null;
@@ -149,7 +149,7 @@ export function UserNamespaceMapDetail(props: {
   });
 
   const map = mapQ.data ?? null;
-  const ns = (map as any)?.user_namespace;
+  const ns = (map as LegacyAny)?.user_namespace;
 
   const [labelDraft, setLabelDraft] = useState('');
   const [labelOriginal, setLabelOriginal] = useState('');
@@ -182,8 +182,8 @@ export function UserNamespaceMapDetail(props: {
   const entryCount = (rows ?? entriesQ.data ?? []).length;
   const usedByCount = usedByQ.data;
 
-  const nsSize = typeof (ns as any)?.size === 'number' ? (ns as any).size : null;
-  const nsId: number | null = typeof (ns as any)?.id === 'number' ? (ns as any).id : null;
+  const nsSize = typeof (ns as LegacyAny)?.size === 'number' ? (ns as LegacyAny).size : null;
+  const nsId: number | null = typeof (ns as LegacyAny)?.id === 'number' ? (ns as LegacyAny).id : null;
 
   const renameM = useMutation({
     mutationFn: async () => {
@@ -250,7 +250,7 @@ export function UserNamespaceMapDetail(props: {
           });
         } catch (e) {
           results.push({ id: r.id, ok: false, err: e });
-          const fieldErrors = parseFieldErrors(e) ?? { _base: [String((e as any)?.message ?? e)] };
+          const fieldErrors = parseFieldErrors(e) ?? { _base: [String((e as LegacyAny)?.message ?? e)] };
 
           setRows((prev) => {
             const p = prev ?? [];
@@ -415,7 +415,7 @@ export function UserNamespaceMapDetail(props: {
         </Card>
       ) : mapQ.isError ? (
         <Alert title={t('userns.map.load_error')} variant="danger">
-          {String((mapQ.error as any)?.message ?? mapQ.error)}
+          {String((mapQ.error as LegacyAny)?.message ?? mapQ.error)}
         </Alert>
       ) : !map ? (
         <Alert title={t('userns.map.not_found')} variant="danger">
@@ -457,7 +457,7 @@ export function UserNamespaceMapDetail(props: {
           </div>
           {renameM.error ? (
             <Alert title={t('userns.map.rename.error')} variant="danger" className="mt-3">
-              {String((renameM.error as any)?.message ?? renameM.error)}
+              {String((renameM.error as LegacyAny)?.message ?? renameM.error)}
             </Alert>
           ) : null}
         </CardBody>
@@ -494,7 +494,7 @@ export function UserNamespaceMapDetail(props: {
                 data-testid={`${props.testIdPrefix}.add.kind`}
                 className="mt-1 h-9 w-full rounded-md border border-border bg-surface px-2 text-sm text-fg"
                 value={addKind}
-                onChange={(e) => setAddKind(e.target.value as any)}
+                onChange={(e) => setAddKind(e.target.value as LegacyAny)}
                 disabled={addM.isPending || !canInteract}
               >
                 <option value="both">{t('userns.entry.kind.both')}</option>
@@ -554,7 +554,7 @@ export function UserNamespaceMapDetail(props: {
 
           {addM.error && !addErrors ? (
             <Alert title={t('userns.entry.create_error')} variant="danger" className="mt-3">
-              {String((addM.error as any)?.message ?? addM.error)}
+              {String((addM.error as LegacyAny)?.message ?? addM.error)}
             </Alert>
           ) : null}
 

@@ -65,7 +65,7 @@ describe('OutageDetailPage', () => {
         en_summary: 'Major outage',
         en_description: 'The storage backend is degraded.',
       },
-    } as any);
+    } as LegacyAny);
     vi.mocked(fetchOutageEntities).mockResolvedValue({
       data: [
         {
@@ -75,7 +75,7 @@ describe('OutageDetailPage', () => {
           entity_id: 99,
         },
       ],
-    } as any);
+    } as LegacyAny);
     vi.mocked(fetchOutageHandlers).mockResolvedValue({
       data: [
         {
@@ -84,7 +84,7 @@ describe('OutageDetailPage', () => {
           note: 'Working on it',
         },
       ],
-    } as any);
+    } as LegacyAny);
     vi.mocked(fetchOutageUpdates).mockResolvedValue({
       data: [
         {
@@ -96,7 +96,7 @@ describe('OutageDetailPage', () => {
           en_description: 'We are checking storage.',
         },
       ],
-    } as any);
+    } as LegacyAny);
 
     renderPage('/outages/42');
 

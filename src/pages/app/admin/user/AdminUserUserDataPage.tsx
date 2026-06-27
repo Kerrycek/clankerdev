@@ -12,7 +12,7 @@ export function AdminUserUserDataPage() {
 
   return (
     <div className="space-y-2" data-testid="admin.user.user_data">
-      <div className="text-sm text-muted">{t('user_data.admin.user_scoped_hint', { login: (user as any).login })}</div>
+      <div className="text-sm text-muted">{t('user_data.admin.user_scoped_hint', { login: (user as LegacyAny).login })}</div>
 
       <UserDataTemplatesPanel
         testIdPrefix="admin.user.user_data"

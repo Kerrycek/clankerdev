@@ -190,7 +190,7 @@ export function MailTemplatesPage() {
   });
 
   const rows: MailTemplate[] = listQ.data ?? [];
-  const pageCursor = useMemo(() => cursorFromDescendingPage(rows as any), [rows]);
+  const pageCursor = useMemo(() => cursorFromDescendingPage(rows as LegacyAny), [rows]);
   const hasMore = rows.length >= pagination.limit;
   const canNext = pagination.hasForward || (hasMore && pageCursor !== null);
   const canPaginate = pagination.stack.length > 1 || rows.length > 0;
@@ -199,7 +199,7 @@ export function MailTemplatesPage() {
     const roles: string[] = ['account', 'admin'];
     if (roleTrim) roles.push(roleTrim);
     for (const tpl of rows) {
-      const s = String((tpl as any).registry_roles ?? '').trim();
+      const s = String((tpl as LegacyAny).registry_roles ?? '').trim();
       if (!s) continue;
       for (const r of s.split(',')) {
         const rr = r.trim();
@@ -218,9 +218,9 @@ export function MailTemplatesPage() {
     const opts: SelectOption[] = [{ value: '', label: t('common.all') }];
     const langs = languagesQ.data ?? [];
     for (const l of langs) {
-      const id = Number((l as any).id);
+      const id = Number((l as LegacyAny).id);
       if (!Number.isFinite(id) || id <= 0) continue;
-      const label = String((l as any).label ?? (l as any).code ?? `#${id}`);
+      const label = String((l as LegacyAny).label ?? (l as LegacyAny).code ?? `#${id}`);
       opts.push({ value: String(id), label });
     }
     return opts;
@@ -247,7 +247,7 @@ export function MailTemplatesPage() {
 
   const filtersActive = Boolean(qTrim || templateIdTrim || uvTrim || roleTrim || publicBool !== undefined || languageId || smartErrors.length);
   const smartNeedle = useMemo(() => smart.trim(), [smart]);
-  const knownRoles = useMemo(() => uniqSorted(['account', 'admin', roleTrim, ...rows.flatMap((tpl) => String((tpl as any).registry_roles ?? '').split(',').map((x) => x.trim()).filter(Boolean))].filter(Boolean) as string[]), [roleTrim, rows]);
+  const knownRoles = useMemo(() => uniqSorted(['account', 'admin', roleTrim, ...rows.flatMap((tpl) => String((tpl as LegacyAny).registry_roles ?? '').split(',').map((x) => x.trim()).filter(Boolean))].filter(Boolean) as string[]), [roleTrim, rows]);
 
   function clearFilters() {
     setQ('');
@@ -281,11 +281,11 @@ export function MailTemplatesPage() {
     if (numeric) return String(numeric);
     const langs = languagesQ.data ?? [];
     const matches = langs.filter((l) => {
-      const code = String((l as any).code ?? '').toLowerCase();
-      const label = String((l as any).label ?? '').toLowerCase();
+      const code = String((l as LegacyAny).code ?? '').toLowerCase();
+      const label = String((l as LegacyAny).label ?? '').toLowerCase();
       return code === needle || label === needle || code.startsWith(needle) || label.startsWith(needle);
     });
-    if (matches.length === 1) return String((matches[0] as any).id);
+    if (matches.length === 1) return String((matches[0] as LegacyAny).id);
     return null;
   }
 
@@ -546,14 +546,14 @@ export function MailTemplatesPage() {
           {/* Mobile */}
           <div className="grid gap-3 md:hidden">
             {rows.map((tpl) => {
-              const id = Number((tpl as any).id);
-              const label = String((tpl as any).label ?? (tpl as any).name ?? '').trim() || `#${id}`;
-              const tplId = String((tpl as any).template_id ?? '').trim();
-              const uv = String((tpl as any).user_visibility ?? '').trim();
-              const roles = String((tpl as any).registry_roles ?? '').split(',').map((x) => x.trim()).filter(Boolean);
-              const isPublic = Boolean((tpl as any).registry_public);
-              const trCount = Number((tpl as any).translations_count ?? 0);
-              const rcCount = Number((tpl as any).recipients_count ?? 0);
+              const id = Number((tpl as LegacyAny).id);
+              const label = String((tpl as LegacyAny).label ?? (tpl as LegacyAny).name ?? '').trim() || `#${id}`;
+              const tplId = String((tpl as LegacyAny).template_id ?? '').trim();
+              const uv = String((tpl as LegacyAny).user_visibility ?? '').trim();
+              const roles = String((tpl as LegacyAny).registry_roles ?? '').split(',').map((x) => x.trim()).filter(Boolean);
+              const isPublic = Boolean((tpl as LegacyAny).registry_public);
+              const trCount = Number((tpl as LegacyAny).translations_count ?? 0);
+              const rcCount = Number((tpl as LegacyAny).recipients_count ?? 0);
 
               return (
                 <Card key={id} className="p-4" testId={`admin.mailer.templates.card.${id}`}>
@@ -586,7 +586,7 @@ export function MailTemplatesPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="mt-3 text-xs text-faint">{formatDateTime((tpl as any).updated_at)}</div>
+                  <div className="mt-3 text-xs text-faint">{formatDateTime((tpl as LegacyAny).updated_at)}</div>
                 </Card>
               );
             })}
@@ -646,15 +646,15 @@ export function MailTemplatesPage() {
             </thead>
             <tbody>
               {rows.map((tpl) => {
-                const id = Number((tpl as any).id);
-                const name = String((tpl as any).name ?? '').trim();
-                const label = String((tpl as any).label ?? '').trim();
-                const tplId = String((tpl as any).template_id ?? '').trim();
-                const uv = String((tpl as any).user_visibility ?? '').trim();
-                const roles = String((tpl as any).registry_roles ?? '').split(',').map((x) => x.trim()).filter(Boolean);
-                const isPublic = Boolean((tpl as any).registry_public);
-                const trCount = Number((tpl as any).translations_count ?? 0);
-                const rcCount = Number((tpl as any).recipients_count ?? 0);
+                const id = Number((tpl as LegacyAny).id);
+                const name = String((tpl as LegacyAny).name ?? '').trim();
+                const label = String((tpl as LegacyAny).label ?? '').trim();
+                const tplId = String((tpl as LegacyAny).template_id ?? '').trim();
+                const uv = String((tpl as LegacyAny).user_visibility ?? '').trim();
+                const roles = String((tpl as LegacyAny).registry_roles ?? '').split(',').map((x) => x.trim()).filter(Boolean);
+                const isPublic = Boolean((tpl as LegacyAny).registry_public);
+                const trCount = Number((tpl as LegacyAny).translations_count ?? 0);
+                const rcCount = Number((tpl as LegacyAny).recipients_count ?? 0);
 
                 return (
                   <TableRowLink key={id} to={`${basePath}/mailer/templates/${id}`} testId={`admin.mailer.templates.row.${id}`}>
@@ -678,7 +678,7 @@ export function MailTemplatesPage() {
                     </td>
                     <td className="px-4 py-2 align-top text-sm tabular-nums">{trCount}</td>
                     <td className="px-4 py-2 align-top text-sm tabular-nums">{rcCount}</td>
-                    <td className="px-4 py-2 align-top text-sm">{formatDateTime((tpl as any).updated_at)}</td>
+                    <td className="px-4 py-2 align-top text-sm">{formatDateTime((tpl as LegacyAny).updated_at)}</td>
                   </TableRowLink>
                 );
               })}

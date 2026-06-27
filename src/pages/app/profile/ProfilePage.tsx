@@ -146,7 +146,7 @@ export function ProfilePage() {
                 <div className="mt-1">
                   <Select
                     value={ui.settings.theme}
-                    onChange={(e) => ui.setTheme(e.target.value as any)}
+                    onChange={(e) => ui.setTheme(e.target.value as LegacyAny)}
                     options={[
                       { value: 'system', label: t('settings.theme.system') },
                       { value: 'light', label: t('settings.theme.light') },
@@ -162,7 +162,7 @@ export function ProfilePage() {
                 <div className="mt-1">
                   <Select
                     value={ui.settings.language}
-                    onChange={(e) => ui.setLanguage(e.target.value as any)}
+                    onChange={(e) => ui.setLanguage(e.target.value as LegacyAny)}
                     options={[
                       { value: 'system', label: t('settings.language.system') },
                       { value: 'en', label: t('settings.language.en') },

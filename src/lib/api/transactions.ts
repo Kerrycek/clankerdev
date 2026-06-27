@@ -52,7 +52,8 @@ export async function fetchTransactionChains(opts?: {
   if (opts?.name) params['name'] = opts.name;
   if (opts?.className) params['class_name'] = opts.className;
   if (opts?.rowId !== undefined) params['row_id'] = opts.rowId;
-  if (opts?.userId !== undefined) params['user'] = opts.userId;
+  // Legacy transaction_chain#index rejects user; list pages apply actor filtering client-side.
+  void opts?.userId;
   if (opts?.userSessionId !== undefined) params['user_session'] = opts.userSessionId;
 
   const res = await haveApiCall<TransactionChain[]>({
@@ -60,6 +61,7 @@ export async function fetchTransactionChains(opts?: {
     path: '/transaction_chains',
     namespace: 'transaction_chain',
     params,
+    meta: { includes: 'user,user_session' },
   });
   return { ...res, data: expectArray<TransactionChain>(res.data, 'transaction_chains') };
 }

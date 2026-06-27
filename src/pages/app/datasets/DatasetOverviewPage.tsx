@@ -106,7 +106,7 @@ function isFailedChainState(state: string | null | undefined): boolean {
 }
 
 function chainProgressLabel(c: TransactionChain, t: (k: any, vars?: any) => string): string | null {
-  const prog = asNumber((c as any).progress);
+  const prog = asNumber((c as LegacyAny).progress);
   if (prog === undefined) return null;
 
   // Some backends report percent as 0..1, some as 0..100.
@@ -153,7 +153,7 @@ function SpaceCard(props: { dataset: any }) {
         subtitle={t('dataset.overview.space.subtitle')}
         actions={
           pctQuotaClamped !== null ? (
-            <Badge variant={pctVariant as any} title={t('dataset.overview.space.badge.title')}>
+            <Badge variant={pctVariant as LegacyAny} title={t('dataset.overview.space.badge.title')}>
               {pctQuotaClamped}%
             </Badge>
           ) : (
@@ -211,19 +211,19 @@ function CountsCard(props: { dataset: any }) {
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
             <div className="text-xs text-faint">{t('dataset.field.children')}</div>
-            <div className="font-medium text-fg">{(ds as any).children_count ?? t('common.na')}</div>
+            <div className="font-medium text-fg">{(ds as LegacyAny).children_count ?? t('common.na')}</div>
           </div>
           <div>
             <div className="text-xs text-faint">{t('dataset.field.snapshots')}</div>
-            <div className="font-medium text-fg">{(ds as any).snapshots_count ?? t('common.na')}</div>
+            <div className="font-medium text-fg">{(ds as LegacyAny).snapshots_count ?? t('common.na')}</div>
           </div>
           <div>
             <div className="text-xs text-faint">{t('dataset.field.mounts')}</div>
-            <div className="font-medium text-fg">{(ds as any).mount_count ?? t('common.na')}</div>
+            <div className="font-medium text-fg">{(ds as LegacyAny).mount_count ?? t('common.na')}</div>
           </div>
           <div>
             <div className="text-xs text-faint">{t('dataset.field.exports')}</div>
-            <div className="font-medium text-fg">{(ds as any).export_count ?? t('common.na')}</div>
+            <div className="font-medium text-fg">{(ds as LegacyAny).export_count ?? t('common.na')}</div>
           </div>
         </div>
       </CardBody>
@@ -236,12 +236,12 @@ function DetailsCard(props: { dataset: any }) {
 
   const ds = props.dataset;
 
-  const stateBadge = objectStateBadge((ds as any).object_state, t);
-  const pool = (ds as any).pool ? String((ds as any).pool) : null;
-  const type = (ds as any).type ? String((ds as any).type) : null;
+  const stateBadge = objectStateBadge((ds as LegacyAny).object_state, t);
+  const pool = (ds as LegacyAny).pool ? String((ds as LegacyAny).pool) : null;
+  const type = (ds as LegacyAny).type ? String((ds as LegacyAny).type) : null;
 
-  const created = (ds as any).created_at ? formatDateTime((ds as any).created_at) : null;
-  const updated = (ds as any).updated_at ? formatDateTime((ds as any).updated_at) : null;
+  const created = (ds as LegacyAny).created_at ? formatDateTime((ds as LegacyAny).created_at) : null;
+  const updated = (ds as LegacyAny).updated_at ? formatDateTime((ds as LegacyAny).updated_at) : null;
 
   return (
     <Card testId="dataset.overview.details">
@@ -298,8 +298,8 @@ function QuickActionsCard(props: { dataset: any }) {
   const ds = props.dataset;
 
   const vpsId =
-    ds.vps && typeof ds.vps === 'object' && 'id' in ds.vps ? Number((ds.vps as any).id) : undefined;
-  const vpsHostname = ds.vps && typeof ds.vps === 'object' ? String((ds.vps as any).hostname ?? '') : '';
+    ds.vps && typeof ds.vps === 'object' && 'id' in ds.vps ? Number((ds.vps as LegacyAny).id) : undefined;
+  const vpsHostname = ds.vps && typeof ds.vps === 'object' ? String((ds.vps as LegacyAny).hostname ?? '') : '';
 
   return (
     <Card testId="dataset.overview.actions">
@@ -395,14 +395,14 @@ function DatasetManagementCard() {
   const [automount, setAutomount] = useState(true);
 
   const [edit, setEdit] = useState<DatasetEditForm>(() => ({
-    quotaGiB: mibToGiBInput((dataset as any).quota),
-    refquotaGiB: mibToGiBInput((dataset as any).refquota),
-    compression: (dataset as any).compression !== false,
-    atime: Boolean((dataset as any).atime),
-    relatime: Boolean((dataset as any).relatime),
-    recordsizeKiB: recordsizeToKiBInput((dataset as any).recordsize),
-    sync: String((dataset as any).sync ?? 'standard') === 'disabled' ? 'disabled' : 'standard',
-    sharenfs: String((dataset as any).sharenfs ?? ''),
+    quotaGiB: mibToGiBInput((dataset as LegacyAny).quota),
+    refquotaGiB: mibToGiBInput((dataset as LegacyAny).refquota),
+    compression: (dataset as LegacyAny).compression !== false,
+    atime: Boolean((dataset as LegacyAny).atime),
+    relatime: Boolean((dataset as LegacyAny).relatime),
+    recordsizeKiB: recordsizeToKiBInput((dataset as LegacyAny).recordsize),
+    sync: String((dataset as LegacyAny).sync ?? 'standard') === 'disabled' ? 'disabled' : 'standard',
+    sharenfs: String((dataset as LegacyAny).sharenfs ?? ''),
     adminOverride: false,
     adminLockType: 'no_lock',
   }));
@@ -547,7 +547,7 @@ function DatasetManagementCard() {
           <div className="text-xs font-medium text-muted">{t('dataset.manage.field.sync')}</div>
           <Select
             value={edit.sync}
-            onChange={(e) => setEdit((p) => ({ ...p, sync: e.target.value as any }))}
+            onChange={(e) => setEdit((p) => ({ ...p, sync: e.target.value as LegacyAny }))}
             testId="dataset.manage.sync"
             options={[
               { value: 'standard', label: t('dataset.manage.sync.standard') },
@@ -578,7 +578,7 @@ function DatasetManagementCard() {
             <div className="text-xs font-medium text-muted">{t('dataset.manage.field.admin_lock_type')}</div>
             <Select
               value={edit.adminLockType}
-              onChange={(e) => setEdit((p) => ({ ...p, adminLockType: e.target.value as any }))}
+              onChange={(e) => setEdit((p) => ({ ...p, adminLockType: e.target.value as LegacyAny }))}
               testId="dataset.manage.admin_lock_type"
               options={[
                 { value: 'no_lock', label: t('dataset.manage.admin_lock.no_lock') },
@@ -673,7 +673,7 @@ function DatasetManagementCard() {
           {fields}
           {createM.isError ? (
             <Alert title={t('dataset.manage.create.error')} variant="danger">
-              {String((createM.error as any)?.message ?? createM.error)}
+              {String((createM.error as LegacyAny)?.message ?? createM.error)}
             </Alert>
           ) : null}
           <div className="flex justify-end gap-2">
@@ -690,7 +690,7 @@ function DatasetManagementCard() {
           {fields}
           {updateM.isError ? (
             <Alert title={t('dataset.manage.edit.error')} variant="danger">
-              {String((updateM.error as any)?.message ?? updateM.error)}
+              {String((updateM.error as LegacyAny)?.message ?? updateM.error)}
             </Alert>
           ) : null}
           <div className="flex justify-end gap-2">
@@ -725,7 +725,7 @@ function DatasetManagementCard() {
       >
         {deleteM.isError ? (
           <Alert title={t('dataset.manage.delete.error')} variant="danger">
-            {String((deleteM.error as any)?.message ?? deleteM.error)}
+            {String((deleteM.error as LegacyAny)?.message ?? deleteM.error)}
           </Alert>
         ) : null}
       </ConfirmDialog>
@@ -791,7 +791,7 @@ function TransactionsCard(props: {
                       </Link>
                     </div>
                     <div className="mt-1 text-xs text-faint">
-                      #{c.id} · {formatDateTime((c as any).created_at)}
+                      #{c.id} · {formatDateTime((c as LegacyAny).created_at)}
                       {prog ? <> · {prog}</> : null}
                     </div>
                   </div>
@@ -821,13 +821,13 @@ export function DatasetOverviewPage() {
     <div className="space-y-6" data-testid="dataset.overview">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="space-y-6">
-          <SpaceCard dataset={dataset as any} />
-          <CountsCard dataset={dataset as any} />
-          <QuickActionsCard dataset={dataset as any} />
+          <SpaceCard dataset={dataset as LegacyAny} />
+          <CountsCard dataset={dataset as LegacyAny} />
+          <QuickActionsCard dataset={dataset as LegacyAny} />
           <DatasetManagementCard />
         </div>
         <div className="space-y-6">
-          <DetailsCard dataset={dataset as any} />
+          <DetailsCard dataset={dataset as LegacyAny} />
           <TipsCard />
         </div>
       </div>

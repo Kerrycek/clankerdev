@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAppMode } from '../../../app/appMode';
@@ -66,7 +66,7 @@ function resourceId(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value) && value > 0) return Math.floor(value);
   if (typeof value === 'string' && /^\d+$/.test(value.trim())) return Number(value.trim());
   if (value && typeof value === 'object') {
-    const raw = (value as any).id ?? (value as any).value;
+    const raw = (value as LegacyAny).id ?? (value as LegacyAny).value;
     return resourceId(raw);
   }
   return null;
@@ -103,7 +103,7 @@ export function RequestDetailPage() {
 
   const q = useQuery({
     queryKey: ['user_request', reqType, 'show', reqId],
-    enabled: Boolean(reqType && reqId),
+    enabled: Boolean(isAdmin && reqType && reqId),
     queryFn: async () => {
       if (!reqType || !reqId) throw new Error('invalid request');
       if (reqType === 'registration') return (await fetchRegistrationRequest(reqId)).data;
@@ -145,22 +145,22 @@ export function RequestDetailPage() {
 
   const risk = useMemo(() => {
     if (!request || reqType !== 'registration') return null;
-    return fraudRiskBadge(request as any);
+    return fraudRiskBadge(request as LegacyAny);
   }, [reqType, request]);
 
-  const actionStateId = firstResourceId(request as any, [
+  const actionStateId = firstResourceId(request as LegacyAny, [
     'action_state',
     'action_state_id',
     'resolve_action_state',
     'resolve_action_state_id',
   ]);
-  const transactionChainId = firstResourceId(request as any, [
+  const transactionChainId = firstResourceId(request as LegacyAny, [
     'transaction_chain',
     'transaction_chain_id',
     'resolve_transaction_chain',
     'resolve_transaction_chain_id',
   ]);
-  const transactionId = firstResourceId(request as any, ['transaction', 'transaction_id', 'resolve_transaction', 'resolve_transaction_id']);
+  const transactionId = firstResourceId(request as LegacyAny, ['transaction', 'transaction_id', 'resolve_transaction', 'resolve_transaction_id']);
   const hasOperationalLinks = Boolean(actionStateId || transactionChainId || transactionId);
 
   async function submitResolve() {
@@ -232,10 +232,12 @@ export function RequestDetailPage() {
   if (!reqType || !reqId) {
     return (
       <ListShell>
-        <ErrorState title={t('requests.detail.invalid')} error={{ message: t('requests.detail.invalid.body') } as any} />
+        <ErrorState title={t('requests.detail.invalid')} error={{ message: t('requests.detail.invalid.body') } as LegacyAny} />
       </ListShell>
     );
   }
+
+  if (!isAdmin) return <Navigate to="/app" replace />;
 
   if (q.isLoading) {
     return (
@@ -248,7 +250,7 @@ export function RequestDetailPage() {
   if (q.isError) {
     return (
       <ListShell>
-        <ErrorState title={t('requests.detail.load_error.title')} error={q.error as any} />
+        <ErrorState title={t('requests.detail.load_error.title')} error={q.error as LegacyAny} />
       </ListShell>
     );
   }
@@ -256,7 +258,7 @@ export function RequestDetailPage() {
   if (!request) {
     return (
       <ListShell>
-        <ErrorState title={t('requests.detail.load_error.title')} error={{ message: t('requests.detail.not_found') } as any} />
+        <ErrorState title={t('requests.detail.load_error.title')} error={{ message: t('requests.detail.not_found') } as LegacyAny} />
       </ListShell>
     );
   }
@@ -310,7 +312,7 @@ export function RequestDetailPage() {
                 <div className="text-sm">
                   {request.user ? (
                     isAdmin ? (
-                      <Link className="text-accent hover:underline" to={`${basePath}/users/${(request.user as any).id}`}>
+                      <Link className="text-accent hover:underline" to={`${basePath}/users/${(request.user as LegacyAny).id}`}>
                         {userLabel(request.user)}
                       </Link>
                     ) : (
@@ -324,29 +326,29 @@ export function RequestDetailPage() {
 
               <div>
                 <div className="text-xs text-muted">{t('requests.detail.admin')}</div>
-                <div className="text-sm">{userLabel((request as any).admin)}</div>
+                <div className="text-sm">{userLabel((request as LegacyAny).admin)}</div>
               </div>
 
               <div>
                 <div className="text-xs text-muted">{t('common.created')}</div>
-                <div className="text-sm">{formatDateTime((request as any).created_at)}</div>
+                <div className="text-sm">{formatDateTime((request as LegacyAny).created_at)}</div>
               </div>
 
               <div>
                 <div className="text-xs text-muted">{t('common.updated')}</div>
-                <div className="text-sm">{formatDateTime((request as any).updated_at)}</div>
+                <div className="text-sm">{formatDateTime((request as LegacyAny).updated_at)}</div>
               </div>
 
               <div>
                 <div className="text-xs text-muted">{t('requests.detail.api_ip')}</div>
-                <div className="text-sm">{String((request as any).api_ip_addr ?? '—')}</div>
-                <div className="text-xs text-muted">{String((request as any).api_ip_ptr ?? '')}</div>
+                <div className="text-sm">{String((request as LegacyAny).api_ip_addr ?? '—')}</div>
+                <div className="text-xs text-muted">{String((request as LegacyAny).api_ip_ptr ?? '')}</div>
               </div>
 
               <div>
                 <div className="text-xs text-muted">{t('requests.detail.client_ip')}</div>
-                <div className="text-sm">{String((request as any).client_ip_addr ?? '—')}</div>
-                <div className="text-xs text-muted">{String((request as any).client_ip_ptr ?? '')}</div>
+                <div className="text-sm">{String((request as LegacyAny).client_ip_addr ?? '—')}</div>
+                <div className="text-xs text-muted">{String((request as LegacyAny).client_ip_ptr ?? '')}</div>
               </div>
             </div>
 
@@ -355,52 +357,52 @@ export function RequestDetailPage() {
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div>
                     <div className="text-xs text-muted">{t('requests.field.login')}</div>
-                    <div className="text-sm">{String((request as any).login ?? '—')}</div>
+                    <div className="text-sm">{String((request as LegacyAny).login ?? '—')}</div>
                   </div>
                   <div>
                     <div className="text-xs text-muted">{t('requests.field.full_name')}</div>
-                    <div className="text-sm">{String((request as any).full_name ?? '—')}</div>
+                    <div className="text-sm">{String((request as LegacyAny).full_name ?? '—')}</div>
                   </div>
                   <div>
                     <div className="text-xs text-muted">{t('requests.field.org')}</div>
                     <div className="text-sm">
-                      {String((request as any).org_name ?? '—')} {String((request as any).org_id ?? '')}
+                      {String((request as LegacyAny).org_name ?? '—')} {String((request as LegacyAny).org_id ?? '')}
                     </div>
                   </div>
                   <div>
                     <div className="text-xs text-muted">{t('requests.field.email')}</div>
-                    <div className="text-sm">{String((request as any).email ?? '—')}</div>
+                    <div className="text-sm">{String((request as LegacyAny).email ?? '—')}</div>
                   </div>
                   <div className="md:col-span-2">
                     <div className="text-xs text-muted">{t('requests.field.address')}</div>
-                    <div className="text-sm whitespace-pre-line">{String((request as any).address ?? '—')}</div>
+                    <div className="text-sm whitespace-pre-line">{String((request as LegacyAny).address ?? '—')}</div>
                   </div>
                   <div>
                     <div className="text-xs text-muted">{t('requests.field.how')}</div>
-                    <div className="text-sm">{String((request as any).how ?? '—')}</div>
+                    <div className="text-sm">{String((request as LegacyAny).how ?? '—')}</div>
                   </div>
                   <div>
                     <div className="text-xs text-muted">{t('requests.field.note')}</div>
-                    <div className="text-sm">{String((request as any).note ?? '—')}</div>
+                    <div className="text-sm">{String((request as LegacyAny).note ?? '—')}</div>
                   </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div>
                     <div className="text-xs text-muted">{t('requests.field.full_name')}</div>
-                    <div className="text-sm">{String((request as any).full_name ?? '—')}</div>
+                    <div className="text-sm">{String((request as LegacyAny).full_name ?? '—')}</div>
                   </div>
                   <div>
                     <div className="text-xs text-muted">{t('requests.field.email')}</div>
-                    <div className="text-sm">{String((request as any).email ?? '—')}</div>
+                    <div className="text-sm">{String((request as LegacyAny).email ?? '—')}</div>
                   </div>
                   <div className="md:col-span-2">
                     <div className="text-xs text-muted">{t('requests.field.address')}</div>
-                    <div className="text-sm whitespace-pre-line">{String((request as any).address ?? '—')}</div>
+                    <div className="text-sm whitespace-pre-line">{String((request as LegacyAny).address ?? '—')}</div>
                   </div>
                   <div className="md:col-span-2">
                     <div className="text-xs text-muted">{t('requests.field.change_reason')}</div>
-                    <div className="text-sm whitespace-pre-line">{String((request as any).change_reason ?? '—')}</div>
+                    <div className="text-sm whitespace-pre-line">{String((request as LegacyAny).change_reason ?? '—')}</div>
                   </div>
                 </div>
               )}
@@ -416,10 +418,10 @@ export function RequestDetailPage() {
                 <StatusDot variant={dotVar} testId={`admin.requests.detail.${reqType}.${reqId}.dot`} />
                 <Badge variant={stateVar}>{t(requestStateLabelKey(state))}</Badge>
               </div>
-              {(request as any).admin_response ? (
+              {(request as LegacyAny).admin_response ? (
                 <div className="mt-3">
                   <div className="text-xs text-muted">{t('requests.detail.admin_response')}</div>
-                  <div className="mt-1 whitespace-pre-line text-sm">{String((request as any).admin_response)}</div>
+                  <div className="mt-1 whitespace-pre-line text-sm">{String((request as LegacyAny).admin_response)}</div>
                 </div>
               ) : null}
             </CardBody>
@@ -471,18 +473,18 @@ export function RequestDetailPage() {
                 <StatCard
                   title={t('requests.detail.risk.ip_fraud')}
                   value={
-                    typeof (request as any).ip_fraud_score === 'number'
-                      ? String((request as any).ip_fraud_score)
+                    typeof (request as LegacyAny).ip_fraud_score === 'number'
+                      ? String((request as LegacyAny).ip_fraud_score)
                       : '—'
                   }
                   description={t('requests.detail.risk.ip_flags')}
                   footer={
                     <div className="space-y-1">
                       <div>
-                        {t('requests.detail.risk.ip_proxy')}: {boolLabel((request as any).ip_proxy)} / {t('requests.detail.risk.ip_vpn')}: {boolLabel((request as any).ip_vpn)} / {t('requests.detail.risk.ip_tor')}:
-                        {' '}{boolLabel((request as any).ip_tor)}
+                        {t('requests.detail.risk.ip_proxy')}: {boolLabel((request as LegacyAny).ip_proxy)} / {t('requests.detail.risk.ip_vpn')}: {boolLabel((request as LegacyAny).ip_vpn)} / {t('requests.detail.risk.ip_tor')}:
+                        {' '}{boolLabel((request as LegacyAny).ip_tor)}
                       </div>
-                      <div>{t('requests.detail.risk.ip_recent_abuse')}: {boolLabel((request as any).ip_recent_abuse)}</div>
+                      <div>{t('requests.detail.risk.ip_recent_abuse')}: {boolLabel((request as LegacyAny).ip_recent_abuse)}</div>
                     </div>
                   }
                   variant="compact"
@@ -491,16 +493,16 @@ export function RequestDetailPage() {
                 <StatCard
                   title={t('requests.detail.risk.mail_fraud')}
                   value={
-                    typeof (request as any).mail_fraud_score === 'number'
-                      ? String((request as any).mail_fraud_score)
+                    typeof (request as LegacyAny).mail_fraud_score === 'number'
+                      ? String((request as LegacyAny).mail_fraud_score)
                       : '—'
                   }
                   description={t('requests.detail.risk.mail_flags')}
                   footer={
                     <div className="space-y-1">
-                      <div>{t('requests.detail.risk.mail_valid')}: {boolLabel((request as any).mail_valid)} / {t('requests.detail.risk.mail_disposable')}: {boolLabel((request as any).mail_disposable)}</div>
-                      <div>{t('requests.detail.risk.mail_deliverability')}: {String((request as any).mail_deliverability ?? '—')}</div>
-                      <div>{t('requests.detail.risk.mail_leaked')}: {boolLabel((request as any).mail_leaked)} / {t('requests.detail.risk.mail_suspect')}: {boolLabel((request as any).mail_suspect)}</div>
+                      <div>{t('requests.detail.risk.mail_valid')}: {boolLabel((request as LegacyAny).mail_valid)} / {t('requests.detail.risk.mail_disposable')}: {boolLabel((request as LegacyAny).mail_disposable)}</div>
+                      <div>{t('requests.detail.risk.mail_deliverability')}: {String((request as LegacyAny).mail_deliverability ?? '—')}</div>
+                      <div>{t('requests.detail.risk.mail_leaked')}: {boolLabel((request as LegacyAny).mail_leaked)} / {t('requests.detail.risk.mail_suspect')}: {boolLabel((request as LegacyAny).mail_suspect)}</div>
                     </div>
                   }
                   variant="compact"

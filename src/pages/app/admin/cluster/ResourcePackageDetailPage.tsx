@@ -166,10 +166,10 @@ export function ResourcePackageDetailPage() {
   const assignmentCanNext = assignmentsPagination.hasForward || assignmentHasMore;
 
   const label = typeof pkg?.label === 'string' && pkg.label.trim() ? pkg.label.trim() : id ? `#${id}` : '—';
-  const personal = Boolean((pkg as any)?.is_personal) || Boolean((pkg as any)?.user);
+  const personal = Boolean((pkg as LegacyAny)?.is_personal) || Boolean((pkg as LegacyAny)?.user);
 
-  const env = (pkg as any)?.environment as Environment | null | undefined;
-  const user = (pkg as any)?.user as any;
+  const env = (pkg as LegacyAny)?.environment as Environment | null | undefined;
+  const user = (pkg as LegacyAny)?.user as LegacyAny;
 
   const badge = personal
     ? { variant: 'warn' as const, label: t('admin.cluster.resource_packages.scope.personal') }
@@ -243,7 +243,7 @@ export function ResourcePackageDetailPage() {
   };
 
   const openEditItem = (it: ClusterResourcePackageItem) => {
-    const crId = typeof (it as any).cluster_resource?.id === 'number' ? String((it as any).cluster_resource.id) : '';
+    const crId = typeof (it as LegacyAny).cluster_resource?.id === 'number' ? String((it as LegacyAny).cluster_resource.id) : '';
     const val = typeof it.value === 'number' ? String(it.value) : '';
     setItemCrId(crId);
     setItemValue(val);
@@ -322,8 +322,8 @@ export function ResourcePackageDetailPage() {
   };
 
   const openAssignEdit = (rec: UserClusterResourcePackage) => {
-    setAssignEnvId(typeof (rec as any).environment?.id === 'number' ? String((rec as any).environment.id) : '');
-    setAssignUserId(typeof (rec as any).user?.id === 'number' ? String((rec as any).user.id) : '');
+    setAssignEnvId(typeof (rec as LegacyAny).environment?.id === 'number' ? String((rec as LegacyAny).environment.id) : '');
+    setAssignUserId(typeof (rec as LegacyAny).user?.id === 'number' ? String((rec as LegacyAny).user.id) : '');
     setAssignComment(typeof rec.comment === 'string' ? rec.comment : '');
     setAssignFromPersonal(false);
     setAssignEditor({ mode: 'edit', record: rec });
@@ -509,7 +509,7 @@ export function ResourcePackageDetailPage() {
               <tbody>
                 {items.map((it) => {
                   const itemId = it.id;
-                  const cr = (it as any).cluster_resource as ClusterResource | null | undefined;
+                  const cr = (it as LegacyAny).cluster_resource as ClusterResource | null | undefined;
                   const v = typeof it.value === 'number' ? it.value : null;
 
                   return (
@@ -599,9 +599,9 @@ export function ResourcePackageDetailPage() {
                 <tbody>
                   {assignments.map((rec) => {
                     const recId = rec.id;
-                    const e = (rec as any).environment as Environment | null | undefined;
-                    const u = (rec as any).user as any;
-                    const ab = (rec as any).added_by as any;
+                    const e = (rec as LegacyAny).environment as Environment | null | undefined;
+                    const u = (rec as LegacyAny).user as LegacyAny;
+                    const ab = (rec as LegacyAny).added_by as LegacyAny;
                     const comment = typeof rec.comment === 'string' ? rec.comment : '';
                     const createdAt = typeof rec.created_at === 'string' ? rec.created_at : null;
 
@@ -895,8 +895,8 @@ export function ResourcePackageDetailPage() {
       >
         <div className="text-sm text-muted">
           {t('admin.cluster.resource_packages.assign.delete_confirm.hint', {
-            user: userLabel((deleteAssignState.rec as any)?.user),
-            environment: envLabel((deleteAssignState.rec as any)?.environment),
+            user: userLabel((deleteAssignState.rec as LegacyAny)?.user),
+            environment: envLabel((deleteAssignState.rec as LegacyAny)?.environment),
           })}
         </div>
       </ConfirmDialog>

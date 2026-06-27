@@ -52,7 +52,7 @@ export function TransactionDetailPage() {
   });
 
   const tx = txQ.data;
-  const txDone = tx ? String((tx as any).done ?? '') === 'done' : false;
+  const txDone = tx ? String((tx as LegacyAny).done ?? '') === 'done' : false;
 
   const title = useMemo(() => {
     if (!txIdValid) return t('transactions.items.detail.invalid_title');
@@ -69,29 +69,29 @@ export function TransactionDetailPage() {
   const chainId = resourceId(tx?.transaction_chain);
   const vpsId = resourceId(tx?.vps);
   const nodeId = resourceId(tx?.node);
-  const userId = resourceId((tx as any)?.user);
+  const userId = resourceId((tx as LegacyAny)?.user);
 
-  const urgent = Boolean((tx as any)?.urgent);
-  const prio = typeof (tx as any)?.priority === 'number' ? ((tx as any).priority as number) : undefined;
-  const type = typeof (tx as any)?.type === 'number' ? ((tx as any).type as number) : undefined;
-  const progress = typeof (tx as any)?.progress === 'number' ? String((tx as any).progress) : undefined;
-  const done = (tx as any)?.done ? String((tx as any).done) : undefined;
+  const urgent = Boolean((tx as LegacyAny)?.urgent);
+  const prio = typeof (tx as LegacyAny)?.priority === 'number' ? ((tx as LegacyAny).priority as number) : undefined;
+  const type = typeof (tx as LegacyAny)?.type === 'number' ? ((tx as LegacyAny).type as number) : undefined;
+  const progress = typeof (tx as LegacyAny)?.progress === 'number' ? String((tx as LegacyAny).progress) : undefined;
+  const done = (tx as LegacyAny)?.done ? String((tx as LegacyAny).done) : undefined;
 
-  const created = (tx as any)?.created_at as string | null | undefined;
-  const started = (tx as any)?.started_at as string | null | undefined;
-  const finished = (tx as any)?.finished_at as string | null | undefined;
+  const created = (tx as LegacyAny)?.created_at as string | null | undefined;
+  const started = (tx as LegacyAny)?.started_at as string | null | undefined;
+  const finished = (tx as LegacyAny)?.finished_at as string | null | undefined;
   const sec = durationSec(started, finished);
 
-  const input = formatPayload((tx as any)?.input);
-  const output = formatPayload((tx as any)?.output);
+  const input = formatPayload((tx as LegacyAny)?.input);
+  const output = formatPayload((tx as LegacyAny)?.output);
   const errorText = transactionErrorText(tx);
-  const objectValue = (tx as any)?.object ?? (tx as any)?.object_ref ?? (tx as any)?.object_reference ?? null;
+  const objectValue = (tx as LegacyAny)?.object ?? (tx as LegacyAny)?.object_ref ?? (tx as LegacyAny)?.object_reference ?? null;
   const objectText = objectValue
     ? refLabel(objectValue) || formatPayload(objectValue)
     : vpsId
-      ? refLabel((tx as any)?.vps) || `#${vpsId}`
+      ? refLabel((tx as LegacyAny)?.vps) || `#${vpsId}`
       : '';
-  const deps = Array.isArray((tx as any)?.depends_on) ? (((tx as any).depends_on as any[]) ?? []) : [];
+  const deps = Array.isArray((tx as LegacyAny)?.depends_on) ? (((tx as LegacyAny).depends_on as LegacyAny[]) ?? []) : [];
 
   return (
     <DetailShell testId="transactions.items.detail" variant="wide">
@@ -186,7 +186,7 @@ export function TransactionDetailPage() {
 
                 <div>
                   <div className="text-xs text-muted">{t('common.updated')}</div>
-                  <div className="mt-1 text-sm">{formatDateTime((tx as any)?.updated_at)}</div>
+                  <div className="mt-1 text-sm">{formatDateTime((tx as LegacyAny)?.updated_at)}</div>
                 </div>
 
                 <div>
@@ -221,7 +221,7 @@ export function TransactionDetailPage() {
 
                 <div>
                   <div className="text-xs text-muted">{t('transactions.tx.success_label')}</div>
-                  <div className="mt-1 text-sm">{typeof (tx as any)?.success === 'number' ? String((tx as any).success) : t('common.na')}</div>
+                  <div className="mt-1 text-sm">{typeof (tx as LegacyAny)?.success === 'number' ? String((tx as LegacyAny).success) : t('common.na')}</div>
                 </div>
 
                 <div>
@@ -231,7 +231,7 @@ export function TransactionDetailPage() {
 
                 <div>
                   <div className="text-xs text-muted">{t('common.user')}</div>
-                  <div className="mt-1 text-sm">{userId ? refLabel((tx as any)?.user) || `#${userId}` : t('common.na')}</div>
+                  <div className="mt-1 text-sm">{userId ? refLabel((tx as LegacyAny)?.user) || `#${userId}` : t('common.na')}</div>
                 </div>
 
                 <div>
@@ -262,11 +262,11 @@ export function TransactionDetailPage() {
                         title={t('common.open_node_detail')}
                         data-testid="transactions.items.detail.node_link"
                       >
-                        {refLabel((tx as any)?.node) || `#${nodeId}`}
+                        {refLabel((tx as LegacyAny)?.node) || `#${nodeId}`}
                       </Link>
                     ) : nodeId ? (
                       <span className="text-muted" data-testid="transactions.items.detail.node_value">
-                        {refLabel((tx as any)?.node) || `#${nodeId}`}
+                        {refLabel((tx as LegacyAny)?.node) || `#${nodeId}`}
                       </span>
                     ) : (
                       <span className="text-muted">{t('common.na')}</span>
@@ -279,7 +279,7 @@ export function TransactionDetailPage() {
                   <div className="mt-1 text-sm">
                     {vpsId ? (
                       <Link className="text-accent hover:underline" to={`${basePath}/vps/${vpsId}`} title={t('common.open_vps_detail')}>
-                        {refLabel((tx as any)?.vps) || `#${vpsId}`}
+                        {refLabel((tx as LegacyAny)?.vps) || `#${vpsId}`}
                       </Link>
                     ) : (
                       <span className="text-muted">{t('common.na')}</span>
@@ -323,7 +323,7 @@ export function TransactionDetailPage() {
                 input={input}
                 output={output}
                 errorText={errorText}
-                source={tx as any}
+                source={tx as LegacyAny}
                 raw={txQ.data}
                 maxHeightClass="max-h-96"
                 rawTestId="transactions.items.detail.raw"

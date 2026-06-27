@@ -69,7 +69,7 @@ export function DnsZoneServersPage() {
   });
 
   const rows = listQ.data?.data ?? [];
-  const cursor = useMemo(() => cursorFromDescendingPage(rows as any), [rows]);
+  const cursor = useMemo(() => cursorFromDescendingPage(rows as LegacyAny), [rows]);
   const hasMore = rows.length >= pagination.limit;
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -85,11 +85,11 @@ export function DnsZoneServersPage() {
     },
     onMutate: () => chrome.acquireLocalLock(zoneRef),
     onSuccess: (res) => {
-      const actionStateId = getMetaActionStateId((res as any)?.meta);
+      const actionStateId = getMetaActionStateId((res as LegacyAny)?.meta);
       if (actionStateId !== undefined) {
         chrome.trackActionState(actionStateId, {
           actionLabelKey: 'action.dns.server_zone.create.label',
-          objectLabel: String((zone as any).name ?? `Zone #${zone.id}`),
+          objectLabel: String((zone as LegacyAny).name ?? `Zone #${zone.id}`),
           object: zoneRef,
         });
       }
@@ -111,11 +111,11 @@ export function DnsZoneServersPage() {
     },
     onMutate: () => chrome.acquireLocalLock(zoneRef),
     onSuccess: (res) => {
-      const actionStateId = getMetaActionStateId((res as any)?.meta);
+      const actionStateId = getMetaActionStateId((res as LegacyAny)?.meta);
       if (actionStateId !== undefined) {
         chrome.trackActionState(actionStateId, {
           actionLabelKey: 'action.dns.server_zone.delete.label',
-          objectLabel: String((zone as any).name ?? `Zone #${zone.id}`),
+          objectLabel: String((zone as LegacyAny).name ?? `Zone #${zone.id}`),
           object: zoneRef,
         });
       }
@@ -163,13 +163,13 @@ export function DnsZoneServersPage() {
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.id} className="border-t border-border" data-testid={`dns.servers.row.${row.id}`}>
-                    <td className="py-2 pl-4 pr-3 font-medium text-fg">{serverName(row as any)}</td>
-                    <td className="py-2 pr-3"><Badge variant="neutral">{zoneTypeLabel((row as any).type)}</Badge></td>
-                    <td className="py-2 pr-3">{typeof (row as any).serial === 'number' ? Number((row as any).serial) : t('common.na')}</td>
-                    <td className="py-2 pr-3">{(row as any).loaded_at ? formatDateTime(String((row as any).loaded_at)) : t('common.na')}</td>
-                    <td className="py-2 pr-3">{(row as any).refresh_at ? formatDateTime(String((row as any).refresh_at)) : t('common.na')}</td>
-                    <td className="py-2 pr-3">{(row as any).expires_at ? formatDateTime(String((row as any).expires_at)) : t('common.na')}</td>
-                    <td className="py-2 pr-3">{(row as any).last_check_at ? formatDateTime(String((row as any).last_check_at)) : t('common.na')}</td>
+                    <td className="py-2 pl-4 pr-3 font-medium text-fg">{serverName(row as LegacyAny)}</td>
+                    <td className="py-2 pr-3"><Badge variant="neutral">{zoneTypeLabel((row as LegacyAny).type)}</Badge></td>
+                    <td className="py-2 pr-3">{typeof (row as LegacyAny).serial === 'number' ? Number((row as LegacyAny).serial) : t('common.na')}</td>
+                    <td className="py-2 pr-3">{(row as LegacyAny).loaded_at ? formatDateTime(String((row as LegacyAny).loaded_at)) : t('common.na')}</td>
+                    <td className="py-2 pr-3">{(row as LegacyAny).refresh_at ? formatDateTime(String((row as LegacyAny).refresh_at)) : t('common.na')}</td>
+                    <td className="py-2 pr-3">{(row as LegacyAny).expires_at ? formatDateTime(String((row as LegacyAny).expires_at)) : t('common.na')}</td>
+                    <td className="py-2 pr-3">{(row as LegacyAny).last_check_at ? formatDateTime(String((row as LegacyAny).last_check_at)) : t('common.na')}</td>
                     {isAdmin ? <td className="py-2 pr-4 text-right"><ActionButton variant="danger" size="sm" onClick={() => setConfirmDelete(row)}>{t('common.delete')}</ActionButton></td> : null}
                   </tr>
                 ))}
@@ -198,7 +198,7 @@ export function DnsZoneServersPage() {
         </div>
       </Modal>
 
-      <ConfirmDialog open={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title={t('dns.zone.servers.delete.title')} description={confirmDelete ? t('dns.zone.servers.delete.description', { server: serverName(confirmDelete as any) }) : ''} confirmLabel={t('common.delete')} confirmVariant="danger" onConfirm={() => deleteM.mutate()} loading={deleteM.isPending} />
+      <ConfirmDialog open={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title={t('dns.zone.servers.delete.title')} description={confirmDelete ? t('dns.zone.servers.delete.description', { server: serverName(confirmDelete as LegacyAny) }) : ''} confirmLabel={t('common.delete')} confirmVariant="danger" onConfirm={() => deleteM.mutate()} loading={deleteM.isPending} />
     </div>
   );
 }

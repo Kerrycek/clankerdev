@@ -223,6 +223,8 @@ Admin only:
 - `app.dashboard.kpi.datasets.open`
 - `app.dashboard.kpi.dns`
 - `app.dashboard.kpi.dns.open`
+- `app.dashboard.status-triage`
+- `app.dashboard.status-triage.open`
 
 ---
 

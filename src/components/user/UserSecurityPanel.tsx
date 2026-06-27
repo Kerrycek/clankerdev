@@ -26,14 +26,14 @@ import { SwitchRow } from '../ui/SwitchRow';
 import { Textarea } from '../ui/Textarea';
 
 function boolField(user: User | undefined, key: string, fallback: boolean): boolean {
-  const v = user ? (user as any)[key] : undefined;
+  const v = user ? (user as LegacyAny)[key] : undefined;
   if (typeof v === 'boolean') return v;
   if (typeof v === 'number') return v !== 0;
   return fallback;
 }
 
 function intField(user: User | undefined, key: string, fallback: number): number {
-  const v = user ? (user as any)[key] : undefined;
+  const v = user ? (user as LegacyAny)[key] : undefined;
   const n = typeof v === 'number' ? v : typeof v === 'string' ? Number(v) : NaN;
   if (Number.isFinite(n)) return n;
   return fallback;
@@ -249,8 +249,8 @@ export function UserSecurityPanel(props: {
         scope: 'all',
       });
 
-      const tokenFull = (res.data as any)?.token_full;
-      const sessionId = (res.data as any)?.id;
+      const tokenFull = (res.data as LegacyAny)?.token_full;
+      const sessionId = (res.data as LegacyAny)?.id;
 
       if (!tokenFull || !sessionId) {
         throw new Error(t('security.impersonation.validation.bad_token'));

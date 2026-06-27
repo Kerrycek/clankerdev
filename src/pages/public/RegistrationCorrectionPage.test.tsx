@@ -79,10 +79,10 @@ function installHappyPathMocks() {
       currency: 'eur',
       language: { id: 1, label: 'English' },
     },
-  } as any);
-  vi.mocked(fetchLocations).mockResolvedValue({ data: [{ id: 9, label: 'Prague' }] } as any);
-  vi.mocked(fetchOsTemplates).mockResolvedValue({ data: [{ id: 5, label: 'Debian 12' }] } as any);
-  vi.mocked(fetchLanguages).mockResolvedValue({ data: [{ id: 1, label: 'English' }] } as any);
+  } as LegacyAny);
+  vi.mocked(fetchLocations).mockResolvedValue({ data: [{ id: 9, label: 'Prague' }] } as LegacyAny);
+  vi.mocked(fetchOsTemplates).mockResolvedValue({ data: [{ id: 5, label: 'Debian 12' }] } as LegacyAny);
+  vi.mocked(fetchLanguages).mockResolvedValue({ data: [{ id: 1, label: 'English' }] } as LegacyAny);
 }
 
 afterEach(() => {
@@ -128,7 +128,7 @@ describe('RegistrationCorrectionPage', () => {
       data: {
         id: 17,
       },
-    } as any);
+    } as LegacyAny);
 
     renderPage('/requests/registrations/17/fix-token');
 

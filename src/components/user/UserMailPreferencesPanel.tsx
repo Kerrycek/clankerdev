@@ -397,16 +397,16 @@ export function UserMailPreferencesPanel(props: { userId: number; user?: User })
     if (!user) return;
     setMailerEnabled(user.mailer_enabled !== false);
 
-    const lang = (user as any).language;
-    const id = typeof lang === 'object' && lang ? (lang as any).id : typeof lang === 'number' ? lang : undefined;
+    const lang = (user as LegacyAny).language;
+    const id = typeof lang === 'object' && lang ? (lang as LegacyAny).id : typeof lang === 'number' ? lang : undefined;
     setLanguageId(id ? String(id) : '');
-  }, [user?.id, (user as any)?.mailer_enabled, (user as any)?.language]);
+  }, [user?.id, (user as LegacyAny)?.mailer_enabled, (user as LegacyAny)?.language]);
 
   const storedMailerEnabled = user ? user.mailer_enabled !== false : true;
 
   const storedLanguageId = useMemo(() => {
-    const lang = user ? (user as any).language : undefined;
-    const id = typeof lang === 'object' && lang ? (lang as any).id : typeof lang === 'number' ? lang : undefined;
+    const lang = user ? (user as LegacyAny).language : undefined;
+    const id = typeof lang === 'object' && lang ? (lang as LegacyAny).id : typeof lang === 'number' ? lang : undefined;
     return id ? String(id) : '';
   }, [user]);
 
@@ -608,7 +608,7 @@ export function UserMailPreferencesPanel(props: { userId: number; user?: User })
               <Select
                 testId="mail.templates.view"
                 value={tplView}
-                onChange={(e) => setTplView(e.target.value as any)}
+                onChange={(e) => setTplView(e.target.value as LegacyAny)}
                 options={[
                   { value: 'all', label: t('mail.prefs.templates.view.all') },
                   { value: 'changed', label: t('mail.prefs.templates.view.changed') },

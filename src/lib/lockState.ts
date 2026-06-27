@@ -65,9 +65,9 @@ export function deriveChainLockState(args: {
   const ids: number[] = [];
 
   for (const c of args.chains ?? []) {
-    const id = Number((c as any).id);
+    const id = Number((c as LegacyAny).id);
     if (!Number.isFinite(id) || id <= 0) continue;
-    if (!isActiveChainState((c as any).state)) continue;
+    if (!isActiveChainState((c as LegacyAny).state)) continue;
     ids.push(id);
   }
 

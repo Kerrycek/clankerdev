@@ -19,7 +19,7 @@ function baseBlockers(ctx: MigrationPlanGateContext): { state: string } | GateDe
     return deny({ titleKey: 'gate.busy.transaction.title', descriptionKey: 'gate.busy.transaction.body' });
   }
 
-  const st = String((ctx.plan as any).state ?? '').trim().toLowerCase();
+  const st = String((ctx.plan as LegacyAny).state ?? '').trim().toLowerCase();
   if (!st) {
     return deny({
       titleKey: 'gate.blocked.migration_plan.unknown_state.title',

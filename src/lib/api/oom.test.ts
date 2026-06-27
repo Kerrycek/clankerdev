@@ -7,13 +7,13 @@ function mockFetchOk(response: any) {
 }
 
 function lastFetchCall() {
-  const calls = (globalThis.fetch as any).mock.calls;
+  const calls = (globalThis.fetch as LegacyAny).mock.calls;
   return calls[calls.length - 1] as [string, RequestInit?];
 }
 
 describe('oom API wrappers', () => {
-  test('fetchOomReports forwards q and filter params', async () => {
-    globalThis.fetch = mockFetchOk({ oom_reports: [], _meta: { total_count: 0 } }) as any;
+  test('fetchOomReports forwards q and supported filters only', async () => {
+    globalThis.fetch = mockFetchOk({ oom_reports: [], _meta: { total_count: 0 } }) as LegacyAny;
 
     await fetchOomReports({
       limit: 50,
@@ -38,7 +38,7 @@ describe('oom API wrappers', () => {
     expect(u.searchParams.get('oom_report[from_id]')).toBe('999');
     expect(u.searchParams.get('oom_report[q]')).toBe('cgroup:/user');
     expect(u.searchParams.get('oom_report[vps]')).toBe('7');
-    expect(u.searchParams.get('oom_report[user]')).toBe('42');
+    expect(u.searchParams.get('oom_report[user]')).toBeNull();
     expect(u.searchParams.get('oom_report[node]')).toBe('3');
     expect(u.searchParams.get('oom_report[location]')).toBe('4');
     expect(u.searchParams.get('oom_report[environment]')).toBe('5');

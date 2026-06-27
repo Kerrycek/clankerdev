@@ -48,13 +48,13 @@ function backendDetailPayload(s: ActionState): string {
   const keys = ['error', 'errors', 'exception', 'message', 'output', 'result', 'response', 'stderr', 'stdout', 'backtrace'];
   const picked: Record<string, unknown> = {};
   for (const key of keys) {
-    if (Object.prototype.hasOwnProperty.call(s as any, key)) picked[key] = (s as any)[key];
+    if (Object.prototype.hasOwnProperty.call(s as LegacyAny, key)) picked[key] = (s as LegacyAny)[key];
   }
   return Object.keys(picked).length > 0 ? safeJson(picked) : safeJson(s);
 }
 
 function compactActionTarget(s: ActionState): string | null {
-  const row = s as any;
+  const row = s as LegacyAny;
   const keys = ['object', 'vps', 'dataset', 'dns_zone', 'user', 'node', 'network', 'migration_plan', 'ip_address'];
   for (const key of keys) {
     const value = row[key];
@@ -97,7 +97,7 @@ function ActionStateInspect(props: {
     queryKey: ['action_state', 'show', { id: props.actionStateId }],
     queryFn: async () => (await fetchActionState(props.actionStateId)).data,
     initialData: props.fallback,
-    refetchInterval: (data) => (data && isFinishedActionState(data as any) ? false : actionPollMs),
+    refetchInterval: (data) => (data && isFinishedActionState(data as LegacyAny) ? false : actionPollMs),
   });
 
   const s = actionQ.data;
@@ -119,7 +119,7 @@ function ActionStateInspect(props: {
 
   const transactionRows = txQ.data ?? [];
   const transactionIds = transactionRows
-    .map((tx) => Number((tx as any).id))
+    .map((tx) => Number((tx as LegacyAny).id))
     .filter((txId) => Number.isFinite(txId) && txId > 0);
 
   const toggleTx = (txId: number) => {
@@ -156,13 +156,13 @@ function ActionStateInspect(props: {
     );
   }
 
-  const id = Number((s as any).id ?? props.actionStateId);
-  const label = (s as any).label ? String((s as any).label) : i18n.t('action_state.title_fallback', { id });
+  const id = Number((s as LegacyAny).id ?? props.actionStateId);
+  const label = (s as LegacyAny).label ? String((s as LegacyAny).label) : i18n.t('action_state.title_fallback', { id });
   const badge = actionStateBadge(s);
   const pct = actionStateProgressPercent(s);
   const pLabel = actionStateProgressLabel(s);
-  const createdAt = (s as any).created_at ? formatDateTime(String((s as any).created_at)) : null;
-  const updatedAt = (s as any).updated_at ? formatDateTime(String((s as any).updated_at)) : null;
+  const createdAt = (s as LegacyAny).created_at ? formatDateTime(String((s as LegacyAny).created_at)) : null;
+  const updatedAt = (s as LegacyAny).updated_at ? formatDateTime(String((s as LegacyAny).updated_at)) : null;
   const tracked = chrome.trackedActionStates.some((x) => x.id === id);
   const chain = chainQ.data;
   const target = compactActionTarget(s);
@@ -171,18 +171,18 @@ function ActionStateInspect(props: {
   const renderTxCard = (tx: Transaction) => {
     const b = transactionBadge(tx);
     const name = tx.name ? String(tx.name) : `#${tx.id}`;
-    const input = formatPayload((tx as any).input);
-    const output = formatPayload((tx as any).output);
+    const input = formatPayload((tx as LegacyAny).input);
+    const output = formatPayload((tx as LegacyAny).output);
     const errorText = transactionErrorText(tx);
-    const txId = Number((tx as any).id);
+    const txId = Number((tx as LegacyAny).id);
     const hasTxId = Number.isFinite(txId) && txId > 0;
     const expanded = hasTxId && expandedTx.has(txId);
-    const nodeId = resourceId((tx as any).node);
-    const vpsId = resourceId((tx as any).vps);
-    const type = typeof (tx as any).type === 'number' ? Number((tx as any).type) : null;
-    const priority = typeof (tx as any).priority === 'number' ? Number((tx as any).priority) : null;
-    const started = (tx as any).started_at as string | null | undefined;
-    const finished = (tx as any).finished_at as string | null | undefined;
+    const nodeId = resourceId((tx as LegacyAny).node);
+    const vpsId = resourceId((tx as LegacyAny).vps);
+    const type = typeof (tx as LegacyAny).type === 'number' ? Number((tx as LegacyAny).type) : null;
+    const priority = typeof (tx as LegacyAny).priority === 'number' ? Number((tx as LegacyAny).priority) : null;
+    const started = (tx as LegacyAny).started_at as string | null | undefined;
+    const finished = (tx as LegacyAny).finished_at as string | null | undefined;
     const sec = durationSec(started, finished);
     const dotVariant =
       b.variant === 'danger' || b.variant === 'warn' || b.variant === 'ok' || b.variant === 'info'
@@ -192,7 +192,7 @@ function ActionStateInspect(props: {
     if (hasTxId) meta.push(<span key="id">#{txId}</span>);
     if (type !== null) meta.push(<span key="type">{i18n.t('transactions.items.row.type_chip', { type })}</span>);
     if (priority !== null) meta.push(<span key="priority">{i18n.t('transactions.tx.prio', { prio: priority })}</span>);
-    if (nodeId) meta.push(<span key="node">{refLabel((tx as any).node) || `#${nodeId}`}</span>);
+    if (nodeId) meta.push(<span key="node">{refLabel((tx as LegacyAny).node) || `#${nodeId}`}</span>);
     if (vpsId) {
       meta.push(
         <Link key="vps" className="underline" to={`${basePath}/vps/${vpsId}`}>
@@ -205,7 +205,7 @@ function ActionStateInspect(props: {
 
     return (
       <div
-        key={(tx as any).id ?? name}
+        key={(tx as LegacyAny).id ?? name}
         className="rounded-md border border-border bg-surface p-3"
         data-testid={hasTxId ? `tasks.inspect.tx.card.${txId}` : undefined}
       >
@@ -452,10 +452,10 @@ export function ActionStatesPanel(props: {
       const requestedId = explicitIds[i];
       const q = explicitQs[i];
       if (q?.data) {
-        const id = Number((q.data as any).id ?? requestedId);
+        const id = Number((q.data as LegacyAny).id ?? requestedId);
         if (!Number.isFinite(id) || id <= 0) continue;
         map.set(id, {
-          s: q.data as any,
+          s: q.data as LegacyAny,
           tracked: trackedSet.has(id),
           pinned: pinnedSet.has(id),
         });
@@ -463,21 +463,21 @@ export function ActionStatesPanel(props: {
     }
 
     const list = indexQ.data ?? [];
-    for (const s of list as any[]) {
+    for (const s of list as LegacyAny[]) {
       const id = Number(s?.id);
       if (!Number.isFinite(id) || id <= 0) continue;
       if (map.has(id)) continue;
-      map.set(id, { s: s as any, tracked: trackedSet.has(id), pinned: pinnedSet.has(id) });
+      map.set(id, { s: s as LegacyAny, tracked: trackedSet.has(id), pinned: pinnedSet.has(id) });
     }
 
     const arr = Array.from(map.values());
     arr.sort((a, b) => {
-      const aCreated = Date.parse(String((a.s as any).created_at ?? ''));
-      const bCreated = Date.parse(String((b.s as any).created_at ?? ''));
+      const aCreated = Date.parse(String((a.s as LegacyAny).created_at ?? ''));
+      const bCreated = Date.parse(String((b.s as LegacyAny).created_at ?? ''));
       if (Number.isFinite(aCreated) && Number.isFinite(bCreated) && aCreated !== bCreated) {
         return bCreated - aCreated;
       }
-      return Number((b.s as any).id ?? 0) - Number((a.s as any).id ?? 0);
+      return Number((b.s as LegacyAny).id ?? 0) - Number((a.s as LegacyAny).id ?? 0);
     });
 
     return arr;
@@ -488,8 +488,8 @@ export function ActionStatesPanel(props: {
   const filtered = useMemo(() => {
     if (!needle) return merged;
     return merged.filter((x) => {
-      const id = Number((x.s as any).id);
-      const label = (x.s as any).label ? String((x.s as any).label) : `#${id}`;
+      const id = Number((x.s as LegacyAny).id);
+      const label = (x.s as LegacyAny).label ? String((x.s as LegacyAny).label) : `#${id}`;
       return String(id).includes(needle) || label.toLowerCase().includes(needle);
     });
   }, [merged, needle]);
@@ -520,7 +520,7 @@ export function ActionStatesPanel(props: {
   });
 
   const selectedRow = selectedActionStateId !== null
-    ? merged.find((x) => Number((x.s as any).id) === selectedActionStateId)
+    ? merged.find((x) => Number((x.s as LegacyAny).id) === selectedActionStateId)
     : undefined;
 
   if (selectedActionStateId !== null) {
@@ -537,8 +537,8 @@ export function ActionStatesPanel(props: {
 
   const renderRow = (x: { s: ActionState; tracked: boolean; pinned: boolean }) => {
     const s = x.s;
-    const id = Number((s as any).id);
-    const label = (s as any).label ? String((s as any).label) : `#${id}`;
+    const id = Number((s as LegacyAny).id);
+    const label = (s as LegacyAny).label ? String((s as LegacyAny).label) : `#${id}`;
     const badge = actionStateBadge(s);
     const toneVariant: ToneVariant | undefined = ((): ToneVariant | undefined => {
       const v = badge.variant;
@@ -555,8 +555,8 @@ export function ActionStatesPanel(props: {
 
     const pinLabel = x.pinned ? i18n.t('tasks.action.unpin') : i18n.t('tasks.action.pin');
 
-    const createdAt = (s as any).created_at ? formatDateTime(String((s as any).created_at)) : null;
-    const updatedAt = (s as any).updated_at ? formatDateTime(String((s as any).updated_at)) : null;
+    const createdAt = (s as LegacyAny).created_at ? formatDateTime(String((s as LegacyAny).created_at)) : null;
+    const updatedAt = (s as LegacyAny).updated_at ? formatDateTime(String((s as LegacyAny).updated_at)) : null;
     const target = compactActionTarget(s);
     const failureSummary = compactFailureSummary(s);
 
@@ -630,7 +630,7 @@ export function ActionStatesPanel(props: {
                 </Button>
               ) : null}
 
-              {Boolean((s as any).can_cancel) && !isFinishedActionState(s) ? (
+              {Boolean((s as LegacyAny).can_cancel) && !isFinishedActionState(s) ? (
                 <Button
                   size="sm"
                   variant="danger"
@@ -685,7 +685,7 @@ export function ActionStatesPanel(props: {
     return (
       <div>
         <div className="text-sm font-medium">{i18n.t('tasks.error.load_action_states')}</div>
-        <div className="mt-1 text-sm text-muted">{String((indexQ.error as any)?.message ?? indexQ.error)}</div>
+        <div className="mt-1 text-sm text-muted">{String((indexQ.error as LegacyAny)?.message ?? indexQ.error)}</div>
       </div>
     );
   }
@@ -782,7 +782,7 @@ export function ActionStatesPanel(props: {
         }}
         onConfirm={() => {
           if (!cancelTarget) return;
-          const id = Number((cancelTarget as any).id);
+          const id = Number((cancelTarget as LegacyAny).id);
           if (!Number.isFinite(id) || id <= 0) return;
           cancelM.mutate(id);
         }}

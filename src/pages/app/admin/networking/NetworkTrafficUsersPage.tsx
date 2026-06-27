@@ -25,6 +25,21 @@ function currentYearMonth() {
   return { year: d.getFullYear(), month: d.getMonth() + 1 };
 }
 
+function networkTrafficUserMatchesText(row: any, rawNeedle: string): boolean {
+  const needle = rawNeedle.trim().toLowerCase();
+  if (!needle) return true;
+
+  const user = row.user;
+  const parts = [
+    typeof user === 'object' ? user?.id : user,
+    typeof user === 'object' ? user?.login : undefined,
+    typeof user === 'object' ? user?.full_name : undefined,
+    typeof user === 'object' ? user?.email : undefined,
+  ];
+
+  return parts.some((part) => String(part ?? '').toLowerCase().includes(needle));
+}
+
 export function NetworkTrafficUsersPage() {
   const { t } = useI18n();
   const [sp, setSp] = useSearchParams();
@@ -52,8 +67,9 @@ export function NetworkTrafficUsersPage() {
     placeholderData: (prev) => prev,
   });
 
-  const rows = listQ.data ?? [];
-  const nextCursor = cursorFromDescendingNumber(rows, (r: any) => Number(r.bytes ?? ((Number(r.bytes_in ?? 0) + Number(r.bytes_out ?? 0)) || 0)));
+  const rawRows = listQ.data ?? [];
+  const rows = React.useMemo(() => (q ? rawRows.filter((row) => networkTrafficUserMatchesText(row, q)) : rawRows), [q, rawRows]);
+  const nextCursor = cursorFromDescendingNumber(rawRows, (r: any) => Number(r.bytes ?? ((Number(r.bytes_in ?? 0) + Number(r.bytes_out ?? 0)) || 0)));
   const canNext = Boolean(nextCursor);
 
   const setParam = (key: string, value?: string) => {
@@ -74,7 +90,7 @@ export function NetworkTrafficUsersPage() {
   return (
     <ListShell
       testId="admin.network_traffic_users.page"
-      header={<PageHeader title={t('admin.network_traffic_users.title')} description={t('admin.network_traffic_users.subtitle')} />}
+      header={<PageHeader title={t('admin.network_traffic_users.title')} description={t('admin.network_traffic_users.subtitle')} meta={q ? t('filters.current_page_text_search_note') : undefined} />}
       filters={<FilterBar
         left={<div className="flex flex-wrap items-center gap-3"><div className="w-full max-w-sm"><Input testId="admin.network_traffic_users.filter.q" value={q} onChange={(e)=>setParam('q', e.target.value)} placeholder={t('admin.network_traffic_users.filter.q.placeholder')} /></div></div>}
         right={<div className="flex flex-wrap items-center gap-3">

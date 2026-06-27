@@ -16,7 +16,7 @@ describe('preflightVpsNotBusy', () => {
         { id: 65, state: 2 },
         { id: 53, state: 4 },
       ],
-    } as any);
+    } as LegacyAny);
 
     await expect(preflightVpsNotBusy({ vpsId: 14, t, knownBusy: true })).resolves.toBeUndefined();
   });
@@ -24,7 +24,7 @@ describe('preflightVpsNotBusy', () => {
   it('blocks an action when backend chains are still active', async () => {
     vi.mocked(fetchTransactionChains).mockResolvedValue({
       data: [{ id: 66, state: 1 }],
-    } as any);
+    } as LegacyAny);
 
     await expect(preflightVpsNotBusy({ vpsId: 14, t, knownBusy: true })).rejects.toMatchObject({ code: 'BUSY' });
   });

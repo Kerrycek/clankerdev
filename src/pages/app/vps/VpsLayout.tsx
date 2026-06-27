@@ -290,7 +290,7 @@ export function VpsLayout() {
     enabled: passwdFlow !== null,
     refetchInterval: (data) => {
       if (!data) return fastPollMs;
-      return (data as any)?.finished ? false : fastPollMs;
+      return (data as LegacyAny)?.finished ? false : fastPollMs;
     },
   });
 
@@ -361,8 +361,8 @@ export function VpsLayout() {
   // Admin/support "My view": prevent managing someone else's objects while still allowing
   // a quick jump to the admin view when needed.
   const ownerId =
-    typeof (vps as any).user === 'object' && (vps as any).user !== null && typeof (vps as any).user.id === 'number'
-      ? Number((vps as any).user.id)
+    typeof (vps as LegacyAny).user === 'object' && (vps as LegacyAny).user !== null && typeof (vps as LegacyAny).user.id === 'number'
+      ? Number((vps as LegacyAny).user.id)
       : undefined;
 
   if (
@@ -375,7 +375,7 @@ export function VpsLayout() {
     return (
       <ScopeMismatchCard
         objectKind={t('object_kind.vps')}
-        objectLabel={String((vps as any).hostname ?? '')}
+        objectLabel={String((vps as LegacyAny).hostname ?? '')}
         ownerUserId={ownerId}
         adminHref={adminHref}
         backHref={`${basePath}/vps`}
@@ -384,8 +384,8 @@ export function VpsLayout() {
     );
   }
 
-  const locationLabel = (vps as any).node?.location?.label ?? t('common.na');
-  const nodeLabel = (vps as any).node?.domain_name ?? (vps as any).node?.name ?? t('common.na');
+  const locationLabel = (vps as LegacyAny).node?.location?.label ?? t('common.na');
+  const nodeLabel = (vps as LegacyAny).node?.domain_name ?? (vps as LegacyAny).node?.name ?? t('common.na');
 
   const sshIp = pickPrimarySshIp(ipsQ.data);
   const sshCommand = sshIp ? `ssh root@${sshIp}` : null;
@@ -408,8 +408,8 @@ export function VpsLayout() {
   const restartGate = gateVpsAction('restart', { vps, busyLocal, busyTransaction });
   const passwdGate = gateVpsAction('passwd', { vps, busyLocal, busyTransaction });
 
-  const rt = runtimeStateBadge((vps as any).is_running, t);
-  const lc = objectStateBadge((vps as any).object_state, t);
+  const rt = runtimeStateBadge((vps as LegacyAny).is_running, t);
+  const lc = objectStateBadge((vps as LegacyAny).object_state, t);
 
   const showAsyncError = passwdAsyncError !== null;
 
@@ -436,10 +436,10 @@ export function VpsLayout() {
                 {t('nav.vps')}
               </Link>
               <span className="text-faint"> · </span>
-              <span>#{(vps as any).id}</span>
+              <span>#{(vps as LegacyAny).id}</span>
             </>
           }
-          title={(vps as any).hostname}
+          title={(vps as LegacyAny).hostname}
           badges={
             <>
               <Badge variant={rt.variant}>{rt.label}</Badge>
@@ -480,7 +480,7 @@ export function VpsLayout() {
                 <div className="text-xs text-muted">
                   {t('tasks.tracking_action', {
                     action: lastAction.actionLabelKey
-                      ? t(lastAction.actionLabelKey as any)
+                      ? t(lastAction.actionLabelKey as LegacyAny)
                       : lastAction.actionLabel ?? t('toast.unknown_action'),
                   })}
                   {lastAction.objectLabel ? <span className="text-faint">{` · ${lastAction.objectLabel}`}</span> : null}
@@ -506,46 +506,49 @@ export function VpsLayout() {
                 }}
               >
                 <option value="">{t('vps.actions.menu.placeholder')}</option>
-                <option value={`${basePath}/vps/${(vps as any).id}/lifecycle`}>{t('vps.tabs.lifecycle')}</option>
-                <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/reinstall`}>
+                <option value={`${basePath}/vps/${(vps as LegacyAny).id}/lifecycle`}>{t('vps.tabs.lifecycle')}</option>
+                <option value={`${basePath}/vps/${(vps as LegacyAny).id}/lifecycle/reinstall`}>
                   {t('action.vps.reinstall.label')}
                 </option>
-                <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/clone`}>
+                <option value={`${basePath}/vps/${(vps as LegacyAny).id}/lifecycle/clone`}>
                   {t('action.vps.clone.label')}
                 </option>
-                <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/swap`}>
+                <option value={`${basePath}/vps/${(vps as LegacyAny).id}/lifecycle/swap`}>
                   {t('action.vps.swap.label')}
                 </option>
-                <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/delete`}>
+                <option value={`${basePath}/vps/${(vps as LegacyAny).id}/lifecycle/delete`}>
                   {t('action.vps.delete.label')}
                 </option>
                 {mode === 'admin' ? (
                   <>
-                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/lifetime`}>
+                    <option value={`${basePath}/vps/${(vps as LegacyAny).id}/lifecycle/lifetime`}>
                       {t('action.vps.lifecycle.label')}
                     </option>
-                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/template`}>
+                    <option value={`${basePath}/vps/${(vps as LegacyAny).id}/lifecycle/template`}>
                       {t('action.vps.template.label')}
                     </option>
-                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/boot`}>
+                    <option value={`${basePath}/vps/${(vps as LegacyAny).id}/lifecycle/boot`}>
                       {t('action.vps.boot.label')}
                     </option>
-                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/replace`}>
+                    <option value={`${basePath}/vps/${(vps as LegacyAny).id}/lifecycle/replace`}>
                       {t('action.vps.replace.label')}
                     </option>
-                    <option value={`${basePath}/vps/${(vps as any).id}/lifecycle/migrate`}>
+                    <option value={`${basePath}/vps/${(vps as LegacyAny).id}/lifecycle/migrate`}>
                       {t('action.vps.migrate.label')}
+                    </option>
+                    <option value={`${basePath}/incidents/new?vps=${(vps as LegacyAny).id}`}>
+                      {t('vps.overview.admin_actions.report_incident')}
                     </option>
                   </>
                 ) : null}
-                <option value={`${basePath}/vps/${(vps as any).id}/network`}>{t('vps.tabs.network')}</option>
-                <option value={`${basePath}/vps/${(vps as any).id}/storage`}>{t('vps.tabs.storage')}</option>
-                <option value={`${basePath}/transactions/items?vps=${(vps as any).id}`}>
+                <option value={`${basePath}/vps/${(vps as LegacyAny).id}/network`}>{t('vps.tabs.network')}</option>
+                <option value={`${basePath}/vps/${(vps as LegacyAny).id}/storage`}>{t('vps.tabs.storage')}</option>
+                <option value={`${basePath}/transactions/items?vps=${(vps as LegacyAny).id}`}>
                   {t('vps.overview.admin_actions.transaction_log')}
                 </option>
               </Select>
 
-              <LinkButton to={`${basePath}/vps/${(vps as any).id}/console`} variant="secondary">
+              <LinkButton to={`${basePath}/vps/${(vps as LegacyAny).id}/console`} variant="secondary">
                 {t('vps.tabs.console')}
               </LinkButton>
 
@@ -614,10 +617,10 @@ export function VpsLayout() {
                 {showAsyncError
                   ? t('vps.power.error.task_failed', { id: passwdAsyncError!.asId })
                   : String(
-                      (startM.error as any)?.message ??
-                        (stopM.error as any)?.message ??
-                        (restartM.error as any)?.message ??
-                        (passwdM.error as any)?.message ??
+                      (startM.error as LegacyAny)?.message ??
+                        (stopM.error as LegacyAny)?.message ??
+                        (restartM.error as LegacyAny)?.message ??
+                        (passwdM.error as LegacyAny)?.message ??
                         t('common.unknown_error')
                     )}
               </div>
@@ -690,7 +693,7 @@ export function VpsLayout() {
             passwdM.mutate(type, {
               onSuccess: (res) => {
                 const asId = getMetaActionStateId(res.meta);
-                const pwd = String((res.data as any)?.password ?? '');
+                const pwd = String((res.data as LegacyAny)?.password ?? '');
 
                 if (asId !== undefined && pwd) {
                   const objectLabel = vpsQ.data?.hostname ? String(vpsQ.data.hostname) : t('common.vps_ref', { id: vpsId });

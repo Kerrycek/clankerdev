@@ -22,17 +22,17 @@ export function eventBadgeVariant(eventType: string | undefined): BadgeVariant {
 }
 
 export function eventDataSummary(ev: ObjectHistoryEvent): string {
-  const d = (ev as any).event_data;
+  const d = (ev as LegacyAny).event_data;
   if (!d) return '';
   if (typeof d !== 'object') return String(d);
-  const keys = Object.keys(d as any);
+  const keys = Object.keys(d as LegacyAny);
   if (keys.length === 0) return '';
   const head = keys.slice(0, 3).join(', ');
   return keys.length > 3 ? `${head}, …` : head;
 }
 
 export function userLabel(ev: ObjectHistoryEvent, na: string): string {
-  const u = (ev as any).user;
+  const u = (ev as LegacyAny).user;
   if (!u) return na;
   if (typeof u === 'string') return u || na;
   if (typeof u === 'number') return `#${u}`;
@@ -47,7 +47,7 @@ export function userLabel(ev: ObjectHistoryEvent, na: string): string {
 }
 
 export function sessionLabel(ev: ObjectHistoryEvent, na: string): string {
-  const s = (ev as any).user_session;
+  const s = (ev as LegacyAny).user_session;
   if (!s) return na;
   if (typeof s === 'string') return s || na;
   if (typeof s === 'number') return `#${s}`;
@@ -62,8 +62,8 @@ export function sessionLabel(ev: ObjectHistoryEvent, na: string): string {
 }
 
 export function trackedObjectLabel(ev: ObjectHistoryEvent, na: string): string {
-  const obj = typeof (ev as any).object === 'string' ? String((ev as any).object).trim() : '';
-  const id = typeof (ev as any).object_id === 'number' ? (ev as any).object_id : undefined;
+  const obj = typeof (ev as LegacyAny).object === 'string' ? String((ev as LegacyAny).object).trim() : '';
+  const id = typeof (ev as LegacyAny).object_id === 'number' ? (ev as LegacyAny).object_id : undefined;
   if (obj && id) return `${obj} #${id}`;
   if (obj) return obj;
   if (id) return `#${id}`;

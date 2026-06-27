@@ -38,7 +38,7 @@ function badgeForCred(c: UserWebauthnCredential): { variant: 'ok' | 'neutral'; l
 
 function secureContext(): boolean {
   if (typeof window === 'undefined') return false;
-  return Boolean((window as any).isSecureContext);
+  return Boolean((window as LegacyAny).isSecureContext);
 }
 
 export function UserWebauthnCredentialsPanel(props: {
@@ -96,8 +96,8 @@ export function UserWebauthnCredentialsPanel(props: {
       if (!label) throw new Error(t('profile.mfa.webauthn.validation.label_required'));
 
       const beginRes = await beginWebauthnRegistration();
-      const challengeToken = (beginRes.data as any)?.challenge_token;
-      const optionsJson = (beginRes.data as any)?.options;
+      const challengeToken = (beginRes.data as LegacyAny)?.challenge_token;
+      const optionsJson = (beginRes.data as LegacyAny)?.options;
 
       if (!challengeToken || !optionsJson) {
         throw new Error(t('profile.mfa.webauthn.validation.bad_begin'));
@@ -110,7 +110,7 @@ export function UserWebauthnCredentialsPanel(props: {
         cred = (await navigator.credentials.create({ publicKey: options })) as PublicKeyCredential | null;
       } catch (e) {
         // User cancellation typically rejects with NotAllowedError.
-        const name = (e as any)?.name;
+        const name = (e as LegacyAny)?.name;
         if (name === 'NotAllowedError') {
           throw new Error(t('profile.mfa.webauthn.validation.cancelled'));
         }

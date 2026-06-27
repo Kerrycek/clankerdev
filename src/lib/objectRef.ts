@@ -69,7 +69,7 @@ export function normalizeObjectRef(raw: unknown): ObjectRef | null {
   if (typeof raw === 'string') return parseObjectRefKey(raw);
 
   if (typeof raw !== 'object') return null;
-  const anyRaw = raw as any;
+  const anyRaw = raw as LegacyAny;
 
   // Accept { key: "Kind:123" }.
   if (typeof anyRaw.key === 'string') {

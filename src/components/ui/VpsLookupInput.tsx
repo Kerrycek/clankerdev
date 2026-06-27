@@ -6,6 +6,7 @@ import { useDebouncedValue } from '../../lib/hooks/useDebouncedValue';
 import { Input } from './Input';
 import { clsx } from './clsx';
 import { parseLookupIdLike, formatLookupId } from '../../lib/lookupInput';
+import { vpsMatchesOwner } from '../../lib/vpsClientFilters';
 
 export function VpsLookupInput(props: {
   value: number | null;
@@ -44,7 +45,7 @@ export function VpsLookupInput(props: {
         limit: 10,
         user: props.userId,
       });
-      return res.data;
+      return res.data.filter((vps) => vpsMatchesOwner(vps, props.userId));
     },
     enabled: open && needle.trim().length >= 2 && idLike === null && !props.disabled,
     staleTime: 15_000,

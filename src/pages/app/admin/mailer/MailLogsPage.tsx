@@ -112,22 +112,22 @@ function resolveTemplateId(
   const list = templates ?? [];
 
   const exact = list.filter((tpl) => {
-    const label = String((tpl as any).label ?? '').trim().toLowerCase();
-    const name = String((tpl as any).name ?? '').trim().toLowerCase();
-    const templateId = String((tpl as any).template_id ?? '').trim().toLowerCase();
+    const label = String((tpl as LegacyAny).label ?? '').trim().toLowerCase();
+    const name = String((tpl as LegacyAny).name ?? '').trim().toLowerCase();
+    const templateId = String((tpl as LegacyAny).template_id ?? '').trim().toLowerCase();
     return label === needle || name === needle || templateId === needle;
   });
 
-  if (exact.length === 1) return { id: Number((exact[0] as any).id) };
+  if (exact.length === 1) return { id: Number((exact[0] as LegacyAny).id) };
 
   const partial = list.filter((tpl) => {
-    const label = String((tpl as any).label ?? '').trim().toLowerCase();
-    const name = String((tpl as any).name ?? '').trim().toLowerCase();
-    const templateId = String((tpl as any).template_id ?? '').trim().toLowerCase();
+    const label = String((tpl as LegacyAny).label ?? '').trim().toLowerCase();
+    const name = String((tpl as LegacyAny).name ?? '').trim().toLowerCase();
+    const templateId = String((tpl as LegacyAny).template_id ?? '').trim().toLowerCase();
     return label.includes(needle) || name.includes(needle) || templateId.includes(needle);
   });
 
-  if (partial.length === 1) return { id: Number((partial[0] as any).id) };
+  if (partial.length === 1) return { id: Number((partial[0] as LegacyAny).id) };
   if (partial.length === 0 && exact.length === 0) return { err: 'none' };
   return { err: 'ambiguous' };
 }
@@ -265,7 +265,7 @@ export function MailLogsPage() {
   });
 
   const rows: MailLog[] = listQ.data ?? [];
-  const pageCursor = useMemo(() => cursorFromDescendingPage(rows as any), [rows]);
+  const pageCursor = useMemo(() => cursorFromDescendingPage(rows as LegacyAny), [rows]);
 
   const hasMore = rows.length >= pagination.limit;
   const canNext = pagination.hasForward || (hasMore && pageCursor !== null);
@@ -446,12 +446,12 @@ export function MailLogsPage() {
   const templateOptions: SelectOption[] = useMemo(() => {
     const opts: SelectOption[] = [{ value: '', label: t('common.all') }];
     const templates = [...(templatesQ.data ?? [])].sort((a, b) =>
-      templateLabel(a as any).localeCompare(templateLabel(b as any))
+      templateLabel(a as LegacyAny).localeCompare(templateLabel(b as LegacyAny))
     );
     for (const tpl of templates) {
-      const id = Number((tpl as any).id);
+      const id = Number((tpl as LegacyAny).id);
       if (!Number.isFinite(id) || id <= 0) continue;
-      opts.push({ value: String(id), label: templateLabel(tpl as any) });
+      opts.push({ value: String(id), label: templateLabel(tpl as LegacyAny) });
     }
     return opts;
   }, [t, templatesQ.data]);
@@ -544,19 +544,19 @@ export function MailLogsPage() {
     if (tplNeedle.length >= 2 && templates.length > 0) {
       const matches = templates
         .filter((tpl) => {
-          const label = templateLabel(tpl as any).toLowerCase();
-          const name = String((tpl as any).name ?? '').toLowerCase();
-          const templateId = String((tpl as any).template_id ?? '').toLowerCase();
+          const label = templateLabel(tpl as LegacyAny).toLowerCase();
+          const name = String((tpl as LegacyAny).name ?? '').toLowerCase();
+          const templateId = String((tpl as LegacyAny).template_id ?? '').toLowerCase();
           return label.includes(tplNeedle) || name.includes(tplNeedle) || templateId.includes(tplNeedle);
         })
         .slice(0, 4);
 
       for (const tpl of matches) {
-        const id = Number((tpl as any).id);
+        const id = Number((tpl as LegacyAny).id);
         if (!Number.isFinite(id) || id <= 0) continue;
         suggestions.push({
           id: `tpl:${id}`,
-          primary: t('mailer.log.smart.suggest.template_match', { label: templateLabel(tpl as any) }),
+          primary: t('mailer.log.smart.suggest.template_match', { label: templateLabel(tpl as LegacyAny) }),
           secondary: t('mailer.log.smart.suggest.template_match.secondary'),
           onPick: () => {
             setTemplateId(String(id));
@@ -904,12 +904,12 @@ export function MailLogsPage() {
           {/* Mobile: cards */}
           <div className="space-y-3 md:hidden">
             {rows.map((m) => {
-              const userId = resourceId((m as any).user);
-              const userLabelText = refLabel((m as any).user) ?? (userId ? `#${userId}` : t('common.na'));
-              const template = (m as any).mail_template;
+              const userId = resourceId((m as LegacyAny).user);
+              const userLabelText = refLabel((m as LegacyAny).user) ?? (userId ? `#${userId}` : t('common.na'));
+              const template = (m as LegacyAny).mail_template;
               const tplLabel = template ? refLabel(template) : undefined;
 
-              const txId = resourceId((m as any).mail_transaction);
+              const txId = resourceId((m as LegacyAny).mail_transaction);
 
               return (
                 <Card key={m.id} testId={`admin.mailer.log.card.${m.id}`}>
@@ -920,11 +920,11 @@ export function MailLogsPage() {
                           className="block truncate text-base font-semibold text-accent hover:underline"
                           to={`${basePath}/mailer/log/${m.id}`}
                         >
-                          {String((m as any).subject ?? t('mailer.log.row.no_subject'))}
+                          {String((m as LegacyAny).subject ?? t('mailer.log.row.no_subject'))}
                         </Link>
                         <div className="mt-0.5 text-xs text-faint">#{m.id}</div>
                       </div>
-                      <Badge variant="neutral">{formatDateTime((m as any).created_at)}</Badge>
+                      <Badge variant="neutral">{formatDateTime((m as LegacyAny).created_at)}</Badge>
                     </div>
 
                     <div className="mt-3 space-y-1 text-xs text-muted">
@@ -943,15 +943,15 @@ export function MailLogsPage() {
                           <span className="text-faint">{t('mailer.log.row.template')}:</span> {tplLabel}
                         </div>
                       ) : null}
-                      {(m as any).to ? (
-                        <div className="truncate" title={String((m as any).to)}>
-                          <span className="text-faint">{t('mailer.log.row.to')}:</span> {String((m as any).to)}
+                      {(m as LegacyAny).to ? (
+                        <div className="truncate" title={String((m as LegacyAny).to)}>
+                          <span className="text-faint">{t('mailer.log.row.to')}:</span> {String((m as LegacyAny).to)}
                         </div>
                       ) : null}
-                      {(m as any).message_id ? (
-                        <div className="truncate" title={String((m as any).message_id)}>
+                      {(m as LegacyAny).message_id ? (
+                        <div className="truncate" title={String((m as LegacyAny).message_id)}>
                           <span className="text-faint">{t('mailer.log.row.message_id')}:</span>{' '}
-                          {String((m as any).message_id)}
+                          {String((m as LegacyAny).message_id)}
                         </div>
                       ) : null}
                       {txId ? (
@@ -1024,11 +1024,11 @@ export function MailLogsPage() {
             </thead>
             <tbody>
               {rows.map((m) => {
-                const userId = resourceId((m as any).user);
-                const userText = refLabel((m as any).user) ?? (userId ? `#${userId}` : t('common.na'));
-                const template = (m as any).mail_template;
+                const userId = resourceId((m as LegacyAny).user);
+                const userText = refLabel((m as LegacyAny).user) ?? (userId ? `#${userId}` : t('common.na'));
+                const template = (m as LegacyAny).mail_template;
                 const tplText = template ? refLabel(template) : t('common.na');
-                const txId = resourceId((m as any).mail_transaction);
+                const txId = resourceId((m as LegacyAny).mail_transaction);
 
                 return (
                   <TableRowLink
@@ -1039,7 +1039,7 @@ export function MailLogsPage() {
                   >
                     <td className="tabular-nums">#{m.id}</td>
                     <td className="min-w-0">
-                      <div className="truncate font-medium">{String((m as any).subject ?? t('mailer.log.row.no_subject'))}</div>
+                      <div className="truncate font-medium">{String((m as LegacyAny).subject ?? t('mailer.log.row.no_subject'))}</div>
                     </td>
                     <td className="min-w-0">
                       {userId ? (
@@ -1051,16 +1051,16 @@ export function MailLogsPage() {
                       )}
                     </td>
                     <td className="min-w-0">
-                      <div className="truncate" title={String((m as any).to ?? '')}>
-                        {String((m as any).to ?? '—')}
+                      <div className="truncate" title={String((m as LegacyAny).to ?? '')}>
+                        {String((m as LegacyAny).to ?? '—')}
                       </div>
                     </td>
                     <td className="min-w-0">
                       <div className="truncate">{tplText}</div>
                     </td>
                     <td className="min-w-0">
-                      <div className="truncate" title={String((m as any).message_id ?? '')}>
-                        {String((m as any).message_id ?? '—')}
+                      <div className="truncate" title={String((m as LegacyAny).message_id ?? '')}>
+                        {String((m as LegacyAny).message_id ?? '—')}
                       </div>
                     </td>
                     <td className="tabular-nums">
@@ -1072,7 +1072,7 @@ export function MailLogsPage() {
                         '—'
                       )}
                     </td>
-                    <td className="whitespace-nowrap">{formatDateTime((m as any).created_at)}</td>
+                    <td className="whitespace-nowrap">{formatDateTime((m as LegacyAny).created_at)}</td>
                   </TableRowLink>
                 );
               })}

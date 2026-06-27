@@ -19,7 +19,7 @@ describe('lockState', () => {
 
   it('keeps a busy lock within TTL even if the last refetch failed', () => {
     const state = deriveChainLockState({
-      chains: [{ id: 123, state: 'running' } as any],
+      chains: [{ id: 123, state: 'running' } as LegacyAny],
       updatedAt: 9_500,
       unreliable: true,
       ttlMs: 1000,
@@ -33,7 +33,7 @@ describe('lockState', () => {
 
   it('degrades and stops treating the object as busy after TTL expires', () => {
     const state = deriveChainLockState({
-      chains: [{ id: 123, state: 'running' } as any],
+      chains: [{ id: 123, state: 'running' } as LegacyAny],
       updatedAt: 8_000,
       unreliable: true,
       ttlMs: 1000,
@@ -53,7 +53,7 @@ describe('lockState', () => {
         { id: 11, state: 'running' },
         { id: 11, state: 'running' },
         { id: 7, state: 'queued' },
-      ] as any,
+      ] as LegacyAny,
       updatedAt: 1,
       unreliable: false,
     });
@@ -68,7 +68,7 @@ describe('lockState', () => {
         { id: 65, state: 2 },
         { id: 53, state: 4 },
         { id: 12, state: 6 },
-      ] as any,
+      ] as LegacyAny,
       updatedAt: 1,
       unreliable: false,
     });
@@ -82,7 +82,7 @@ describe('lockState', () => {
       chains: [
         { id: 66, state: 1 },
         { id: 67, state: 3 },
-      ] as any,
+      ] as LegacyAny,
       updatedAt: 1,
       unreliable: false,
     });

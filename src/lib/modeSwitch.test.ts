@@ -72,6 +72,24 @@ describe('modeSwitch', () => {
     ).toBe('/app/incidents#draft');
   });
 
+  it('keeps admin triage and admin outage deep links out of the user scope', () => {
+    expect(
+      computeOtherModeUrl({
+        mode: 'admin',
+        pathname: '/admin/requests/registration/31',
+        search: '?state=awaiting',
+      })
+    ).toBe('/app');
+
+    expect(
+      computeOtherModeUrl({
+        mode: 'admin',
+        pathname: '/admin/outages/7',
+        hash: '#events',
+      })
+    ).toBe('/app#events');
+  });
+
   it('falls back to the user dashboard for admin-only areas with no user equivalent', () => {
     expect(
       computeOtherModeUrl({

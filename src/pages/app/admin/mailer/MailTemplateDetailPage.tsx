@@ -85,7 +85,7 @@ export function MailTemplateDetailPage() {
   });
 
   const [userVisibility, setUserVisibility] = useState<string>('');
-  const uvCurrent = String((tplQ.data as any)?.user_visibility ?? '').trim() || 'default';
+  const uvCurrent = String((tplQ.data as LegacyAny)?.user_visibility ?? '').trim() || 'default';
 
   useEffect(() => {
     if (!tplQ.data) return;
@@ -103,13 +103,13 @@ export function MailTemplateDetailPage() {
     },
   });
 
-  const roles = splitCsv((tplQ.data as any)?.registry_roles);
-  const isPublic = Boolean((tplQ.data as any)?.registry_public);
+  const roles = splitCsv((tplQ.data as LegacyAny)?.registry_roles);
+  const isPublic = Boolean((tplQ.data as LegacyAny)?.registry_public);
 
   const associatedRecipientIds = useMemo(() => {
     const ids = new Set<number>();
     for (const r of recipientsQ.data ?? []) {
-      const mr = (r as any).mail_recipient;
+      const mr = (r as LegacyAny).mail_recipient;
       const rid = resourceId(mr);
       if (rid) ids.add(rid);
     }
@@ -187,9 +187,9 @@ export function MailTemplateDetailPage() {
   const languageOptions: SelectOption[] = useMemo(() => {
     const opts: SelectOption[] = [{ value: '', label: t('common.select') }];
     for (const l of languagesQ.data ?? []) {
-      const lid = Number((l as any).id);
+      const lid = Number((l as LegacyAny).id);
       if (!Number.isFinite(lid) || lid <= 0) continue;
-      const label = String((l as any).label ?? (l as any).code ?? `#${lid}`);
+      const label = String((l as LegacyAny).label ?? (l as LegacyAny).code ?? `#${lid}`);
       opts.push({ value: String(lid), label });
     }
     return opts;
@@ -260,7 +260,7 @@ export function MailTemplateDetailPage() {
     );
   }
 
-  const tpl = tplQ.data as any;
+  const tpl = tplQ.data as LegacyAny;
   const title = String(tpl?.label ?? tpl?.name ?? `#${id}`);
 
   return (
@@ -357,7 +357,7 @@ export function MailTemplateDetailPage() {
                 {saveUvM.isError ? (
                   <div className="mt-3">
                     <Alert variant="danger" title={t('mailer.templates.detail.save_visibility_error')}>
-                      {String((saveUvM.error as any)?.message ?? saveUvM.error)}
+                      {String((saveUvM.error as LegacyAny)?.message ?? saveUvM.error)}
                     </Alert>
                   </div>
                 ) : null}
@@ -445,15 +445,15 @@ export function MailTemplateDetailPage() {
                   </thead>
                   <tbody>
                     {(recipientsQ.data ?? []).map((r: MailTemplateRecipient) => {
-                      const mr = (r as any).mail_recipient as MailRecipient | undefined;
+                      const mr = (r as LegacyAny).mail_recipient as MailRecipient | undefined;
                       const rid = resourceId(mr);
                       const label = refLabel(mr) ?? (rid ? `#${rid}` : t('common.na'));
-                      const to = String((mr as any)?.to ?? '');
-                      const cc = String((mr as any)?.cc ?? '');
-                      const bcc = String((mr as any)?.bcc ?? '');
+                      const to = String((mr as LegacyAny)?.to ?? '');
+                      const cc = String((mr as LegacyAny)?.cc ?? '');
+                      const bcc = String((mr as LegacyAny)?.bcc ?? '');
 
                       return (
-                        <tr key={rid ?? (r as any).id} className="border-b border-border">
+                        <tr key={rid ?? (r as LegacyAny).id} className="border-b border-border">
                           <td className="px-4 py-2 text-sm">{label}</td>
                           <td className="max-w-xs truncate px-4 py-2 text-sm" title={to}>
                             {to || <span className="text-muted">{t('common.na')}</span>}
@@ -524,10 +524,10 @@ export function MailTemplateDetailPage() {
                   </thead>
                   <tbody>
                     {(translationsQ.data ?? []).map((tr: MailTemplateTranslation) => {
-                      const tid = Number((tr as any).id);
-                      const lang = (tr as any).language as Language | undefined;
-                      const langLabel = String((lang as any)?.label ?? (lang as any)?.code ?? t('common.na'));
-                      const subject = String((tr as any).subject ?? '');
+                      const tid = Number((tr as LegacyAny).id);
+                      const lang = (tr as LegacyAny).language as Language | undefined;
+                      const langLabel = String((lang as LegacyAny)?.label ?? (lang as LegacyAny)?.code ?? t('common.na'));
+                      const subject = String((tr as LegacyAny).subject ?? '');
 
                       return (
                         <TableRowLink
@@ -539,7 +539,7 @@ export function MailTemplateDetailPage() {
                           <td className="px-4 py-2 text-sm">
                             {subject ? <span title={subject}>{subject}</span> : <span className="text-muted">{t('common.na')}</span>}
                           </td>
-                          <td className="px-4 py-2 text-sm">{formatDateTime((tr as any).updated_at)}</td>
+                          <td className="px-4 py-2 text-sm">{formatDateTime((tr as LegacyAny).updated_at)}</td>
                         </TableRowLink>
                       );
                     })}
@@ -590,7 +590,7 @@ export function MailTemplateDetailPage() {
                           cc: newRecipient.cc.trim() || undefined,
                           bcc: newRecipient.bcc.trim() || undefined,
                         });
-                        const rid = Number((created as any).id);
+                        const rid = Number((created as LegacyAny).id);
                         if (Number.isFinite(rid) && rid > 0) addRecipientM.mutate(rid);
                       }}
                       loading={createRecipientM.isPending || addRecipientM.isPending}
@@ -650,15 +650,15 @@ export function MailTemplateDetailPage() {
                       .filter((r) => {
                         const needle = recipientSearch.trim().toLowerCase();
                         if (!needle) return true;
-                        const hay = `${String((r as any).label ?? '')} ${String((r as any).to ?? '')} ${String((r as any).cc ?? '')} ${String((r as any).bcc ?? '')}`.toLowerCase();
+                        const hay = `${String((r as LegacyAny).label ?? '')} ${String((r as LegacyAny).to ?? '')} ${String((r as LegacyAny).cc ?? '')} ${String((r as LegacyAny).bcc ?? '')}`.toLowerCase();
                         return hay.includes(needle);
                       })
                       .map((r: MailRecipient) => {
-                        const rid = Number((r as any).id);
-                        const label = String((r as any).label ?? `#${rid}`);
-                        const to = String((r as any).to ?? '');
-                        const cc = String((r as any).cc ?? '');
-                        const bcc = String((r as any).bcc ?? '');
+                        const rid = Number((r as LegacyAny).id);
+                        const label = String((r as LegacyAny).label ?? `#${rid}`);
+                        const to = String((r as LegacyAny).to ?? '');
+                        const cc = String((r as LegacyAny).cc ?? '');
+                        const bcc = String((r as LegacyAny).bcc ?? '');
                         const selected = selectedRecipientId === rid;
                         const already = associatedRecipientIds.has(rid);
 
@@ -857,7 +857,7 @@ export function MailTemplateDetailPage() {
 
               {createTranslationM.isError ? (
                 <Alert variant="danger" title={t('mailer.templates.detail.translations.modal.create_error')}>
-                  {String((createTranslationM.error as any)?.message ?? createTranslationM.error)}
+                  {String((createTranslationM.error as LegacyAny)?.message ?? createTranslationM.error)}
                 </Alert>
               ) : null}
             </div>

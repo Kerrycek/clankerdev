@@ -88,6 +88,18 @@ function datasetLabel(ds: Dataset): string {
   return String(label ?? `#${ds.id}`);
 }
 
+
+function datasetOwnerId(ds: Dataset): number | undefined {
+  if (!ds.user || typeof ds.user !== 'object' || !('id' in ds.user)) return undefined;
+  const id = Number((ds.user as { id?: unknown }).id);
+  return Number.isFinite(id) && id > 0 ? id : undefined;
+}
+
+function datasetMatchesClientFilters(ds: Dataset, filters: { userId?: number }): boolean {
+  if (filters.userId !== undefined && datasetOwnerId(ds) !== filters.userId) return false;
+  return true;
+}
+
 function canonicalKey(raw: string): 'q' | 'user' | 'vps' | 'id' | null {
   const k = String(raw ?? '')
     .trim()
@@ -132,7 +144,14 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
   const vpsIdNum = useMemo(() => parsePositiveInt(vpsRaw), [vpsRaw]);
   const showOwnerColumn = requestedOwnerColumn && mode === 'admin';
   const listId = rolePreset === 'primary' ? 'nas.list' : 'datasets.list';
-  const includes = showOwnerColumn ? 'user' : showVpsFilter ? 'vps' : undefined;
+  const clientUserId = mode === 'admin' ? userIdNum : scope.mineUserId;
+  const clientFiltersActive = clientUserId !== undefined;
+  const includes = useMemo(() => {
+    const values: string[] = [];
+    if (showOwnerColumn || clientUserId !== undefined) values.push('user');
+    if (showVpsFilter) values.push('vps');
+    return values.length > 0 ? values.join(',') : undefined;
+  }, [clientUserId, showOwnerColumn, showVpsFilter]);
 
   // URL hygiene: keep unsupported/invalid params from lingering.
   useEffect(() => {
@@ -169,7 +188,7 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
     filterKey: JSON.stringify({
       basePath,
       q: qText,
-      user: mode === 'admin' ? userIdNum ?? null : scope.mineUserId ?? null,
+      user: clientUserId ?? null,
       vps: showVpsFilter ? vpsIdNum ?? null : null,
       role: rolePreset ?? null,
       scope: scope.scope,
@@ -188,7 +207,7 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
         limit: pagination.limit,
         fromId: pagination.fromId,
         q: qText || null,
-        user: mode === 'admin' ? userIdNum ?? null : scope.mineUserId ?? null,
+        user: clientUserId ?? null,
         vps: showVpsFilter ? vpsIdNum ?? null : null,
         role: rolePreset ?? null,
         includes,
@@ -200,17 +219,21 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
         fromId: pagination.fromId,
         includes,
         q: qText || undefined,
-        user: mode === 'admin' ? userIdNum : scope.mineUserId,
         vps: showVpsFilter ? vpsIdNum || undefined : undefined,
         role: rolePreset,
       })
     ).data,
   });
 
-  const rows = datasetsQ.data ?? [];
+  const rawRows = datasetsQ.data ?? [];
+  const rows = useMemo(
+    () => rawRows.filter((dataset) => datasetMatchesClientFilters(dataset, { userId: clientUserId })),
+    [clientUserId, rawRows]
+  );
 
-  const pageCursor = useMemo(() => cursorFromDescendingPage(rows as any), [rows]);
-  const hasMore = rows.length >= pagination.limit;
+  const pageCursor = useMemo(() => cursorFromDescendingPage(rawRows as LegacyAny), [rawRows]);
+  const hasMore = rawRows.length >= pagination.limit;
+  const showEmptyState = rawRows.length === 0 || (rows.length === 0 && !clientFiltersActive);
 
   const filtersActive = Boolean(qText) || Boolean(userIdNum !== undefined) || Boolean(showVpsFilter && vpsIdNum !== undefined);
 
@@ -559,7 +582,7 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
           testId="datasets.list.header"
           title={t(titleKey)}
           description={t(descriptionKey)}
-          meta={filtersActive ? t('list.meta.filters_active') : undefined}
+          meta={clientFiltersActive ? t('datasets.client_filter_note') : filtersActive ? t('list.meta.filters_active') : undefined}
           actions={
             <Button variant="secondary" size="sm" onClick={() => void datasetsQ.refetch()} testId="datasets.list.refresh">
               {t('common.refresh')}
@@ -641,7 +664,7 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
           showBack={false}
           detailsExtra={{ page: 'datasets.list', scope: scope.scope }}
         />
-      ) : rows.length === 0 ? (
+      ) : showEmptyState ? (
         <EmptyState
           testId="datasets.list.empty"
           title={filtersActive ? t('empty.list.no_matches.title') : t('datasets.list.empty')}
@@ -653,17 +676,21 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
         <>
           {/* Mobile: cards */}
           <div className="space-y-3 md:hidden">
-            {rows.map((ds) => {
-              const state = objectStateBadge((ds as any).object_state, t);
+            {rows.length === 0 ? (
+              <Card>
+                <div className="p-4 text-center text-sm text-muted">{t('empty.list.no_matches.title')}</div>
+              </Card>
+            ) : rows.map((ds) => {
+              const state = objectStateBadge((ds as LegacyAny).object_state, t);
               const rowVariant = datasetRowVariant(ds, state.variant);
               const dotVariant = dotVariantFromRowVariant(rowVariant) ?? dotVariantFromBadgeVariant(state.variant);
               const label = datasetLabel(ds);
               const vpsId =
-                ds.vps && typeof ds.vps === 'object' && 'id' in ds.vps ? Number((ds.vps as any).id) : undefined;
-              const vpsHostname = ds.vps && typeof ds.vps === 'object' ? String((ds.vps as any).hostname ?? '') : '';
+                ds.vps && typeof ds.vps === 'object' && 'id' in ds.vps ? Number((ds.vps as LegacyAny).id) : undefined;
+              const vpsHostname = ds.vps && typeof ds.vps === 'object' ? String((ds.vps as LegacyAny).hostname ?? '') : '';
               const ownerId =
-                ds.user && typeof ds.user === 'object' && 'id' in ds.user ? Number((ds.user as any).id) : undefined;
-              const ownerLogin = ds.user && typeof ds.user === 'object' ? String((ds.user as any).login ?? '') : '';
+                ds.user && typeof ds.user === 'object' && 'id' in ds.user ? Number((ds.user as LegacyAny).id) : undefined;
+              const ownerLogin = ds.user && typeof ds.user === 'object' ? String((ds.user as LegacyAny).login ?? '') : '';
 
               return (
                 <Card key={ds.id} testId={`datasets.card.${ds.id}`} className={toneSurfaceClass(rowVariant)}>
@@ -685,7 +712,7 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
                     </div>
 
                     <div className="mt-3">
-                      <DatasetUsage used={ds.used as any} refquota={ds.refquota as any} />
+                      <DatasetUsage used={ds.used as LegacyAny} refquota={ds.refquota as LegacyAny} />
                     </div>
 
                     <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
@@ -779,17 +806,23 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((ds) => {
-                const state = objectStateBadge((ds as any).object_state, t);
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={showOwnerColumn || showVpsFilter ? 8 : 7} className="px-4 py-10 text-center text-sm text-muted">
+                    {t('empty.list.no_matches.title')}
+                  </td>
+                </tr>
+              ) : rows.map((ds) => {
+                const state = objectStateBadge((ds as LegacyAny).object_state, t);
                 const rowVariant = datasetRowVariant(ds, state.variant);
                 const dotVariant = dotVariantFromRowVariant(rowVariant) ?? dotVariantFromBadgeVariant(state.variant);
                 const label = datasetLabel(ds);
                 const vpsId =
-                  ds.vps && typeof ds.vps === 'object' && 'id' in ds.vps ? Number((ds.vps as any).id) : undefined;
-                const vpsHostname = ds.vps && typeof ds.vps === 'object' ? String((ds.vps as any).hostname ?? '') : '';
+                  ds.vps && typeof ds.vps === 'object' && 'id' in ds.vps ? Number((ds.vps as LegacyAny).id) : undefined;
+                const vpsHostname = ds.vps && typeof ds.vps === 'object' ? String((ds.vps as LegacyAny).hostname ?? '') : '';
                 const ownerId =
-                  ds.user && typeof ds.user === 'object' && 'id' in ds.user ? Number((ds.user as any).id) : undefined;
-                const ownerLogin = ds.user && typeof ds.user === 'object' ? String((ds.user as any).login ?? '') : '';
+                  ds.user && typeof ds.user === 'object' && 'id' in ds.user ? Number((ds.user as LegacyAny).id) : undefined;
+                const ownerLogin = ds.user && typeof ds.user === 'object' ? String((ds.user as LegacyAny).login ?? '') : '';
 
                 return (
                   <TableRowLink
@@ -830,7 +863,7 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
                       </td>
                     ) : null}
                     <td className="px-4 py-2">
-                      <DatasetUsage used={ds.used as any} refquota={ds.refquota as any} />
+                      <DatasetUsage used={ds.used as LegacyAny} refquota={ds.refquota as LegacyAny} />
                     </td>
                     <td className="px-4 py-2">{ds.snapshots_count ?? t('common.na')}</td>
                     <td className="px-4 py-2">{ds.mount_count ?? t('common.na')}</td>

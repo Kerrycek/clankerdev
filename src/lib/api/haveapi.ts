@@ -101,7 +101,7 @@ function getHaveApiDescriptionFromWindow(): any | undefined {
   // This is very useful for reading dynamic bits like authentication header name
   // and meta namespace.
   if (typeof window === 'undefined') return undefined;
-  return (window as any).vpsAdmin?.description;
+  return (window as LegacyAny).vpsAdmin?.description;
 }
 
 let cachedDescription: any | undefined;
@@ -243,7 +243,7 @@ export function unwrapSingleResponse<T>(
  */
 export function getMetaActionStateId(meta: unknown): number | undefined {
   if (!meta || typeof meta !== 'object') return undefined;
-  const raw = (meta as any)['action_state_id'] ?? (meta as any)['state_id'];
+  const raw = (meta as LegacyAny)['action_state_id'] ?? (meta as LegacyAny)['state_id'];
   if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
   if (typeof raw === 'string') {
     const n = Number(raw);
@@ -257,7 +257,7 @@ export function getMetaActionStateId(meta: unknown): number | undefined {
  */
 export function getMetaTotalCount(meta: unknown): number | undefined {
   if (!meta || typeof meta !== 'object') return undefined;
-  const raw = (meta as any)['total_count'];
+  const raw = (meta as LegacyAny)['total_count'];
   if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
   if (typeof raw === 'string') {
     const n = Number(raw);

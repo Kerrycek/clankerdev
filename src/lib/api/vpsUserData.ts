@@ -41,7 +41,7 @@ export async function fetchVpsUserDataList(opts?: {
   });
 
   return {
-    data: expectArray<VpsUserData>(res.data as any, 'vps_user_data.index'),
+    data: expectArray<VpsUserData>(res.data as LegacyAny, 'vps_user_data.index'),
     meta: res.meta,
   };
 }
@@ -52,7 +52,7 @@ export async function fetchVpsUserData(id: number): Promise<{ data: VpsUserData;
     path: `/vps_user_data/${id}`,
   });
 
-  return { data: res.data as any, meta: res.meta };
+  return { data: res.data as LegacyAny, meta: res.meta };
 }
 
 export async function createVpsUserData(payload: {
@@ -65,10 +65,10 @@ export async function createVpsUserData(payload: {
     method: 'POST',
     path: '/vps_user_data',
     namespace: 'vps_user_data',
-    params: payload as any,
+    params: payload as LegacyAny,
   });
 
-  return { data: res.data as any, meta: res.meta };
+  return { data: res.data as LegacyAny, meta: res.meta };
 }
 
 export async function updateVpsUserData(
@@ -83,10 +83,10 @@ export async function updateVpsUserData(
     method: 'PUT',
     path: `/vps_user_data/${id}`,
     namespace: 'vps_user_data',
-    params: payload as any,
+    params: payload as LegacyAny,
   });
 
-  return { data: res.data as any, meta: res.meta };
+  return { data: res.data as LegacyAny, meta: res.meta };
 }
 
 export async function deleteVpsUserData(id: number): Promise<void> {

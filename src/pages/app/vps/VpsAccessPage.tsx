@@ -55,10 +55,10 @@ function resourceId(value: unknown): number | null {
 }
 
 function extractPassword(res: ApiResult<VpsGeneratedPassword>): string {
-  const direct = (res.data as any)?.password;
+  const direct = (res.data as LegacyAny)?.password;
   if (direct !== undefined && direct !== null && direct !== '') return String(direct);
 
-  const raw = res.raw as any;
+  const raw = res.raw as LegacyAny;
   const responsePassword = raw?.response?.vps?.password ?? raw?.response?.password ?? raw?.vps?.password ?? raw?.password;
   return responsePassword !== undefined && responsePassword !== null ? String(responsePassword) : '';
 }
@@ -124,10 +124,10 @@ export function VpsAccessPage() {
   const { t } = useI18n();
   const { vps, refetch, refetchChains, vpsRef, busyTransaction, busyLocalLock } = useVps();
   const vpsId = Number(vps.id);
-  const objectLabel = String((vps as any).hostname ?? '') || `#${vpsId}`;
-  const isRunning = boolValue((vps as any).is_running);
-  const ownerUserId = resourceId((vps as any).user);
-  const ownerLabel = resourceLabel((vps as any).user);
+  const objectLabel = String((vps as LegacyAny).hostname ?? '') || `#${vpsId}`;
+  const isRunning = boolValue((vps as LegacyAny).is_running);
+  const ownerUserId = resourceId((vps as LegacyAny).user);
+  const ownerLabel = resourceLabel((vps as LegacyAny).user);
   const [passwordType, setPasswordType] = useState<VpsPasswordType>('secure');
   const [pendingPasswordType, setPendingPasswordType] = useState<VpsPasswordType | null>(null);
   const [selectedPublicKeyId, setSelectedPublicKeyId] = useState<number | null>(null);
@@ -256,7 +256,7 @@ export function VpsAccessPage() {
   const statusItems = useMemo(
     () => [
       { label: t('vps.access.status.hostname'), value: objectLabel },
-      { label: t('vps.access.status.os_template'), value: resourceLabel((vps as any).os_template) },
+      { label: t('vps.access.status.os_template'), value: resourceLabel((vps as LegacyAny).os_template) },
       { label: t('vps.access.status.owner'), value: ownerLabel },
       { label: t('vps.access.status.running'), value: isRunning ? t('vps.access.status.running_yes') : t('vps.access.status.running_no') },
       { label: t('vps.access.status.password_type'), value: selectedTypeLabel },
@@ -284,8 +284,8 @@ export function VpsAccessPage() {
         </Alert>
       ) : null}
 
-      {passwdM.error ? <Alert variant="danger">{String((passwdM.error as any)?.message ?? passwdM.error)}</Alert> : null}
-      {deployKeyM.error ? <Alert variant="danger">{String((deployKeyM.error as any)?.message ?? deployKeyM.error)}</Alert> : null}
+      {passwdM.error ? <Alert variant="danger">{String((passwdM.error as LegacyAny)?.message ?? passwdM.error)}</Alert> : null}
+      {deployKeyM.error ? <Alert variant="danger">{String((deployKeyM.error as LegacyAny)?.message ?? deployKeyM.error)}</Alert> : null}
       {missingPassword ? <Alert variant="warn">{t('vps.access.generated.missing_password')}</Alert> : null}
       {keyDeployMessage ? <Alert variant="info">{t('vps.access.ssh.deployed', { key: keyDeployMessage })}</Alert> : null}
 
@@ -336,8 +336,8 @@ export function VpsAccessPage() {
         <CardHeader title={t('vps.access.ssh.title')} subtitle={t('vps.access.ssh.subtitle')} />
         <CardBody className="space-y-4">
           {publicKeyUserId === null && currentUserQ.isPending ? <Alert variant="info">{t('vps.access.ssh.loading_user')}</Alert> : null}
-          {currentUserQ.error ? <Alert variant="danger">{String((currentUserQ.error as any)?.message ?? currentUserQ.error)}</Alert> : null}
-          {publicKeysQ.error ? <Alert variant="danger">{String((publicKeysQ.error as any)?.message ?? publicKeysQ.error)}</Alert> : null}
+          {currentUserQ.error ? <Alert variant="danger">{String((currentUserQ.error as LegacyAny)?.message ?? currentUserQ.error)}</Alert> : null}
+          {publicKeysQ.error ? <Alert variant="danger">{String((publicKeysQ.error as LegacyAny)?.message ?? publicKeysQ.error)}</Alert> : null}
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-end">
             <label className="space-y-2">

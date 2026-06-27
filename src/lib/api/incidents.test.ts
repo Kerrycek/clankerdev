@@ -7,13 +7,13 @@ function mockFetchOk(response: any) {
 }
 
 function lastFetchCall() {
-  const calls = (globalThis.fetch as any).mock.calls;
+  const calls = (globalThis.fetch as LegacyAny).mock.calls;
   return calls[calls.length - 1] as [string, RequestInit?];
 }
 
 describe('incident API wrappers', () => {
   test('fetchIncidentReports forwards q and structured filters', async () => {
-    globalThis.fetch = mockFetchOk({ incident_reports: [], _meta: { total_count: 0 } }) as any;
+    globalThis.fetch = mockFetchOk({ incident_reports: [], _meta: { total_count: 0 } }) as LegacyAny;
 
     await fetchIncidentReports({
       limit: 20,

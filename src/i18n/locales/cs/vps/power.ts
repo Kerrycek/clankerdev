@@ -1,0 +1,22 @@
+// VPS locale chunk: power
+export const csVps_power = {
+  'vps.power.aria.start': 'Spustit VPS',
+  'vps.power.aria.restart': 'Restartovat VPS',
+  'vps.power.aria.stop': 'Zastavit VPS',
+  'vps.power.stop.confirm_title': 'Zastavit VPS',
+  'vps.power.stop.confirm_desc_basic': 'Zastavení VPS jej vypne. Pokud si nejsi jistý, zvaž místo toho restart.',
+  'vps.power.stop.confirm_desc_advanced': 'Zastavit toto VPS?',
+  'vps.power.stop.force.label': 'Vynutit zastavení',
+  'vps.power.stop.force.help': 'Vynucené zastavení může být užitečné, pokud VPS nereaguje, ale může zvýšit riziko problémů se souborovým systémem.',
+  'vps.power.restart.confirm_title': 'Restartovat VPS',
+  'vps.power.restart.confirm_desc_basic': 'Restart VPS jej znovu spustí.',
+  'vps.power.restart.confirm_desc_advanced': 'Restartovat toto VPS?',
+  'vps.power.restart.force.label': 'Vynutit restart',
+  'vps.power.restart.force.help': 'Vynucený restart může být užitečný, pokud VPS nereaguje, ale může zvýšit riziko problémů se souborovým systémem.',
+  'vps.power.root_password.button': 'Root heslo',
+  'vps.power.root_password.confirm_desc_basic': 'Tímto se vygeneruje nové root heslo pro VPS a jednou se zobrazí. Ulož si ho bezpečně.',
+  'vps.power.root_password.confirm_desc_advanced': 'Vygenerovat nové root heslo a zobrazit ho?',
+  'vps.power.root_password.type.secure': 'Bezpečné (výchozí)',
+  'vps.power.root_password.type.simple': 'Jednoduché',
+  'vps.power.error.task_failed': 'Operace selhala (úloha #{id}). Podrobnosti najdeš v Úlohách.',
+} as const;

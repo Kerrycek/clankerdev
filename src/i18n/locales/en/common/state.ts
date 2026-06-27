@@ -1,0 +1,22 @@
+// Common locale chunk: state
+export const enCommon_state = {
+  'state.active': 'Active',
+  'state.planned': 'Planned',
+  'state.resolved': 'Resolved',
+  'state.draft': 'Draft',
+  'state.inactive': 'Inactive',
+  'state.up': 'Up',
+  'state.down': 'Down',
+  'state.running': 'Running',
+  'state.stopped': 'Stopped',
+  'state.suspended': 'Suspended',
+  'state.soft_delete': 'Soft delete',
+  'state.hard_delete': 'Hard delete',
+  'state.deleted': 'Deleted',
+  'state.unknown': 'Unknown',
+  'state.busy': 'Busy',
+  'state.maintenance': 'Maintenance',
+  'state.canceled': 'Cancelled',
+  'state.done': 'Done',
+  'state.failed': 'Failed',
+} as const;

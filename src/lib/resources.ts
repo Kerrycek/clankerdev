@@ -35,7 +35,7 @@ export function resourceId(ref: unknown): number | undefined {
   if (direct !== undefined) return direct;
 
   if (typeof ref === 'object') {
-    const id = parsePositiveId((ref as any).id);
+    const id = parsePositiveId((ref as LegacyAny).id);
     return id;
   }
 
@@ -56,7 +56,7 @@ export function refLabel(ref: unknown): string | undefined {
   }
 
   if (typeof ref === 'object') {
-    const obj = ref as any;
+    const obj = ref as LegacyAny;
 
     const keys = ['label', 'name', 'login', 'hostname', 'domain_name', 'fqdn'];
     for (const k of keys) {

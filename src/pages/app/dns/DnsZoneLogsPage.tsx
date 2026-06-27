@@ -21,7 +21,7 @@ import { useDnsZoneContext } from './DnsZoneContext';
 
 function logHaystack(l: DnsRecordLog): string {
   const chainId = l.transaction_chain && typeof l.transaction_chain === 'object' && 'id' in l.transaction_chain
-    ? String((l.transaction_chain as any).id)
+    ? String((l.transaction_chain as LegacyAny).id)
     : '';
   const changes = l.attr_changes ? JSON.stringify(l.attr_changes) : '';
   return `${l.id} ${l.change_type ?? ''} ${l.name ?? ''} ${l.type ?? ''} ${chainId} ${changes}`;
@@ -59,25 +59,29 @@ export function DnsZoneLogsPage() {
     allowedLimits: [25, 50, 100],
   });
 
+  const logQuery = qstr.trim().toLowerCase();
+
   const logsQ = useQuery({
-    queryKey: ['dns_record_logs', 'index', { dns_zone: zone.id, limit: pagination.limit, fromId: pagination.fromId, q: qstr.trim() }],
+    queryKey: ['dns_record_logs', 'index', { dns_zone: zone.id, limit: pagination.limit, fromId: pagination.fromId, q: logQuery }],
     queryFn: async () =>
       fetchDnsRecordLogs({
         dns_zone: zone.id,
         limit: pagination.limit,
         fromId: pagination.fromId,
-        q: qstr.trim() || undefined,
       }),
   });
 
   const pageData = logsQ.data?.data ?? [];
   const totalCount =
     typeof logsQ.data?.meta?.['total_count'] === 'number' ? Number(logsQ.data.meta['total_count']) : pageData.length;
-  const rows = pageData;
+  const rows = useMemo(
+    () => (logQuery ? pageData.filter((log) => logHaystack(log).toLowerCase().includes(logQuery)) : pageData),
+    [logQuery, pageData]
+  );
 
-  const pageCursor = useMemo(() => cursorFromDescendingPage(pageData as any), [pageData]);
+  const pageCursor = useMemo(() => cursorFromDescendingPage(pageData as LegacyAny), [pageData]);
   const hasMore = pageData.length >= pagination.limit;
-  const filtersActive = Boolean(qstr.trim());
+  const filtersActive = Boolean(logQuery);
 
   return (
     <div className="space-y-6" data-testid="dns.logs.list">
@@ -85,7 +89,7 @@ export function DnsZoneLogsPage() {
         <div>
           <h2 className="text-xl font-semibold text-fg">{t('dns.zone.logs.page.title')}</h2>
           <p className="mt-1 text-sm text-muted">{t('dns.zone.logs.page.description')}</p>
-          {filtersActive ? <p className="mt-1 text-xs text-faint">{t('list.meta.filters_active')}</p> : null}
+          {filtersActive ? <p className="mt-1 text-xs text-faint">{t('filters.current_page_text_search_note')}</p> : null}
         </div>
 
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-end">
@@ -140,7 +144,7 @@ export function DnsZoneLogsPage() {
               rows.map((l) => {
                 const chainId =
                   l.transaction_chain && typeof l.transaction_chain === 'object' && 'id' in l.transaction_chain
-                    ? Number((l.transaction_chain as any).id)
+                    ? Number((l.transaction_chain as LegacyAny).id)
                     : undefined;
 
                 return (
@@ -209,7 +213,7 @@ export function DnsZoneLogsPage() {
                     rows.map((l) => {
                       const chainId =
                         l.transaction_chain && typeof l.transaction_chain === 'object' && 'id' in l.transaction_chain
-                          ? Number((l.transaction_chain as any).id)
+                          ? Number((l.transaction_chain as LegacyAny).id)
                           : undefined;
 
                       return (

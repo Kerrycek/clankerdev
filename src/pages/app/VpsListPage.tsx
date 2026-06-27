@@ -39,6 +39,7 @@ import { useKeysetPagination } from '../../lib/hooks/useKeysetPagination';
 import { useTierAIntervalMs } from '../../lib/refreshTiers';
 import { useNetworkStatus } from '../../lib/useNetworkStatus';
 import { isDataStale } from '../../lib/lockState';
+import { vpsMatchesOwner } from '../../lib/vpsClientFilters';
 import { VpsListFilters } from './vps/VpsListFilters';
 import { VpsListMobile } from './vps/VpsListMobile';
 import { VpsListTable } from './vps/VpsListTable';
@@ -290,10 +291,12 @@ export function VpsListPage() {
     },
   });
 
-  const rows = useMemo(() => (q.data ?? []), [q.data]);
+  const rawRows = useMemo(() => (q.data ?? []), [q.data]);
+  const ownerFilterUserId = mode === 'admin' ? userIdNum : scope.mineUserId;
+  const rows = useMemo(() => rawRows.filter((vps) => vpsMatchesOwner(vps, ownerFilterUserId)), [ownerFilterUserId, rawRows]);
 
-  const pageCursor = useMemo(() => cursorFromDescendingPage(q.data), [q.data]);
-  const hasMore = (q.data ?? []).length >= pagination.limit;
+  const pageCursor = useMemo(() => cursorFromDescendingPage(rawRows), [rawRows]);
+  const hasMore = rawRows.length >= pagination.limit;
   const canPaginate = pagination.canPrev || pagination.hasForward || hasMore;
 
   const filtersActive =
@@ -734,7 +737,7 @@ export function VpsListPage() {
 
     return chips;
   }, [mode, nodeIdNum, search, smartErrors, userIdNum, userNamespaceMapIdNum]);
-  const emptyNone = (q.data ?? []).length === 0 && !filtersActive;
+  const emptyNone = rawRows.length === 0 && !filtersActive;
   const emptyTitle = emptyNone
     ? scope.scope === 'mine'
       ? t('empty.vps.none.title')
@@ -756,6 +759,7 @@ export function VpsListPage() {
           testId="vps.list.header"
           title={t('nav.vps')}
           description={t('vps.list.description')}
+          meta={ownerFilterUserId !== undefined ? t('filters.current_page_contract_note') : undefined}
           actions={
             <Button to={`${basePath}/vps/new`} testId="vps.list.create">
               <Plus className="h-4 w-4" />

@@ -8,6 +8,9 @@ import { useObjectScope } from '../../app/objectScope';
 import { PageContainer } from '../../components/layout/PageContainer';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { SummaryGrid } from '../../components/layout/SummaryGrid';
+import { Alert } from '../../components/ui/Alert';
+import { Badge } from '../../components/ui/Badge';
+import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { LinkButton } from '../../components/ui/LinkButton';
 import { StatCard } from '../../components/ui/StatCard';
 import { GaugeRing } from '../../components/ui/GaugeRing';
@@ -16,8 +19,12 @@ import { fetchActiveTransactionChains } from '../../lib/api/transactions';
 import { fetchVpsList } from '../../lib/api/vps';
 import { fetchDatasets } from '../../lib/api/datasets';
 import { fetchDnsZones } from '../../lib/api/dns';
+import { fetchOutages, fetchPublicNodeStatus, type Outage, type PublicNodeStatus } from '../../lib/api/public';
 import { getMetaTotalCount } from '../../lib/api/haveapi';
-import { useTierAIntervalMs } from '../../lib/refreshTiers';
+import { vpsMatchesOwner } from '../../lib/vpsClientFilters';
+import { chainMatchesUser } from './transactions/transactionChainSemantics';
+import { categorizeOutage, sortOutagesNewestFirst } from '../../lib/outage';
+import { useTierAIntervalMs, useTierSlowIntervalMs } from '../../lib/refreshTiers';
 
 function countRunning(vpses: any[]): { running: number; stopped: number; unknown: number } {
   let running = 0;
@@ -25,12 +32,32 @@ function countRunning(vpses: any[]): { running: number; stopped: number; unknown
   let unknown = 0;
 
   for (const vps of vpses) {
-    if ((vps as any).is_running === true) running += 1;
-    else if ((vps as any).is_running === false) stopped += 1;
+    if ((vps as LegacyAny).is_running === true) running += 1;
+    else if ((vps as LegacyAny).is_running === false) stopped += 1;
     else unknown += 1;
   }
 
   return { running, stopped, unknown };
+}
+
+function summarizePublicNodes(nodes: PublicNodeStatus[]): { ok: number; down: number; total: number } {
+  let ok = 0;
+  let down = 0;
+
+  for (const node of nodes) {
+    if (node.status === true) ok += 1;
+    else down += 1;
+  }
+
+  return { ok, down, total: nodes.length };
+}
+
+function currentOutages(outages: Outage[] | undefined): Outage[] {
+  if (!outages) return [];
+  const now = new Date();
+  return outages
+    .filter((outage) => categorizeOutage(outage, now) === 'current')
+    .sort(sortOutagesNewestFirst);
 }
 
 async function fetchAllVpsesForSummary(opts: { user?: number; maxItems?: number }) {
@@ -51,14 +78,14 @@ async function fetchAllVpsesForSummary(opts: { user?: number; maxItems?: number 
     const page = res.data ?? [];
     if (page.length === 0) break;
 
-    items = items.concat(page);
+    items = items.concat(page.filter((vps) => vpsMatchesOwner(vps, opts.user)));
     if (items.length >= maxItems) {
       items = items.slice(0, maxItems);
       break;
     }
 
     const last = page[page.length - 1];
-    const lastId = typeof (last as any)?.id === 'number' ? (last as any).id : undefined;
+    const lastId = typeof (last as LegacyAny)?.id === 'number' ? (last as LegacyAny).id : undefined;
     if (!lastId || page.length < limit) break;
 
     // Defensive: prevent infinite loops in case the backend returns a stable last id.
@@ -75,9 +102,10 @@ export function DashboardPage() {
   const auth = useAuth();
   const { basePath } = useAppMode();
   const scope = useObjectScope();
-  const { t } = useI18n();
+  const { t, tc } = useI18n();
 
   const tierARefetchMs = useTierAIntervalMs();
+  const tierSlowRefetchMs = useTierSlowIntervalMs();
 
   const mineUserId = scope.mineUserId;
 
@@ -104,11 +132,25 @@ export function DashboardPage() {
 
   const activeChainsQ = useQuery({
     queryKey: ['dashboard', 'transaction_chains', 'active', { userId: mineUserId ?? null }],
-    queryFn: async () => fetchActiveTransactionChains({ limit: 100, userId: mineUserId }),
+    queryFn: async () => (await fetchActiveTransactionChains({ limit: 100, userId: mineUserId })).filter((chain) => chainMatchesUser(chain, mineUserId)),
     refetchInterval: tierARefetchMs,
   });
 
+  const publicNodesQ = useQuery({
+    queryKey: ['dashboard', 'public_status', 'nodes'],
+    queryFn: async () => (await fetchPublicNodeStatus()).data,
+    refetchInterval: tierSlowRefetchMs,
+  });
+
+  const publicOutagesQ = useQuery({
+    queryKey: ['dashboard', 'public_status', 'outages'],
+    queryFn: async () => (await fetchOutages()).data,
+    refetchInterval: tierSlowRefetchMs,
+  });
+
   const runningCounts = useMemo(() => countRunning(vpsQ.data?.items ?? []), [vpsQ.data]);
+  const publicNodeSummary = useMemo(() => summarizePublicNodes(publicNodesQ.data ?? []), [publicNodesQ.data]);
+  const activePublicOutages = useMemo(() => currentOutages(publicOutagesQ.data), [publicOutagesQ.data]);
   const vpsTotalCount = vpsQ.data?.totalCount ?? (vpsQ.data ? vpsQ.data.items.length : undefined);
   const vpsRunningCount = runningCounts.running;
   const vpsStoppedCount = runningCounts.stopped;
@@ -126,6 +168,9 @@ export function DashboardPage() {
   const vpsCountsComplete = !vpsTruncated;
   const vpsRatio = vpsTotalCount && vpsTotalCount > 0 ? vpsRunningCount / vpsTotalCount : 0;
   const vpsRatioLabel = vpsCountsComplete && vpsTotalCount && vpsTotalCount > 0 ? `${Math.round(vpsRatio * 100)}%` : '—';
+  const publicStatusLoading = publicNodesQ.isLoading || publicOutagesQ.isLoading;
+  const publicStatusError = publicNodesQ.isError || publicOutagesQ.isError;
+  const publicStatusNeedsAttention = activePublicOutages.length > 0 || publicNodeSummary.down > 0;
 
   return (
     <PageContainer testId="app.dashboard.page">
@@ -248,6 +293,57 @@ export function DashboardPage() {
             />
           </div>
         </SummaryGrid>
+
+        <Card testId="app.dashboard.status-triage">
+          <CardHeader
+            title={t('dashboard.status.title')}
+            subtitle={t('dashboard.status.subtitle')}
+            actions={
+              <LinkButton to="/" variant="secondary" size="sm" testId="app.dashboard.status-triage.open">
+                {t('dashboard.status.open_public')}
+              </LinkButton>
+            }
+          />
+          <CardBody>
+            {publicStatusLoading ? (
+              <div className="text-sm text-muted">{t('dashboard.status.loading')}</div>
+            ) : publicStatusError ? (
+              <Alert title={t('dashboard.status.error')} variant="danger" />
+            ) : (
+              <div className="space-y-3">
+                <Alert
+                  title={
+                    publicStatusNeedsAttention
+                      ? t('dashboard.status.attention.title')
+                      : t('dashboard.status.nominal.title')
+                  }
+                  variant={publicStatusNeedsAttention ? 'warn' : 'info'}
+                >
+                  {publicStatusNeedsAttention
+                    ? t('dashboard.status.attention.body')
+                    : t('dashboard.status.nominal.body')}
+                </Alert>
+
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <Badge variant={activePublicOutages.length > 0 ? 'danger' : 'ok'}>
+                    {tc('dashboard.status.outages', activePublicOutages.length)}
+                  </Badge>
+                  {publicNodeSummary.total > 0 ? (
+                    <Badge variant={publicNodeSummary.down > 0 ? 'danger' : 'ok'}>
+                      {t('dashboard.status.nodes', {
+                        ok: publicNodeSummary.ok,
+                        down: publicNodeSummary.down,
+                        total: publicNodeSummary.total,
+                      })}
+                    </Badge>
+                  ) : (
+                    <Badge variant="neutral">{t('dashboard.status.nodes_unknown')}</Badge>
+                  )}
+                </div>
+              </div>
+            )}
+          </CardBody>
+        </Card>
       </div>
     </PageContainer>
   );

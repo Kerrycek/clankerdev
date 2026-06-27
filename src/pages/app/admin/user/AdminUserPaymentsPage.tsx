@@ -31,6 +31,7 @@ import { cursorFromDescendingPage } from '../../../../lib/lockIndex';
 import { getPaidUntilStatus, paidUntilBadgeVariant, paidUntilStatusLabelKey } from '../../../../lib/paymentsBadges';
 import { formatMoneyLike, safeInt } from '../../../../lib/paymentsFormat';
 import { useKeysetPagination } from '../../../../lib/hooks/useKeysetPagination';
+import { refId } from '../../../../lib/resourceRefs';
 
 import { useAdminUserContext } from './AdminUserLayout';
 
@@ -40,6 +41,11 @@ function parsePositiveInt(value: string): number | null {
   const n = Number(v);
   if (!Number.isFinite(n) || n <= 0) return null;
   return Math.floor(n);
+}
+
+function userPaymentMatchesUser(payment: unknown, userId: number): boolean {
+  if (!payment || typeof payment !== 'object') return false;
+  return refId((payment as { user?: unknown }).user) === userId;
 }
 
 export function AdminUserPaymentsPage() {
@@ -107,10 +113,12 @@ export function AdminUserPaymentsPage() {
     staleTime: 15_000,
   });
 
-  const canNext = (historyQ.data?.length ?? 0) >= pagination.limit;
-  const cursor = useMemo(() => cursorFromDescendingPage(historyQ.data as any), [historyQ.data]);
+  const rawHistoryRows = historyQ.data ?? [];
+  const historyRows = useMemo(() => rawHistoryRows.filter((payment) => userPaymentMatchesUser(payment, userId)), [rawHistoryRows, userId]);
+  const canNext = rawHistoryRows.length >= pagination.limit;
+  const cursor = useMemo(() => cursorFromDescendingPage(rawHistoryRows as LegacyAny), [rawHistoryRows]);
 
-  const instructions = String((instructionsQ.data as any)?.instructions ?? '').trim();
+  const instructions = String((instructionsQ.data as LegacyAny)?.instructions ?? '').trim();
 
   // -----------------------
   // Edit payment settings
@@ -190,7 +198,7 @@ export function AdminUserPaymentsPage() {
       return { lockRef: ref };
     },
     onSettled: (_data, _err, _vars, ctx) => {
-      if ((ctx as any)?.lockRef) chrome.releaseLocalLock((ctx as any).lockRef);
+      if ((ctx as LegacyAny)?.lockRef) chrome.releaseLocalLock((ctx as LegacyAny).lockRef);
     },
     onSuccess: () => {
       toasts.pushToast({ variant: 'ok', title: t('admin.user.payments.add_payment.toast.created') });
@@ -262,7 +270,7 @@ export function AdminUserPaymentsPage() {
           <CardBody>
             {instructionsQ.isLoading ? <LoadingState /> : null}
             {instructionsQ.isError ? (
-              <ErrorState title={t('payments.my.instructions.load_error.title')} error={instructionsQ.error as any} />
+              <ErrorState title={t('payments.my.instructions.load_error.title')} error={instructionsQ.error as LegacyAny} />
             ) : null}
             {!instructionsQ.isLoading && !instructionsQ.isError ? (
               instructions ? (
@@ -285,10 +293,10 @@ export function AdminUserPaymentsPage() {
           <CardHeader title={t('payments.my.history.title')} subtitle={t('payments.my.history.description')} />
           <CardBody>
             {historyQ.isLoading ? <LoadingState /> : null}
-            {historyQ.isError ? <ErrorState title={t('payments.my.history.load_error.title')} error={historyQ.error as any} /> : null}
+            {historyQ.isError ? <ErrorState title={t('payments.my.history.load_error.title')} error={historyQ.error as LegacyAny} /> : null}
 
             {!historyQ.isLoading && !historyQ.isError ? (
-              historyQ.data && historyQ.data.length > 0 ? (
+              historyRows.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm table-list" data-testid="admin.user.payments.history.table">
                     <thead className="bg-surface-2">
@@ -300,7 +308,7 @@ export function AdminUserPaymentsPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {historyQ.data.map((p) => (
+                      {historyRows.map((p) => (
                         <tr key={p.id} data-testid={`admin.user.payments.history.row.${p.id}`}>
                           <td className="px-3 py-2 font-medium tabular-nums">{formatDateTime(p.created_at)}</td>
                           <td className="px-3 py-2 text-right tabular-nums">{formatMoneyLike(safeInt(p.amount))}</td>
@@ -309,10 +317,10 @@ export function AdminUserPaymentsPage() {
                             <span className="tabular-nums">{formatDateTime(p.to_date)}</span>
                           </td>
                           <td className="px-3 py-2 text-xs text-muted">
-                            {typeof (p as any).accounted_by === 'object' && (p as any).accounted_by ? (
+                            {typeof (p as LegacyAny).accounted_by === 'object' && (p as LegacyAny).accounted_by ? (
                               <span className="tabular-nums">
-                                {String((p as any).accounted_by.login ?? '')}
-                                {typeof (p as any).accounted_by.id === 'number' ? ` (#${(p as any).accounted_by.id})` : ''}
+                                {String((p as LegacyAny).accounted_by.login ?? '')}
+                                {typeof (p as LegacyAny).accounted_by.id === 'number' ? ` (#${(p as LegacyAny).accounted_by.id})` : ''}
                               </span>
                             ) : (
                               '—'
@@ -358,7 +366,7 @@ export function AdminUserPaymentsPage() {
           {accountQ.isError ? (
             <ErrorState
               title={t('admin.user.payments.settings.load_error.title')}
-              error={accountQ.error as any}
+              error={accountQ.error as LegacyAny}
               showDetails
             />
           ) : null}

@@ -45,7 +45,7 @@ export function VpsConsolePage() {
   const [frameNonce, setFrameNonce] = useState(0);
   const [manualReconnect, setManualReconnect] = useState(false);
 
-  const server = (vps.node as any)?.location?.remote_console_server as string | undefined;
+  const server = (vps.node as LegacyAny)?.location?.remote_console_server as string | undefined;
   const canCreateSession = Boolean(server);
 
   const tokenQ = useQuery({
@@ -159,7 +159,7 @@ export function VpsConsolePage() {
             data-testid="vps.console.connection_state"
           >
             <span className={clsx('h-2.5 w-2.5 rounded-full', stateVariant[connectionState])} aria-hidden="true" />
-            {t(`vps.console.state.${connectionState}` as any)}
+            {t(`vps.console.state.${connectionState}` as LegacyAny)}
           </div>
         </div>
 
@@ -288,7 +288,7 @@ export function VpsConsolePage() {
                   ) : null}
                   <div>
                     <span className="font-medium">{t('vps.console.tech.message')}</span>:{' '}
-                    {String((tokenQ.error as any)?.message ?? tokenQ.error)}
+                    {String((tokenQ.error as LegacyAny)?.message ?? tokenQ.error)}
                   </div>
                   {server ? (
                     <div>
@@ -336,7 +336,7 @@ export function VpsConsolePage() {
               <span className="truncate font-mono">{vps.hostname ?? `vps-${vps.id}`}</span>
             </div>
             <div className="text-white/70" data-testid="vps.console.frame_status">
-              {t(`vps.console.state.${connectionState}` as any)}
+              {t(`vps.console.state.${connectionState}` as LegacyAny)}
             </div>
           </div>
           <div className="relative bg-black">

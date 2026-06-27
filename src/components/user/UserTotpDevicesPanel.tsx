@@ -86,7 +86,7 @@ export function UserTotpDevicesPanel(props: {
       }
 
       const res = await confirmUserTotpDevice(props.userId, confirming.id, { code: confirmExistingCode.trim() });
-      const recovery = (res.data as any)?.recovery_code;
+      const recovery = (res.data as LegacyAny)?.recovery_code;
       if (!recovery) throw new Error(t('profile.mfa.totp.validation.recovery_missing'));
       return String(recovery);
     },

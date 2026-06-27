@@ -15,12 +15,12 @@ function makeUsersResponse(rows: unknown[]) {
 
 afterEach(() => {
   vi.restoreAllMocks();
-  (window as any).vpsAdmin = undefined;
+  (window as LegacyAny).vpsAdmin = undefined;
 });
 
 describe('fetchUsers', () => {
   function installApiFixture() {
-    (window as any).vpsAdmin = {
+    (window as LegacyAny).vpsAdmin = {
       api: { url: 'https://api.example.test', version: 'v7.0' },
       sessionToken: 'tok_123',
       description: {
@@ -141,7 +141,7 @@ describe('fetchUsers', () => {
 
 describe('updateUser', () => {
   function installApiFixture() {
-    (window as any).vpsAdmin = {
+    (window as LegacyAny).vpsAdmin = {
       api: { url: 'https://api.example.test', version: 'v7.0' },
       sessionToken: 'tok_123',
       description: {
@@ -190,7 +190,7 @@ describe('updateUser', () => {
 
 describe('admin user mutations', () => {
   function installApiFixture() {
-    (window as any).vpsAdmin = {
+    (window as LegacyAny).vpsAdmin = {
       api: { url: 'https://api.example.test', version: 'v7.0' },
       sessionToken: 'tok_123',
       description: {

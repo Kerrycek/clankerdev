@@ -7,13 +7,13 @@ function mockFetchOk(response: any) {
 }
 
 function lastFetchCall() {
-  const calls = (globalThis.fetch as any).mock.calls;
+  const calls = (globalThis.fetch as LegacyAny).mock.calls;
   return calls[calls.length - 1] as [string, RequestInit?];
 }
 
 describe('mailer API wrappers', () => {
   test('fetchMailLogs forwards search, relation and date-window filters', async () => {
-    globalThis.fetch = mockFetchOk({ mail_logs: [], _meta: { total_count: 0 } }) as any;
+    globalThis.fetch = mockFetchOk({ mail_logs: [], _meta: { total_count: 0 } }) as LegacyAny;
 
     await fetchMailLogs({
       limit: 50,
@@ -39,7 +39,7 @@ describe('mailer API wrappers', () => {
   });
 
   test('fetchMailboxes forwards q, server, user and ssl filters', async () => {
-    globalThis.fetch = mockFetchOk({ mailboxes: [], _meta: { total_count: 0 } }) as any;
+    globalThis.fetch = mockFetchOk({ mailboxes: [], _meta: { total_count: 0 } }) as LegacyAny;
 
     await fetchMailboxes({
       limit: 10,
@@ -63,7 +63,7 @@ describe('mailer API wrappers', () => {
   });
 
   test('fetchMailRecipients forwards q and per-field address filters', async () => {
-    globalThis.fetch = mockFetchOk({ mail_recipients: [], _meta: { total_count: 0 } }) as any;
+    globalThis.fetch = mockFetchOk({ mail_recipients: [], _meta: { total_count: 0 } }) as LegacyAny;
 
     await fetchMailRecipients({
       limit: 25,

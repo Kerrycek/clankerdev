@@ -42,6 +42,7 @@ import { TableRowLink } from '../../../components/ui/TableRowLink';
 import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 import { VpsLookupInput } from '../../../components/ui/VpsLookupInput';
 import { dotVariantFromRowVariant } from '../../../lib/variantMap';
+import { refId } from '../../../lib/resourceRefs';
 
 function safeNumber(value: string): number | undefined {
   const t = value.trim();
@@ -103,7 +104,7 @@ function parseDateTimeLocalValue(input: string, opts: { endOfDay?: boolean } = {
 }
 
 function nodeLabel(n: Node): string {
-  return (n as any).domain_name ? String((n as any).domain_name) : `#${n.id}`;
+  return (n as LegacyAny).domain_name ? String((n as LegacyAny).domain_name) : `#${n.id}`;
 }
 
 function envLabel(e: Environment): string {
@@ -123,6 +124,17 @@ function ruleLabelKey(action?: string): string {
   if (action === 'ignore') return 'oom.rule.ignore';
   if (action === 'notify') return 'oom.rule.notify';
   return 'oom.rule.implicit';
+}
+
+function oomReportUserId(row: OomReport): number | undefined {
+  const anyRow = row as LegacyAny;
+  const vps = anyRow.vps && typeof anyRow.vps === 'object' ? anyRow.vps : undefined;
+  return refId(anyRow.user) ?? refId(anyRow.user_id) ?? refId(anyRow.raw_user_id) ?? refId(vps?.user);
+}
+
+function oomReportMatchesUser(row: OomReport, userId: number | undefined): boolean {
+  if (userId === undefined) return true;
+  return oomReportUserId(row) === userId;
 }
 
 export function OomReportsPage() {
@@ -362,7 +374,8 @@ export function OomReportsPage() {
     return opts;
   }, [locQ.data, t]);
 
-  const rows = listQ.data ?? [];
+  const rawRows = listQ.data ?? [];
+  const rows = useMemo(() => rawRows.filter((row) => oomReportMatchesUser(row, userId)), [rawRows, userId]);
 
   const shareUrl = useMemo(() => {
     if (typeof window === 'undefined') return '';
@@ -779,7 +792,7 @@ export function OomReportsPage() {
     <PageHeader
       title={t('oom.list.title')}
       description={t('oom.list.description')}
-      meta={filtersActive ? <span className="text-xs text-faint">{t('list.meta.filters_active')}</span> : null}
+      meta={userId !== undefined ? t('filters.current_page_contract_note') : filtersActive ? t('list.meta.filters_active') : undefined}
       actions={
         <Button variant="secondary" size="sm" to={`${basePath}/oom-reports`} testId="oom.list.refresh">
           {t('common.refresh')}
@@ -1076,17 +1089,17 @@ export function OomReportsPage() {
                     const to = `${basePath}/oom-reports/${r.id}`;
                     const createdAt = formatDateTime(r.created_at);
 
-                    const vpsIdRow = (r.vps as any)?.id ? Number((r.vps as any).id) : undefined;
-                    const vpsHost = (r.vps as any)?.hostname ? String((r.vps as any).hostname) : undefined;
+                    const vpsIdRow = (r.vps as LegacyAny)?.id ? Number((r.vps as LegacyAny).id) : undefined;
+                    const vpsHost = (r.vps as LegacyAny)?.hostname ? String((r.vps as LegacyAny).hostname) : undefined;
 
-                    const userIdRow = (r.vps as any)?.user?.id ? Number((r.vps as any).user.id) : undefined;
-                    const userLogin = (r.vps as any)?.user?.login ? String((r.vps as any).user.login) : undefined;
+                    const userIdRow = (r.vps as LegacyAny)?.user?.id ? Number((r.vps as LegacyAny).user.id) : undefined;
+                    const userLogin = (r.vps as LegacyAny)?.user?.login ? String((r.vps as LegacyAny).user.login) : undefined;
 
-                    const nodeName = (r.vps as any)?.node?.domain_name ? String((r.vps as any).node.domain_name) : undefined;
+                    const nodeName = (r.vps as LegacyAny)?.node?.domain_name ? String((r.vps as LegacyAny).node.domain_name) : undefined;
 
                     const killed = r.killed_name ? `${r.killed_name}${r.killed_pid ? ` (${r.killed_pid})` : ''}` : '—';
 
-                    const action = (r.oom_report_rule as any)?.action ? String((r.oom_report_rule as any).action) : undefined;
+                    const action = (r.oom_report_rule as LegacyAny)?.action ? String((r.oom_report_rule as LegacyAny).action) : undefined;
                     const rowVariant = ruleVariant(action);
                     const dotVariant = dotVariantFromRowVariant(rowVariant);
 
@@ -1153,12 +1166,12 @@ export function OomReportsPage() {
                 const to = `${basePath}/oom-reports/${r.id}`;
                 const createdAt = formatDateTime(r.created_at);
 
-                const vpsIdRow = (r.vps as any)?.id ? Number((r.vps as any).id) : undefined;
-                const vpsHost = (r.vps as any)?.hostname ? String((r.vps as any).hostname) : undefined;
+                const vpsIdRow = (r.vps as LegacyAny)?.id ? Number((r.vps as LegacyAny).id) : undefined;
+                const vpsHost = (r.vps as LegacyAny)?.hostname ? String((r.vps as LegacyAny).hostname) : undefined;
 
-                const nodeName = (r.vps as any)?.node?.domain_name ? String((r.vps as any).node.domain_name) : undefined;
+                const nodeName = (r.vps as LegacyAny)?.node?.domain_name ? String((r.vps as LegacyAny).node.domain_name) : undefined;
 
-                const action = (r.oom_report_rule as any)?.action ? String((r.oom_report_rule as any).action) : undefined;
+                const action = (r.oom_report_rule as LegacyAny)?.action ? String((r.oom_report_rule as LegacyAny).action) : undefined;
 
                 return (
                   <TableCard
@@ -1181,7 +1194,7 @@ export function OomReportsPage() {
                         label: t('oom.field.rule_action'),
                         value: <Badge variant={ruleVariant(action)}>{t(ruleLabelKey(action))}</Badge>,
                       },
-                    ].filter(Boolean) as any}
+                    ].filter(Boolean) as LegacyAny}
                   />
                 );
               })}
@@ -1195,7 +1208,7 @@ export function OomReportsPage() {
               canPrev={pagination.canPrev}
               canNext={!pagination.hasForward && rows.length === pagination.limit}
               onPrev={() => pagination.goPrev()}
-              onNext={() => pagination.goNext(rows.length > 0 ? (rows[rows.length - 1] as any).id : undefined)}
+              onNext={() => pagination.goNext(rows.length > 0 ? (rows[rows.length - 1] as LegacyAny).id : undefined)}
               onGoToPage={pagination.goToPage}
               limit={pagination.limit}
               allowedLimits={pagination.allowedLimits}

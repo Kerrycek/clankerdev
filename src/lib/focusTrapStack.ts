@@ -15,7 +15,7 @@ export type FocusTrap = {
 const trapStack: FocusTrap[] = [];
 
 function isHTMLElement(v: unknown): v is HTMLElement {
-  return typeof v === 'object' && v !== null && (v as any).nodeType === 1;
+  return typeof v === 'object' && v !== null && (v as LegacyAny).nodeType === 1;
 }
 
 function isVisible(el: HTMLElement): boolean {
@@ -56,7 +56,7 @@ function getFocusableElements(container: HTMLElement): HTMLElement[] {
 function safeFocus(el: HTMLElement) {
   try {
     // preventScroll is supported by all modern browsers.
-    (el as any).focus?.({ preventScroll: true });
+    (el as LegacyAny).focus?.({ preventScroll: true });
   } catch {
     try {
       el.focus();

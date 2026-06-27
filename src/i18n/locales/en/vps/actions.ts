@@ -1,0 +1,21 @@
+// VPS locale chunk: actions
+export const enVps_actions = {
+  'vps.actions.menu.label': 'VPS actions',
+  'vps.actions.menu.placeholder': 'Actions...',
+  'action.vps.template.label': 'Update VPS template info',
+  'action.vps.lifecycle.label': 'Update VPS lifecycle',
+  'action.vps.boot.label': 'Boot VPS from template',
+  'action.vps.reinstall.label': 'Reinstall VPS',
+  'action.vps.migrate.label': 'Migrate VPS',
+  'action.vps.delete.label': 'Delete VPS',
+  'action.vps.config.save.label': 'Save VPS configuration',
+  'action.vps.access.passwd.label': 'Generate root password',
+  'action.vps.access.deploy_public_key.label': 'Deploy SSH public key',
+  'action.vps.network.ptr_update.label': 'Update PTR',
+  'action.vps.network.host_create.label': 'Create host address',
+  'action.vps.network.host_assign.label': 'Assign host address',
+  'action.vps.network.host_free.label': 'Free host address',
+  'action.vps.network.route_assign.label': 'Assign IP route',
+  'action.vps.network.route_free.label': 'Free IP route',
+  'action.vps.network.route_owner_update.label': 'Update route owner',
+} as const;

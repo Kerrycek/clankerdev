@@ -36,6 +36,7 @@ export const csDns = {
   'dns.zones.advanced.role.label': 'Typ',
   'dns.zones.advanced.source.label': 'Zdroj',
   'dns.zones.advanced.note': 'Filtry se ukládají do URL, takže je můžeš sdílet nebo uložit do záložek.',
+  'dns.zones.client_filter_note': 'Hledání, vlastník a DNSSEC filtr se aplikují jen na aktuálně načtenou stránku; role/source/enabled a stránkování dál používají legacy API filtry.',
   'dns.zones.role.forward': 'Přeposílací',
   'dns.zones.role.reverse': 'Reverzní',
   'dns.zones.source.internal': 'Interní',

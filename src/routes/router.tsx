@@ -16,6 +16,7 @@ const OverviewPage = lazyRoute(() => import('../pages/public/OverviewPage'), 'Ov
 const OutagesPage = lazyRoute(() => import('../pages/public/OutagesPage'), 'OutagesPage');
 const OutageDetailPage = lazyRoute(() => import('../pages/public/OutageDetailPage'), 'OutageDetailPage');
 const NewsPage = lazyRoute(() => import('../pages/public/NewsPage'), 'NewsPage');
+const SecurityAdvisoriesPage = lazyRoute(() => import('../pages/public/SecurityAdvisoriesPage'), 'SecurityAdvisoriesPage');
 const RegistrationCorrectionPage = lazyRoute(() => import('../pages/public/RegistrationCorrectionPage'), 'RegistrationCorrectionPage');
 const DashboardPage = lazyRoute(() => import('../pages/app/DashboardPage'), 'DashboardPage');
 const VpsListPage = lazyRoute(() => import('../pages/app/VpsListPage'), 'VpsListPage');
@@ -92,6 +93,7 @@ const UsersPage = lazyRoute(() => import('../pages/app/admin/UsersPage'), 'Users
 const AdminUserLayout = lazyRoute(() => import('../pages/app/admin/user/AdminUserLayout'), 'AdminUserLayout');
 const AdminUserMailPage = lazyRoute(() => import('../pages/app/admin/user/AdminUserMailPage'), 'AdminUserMailPage');
 const AdminUserPaymentsPage = lazyRoute(() => import('../pages/app/admin/user/AdminUserPaymentsPage'), 'AdminUserPaymentsPage');
+const AdminUserResourcesPage = lazyRoute(() => import('../pages/app/admin/user/AdminUserResourcesPage'), 'AdminUserResourcesPage');
 const AdminUserHistoryPage = lazyRoute(() => import('../pages/app/admin/user/AdminUserHistoryPage'), 'AdminUserHistoryPage');
 const AdminUserKeysPage = lazyRoute(() => import('../pages/app/admin/user/AdminUserKeysPage'), 'AdminUserKeysPage');
 const AdminUserSessionsPage = lazyRoute(() => import('../pages/app/admin/user/AdminUserSessionsPage'), 'AdminUserSessionsPage');
@@ -177,6 +179,7 @@ export const router = createBrowserRouter([
             { index: true, element: <OverviewPage /> },
             { path: 'outages', element: <OutagesPage /> },
             { path: 'outages/:outageId', element: <OutageDetailPage /> },
+            { path: 'security-advisories', element: <SecurityAdvisoriesPage /> },
             { path: 'news', element: <NewsPage /> },
             { path: 'requests/registrations/:requestId/:token', element: <RegistrationCorrectionPage /> },
             { path: '*', element: <NotFoundPage /> },
@@ -335,6 +338,7 @@ export const router = createBrowserRouter([
               children: [
                 { index: true, element: <AdminUserOverviewPage /> },
                 { path: 'payments', element: <AdminUserPaymentsPage /> },
+                { path: 'resources', element: <AdminUserResourcesPage /> },
                 { path: 'environment-configs', element: <AdminUserEnvironmentConfigsPage /> },
                 { path: 'security', element: <AdminUserSecurityPage /> },
                 { path: 'mfa', element: <AdminUserMfaPage /> },

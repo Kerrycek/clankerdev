@@ -777,8 +777,8 @@ export function NetworksPage() {
                   <td className="px-3 py-2 text-right font-mono text-xs text-muted tabular-nums">{assigned ?? '—'}</td>
                   <td className="px-3 py-2 text-right font-mono text-xs text-muted tabular-nums">{owned ?? '—'}</td>
                   <td className="px-3 py-2 text-right font-mono text-xs text-muted tabular-nums">{free ?? '—'}</td>
-                  <td className="px-3 py-2 text-muted">{locLabel((n as any).primary_location ?? null)}</td>
-                  <td className="px-3 py-2 text-right font-mono text-xs text-muted tabular-nums">{(n as any).locations_count ?? '—'}</td>
+                  <td className="px-3 py-2 text-muted">{locLabel((n as LegacyAny).primary_location ?? null)}</td>
+                  <td className="px-3 py-2 text-right font-mono text-xs text-muted tabular-nums">{(n as LegacyAny).locations_count ?? '—'}</td>
                   <td className="px-3 py-2 text-right">
                     <div className="inline-flex items-center gap-2">
                       <Button

@@ -24,6 +24,7 @@ export const enOps_tasks = {
   "tasks.error.load_chains": "Failed to load transaction chains",
   "tasks.error.load_items": "Failed to load transactions",
   "tasks.filter.placeholder": "Filter tasks…",
+  "tasks.filter.label": "Filter tasks",
   "tasks.inspect.action_state_id": "Action state ID",
   "tasks.inspect.backend_details": "Backend details / output",
   "tasks.inspect.collapse_all": "Collapse all",

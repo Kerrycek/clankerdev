@@ -31,13 +31,14 @@ function safeNumber(value: string): number | undefined {
   return i;
 }
 
-function toIsoOrUndefined(dtLocal: string): string | undefined {
+export function toIsoOrUndefined(dtLocal: string): string | undefined {
   const t = dtLocal.trim();
   if (!t) return undefined;
+
   const d = new Date(t);
-  const iso = d.toISOString();
-  if (iso === 'Invalid Date') return undefined;
-  return iso;
+  if (!Number.isFinite(d.getTime())) return undefined;
+
+  return d.toISOString();
 }
 
 function nowDatetimeLocal(): string {
@@ -108,9 +109,9 @@ export function IncidentReportNewPage() {
   const vpsSummary = useMemo(() => {
     const v = vpsQ.data as Vps | undefined;
     if (!v) return null;
-    const host = (v as any).hostname ? String((v as any).hostname) : `#${v.id}`;
-    const nodeName = (v as any)?.node?.domain_name ? String((v as any).node.domain_name) : undefined;
-    const userLogin = (v as any)?.user?.login ? String((v as any).user.login) : undefined;
+    const host = (v as LegacyAny).hostname ? String((v as LegacyAny).hostname) : `#${v.id}`;
+    const nodeName = (v as LegacyAny)?.node?.domain_name ? String((v as LegacyAny).node.domain_name) : undefined;
+    const userLogin = (v as LegacyAny)?.user?.login ? String((v as LegacyAny).user.login) : undefined;
 
     return (
       <div className="text-sm text-muted">
@@ -158,7 +159,7 @@ export function IncidentReportNewPage() {
       return { lockRef: ref };
     },
     onSettled: (_data, _err, _vars, ctx) => {
-      if ((ctx as any)?.lockRef) chrome.releaseLocalLock((ctx as any).lockRef);
+      if ((ctx as LegacyAny)?.lockRef) chrome.releaseLocalLock((ctx as LegacyAny).lockRef);
     },
     onSuccess: (res) => {
       const asId = getMetaActionStateId(res.meta);

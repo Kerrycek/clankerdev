@@ -84,7 +84,7 @@ function canonicalKey(raw: string): SmartKey | null {
   if (k === 'state' || k === 'st') return 'state';
   if (k === 'user' || k === 'u') return 'user';
 
-  // Free-text search (server-side)
+  // Free-text search (client-side on the currently loaded page)
   if (
     k === 'q' ||
     k === 'search' ||
@@ -119,6 +119,58 @@ function safePositiveInt(s: string): number | undefined {
   const n = Number(trimmed);
   if (!Number.isFinite(n) || n <= 0) return undefined;
   return Math.floor(n);
+}
+
+function compactText(value: unknown): string | null {
+  if (value === undefined || value === null) return null;
+  const text = String(value).trim();
+  return text ? text.toLowerCase() : null;
+}
+
+function paymentMatchesQuery(payment: IncomingPayment, rawNeedle: string): boolean {
+  const needle = String(rawNeedle ?? '').trim().toLowerCase();
+  if (!needle) return true;
+
+  const user = (payment as LegacyAny).user;
+  const fields: unknown[] = [
+    payment.id,
+    payment.transaction_id,
+    payment.state,
+    payment.date,
+    payment.amount,
+    payment.currency,
+    payment.src_amount,
+    payment.src_currency,
+    payment.account_name,
+    payment.user_ident,
+    payment.user_message,
+    payment.vs,
+    payment.ks,
+    payment.ss,
+    payment.transaction_type,
+    payment.comment,
+  ];
+
+  if (user && typeof user === 'object') {
+    fields.push(user.id, user.login, user.label, user.name, user.full_name, user.email);
+  }
+
+  return fields.some((value) => compactText(value)?.includes(needle));
+}
+
+function paymentMatchesUser(payment: IncomingPayment, userId: number | undefined): boolean {
+  if (userId === undefined) return true;
+
+  const user = (payment as LegacyAny).user;
+  if (user && typeof user === 'object') {
+    const rawId = (user as LegacyAny).id;
+    if (Number(rawId) === userId) return true;
+  }
+
+  // The old incoming_payment#index output has no assigned-user filter/output.
+  // For current-page triage, a numeric VS/user_ident still helps find likely
+  // payments for the member without sending unsupported HaveAPI params.
+  return String(payment.vs ?? '').trim() === String(userId) || String(payment.user_ident ?? '').trim() === String(userId);
 }
 
 export function IncomingPaymentsPage() {
@@ -275,7 +327,7 @@ export function IncomingPaymentsPage() {
           const n = parseNumericToken(value);
           if (n !== null) nextUserId = n;
           else {
-            // Treat non-numeric values as a search term, since server-side q matches user login.
+            // Treat non-numeric values as current-page free text; upstream does not expose a user/login filter here.
             free.push(value);
           }
           continue;
@@ -513,7 +565,7 @@ export function IncomingPaymentsPage() {
     queryKey: [
       'incoming_payments',
       'index',
-      { limit: pagination.limit, fromId: pagination.fromId, state: state || undefined, q: qText.trim() || undefined, user: userIdNum },
+      { limit: pagination.limit, fromId: pagination.fromId, state: state || undefined },
     ],
     queryFn: async () =>
       (
@@ -521,17 +573,19 @@ export function IncomingPaymentsPage() {
           limit: pagination.limit,
           fromId: pagination.fromId,
           state: state || undefined,
-          q: qText.trim() || undefined,
-          userId: userIdNum,
         })
       ).data,
     refetchInterval: tierSlowMs,
   });
 
-  const rows = paymentsQ.data ?? [];
+  const rawRows = paymentsQ.data ?? [];
+  const rows = useMemo(
+    () => rawRows.filter((p) => paymentMatchesQuery(p, qText) && paymentMatchesUser(p, userIdNum)),
+    [qText, rawRows, userIdNum]
+  );
 
-  const pageCursor = useMemo(() => cursorFromDescendingPage(rows as any), [rows]);
-  const canNext = rows.length === pagination.limit;
+  const pageCursor = useMemo(() => cursorFromDescendingPage(rawRows as LegacyAny), [rawRows]);
+  const canNext = rawRows.length === pagination.limit;
 
   const shareUrl = useMemo(() => (typeof window !== 'undefined' ? window.location.href : ''), [sp]);
 
@@ -629,6 +683,15 @@ export function IncomingPaymentsPage() {
 
           {activeFilterChips.length ? <div className="flex flex-wrap gap-2">{activeFilterChips}</div> : null}
 
+          {qText.trim() || userIdNum !== undefined ? (
+            <div
+              className="rounded-md border border-border bg-surface px-3 py-2 text-xs text-muted"
+              data-testid="admin.payments.incoming.client_filter_note"
+            >
+              {t('payments.incoming.list.client_filter_note')}
+            </div>
+          ) : null}
+
           <SmartInputHelp
             open={helpOpen}
             onClose={() => setHelpOpen(false)}
@@ -725,7 +788,7 @@ export function IncomingPaymentsPage() {
         <ErrorState
           testId="admin.payments.incoming.error"
           title={t('payments.incoming.list.load_error.title')}
-          error={paymentsQ.error as any}
+          error={paymentsQ.error as LegacyAny}
         />
       ) : rows.length === 0 ? (
         <EmptyState testId="admin.payments.incoming.empty" title={t('payments.incoming.list.empty')} />
@@ -735,10 +798,10 @@ export function IncomingPaymentsPage() {
           <div className="space-y-2 md:hidden">
             {rows.map((p: IncomingPayment) => {
               const st = String(p.state ?? '').trim();
-              const acctStatus = (p as any).user ? getPaidUntilStatus(p.user_paid_until) : null;
+              const acctStatus = (p as LegacyAny).user ? getPaidUntilStatus(p.user_paid_until) : null;
               const primaryVar = incomingPaymentPrimaryVariant({
                 state: st,
-                user: (p as any).user,
+                user: (p as LegacyAny).user,
                 user_paid_until: p.user_paid_until,
               });
               const dotVar = dotVariantFromBadgeVariant(primaryVar);
@@ -768,9 +831,9 @@ export function IncomingPaymentsPage() {
                         {String(p.transaction_id ?? '—')}
                       </div>
                       <div className="mt-1 text-xs text-muted">
-                        <span className="text-faint">{t('common.user')}:</span> {userLabel((p as any).user)}
+                        <span className="text-faint">{t('common.user')}:</span> {userLabel((p as LegacyAny).user)}
                       </div>
-                      {(p as any).user ? (
+                      {(p as LegacyAny).user ? (
                         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
                           <span className="text-faint">{t('payments.incoming.list.col.paid_until')}:</span>{' '}
                           {p.user_paid_until ? formatDateTime(p.user_paid_until) : '—'}
@@ -846,15 +909,15 @@ export function IncomingPaymentsPage() {
             <tbody>
               {rows.map((p: IncomingPayment) => {
                 const st = String(p.state ?? '').trim();
-                const acctStatus = (p as any).user ? getPaidUntilStatus(p.user_paid_until) : null;
+                const acctStatus = (p as LegacyAny).user ? getPaidUntilStatus(p.user_paid_until) : null;
                 const rowVar = incomingPaymentRowVariantWithAccount({
                   state: st,
-                  user: (p as any).user,
+                  user: (p as LegacyAny).user,
                   user_paid_until: p.user_paid_until,
                 });
                 const primaryVar = incomingPaymentPrimaryVariant({
                   state: st,
-                  user: (p as any).user,
+                  user: (p as LegacyAny).user,
                   user_paid_until: p.user_paid_until,
                 });
                 const dotVar = dotVariantFromBadgeVariant(primaryVar);
@@ -884,9 +947,9 @@ export function IncomingPaymentsPage() {
                     </td>
                     <td className="px-4 py-2 text-xs text-muted tabular-nums">{String(p.vs ?? '—')}</td>
                     <td className="px-4 py-2 text-xs text-muted">{String(p.account_name ?? '—')}</td>
-                    <td className="px-4 py-2 text-xs text-muted">{userLabel((p as any).user)}</td>
+                    <td className="px-4 py-2 text-xs text-muted">{userLabel((p as LegacyAny).user)}</td>
                     <td className="px-4 py-2 text-xs text-muted">
-                      {(p as any).user ? (
+                      {(p as LegacyAny).user ? (
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="tabular-nums">{p.user_paid_until ? formatDateTime(p.user_paid_until) : '—'}</span>
                           {acctStatus && (acctStatus.status === 'due_soon' || acctStatus.status === 'overdue') ? (

@@ -70,7 +70,7 @@ export function DatasetPlansPage() {
   const chrome = useChrome();
   const qc = useQueryClient();
 
-  const environmentId = typeof (dataset as any).environment?.id === 'number' ? Number((dataset as any).environment.id) : null;
+  const environmentId = typeof (dataset as LegacyAny).environment?.id === 'number' ? Number((dataset as LegacyAny).environment.id) : null;
   const [assignOpen, setAssignOpen] = useState(false);
   const [selectedEnvPlanId, setSelectedEnvPlanId] = useState('');
   const [removePlan, setRemovePlan] = useState<DatasetInPoolPlan | null>(null);
@@ -210,7 +210,7 @@ export function DatasetPlansPage() {
             </div>
             <div>
               <div className="text-xs text-faint">{t('dataset.plans.environment')}</div>
-              <div className="font-medium text-fg">{refLabel((dataset as any).environment, t('common.na'))}</div>
+              <div className="font-medium text-fg">{refLabel((dataset as LegacyAny).environment, t('common.na'))}</div>
             </div>
           </div>
         </CardBody>
@@ -323,7 +323,7 @@ export function DatasetPlansPage() {
                     </div>
                     <div>
                       <div className="text-xs text-faint">{t('dataset.plans.column.source')}</div>
-                      <div className="font-medium text-fg">{refLabel((selected as any).dataset_plan, t('common.na'))}</div>
+                      <div className="font-medium text-fg">{refLabel((selected as LegacyAny).dataset_plan, t('common.na'))}</div>
                     </div>
                   </div>
                 </CardBody>

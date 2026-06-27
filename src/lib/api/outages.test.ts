@@ -28,13 +28,13 @@ function mockFetchOkSequence(responses: any[]) {
 }
 
 function lastFetchCall() {
-  const calls = (globalThis.fetch as any).mock.calls;
+  const calls = (globalThis.fetch as LegacyAny).mock.calls;
   return calls[calls.length - 1] as [string, RequestInit?];
 }
 
 describe('outage admin API wrappers', () => {
   test('fetchAdminOutages forwards legacy filters through the outage namespace', async () => {
-    globalThis.fetch = mockFetchOk({ outages: [{ id: 7 }] }) as any;
+    globalThis.fetch = mockFetchOk({ outages: [{ id: 7 }] }) as LegacyAny;
 
     await fetchAdminOutages({ state: 'announced', type: 'outage', handledBy: 42, vps: 101, limit: 25, fromId: 900 });
 
@@ -50,7 +50,7 @@ describe('outage admin API wrappers', () => {
   });
 
   test('create and update outage use the outage namespace payload', async () => {
-    globalThis.fetch = mockFetchOk({ outage: { id: 7 } }) as any;
+    globalThis.fetch = mockFetchOk({ outage: { id: 7 } }) as LegacyAny;
 
     await createOutage({
       begins_at: '2026-05-28T10:00:00.000Z',
@@ -88,7 +88,7 @@ describe('outage admin API wrappers', () => {
   });
 
   test('entity and handler wrappers match nested outage contracts', async () => {
-    globalThis.fetch = mockFetchOk({ entity: { id: 3 }, handler: { id: 4 } }) as any;
+    globalThis.fetch = mockFetchOk({ entity: { id: 3 }, handler: { id: 4 } }) as LegacyAny;
 
     await createOutageEntity(7, { name: 'Node', entity_id: 12 });
     let [url, init] = lastFetchCall();
@@ -114,7 +114,7 @@ describe('outage admin API wrappers', () => {
   });
 
   test('outage updates and rebuild use legacy endpoints', async () => {
-    globalThis.fetch = mockFetchOk({ outage_update: { id: 8 }, outage: { id: 7 } }) as any;
+    globalThis.fetch = mockFetchOk({ outage_update: { id: 8 }, outage: { id: 7 } }) as LegacyAny;
 
     await createOutageUpdate({ outage: 7, state: 'resolved', send_mail: true, en_summary: 'Resolved' });
     let [url, init] = lastFetchCall();
@@ -142,7 +142,7 @@ describe('outage admin API wrappers', () => {
       { entity: { id: 4 } },
       { handler: { id: 5 } },
       { outage: { id: 7 } },
-    ]) as any;
+    ]) as LegacyAny;
 
     await createOutageWithSystems(
       {
@@ -162,7 +162,7 @@ describe('outage admin API wrappers', () => {
       }
     );
 
-    const calls = (globalThis.fetch as any).mock.calls as Array<[string, RequestInit?]>;
+    const calls = (globalThis.fetch as LegacyAny).mock.calls as Array<[string, RequestInit?]>;
     expect(calls.map(([url]) => new URL(url).pathname)).toEqual([
       '/v7.0/outages',
       '/v7.0/outages/7/entities',
@@ -176,7 +176,7 @@ describe('outage admin API wrappers', () => {
   });
 
   test('applyOutageSystems diffs current systems and handlers before rebuild', async () => {
-    globalThis.fetch = mockFetchOk({ entity: { id: 9 }, handler: { id: 8 }, outage: { id: 7 } }) as any;
+    globalThis.fetch = mockFetchOk({ entity: { id: 9 }, handler: { id: 8 }, outage: { id: 7 } }) as LegacyAny;
 
     await applyOutageSystems(
       7,
@@ -185,8 +185,8 @@ describe('outage admin API wrappers', () => {
         { id: 2, name: 'Node', entity_id: 10 },
       ],
       [
-        { id: 4, user: { id: 42 } } as any,
-        { id: 5, user_id: 99 } as any,
+        { id: 4, user: { id: 42 } } as LegacyAny,
+        { id: 5, user_id: 99 } as LegacyAny,
       ],
       {
         entities: [
@@ -197,7 +197,7 @@ describe('outage admin API wrappers', () => {
       }
     );
 
-    const calls = (globalThis.fetch as any).mock.calls as Array<[string, RequestInit?]>;
+    const calls = (globalThis.fetch as LegacyAny).mock.calls as Array<[string, RequestInit?]>;
     expect(calls.map(([url]) => new URL(url).pathname)).toEqual([
       '/v7.0/outages/7/entities',
       '/v7.0/outages/7/entities/2',
@@ -214,7 +214,7 @@ describe('outage admin API wrappers', () => {
 
 describe('network add addresses API wrapper', () => {
   test('addNetworkAddresses posts network#add_addresses payload', async () => {
-    globalThis.fetch = mockFetchOk({ network: { count: 4 } }) as any;
+    globalThis.fetch = mockFetchOk({ network: { count: 4 } }) as LegacyAny;
 
     await addNetworkAddresses({ id: 22, count: 4, user: 7, environment: 2 });
 

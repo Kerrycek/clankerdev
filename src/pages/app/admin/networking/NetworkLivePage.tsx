@@ -7,6 +7,7 @@ import { fetchNetworkInterfaceMonitor } from '../../../../lib/api/networking';
 import { formatDateTime } from '../../../../lib/format';
 import { formatBytesIec } from '../../../../lib/bytes';
 import { parsePositiveInt } from '../../../../lib/parse';
+import { refId } from '../../../../lib/resourceRefs';
 import { ListShell } from '../../../../components/layout/ListShell';
 import { PageHeader } from '../../../../components/layout/PageHeader';
 import { FilterBar } from '../../../../components/layout/FilterBar';
@@ -38,6 +39,30 @@ function rate(value: number | undefined | null, delta: number | undefined | null
   const d = Number(delta ?? 1);
   if (!Number.isFinite(d) || d <= 0) return formatBytesIec(value);
   return `${formatBytesIec(value / d)}/s`;
+}
+
+function networkLiveMatchesText(row: any, rawNeedle: string): boolean {
+  const needle = rawNeedle.trim().toLowerCase();
+  if (!needle) return true;
+
+  const ni = row.network_interface;
+  const vps = ni && typeof ni === 'object' ? ni.vps : undefined;
+  const user = vps && typeof vps === 'object' ? vps.user : undefined;
+  const node = vps && typeof vps === 'object' ? vps.node : undefined;
+  const parts = [row.id, label(ni, 'name'), label(vps, 'hostname'), label(user, 'login'), label(node, 'domain_name'), label(node, 'name')];
+
+  return parts.some((part) => String(part ?? '').toLowerCase().includes(needle));
+}
+
+function networkLiveUserId(row: any): number | undefined {
+  const ni = row?.network_interface && typeof row.network_interface === 'object' ? row.network_interface : undefined;
+  const vps = ni?.vps && typeof ni.vps === 'object' ? ni.vps : undefined;
+  return refId(vps?.user) ?? refId(row?.user) ?? refId(row?.raw_user_id) ?? refId(row?.user_id);
+}
+
+function networkLiveMatchesUser(row: any, userId: number | undefined): boolean {
+  if (userId === undefined) return true;
+  return networkLiveUserId(row) === userId;
 }
 
 export function NetworkLivePage() {
@@ -72,12 +97,16 @@ export function NetworkLivePage() {
     setSp(next);
   };
 
-  const rows = listQ.data ?? [];
+  const rawRows = listQ.data ?? [];
+  const rows = React.useMemo(
+    () => rawRows.filter((row) => networkLiveMatchesText(row, q) && networkLiveMatchesUser(row, userId)),
+    [q, rawRows, userId]
+  );
 
   return (
     <ListShell
       testId="admin.network_live.page"
-      header={<PageHeader title={t('admin.network_live.title')} description={t('admin.network_live.subtitle')} />}
+      header={<PageHeader title={t('admin.network_live.title')} description={t('admin.network_live.subtitle')} meta={q || userId ? t('filters.current_page_contract_note') : undefined} />}
       filters={<FilterBar
         left={<div className="flex flex-wrap items-center gap-3">
           <div className="w-full max-w-sm"><Input testId="admin.network_live.filter.q" value={q} onChange={(e)=>setParam('q', e.target.value)} placeholder={t('admin.network_live.filter.q.placeholder')} /></div>

@@ -178,7 +178,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     });
   });
 
-  test('admin clone posts owner and node payload, not location', async ({ page }) => {
+  test('admin clone omits legacy-rejected owner and node selectors', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installLifecycleMock(page);
 
@@ -204,14 +204,12 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
         resources: true,
         features: true,
         stop: true,
-        user: 8,
-        node: 3,
       },
     });
     await expect(page).toHaveURL(/\/admin\/vps\/456$/);
   });
 
-  test('admin swap includes legacy admin-only options', async ({ page }) => {
+  test('admin swap omits legacy-rejected expiration selector', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installLifecycleMock(page);
 
@@ -243,7 +241,6 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
         vps: 321,
         hostname: true,
         resources: false,
-        expirations: true,
       },
     });
   });

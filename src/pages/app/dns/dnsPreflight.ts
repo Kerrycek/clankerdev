@@ -24,7 +24,7 @@ function extractRecentChainIds(logs: DnsRecordLog[], limit: number): number[] {
   const seen = new Set<number>();
 
   for (const l of logs) {
-    const raw = (l.transaction_chain as any)?.id;
+    const raw = (l.transaction_chain as LegacyAny)?.id;
     const id = typeof raw === 'number' ? raw : Number(raw);
     if (!Number.isFinite(id) || id <= 0) continue;
     if (seen.has(id)) continue;
@@ -59,7 +59,7 @@ async function fetchChainsByConcern(zoneId: number, classes: string[]): Promise<
   for (const s of settled) {
     if (s.status !== 'fulfilled') continue;
     for (const c of s.value ?? []) {
-      const id = Number((c as any)?.id);
+      const id = Number((c as LegacyAny)?.id);
       if (!Number.isFinite(id) || id <= 0) continue;
       byId.set(id, c);
     }

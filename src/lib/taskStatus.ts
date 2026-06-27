@@ -127,7 +127,7 @@ export function isActiveChainState(state: unknown): boolean {
 
 /** Convenience helper: return true when any chain in the list is active (not finished). */
 export function hasActiveChains(chains: Array<{ state?: unknown }> | undefined): boolean {
-  return (chains ?? []).some((c) => isActiveChainState((c as any).state));
+  return (chains ?? []).some((c) => isActiveChainState((c as LegacyAny).state));
 }
 
 export function isFailedChainState(state: unknown): boolean {
@@ -164,8 +164,8 @@ export function chainBadgeFromState(state: unknown, t?: Translator): BadgeSpec {
  * "number of transactions in the chain".
  */
 export function chainProgressPercent(c: { progress?: unknown; size?: unknown }): number | null {
-  const cur = (c as any)?.progress;
-  const total = (c as any)?.size;
+  const cur = (c as LegacyAny)?.progress;
+  const total = (c as LegacyAny)?.size;
 
   if (typeof cur !== 'number' || typeof total !== 'number' || total <= 0) return null;
 
@@ -176,8 +176,8 @@ export function chainProgressPercent(c: { progress?: unknown; size?: unknown }):
 }
 
 export function chainProgressLabel(c: { progress?: unknown; size?: unknown }): string | null {
-  const cur = (c as any)?.progress;
-  const total = (c as any)?.size;
+  const cur = (c as LegacyAny)?.progress;
+  const total = (c as LegacyAny)?.size;
 
   if (typeof cur !== 'number' || typeof total !== 'number' || total <= 0) return null;
 
@@ -203,8 +203,8 @@ export function transactionBadge(
   maybeTranslator?: Translator
 ): BadgeSpec {
   const isObj = Boolean(txOrDone) && typeof txOrDone === 'object';
-  const doneRaw = isObj ? (txOrDone as any).done : txOrDone;
-  const successRaw = isObj ? (txOrDone as any).success : isTranslator(successOrTranslator) ? undefined : successOrTranslator;
+  const doneRaw = isObj ? (txOrDone as LegacyAny).done : txOrDone;
+  const successRaw = isObj ? (txOrDone as LegacyAny).success : isTranslator(successOrTranslator) ? undefined : successOrTranslator;
   const tt = resolveTranslator(isTranslator(successOrTranslator) ? successOrTranslator : maybeTranslator);
 
   const done = String(doneRaw ?? '').trim() || 'unknown';
@@ -232,11 +232,11 @@ export function transactionBadge(
 // ----------------------
 
 export function isFinishedActionState(s: { finished?: unknown }): boolean {
-  return Boolean((s as any).finished);
+  return Boolean((s as LegacyAny).finished);
 }
 
 export function isFailingActionState(s: { status?: unknown }): boolean {
-  return (s as any).status === false;
+  return (s as LegacyAny).status === false;
 }
 
 export function actionStateBadge(s: { finished?: unknown; status?: unknown }, t?: Translator): BadgeSpec {
@@ -252,8 +252,8 @@ export function actionStateBadge(s: { finished?: unknown; status?: unknown }, t?
 }
 
 export function actionStateProgressPercent(s: { current?: unknown; total?: unknown }): number | null {
-  const cur = (s as any).current;
-  const total = (s as any).total;
+  const cur = (s as LegacyAny).current;
+  const total = (s as LegacyAny).total;
   if (typeof cur !== 'number' || typeof total !== 'number' || total <= 0) return null;
   const p = (cur / total) * 100;
   if (!Number.isFinite(p)) return null;
@@ -261,9 +261,9 @@ export function actionStateProgressPercent(s: { current?: unknown; total?: unkno
 }
 
 export function actionStateProgressLabel(s: { current?: unknown; total?: unknown; unit?: unknown }): string | null {
-  const cur = (s as any).current;
-  const total = (s as any).total;
-  const unit = typeof (s as any).unit === 'string' ? ((s as any).unit as string) : '';
+  const cur = (s as LegacyAny).current;
+  const total = (s as LegacyAny).total;
+  const unit = typeof (s as LegacyAny).unit === 'string' ? ((s as LegacyAny).unit as string) : '';
   if (typeof cur !== 'number' || typeof total !== 'number') return null;
   const u = unit ? ` ${unit}` : '';
   return `${cur}/${total}${u}`;

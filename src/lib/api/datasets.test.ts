@@ -45,13 +45,14 @@ describe('datasets API wrappers', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    await fetchDatasets({ limit: 42, includes: 'vps' });
+    await fetchDatasets({ limit: 42, user: 55, includes: 'vps' });
 
     const [url] = firstFetchCall(fetchMock);
     const u = new URL(String(url));
 
     expect(u.pathname).toBe('/v7.0/datasets');
     expect(u.searchParams.get('dataset[limit]')).toBe('42');
+    expect(u.searchParams.get('dataset[user]')).toBeNull();
     expect(u.searchParams.get('_meta[includes]')).toBe('vps');
   });
 
@@ -92,7 +93,7 @@ describe('datasets API wrappers', () => {
     const fetchMock = mockFetchOk({ dataset: { id: 124, name: 'tank/user/app' } });
     vi.stubGlobal('fetch', fetchMock);
 
-    await createDataset({ dataset: 123, name: 'app', automount: true, refquota: 10240, compression: true });
+    await createDataset({ dataset: 123, name: 'app', automount: true, refquota: 10240, compression: true, sharenfs: 'rw' });
 
     const [url, init] = firstFetchCall(fetchMock);
     expect(String(url)).toContain('/v7.0/datasets');
@@ -107,13 +108,19 @@ describe('datasets API wrappers', () => {
     const fetchMock = mockFetchOk(null);
     vi.stubGlobal('fetch', fetchMock);
 
-    await updateDataset(123, { quota: 20480, sync: 'standard', admin_override: true, admin_lock_type: 'not_more' });
+    await updateDataset(123, {
+      quota: 20480,
+      sync: 'standard',
+      sharenfs: 'rw',
+      admin_override: true,
+      admin_lock_type: 'not_more',
+    });
 
     const [url, init] = firstFetchCall(fetchMock);
     expect(String(url)).toContain('/v7.0/datasets/123');
     expect(init?.method).toBe('PUT');
     expect(JSON.parse(String(init?.body))).toEqual({
-      dataset: { quota: 20480, sync: 'standard', admin_override: true, admin_lock_type: 'not_more' },
+      dataset: { quota: 20480, sync: 'standard' },
     });
   });
 

@@ -138,7 +138,7 @@ export function OomReportRulesPage() {
   });
 
   const vpsHost = useMemo(() => {
-    const v = vpsQ.data as any;
+    const v = vpsQ.data as LegacyAny;
     if (!v) return undefined;
     return v.hostname ? String(v.hostname) : `#${v.id}`;
   }, [vpsQ.data]);
@@ -199,7 +199,7 @@ export function OomReportRulesPage() {
                 <label className="block text-xs text-muted">{t('oom.rules.field.action')}</label>
                 <Select
                   value={createAction}
-                  onChange={(e) => setCreateAction(e.target.value as any)}
+                  onChange={(e) => setCreateAction(e.target.value as LegacyAny)}
                   options={[
                     { value: 'notify', label: t(ruleLabelKey('notify')) },
                     { value: 'ignore', label: t(ruleLabelKey('ignore')) },
@@ -256,7 +256,7 @@ export function OomReportRulesPage() {
                             {isEditing ? (
                               <Select
                                 value={editAction}
-                                onChange={(e) => setEditAction(e.target.value as any)}
+                                onChange={(e) => setEditAction(e.target.value as LegacyAny)}
                                 options={[
                                   { value: 'notify', label: t(ruleLabelKey('notify')) },
                                   { value: 'ignore', label: t(ruleLabelKey('ignore')) },
@@ -302,7 +302,7 @@ export function OomReportRulesPage() {
                                   size="sm"
                                   onClick={() => {
                                     setEditingId(rule.id);
-                                    setEditAction((rule.action as any) || 'notify');
+                                    setEditAction((rule.action as LegacyAny) || 'notify');
                                     setEditPattern(rule.cgroup_pattern ? String(rule.cgroup_pattern) : '');
                                   }}
                                   testId={`oom.rules.row.${rule.id}.edit`}

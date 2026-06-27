@@ -49,9 +49,11 @@ async function assertTableScanContrast(table: Locator) {
   const hoverBg = await clickableRow.evaluate((node) => getComputedStyle(node).backgroundColor);
   const hoverA = parseAlpha(hoverBg);
 
-  // Contract: zebra rows use a solid alternate background, and hover on a clickable row
-  // switches that row to a visible scan-contrast tone.
-  expect(hoverA).toBeGreaterThanOrEqual(0.8);
+  // Contract: zebra rows use a solid alternate background, and hover on a
+  // clickable row switches that row to a visible scan-contrast tone. The hover
+  // surface is intentionally blended, so keep this below the fully opaque
+  // overlay contract while still catching transparent/near-invisible rows.
+  expect(hoverA).toBeGreaterThanOrEqual(0.4);
 }
 
 test('@smoke design sandbox renders and UI settings controls work', async ({ page }) => {

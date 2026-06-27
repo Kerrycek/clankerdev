@@ -12,13 +12,13 @@ function mockFetchOk(response: any) {
 }
 
 function lastFetchCall() {
-  const calls = (globalThis.fetch as any).mock.calls;
+  const calls = (globalThis.fetch as LegacyAny).mock.calls;
   return calls[calls.length - 1] as [string, RequestInit?];
 }
 
 describe('payments API wrappers', () => {
-  test('fetchIncomingPayments forwards q, state, user and pagination filters', async () => {
-    globalThis.fetch = mockFetchOk({ incoming_payments: [], _meta: { total_count: 0 } }) as any;
+  test('fetchIncomingPayments forwards only upstream-supported state and pagination filters', async () => {
+    globalThis.fetch = mockFetchOk({ incoming_payments: [], _meta: { total_count: 0 } }) as LegacyAny;
 
     await fetchIncomingPayments({ limit: 25, fromId: 200, state: 'queued', q: 'spec', userId: 42 });
 
@@ -29,12 +29,12 @@ describe('payments API wrappers', () => {
     expect(u.searchParams.get('incoming_payment[limit]')).toBe('25');
     expect(u.searchParams.get('incoming_payment[from_id]')).toBe('200');
     expect(u.searchParams.get('incoming_payment[state]')).toBe('queued');
-    expect(u.searchParams.get('incoming_payment[q]')).toBe('spec');
-    expect(u.searchParams.get('incoming_payment[user]')).toBe('42');
+    expect(u.searchParams.has('incoming_payment[q]')).toBe(false);
+    expect(u.searchParams.has('incoming_payment[user]')).toBe(false);
   });
 
   test('createUserPayment sends namespaced incoming-payment payload', async () => {
-    globalThis.fetch = mockFetchOk({ user_payment: { id: 9 } }) as any;
+    globalThis.fetch = mockFetchOk({ user_payment: { id: 9 } }) as LegacyAny;
 
     await createUserPayment({ user: 7, incoming_payment: 15 });
 
@@ -47,8 +47,8 @@ describe('payments API wrappers', () => {
     expect(body).toEqual({ user_payment: { user: 7, incoming_payment: 15 } });
   });
 
-  test('fetchUserPayments forwards user and accounted_by filters', async () => {
-    globalThis.fetch = mockFetchOk({ user_payments: [], _meta: { total_count: 0 } }) as any;
+  test('fetchUserPayments omits unsupported user and accounted_by filters', async () => {
+    globalThis.fetch = mockFetchOk({ user_payments: [], _meta: { total_count: 0 } }) as LegacyAny;
 
     await fetchUserPayments({ limit: 10, fromId: 55, userId: 7, accountedById: 2 });
 
@@ -58,12 +58,12 @@ describe('payments API wrappers', () => {
     expect(u.pathname).toBe('/v7.0/user_payments');
     expect(u.searchParams.get('user_payment[limit]')).toBe('10');
     expect(u.searchParams.get('user_payment[from_id]')).toBe('55');
-    expect(u.searchParams.get('user_payment[user]')).toBe('7');
-    expect(u.searchParams.get('user_payment[accounted_by]')).toBe('2');
+    expect(u.searchParams.get('user_payment[user]')).toBeNull();
+    expect(u.searchParams.get('user_payment[accounted_by]')).toBeNull();
   });
 
   test('fetchPaymentInstructions uses user subresource path', async () => {
-    globalThis.fetch = mockFetchOk({ instructions: 'Use VS 123.' }) as any;
+    globalThis.fetch = mockFetchOk({ instructions: 'Use VS 123.' }) as LegacyAny;
 
     const res = await fetchPaymentInstructions(7);
 
@@ -75,7 +75,7 @@ describe('payments API wrappers', () => {
   });
 
   test('fetchPaymentInstructions normalizes legacy string responses', async () => {
-    globalThis.fetch = mockFetchOk('Account: 123456/0100\nVS: 42') as any;
+    globalThis.fetch = mockFetchOk('Account: 123456/0100\nVS: 42') as LegacyAny;
 
     const res = await fetchPaymentInstructions(42);
 

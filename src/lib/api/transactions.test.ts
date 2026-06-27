@@ -7,14 +7,14 @@ function mockFetchOk(response: any) {
 }
 
 function lastFetchUrl() {
-  const calls = (globalThis.fetch as any).mock.calls;
+  const calls = (globalThis.fetch as LegacyAny).mock.calls;
   const [url] = calls[calls.length - 1] as [string, RequestInit?];
   return new URL(url);
 }
 
 describe('transactions API wrappers', () => {
   test('fetchTransactionChains forwards HaveAPI index filters', async () => {
-    globalThis.fetch = mockFetchOk({ transaction_chain: [{ id: 10, label: 'chain' }], _meta: { total_count: 1 } }) as any;
+    globalThis.fetch = mockFetchOk({ transaction_chain: [{ id: 10, label: 'chain' }], _meta: { total_count: 1 } }) as LegacyAny;
 
     const res = await fetchTransactionChains({
       limit: 25,
@@ -37,12 +37,12 @@ describe('transactions API wrappers', () => {
     expect(u.searchParams.get('transaction_chain[name]')).toBe('restart');
     expect(u.searchParams.get('transaction_chain[class_name]')).toBe('Vps');
     expect(u.searchParams.get('transaction_chain[row_id]')).toBe('123');
-    expect(u.searchParams.get('transaction_chain[user]')).toBe('7');
+    expect(u.searchParams.get('transaction_chain[user]')).toBeNull();
     expect(u.searchParams.get('transaction_chain[user_session]')).toBe('44');
   });
 
   test('fetchTransactions forwards transaction-chain debug filters', async () => {
-    globalThis.fetch = mockFetchOk({ transaction: [{ id: 501, name: 'tx' }] }) as any;
+    globalThis.fetch = mockFetchOk({ transaction: [{ id: 501, name: 'tx' }] }) as LegacyAny;
 
     const res = await fetchTransactions({
       limit: 100,
@@ -72,12 +72,12 @@ describe('transactions API wrappers', () => {
   });
 
   test('detail helpers use show endpoints without namespaced query params', async () => {
-    globalThis.fetch = mockFetchOk({ transaction_chain: { id: 42 } }) as any;
+    globalThis.fetch = mockFetchOk({ transaction_chain: { id: 42 } }) as LegacyAny;
     await fetchTransactionChain(42);
     expect(lastFetchUrl().pathname).toBe('/v7.0/transaction_chains/42');
     expect(lastFetchUrl().search).toBe('');
 
-    globalThis.fetch = mockFetchOk({ transaction: { id: 501 } }) as any;
+    globalThis.fetch = mockFetchOk({ transaction: { id: 501 } }) as LegacyAny;
     await fetchTransaction(501);
     expect(lastFetchUrl().pathname).toBe('/v7.0/transactions/501');
     expect(lastFetchUrl().search).toBe('');

@@ -59,7 +59,7 @@ export function createLocalLock(ref: ObjectRef, nowMs: number, opts?: { actionSt
 
 export function normalizeLocalLock(raw: unknown): LocalLock | null {
   if (!raw || typeof raw !== 'object') return null;
-  const anyRaw = raw as any;
+  const anyRaw = raw as LegacyAny;
 
   // We accept either:
   // - { key: 'Kind:123', acquiredAt, expiresAt, actionStateId }

@@ -11,6 +11,7 @@ interface AppHeaderProps {
   mode: 'user' | 'admin';
   canSwitchMode: boolean;
   shortcutHint: string;
+  mobileNavOpen: boolean;
   onOpenMobileNav: () => void;
   onOpenPalette: () => void;
   showSyncIndicator: boolean;
@@ -24,6 +25,7 @@ interface AppHeaderProps {
   onRetrySync: () => void;
   tasksFailedCount: number;
   tasksActiveCount: number;
+  tasksOpen: boolean;
   onOpenTasks: () => void;
   userMenuRef: React.RefObject<HTMLDivElement | null>;
   userMenuOpen: boolean;
@@ -55,6 +57,9 @@ function AppSyncPopover(props: Pick<AppHeaderProps,
         )}
         onClick={() => setSyncOpen((v) => !v)}
         aria-label={syncStatus === 'offline' ? t('sync.offline.indicator') : t('sync.error.indicator')}
+        aria-controls="shell-sync-panel"
+        aria-expanded={syncOpen}
+        aria-haspopup="dialog"
         title={syncStatus === 'offline' ? t('sync.offline.indicator') : t('sync.error.indicator')}
         data-testid="shell.sync-indicator"
       >
@@ -64,6 +69,9 @@ function AppSyncPopover(props: Pick<AppHeaderProps,
 
       {syncOpen ? (
         <div
+          id="shell-sync-panel"
+          role="dialog"
+          aria-label={syncTitle}
           className="absolute right-0 mt-2 w-64 rounded-md border border-border bg-overlay-surface p-2 shadow-panel"
           data-testid="shell.sync-panel"
           data-overlay="popover"
@@ -139,6 +147,9 @@ function AppUserMenu(props: Pick<AppHeaderProps,
         )}
         onClick={() => setUserMenuOpen((v) => !v)}
         aria-label={t('user_menu.open')}
+        aria-controls="shell-user-menu"
+        aria-expanded={userMenuOpen}
+        aria-haspopup="dialog"
         data-testid="shell.user-menu-button"
       >
         <User size={18} />
@@ -148,6 +159,9 @@ function AppUserMenu(props: Pick<AppHeaderProps,
 
       {userMenuOpen ? (
         <div
+          id="shell-user-menu"
+          role="dialog"
+          aria-label={t('user_menu.settings')}
           className="absolute right-0 mt-2 w-64 rounded-md border border-border bg-overlay-surface p-2 shadow-panel"
           data-testid="shell.user-menu"
           data-overlay="popover"
@@ -161,6 +175,7 @@ function AppUserMenu(props: Pick<AppHeaderProps,
                   testId="shell.user-menu.scope.mine"
                   variant={mode === 'user' ? 'primary' : 'secondary'}
                   size="sm"
+                  aria-pressed={mode === 'user'}
                   className="w-full"
                   onClick={() => {
                     if (mode === 'user') return;
@@ -174,6 +189,7 @@ function AppUserMenu(props: Pick<AppHeaderProps,
                   testId="shell.user-menu.scope.all"
                   variant={mode === 'admin' ? 'primary' : 'secondary'}
                   size="sm"
+                  aria-pressed={mode === 'admin'}
                   className="w-full"
                   onClick={() => {
                     if (mode === 'admin') return;
@@ -197,6 +213,7 @@ function AppUserMenu(props: Pick<AppHeaderProps,
                 testId="shell.user-menu.theme.system"
                 variant={theme === 'system' ? 'primary' : 'secondary'}
                 size="sm"
+                aria-pressed={theme === 'system'}
                 className="w-full"
                 onClick={() => onSetTheme('system')}
               >
@@ -206,6 +223,7 @@ function AppUserMenu(props: Pick<AppHeaderProps,
                 testId="shell.user-menu.theme.light"
                 variant={theme === 'light' ? 'primary' : 'secondary'}
                 size="sm"
+                aria-pressed={theme === 'light'}
                 className="w-full"
                 onClick={() => onSetTheme('light')}
               >
@@ -215,6 +233,7 @@ function AppUserMenu(props: Pick<AppHeaderProps,
                 testId="shell.user-menu.theme.dark"
                 variant={theme === 'dark' ? 'primary' : 'secondary'}
                 size="sm"
+                aria-pressed={theme === 'dark'}
                 className="w-full"
                 onClick={() => onSetTheme('dark')}
               >
@@ -230,6 +249,7 @@ function AppUserMenu(props: Pick<AppHeaderProps,
                 testId="shell.user-menu.language.system"
                 variant={language === 'system' ? 'primary' : 'secondary'}
                 size="sm"
+                aria-pressed={language === 'system'}
                 className="w-full"
                 onClick={() => onSetLanguage('system')}
               >
@@ -239,8 +259,10 @@ function AppUserMenu(props: Pick<AppHeaderProps,
                 testId="shell.user-menu.language.en"
                 variant={language === 'en' ? 'primary' : 'secondary'}
                 size="sm"
+                aria-pressed={language === 'en'}
                 className="w-full"
                 title={t('settings.language.en')}
+                ariaLabel={t('settings.language.en')}
                 onClick={() => onSetLanguage('en')}
               >
                 EN
@@ -249,8 +271,10 @@ function AppUserMenu(props: Pick<AppHeaderProps,
                 testId="shell.user-menu.language.cs"
                 variant={language === 'cs' ? 'primary' : 'secondary'}
                 size="sm"
+                aria-pressed={language === 'cs'}
                 className="w-full"
                 title={t('settings.language.cs')}
+                ariaLabel={t('settings.language.cs')}
                 onClick={() => onSetLanguage('cs')}
               >
                 CS
@@ -305,6 +329,7 @@ export function AppHeader(props: AppHeaderProps) {
     mode,
     canSwitchMode,
     shortcutHint,
+    mobileNavOpen,
     onOpenMobileNav,
     onOpenPalette,
     showSyncIndicator,
@@ -318,6 +343,7 @@ export function AppHeader(props: AppHeaderProps) {
     onRetrySync,
     tasksFailedCount,
     tasksActiveCount,
+    tasksOpen,
     onOpenTasks,
     userMenuRef,
     userMenuOpen,
@@ -341,6 +367,8 @@ export function AppHeader(props: AppHeaderProps) {
           className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-border bg-overlay-surface shadow-card hover:bg-surface-2 md:hidden"
           onClick={onOpenMobileNav}
           aria-label={t('nav.open')}
+          aria-controls="app-mobile-navigation"
+          aria-expanded={mobileNavOpen}
           data-testid="shell.mobile-nav-button"
         >
           <Menu size={20} />
@@ -355,6 +383,7 @@ export function AppHeader(props: AppHeaderProps) {
           )}
           onClick={onOpenPalette}
           aria-label={t('palette.open')}
+          aria-haspopup="dialog"
           data-testid="palette.open"
         >
           <Search size={18} />
@@ -403,6 +432,9 @@ export function AppHeader(props: AppHeaderProps) {
           )}
           onClick={onOpenTasks}
           aria-label={t('common.open_tasks')}
+          aria-controls="app-tasks-drawer"
+          aria-expanded={tasksOpen}
+          aria-haspopup="dialog"
           data-testid="tasks.open-button"
         >
           <Activity size={18} />

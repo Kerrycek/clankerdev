@@ -482,7 +482,7 @@ export function UserNamespaceMapList(props: {
         </Card>
       ) : qList.isError ? (
         <Alert title={t('userns.map.load_error')} variant="danger">
-          {String((qList.error as any)?.message ?? qList.error)}
+          {String((qList.error as LegacyAny)?.message ?? qList.error)}
         </Alert>
       ) : rows.length === 0 ? (
         <>
@@ -542,8 +542,8 @@ export function UserNamespaceMapList(props: {
           <tbody>
             {rows.map((r) => {
               const to = `${props.mapsBase}/${r.id}`;
-              const ns = (r as any).user_namespace;
-              const owner = (ns as any)?.user;
+              const ns = (r as LegacyAny).user_namespace;
+              const owner = (ns as LegacyAny)?.user;
 
               return (
                 <TableRowLink key={r.id} to={to} testId={`${props.testIdPrefix}.row.${r.id}`} className="border-b border-border">

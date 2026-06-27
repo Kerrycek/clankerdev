@@ -82,7 +82,7 @@ describe('TransactionChainsPanel', () => {
 
     vi.mocked(fetchTransactionChain).mockResolvedValue({
       data: { id: 75, label: 'Create', state: 'queued', size: 2, progress: 1 },
-    } as any);
+    } as LegacyAny);
 
     vi.mocked(fetchTransactionChains).mockResolvedValue({
       data: [
@@ -95,7 +95,7 @@ describe('TransactionChainsPanel', () => {
           created_at: '2026-05-30T18:00:00Z',
         },
       ],
-    } as any);
+    } as LegacyAny);
 
     vi.mocked(fetchTransactions).mockResolvedValue({
       data: [
@@ -114,7 +114,7 @@ describe('TransactionChainsPanel', () => {
           output: { ok: true },
         },
       ],
-    } as any);
+    } as LegacyAny);
   });
 
   it('expands a transaction chain and shows transaction payload inline', async () => {

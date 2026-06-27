@@ -43,7 +43,7 @@ function peerTypeLabel(v: unknown): string {
 
 function transferSnippet(transfer: DnsZoneTransfer): string {
   const host = peerLabel(transfer);
-  const keyName = typeof (transfer as any).dns_tsig_key?.name === 'string' ? String((transfer as any).dns_tsig_key.name) : '';
+  const keyName = typeof (transfer as LegacyAny).dns_tsig_key?.name === 'string' ? String((transfer as LegacyAny).dns_tsig_key.name) : '';
   const lines = [
     `server ${host} {`,
     keyName ? `  keys { ${keyName}; };` : '  # no TSIG key configured',
@@ -80,7 +80,7 @@ export function DnsZoneTransfersPage() {
   });
 
   const transfers = listQ.data?.data ?? [];
-  const cursor = useMemo(() => cursorFromDescendingPage(transfers as any), [transfers]);
+  const cursor = useMemo(() => cursorFromDescendingPage(transfers as LegacyAny), [transfers]);
   const hasMore = transfers.length >= pagination.limit;
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -102,11 +102,11 @@ export function DnsZoneTransfersPage() {
     },
     onMutate: () => chrome.acquireLocalLock(zoneRef),
     onSuccess: (res) => {
-      const actionStateId = getMetaActionStateId((res as any)?.meta);
+      const actionStateId = getMetaActionStateId((res as LegacyAny)?.meta);
       if (actionStateId !== undefined) {
         chrome.trackActionState(actionStateId, {
           actionLabelKey: 'action.dns.zone_transfer.create.label',
-          objectLabel: String((zone as any).name ?? `Zone #${zone.id}`),
+          objectLabel: String((zone as LegacyAny).name ?? `Zone #${zone.id}`),
           object: zoneRef,
         });
       }
@@ -131,11 +131,11 @@ export function DnsZoneTransfersPage() {
     },
     onMutate: () => chrome.acquireLocalLock(zoneRef),
     onSuccess: (res) => {
-      const actionStateId = getMetaActionStateId((res as any)?.meta);
+      const actionStateId = getMetaActionStateId((res as LegacyAny)?.meta);
       if (actionStateId !== undefined) {
         chrome.trackActionState(actionStateId, {
           actionLabelKey: 'action.dns.zone_transfer.delete.label',
-          objectLabel: String((zone as any).name ?? `Zone #${zone.id}`),
+          objectLabel: String((zone as LegacyAny).name ?? `Zone #${zone.id}`),
           object: zoneRef,
         });
       }
@@ -189,8 +189,8 @@ export function DnsZoneTransfersPage() {
                   return (
                     <tr key={transfer.id} className="border-t border-border" data-testid={`dns.transfers.row.${transfer.id}`}>
                       <td className="py-2 pl-4 pr-3 font-medium text-fg">{peerLabel(transfer)}</td>
-                      <td className="py-2 pr-3"><Badge variant="neutral">{peerTypeLabel((transfer as any).peer_type)}</Badge></td>
-                      <td className="py-2 pr-3">{(transfer as any).dns_tsig_key?.name ? <Badge variant="ok">{String((transfer as any).dns_tsig_key.name)}</Badge> : <Badge variant="neutral">{t('common.none')}</Badge>}</td>
+                      <td className="py-2 pr-3"><Badge variant="neutral">{peerTypeLabel((transfer as LegacyAny).peer_type)}</Badge></td>
+                      <td className="py-2 pr-3">{(transfer as LegacyAny).dns_tsig_key?.name ? <Badge variant="ok">{String((transfer as LegacyAny).dns_tsig_key.name)}</Badge> : <Badge variant="neutral">{t('common.none')}</Badge>}</td>
                       <td className="py-2 pr-3">{transfer.created_at ? formatDateTime(String(transfer.created_at)) : t('common.na')}</td>
                       <td className="py-2 pr-3">
                         <details>

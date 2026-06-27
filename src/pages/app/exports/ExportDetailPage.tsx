@@ -123,16 +123,16 @@ export function ExportDetailPage() {
 
   const ex = exportQ.data ?? null;
   const hosts = hostsQ.data ?? [];
-  const datasetId = parsePositiveInt((ex as any)?.dataset?.id);
-  const userId = parsePositiveInt((ex as any)?.user?.id);
+  const datasetId = parsePositiveInt((ex as LegacyAny)?.dataset?.id);
+  const userId = parsePositiveInt((ex as LegacyAny)?.user?.id);
   const datasetRef = datasetId ? objectRef('Dataset', datasetId) : null;
-  const snapshotId = parsePositiveInt((ex as any)?.snapshot?.id);
+  const snapshotId = parsePositiveInt((ex as LegacyAny)?.snapshot?.id);
   const address = exportAddress(ex);
-  const path = String((ex as any)?.path ?? '');
+  const path = String((ex as LegacyAny)?.path ?? '');
   const mountPoint = useMemo(() => `/mnt/${sanitizeMountName(sourceShortName(ex), id ?? 0)}`, [ex, id]);
   const sourceIsSnapshot = snapshotId !== null;
-  const allVps = Boolean((ex as any)?.all_vps);
-  const rw = Boolean((ex as any)?.rw);
+  const allVps = Boolean((ex as LegacyAny)?.all_vps);
+  const rw = Boolean((ex as LegacyAny)?.rw);
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -152,13 +152,13 @@ export function ExportDetailPage() {
   useEffect(() => {
     if (!ex) return;
     setEditForm({
-      all_vps: Boolean((ex as any).all_vps),
-      rw: Boolean((ex as any).rw),
-      sync: Boolean((ex as any).sync),
-      subtree_check: Boolean((ex as any).subtree_check),
-      root_squash: Boolean((ex as any).root_squash),
-      threads: String((ex as any).threads ?? 8),
-      enabled: Boolean((ex as any).enabled ?? true),
+      all_vps: Boolean((ex as LegacyAny).all_vps),
+      rw: Boolean((ex as LegacyAny).rw),
+      sync: Boolean((ex as LegacyAny).sync),
+      subtree_check: Boolean((ex as LegacyAny).subtree_check),
+      root_squash: Boolean((ex as LegacyAny).root_squash),
+      threads: String((ex as LegacyAny).threads ?? 8),
+      enabled: Boolean((ex as LegacyAny).enabled ?? true),
     });
   }, [ex]);
 
@@ -175,9 +175,9 @@ export function ExportDetailPage() {
     setHostForm({
       ip_address: null,
       rw: rw,
-      sync: Boolean((ex as any)?.sync),
-      subtree_check: Boolean((ex as any)?.subtree_check),
-      root_squash: Boolean((ex as any)?.root_squash),
+      sync: Boolean((ex as LegacyAny)?.sync),
+      subtree_check: Boolean((ex as LegacyAny)?.subtree_check),
+      root_squash: Boolean((ex as LegacyAny)?.root_squash),
     });
     setHostEditorOpen(true);
   };
@@ -185,11 +185,11 @@ export function ExportDetailPage() {
   const openEditHost = (host: ExportHost) => {
     setEditingHost(host);
     setHostForm({
-      ip_address: parsePositiveInt((host as any)?.ip_address?.id),
-      rw: Boolean((host as any)?.rw),
-      sync: Boolean((host as any)?.sync),
-      subtree_check: Boolean((host as any)?.subtree_check),
-      root_squash: Boolean((host as any)?.root_squash),
+      ip_address: parsePositiveInt((host as LegacyAny)?.ip_address?.id),
+      rw: Boolean((host as LegacyAny)?.rw),
+      sync: Boolean((host as LegacyAny)?.sync),
+      subtree_check: Boolean((host as LegacyAny)?.subtree_check),
+      root_squash: Boolean((host as LegacyAny)?.root_squash),
     });
     setHostEditorOpen(true);
   };
@@ -234,7 +234,7 @@ export function ExportDetailPage() {
     },
     onMutate: onMutateLock,
     onSuccess: async (res) => {
-      trackFromMeta((res as any).meta, t('exports.action.update'));
+      trackFromMeta((res as LegacyAny).meta, t('exports.action.update'));
       await invalidateAll();
       setEditOpen(false);
       pushToast({ variant: 'ok', title: t('exports.update.success') });
@@ -252,7 +252,7 @@ export function ExportDetailPage() {
     },
     onMutate: onMutateLock,
     onSuccess: async (res) => {
-      trackFromMeta((res as any).meta, t('exports.action.delete'));
+      trackFromMeta((res as LegacyAny).meta, t('exports.action.delete'));
       await invalidateAll();
       pushToast({ variant: 'ok', title: t('exports.delete.success') });
       navigate(`${basePath}/exports`);
@@ -267,7 +267,7 @@ export function ExportDetailPage() {
     mutationFn: async () => {
       if (id === null) throw new Error('invalid export id');
       if (editingHost) {
-        const hostId = parsePositiveInt((editingHost as any)?.id);
+        const hostId = parsePositiveInt((editingHost as LegacyAny)?.id);
         if (!hostId) throw new Error('invalid host id');
         return await updateExportHost(id, hostId, {
           rw: hostForm.rw,
@@ -287,7 +287,7 @@ export function ExportDetailPage() {
     },
     onMutate: onMutateLock,
     onSuccess: async (res) => {
-      trackFromMeta((res as any).meta, editingHost ? t('exports.host.update.success') : t('exports.host.create.success'));
+      trackFromMeta((res as LegacyAny).meta, editingHost ? t('exports.host.update.success') : t('exports.host.create.success'));
       await invalidateAll();
       setHostEditorOpen(false);
       setEditingHost(null);
@@ -303,13 +303,13 @@ export function ExportDetailPage() {
   const deleteHostM = useMutation({
     mutationFn: async () => {
       if (id === null) throw new Error('invalid export id');
-      const hostId = parsePositiveInt((deleteHost as any)?.id);
+      const hostId = parsePositiveInt((deleteHost as LegacyAny)?.id);
       if (!hostId) throw new Error('invalid host id');
       return await deleteExportHost(id, hostId);
     },
     onMutate: onMutateLock,
     onSuccess: async (res) => {
-      trackFromMeta((res as any).meta, t('exports.host.delete.success'));
+      trackFromMeta((res as LegacyAny).meta, t('exports.host.delete.success'));
       await invalidateAll();
       setDeleteHost(null);
       pushToast({ variant: 'ok', title: t('exports.host.delete.success') });
@@ -366,7 +366,7 @@ export function ExportDetailPage() {
           description={sourceLabel(ex)}
           meta={
             <span className="flex flex-wrap items-center gap-2">
-              <Badge variant={badgeVariant} testId="exports.detail.badge.enabled">{boolBadgeLabel(Boolean(ex.enabled), t as any)}</Badge>
+              <Badge variant={badgeVariant} testId="exports.detail.badge.enabled">{boolBadgeLabel(Boolean(ex.enabled), t as LegacyAny)}</Badge>
               <Badge variant={sourceIsSnapshot ? 'info' : 'neutral'}>{sourceIsSnapshot ? t('common.snapshot') : t('common.dataset')}</Badge>
               <span>#{id}</span>
             </span>
@@ -408,16 +408,16 @@ export function ExportDetailPage() {
                   <div className="text-xs font-semibold text-muted">{t('exports.field.mode')}</div>
                   <div className="mt-1 flex flex-wrap gap-2">
                     <Badge variant={rw ? 'ok' : 'neutral'}>{rw ? t('exports.mode.rw') : t('exports.mode.ro')}</Badge>
-                    <Badge variant={Boolean((ex as any).sync) ? 'ok' : 'warn'}>{t('exports.field.sync')}</Badge>
-                    <Badge variant={Boolean((ex as any).subtree_check) ? 'info' : 'neutral'}>{t('exports.field.subtree_check')}</Badge>
-                    <Badge variant={Boolean((ex as any).root_squash) ? 'info' : 'neutral'}>{t('exports.field.root_squash')}</Badge>
+                    <Badge variant={Boolean((ex as LegacyAny).sync) ? 'ok' : 'warn'}>{t('exports.field.sync')}</Badge>
+                    <Badge variant={Boolean((ex as LegacyAny).subtree_check) ? 'info' : 'neutral'}>{t('exports.field.subtree_check')}</Badge>
+                    <Badge variant={Boolean((ex as LegacyAny).root_squash) ? 'info' : 'neutral'}>{t('exports.field.root_squash')}</Badge>
                   </div>
                 </div>
                 <div>
                   <div className="text-xs font-semibold text-muted">{t('exports.field.scope')}</div>
                   <div className="mt-1 flex flex-wrap gap-2">
                     <Badge variant={allVps ? 'info' : 'neutral'}>{allVps ? t('exports.field.all_vps') : t('exports.field.selected_hosts')}</Badge>
-                    {mode === 'admin' ? <Badge variant="neutral">{t('exports.field.threads_label', { count: String((ex as any).threads ?? 0) })}</Badge> : null}
+                    {mode === 'admin' ? <Badge variant="neutral">{t('exports.field.threads_label', { count: String((ex as LegacyAny).threads ?? 0) })}</Badge> : null}
                   </div>
                 </div>
               </div>
@@ -512,16 +512,16 @@ export function ExportDetailPage() {
                   </thead>
                   <tbody>
                     {hosts.map((host) => {
-                      const hostId = parsePositiveInt((host as any).id) ?? 0;
+                      const hostId = parsePositiveInt((host as LegacyAny).id) ?? 0;
                       return (
                         <tr key={hostId} data-testid={`exports.detail.hosts.row.${hostId}`} className={clsx('border-t border-border/80')}>
                           <td className="px-2 py-2 font-mono text-xs text-fg">{hostLabel(host)}</td>
-                          <td className="px-2 py-2 text-sm text-fg">{Boolean((host as any).rw) ? t('exports.mode.rw') : t('exports.mode.ro')}</td>
+                          <td className="px-2 py-2 text-sm text-fg">{Boolean((host as LegacyAny).rw) ? t('exports.mode.rw') : t('exports.mode.ro')}</td>
                           <td className="px-2 py-2">
                             <div className="flex flex-wrap gap-1">
-                              <Badge variant={Boolean((host as any).sync) ? 'ok' : 'warn'}>{t('exports.field.sync')}</Badge>
-                              <Badge variant={Boolean((host as any).subtree_check) ? 'info' : 'neutral'}>{t('exports.field.subtree_check')}</Badge>
-                              <Badge variant={Boolean((host as any).root_squash) ? 'info' : 'neutral'}>{t('exports.field.root_squash')}</Badge>
+                              <Badge variant={Boolean((host as LegacyAny).sync) ? 'ok' : 'warn'}>{t('exports.field.sync')}</Badge>
+                              <Badge variant={Boolean((host as LegacyAny).subtree_check) ? 'info' : 'neutral'}>{t('exports.field.subtree_check')}</Badge>
+                              <Badge variant={Boolean((host as LegacyAny).root_squash) ? 'info' : 'neutral'}>{t('exports.field.root_squash')}</Badge>
                             </div>
                           </td>
                           <td className="px-2 py-2 text-right">

@@ -132,7 +132,7 @@ export async function fetchDatasets(opts?: {
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.q !== undefined) params['q'] = opts.q;
-  if (opts?.user !== undefined) params['user'] = opts.user;
+  // Legacy Dataset::Index blacklists user; owner filtering is handled by list UIs.
   if (opts?.vps !== undefined) params['vps'] = opts.vps;
   if (opts?.subtree !== undefined) params['subtree'] = opts.subtree;
   if (opts?.withoutSnapshotIn !== undefined) params['without_snapshot_in'] = opts.withoutSnapshotIn;
@@ -177,12 +177,27 @@ export type DatasetCreatePayload = DatasetEditablePayload & {
   automount?: boolean;
 };
 
+function sanitizeDatasetCreatePayload(payload: DatasetCreatePayload): Omit<DatasetCreatePayload, 'sharenfs'> {
+  const { sharenfs: _sharenfs, ...safe } = payload;
+  return safe;
+}
+
+function sanitizeDatasetUpdatePayload(payload: DatasetEditablePayload): Omit<DatasetEditablePayload, 'sharenfs' | 'admin_override' | 'admin_lock_type'> {
+  const {
+    sharenfs: _sharenfs,
+    admin_override: _adminOverride,
+    admin_lock_type: _adminLockType,
+    ...safe
+  } = payload;
+  return safe;
+}
+
 export async function createDataset(payload: DatasetCreatePayload) {
   return haveApiCall<Dataset>({
     method: 'POST',
     path: '/datasets',
     namespace: 'dataset',
-    params: payload,
+    params: sanitizeDatasetCreatePayload(payload),
   });
 }
 
@@ -191,7 +206,7 @@ export async function updateDataset(datasetId: number, payload: DatasetEditableP
     method: 'PUT',
     path: `/datasets/${datasetId}`,
     namespace: 'dataset',
-    params: payload,
+    params: sanitizeDatasetUpdatePayload(payload),
   });
 }
 

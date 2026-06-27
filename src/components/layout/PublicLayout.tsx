@@ -8,6 +8,7 @@ import { useI18n } from '../../app/i18n';
 import { clsx } from '../ui/clsx';
 import { withRouterBasename, withSameOriginNextParam } from '../../lib/routerPaths';
 import { ContextualHelpPanel } from './ContextualHelpPanel';
+import { SkipLink } from './SkipLink';
 
 function NavItem(props: { to: string; children: React.ReactNode }) {
   return (
@@ -49,6 +50,7 @@ function PublicLayoutInner() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <SkipLink targetId="public-main-content" label={i18n.t('accessibility.skip_to_content')} />
       <header className="sticky top-0 z-30 border-b border-border bg-bg">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="flex h-14 items-center gap-3">
@@ -56,9 +58,10 @@ function PublicLayoutInner() {
               vpsAdmin
             </NavLink>
 
-            <nav className="hidden md:flex items-center gap-1" data-document-title-nav="section">
+            <nav className="hidden md:flex items-center gap-1" aria-label={i18n.t('accessibility.primary_navigation')} data-document-title-nav="section">
               <NavItem to="/">{i18n.t('public.nav.overview')}</NavItem>
               <NavItem to="/outages">{i18n.t('public.nav.outages')}</NavItem>
+              <NavItem to="/security-advisories">{i18n.t('public.nav.security')}</NavItem>
               <NavItem to="/news">{i18n.t('public.nav.news')}</NavItem>
             </nav>
 
@@ -75,6 +78,8 @@ function PublicLayoutInner() {
               type="button"
               className="md:hidden inline-flex items-center justify-center rounded-md border border-border bg-overlay-surface p-2 shadow-card hover:bg-surface-2"
               aria-label={mobileOpen ? i18n.t('public.menu.close') : i18n.t('public.menu.open')}
+              aria-controls="public-mobile-navigation"
+              aria-expanded={mobileOpen}
               onClick={() => setMobileOpen((v) => !v)}
             >
               {mobileOpen ? <X size={18} /> : <Menu size={18} />}
@@ -83,9 +88,10 @@ function PublicLayoutInner() {
 
           {mobileOpen && (
             <div className="md:hidden pb-4">
-              <div className="flex flex-col gap-1" data-document-title-nav="section">
+              <nav id="public-mobile-navigation" className="flex flex-col gap-1" aria-label={i18n.t('accessibility.primary_navigation')} data-document-title-nav="section">
                 <NavItem to="/">{i18n.t('public.nav.overview')}</NavItem>
                 <NavItem to="/outages">{i18n.t('public.nav.outages')}</NavItem>
+                <NavItem to="/security-advisories">{i18n.t('public.nav.security')}</NavItem>
                 <NavItem to="/news">{i18n.t('public.nav.news')}</NavItem>
                 <a
                   href={primaryHref}
@@ -93,13 +99,19 @@ function PublicLayoutInner() {
                 >
                   {primaryLabel}
                 </a>
-              </div>
+              </nav>
             </div>
           )}
         </div>
       </header>
 
-      <main className="flex-1" data-document-title-region>
+      <main
+        id="public-main-content"
+        className="flex-1 outline-none"
+        data-document-title-region
+        tabIndex={-1}
+        aria-label={i18n.t('accessibility.main_region')}
+      >
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6">
           <div className="space-y-6">
             <ContextualHelpPanel pathname={location.pathname} scope="public" />

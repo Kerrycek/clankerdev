@@ -1,0 +1,21 @@
+// VPS locale chunk: actions
+export const csVps_actions = {
+  'vps.actions.menu.label': 'Akce VPS',
+  'vps.actions.menu.placeholder': 'Akce...',
+  'action.vps.template.label': 'Upravit informace o šabloně VPS',
+  'action.vps.lifecycle.label': 'Upravit životní cyklus VPS',
+  'action.vps.boot.label': 'Boot VPS z šablony',
+  'action.vps.reinstall.label': 'Reinstall VPS',
+  'action.vps.migrate.label': 'Migrovat VPS',
+  'action.vps.delete.label': 'Smazat VPS',
+  'action.vps.config.save.label': 'Uložit konfiguraci VPS',
+  'action.vps.access.passwd.label': 'Vygenerovat root heslo',
+  'action.vps.access.deploy_public_key.label': 'Nasadit SSH veřejný klíč',
+  'action.vps.network.ptr_update.label': 'Upravit PTR',
+  'action.vps.network.host_create.label': 'Vytvořit host adresu',
+  'action.vps.network.host_assign.label': 'Přiřadit host adresu',
+  'action.vps.network.host_free.label': 'Odebrat host adresu',
+  'action.vps.network.route_assign.label': 'Přiřadit IP routu',
+  'action.vps.network.route_free.label': 'Odebrat IP routu',
+  'action.vps.network.route_owner_update.label': 'Upravit vlastníka routy',
+} as const;

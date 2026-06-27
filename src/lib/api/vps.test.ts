@@ -20,7 +20,7 @@ function mockFetchOk(response: any) {
 }
 
 function lastFetchCall() {
-  const calls = (globalThis.fetch as any).mock.calls;
+  const calls = (globalThis.fetch as LegacyAny).mock.calls;
   return calls[calls.length - 1] as [string, RequestInit?];
 }
 
@@ -45,7 +45,7 @@ describe('vps API wrappers', () => {
       location: 3,
       address_location: 4,
       onstartall: true,
-    } as any);
+    } as LegacyAny);
 
     expect(params).toEqual({
       hostname: 'my-vps',
@@ -68,8 +68,8 @@ describe('vps API wrappers', () => {
     expect(params).not.toHaveProperty('onstartall');
   });
 
-  test('fetchVpsList forwards list filters', async () => {
-    globalThis.fetch = mockFetchOk({ vpses: [], _meta: { total_count: 0 } }) as any;
+  test('fetchVpsList forwards supported list filters and omits user', async () => {
+    globalThis.fetch = mockFetchOk({ vpses: [], _meta: { total_count: 0 } }) as LegacyAny;
 
     await fetchVpsList({
       limit: 25,
@@ -89,7 +89,7 @@ describe('vps API wrappers', () => {
     expect(u.searchParams.get('vps[limit]')).toBe('25');
     expect(u.searchParams.get('vps[from_id]')).toBe('123');
     expect(u.searchParams.get('vps[hostname_any]')).toBe('db');
-    expect(u.searchParams.get('vps[user]')).toBe('42');
+    expect(u.searchParams.get('vps[user]')).toBeNull();
     expect(u.searchParams.get('vps[node]')).toBe('7');
     expect(u.searchParams.get('vps[user_namespace_map]')).toBe('3');
     expect(u.searchParams.get('vps[location]')).toBe('2');
@@ -97,7 +97,7 @@ describe('vps API wrappers', () => {
   });
 
   test('fetchVpsStatuses forwards time-window and cursor params', async () => {
-    globalThis.fetch = mockFetchOk({ statuses: [], _meta: { total_count: 0 } }) as any;
+    globalThis.fetch = mockFetchOk({ statuses: [], _meta: { total_count: 0 } }) as LegacyAny;
 
     await fetchVpsStatuses(321, {
       limit: 80,
@@ -117,7 +117,7 @@ describe('vps API wrappers', () => {
   });
 
   test('fetchVps forwards include meta', async () => {
-    globalThis.fetch = mockFetchOk({ vps: { id: 1 } }) as any;
+    globalThis.fetch = mockFetchOk({ vps: { id: 1 } }) as LegacyAny;
 
     await fetchVps(1, { includes: 'user,node,dataset' });
 
@@ -129,7 +129,7 @@ describe('vps API wrappers', () => {
   });
 
   test('createVps posts admin create payload matching legacy vpsAdmin shape', async () => {
-    globalThis.fetch = mockFetchOk({ vps: { id: 150 } }) as any;
+    globalThis.fetch = mockFetchOk({ vps: { id: 150 } }) as LegacyAny;
 
     await createVps({
       mode: 'admin',
@@ -150,7 +150,7 @@ describe('vps API wrappers', () => {
       ipv4: 1,
       ipv6: 1,
       ipv4_private: 0,
-    } as any);
+    } as LegacyAny);
 
     const [url, init] = lastFetchCall();
     const body = JSON.parse(String(init?.body));
@@ -181,7 +181,7 @@ describe('vps API wrappers', () => {
   });
 
   test('createVps posts user create payload without admin-only fields', async () => {
-    globalThis.fetch = mockFetchOk({ vps: { id: 151 } }) as any;
+    globalThis.fetch = mockFetchOk({ vps: { id: 151 } }) as LegacyAny;
 
     await createVps({
       mode: 'user',
@@ -202,7 +202,7 @@ describe('vps API wrappers', () => {
       node: 5,
       onstartall: true,
       info: 'not for user mode',
-    } as any);
+    } as LegacyAny);
 
     const [url, init] = lastFetchCall();
     const body = JSON.parse(String(init?.body));
@@ -232,19 +232,20 @@ describe('vps API wrappers', () => {
     expect(body.vps).not.toHaveProperty('info');
   });
 
-  test('vpsClone posts legacy clone payload', async () => {
-    globalThis.fetch = mockFetchOk({ vps: { id: 160 } }) as any;
+  test('vpsClone posts legacy-safe clone payload', async () => {
+    globalThis.fetch = mockFetchOk({ vps: { id: 160 } }) as LegacyAny;
 
     await vpsClone(12, {
       user: 1,
       node: 5,
+      configs: true,
       hostname: 'source-12-clone',
       subdatasets: true,
       dataset_plans: true,
       resources: true,
       features: false,
       stop: true,
-    });
+    } as LegacyAny);
 
     const [url, init] = lastFetchCall();
     const body = JSON.parse(String(init?.body));
@@ -253,8 +254,6 @@ describe('vps API wrappers', () => {
     expect(init?.method).toBe('POST');
     expect(body).toEqual({
       vps: {
-        user: 1,
-        node: 5,
         hostname: 'source-12-clone',
         subdatasets: true,
         dataset_plans: true,
@@ -266,7 +265,7 @@ describe('vps API wrappers', () => {
   });
 
   test('vpsClone can post user playground target environment and location', async () => {
-    globalThis.fetch = mockFetchOk({ vps: { id: 161 } }) as any;
+    globalThis.fetch = mockFetchOk({ vps: { id: 161 } }) as LegacyAny;
 
     await vpsClone(12, {
       hostname: 'source-12-playground',
@@ -298,8 +297,8 @@ describe('vps API wrappers', () => {
     });
   });
 
-  test('vpsSwapWith posts legacy swap payload', async () => {
-    globalThis.fetch = mockFetchOk({}) as any;
+  test('vpsSwapWith posts legacy-safe swap payload', async () => {
+    globalThis.fetch = mockFetchOk({}) as LegacyAny;
 
     await vpsSwapWith(12, {
       vps: 14,
@@ -318,13 +317,12 @@ describe('vps API wrappers', () => {
         vps: 14,
         hostname: true,
         resources: true,
-        expirations: false,
       },
     });
   });
 
   test('vpsReplace posts legacy admin replace payload', async () => {
-    globalThis.fetch = mockFetchOk({ vps: { id: 12 } }) as any;
+    globalThis.fetch = mockFetchOk({ vps: { id: 12 } }) as LegacyAny;
 
     await vpsReplace(12, {
       node: 5,
@@ -349,7 +347,7 @@ describe('vps API wrappers', () => {
   });
 
   test('vpsBoot posts legacy rescue boot payload', async () => {
-    globalThis.fetch = mockFetchOk({}) as any;
+    globalThis.fetch = mockFetchOk({}) as LegacyAny;
 
     await vpsBoot(12, {
       os_template: 6,
@@ -370,7 +368,7 @@ describe('vps API wrappers', () => {
   });
 
   test('vpsReinstall posts legacy reinstall payload', async () => {
-    globalThis.fetch = mockFetchOk({}) as any;
+    globalThis.fetch = mockFetchOk({}) as LegacyAny;
 
     await vpsReinstall(12, { os_template: 6 });
 
@@ -387,7 +385,7 @@ describe('vps API wrappers', () => {
   });
 
   test('vpsMigrate posts legacy migration payload', async () => {
-    globalThis.fetch = mockFetchOk({}) as any;
+    globalThis.fetch = mockFetchOk({}) as LegacyAny;
 
     await vpsMigrate(12, {
       node: 7,
@@ -422,7 +420,7 @@ describe('vps API wrappers', () => {
   });
 
   test('vpsDelete sends lazy delete payload through vps namespace', async () => {
-    globalThis.fetch = mockFetchOk({}) as any;
+    globalThis.fetch = mockFetchOk({}) as LegacyAny;
 
     await vpsDelete(12, { lazy: true });
 

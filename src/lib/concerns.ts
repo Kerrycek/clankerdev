@@ -20,7 +20,7 @@ function coerceInt(v: unknown): number | null {
   }
   if (isRecord(v)) {
     // Some API shapes include refs as objects like { id: 123 }.
-    const id = (v as any)['id'];
+    const id = (v as LegacyAny)['id'];
     if (id !== undefined) return coerceInt(id);
   }
   return null;

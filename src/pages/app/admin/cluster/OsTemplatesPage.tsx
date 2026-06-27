@@ -41,17 +41,17 @@ import { TableCard } from '../../../../components/ui/TableCard';
 import { Textarea } from '../../../../components/ui/Textarea';
 
 function osFamilyLabel(f: OsFamily): string {
-  const label = typeof (f as any).label === 'string' ? String((f as any).label).trim() : '';
+  const label = typeof (f as LegacyAny).label === 'string' ? String((f as LegacyAny).label).trim() : '';
   return label || `#${f.id}`;
 }
 
 function tplOsFamilyLabel(tpl: OsTemplate): string {
-  const f = (tpl as any).os_family;
+  const f = (tpl as LegacyAny).os_family;
   if (!f) return '—';
   if (typeof f === 'string') return f;
   if (typeof f === 'number') return `#${f}`;
   if (typeof f === 'object' && typeof f.id === 'number') {
-    const label = typeof (f as any).label === 'string' ? String((f as any).label).trim() : '';
+    const label = typeof (f as LegacyAny).label === 'string' ? String((f as LegacyAny).label).trim() : '';
     return label || `#${f.id}`;
   }
   return '—';
@@ -758,7 +758,7 @@ export function OsTemplatesPage() {
               const dist = typeof tpl.distribution === 'string' ? tpl.distribution : '';
               const version = typeof tpl.version === 'string' ? tpl.version : '';
               const name = typeof tpl.name === 'string' ? tpl.name : '';
-              const usesCount = typeof (tpl as any).uses_count === 'number' ? (tpl as any).uses_count : undefined;
+              const usesCount = typeof (tpl as LegacyAny).uses_count === 'number' ? (tpl as LegacyAny).uses_count : undefined;
 
               const enabledBadge = boolBadge(tpl.enabled, 'common.enabled', 'common.disabled', t);
               const supportedBadge = boolBadge(tpl.supported, 'common.supported', 'common.unsupported', t);

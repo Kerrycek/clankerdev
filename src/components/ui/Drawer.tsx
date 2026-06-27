@@ -15,6 +15,7 @@ export function Drawer(props: {
   width?: 'sm' | 'md' | 'lg';
 
   /** Optional test ids for E2E / integration testing */
+  id?: string;
   testId?: string;
   closeTestId?: string;
 
@@ -66,6 +67,7 @@ export function Drawer(props: {
       ) : null}
 
       <div
+        id={props.id}
         role="dialog"
         aria-modal={modal ? 'true' : 'false'}
         aria-labelledby={props.title ? titleId : undefined}

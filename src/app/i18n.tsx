@@ -86,7 +86,7 @@ export function I18nProvider(props: { children: React.ReactNode }) {
       const k1 = `${baseKey}.${category}` as TranslationKey;
       const k2 = `${baseKey}.other` as TranslationKey;
 
-      const chosen = (dict as any)[k1] ?? (dict as any)[k2] ?? (dict as any)[baseKey] ?? (dictionaries.en as any)[k2] ?? (dictionaries.en as any)[baseKey];
+      const chosen = (dict as LegacyAny)[k1] ?? (dict as LegacyAny)[k2] ?? (dict as LegacyAny)[baseKey] ?? (dictionaries.en as LegacyAny)[k2] ?? (dictionaries.en as LegacyAny)[baseKey];
       const raw = typeof chosen === 'string' ? chosen : String(baseKey);
       return interpolate(raw, { count, ...(vars ?? {}) });
     };

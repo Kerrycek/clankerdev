@@ -101,13 +101,13 @@ function nodeOptionLabel(node: any): { id: number; label: string; location?: str
 }
 
 function vpsId(m: VpsMigration): number | undefined {
-  const raw = (m.vps as any)?.id;
+  const raw = (m.vps as LegacyAny)?.id;
   const id = typeof raw === 'number' ? raw : Number(raw);
   return Number.isFinite(id) && id > 0 ? id : undefined;
 }
 
 function chainId(m: VpsMigration): number | undefined {
-  const raw = (m.transaction_chain as any)?.id;
+  const raw = (m.transaction_chain as LegacyAny)?.id;
   const id = typeof raw === 'number' ? raw : Number(raw);
   return Number.isFinite(id) && id > 0 ? id : undefined;
 }
@@ -177,7 +177,7 @@ export function MigrationPlanDetailPage() {
   });
 
   const pageMigrations = migQ.data ?? [];
-  const pageCursor = useMemo(() => cursorFromDescendingPage(pageMigrations as any), [pageMigrations]);
+  const pageCursor = useMemo(() => cursorFromDescendingPage(pageMigrations as LegacyAny), [pageMigrations]);
   const hasMore = pageMigrations.length >= pagination.limit;
   const canNext = pagination.hasForward || (hasMore && pageCursor !== null);
   const showPagination = migQ.isSuccess && (pagination.page > 1 || pageMigrations.length > 0 || canNext);
@@ -422,7 +422,7 @@ export function MigrationPlanDetailPage() {
 
 
   const plan = planQ.data as MigrationPlan | undefined;
-  const planForGates = (plan ?? ({ id: planId } as any)) as MigrationPlan;
+  const planForGates = (plan ?? ({ id: planId } as LegacyAny)) as MigrationPlan;
 
   const busyLocalAny =
     busyLocalLock ||

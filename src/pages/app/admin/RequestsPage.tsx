@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CircleHelp, SlidersHorizontal } from 'lucide-react';
 
 import { useAppMode } from '../../../app/appMode';
 import { useI18n } from '../../../app/i18n';
 import { useToasts } from '../../../app/toasts';
+import { useChrome } from '../../../components/layout/ChromeContext';
 
 import { searchUsers } from '../../../lib/api/users';
 import {
@@ -13,9 +14,13 @@ import {
   fetchChangeRequests,
   fetchRegistrationRequest,
   fetchRegistrationRequests,
+  resolveChangeRequest,
+  resolveRegistrationRequest,
   type ChangeRequest,
   type RegistrationRequest,
+  type ResolveUserRequestAction,
 } from '../../../lib/api/requests';
+import { getMetaActionStateId } from '../../../lib/api/haveapi';
 import { formatDateTime } from '../../../lib/format';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 import { useDebouncedValue } from '../../../lib/hooks/useDebouncedValue';
@@ -45,7 +50,6 @@ import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { CopyButton } from '../../../components/ui/CopyButton';
-import { Drawer } from '../../../components/ui/Drawer';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { ErrorState } from '../../../components/ui/ErrorState';
 import { FilterChip } from '../../../components/ui/FilterChip';
@@ -61,10 +65,136 @@ import { TableRowLink } from '../../../components/ui/TableRowLink';
 import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 
 type RequestTypeFilter = 'all' | 'registration' | 'change';
+type RequestStateFilter = 'all' | 'awaiting' | 'pending_correction' | 'approved' | 'denied' | 'ignored';
+
+const DEFAULT_REQUEST_STATE: RequestStateFilter = 'awaiting';
+const ALL_REQUEST_STATES: RequestStateFilter = 'all';
+
+const REQUEST_RESOLVE_ACTIONS: ResolveUserRequestAction[] = ['approve', 'deny', 'ignore', 'request_correction'];
+
+const REQUEST_ACTION_TARGET_STATE: Record<ResolveUserRequestAction, RequestStateFilter> = {
+  approve: 'approved',
+  deny: 'denied',
+  ignore: 'ignored',
+  request_correction: 'pending_correction',
+};
+
+const REQUEST_ACTION_VARIANT: Record<ResolveUserRequestAction, 'primary' | 'secondary' | 'danger'> = {
+  approve: 'primary',
+  deny: 'danger',
+  ignore: 'secondary',
+  request_correction: 'secondary',
+};
 
 type UnifiedRequestRow =
   | (RegistrationRequest & { _type: 'registration' })
   | (ChangeRequest & { _type: 'change' });
+
+function requestRowKey(row: UnifiedRequestRow): string {
+  return `${row._type}:${String((row as LegacyAny).id)}`;
+}
+
+function requestStateOptions(): RequestStateFilter[] {
+  return [ALL_REQUEST_STATES, 'awaiting', 'pending_correction', 'approved', 'denied', 'ignored'];
+}
+
+function isRequestStateFilter(value: string): value is RequestStateFilter {
+  return requestStateOptions().includes(value as RequestStateFilter);
+}
+
+function stateFromSearchParams(sp: URLSearchParams): RequestStateFilter {
+  const raw = sp.get('state');
+  if (raw === null || !raw.trim()) return DEFAULT_REQUEST_STATE;
+
+  const state = raw.trim().toLowerCase();
+  if (isRequestStateFilter(state)) return state;
+  return DEFAULT_REQUEST_STATE;
+}
+
+function requestStateFilterForApi(state: RequestStateFilter): string | undefined {
+  return state === ALL_REQUEST_STATES ? undefined : state;
+}
+
+function requestStateFilterLabel(t: (key: any, vars?: Record<string, unknown>) => string, state: RequestStateFilter): string {
+  if (state === ALL_REQUEST_STATES) return t('requests.state.all');
+  return t(requestStateLabelKey(state));
+}
+
+function requestResolveActionLabelKey(action: ResolveUserRequestAction): string {
+  return `requests.resolve.action.${action}`;
+}
+
+function availableResolveActions(state: string): ResolveUserRequestAction[] {
+  const normalized = state.trim();
+  return REQUEST_RESOLVE_ACTIONS.filter((action) => REQUEST_ACTION_TARGET_STATE[action] !== normalized);
+}
+
+function stringifySearchValue(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) return value.map(stringifySearchValue).filter(Boolean).join(' ');
+  if (typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    return [obj['id'], obj['login'], obj['label'], obj['name'], obj['full_name'], obj['email']]
+      .map(stringifySearchValue)
+      .filter(Boolean)
+      .join(' ');
+  }
+  return '';
+}
+
+function requestSearchHaystack(row: UnifiedRequestRow): string {
+  const r = row as LegacyAny;
+  const fields = [
+    r.id,
+    row._type,
+    r.state,
+    r.label,
+    r.user,
+    r.admin,
+    r.login,
+    r.full_name,
+    r.org_name,
+    r.org_id,
+    r.email,
+    r.address,
+    r.how,
+    r.note,
+    r.change_reason,
+    r.api_ip_addr,
+    r.api_ip_ptr,
+    r.client_ip_addr,
+    r.client_ip_ptr,
+    r.admin_response,
+    r.currency,
+    r.language,
+    r.location,
+    r.os_template,
+  ];
+
+  return fields.map(stringifySearchValue).filter(Boolean).join(' ').toLowerCase();
+}
+
+function requestMatchesSearch(row: UnifiedRequestRow, query: string): boolean {
+  const terms = query
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .map((term) => term.trim())
+    .filter(Boolean);
+
+  if (terms.length === 0) return true;
+
+  const haystack = requestSearchHaystack(row);
+  return terms.every((term) => haystack.includes(term));
+}
+
+function requestUserLabel(r: any): string {
+  if (typeof r?.user?.login === 'string') return String(r.user.login);
+  if (typeof r?.user?.label === 'string') return String(r.user.label);
+  if (r?.user) return `#${String(r.user.id)}`;
+  return '—';
+}
 
 function safeNumber(value: string): number | undefined {
   const t = value.trim();
@@ -103,10 +233,6 @@ function mergeByIdDesc(reg: RegistrationRequest[], ch: ChangeRequest[], limit: n
   return out;
 }
 
-function defaultStateOptions(): string[] {
-  return ['', 'awaiting', 'pending_correction', 'approved', 'denied', 'ignored'];
-}
-
 function canonicalKey(rawKey: string):
   | 'q'
   | 'type'
@@ -141,11 +267,11 @@ function parseTypeValue(value: string): RequestTypeFilter | null {
   return null;
 }
 
-function resolveStateValue(value: string): string | null {
+function resolveStateValue(value: string): RequestStateFilter | null {
   const v = value.trim().toLowerCase();
   if (!v) return null;
 
-  const known = defaultStateOptions().filter((x) => x);
+  const known = requestStateOptions();
   const exact = known.find((s) => s.toLowerCase() === v);
   if (exact) return exact;
 
@@ -159,13 +285,15 @@ export function RequestsPage() {
   const isAdmin = mode === 'admin';
   const { t } = useI18n();
   const toasts = useToasts();
+  const chrome = useChrome();
+  const qc = useQueryClient();
   const navigate = useNavigate();
 
   const tierSlowRefetchMs = useTierSlowIntervalMs();
   const [sp, setSp] = useSearchParams();
 
-  const [type, setType] = useState<RequestTypeFilter>(() => (sp.get('type') as any) || 'all');
-  const [state, setState] = useState(() => sp.get('state') ?? '');
+  const [type, setType] = useState<RequestTypeFilter>(() => (sp.get('type') as LegacyAny) || 'all');
+  const [state, setState] = useState<RequestStateFilter>(() => stateFromSearchParams(sp));
   const [qText, setQText] = useState(() => sp.get('q') ?? '');
   const [userId, setUserId] = useState(() => sp.get('user') ?? '');
   const [adminId, setAdminId] = useState(() => sp.get('admin') ?? '');
@@ -177,12 +305,14 @@ export function RequestsPage() {
   const [smartErrors, setSmartErrors] = useState<string[]>([]);
   const [helpOpen, setHelpOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
+  const [resolvingKey, setResolvingKey] = useState<string | null>(null);
   const smartInputRef = useRef<HTMLInputElement>(null);
 
   // Sync from URL on navigation.
   useEffect(() => {
-    setType(((sp.get('type') as any) || 'all') as RequestTypeFilter);
-    setState(sp.get('state') ?? '');
+    setType(((sp.get('type') as LegacyAny) || 'all') as RequestTypeFilter);
+    setState(stateFromSearchParams(sp));
     setQText(sp.get('q') ?? '');
     setUserId(isAdmin ? sp.get('user') ?? '' : '');
     setAdminId(isAdmin ? sp.get('admin') ?? '' : '');
@@ -198,8 +328,8 @@ export function RequestsPage() {
     if (type && type !== 'all') next.set('type', type);
     else next.delete('type');
 
-    const st = state.trim();
-    if (st && defaultStateOptions().includes(st)) next.set('state', st);
+    const st = isRequestStateFilter(state) ? state : DEFAULT_REQUEST_STATE;
+    if (st !== DEFAULT_REQUEST_STATE) next.set('state', st);
     else next.delete('state');
 
     const q = qText.trim();
@@ -224,7 +354,8 @@ export function RequestsPage() {
     if (next.toString() !== sp.toString()) setSp(next, { replace: true });
   }, [adminId, apiIp, clientIp, clientPtr, isAdmin, qText, setSp, sp, state, type, userId]);
 
-  const stateTrim = state.trim() || undefined;
+  const stateFilter = isRequestStateFilter(state) ? state : DEFAULT_REQUEST_STATE;
+  const stateTrim = requestStateFilterForApi(stateFilter);
   const qTrim = qText.trim() || undefined;
   const userIdNum = safeNumber(userId);
   const adminIdNum = safeNumber(adminId);
@@ -232,7 +363,7 @@ export function RequestsPage() {
   const filtersActive = Boolean(
     qTrim ||
       (type && type !== 'all') ||
-      stateTrim ||
+      stateFilter !== DEFAULT_REQUEST_STATE ||
       (isAdmin && userIdNum !== undefined) ||
       (isAdmin && adminIdNum !== undefined) ||
       apiIp.trim() ||
@@ -242,7 +373,7 @@ export function RequestsPage() {
 
   function clearFilters() {
     setType('all');
-    setState('');
+    setState(DEFAULT_REQUEST_STATE);
     setQText('');
     setUserId('');
     setAdminId('');
@@ -272,8 +403,8 @@ export function RequestsPage() {
     allowedLimits: [25, 50, 100, 200],
   });
 
-  const needRegs = type === 'all' || type === 'registration';
-  const needChanges = type === 'all' || type === 'change';
+  const needRegs = isAdmin && (type === 'all' || type === 'registration');
+  const needChanges = isAdmin && (type === 'all' || type === 'change');
 
   const regQ = useQuery({
     queryKey: [
@@ -348,13 +479,56 @@ export function RequestsPage() {
   const reg = regQ.data?.data ?? [];
   const ch = changeQ.data?.data ?? [];
 
-  const rows = useMemo(() => {
-    if (type === 'registration') return reg.map((x) => ({ ...x, _type: 'registration' as const })) as UnifiedRequestRow[];
-    if (type === 'change') return ch.map((x) => ({ ...x, _type: 'change' as const })) as UnifiedRequestRow[];
-    return mergeByIdDesc(reg, ch, pagination.limit);
+  const rawRows = useMemo(() => {
+    return (
+      type === 'registration'
+        ? (reg.map((x) => ({ ...x, _type: 'registration' as const })) as UnifiedRequestRow[])
+        : type === 'change'
+          ? (ch.map((x) => ({ ...x, _type: 'change' as const })) as UnifiedRequestRow[])
+          : mergeByIdDesc(reg, ch, pagination.limit)
+    );
   }, [ch, pagination.limit, reg, type]);
 
-  const pageCursor = useMemo(() => cursorFromDescendingPage(rows as any), [rows]);
+  const rows = useMemo(() => {
+    const stateScopedRows =
+      stateFilter === ALL_REQUEST_STATES
+        ? rawRows
+        : rawRows.filter((row) => String((row as LegacyAny).state ?? '').trim() === stateFilter);
+
+    if (!qTrim) return stateScopedRows;
+    return stateScopedRows.filter((row) => requestMatchesSearch(row, qTrim));
+  }, [qTrim, rawRows, stateFilter]);
+
+  const visibleRowKeys = useMemo(() => rows.map(requestRowKey), [rows]);
+  const visibleRowKeySet = useMemo(() => new Set(visibleRowKeys), [visibleRowKeys]);
+
+  useEffect(() => {
+    setExpandedKeys((prev) => {
+      const next = new Set([...prev].filter((key) => visibleRowKeySet.has(key)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [visibleRowKeySet]);
+
+  const allRowsExpanded = rows.length > 0 && visibleRowKeys.every((key) => expandedKeys.has(key));
+
+  function toggleExpanded(key: string) {
+    setExpandedKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  function expandAllRows() {
+    setExpandedKeys(new Set(visibleRowKeys));
+  }
+
+  function collapseAllRows() {
+    setExpandedKeys(new Set());
+  }
+
+  const pageCursor = useMemo(() => cursorFromDescendingPage(rawRows as LegacyAny), [rawRows]);
 
   const fetchedCount = reg.length + ch.length;
   const canNext = useMemo(() => {
@@ -362,12 +536,12 @@ export function RequestsPage() {
     if (type === 'change') return ch.length === pagination.limit;
 
     // Unified: if we fetched more than we display, we definitely have a next page.
-    if (fetchedCount > rows.length) return true;
+    if (fetchedCount > rawRows.length) return true;
     // Otherwise, if any source hit its limit, there might be more beyond.
     if (reg.length === pagination.limit) return true;
     if (ch.length === pagination.limit) return true;
     return false;
-  }, [ch.length, fetchedCount, pagination.limit, reg.length, rows.length, type]);
+  }, [ch.length, fetchedCount, pagination.limit, rawRows.length, reg.length, type]);
 
   const isLoading = (needRegs && regQ.isLoading) || (needChanges && changeQ.isLoading);
   const error = (needRegs && regQ.isError ? regQ.error : null) || (needChanges && changeQ.isError ? changeQ.error : null);
@@ -388,9 +562,9 @@ export function RequestsPage() {
   const openRequestById = useCallback(
     async (id: number) => {
       // If the id is already on the page, we know the type and can open directly.
-      const onPage = rows.find((r) => Number((r as any).id) === id);
+      const onPage = rows.find((r) => Number((r as LegacyAny).id) === id);
       if (onPage) {
-        navigate(`${basePath}/requests/${(onPage as any)._type}/${id}`);
+        navigate(`${basePath}/requests/${(onPage as LegacyAny)._type}/${id}`);
         return;
       }
 
@@ -414,6 +588,131 @@ export function RequestsPage() {
     },
     [basePath, navigate, rows, t, toasts]
   );
+
+  async function submitRowResolve(row: UnifiedRequestRow, action: ResolveUserRequestAction) {
+    const id = Number((row as LegacyAny).id);
+    if (!Number.isFinite(id) || id <= 0) return;
+
+    const key = `${requestRowKey(row)}:${action}`;
+    setResolvingKey(key);
+
+    try {
+      const res =
+        row._type === 'registration'
+          ? await resolveRegistrationRequest(id, { action })
+          : await resolveChangeRequest(id, { action });
+
+      const asId = getMetaActionStateId(res.meta);
+      if (asId) chrome.trackActionState(asId);
+
+      toasts.pushToast({
+        variant: 'ok',
+        title: t('requests.resolve.toast.title'),
+        body: t('requests.resolve.toast.message'),
+      });
+
+      await qc.invalidateQueries({ queryKey: ['user_request'] });
+      if (needRegs) void regQ.refetch();
+      if (needChanges) void changeQ.refetch();
+    } catch (e: any) {
+      toasts.pushToast({
+        variant: 'danger',
+        title: t('requests.resolve.toast.error.title'),
+        body: e?.message ?? String(e),
+      });
+    } finally {
+      setResolvingKey((current) => (current === key ? null : current));
+    }
+  }
+
+  function renderRowActions(row: UnifiedRequestRow) {
+    const state = String((row as LegacyAny).state ?? '').trim();
+    const actions = availableResolveActions(state);
+    if (actions.length === 0) return <span className="text-xs text-faint">—</span>;
+
+    return (
+      <div className="flex flex-wrap gap-1" data-row-no-nav="true">
+        {actions.map((action) => {
+          const key = `${requestRowKey(row)}:${action}`;
+          return (
+            <Button
+              key={action}
+              variant={REQUEST_ACTION_VARIANT[action]}
+              size="sm"
+              loading={resolvingKey === key}
+              disabled={Boolean(resolvingKey && resolvingKey !== key)}
+              onClick={() => void submitRowResolve(row, action)}
+              testId={`admin.requests.row.${row._type}.${String((row as LegacyAny).id)}.action.${action}`}
+            >
+              {t(requestResolveActionLabelKey(action))}
+            </Button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  function renderExpandedRow(row: UnifiedRequestRow) {
+    const r = row as LegacyAny;
+    const reqType = row._type;
+
+    const detailItems =
+      reqType === 'registration'
+        ? [
+            [t('requests.field.login'), String(r.login ?? '—')],
+            [t('requests.field.full_name'), String(r.full_name ?? '—')],
+            [t('requests.field.org'), [r.org_name, r.org_id ? `(${String(r.org_id)})` : ''].filter(Boolean).join(' ') || '—'],
+            [t('requests.field.email'), String(r.email ?? '—')],
+            [t('requests.field.address'), String(r.address ?? '—')],
+            [t('requests.field.how'), String(r.how ?? '—')],
+            [t('requests.field.note'), String(r.note ?? '—')],
+          ]
+        : [
+            [t('requests.field.full_name'), String(r.full_name ?? '—')],
+            [t('requests.field.email'), String(r.email ?? '—')],
+            [t('requests.field.address'), String(r.address ?? '—')],
+            [t('requests.field.change_reason'), String(r.change_reason ?? '—')],
+          ];
+
+    return (
+      <div className="rounded-lg border border-border bg-surface-2 p-3" data-testid={`admin.requests.row.${reqType}.${String(r.id)}.expanded`}>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {detailItems.map(([label, value]) => (
+            <div key={String(label)}>
+              <div className="text-xs text-muted">{label}</div>
+              <div className="whitespace-pre-line break-words text-sm">{value}</div>
+            </div>
+          ))}
+
+          <div>
+            <div className="text-xs text-muted">{t('requests.detail.api_ip')}</div>
+            <div className="break-words text-sm">{String(r.api_ip_addr ?? '—')}</div>
+            {r.api_ip_ptr ? <div className="break-words text-xs text-muted">{String(r.api_ip_ptr)}</div> : null}
+          </div>
+
+          <div>
+            <div className="text-xs text-muted">{t('requests.detail.client_ip')}</div>
+            <div className="break-words text-sm">{String(r.client_ip_addr ?? '—')}</div>
+            {r.client_ip_ptr ? <div className="break-words text-xs text-muted">{String(r.client_ip_ptr)}</div> : null}
+          </div>
+
+          {r.admin_response ? (
+            <div className="md:col-span-2 xl:col-span-3">
+              <div className="text-xs text-muted">{t('requests.detail.admin_response')}</div>
+              <div className="whitespace-pre-line break-words text-sm">{String(r.admin_response)}</div>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
+          <Link className="text-sm font-medium text-accent hover:underline" to={`${basePath}/requests/${reqType}/${String(r.id)}`}>
+            {t('requests.list.open_detail')}
+          </Link>
+          <div>{renderRowActions(row)}</div>
+        </div>
+      </div>
+    );
+  }
 
   async function applySmartText(raw: string) {
     const input = raw.trim();
@@ -675,7 +974,7 @@ export function RequestsPage() {
       return suggestions;
     }
 
-    // Default free text: server-side search.
+    // Default free text: current loaded page search. The legacy HaveAPI index does not accept q.
     suggestions.push({
       id: 'q',
       primary: t('requests.smart.suggest.q', { value: needle }),
@@ -693,7 +992,7 @@ export function RequestsPage() {
     if (st) {
       suggestions.push({
         id: `state.${st}`,
-        primary: t('requests.smart.suggest.state', { state: t(requestStateLabelKey(st)) }),
+        primary: t('requests.smart.suggest.state', { state: requestStateFilterLabel(t, st) }),
         secondary: `state:${st}`,
         onPick: () => {
           setState(st);
@@ -755,15 +1054,18 @@ export function RequestsPage() {
       );
     }
 
-    if (stateTrim) {
-      const tone = (tableVariantFromBadgeVariant(requestStateBadgeVariant(stateTrim)) ?? 'neutral') as any;
+    if (stateFilter !== DEFAULT_REQUEST_STATE) {
+      const tone =
+        stateFilter === ALL_REQUEST_STATES
+          ? 'neutral'
+          : ((tableVariantFromBadgeVariant(requestStateBadgeVariant(stateFilter)) ?? 'neutral') as LegacyAny);
 
       chips.push(
         <FilterChip
           key="state"
-          label={`state:${t(requestStateLabelKey(stateTrim))}`}
+          label={`state:${requestStateFilterLabel(t, stateFilter)}`}
           tone={tone}
-          onRemove={() => setState('')}
+          onRemove={() => setState(DEFAULT_REQUEST_STATE)}
           testId="admin.requests.chip.state"
         />
       );
@@ -848,9 +1150,10 @@ export function RequestsPage() {
     });
 
     return chips;
-  }, [adminIdNum, apiIp, clientIp, clientPtr, isAdmin, qTrim, smartErrors, stateTrim, t, type, userIdNum]);
+  }, [adminIdNum, apiIp, clientIp, clientPtr, isAdmin, qTrim, smartErrors, stateFilter, t, type, userIdNum]);
 
   const shareUrl = useMemo(() => (typeof window !== 'undefined' ? window.location.href : ''), [sp]);
+  const tableColumnCount = isAdmin ? 11 : 9;
 
   const helpExamples = isAdmin
     ? [
@@ -890,12 +1193,15 @@ export function RequestsPage() {
     { key: 'id', description: t('requests.list.smart_help.keys.id'), example: 'id:123' },
   ];
 
+  if (!isAdmin) return <Navigate to="/app" replace />;
+
   return (
     <ListShell
       testId="admin.requests.list"
       header={<PageHeader title={isAdmin ? t('requests.list.title') : t('requests.my.title')} description={isAdmin ? t('requests.list.description') : t('requests.my.description')} />}
       filters={
         <>
+          <div className="relative">
           <FilterBar testId="admin.requests.filters">
             <div className="w-full sm:max-w-xl">
               <SmartFilterInput
@@ -943,21 +1249,50 @@ export function RequestsPage() {
             </Button>
 
             <Button
-              variant={state === 'awaiting' ? 'primary' : 'secondary'}
+              variant={stateFilter === DEFAULT_REQUEST_STATE ? 'primary' : 'secondary'}
               size="sm"
-              onClick={() => setState(state === 'awaiting' ? '' : 'awaiting')}
+              onClick={() => setState(DEFAULT_REQUEST_STATE)}
               testId="admin.requests.quick.awaiting"
             >
               {t(requestStateLabelKey('awaiting'))}
             </Button>
 
             <Button
-              variant={state === 'pending_correction' ? 'primary' : 'secondary'}
+              variant={stateFilter === 'pending_correction' ? 'primary' : 'secondary'}
               size="sm"
-              onClick={() => setState(state === 'pending_correction' ? '' : 'pending_correction')}
+              onClick={() => setState(stateFilter === 'pending_correction' ? DEFAULT_REQUEST_STATE : 'pending_correction')}
               testId="admin.requests.quick.pending_correction"
             >
               {t(requestStateLabelKey('pending_correction'))}
+            </Button>
+
+            <Button
+              variant={stateFilter === ALL_REQUEST_STATES ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => setState(stateFilter === ALL_REQUEST_STATES ? DEFAULT_REQUEST_STATE : ALL_REQUEST_STATES)}
+              testId="admin.requests.quick.all"
+            >
+              {t('requests.state.all')}
+            </Button>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={expandAllRows}
+              disabled={rows.length === 0 || allRowsExpanded}
+              testId="admin.requests.expand_all"
+            >
+              {t('requests.list.expand_all')}
+            </Button>
+
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={collapseAllRows}
+              disabled={expandedKeys.size === 0}
+              testId="admin.requests.collapse_all"
+            >
+              {t('requests.list.collapse_all')}
             </Button>
 
             <CopyButton
@@ -974,6 +1309,139 @@ export function RequestsPage() {
               </Button>
             ) : null}
           </FilterBar>
+
+          {advancedOpen ? (
+            <div
+              className="absolute left-0 top-full z-40 mt-2 w-full max-w-content-lg rounded-lg border border-border bg-overlay-surface p-4 shadow-panel"
+              data-testid="admin.requests.advanced_filters"
+            >
+              <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
+                <div className="text-sm font-semibold">{t('filters.advanced.title')}</div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 px-0"
+                  onClick={() => setAdvancedOpen(false)}
+                  aria-label={t('common.close')}
+                >
+                  ×
+                </Button>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div>
+                  <div className="text-sm font-medium">{t('requests.list.filter.type.label')}</div>
+                  <div className="mt-1">
+                    <Select
+                      value={type}
+                      onChange={(e) => setType((e.target.value as RequestTypeFilter) || 'all')}
+                      aria-label={t('requests.list.filter.type.aria')}
+                    >
+                      <option value="all">{t('requests.list.filter.type.all')}</option>
+                      <option value="registration">{t('requests.type.registration')}</option>
+                      <option value="change">{t('requests.type.change')}</option>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-sm font-medium">{t('requests.list.filter.state.label')}</div>
+                  <div className="mt-1">
+                    <Select
+                      value={stateFilter}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setState(isRequestStateFilter(next) ? next : DEFAULT_REQUEST_STATE);
+                      }}
+                      aria-label={t('requests.list.filter.state.aria')}
+                    >
+                      {requestStateOptions().map((s) => (
+                        <option key={s} value={s}>
+                          {requestStateFilterLabel(t, s)}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-sm font-medium">{t('requests.list.filter.user.label')}</div>
+                  <div className="mt-1">
+                    <UserLookupInput
+                      value={userId}
+                      onChange={setUserId}
+                      placeholder={t('requests.list.filter.user.placeholder')}
+                      testId="admin.requests.filter.user.lookup"
+                      loadingLabel={t('common.loading')}
+                      noResultsLabel={t('palette.empty.no_results')}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-sm font-medium">{t('requests.list.filter.admin.label')}</div>
+                  <div className="mt-1">
+                    <UserLookupInput
+                      value={adminId}
+                      onChange={setAdminId}
+                      placeholder={t('requests.list.filter.admin.placeholder')}
+                      testId="admin.requests.filter.admin.lookup"
+                      loadingLabel={t('common.loading')}
+                      noResultsLabel={t('palette.empty.no_results')}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-sm font-medium">{t('requests.list.filter.api_ip.label')}</div>
+                  <div className="mt-1">
+                    <Input
+                      value={apiIp}
+                      onChange={(e) => setApiIp(e.target.value)}
+                      placeholder={t('requests.list.filter.api_ip.placeholder')}
+                      testId="admin.requests.filter.api_ip"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-sm font-medium">{t('requests.list.filter.client_ip.label')}</div>
+                  <div className="mt-1">
+                    <Input
+                      value={clientIp}
+                      onChange={(e) => setClientIp(e.target.value)}
+                      placeholder={t('requests.list.filter.client_ip.placeholder')}
+                      testId="admin.requests.filter.client_ip"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-sm font-medium">{t('requests.list.filter.client_ptr.label')}</div>
+                  <div className="mt-1">
+                    <Input
+                      value={clientPtr}
+                      onChange={(e) => setClientPtr(e.target.value)}
+                      placeholder={t('requests.list.filter.client_ptr.placeholder')}
+                      testId="admin.requests.filter.client_ptr"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-center justify-end gap-2 border-t border-border pt-3">
+                {filtersActive ? (
+                  <Button variant="secondary" size="sm" onClick={clearFilters}>
+                    {t('common.clear_filters')}
+                  </Button>
+                ) : null}
+                <Button variant="primary" size="sm" onClick={() => setAdvancedOpen(false)}>
+                  {t('common.done')}
+                </Button>
+              </div>
+            </div>
+          ) : null}
+          </div>
 
           <SmartInputHelp
             open={helpOpen}
@@ -1021,127 +1489,6 @@ export function RequestsPage() {
             testId="admin.requests.smart_filter.help"
             keyRowTestIdPrefix="admin.requests.smart_filter.help.key"
           />
-
-          <Drawer
-            open={advancedOpen}
-            onClose={() => setAdvancedOpen(false)}
-            title={t('filters.advanced.title')}
-            width="lg"
-            testId="admin.requests.advanced_filters"
-            footer={
-              <div className="flex items-center justify-end gap-2">
-                {filtersActive ? (
-                  <Button variant="secondary" size="sm" onClick={clearFilters}>
-                    {t('common.clear_filters')}
-                  </Button>
-                ) : null}
-                <Button variant="primary" size="sm" onClick={() => setAdvancedOpen(false)}>
-                  {t('common.done')}
-                </Button>
-              </div>
-            }
-          >
-            <div className="space-y-4">
-              <div>
-                <div className="text-sm font-medium">{t('requests.list.filter.type.label')}</div>
-                <div className="mt-1">
-                  <Select
-                    value={type}
-                    onChange={(e) => setType((e.target.value as RequestTypeFilter) || 'all')}
-                    aria-label={t('requests.list.filter.type.aria')}
-                  >
-                    <option value="all">{t('requests.list.filter.type.all')}</option>
-                    <option value="registration">{t('requests.type.registration')}</option>
-                    <option value="change">{t('requests.type.change')}</option>
-                  </Select>
-                </div>
-              </div>
-
-              <div>
-                <div className="text-sm font-medium">{t('requests.list.filter.state.label')}</div>
-                <div className="mt-1">
-                  <Select value={state} onChange={(e) => setState(e.target.value)} aria-label={t('requests.list.filter.state.aria')}>
-                    <option value="">{t('common.all')}</option>
-                    {defaultStateOptions()
-                      .filter((x) => x)
-                      .map((s) => (
-                        <option key={s} value={s}>
-                          {t(requestStateLabelKey(s))}
-                        </option>
-                      ))}
-                  </Select>
-                </div>
-              </div>
-
-              {isAdmin ? (
-                <>
-                  <div>
-                    <div className="text-sm font-medium">{t('requests.list.filter.user.label')}</div>
-                    <div className="mt-1">
-                      <UserLookupInput
-                        value={userId}
-                        onChange={setUserId}
-                        placeholder={t('requests.list.filter.user.placeholder')}
-                        testId="admin.requests.filter.user.lookup"
-                        loadingLabel={t('common.loading')}
-                        noResultsLabel={t('palette.empty.no_results')}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-sm font-medium">{t('requests.list.filter.admin.label')}</div>
-                    <div className="mt-1">
-                      <UserLookupInput
-                        value={adminId}
-                        onChange={setAdminId}
-                        placeholder={t('requests.list.filter.admin.placeholder')}
-                        testId="admin.requests.filter.admin.lookup"
-                        loadingLabel={t('common.loading')}
-                        noResultsLabel={t('palette.empty.no_results')}
-                      />
-                    </div>
-                  </div>
-                </>
-              ) : null}
-
-              <div>
-                <div className="text-sm font-medium">{t('requests.list.filter.api_ip.label')}</div>
-                <div className="mt-1">
-                  <Input
-                    value={apiIp}
-                    onChange={(e) => setApiIp(e.target.value)}
-                    placeholder={t('requests.list.filter.api_ip.placeholder')}
-                    testId="admin.requests.filter.api_ip"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="text-sm font-medium">{t('requests.list.filter.client_ip.label')}</div>
-                <div className="mt-1">
-                  <Input
-                    value={clientIp}
-                    onChange={(e) => setClientIp(e.target.value)}
-                    placeholder={t('requests.list.filter.client_ip.placeholder')}
-                    testId="admin.requests.filter.client_ip"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="text-sm font-medium">{t('requests.list.filter.client_ptr.label')}</div>
-                <div className="mt-1">
-                  <Input
-                    value={clientPtr}
-                    onChange={(e) => setClientPtr(e.target.value)}
-                    placeholder={t('requests.list.filter.client_ptr.placeholder')}
-                    testId="admin.requests.filter.client_ptr"
-                  />
-                </div>
-              </div>
-            </div>
-          </Drawer>
         </>
       }
     >
@@ -1151,7 +1498,7 @@ export function RequestsPage() {
         <ErrorState
           testId="admin.requests.error"
           title={t('requests.list.load_error.title')}
-          error={error as any}
+          error={error as LegacyAny}
           onRetry={() => {
             if (needRegs) void regQ.refetch();
             if (needChanges) void changeQ.refetch();
@@ -1172,21 +1519,16 @@ export function RequestsPage() {
           {/* Mobile: cards */}
           <div className="space-y-2 md:hidden">
             {rows.map((r) => {
-              const id = Number((r as any).id);
-              const reqType = (r as any)._type as 'registration' | 'change';
-              const st = String((r as any).state ?? '').trim();
+              const id = Number((r as LegacyAny).id);
+              const reqType = (r as LegacyAny)._type as 'registration' | 'change';
+              const key = requestRowKey(r);
+              const expanded = expandedKeys.has(key);
+              const st = String((r as LegacyAny).state ?? '').trim();
               const stateVar = requestStateBadgeVariant(st);
               const dotVar = dotVariantFromBadgeVariant(stateVar);
-              const userLabel =
-                typeof (r as any).user?.login === 'string'
-                  ? String((r as any).user.login)
-                  : typeof (r as any).user?.label === 'string'
-                    ? String((r as any).user.label)
-                    : (r as any).user
-                      ? `#${String((r as any).user.id)}`
-                      : '—';
-              const label = String((r as any).label ?? '').trim() || '—';
-              const risk = reqType === 'registration' ? fraudRiskBadge(r as any) : null;
+              const userLabel = requestUserLabel(r);
+              const label = String((r as LegacyAny).label ?? '').trim() || '—';
+              const risk = reqType === 'registration' ? fraudRiskBadge(r as LegacyAny) : null;
 
               return (
                 <Card key={`${reqType}-${id}`} className="p-4">
@@ -1213,16 +1555,30 @@ export function RequestsPage() {
                       ) : null}
                       <div className="mt-1 text-xs text-muted">
                         <span className="text-faint">{t('common.created')}:</span>{' '}
-                        {(r as any).created_at ? formatDateTime(String((r as any).created_at)) : '—'}
+                        {(r as LegacyAny).created_at ? formatDateTime(String((r as LegacyAny).created_at)) : '—'}
                       </div>
                     </div>
-                    <Link
-                      className="text-xs font-medium text-accent hover:underline"
-                      to={`${basePath}/requests/${reqType}/${id}`}
-                    >
-                      {t('common.open')}
-                    </Link>
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 px-0"
+                        onClick={() => toggleExpanded(key)}
+                        aria-label={expanded ? t('requests.list.collapse_row') : t('requests.list.expand_row')}
+                        testId={`admin.requests.row.${reqType}.${id}.toggle`}
+                      >
+                        {expanded ? '−' : '+'}
+                      </Button>
+                      <Link
+                        className="text-xs font-medium text-accent hover:underline"
+                        to={`${basePath}/requests/${reqType}/${id}`}
+                      >
+                        {t('common.open')}
+                      </Link>
+                    </div>
                   </div>
+                  <div className="mt-3">{renderRowActions(r)}</div>
+                  {expanded ? <div className="mt-3">{renderExpandedRow(r)}</div> : null}
                 </Card>
               );
             })}
@@ -1267,6 +1623,7 @@ export function RequestsPage() {
           >
             <thead>
               <tr className="border-b border-border text-left text-xs text-muted">
+                <th className="px-4 py-2" aria-label={t('requests.list.expand_row')} />
                 <th className="px-4 py-2">{t('common.id')}</th>
                 <th className="px-4 py-2">{t('common.type')}</th>
                 <th className="px-4 py-2">{t('common.label')}</th>
@@ -1276,71 +1633,88 @@ export function RequestsPage() {
                 <th className="px-4 py-2">{t('requests.list.col.api_ip')}</th>
                 <th className="px-4 py-2">{t('requests.list.col.client_ip')}</th>
                 {isAdmin ? <th className="px-4 py-2">{t('requests.list.col.risk')}</th> : null}
+                <th className="px-4 py-2">{t('requests.list.col.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => {
-                const id = Number((r as any).id);
-                const reqType = (r as any)._type as 'registration' | 'change';
-                const st = String((r as any).state ?? '').trim();
+                const id = Number((r as LegacyAny).id);
+                const reqType = (r as LegacyAny)._type as 'registration' | 'change';
+                const key = requestRowKey(r);
+                const expanded = expandedKeys.has(key);
+                const st = String((r as LegacyAny).state ?? '').trim();
                 const rowVar = requestRowVariant(st);
                 const stateVar = requestStateBadgeVariant(st);
                 const dotVar = dotVariantFromBadgeVariant(stateVar);
-                const label = String((r as any).label ?? '').trim() || '—';
-                const userLabel =
-                  typeof (r as any).user?.login === 'string'
-                    ? String((r as any).user.login)
-                    : typeof (r as any).user?.label === 'string'
-                      ? String((r as any).user.label)
-                      : (r as any).user
-                        ? `#${String((r as any).user.id)}`
-                        : '—';
+                const label = String((r as LegacyAny).label ?? '').trim() || '—';
+                const userLabel = requestUserLabel(r);
 
-                const apiIpStr = typeof (r as any).api_ip_addr === 'string' ? String((r as any).api_ip_addr) : '—';
+                const apiIpStr = typeof (r as LegacyAny).api_ip_addr === 'string' ? String((r as LegacyAny).api_ip_addr) : '—';
                 const clientIpStr =
-                  typeof (r as any).client_ip_addr === 'string' ? String((r as any).client_ip_addr) : '—';
+                  typeof (r as LegacyAny).client_ip_addr === 'string' ? String((r as LegacyAny).client_ip_addr) : '—';
 
-                const risk = reqType === 'registration' ? fraudRiskBadge(r as any) : null;
+                const risk = reqType === 'registration' ? fraudRiskBadge(r as LegacyAny) : null;
 
                 return (
-                  <TableRowLink
-                    key={`${reqType}-${id}`}
-                    testId={`admin.requests.row.${reqType}.${id}`}
-                    to={`${basePath}/requests/${reqType}/${id}`}
-                    variant={rowVar}
-                    className="border-b border-border/60 last:border-b-0"
-                  >
-                    <td className="px-4 py-2">
-                      <div className="flex items-center gap-2">
-                        <StatusDot variant={dotVar} testId={`admin.requests.row.${reqType}.${id}.dot`} />
-                        <span className="font-medium text-accent">#{id}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-2">
-                      <Badge variant={requestTypeBadgeVariant(reqType)}>{t(requestTypeLabelKey(reqType))}</Badge>
-                    </td>
-                    <td className="px-4 py-2 text-xs text-muted">{label}</td>
-                    {isAdmin ? <td className="px-4 py-2 text-xs text-muted">{userLabel}</td> : null}
-                    <td className="px-4 py-2">
-                      <Badge variant={stateVar}>{t(requestStateLabelKey(st))}</Badge>
-                    </td>
-                    <td className="px-4 py-2 text-xs text-muted">
-                      {(r as any).created_at ? formatDateTime(String((r as any).created_at)) : '—'}
-                    </td>
-                    <td className="px-4 py-2 text-xs text-muted">{apiIpStr}</td>
-                    <td className="px-4 py-2 text-xs text-muted">{clientIpStr}</td>
-                    {isAdmin ? (
+                  <React.Fragment key={key}>
+                    <TableRowLink
+                      testId={`admin.requests.row.${reqType}.${id}`}
+                      to={`${basePath}/requests/${reqType}/${id}`}
+                      variant={rowVar}
+                      className="border-b border-border/60 last:border-b-0"
+                    >
                       <td className="px-4 py-2">
-                        {risk ? (
-                          <Badge variant={risk.variant} title={t('requests.risk.tooltip', { score: risk.score })}>
-                            {t(risk.labelKey)} {risk.score}
-                          </Badge>
-                        ) : (
-                          <span className="text-faint">—</span>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 px-0"
+                          onClick={() => toggleExpanded(key)}
+                          aria-label={expanded ? t('requests.list.collapse_row') : t('requests.list.expand_row')}
+                          testId={`admin.requests.row.${reqType}.${id}.toggle`}
+                        >
+                          {expanded ? '−' : '+'}
+                        </Button>
                       </td>
+                      <td className="px-4 py-2">
+                        <div className="flex items-center gap-2">
+                          <StatusDot variant={dotVar} testId={`admin.requests.row.${reqType}.${id}.dot`} />
+                          <span className="font-medium text-accent">#{id}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-2">
+                        <Badge variant={requestTypeBadgeVariant(reqType)}>{t(requestTypeLabelKey(reqType))}</Badge>
+                      </td>
+                      <td className="px-4 py-2 text-xs text-muted">{label}</td>
+                      {isAdmin ? <td className="px-4 py-2 text-xs text-muted">{userLabel}</td> : null}
+                      <td className="px-4 py-2">
+                        <Badge variant={stateVar}>{t(requestStateLabelKey(st))}</Badge>
+                      </td>
+                      <td className="px-4 py-2 text-xs text-muted">
+                        {(r as LegacyAny).created_at ? formatDateTime(String((r as LegacyAny).created_at)) : '—'}
+                      </td>
+                      <td className="px-4 py-2 text-xs text-muted">{apiIpStr}</td>
+                      <td className="px-4 py-2 text-xs text-muted">{clientIpStr}</td>
+                      {isAdmin ? (
+                        <td className="px-4 py-2">
+                          {risk ? (
+                            <Badge variant={risk.variant} title={t('requests.risk.tooltip', { score: risk.score })}>
+                              {t(risk.labelKey)} {risk.score}
+                            </Badge>
+                          ) : (
+                            <span className="text-faint">—</span>
+                          )}
+                        </td>
+                      ) : null}
+                      <td className="px-4 py-2">{renderRowActions(r)}</td>
+                    </TableRowLink>
+                    {expanded ? (
+                      <tr className="border-b border-border/60 bg-surface-1">
+                        <td className="px-4 py-3" colSpan={tableColumnCount}>
+                          {renderExpandedRow(r)}
+                        </td>
+                      </tr>
                     ) : null}
-                  </TableRowLink>
+                  </React.Fragment>
                 );
               })}
             </tbody>

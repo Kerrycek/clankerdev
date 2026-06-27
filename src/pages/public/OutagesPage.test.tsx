@@ -59,7 +59,7 @@ describe('OutagesPage', () => {
           en_summary: 'Database maintenance',
         },
       ],
-    } as any);
+    } as LegacyAny);
 
     renderPage();
 

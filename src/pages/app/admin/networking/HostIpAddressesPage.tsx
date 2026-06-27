@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 
@@ -45,19 +45,19 @@ function idOf(v: any): number | null {
 }
 
 function ipAddrLabel(row: HostIpAddress): string {
-  const ip = (row as any).ip_address;
+  const ip = (row as LegacyAny).ip_address;
   if (ip && typeof ip === 'object') {
-    const addr = String((ip as any).ip_addr ?? (ip as any).addr ?? '').trim();
+    const addr = String((ip as LegacyAny).ip_addr ?? (ip as LegacyAny).addr ?? '').trim();
     if (addr) return addr;
   }
   return '—';
 }
 
 function vpsLabel(row: HostIpAddress): string {
-  const ni = (row as any).ip_address?.network_interface;
-  const vps = ni && typeof ni === 'object' ? (ni as any).vps : undefined;
+  const ni = (row as LegacyAny).ip_address?.network_interface;
+  const vps = ni && typeof ni === 'object' ? (ni as LegacyAny).vps : undefined;
   if (vps && typeof vps === 'object') {
-    const hostname = String((vps as any).hostname ?? '').trim();
+    const hostname = String((vps as LegacyAny).hostname ?? '').trim();
     const id = idOf(vps);
     if (hostname && id) return `${hostname} (#${id})`;
     if (hostname) return hostname;
@@ -67,9 +67,9 @@ function vpsLabel(row: HostIpAddress): string {
 }
 
 function userLabel(row: HostIpAddress): string {
-  const user = (row as any).ip_address?.user;
+  const user = (row as LegacyAny).ip_address?.user;
   if (user && typeof user === 'object') {
-    const login = String((user as any).login ?? '').trim();
+    const login = String((user as LegacyAny).login ?? '').trim();
     const id = idOf(user);
     if (login && id) return `${login} (#${id})`;
     if (login) return login;
@@ -79,9 +79,9 @@ function userLabel(row: HostIpAddress): string {
 }
 
 function ifaceLabel(row: HostIpAddress): string {
-  const iface = (row as any).ip_address?.network_interface;
+  const iface = (row as LegacyAny).ip_address?.network_interface;
   if (iface && typeof iface === 'object') {
-    const name = String((iface as any).name ?? '').trim();
+    const name = String((iface as LegacyAny).name ?? '').trim();
     const id = idOf(iface);
     if (name && id) return `${name} (#${id})`;
     if (name) return name;
@@ -95,7 +95,25 @@ function rowVariant(row: HostIpAddress): 'warn' | undefined {
 }
 
 function hostAddr(row: HostIpAddress): string {
-  return String((row as any).addr ?? (row as any).ip_addr ?? `#${row.id}`);
+  return String((row as LegacyAny).addr ?? (row as LegacyAny).ip_addr ?? `#${row.id}`);
+}
+
+function hostIpMatchesText(row: HostIpAddress, rawNeedle: string): boolean {
+  const needle = rawNeedle.trim().toLowerCase();
+  if (!needle) return true;
+
+  const parts = [
+    row.id,
+    (row as LegacyAny).addr,
+    (row as LegacyAny).ip_addr,
+    (row as LegacyAny).reverse_record_value,
+    ipAddrLabel(row),
+    ifaceLabel(row),
+    vpsLabel(row),
+    userLabel(row),
+  ];
+
+  return parts.some((part) => String(part ?? '').toLowerCase().includes(needle));
 }
 
 export function HostIpAddressesPage() {
@@ -196,8 +214,9 @@ export function HostIpAddressesPage() {
     },
   });
 
-  const rows = listQ.data ?? [];
-  const nextCursor = cursorFromDescendingPage(rows, (r) => Number((r as any).id));
+  const rawRows = listQ.data ?? [];
+  const rows = useMemo(() => (q ? rawRows.filter((row) => hostIpMatchesText(row, q)) : rawRows), [q, rawRows]);
+  const nextCursor = cursorFromDescendingPage(rawRows, (r) => Number((r as LegacyAny).id));
   const canNext = Boolean(nextCursor);
 
   const setParam = (key: string, value?: string) => {
@@ -219,7 +238,7 @@ export function HostIpAddressesPage() {
   return (
     <ListShell
       testId="admin.host_ip_addresses.page"
-      header={<PageHeader title={t('admin.host_ip_addresses.title')} description={t('admin.host_ip_addresses.subtitle')} />}
+      header={<PageHeader title={t('admin.host_ip_addresses.title')} description={t('admin.host_ip_addresses.subtitle')} meta={q ? t('filters.current_page_text_search_note') : undefined} />}
       filters={
         <FilterBar
           left={
@@ -277,21 +296,21 @@ export function HostIpAddressesPage() {
           </thead>
           <tbody>
             {rows.map((row) => {
-              const id = Number((row as any).id);
+              const id = Number((row as LegacyAny).id);
               const variant = rowVariant(row);
               return (
                 <tr key={id} data-testid={`admin.host_ip_addresses.row.${id}`} data-row-variant={variant} className={clsx(variant ? toneSurfaceClass(variant) : undefined)}>
                   <td><StatusDot variant={variant ?? 'ok'} testId={`admin.host_ip_addresses.row.${id}.dot`} /></td>
-                  <td className="font-medium tabular-nums">{String((row as any).addr ?? `#${id}`)}</td>
+                  <td className="font-medium tabular-nums">{String((row as LegacyAny).addr ?? `#${id}`)}</td>
                   <td className="tabular-nums">{ipAddrLabel(row)}</td>
                   <td>{ifaceLabel(row)}</td>
                   <td>{vpsLabel(row)}</td>
                   <td>{userLabel(row)}</td>
-                  <td className="max-w-80 truncate">{String((row as any).reverse_record_value ?? t('common.na'))}</td>
+                  <td className="max-w-80 truncate">{String((row as LegacyAny).reverse_record_value ?? t('common.na'))}</td>
                   <td>
                     <div className="flex flex-wrap gap-1">
                       <Badge tone={row.assigned === false ? 'warn' : 'ok'}>{row.assigned === false ? t('common.unassigned') : t('common.assigned')}</Badge>
-                      {(row as any).user_created ? <Badge tone="neutral">{t('common.custom')}</Badge> : null}
+                      {(row as LegacyAny).user_created ? <Badge tone="neutral">{t('common.custom')}</Badge> : null}
                     </div>
                   </td>
                   <td className="text-right">
@@ -302,7 +321,7 @@ export function HostIpAddressesPage() {
                         testId={`admin.host_ip_addresses.row.${id}.ptr`}
                         onClick={() => {
                           setPtrEditor(row);
-                          setPtrValue(String((row as any).reverse_record_value ?? ''));
+                          setPtrValue(String((row as LegacyAny).reverse_record_value ?? ''));
                         }}
                       >
                         {t('admin.host_ip_addresses.action.ptr')}
@@ -331,7 +350,7 @@ export function HostIpAddressesPage() {
                           {t('admin.host_ip_addresses.action.free')}
                         </ActionButton>
                       )}
-                      {(row as any).user_created && row.assigned === false ? (
+                      {(row as LegacyAny).user_created && row.assigned === false ? (
                         <Button
                           size="sm"
                           variant="danger"

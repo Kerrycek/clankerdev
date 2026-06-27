@@ -812,16 +812,16 @@ export function LocationsPage() {
           <tbody>
             {locations.map((loc) => {
               const desc = typeof loc.description === 'string' ? loc.description.trim() : '';
-              const remote = typeof (loc as any).remote_console_server === 'string' ? String((loc as any).remote_console_server).trim() : '';
-              const hasIpv6 = Boolean((loc as any).has_ipv6);
+              const remote = typeof (loc as LegacyAny).remote_console_server === 'string' ? String((loc as LegacyAny).remote_console_server).trim() : '';
+              const hasIpv6 = Boolean((loc as LegacyAny).has_ipv6);
               return (
                 <tr key={loc.id} data-testid={`admin.cluster.locations.row.${loc.id}`}>
                   <td className="px-3 py-2">
                     <div className="font-medium text-fg">{locLabel(loc)}</div>
                     {desc ? <div className="mt-0.5 text-xs text-muted">{desc}</div> : null}
                   </td>
-                  <td className="px-3 py-2 text-sm">{envLabel((loc as any).environment)}</td>
-                  <td className="px-3 py-2 text-sm">{(loc as any).domain || '—'}</td>
+                  <td className="px-3 py-2 text-sm">{envLabel((loc as LegacyAny).environment)}</td>
+                  <td className="px-3 py-2 text-sm">{(loc as LegacyAny).domain || '—'}</td>
                   <td className="px-3 py-2">
                     <Badge variant={hasIpv6 ? 'ok' : 'neutral'}>{hasIpv6 ? t('common.yes') : t('common.no')}</Badge>
                   </td>

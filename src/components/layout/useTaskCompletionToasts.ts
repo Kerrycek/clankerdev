@@ -36,7 +36,7 @@ function safeActionLabel(opts: {
 
   if (tracked.actionLabelKey) {
     try {
-      const v = t(tracked.actionLabelKey as any);
+      const v = t(tracked.actionLabelKey as LegacyAny);
       if (v) return v;
     } catch {
       // ignore; fall back
@@ -45,7 +45,7 @@ function safeActionLabel(opts: {
 
   if (tracked.actionLabel) return tracked.actionLabel;
 
-  const label = actionState && (actionState as any).label ? String((actionState as any).label) : '';
+  const label = actionState && (actionState as LegacyAny).label ? String((actionState as LegacyAny).label) : '';
   if (label) return label;
 
   return t('toast.unknown_action');
@@ -117,7 +117,7 @@ export function useTaskCompletionToasts(opts: {
     for (let i = 0; i < watchedActionIds.length; i++) {
       const id = watchedActionIds[i];
       if (id === undefined) continue;
-      const s = actionQs[i]?.data as any as ActionState | undefined;
+      const s = actionQs[i]?.data as LegacyAny as ActionState | undefined;
       if (!s) continue;
       map.set(id, s);
     }
@@ -173,7 +173,7 @@ export function useTaskCompletionToasts(opts: {
       const id = watchedActionIds[i];
       if (id === undefined) continue;
       const q = actionQs[i];
-      const s = q?.data as any as ActionState | undefined;
+      const s = q?.data as LegacyAny as ActionState | undefined;
       if (!s) continue;
 
       const finished = isFinishedActionState(s);
@@ -253,7 +253,7 @@ export function useTaskCompletionToasts(opts: {
       const id = watchedChainIdsSorted[i];
       if (id === undefined) continue;
       const q = chainQs[i];
-      const c = q?.data as any as TransactionChain | undefined;
+      const c = q?.data as LegacyAny as TransactionChain | undefined;
       if (!c) continue;
 
       const finished = isFinishedChainState(c.state);

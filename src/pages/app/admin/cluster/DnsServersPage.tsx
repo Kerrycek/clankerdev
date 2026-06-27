@@ -59,7 +59,7 @@ export function DnsServersPage() {
 
   const pagination = useKeysetPagination({ id: 'admin.cluster.dns_servers', filterKey: JSON.stringify({ q, hidden, userZones }), searchParams, setSearchParams, defaultLimit: 50, allowedLimits: [25,50,100] });
 
-  const nodesQ = useQuery({ queryKey: ['nodes', 'dns_server_nodes'], queryFn: async () => (await fetchNodes({ limit: 200 })).data as any[], staleTime: 60_000 });
+  const nodesQ = useQuery({ queryKey: ['nodes', 'dns_server_nodes'], queryFn: async () => (await fetchNodes({ limit: 200 })).data as LegacyAny[], staleTime: 60_000 });
   const nodesData = nodesQ.data ?? [];
 
   const listQ = useQuery({
@@ -68,7 +68,7 @@ export function DnsServersPage() {
   });
 
   const rows = listQ.data?.data ?? [];
-  const cursor = useMemo(() => cursorFromDescendingPage(rows as any), [rows]);
+  const cursor = useMemo(() => cursorFromDescendingPage(rows as LegacyAny), [rows]);
   const hasMore = rows.length >= pagination.limit;
 
   useEffect(() => {

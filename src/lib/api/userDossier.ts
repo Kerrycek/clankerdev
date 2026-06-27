@@ -336,7 +336,7 @@ export async function createUserTotpDevice(userId: number, payload: { label: str
     params: payload,
   });
 
-  const d: any = res.data as any;
+  const d: any = res.data as LegacyAny;
   if (!d || typeof d !== 'object') {
     throw new Error(`users/${userId}/totp_devices#create: expected object, got ${typeof d}`);
   }
@@ -355,7 +355,7 @@ export async function confirmUserTotpDevice(userId: number, deviceId: number, pa
     params: payload,
   });
 
-  const d: any = res.data as any;
+  const d: any = res.data as LegacyAny;
 
   // HaveAPI responses differ across versions:
   // - either `{ recovery_code: "..." }`

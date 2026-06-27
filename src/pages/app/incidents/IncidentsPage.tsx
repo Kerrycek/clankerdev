@@ -1046,17 +1046,17 @@ export function IncidentsPage() {
                     const to = `${basePath}/incidents/${r.id}`;
                     const det = formatDateTime(r.detected_at);
 
-                    const vpsHost = (r.vps as any)?.hostname ? String((r.vps as any).hostname) : undefined;
-                    const vpsIdRow = (r.vps as any)?.id ? Number((r.vps as any).id) : undefined;
+                    const vpsHost = (r.vps as LegacyAny)?.hostname ? String((r.vps as LegacyAny).hostname) : undefined;
+                    const vpsIdRow = (r.vps as LegacyAny)?.id ? Number((r.vps as LegacyAny).id) : undefined;
 
-                    const userLogin = (r.user as any)?.login ? String((r.user as any).login) : undefined;
-                    const userIdRow = (r.user as any)?.id ? Number((r.user as any).id) : undefined;
+                    const userLogin = (r.user as LegacyAny)?.login ? String((r.user as LegacyAny).login) : undefined;
+                    const userIdRow = (r.user as LegacyAny)?.id ? Number((r.user as LegacyAny).id) : undefined;
 
-                    const filedLogin = (r.filed_by as any)?.login ? String((r.filed_by as any).login) : undefined;
-                    const filedId = (r.filed_by as any)?.id ? Number((r.filed_by as any).id) : undefined;
+                    const filedLogin = (r.filed_by as LegacyAny)?.login ? String((r.filed_by as LegacyAny).login) : undefined;
+                    const filedId = (r.filed_by as LegacyAny)?.id ? Number((r.filed_by as LegacyAny).id) : undefined;
 
-                    const assignmentIp = (r.ip_address_assignment as any)?.ip_addr
-                      ? String((r.ip_address_assignment as any).ip_addr)
+                    const assignmentIp = (r.ip_address_assignment as LegacyAny)?.ip_addr
+                      ? String((r.ip_address_assignment as LegacyAny).ip_addr)
                       : undefined;
 
                     const action = String(r.vps_action ?? 'none');
@@ -1153,14 +1153,14 @@ export function IncidentsPage() {
                 const to = `${basePath}/incidents/${r.id}`;
                 const det = formatDateTime(r.detected_at);
 
-                const vpsHost = (r.vps as any)?.hostname ? String((r.vps as any).hostname) : undefined;
-                const vpsIdRow = (r.vps as any)?.id ? Number((r.vps as any).id) : undefined;
+                const vpsHost = (r.vps as LegacyAny)?.hostname ? String((r.vps as LegacyAny).hostname) : undefined;
+                const vpsIdRow = (r.vps as LegacyAny)?.id ? Number((r.vps as LegacyAny).id) : undefined;
 
-                const userLogin = (r.user as any)?.login ? String((r.user as any).login) : undefined;
-                const userIdRow = (r.user as any)?.id ? Number((r.user as any).id) : undefined;
+                const userLogin = (r.user as LegacyAny)?.login ? String((r.user as LegacyAny).login) : undefined;
+                const userIdRow = (r.user as LegacyAny)?.id ? Number((r.user as LegacyAny).id) : undefined;
 
-                const assignmentIp = (r.ip_address_assignment as any)?.ip_addr
-                  ? String((r.ip_address_assignment as any).ip_addr)
+                const assignmentIp = (r.ip_address_assignment as LegacyAny)?.ip_addr
+                  ? String((r.ip_address_assignment as LegacyAny).ip_addr)
                   : undefined;
 
                 const action = String(r.vps_action ?? 'none');
@@ -1195,7 +1195,7 @@ export function IncidentsPage() {
                       action !== 'none'
                         ? { label: t('incidents.field.vps_action'), value: t(vpsActionLabelKey(action)) }
                         : null,
-                    ].filter(Boolean) as any}
+                    ].filter(Boolean) as LegacyAny}
                   />
                 );
               })}
@@ -1209,7 +1209,7 @@ export function IncidentsPage() {
               canPrev={pagination.canPrev}
               canNext={!pagination.hasForward && rows.length === pagination.limit}
               onPrev={() => pagination.goPrev()}
-              onNext={() => pagination.goNext(rows.length > 0 ? (rows[rows.length - 1] as any).id : undefined)}
+              onNext={() => pagination.goNext(rows.length > 0 ? (rows[rows.length - 1] as LegacyAny).id : undefined)}
               onGoToPage={pagination.goToPage}
               limit={pagination.limit}
               allowedLimits={pagination.allowedLimits}

@@ -364,7 +364,7 @@ export function ResourcePackagesPage() {
 
   const deleteImpactQ = useQuery({
     queryKey: ['user_cluster_resource_packages', 'count', { pkgId: deletePkg?.id }],
-    enabled: deleteState.open && Boolean(deletePkg) && !(deletePkg as any)?.is_personal,
+    enabled: deleteState.open && Boolean(deletePkg) && !(deletePkg as LegacyAny)?.is_personal,
     queryFn: async () => {
       if (!deletePkg) return 0;
       const res = await fetchUserClusterResourcePackages({ clusterResourcePackageId: deletePkg.id, limit: 1 });
@@ -518,7 +518,7 @@ export function ResourcePackagesPage() {
             {packages.map((p) => {
               const id = p.id;
               const label = typeof p.label === 'string' && p.label.trim() ? p.label.trim() : `#${id}`;
-              const personal = Boolean((p as any).is_personal) || Boolean((p as any).user);
+              const personal = Boolean((p as LegacyAny).is_personal) || Boolean((p as LegacyAny).user);
 
               return (
                 <tr key={id} data-testid={`admin.cluster.resource_packages.row.${id}`}>
@@ -532,8 +532,8 @@ export function ResourcePackagesPage() {
                       {personal ? t('admin.cluster.resource_packages.scope.personal') : t('admin.cluster.resource_packages.scope.global')}
                     </Badge>
                   </td>
-                  <td className="px-3 py-2 text-muted">{personal ? envLabel((p as any).environment) : '—'}</td>
-                  <td className="px-3 py-2 text-muted">{personal ? userLabel((p as any).user) : '—'}</td>
+                  <td className="px-3 py-2 text-muted">{personal ? envLabel((p as LegacyAny).environment) : '—'}</td>
+                  <td className="px-3 py-2 text-muted">{personal ? userLabel((p as LegacyAny).user) : '—'}</td>
                   <td className="px-3 py-2 text-right">
                     <div className="inline-flex items-center gap-2">
                       <Button

@@ -33,6 +33,45 @@ import {
   resolveVersionValue,
 } from './ipAddresses/ipAddressListSemantics';
 
+
+function appendSearchPart(parts: string[], value: unknown) {
+  if (value === undefined || value === null) return;
+  const text = String(value).trim();
+  if (text) parts.push(text);
+}
+
+function appendResourceSearchParts(parts: string[], value: unknown, keys: string[]) {
+  if (value === undefined || value === null) return;
+  if (typeof value === 'number' || typeof value === 'string') {
+    appendSearchPart(parts, value);
+    return;
+  }
+  if (typeof value !== 'object') return;
+
+  const row = value as Record<string, unknown>;
+  appendSearchPart(parts, row['id']);
+  keys.forEach((key) => appendSearchPart(parts, row[key]));
+}
+
+function ipAddressMatchesText(row: IpAddress, rawNeedle: string): boolean {
+  const needle = rawNeedle.trim().toLowerCase();
+  if (!needle) return true;
+
+  const parts: string[] = [];
+  appendSearchPart(parts, row.id);
+  appendSearchPart(parts, row.addr);
+  appendSearchPart(parts, row.prefix);
+  appendSearchPart(parts, row.size);
+  appendSearchPart(parts, row.order);
+  appendResourceSearchParts(parts, row.network, ['address', 'role', 'purpose', 'ip_version', 'prefix']);
+  appendResourceSearchParts(parts, row.network_interface, ['name', 'mac', 'vps']);
+  appendResourceSearchParts(parts, row.user, ['login', 'full_name', 'email']);
+  appendResourceSearchParts(parts, row.vps, ['hostname', 'label']);
+  appendResourceSearchParts(parts, row.route_via, ['addr', 'ip_addr']);
+
+  return parts.some((part) => part.toLowerCase().includes(needle));
+}
+
 export function IpAddressesPage() {
   const { basePath } = useAppMode();
   const { t } = useI18n();
@@ -216,9 +255,13 @@ export function IpAddressesPage() {
     staleTime: 10_000,
   });
 
-  const pageData = listQ.data ?? [];
-  const pageCursor = useMemo(() => cursorFromDescendingPage(pageData), [pageData]);
-  const hasMore = pageData.length >= pagination.limit;
+  const rawPageData = listQ.data ?? [];
+  const pageData = useMemo(
+    () => (qText.trim() ? rawPageData.filter((row) => ipAddressMatchesText(row, qText)) : rawPageData),
+    [qText, rawPageData]
+  );
+  const pageCursor = useMemo(() => cursorFromDescendingPage(rawPageData), [rawPageData]);
+  const hasMore = rawPageData.length >= pagination.limit;
   const canNext = pagination.hasForward || (hasMore && pageCursor !== null);
   const canPaginate = pagination.stack.length > 1 || pageData.length > 0;
 

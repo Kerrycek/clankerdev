@@ -29,12 +29,12 @@ export function buildTransactionLockIndex(
   const maxDepth = typeof opts?.maxDepth === 'number' ? opts.maxDepth : 3;
 
   for (const chain of chains ?? []) {
-    const id = Number((chain as any).id);
+    const id = Number((chain as LegacyAny).id);
     if (!Number.isFinite(id) || id <= 0) continue;
 
-    if (onlyActive && isFinishedChainState((chain as any).state)) continue;
+    if (onlyActive && isFinishedChainState((chain as LegacyAny).state)) continue;
 
-    const refs = extractConcernRefs((chain as any).concerns, { maxDepth });
+    const refs = extractConcernRefs((chain as LegacyAny).concerns, { maxDepth });
     for (const r of refs) {
       const key = concernKey(r.class_name, r.row_id);
       const existing = out.get(key);
@@ -68,7 +68,7 @@ export function transactionLockChainIds(
 export function cursorFromDescendingPage<T>(rows: T[] | undefined, getId?: (row: T) => unknown): number | null {
   let min: number | null = null;
   for (const r of rows ?? []) {
-    const id = Number(getId ? getId(r) : (r as any).id);
+    const id = Number(getId ? getId(r) : (r as LegacyAny).id);
     if (!Number.isFinite(id) || id <= 0) continue;
     if (min === null || id < min) min = id;
   }
@@ -81,7 +81,7 @@ export function cursorFromDescendingPage<T>(rows: T[] | undefined, getId?: (row:
 export function cursorFromAscendingPage<T>(rows: T[] | undefined, getId?: (row: T) => unknown): number | null {
   let max: number | null = null;
   for (const r of rows ?? []) {
-    const id = Number(getId ? getId(r) : (r as any).id);
+    const id = Number(getId ? getId(r) : (r as LegacyAny).id);
     if (!Number.isFinite(id) || id <= 0) continue;
     if (max === null || id > max) max = id;
   }

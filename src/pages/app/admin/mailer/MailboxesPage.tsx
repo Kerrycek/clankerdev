@@ -111,7 +111,7 @@ export function MailboxesPage() {
   });
 
   const rows: Mailbox[] = listQ.data ?? [];
-  const pageCursor = useMemo(() => cursorFromDescendingPage(rows as any), [rows]);
+  const pageCursor = useMemo(() => cursorFromDescendingPage(rows as LegacyAny), [rows]);
   const hasMore = rows.length >= pagination.limit;
   const canNext = pagination.hasForward || (hasMore && pageCursor !== null);
   const canPaginate = pagination.stack.length > 1 || rows.length > 0;
@@ -497,14 +497,14 @@ export function MailboxesPage() {
             </thead>
             <tbody>
               {rows.map((mb) => {
-                const id = Number((mb as any).id);
-                const label = String((mb as any).label ?? `#${id}`);
-                const server = String((mb as any).server ?? '');
-                const port = Number((mb as any).port ?? 0);
-                const user = String((mb as any).user ?? '');
-                const ssl = Boolean((mb as any).enable_ssl);
-                const handlers = Number((mb as any).handlers_count ?? 0);
-                const updatedAt = (mb as any).updated_at;
+                const id = Number((mb as LegacyAny).id);
+                const label = String((mb as LegacyAny).label ?? `#${id}`);
+                const server = String((mb as LegacyAny).server ?? '');
+                const port = Number((mb as LegacyAny).port ?? 0);
+                const user = String((mb as LegacyAny).user ?? '');
+                const ssl = Boolean((mb as LegacyAny).enable_ssl);
+                const handlers = Number((mb as LegacyAny).handlers_count ?? 0);
+                const updatedAt = (mb as LegacyAny).updated_at;
 
                 return (
                   <TableRowLink

@@ -10,6 +10,7 @@ import { useToasts } from '../../app/toasts';
 import { useObjectScope } from '../../app/objectScope';
 import { clusterSearch, type ClusterSearchHit } from '../../lib/api/clusterSearch';
 import { fetchVps, fetchVpsList, type Vps } from '../../lib/api/vps';
+import { vpsMatchesOwner } from '../../lib/vpsClientFilters';
 import { useDebouncedValue } from '../../lib/hooks/useDebouncedValue';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
@@ -252,13 +253,13 @@ function resultsFromClusterSearch(
   const out: PaletteResult[] = [];
 
   for (const h of hits ?? []) {
-    const resource = normalizeResourceName((h as any)?.resource);
-    const id = parseId((h as any)?.id);
+    const resource = normalizeResourceName((h as LegacyAny)?.resource);
+    const id = parseId((h as LegacyAny)?.id);
     if (!resource || id === null) continue;
 
     const fallbackRef = resourceRefLabel(t, resource, id);
-    const primary = String((h as any)?.value ?? (h as any)?.label ?? fallbackRef).trim();
-    const attr = String((h as any)?.attribute ?? '').trim();
+    const primary = String((h as LegacyAny)?.value ?? (h as LegacyAny)?.label ?? fallbackRef).trim();
+    const attr = String((h as LegacyAny)?.attribute ?? '').trim();
     const secondary = attr ? `${fallbackRef} · ${attr}` : fallbackRef;
 
     if (resource === 'Vps') {
@@ -540,8 +541,8 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
               // hiding objects that clearly belong to someone else.
               if (
                 scope.mineUserId !== undefined &&
-                typeof (vps as any)?.user?.id === 'number' &&
-                (vps as any).user.id !== scope.mineUserId
+                typeof (vps as LegacyAny)?.user?.id === 'number' &&
+                (vps as LegacyAny).user.id !== scope.mineUserId
               ) {
                 if (!alive || ac.signal.aborted) return;
                 setResults([]);
@@ -564,7 +565,7 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
             signal: ac.signal,
           });
           if (!alive || ac.signal.aborted) return;
-          setResults(vpsResultsFromList(res.data ?? [], basePath, t));
+          setResults(vpsResultsFromList((res.data ?? []).filter((vps) => vpsMatchesOwner(vps, scope.mineUserId)), basePath, t));
         }
       } catch (e: any) {
         if (e?.name === 'AbortError') return;

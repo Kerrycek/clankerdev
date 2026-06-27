@@ -59,7 +59,6 @@ export function buildSidebarNavItems(opts: {
 
   if (appMode === 'user') {
     items.push({ id: 'payments', to: `${basePath}/payments`, label: t('nav.payments'), icon: <CreditCard size={18} /> });
-    items.push({ id: 'requests', to: `${basePath}/requests`, label: t('nav.requests'), icon: <Inbox size={18} /> });
   }
 
   if (appMode === 'admin') {
@@ -130,6 +129,7 @@ export function AppSidebar(props: {
   return (
     <>
       <Drawer
+        id="app-mobile-navigation"
         open={mobileNavOpen}
         side="left"
         title={t('nav.navigation')}
@@ -140,7 +140,7 @@ export function AppSidebar(props: {
         <div className="space-y-4">
           <AppLogo subtitle={t('app.logo.subtitle')} />
 
-          <nav className="space-y-1" data-document-title-nav="section">
+          <nav className="space-y-1" aria-label={t('accessibility.primary_navigation')} data-document-title-nav="section">
             {navItems.map((it) => (
               <NavLink
                 key={it.to}
@@ -174,7 +174,7 @@ export function AppSidebar(props: {
             <AppLogo subtitle={t('app.logo.subtitle')} collapsed={sidebarCollapsed} />
           </div>
 
-          <nav className="flex-1 space-y-1 px-2" data-document-title-nav="section">
+          <nav id="app-sidebar-navigation" className="flex-1 space-y-1 px-2" aria-label={t('accessibility.primary_navigation')} data-document-title-nav="section">
             {navItems.map((it) => (
               <NavLink
                 key={it.to}
@@ -187,6 +187,7 @@ export function AppSidebar(props: {
                   )
                 }
                 title={sidebarCollapsed ? it.label : undefined}
+                aria-label={sidebarCollapsed ? it.label : undefined}
               >
                 {it.icon}
                 {sidebarCollapsed ? null : <span>{it.label}</span>}
@@ -198,6 +199,9 @@ export function AppSidebar(props: {
             <Button
               variant="ghost"
               onClick={onToggleSidebar}
+              aria-controls="app-sidebar-navigation"
+              aria-expanded={!sidebarCollapsed}
+              ariaLabel={sidebarCollapsed ? t('settings.sidebar.expand') : t('settings.sidebar.collapse')}
               className="w-full justify-start"
             >
               {sidebarCollapsed ? (

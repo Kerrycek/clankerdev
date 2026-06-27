@@ -66,7 +66,7 @@ function parsePositiveInt(value: string): number | undefined {
 
 function refId(value: unknown): number | undefined {
   if (!value || typeof value !== 'object') return undefined;
-  const raw = (value as any).id;
+  const raw = (value as LegacyAny).id;
   if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
   if (typeof raw === 'string') {
     const n = Number(raw);
@@ -78,9 +78,9 @@ function refId(value: unknown): number | undefined {
 function refLabel(value: unknown): string | undefined {
   if (!value || typeof value !== 'object') return undefined;
   return (
-    (typeof (value as any).label === 'string' && (value as any).label) ||
-    (typeof (value as any).name === 'string' && (value as any).name) ||
-    (typeof (value as any).code === 'string' && (value as any).code) ||
+    (typeof (value as LegacyAny).label === 'string' && (value as LegacyAny).label) ||
+    (typeof (value as LegacyAny).name === 'string' && (value as LegacyAny).name) ||
+    (typeof (value as LegacyAny).code === 'string' && (value as LegacyAny).code) ||
     undefined
   );
 }

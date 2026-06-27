@@ -121,8 +121,8 @@ export function getRuntimeConfig(): RuntimeConfig {
 
   const viteEnv = import.meta.env as Record<string, string | undefined>;
   const nodeEnv =
-    typeof process !== 'undefined' && typeof (process as any).env === 'object'
-      ? ((process as any).env as Record<string, string | undefined>)
+    typeof process !== 'undefined' && typeof (process as LegacyAny).env === 'object'
+      ? ((process as LegacyAny).env as Record<string, string | undefined>)
       : undefined;
 
   const env = (key: string): string | undefined => viteEnv[key] ?? nodeEnv?.[key];
@@ -146,7 +146,7 @@ export function getRuntimeConfig(): RuntimeConfig {
 
   // OAuth2 client config (used by the SPA for login).
   // Defaults are tuned for vpsFree's SSO.
-  const oauthFromWindow = (win as any)?.vpsAdmin?.webuiNext?.oauth2 as Partial<OAuth2Config> | undefined;
+  const oauthFromWindow = (win as LegacyAny)?.vpsAdmin?.webuiNext?.oauth2 as Partial<OAuth2Config> | undefined;
 
   const oauthAuthorizeUrl = trimTrailingSlash(
     (oauthFromWindow?.authorizeUrl as string | undefined) ??
@@ -266,7 +266,7 @@ export function getRuntimeConfig(): RuntimeConfig {
 
   // Public status landing tuning.
   // Allow runtime overrides from window and optional env variables.
-  const publicStatusFromWindow = (win as any)?.vpsAdmin?.webuiNext?.publicStatus as
+  const publicStatusFromWindow = (win as LegacyAny)?.vpsAdmin?.webuiNext?.publicStatus as
     | Partial<PublicStatusConfig>
     | undefined;
 

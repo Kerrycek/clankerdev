@@ -38,7 +38,8 @@ export async function fetchObjectHistoryEvents(opts?: {
   const q = opts?.q ? String(opts.q).trim() : '';
   if (q) params['q'] = q;
 
-  if (opts?.userId !== undefined) params['user'] = opts.userId;
+  // Legacy object_history#index rejects user; audit list pages apply actor filtering client-side.
+  void opts?.userId;
   if (opts?.userSessionId !== undefined) params['user_session'] = opts.userSessionId;
 
   const obj = opts?.object ? String(opts.object).trim() : '';
@@ -54,6 +55,7 @@ export async function fetchObjectHistoryEvents(opts?: {
     path: '/object_histories',
     namespace: 'object_history',
     params,
+    meta: { includes: 'user,user_session' },
   });
 
   return { ...res, data: expectArray<ObjectHistoryEvent>(res.data, 'object_histories#index') };

@@ -587,9 +587,9 @@ export function EnvironmentsPage() {
           </thead>
           <tbody>
             {environments.map((env) => {
-              const canCreate = Boolean((env as any).can_create_vps);
-              const canDestroy = Boolean((env as any).can_destroy_vps);
-              const ipOwner = (env as any).user_ip_ownership;
+              const canCreate = Boolean((env as LegacyAny).can_create_vps);
+              const canDestroy = Boolean((env as LegacyAny).can_destroy_vps);
+              const ipOwner = (env as LegacyAny).user_ip_ownership;
 
               const desc = typeof env.description === 'string' ? env.description.trim() : '';
 
@@ -599,15 +599,15 @@ export function EnvironmentsPage() {
                     <div className="font-medium text-fg">{envLabel(env)}</div>
                     {desc ? <div className="mt-0.5 text-xs text-muted">{desc}</div> : null}
                   </td>
-                  <td className="px-3 py-2 text-sm">{(env as any).domain || '—'}</td>
+                  <td className="px-3 py-2 text-sm">{(env as LegacyAny).domain || '—'}</td>
                   <td className="px-3 py-2">
                     <Badge variant={canCreate ? 'ok' : 'neutral'}>{canCreate ? t('common.yes') : t('common.no')}</Badge>
                   </td>
                   <td className="px-3 py-2">
                     <Badge variant={canDestroy ? 'warn' : 'neutral'}>{canDestroy ? t('common.yes') : t('common.no')}</Badge>
                   </td>
-                  <td className="px-3 py-2 text-sm">{fmtUnlimited((env as any).max_vps_count as any)}</td>
-                  <td className="px-3 py-2 text-sm">{fmtLifetimeSeconds((env as any).vps_lifetime as any)}</td>
+                  <td className="px-3 py-2 text-sm">{fmtUnlimited((env as LegacyAny).max_vps_count as LegacyAny)}</td>
+                  <td className="px-3 py-2 text-sm">{fmtLifetimeSeconds((env as LegacyAny).vps_lifetime as LegacyAny)}</td>
                   <td className="px-3 py-2">
                     <Badge variant={ipOwner === false ? 'warn' : 'ok'}>
                       {ipOwner === false ? t('common.no') : t('common.yes')}

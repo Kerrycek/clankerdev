@@ -80,7 +80,7 @@ function DemoVpsActionRow(props: {
   const stop = gateVpsAction('stop', { vps: props.vps, busyLocal: props.busyLocal, busyTransaction: props.busyTransaction });
   const restart = gateVpsAction('restart', { vps: props.vps, busyLocal: props.busyLocal, busyTransaction: props.busyTransaction });
 
-  const running = (props.vps as any).is_running;
+  const running = (props.vps as LegacyAny).is_running;
   const runtimeLabel =
     running === true ? t('state.running') : running === false ? t('state.stopped') : t('state.unknown');
   const runtimeVariant = running === true ? 'ok' : running === false ? 'danger' : 'neutral';
@@ -164,7 +164,7 @@ export function DesignSandboxPage() {
       memory: 2048,
       diskspace: 20480,
       node: { id: 1, domain_name: 'node1' },
-    }) as any,
+    }) as LegacyAny,
     []
   );
 
@@ -178,7 +178,7 @@ export function DesignSandboxPage() {
       memory: 1024,
       diskspace: 10240,
       node: { id: 2, domain_name: 'node2' },
-    }) as any,
+    }) as LegacyAny,
     []
   );
 
@@ -192,7 +192,7 @@ export function DesignSandboxPage() {
       memory: 4096,
       diskspace: 40960,
       node: { id: 3, domain_name: 'node3' },
-    }) as any,
+    }) as LegacyAny,
     []
   );
 

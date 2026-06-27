@@ -13,7 +13,7 @@ function extractRecentChainIds(logs: DnsRecordLog[], limit: number): number[] {
   const seen = new Set<number>();
 
   for (const l of logs) {
-    const raw = (l.transaction_chain as any)?.id;
+    const raw = (l.transaction_chain as LegacyAny)?.id;
     const id = typeof raw === 'number' ? raw : Number(raw);
     if (!Number.isFinite(id) || id <= 0) continue;
     if (seen.has(id)) continue;
@@ -47,18 +47,18 @@ function toTs(t: string | undefined): number {
 function combineChains(a: TransactionChain[], b: TransactionChain[]): TransactionChain[] {
   const byId = new Map<number, TransactionChain>();
   for (const c of a ?? []) {
-    if (typeof (c as any)?.id === 'number') byId.set((c as any).id, c);
+    if (typeof (c as LegacyAny)?.id === 'number') byId.set((c as LegacyAny).id, c);
   }
   for (const c of b ?? []) {
-    if (typeof (c as any)?.id === 'number') byId.set((c as any).id, c);
+    if (typeof (c as LegacyAny)?.id === 'number') byId.set((c as LegacyAny).id, c);
   }
 
   const rows = [...byId.values()];
   rows.sort((x, y) => {
-    const tx = toTs((x as any).created_at);
-    const ty = toTs((y as any).created_at);
+    const tx = toTs((x as LegacyAny).created_at);
+    const ty = toTs((y as LegacyAny).created_at);
     if (tx !== ty) return ty - tx;
-    return (Number((y as any).id) ?? 0) - (Number((x as any).id) ?? 0);
+    return (Number((y as LegacyAny).id) ?? 0) - (Number((x as LegacyAny).id) ?? 0);
   });
   return rows;
 }
@@ -155,8 +155,8 @@ export function useDnsZoneTransactionChains(zoneId: number): DnsZoneChainDiscove
       for (const s of settled) {
         if (s.status !== 'fulfilled') continue;
         for (const c of s.value ?? []) {
-          if (typeof (c as any)?.id !== 'number') continue;
-          byId.set((c as any).id, c);
+          if (typeof (c as LegacyAny)?.id !== 'number') continue;
+          byId.set((c as LegacyAny).id, c);
         }
       }
 

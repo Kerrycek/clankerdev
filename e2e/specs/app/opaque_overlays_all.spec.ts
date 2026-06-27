@@ -96,6 +96,13 @@ test.describe('@smoke opaque overlay surfaces', () => {
 
 test.describe('@smoke opaque overlay popovers', () => {
   test('smart-filter and user-lookup popovers are fully opaque in light and dark', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, {
+      sessionToken: 'TEST_ADMIN_SESSION',
+      webuiNext: {
+        enableDesignSandbox: true,
+      },
+    });
+
     await installHaveApiMock(page, {
       user: { id: 1, login: 'admin', level: 100 },
       handlers: {
@@ -108,8 +115,6 @@ test.describe('@smoke opaque overlay popovers', () => {
         'GET user_request/changes': () => ({ changes: [] }),
       },
     });
-
-    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_ADMIN_SESSION' });
 
     const themes = ['light', 'dark'] as const;
 

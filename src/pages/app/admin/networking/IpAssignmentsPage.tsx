@@ -8,6 +8,7 @@ import { formatDateTime } from '../../../../lib/format';
 import { useKeysetPagination } from '../../../../lib/hooks/useKeysetPagination';
 import { cursorFromDescendingPage } from '../../../../lib/lockIndex';
 import { parseBoolParam, parsePositiveInt } from '../../../../lib/parse';
+import { refId } from '../../../../lib/resourceRefs';
 import { ListShell } from '../../../../components/layout/ListShell';
 import { PageHeader } from '../../../../components/layout/PageHeader';
 import { FilterBar } from '../../../../components/layout/FilterBar';
@@ -25,10 +26,7 @@ import { UserLookupInput } from '../../../../components/ui/UserLookupInput';
 import { VpsLookupInput } from '../../../../components/ui/VpsLookupInput';
 
 function idOf(v: any): number | null {
-  if (!v) return null;
-  if (typeof v === 'number') return v;
-  if (typeof v === 'object' && typeof v.id === 'number') return v.id;
-  return null;
+  return refId(v) ?? null;
 }
 
 function resourceLabel(v: any, primary: string, fallback = '—') {
@@ -41,6 +39,35 @@ function resourceLabel(v: any, primary: string, fallback = '—') {
     if (id) return `#${id}`;
   }
   return fallback;
+}
+
+function ipAssignmentMatchesText(row: any, rawNeedle: string): boolean {
+  const needle = rawNeedle.trim().toLowerCase();
+  if (!needle) return true;
+
+  const parts = [
+    row.id,
+    row.ip_addr,
+    row.ip_prefix,
+    row.raw_user_id,
+    row.raw_vps_id,
+    resourceLabel(row.user, 'login'),
+    resourceLabel(row.vps, 'hostname'),
+    resourceLabel(row.assigned_by_chain, 'name'),
+    resourceLabel(row.unassigned_by_chain, 'name'),
+  ];
+
+  return parts.some((part) => String(part ?? '').toLowerCase().includes(needle));
+}
+
+function ipAssignmentUserId(row: any): number | undefined {
+  const vps = row?.vps && typeof row.vps === 'object' ? row.vps : undefined;
+  return refId(row?.user) ?? refId(row?.raw_user_id) ?? refId(row?.user_id) ?? refId(vps?.user);
+}
+
+function ipAssignmentMatchesUser(row: any, userId: number | undefined): boolean {
+  if (userId === undefined) return true;
+  return ipAssignmentUserId(row) === userId;
 }
 
 export function IpAssignmentsPage() {
@@ -70,8 +97,12 @@ export function IpAssignmentsPage() {
     placeholderData: (prev) => prev,
   });
 
-  const rows = listQ.data ?? [];
-  const nextCursor = cursorFromDescendingPage(rows, (r) => Number((r as any).id));
+  const rawRows = listQ.data ?? [];
+  const rows = React.useMemo(
+    () => rawRows.filter((row) => ipAssignmentMatchesText(row, q) && ipAssignmentMatchesUser(row, userId)),
+    [q, rawRows, userId]
+  );
+  const nextCursor = cursorFromDescendingPage(rawRows, (r) => Number((r as LegacyAny).id));
   const canNext = Boolean(nextCursor);
 
   const setParam = (key: string, value?: string) => {
@@ -93,7 +124,7 @@ export function IpAssignmentsPage() {
   return (
     <ListShell
       testId="admin.ip_assignments.page"
-      header={<PageHeader title={t('admin.ip_assignments.title')} description={t('admin.ip_assignments.subtitle')} />}
+      header={<PageHeader title={t('admin.ip_assignments.title')} description={t('admin.ip_assignments.subtitle')} meta={q || userId ? t('filters.current_page_contract_note') : undefined} />}
       filters={
         <FilterBar
           left={<div className="flex flex-wrap items-center gap-3">

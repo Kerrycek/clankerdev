@@ -60,12 +60,8 @@ export async function fetchExports(opts?: {
   const params: Record<string, unknown> = {};
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
-  if (opts?.q !== undefined) params['q'] = opts.q;
-  if (opts?.user !== undefined) params['user'] = opts.user;
-  if (opts?.dataset !== undefined) params['dataset'] = opts.dataset;
-  if (opts?.snapshot !== undefined) params['snapshot'] = opts.snapshot;
-  if (opts?.hostIpAddress !== undefined) params['host_ip_address'] = opts.hostIpAddress;
-  if (opts?.enabled !== undefined) params['enabled'] = opts.enabled;
+  // Legacy Export::Index only accepts limit/from_id.
+  // Next UI keeps q/user/dataset/snapshot/host/enabled as current-page filters.
 
   const res = await haveApiCall<ExportItem[]>({
     method: 'GET',
@@ -86,7 +82,7 @@ export async function fetchExport(exportId: number, opts?: { includes?: string }
   });
 }
 
-export async function createExport(payload: {
+type ExportCreatePayload = {
   dataset?: number;
   snapshot?: number;
   host_ip_address: number;
@@ -97,16 +93,9 @@ export async function createExport(payload: {
   root_squash?: boolean;
   threads?: number;
   enabled?: boolean;
-}) {
-  return haveApiCall<ExportItem>({
-    method: 'POST',
-    path: '/exports',
-    namespace: 'export',
-    params: payload,
-  });
-}
+};
 
-export async function updateExport(exportId: number, payload: {
+type ExportUpdatePayload = {
   all_vps?: boolean;
   rw?: boolean;
   sync?: boolean;
@@ -114,12 +103,28 @@ export async function updateExport(exportId: number, payload: {
   root_squash?: boolean;
   threads?: number;
   enabled?: boolean;
-}) {
+};
+
+function sanitizeExportPayload<T extends ExportCreatePayload | ExportUpdatePayload>(payload: T): Omit<T, 'threads'> {
+  const { threads: _threads, ...safe } = payload;
+  return safe;
+}
+
+export async function createExport(payload: ExportCreatePayload) {
+  return haveApiCall<ExportItem>({
+    method: 'POST',
+    path: '/exports',
+    namespace: 'export',
+    params: sanitizeExportPayload(payload),
+  });
+}
+
+export async function updateExport(exportId: number, payload: ExportUpdatePayload) {
   return haveApiCall<ExportItem>({
     method: 'PUT',
     path: `/exports/${exportId}`,
     namespace: 'export',
-    params: payload,
+    params: sanitizeExportPayload(payload),
   });
 }
 

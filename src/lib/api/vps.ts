@@ -1,3 +1,4 @@
+import { omitHaveApiParams } from './contract';
 import { expectArray, haveApiCall } from './haveapi';
 import type { ResourceRef } from './appTypes';
 import type { Node } from './nodes';
@@ -202,7 +203,8 @@ export async function fetchVpsList(opts?: {
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
   if (opts?.hostnameAny) params['hostname_any'] = opts.hostnameAny;
   if (opts?.hostnameExact) params['hostname_exact'] = opts.hostnameExact;
-  if (opts?.user !== undefined) params['user'] = opts.user;
+  // Legacy vps#index rejects user. UI surfaces keep owner narrowing as a current-page filter.
+  void opts?.user;
   if (opts?.userNamespaceMap !== undefined) params['user_namespace_map'] = opts.userNamespaceMap;
   if (opts?.node !== undefined) params['node'] = opts.node;
   if (opts?.location !== undefined) params['location'] = opts.location;
@@ -284,7 +286,8 @@ export async function vpsClone(vpsId: number, params: VpsClonePayload) {
     method: 'POST',
     path: `/vpses/${vpsId}/clone`,
     namespace: 'vps',
-    params: { ...params },
+    // Legacy vps#clone rejects admin-only target user/node/configs selectors.
+    params: omitHaveApiParams(params as unknown as Record<string, unknown>, ['user', 'node', 'configs']),
   });
 }
 
@@ -293,7 +296,8 @@ export async function vpsSwapWith(vpsId: number, params: VpsSwapWithPayload) {
     method: 'POST',
     path: `/vpses/${vpsId}/swap_with`,
     namespace: 'vps',
-    params: { ...params },
+    // Legacy vps#swap_with rejects expirations.
+    params: omitHaveApiParams(params as unknown as Record<string, unknown>, ['expirations']),
   });
 }
 

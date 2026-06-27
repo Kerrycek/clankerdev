@@ -106,8 +106,8 @@ export function DatasetLayout() {
   const chainsStale = chainLock.stale;
 
   const ownerId =
-    typeof (ds as any).user === 'object' && (ds as any).user !== null && typeof (ds as any).user.id === 'number'
-      ? Number((ds as any).user.id)
+    typeof (ds as LegacyAny).user === 'object' && (ds as LegacyAny).user !== null && typeof (ds as LegacyAny).user.id === 'number'
+      ? Number((ds as LegacyAny).user.id)
       : undefined;
 
   if (
@@ -129,8 +129,8 @@ export function DatasetLayout() {
     );
   }
 
-  const vpsId = ds.vps && typeof ds.vps === 'object' && 'id' in ds.vps ? Number((ds.vps as any).id) : undefined;
-  const vpsHostname = ds.vps && typeof ds.vps === 'object' ? String((ds.vps as any).hostname ?? '') : '';
+  const vpsId = ds.vps && typeof ds.vps === 'object' && 'id' in ds.vps ? Number((ds.vps as LegacyAny).id) : undefined;
+  const vpsHostname = ds.vps && typeof ds.vps === 'object' ? String((ds.vps as LegacyAny).hostname ?? '') : '';
 
   const tabs = [
     { label: t('dataset.tabs.overview'), to: `${basePath}/datasets/${ds.id}`, end: true },

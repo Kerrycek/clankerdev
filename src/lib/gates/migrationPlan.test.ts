@@ -4,7 +4,7 @@ import { gateMigrationPlanAction } from './migrationPlan';
 
 describe('gateMigrationPlanAction', () => {
   it('blocks actions when a local transition lock is present', () => {
-    const r = gateMigrationPlanAction('start', { plan: { id: 1, state: 'staged' } as any, busyLocal: true });
+    const r = gateMigrationPlanAction('start', { plan: { id: 1, state: 'staged' } as LegacyAny, busyLocal: true });
     expect(r.allowed).toBe(false);
     if (!r.allowed) {
       expect(r.reason.titleKey).toBe('gate.busy.local.title');
@@ -12,7 +12,7 @@ describe('gateMigrationPlanAction', () => {
   });
 
   it('blocks start when plan is not staged', () => {
-    const r = gateMigrationPlanAction('start', { plan: { id: 1, state: 'running' } as any });
+    const r = gateMigrationPlanAction('start', { plan: { id: 1, state: 'running' } as LegacyAny });
     expect(r.allowed).toBe(false);
     if (!r.allowed) {
       expect(r.reason.titleKey).toBe('gate.blocked.migration_plan.not_startable.title');
@@ -20,12 +20,12 @@ describe('gateMigrationPlanAction', () => {
   });
 
   it('allows cancel for running plan', () => {
-    const r = gateMigrationPlanAction('cancel', { plan: { id: 1, state: 'running' } as any });
+    const r = gateMigrationPlanAction('cancel', { plan: { id: 1, state: 'running' } as LegacyAny });
     expect(r.allowed).toBe(true);
   });
 
   it('blocks cancel for staged plan', () => {
-    const r = gateMigrationPlanAction('cancel', { plan: { id: 1, state: 'staged' } as any });
+    const r = gateMigrationPlanAction('cancel', { plan: { id: 1, state: 'staged' } as LegacyAny });
     expect(r.allowed).toBe(false);
     if (!r.allowed) {
       expect(r.reason.titleKey).toBe('gate.blocked.migration_plan.not_cancellable.title');
@@ -33,7 +33,7 @@ describe('gateMigrationPlanAction', () => {
   });
 
   it('blocks delete when plan is not staged', () => {
-    const r = gateMigrationPlanAction('delete', { plan: { id: 1, state: 'done' } as any });
+    const r = gateMigrationPlanAction('delete', { plan: { id: 1, state: 'done' } as LegacyAny });
     expect(r.allowed).toBe(false);
     if (!r.allowed) {
       expect(r.reason.titleKey).toBe('gate.blocked.migration_plan.not_deletable.title');

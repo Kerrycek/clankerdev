@@ -27,14 +27,14 @@ export function BlockingActionProgressModal(props: {
     enabled: actionStateId !== null,
     refetchInterval: (data) => {
       if (!data) return fastPollMs;
-      return (data as any)?.finished ? false : fastPollMs;
+      return (data as LegacyAny)?.finished ? false : fastPollMs;
     },
   });
 
   useEffect(() => {
     if (actionStateId === null) return;
     if (!q.data) return;
-    if (!(q.data as any).finished) return;
+    if (!(q.data as LegacyAny).finished) return;
     props.onClose();
   }, [actionStateId, q.data, props.onClose]);
 
@@ -57,15 +57,15 @@ export function BlockingActionProgressModal(props: {
   }, [props.tracked?.progressTitleKey, t]);
 
   const actionLabel = useMemo(() => {
-    if (props.tracked?.actionLabelKey) return t(props.tracked.actionLabelKey as any);
+    if (props.tracked?.actionLabelKey) return t(props.tracked.actionLabelKey as LegacyAny);
     if (props.tracked?.actionLabel) return String(props.tracked.actionLabel);
     return t('toast.unknown_action');
   }, [props.tracked?.actionLabel, props.tracked?.actionLabelKey, t]);
 
   const objectLabel = props.tracked?.objectLabel ? String(props.tracked.objectLabel) : null;
 
-  const pct = q.data ? actionStateProgressPercent(q.data as any) : null;
-  const progressLabel = q.data ? actionStateProgressLabel(q.data as any) : null;
+  const pct = q.data ? actionStateProgressPercent(q.data as LegacyAny) : null;
+  const progressLabel = q.data ? actionStateProgressLabel(q.data as LegacyAny) : null;
 
   if (actionStateId === null) return null;
 

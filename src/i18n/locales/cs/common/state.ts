@@ -1,0 +1,22 @@
+// Common locale chunk: state
+export const csCommon_state = {
+  'state.active': 'Aktivní',
+  'state.planned': 'Plánováno',
+  'state.resolved': 'Vyřešeno',
+  'state.draft': 'Návrh',
+  'state.inactive': 'Neaktivní',
+  'state.up': 'Dostupný',
+  'state.down': 'Nedostupný',
+  'state.running': 'Běží',
+  'state.stopped': 'Zastaveno',
+  'state.suspended': 'Pozastaveno',
+  'state.soft_delete': 'Skryto',
+  'state.hard_delete': 'Trvale smazat',
+  'state.deleted': 'Smazáno',
+  'state.unknown': 'Neznámý stav',
+  'state.busy': 'Probíhá operace',
+  'state.maintenance': 'Údržba',
+  'state.canceled': 'Zrušeno',
+  'state.done': 'Hotovo',
+  'state.failed': 'Selhalo',
+} as const;

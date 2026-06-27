@@ -22,6 +22,7 @@ import { parseNumericToken, splitKeyValueToken, tokenizeSmartInput, unquoteSmart
 
 import { eventBadgeVariant, eventDataSummary, eventVariant, sessionLabel, trackedObjectLabel, userLabel } from '../../../lib/auditUi';
 import { dotVariantFromBadgeVariant } from '../../../lib/variantMap';
+import { refId } from '../../../lib/resourceRefs';
 
 import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
@@ -46,6 +47,11 @@ function safeNumber(value: string): number | undefined {
   const n = Number(trimmed);
   if (!Number.isFinite(n) || n <= 0) return undefined;
   return Math.floor(n);
+}
+
+function objectHistoryMatchesUser(event: ObjectHistoryEvent, userId: number | undefined): boolean {
+  if (userId === undefined) return true;
+  return refId(event.user) === userId;
 }
 
 export function AuditPage() {
@@ -202,8 +208,10 @@ export function AuditPage() {
       ).data,
   });
 
-  const pageCursor = useMemo(() => cursorFromDescendingPage(eventsQ.data as any), [eventsQ.data]);
-  const hasMore = (eventsQ.data ?? []).length >= pagination.limit;
+  const rawEvents = eventsQ.data ?? [];
+  const events = useMemo(() => rawEvents.filter((event) => objectHistoryMatchesUser(event, userId)), [rawEvents, userId]);
+  const pageCursor = useMemo(() => cursorFromDescendingPage(rawEvents as LegacyAny), [rawEvents]);
+  const hasMore = rawEvents.length >= pagination.limit;
 
   const openAudit = (historyId: number) => {
     navigate(`${basePath}/audit/${historyId}`);
@@ -237,10 +245,10 @@ export function AuditPage() {
     try {
       const list = (await searchUsers({ q: needle, limit: 10 })).data;
       if (list.length === 0) return { err: 'none' };
-      if (list.length === 1) return { id: Number((list[0] as any).id) };
+      if (list.length === 1) return { id: Number((list[0] as LegacyAny).id) };
 
-      const exact = list.filter((u) => String((u as any).login ?? '').trim().toLowerCase() === needleLc);
-      if (exact.length === 1) return { id: Number((exact[0] as any).id) };
+      const exact = list.filter((u) => String((u as LegacyAny).login ?? '').trim().toLowerCase() === needleLc);
+      if (exact.length === 1) return { id: Number((exact[0] as LegacyAny).id) };
 
       return { err: 'ambiguous' };
     } catch {
@@ -405,8 +413,8 @@ export function AuditPage() {
     const uList = userSuggestQuery.data ?? [];
     if (needle.length >= 2 && !needle.includes(':') && uList.length > 0) {
       for (const u of uList.slice(0, 5)) {
-        const id = Number((u as any).id);
-        const login = String((u as any).login ?? '').trim();
+        const id = Number((u as LegacyAny).id);
+        const login = String((u as LegacyAny).login ?? '').trim();
         if (!Number.isFinite(id) || id <= 0 || !login) continue;
         out.push({
           id: `user.${id}`,
@@ -522,7 +530,7 @@ export function AuditPage() {
   return (
     <ListShell
       testId="admin.audit.page"
-      header={<PageHeader title={t('audit.title')} description={t('audit.subtitle')} />}
+      header={<PageHeader title={t('audit.title')} description={t('audit.subtitle')} meta={userId !== undefined ? t('filters.current_page_contract_note') : undefined} />}
       filters={
         <>
           <FilterBar testId="admin.audit.filters">
@@ -743,7 +751,7 @@ export function AuditPage() {
           onRetry={() => void eventsQ.refetch()}
           detailsExtra={{ page: 'admin.audit' }}
         />
-      ) : (eventsQ.data ?? []).length === 0 ? (
+      ) : events.length === 0 ? (
         <EmptyState
           testId="admin.audit.empty"
           title={t('audit.empty.title')}
@@ -783,7 +791,7 @@ export function AuditPage() {
             </tr>
           </thead>
           <tbody>
-            {(eventsQ.data ?? []).map((ev) => {
+            {events.map((ev) => {
               const label = ev.event_type ? String(ev.event_type) : na;
               const variant = eventVariant(ev.event_type);
               const badgeVariant = eventBadgeVariant(ev.event_type);

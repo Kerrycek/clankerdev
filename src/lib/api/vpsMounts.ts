@@ -1,3 +1,4 @@
+import { omitHaveApiParams } from './contract';
 import { expectArray, haveApiCall } from './haveapi';
 import type { ResourceRef } from './appTypes';
 import type { User } from './users';
@@ -55,7 +56,8 @@ export async function updateVpsMount(vpsId: number, mountId: number, params: Rec
     method: 'PUT',
     path: `/vpses/${vpsId}/mounts/${mountId}`,
     namespace: 'mount',
-    params,
+    // Legacy mount#update rejects master_enabled; the editable fields stay mutable.
+    params: omitHaveApiParams(params, ['master_enabled']),
   });
 }
 

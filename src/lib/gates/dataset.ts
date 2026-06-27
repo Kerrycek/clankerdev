@@ -15,13 +15,13 @@ export type DatasetAction =
 type DatasetLife = 'active' | 'inactive' | 'deleted' | 'unknown';
 
 function lifeState(ds: Dataset): DatasetLife {
-  const st = String((ds as any).object_state ?? '').trim();
+  const st = String((ds as LegacyAny).object_state ?? '').trim();
   if (st === 'active') return 'active';
   if (st === 'deleted') return 'deleted';
   if (st === 'inactive') return 'inactive';
   if (st) return 'unknown';
 
-  const active = (ds as any).active;
+  const active = (ds as LegacyAny).active;
   if (active === true) return 'active';
   if (active === false) return 'inactive';
   return 'unknown';

@@ -56,8 +56,8 @@ function sessionSearchHaystack(s: UserSession): string {
     String(s.token_fragment ?? ''),
     String(s.token_lifetime ?? ''),
     String(s.token_interval ?? ''),
-    String((s.user as any)?.login ?? ''),
-    String((s.admin as any)?.login ?? ''),
+    String((s.user as LegacyAny)?.login ?? ''),
+    String((s.admin as LegacyAny)?.login ?? ''),
   ];
 
   return parts.join(' ').toLowerCase();
@@ -135,7 +135,7 @@ export function UserSessionsPanel(props: {
     refetchInterval: interval,
   });
 
-  const pageCursor = useMemo(() => cursorFromDescendingPage(sessionsQ.data as any), [sessionsQ.data]);
+  const pageCursor = useMemo(() => cursorFromDescendingPage(sessionsQ.data as LegacyAny), [sessionsQ.data]);
   const hasMore = (sessionsQ.data ?? []).length >= pagination.limit;
 
   const sessions = useMemo(() => {
@@ -211,7 +211,7 @@ export function UserSessionsPanel(props: {
               <div className="mt-1">
                 <Select
                   value={sessionsState}
-                  onChange={(e) => setSessionsState(e.target.value as any)}
+                  onChange={(e) => setSessionsState(e.target.value as LegacyAny)}
                   options={[
                     { value: 'open', label: t('profile.sessions.state.open') },
                     { value: 'all', label: t('profile.sessions.state.all') },

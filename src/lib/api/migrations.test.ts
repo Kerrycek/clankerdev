@@ -8,13 +8,13 @@ function mockFetchOk(response: any) {
 
 describe('migrations API wrappers', () => {
   test('fetchMigrationPlans forwards q, state, user, limit, and from_id', async () => {
-    globalThis.fetch = mockFetchOk({ migration_plans: [{ id: 33, state: 'staged' }], _meta: { total_count: 1 } }) as any;
+    globalThis.fetch = mockFetchOk({ migration_plans: [{ id: 33, state: 'staged' }], _meta: { total_count: 1 } }) as LegacyAny;
 
     const res = await fetchMigrationPlans({ q: 'Drain node', state: 'staged', userId: 44, limit: 10, fromId: 90 });
 
     expect(res.data).toEqual([{ id: 33, state: 'staged' }]);
 
-    const [url] = (globalThis.fetch as any).mock.calls.find(([u]: [string]) => new URL(u).pathname.endsWith('/migration_plans'));
+    const [url] = (globalThis.fetch as LegacyAny).mock.calls.find(([u]: [string]) => new URL(u).pathname.endsWith('/migration_plans'));
     const u = new URL(url);
 
     expect(u.pathname).toBe('/v7.0/migration_plans');

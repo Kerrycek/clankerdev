@@ -139,7 +139,7 @@ export function UserKnownDevicesPanel(props: {
     refetchInterval: interval,
   });
 
-  const pageCursor = useMemo(() => cursorFromDescendingPage(devicesQ.data as any), [devicesQ.data]);
+  const pageCursor = useMemo(() => cursorFromDescendingPage(devicesQ.data as LegacyAny), [devicesQ.data]);
   const hasMore = (devicesQ.data ?? []).length >= pagination.limit;
 
   const devices = useMemo(() => {

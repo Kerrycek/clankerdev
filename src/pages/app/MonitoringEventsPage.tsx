@@ -29,6 +29,7 @@ import {
 } from '../../lib/lockIndex';
 import { useTierAIntervalMs } from '../../lib/refreshTiers';
 import { dotVariantFromRowVariant } from '../../lib/variantMap';
+import { refId } from '../../lib/resourceRefs';
 
 import { Badge } from '../../components/ui/Badge';
 import { Card } from '../../components/ui/Card';
@@ -120,6 +121,11 @@ function normalizeObjectName(value: string): string {
   return v;
 }
 
+function monitoredEventMatchesUser(event: MonitoredEvent, userId: number | undefined): boolean {
+  if (userId === undefined) return true;
+  return refId(event.user) === userId;
+}
+
 function inferState(value: string, allowed: MonitoredEventState[]): MonitoredEventState | null {
   const v = value.trim().toLowerCase();
   if (!v) return null;
@@ -190,7 +196,7 @@ export function MonitoringEventsPage() {
     else next.delete('object_id');
 
     const st = state.trim();
-    if (st && stateOptions(mode).includes(st as any)) next.set('state', st);
+    if (st && stateOptions(mode).includes(st as LegacyAny)) next.set('state', st);
     else next.delete('state');
 
     // API forbids specifying user filter in user mode.
@@ -280,17 +286,18 @@ export function MonitoringEventsPage() {
     refetchInterval: tierARefetchMs,
   });
 
-  const rows = q.data ?? [];
+  const rawRows = q.data ?? [];
+  const rows = useMemo(() => rawRows.filter((event) => monitoredEventMatchesUser(event, userIdNum)), [rawRows, userIdNum]);
 
   const pageCursor = useMemo(() => {
-    if (order === 'oldest') return cursorFromAscendingPage(rows as any);
-    if (order === 'latest') return cursorFromDescendingPage(rows as any);
-    if (order === 'longest') return cursorFromDescendingNumber(rows, (r) => (r as any).duration);
-    if (order === 'shortest') return cursorFromAscendingNumber(rows, (r) => (r as any).duration);
-    return cursorFromDescendingPage(rows as any);
-  }, [order, rows]);
+    if (order === 'oldest') return cursorFromAscendingPage(rawRows as LegacyAny);
+    if (order === 'latest') return cursorFromDescendingPage(rawRows as LegacyAny);
+    if (order === 'longest') return cursorFromDescendingNumber(rawRows, (r) => (r as LegacyAny).duration);
+    if (order === 'shortest') return cursorFromAscendingNumber(rawRows, (r) => (r as LegacyAny).duration);
+    return cursorFromDescendingPage(rawRows as LegacyAny);
+  }, [order, rawRows]);
 
-  const canNext = rows.length >= pagination.limit;
+  const canNext = rawRows.length >= pagination.limit;
 
   const filtersActive = Boolean(
     monitor.trim() || objectName.trim() || objectIdNum || state.trim() || (mode === 'admin' && userIdNum)
@@ -685,7 +692,7 @@ export function MonitoringEventsPage() {
   return (
     <ListShell
       testId="monitoring.events.list"
-      header={<PageHeader title={t('monitoring.title')} description={t('monitoring.description')} testId="monitoring.events.header" />}
+      header={<PageHeader title={t('monitoring.title')} description={t('monitoring.description')} meta={mode === 'admin' && userIdNum !== undefined ? t('filters.current_page_contract_note') : undefined} testId="monitoring.events.header" />}
       filters={
         <>
           <FilterBar testId="monitoring.events.filters">
@@ -1011,26 +1018,26 @@ export function MonitoringEventsPage() {
           </thead>
           <tbody>
             {rows.map((e: MonitoredEvent) => {
-              const id = Number((e as any).id);
-              const stateVal = String((e as any).state ?? '');
+              const id = Number((e as LegacyAny).id);
+              const stateVal = String((e as LegacyAny).state ?? '');
               const badgeV = monitoredEventBadgeVariant(stateVal);
               const rowV = monitoredEventRowVariant(stateVal);
               const dotV = dotVariantFromRowVariant(rowV);
               const labelKey = monitoredEventStateLabelKey(stateVal);
               const stateLabel = labelKey ? t(labelKey) : stateVal || t('common.unknown');
 
-              const objName = (e as any).object_name as string | undefined;
-              const objId = Number((e as any).object_id);
+              const objName = (e as LegacyAny).object_name as string | undefined;
+              const objId = Number((e as LegacyAny).object_id);
               const objLink = objectLink(basePath, objName, Number.isFinite(objId) ? objId : undefined);
 
-              const createdAt = (e as any).created_at ? formatDateTime((e as any).created_at) : '';
-              const duration = (e as any).duration;
+              const createdAt = (e as LegacyAny).created_at ? formatDateTime((e as LegacyAny).created_at) : '';
+              const duration = (e as LegacyAny).duration;
               const durationLabel =
                 typeof duration === 'number' && Number.isFinite(duration)
                   ? formatDurationSeconds(duration)
                   : t('common.na');
 
-              const savedUntilIso = (e as any).saved_until as string | null | undefined;
+              const savedUntilIso = (e as LegacyAny).saved_until as string | null | undefined;
               const savedUntilLabel = savedUntilIso
                 ? formatDateTime(savedUntilIso)
                 : stateVal === 'acknowledged' || stateVal === 'ignored'
@@ -1059,10 +1066,10 @@ export function MonitoringEventsPage() {
                   </td>
                   <td className="px-4 py-2">
                     <div className="min-w-0">
-                      <div className="truncate text-sm font-medium">{(e as any).label ?? (e as any).monitor ?? t('common.unknown')}</div>
-                      <div className="mt-0.5 truncate text-xs text-muted">{(e as any).issue ?? ''}</div>
-                      {(e as any).monitor ? (
-                        <div className="mt-1 text-xs text-faint">{t('monitoring.monitor_name', { name: String((e as any).monitor) })}</div>
+                      <div className="truncate text-sm font-medium">{(e as LegacyAny).label ?? (e as LegacyAny).monitor ?? t('common.unknown')}</div>
+                      <div className="mt-0.5 truncate text-xs text-muted">{(e as LegacyAny).issue ?? ''}</div>
+                      {(e as LegacyAny).monitor ? (
+                        <div className="mt-1 text-xs text-faint">{t('monitoring.monitor_name', { name: String((e as LegacyAny).monitor) })}</div>
                       ) : null}
                     </div>
                   </td>
@@ -1085,7 +1092,7 @@ export function MonitoringEventsPage() {
                   </td>
                   {mode === 'admin' ? (
                     <td className="px-4 py-2">
-                      <span className="text-sm">{(e as any).user?.login ?? (e as any).user?.label ?? t('common.na')}</span>
+                      <span className="text-sm">{(e as LegacyAny).user?.login ?? (e as LegacyAny).user?.label ?? t('common.na')}</span>
                     </td>
                   ) : null}
                   <td className="px-4 py-2 text-sm text-muted">{createdAt}</td>

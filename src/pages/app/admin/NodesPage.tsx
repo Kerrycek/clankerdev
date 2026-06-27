@@ -139,7 +139,7 @@ function maintenanceReason(row: NodeRow): string | undefined {
   const direct = typeof row.maintenance_lock_reason === 'string' ? row.maintenance_lock_reason.trim() : '';
   if (direct) return direct;
 
-  const lock = row.maintenance_lock as any;
+  const lock = row.maintenance_lock as LegacyAny;
   if (typeof lock === 'string') {
     const s = lock.trim();
     return s || undefined;
@@ -544,10 +544,10 @@ export function NodesPage() {
 
         return {
           id: typeof n.id === 'number' ? n.id : undefined,
-          name: String(n.domain_name ?? n.name ?? n.fqdn ?? `#${(n as any).id ?? '?'}`),
-          fqdn: typeof (n as any).fqdn === 'string' ? (n as any).fqdn : undefined,
-          domain_name: typeof (n as any).domain_name === 'string' ? (n as any).domain_name : undefined,
-          locationLabel: locationLabel((n as any).location),
+          name: String(n.domain_name ?? n.name ?? n.fqdn ?? `#${(n as LegacyAny).id ?? '?'}`),
+          fqdn: typeof (n as LegacyAny).fqdn === 'string' ? (n as LegacyAny).fqdn : undefined,
+          domain_name: typeof (n as LegacyAny).domain_name === 'string' ? (n as LegacyAny).domain_name : undefined,
+          locationLabel: locationLabel((n as LegacyAny).location),
 
           status: st?.status,
           last_report: st?.last_report,
@@ -555,10 +555,10 @@ export function NodesPage() {
           vps_count: st?.vps_count,
           vps_free: st?.vps_free,
           hypervisor_type: st?.hypervisor_type,
-          maintenance_lock: (st as any)?.maintenance_lock,
+          maintenance_lock: (st as LegacyAny)?.maintenance_lock,
           maintenance_lock_reason:
-            typeof (st as any)?.maintenance_lock_reason === 'string'
-              ? ((st as any).maintenance_lock_reason as string)
+            typeof (st as LegacyAny)?.maintenance_lock_reason === 'string'
+              ? ((st as LegacyAny).maintenance_lock_reason as string)
               : undefined,
         } satisfies NodeRow;
       });
@@ -614,7 +614,7 @@ export function NodesPage() {
     return { total, down, locked };
   }, [rows]);
 
-  const pageCursor = useMemo(() => cursorFromDescendingPage(pageNodes as any), [pageNodes]);
+  const pageCursor = useMemo(() => cursorFromDescendingPage(pageNodes as LegacyAny), [pageNodes]);
   const hasMore = pageNodes.length >= pagination.limit;
 
   const canPaginate = nodesQ.isSuccess;
@@ -842,8 +842,8 @@ export function NodesPage() {
           showBack={false}
           detailsExtra={{
             page: 'admin.nodes',
-            nodesError: String((nodesQ.error as any)?.message ?? nodesQ.error),
-            statusError: String((statusQ.error as any)?.message ?? statusQ.error),
+            nodesError: String((nodesQ.error as LegacyAny)?.message ?? nodesQ.error),
+            statusError: String((statusQ.error as LegacyAny)?.message ?? statusQ.error),
           }}
         />
       ) : null}
@@ -851,14 +851,14 @@ export function NodesPage() {
       {nodesQ.isError && statusQ.data ? (
         <Alert title={t('admin.nodes.alert.auth_index_unavailable.title')} variant="warn">
           <div>{t('admin.nodes.alert.auth_index_unavailable.body')}</div>
-          <div className="mt-2 text-xs text-muted">{String((nodesQ.error as any)?.message ?? nodesQ.error)}</div>
+          <div className="mt-2 text-xs text-muted">{String((nodesQ.error as LegacyAny)?.message ?? nodesQ.error)}</div>
         </Alert>
       ) : null}
 
       {statusQ.isError && nodesQ.data ? (
         <Alert title={t('admin.nodes.alert.public_status_unavailable.title')} variant="warn">
           <div>{t('admin.nodes.alert.public_status_unavailable.body')}</div>
-          <div className="mt-2 text-xs text-muted">{String((statusQ.error as any)?.message ?? statusQ.error)}</div>
+          <div className="mt-2 text-xs text-muted">{String((statusQ.error as LegacyAny)?.message ?? statusQ.error)}</div>
         </Alert>
       ) : null}
 

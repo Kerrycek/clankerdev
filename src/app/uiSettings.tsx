@@ -45,7 +45,7 @@ function nowIso(): string {
 
 function safeErrorMessage(err: unknown): string {
   if (err instanceof HaveApiError) return err.message;
-  if (err && typeof err === 'object' && 'message' in err) return String((err as any).message);
+  if (err && typeof err === 'object' && 'message' in err) return String((err as LegacyAny).message);
   return String(err);
 }
 
@@ -125,7 +125,7 @@ export function UiSettingsProvider(props: { children: React.ReactNode }) {
         // but we accept any shape as long as it has the configured field.
         const record = reply.data;
         const value = (record && typeof record === 'object')
-          ? (record as any)[serverField]
+          ? (record as LegacyAny)[serverField]
           : undefined;
 
         if (value === undefined) {

@@ -83,6 +83,7 @@ export function LifecyclePanel(props: {
   const isAdminUi = mode === 'admin';
   const st = String(props.objectState ?? '').trim() || 'unknown';
 
+  const lifetimeRef = objectRef(props.kind === 'vps' ? 'Vps' : 'User', props.id);
   const stBadge = objectStateBadge(st, t);
   const helpKey = stateHelpKey(st);
 
@@ -102,6 +103,7 @@ export function LifecyclePanel(props: {
   const snooze = useMemo(() => snoozeIso(snoozePreset, snoozeCustom), [snoozeCustom, snoozePreset]);
 
   const snoozeMut = useMutation({
+    onMutate: () => chrome.acquireLocalLock(lifetimeRef),
     mutationFn: async () => {
       if (props.kind !== 'vps') throw new Error('Snooze is only supported for VPS');
       if (!snooze.valid || !snooze.iso) throw new Error('Invalid remind-after date');
@@ -114,7 +116,7 @@ export function LifecyclePanel(props: {
         chrome.trackActionState(asId, {
           actionLabelKey: 'action.vps.lifecycle.label',
           objectLabel: props.objectLabel,
-          object: objectRef('Vps', props.id),
+          object: lifetimeRef,
         });
       }
       toasts.pushToast({
@@ -133,6 +135,7 @@ export function LifecyclePanel(props: {
         autoDismissMs: false,
       });
     },
+    onSettled: () => chrome.releaseLocalLock(lifetimeRef),
   });
 
   // ----------------------
@@ -221,6 +224,7 @@ export function LifecyclePanel(props: {
   const adminPayloadValid = Boolean(adminPayloadHasChanges && expParsed.valid && remindParsed.valid);
 
   const adminMut = useMutation({
+    onMutate: () => chrome.acquireLocalLock(lifetimeRef),
     mutationFn: async () => {
       if (!adminPayload || !adminPayloadValid) throw new Error('Nothing to update');
       if (props.kind === 'vps') return await updateVps(props.id, adminPayload);
@@ -237,7 +241,7 @@ export function LifecyclePanel(props: {
           actionLabelKey: props.kind === 'vps' ? 'action.vps.lifecycle.label' : undefined,
           actionLabel: props.kind === 'user' ? t('lifetimes.panel.title') : undefined,
           objectLabel: props.objectLabel,
-          object: objectRef(props.kind === 'vps' ? 'Vps' : 'User', props.id),
+          object: lifetimeRef,
         });
       }
 
@@ -260,6 +264,7 @@ export function LifecyclePanel(props: {
         autoDismissMs: false,
       });
     },
+    onSettled: () => chrome.releaseLocalLock(lifetimeRef),
   });
 
   function requestAdminSave() {
@@ -472,7 +477,7 @@ export function LifecyclePanel(props: {
                 </Select>
               </div>
               <div className="mt-2 text-xs text-faint">
-                {stateHelpKey(adminState) ? t(stateHelpKey(adminState) as any) : ''}
+                {stateHelpKey(adminState) ? t(stateHelpKey(adminState) as LegacyAny) : ''}
               </div>
             </div>
 
@@ -597,21 +602,21 @@ export function LifecyclePanel(props: {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {logs.map((s) => {
-                    const stateRaw = String(normalizeStateLogValue<string>(s as any, 'state') ?? '').trim();
+                    const stateRaw = String(normalizeStateLogValue<string>(s as LegacyAny, 'state') ?? '').trim();
                     const b = objectStateBadge(stateRaw || 'unknown', t);
 
-                    const u = (s as any).user as any | undefined;
+                    const u = (s as LegacyAny).user as LegacyAny | undefined;
                     const userLabel = u?.login ?? u?.label ?? (typeof u?.id === 'number' ? `#${u.id}` : t('common.na'));
 
                     return (
                       <tr key={s.id}>
                         <td className="py-2 pr-3 align-top whitespace-nowrap">{formatDateTime(changedAtIso(s) ?? null)}</td>
                         <td className="py-2 pr-3 align-top"><Badge variant={b.variant}>{stateLabel(s)}</Badge></td>
-                        <td className="py-2 pr-3 align-top whitespace-nowrap">{expAtIso(s) ? formatDateTime(expAtIso(s) as any) : t('common.na')}</td>
-                        <td className="py-2 pr-3 align-top whitespace-nowrap">{remindAtIso(s) ? formatDateTime(remindAtIso(s) as any) : t('common.na')}</td>
+                        <td className="py-2 pr-3 align-top whitespace-nowrap">{expAtIso(s) ? formatDateTime(expAtIso(s) as LegacyAny) : t('common.na')}</td>
+                        <td className="py-2 pr-3 align-top whitespace-nowrap">{remindAtIso(s) ? formatDateTime(remindAtIso(s) as LegacyAny) : t('common.na')}</td>
                         <td className="py-2 pr-3 align-top whitespace-nowrap">{userLabel}</td>
                         <td className="py-2 align-top">
-                          <div className="max-w-xl whitespace-pre-wrap break-words text-xs text-muted">{String((s as any).reason ?? '') || '—'}</div>
+                          <div className="max-w-xl whitespace-pre-wrap break-words text-xs text-muted">{String((s as LegacyAny).reason ?? '') || '—'}</div>
                         </td>
                       </tr>
                     );

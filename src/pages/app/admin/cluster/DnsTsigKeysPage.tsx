@@ -53,7 +53,7 @@ export function DnsTsigKeysPage() {
     queryFn: async () => fetchDnsTsigKeys({ limit: pagination.limit, fromId: pagination.fromId, q: q.trim() || undefined, algorithm: algorithm || undefined, user: userId ?? undefined }),
   });
   const rows = listQ.data?.data ?? [];
-  const cursor = useMemo(() => cursorFromDescendingPage(rows as any), [rows]);
+  const cursor = useMemo(() => cursorFromDescendingPage(rows as LegacyAny), [rows]);
   const hasMore = rows.length >= pagination.limit;
 
   const createM = useMutation({
@@ -79,7 +79,7 @@ export function DnsTsigKeysPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm table-list">
               <thead><tr className="text-left text-xs uppercase tracking-wide text-faint"><th className="py-2 pl-4 pr-3">{t('common.name')}</th><th className="py-2 pr-3">{t('common.user')}</th><th className="py-2 pr-3">{t('common.algorithm')}</th><th className="py-2 pr-3">{t('common.secret')}</th><th className="py-2 pr-3">{t('common.created')}</th><th className="py-2 pr-4">{t('common.actions')}</th></tr></thead>
-              <tbody>{rows.map((row) => <tr key={row.id} className="border-t border-border" data-testid={`admin.cluster.dns_tsig.row.${row.id}`}><td className="py-2 pl-4 pr-3 font-medium text-fg">{String(row.name ?? `#${row.id}`)}</td><td className="py-2 pr-3">{typeof (row as any).user?.login === 'string' ? String((row as any).user.login) : t('common.na')}</td><td className="py-2 pr-3"><Badge variant="neutral">{String(row.algorithm ?? t('common.na'))}</Badge></td><td className="py-2 pr-3"><SecretField value={typeof row.secret === 'string' ? row.secret : ''} testId={`admin.cluster.dns_tsig.row.${row.id}.secret`} /></td><td className="py-2 pr-3">{row.created_at ? formatDateTime(String(row.created_at)) : t('common.na')}</td><td className="py-2 pr-4 text-right"><ActionButton size="sm" variant="danger" onClick={() => setConfirmDelete(row)}>{t('common.delete')}</ActionButton></td></tr>)}</tbody>
+              <tbody>{rows.map((row) => <tr key={row.id} className="border-t border-border" data-testid={`admin.cluster.dns_tsig.row.${row.id}`}><td className="py-2 pl-4 pr-3 font-medium text-fg">{String(row.name ?? `#${row.id}`)}</td><td className="py-2 pr-3">{typeof (row as LegacyAny).user?.login === 'string' ? String((row as LegacyAny).user.login) : t('common.na')}</td><td className="py-2 pr-3"><Badge variant="neutral">{String(row.algorithm ?? t('common.na'))}</Badge></td><td className="py-2 pr-3"><SecretField value={typeof row.secret === 'string' ? row.secret : ''} testId={`admin.cluster.dns_tsig.row.${row.id}.secret`} /></td><td className="py-2 pr-3">{row.created_at ? formatDateTime(String(row.created_at)) : t('common.na')}</td><td className="py-2 pr-4 text-right"><ActionButton size="sm" variant="danger" onClick={() => setConfirmDelete(row)}>{t('common.delete')}</ActionButton></td></tr>)}</tbody>
             </table>
           </div>
           <KeysetPagination page={pagination.page} pageCount={pagination.stack.length} canPrev={pagination.canPrev} canNext={hasMore} onPrev={pagination.goPrev} onNext={() => pagination.goNext(cursor)} />

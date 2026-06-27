@@ -123,10 +123,18 @@ npm run rc:check
 
 # Optional: enable screenshot matrix specs
 E2E_START_SERVER=1 E2E_SCREENSHOTS=1 node scripts/playwright.mjs test
+
+# Optional: Phase 11 shell/accessibility screenshot audit
+E2E_START_SERVER=1 \
+E2E_PHASE11_SCREENSHOTS=1 \
+E2E_PHASE11_SCREENSHOT_DIR=/tmp/phase11_screenshots \
+node scripts/playwright.mjs test e2e/specs/app/phase11_screenshots.spec.ts --project=chromium --workers=1
 ```
 
 #### Notes
 - `E2E_BASE_URL` defaults to `http://127.0.0.1:5173`.
+- Restricted local/container runs can use `E2E_CHROMIUM_EXECUTABLE=/usr/bin/chromium` when bundled Playwright browser installation is unavailable. Use this only as a fallback; normal CI should keep using Playwright-managed browsers.
+- `E2E_DISABLE_VIDEO=1`, `E2E_TRACE=off|on`, and `E2E_RETRIES=0` can reduce local artefacts or make one-off debugging runs deterministic.
 - If you start the server yourself, omit `E2E_START_SERVER` and set `E2E_BASE_URL`.
 - Real OAuth login is intentionally not part of the default PR suite. If needed, add a separate staging-only workflow
   using credentials from CI secrets.

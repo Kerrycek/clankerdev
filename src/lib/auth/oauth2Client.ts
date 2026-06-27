@@ -181,7 +181,7 @@ async function exchangeCodeForToken(cfg: RuntimeConfig, code: string, verifier: 
     body: body.toString(),
   });
 
-  const json = (await res.json().catch(() => null)) as any;
+  const json = (await res.json().catch(() => null)) as LegacyAny;
 
   if (!res.ok) {
     const msg = json?.error_description || json?.error || `Token request failed (HTTP ${res.status})`;

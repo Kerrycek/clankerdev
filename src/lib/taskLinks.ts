@@ -14,7 +14,7 @@ function coerceInt(v: unknown): number | null {
     if (Number.isFinite(n)) return Math.floor(n);
   }
   if (typeof v === 'object' && v !== null) {
-    const id = (v as any).id;
+    const id = (v as LegacyAny).id;
     const n = coerceInt(id);
     if (n !== null) return n;
   }
@@ -57,7 +57,7 @@ export function extractRelatedTransactionChainIdFromActionState(actionState: unk
   for (const cand of directCandidates) {
     if (Array.isArray(cand)) {
       for (const item of cand) {
-        const id = firstObjectId((item as any)?.transaction_chain, (item as any)?.transactionChain, (item as any)?.transaction_chain_id);
+        const id = firstObjectId((item as LegacyAny)?.transaction_chain, (item as LegacyAny)?.transactionChain, (item as LegacyAny)?.transaction_chain_id);
         if (id !== null) return id;
       }
     }

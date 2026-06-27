@@ -60,6 +60,7 @@ export interface NetworkTrafficUserTopRow {
 export async function fetchHostIpAddresses(opts?: {
   limit?: number;
   fromId?: number;
+  /** UI-only text search. The legacy host_ip_address#index resource does not accept q. */
   q?: string;
   ipAddress?: number;
   networkInterface?: number;
@@ -76,7 +77,7 @@ export async function fetchHostIpAddresses(opts?: {
   const params: Record<string, unknown> = {};
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
-  if (opts?.q) params['q'] = opts.q;
+  // q is intentionally not forwarded: legacy host_ip_address#index has structured filters only.
   if (opts?.ipAddress !== undefined) params['ip_address'] = opts.ipAddress;
   if (opts?.networkInterface !== undefined) params['network_interface'] = opts.networkInterface;
   if (opts?.user !== undefined) params['user'] = opts.user;
@@ -143,23 +144,27 @@ export async function freeHostIpAddress(hostIpAddressId: number) {
 export async function fetchIpAddressAssignments(opts?: {
   limit?: number;
   fromId?: number;
+  /** UI-only text search. The legacy ip_address_assignment#index resource does not accept q. */
   q?: string;
   user?: number;
   vps?: number;
   active?: boolean;
   location?: number;
   network?: number;
+  ipVersion?: 4 | 6;
   order?: 'newest' | 'oldest';
 }) {
   const params: Record<string, unknown> = {};
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
-  if (opts?.q) params['q'] = opts.q;
-  if (opts?.user !== undefined) params['user'] = opts.user;
+  // q/user are intentionally not forwarded: legacy ip_address_assignment#index has structured filters only.
+  void opts?.q;
+  void opts?.user;
   if (opts?.vps !== undefined) params['vps'] = opts.vps;
   if (opts?.active !== undefined) params['active'] = opts.active;
   if (opts?.location !== undefined) params['location'] = opts.location;
   if (opts?.network !== undefined) params['network'] = opts.network;
+  if (opts?.ipVersion !== undefined) params['ip_version'] = opts.ipVersion;
   if (opts?.order) params['order'] = opts.order;
 
   const res = await haveApiCall<IpAddressAssignment[]>({
@@ -174,6 +179,7 @@ export async function fetchIpAddressAssignments(opts?: {
 
 export async function fetchNetworkInterfaceMonitor(opts?: {
   limit?: number;
+  /** UI-only text search. The legacy network_interface_monitor#index resource does not accept q. */
   q?: string;
   user?: number;
   environment?: number;
@@ -185,8 +191,9 @@ export async function fetchNetworkInterfaceMonitor(opts?: {
 }) {
   const params: Record<string, unknown> = {};
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
-  if (opts?.q) params['q'] = opts.q;
-  if (opts?.user !== undefined) params['user'] = opts.user;
+  // q/user are intentionally not forwarded: legacy network_interface_monitor#index has structured filters only.
+  void opts?.q;
+  void opts?.user;
   if (opts?.environment !== undefined) params['environment'] = opts.environment;
   if (opts?.location !== undefined) params['location'] = opts.location;
   if (opts?.node !== undefined) params['node'] = opts.node;
@@ -207,6 +214,7 @@ export async function fetchNetworkInterfaceMonitor(opts?: {
 export async function fetchNetworkTrafficUserTop(opts?: {
   limit?: number;
   fromBytes?: number;
+  /** UI-only text search. The legacy network_interface_accounting#user_top action does not accept q. */
   q?: string;
   environment?: number;
   location?: number;
@@ -217,7 +225,7 @@ export async function fetchNetworkTrafficUserTop(opts?: {
   const params: Record<string, unknown> = {};
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.fromBytes !== undefined) params['from_bytes'] = opts.fromBytes;
-  if (opts?.q) params['q'] = opts.q;
+  // q is intentionally not forwarded: legacy network_interface_accounting#user_top has structured filters only.
   if (opts?.environment !== undefined) params['environment'] = opts.environment;
   if (opts?.location !== undefined) params['location'] = opts.location;
   if (opts?.node !== undefined) params['node'] = opts.node;

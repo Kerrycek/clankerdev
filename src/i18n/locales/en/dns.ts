@@ -36,6 +36,7 @@ export const enDns = {
   'dns.zones.advanced.role.label': 'Role',
   'dns.zones.advanced.source.label': 'Source',
   'dns.zones.advanced.note': 'Filters are stored in the URL so you can bookmark/share them.',
+  'dns.zones.client_filter_note': 'Search, owner and DNSSEC filters are applied only to the current page; role/source/enabled and pagination still use legacy API filters.',
   'dns.zones.role.forward': 'Forward',
   'dns.zones.role.reverse': 'Reverse',
   'dns.zones.source.internal': 'Internal',

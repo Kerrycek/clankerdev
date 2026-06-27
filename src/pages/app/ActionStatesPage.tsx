@@ -418,7 +418,7 @@ export function ActionStatesPage() {
       queryKey: ['action_state', 'show', { id }],
       queryFn: async () => (await fetchActionState(id)).data,
       enabled: Number.isFinite(id) && id > 0,
-      refetchInterval: (data: unknown) => (data && isFinishedActionState(data as any) ? false : actionPollMs),
+      refetchInterval: (data: unknown) => (data && isFinishedActionState(data as LegacyAny) ? false : actionPollMs),
     })),
   });
 
@@ -427,7 +427,7 @@ export function ActionStatesPage() {
       queryKey: ['action_state', 'show', { id }],
       queryFn: async () => (await fetchActionState(id)).data,
       enabled: Number.isFinite(id) && id > 0,
-      refetchInterval: (data: unknown) => (data && isFinishedActionState(data as any) ? false : actionPollMs),
+      refetchInterval: (data: unknown) => (data && isFinishedActionState(data as LegacyAny) ? false : actionPollMs),
     })),
   });
 
@@ -445,7 +445,7 @@ export function ActionStatesPage() {
   });
 
   const pageCursor = useMemo(() => {
-    const rows = q.data as any;
+    const rows = q.data as LegacyAny;
     return order === 'oldest' ? cursorFromAscendingPage(rows) : cursorFromDescendingPage(rows);
   }, [order, q.data]);
 
@@ -476,8 +476,8 @@ export function ActionStatesPage() {
       const id = pinnedIds[i];
       const q2 = pinnedQs[i];
       if (!id || !q2?.data) continue;
-      const s = q2.data as any as ActionState;
-      const sid = Number((s as any).id ?? id);
+      const s = q2.data as LegacyAny as ActionState;
+      const sid = Number((s as LegacyAny).id ?? id);
       if (!Number.isFinite(sid) || sid <= 0) continue;
       upsert(sid, s, { pinned: true });
     }
@@ -487,16 +487,16 @@ export function ActionStatesPage() {
       const id = trackedIds[i];
       const q2 = trackedQs[i];
       if (!id || !q2?.data) continue;
-      const s = q2.data as any as ActionState;
-      const sid = Number((s as any).id ?? id);
+      const s = q2.data as LegacyAny as ActionState;
+      const sid = Number((s as LegacyAny).id ?? id);
       if (!Number.isFinite(sid) || sid <= 0) continue;
       upsert(sid, s, { tracked: true, pinned: pinnedSet.has(sid) });
     }
 
     // Then the index list
     for (const s0 of q.data ?? []) {
-      const s = s0 as any as ActionState;
-      const id = Number((s as any)?.id);
+      const s = s0 as LegacyAny as ActionState;
+      const id = Number((s as LegacyAny)?.id);
       if (!Number.isFinite(id) || id <= 0) continue;
       if (map.has(id)) continue;
       upsert(id, s, { tracked: trackedSet.has(id), pinned: pinnedSet.has(id) });
@@ -508,14 +508,14 @@ export function ActionStatesPage() {
       // Pinned first
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
 
-      const aCreated = Date.parse(String((a.s as any).created_at ?? ''));
-      const bCreated = Date.parse(String((b.s as any).created_at ?? ''));
+      const aCreated = Date.parse(String((a.s as LegacyAny).created_at ?? ''));
+      const bCreated = Date.parse(String((b.s as LegacyAny).created_at ?? ''));
       if (Number.isFinite(aCreated) && Number.isFinite(bCreated) && aCreated !== bCreated) {
         return order === 'oldest' ? aCreated - bCreated : bCreated - aCreated;
       }
 
-      const aId = Number((a.s as any).id ?? 0);
-      const bId = Number((b.s as any).id ?? 0);
+      const aId = Number((a.s as LegacyAny).id ?? 0);
+      const bId = Number((b.s as LegacyAny).id ?? 0);
       return order === 'oldest' ? aId - bId : bId - aId;
     });
 
@@ -531,8 +531,8 @@ export function ActionStatesPage() {
 
     if (needle) {
       rows = rows.filter((x) => {
-        const id = Number((x.s as any).id);
-        const label = (x.s as any).label ? String((x.s as any).label) : `#${id}`;
+        const id = Number((x.s as LegacyAny).id);
+        const label = (x.s as LegacyAny).label ? String((x.s as LegacyAny).label) : `#${id}`;
         return String(id).includes(needle) || label.toLowerCase().includes(needle);
       });
     }
@@ -574,8 +574,8 @@ export function ActionStatesPage() {
 
   const renderRow = (x: { s: ActionState; tracked: boolean; pinned: boolean }) => {
     const s = x.s;
-    const id = Number((s as any).id);
-    const label = (s as any).label ? String((s as any).label) : `#${id}`;
+    const id = Number((s as LegacyAny).id);
+    const label = (s as LegacyAny).label ? String((s as LegacyAny).label) : `#${id}`;
     const badge = actionStateBadge(s);
     const toneVariant: ToneVariant | undefined = ((): ToneVariant | undefined => {
       const v = badge.variant;
@@ -590,8 +590,8 @@ export function ActionStatesPage() {
 
     const highlight = chrome.highlightActionStateId != null && chrome.highlightActionStateId === id;
 
-    const createdAt = (s as any).created_at ? formatDateTime(String((s as any).created_at)) : null;
-    const updatedAt = (s as any).updated_at ? formatDateTime(String((s as any).updated_at)) : null;
+    const createdAt = (s as LegacyAny).created_at ? formatDateTime(String((s as LegacyAny).created_at)) : null;
+    const updatedAt = (s as LegacyAny).updated_at ? formatDateTime(String((s as LegacyAny).updated_at)) : null;
 
     const meta: React.ReactNode[] = [];
     meta.push(<span key="id">#{id}</span>);
@@ -653,7 +653,7 @@ export function ActionStatesPage() {
                 {x.pinned ? <PinOff size={16} /> : <Pin size={16} />}
               </Button>
 
-              {Boolean((s as any).can_cancel) && !isFinishedActionState(s) ? (
+              {Boolean((s as LegacyAny).can_cancel) && !isFinishedActionState(s) ? (
                 <Button
                   size="sm"
                   variant="danger"
@@ -982,7 +982,7 @@ export function ActionStatesPage() {
         }}
         onConfirm={() => {
           if (!cancelTarget) return;
-          const id = Number((cancelTarget as any).id);
+          const id = Number((cancelTarget as LegacyAny).id);
           if (!Number.isFinite(id) || id <= 0) return;
           cancelM.mutate(id);
         }}

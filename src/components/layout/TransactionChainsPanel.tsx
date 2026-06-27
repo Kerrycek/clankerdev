@@ -30,7 +30,7 @@ import { resourceId, refLabel } from '../../lib/resources';
 import { TransactionPayloadPanels } from '../ui/TransactionPayloadPanels';
 
 function formatConcerns(chain: TransactionChain): string | null {
-  const c = chain.concerns as any;
+  const c = chain.concerns as LegacyAny;
   const type = c && typeof c === 'object' && typeof c.type === 'string' ? c.type : null;
 
   const refs = extractConcernRefs(chain.concerns, { maxDepth: 3 });
@@ -127,33 +127,33 @@ export function TransactionChainsPanel(props: {
       const requestedId = pinnedIds[i];
       const q2 = pinnedQs[i];
       if (q2?.data) {
-        const id = Number((q2.data as any).id ?? requestedId);
+        const id = Number((q2.data as LegacyAny).id ?? requestedId);
         if (!Number.isFinite(id) || id <= 0) continue;
-        map.set(id, { c: q2.data as any, pinned: true });
+        map.set(id, { c: q2.data as LegacyAny, pinned: true });
       }
     }
 
     for (const c of q.data ?? []) {
-      const id = Number((c as any)?.id);
+      const id = Number((c as LegacyAny)?.id);
       if (!Number.isFinite(id) || id <= 0) continue;
       if (map.has(id)) continue;
-      map.set(id, { c: c as any, pinned: pinnedSet.has(id) });
+      map.set(id, { c: c as LegacyAny, pinned: pinnedSet.has(id) });
     }
 
     const arr = Array.from(map.values());
     arr.sort((a, b) => {
-      const aCreated = Date.parse(String((a.c as any).created_at ?? ''));
-      const bCreated = Date.parse(String((b.c as any).created_at ?? ''));
+      const aCreated = Date.parse(String((a.c as LegacyAny).created_at ?? ''));
+      const bCreated = Date.parse(String((b.c as LegacyAny).created_at ?? ''));
       if (Number.isFinite(aCreated) && Number.isFinite(bCreated) && aCreated !== bCreated) {
         return bCreated - aCreated;
       }
-      return Number((b.c as any).id ?? 0) - Number((a.c as any).id ?? 0);
+      return Number((b.c as LegacyAny).id ?? 0) - Number((a.c as LegacyAny).id ?? 0);
     });
 
     if (!needle) return arr;
 
     return arr.filter(({ c }) => {
-      const id = Number((c as any).id);
+      const id = Number((c as LegacyAny).id);
       const label = c.label ? String(c.label) : `#${id}`;
       const concerns = formatConcerns(c);
       const hay = `${label} ${id} ${concerns ?? ''}`.toLowerCase();
@@ -205,7 +205,7 @@ export function TransactionChainsPanel(props: {
       <div>
         {header}
         <div className="mt-2 text-sm font-medium">{i18n.t('tasks.error.load_chains')}</div>
-        <div className="mt-1 text-sm text-muted">{String((q.error as any)?.message ?? q.error)}</div>
+        <div className="mt-1 text-sm text-muted">{String((q.error as LegacyAny)?.message ?? q.error)}</div>
       </div>
     );
   }
@@ -239,7 +239,7 @@ export function TransactionChainsPanel(props: {
     const expanded = expandedChainId === c.id;
 
     const createdAt = formatDateTime(c.created_at);
-    const updatedAt = (c as any).updated_at ? formatDateTime(String((c as any).updated_at)) : null;
+    const updatedAt = (c as LegacyAny).updated_at ? formatDateTime(String((c as LegacyAny).updated_at)) : null;
     const failureSummary = compactFailureSummary(c);
     const meta: React.ReactNode[] = [];
     meta.push(<span key="id">#{c.id}</span>);
@@ -357,15 +357,15 @@ export function TransactionChainsPanel(props: {
                   const txId = Number(tx.id);
                   const hasTxId = Number.isFinite(txId) && txId > 0;
                   const txExpanded = hasTxId && expandedTransactionIds.has(txId);
-                  const nodeId = resourceId((tx as any).node);
-                  const vpsId = resourceId((tx as any).vps);
-                  const type = typeof (tx as any).type === 'number' ? Number((tx as any).type) : null;
-                  const priority = typeof (tx as any).priority === 'number' ? Number((tx as any).priority) : null;
-                  const started = (tx as any).started_at as string | null | undefined;
-                  const finished = (tx as any).finished_at as string | null | undefined;
+                  const nodeId = resourceId((tx as LegacyAny).node);
+                  const vpsId = resourceId((tx as LegacyAny).vps);
+                  const type = typeof (tx as LegacyAny).type === 'number' ? Number((tx as LegacyAny).type) : null;
+                  const priority = typeof (tx as LegacyAny).priority === 'number' ? Number((tx as LegacyAny).priority) : null;
+                  const started = (tx as LegacyAny).started_at as string | null | undefined;
+                  const finished = (tx as LegacyAny).finished_at as string | null | undefined;
                   const sec = durationSec(started, finished);
-                  const input = formatPayload((tx as any).input);
-                  const output = formatPayload((tx as any).output);
+                  const input = formatPayload((tx as LegacyAny).input);
+                  const output = formatPayload((tx as LegacyAny).output);
                   const errorText = transactionErrorText(tx);
                   const hasPayload = Boolean(input || output);
 
@@ -385,7 +385,7 @@ export function TransactionChainsPanel(props: {
                             <span>{i18n.t('tasks.meta.created', { time: formatDateTime(tx.created_at) })}</span>
                             {type !== null ? <span>{i18n.t('transactions.items.row.type_chip', { type })}</span> : null}
                             {priority !== null ? <span>{i18n.t('transactions.tx.prio', { prio: priority })}</span> : null}
-                            {nodeId ? <span>{refLabel((tx as any).node) || i18n.t('transactions.tx.node', { id: nodeId })}</span> : null}
+                            {nodeId ? <span>{refLabel((tx as LegacyAny).node) || i18n.t('transactions.tx.node', { id: nodeId })}</span> : null}
                             {vpsId ? <span>{i18n.t('transactions.tx.vps', { id: vpsId })}</span> : null}
                             {sec !== null ? <span>{i18n.t('transactions.tx.duration', { sec })}</span> : null}
                           </div>
