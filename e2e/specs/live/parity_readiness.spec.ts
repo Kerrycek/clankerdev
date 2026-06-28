@@ -1,12 +1,28 @@
 import { expect, test } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+
+import { bootstrapVpsAdminWindow } from '../../fixtures/bootstrap';
 
 const liveEnabled = process.env.E2E_LIVE_PARITY === '1';
+const liveApiUrl = process.env.E2E_BASE_URL ?? 'https://dev.crucio.cz';
 const liveVpsId = process.env.E2E_LIVE_VPS_ID;
 const liveSwapTargetVpsId = process.env.E2E_LIVE_SWAP_TARGET_VPS_ID;
 const liveDatasetId = process.env.E2E_LIVE_DATASET_ID;
+const liveSessionToken = process.env.E2E_LIVE_SESSION_TOKEN ??
+  (process.env.E2E_LIVE_SESSION_TOKEN_FILE
+    ? readFileSync(process.env.E2E_LIVE_SESSION_TOKEN_FILE, 'utf8').trim()
+    : '');
 
 test.describe('@live-manual live parity readiness', () => {
   test.skip(!liveEnabled, 'Set E2E_LIVE_PARITY=1 to run against a real dev environment.');
+  test.skip(!liveSessionToken, 'Set E2E_LIVE_SESSION_TOKEN or E2E_LIVE_SESSION_TOKEN_FILE.');
+
+  test.beforeEach(async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, {
+      apiUrl: liveApiUrl,
+      sessionToken: liveSessionToken,
+    });
+  });
 
   test('VPS lifecycle workflows expose real-operation gates without submitting actions', async ({ page }) => {
     test.skip(!liveVpsId, 'Set E2E_LIVE_VPS_ID to a disposable VPS ID.');
