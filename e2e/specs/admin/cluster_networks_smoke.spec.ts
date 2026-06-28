@@ -4,6 +4,9 @@ import { installHaveApiMock } from '../../fixtures/haveapi';
 
 test.describe('Admin / Cluster / Networks (smoke)', () => {
   test('lists networks, supports filters, and opens network detail', async ({ page }) => {
+    const isApiRequest = (url: string, path: string) =>
+      (url.includes(`/api/v7.0/${path}`) || url.includes(`/v7.0/${path}`));
+
     const locations = [
       { id: 1, label: 'Praha' },
       { id: 2, label: 'Brno' },
@@ -171,7 +174,7 @@ test.describe('Admin / Cluster / Networks (smoke)', () => {
 
     const apiCalls: { url: string; method: string; body?: string | null }[] = [];
     page.on('request', (req) => {
-      if (!req.url().includes('/api/v7.0/')) return;
+      if (!req.url().includes('/api/v7.0/') && !req.url().includes('/v7.0/')) return;
       apiCalls.push({ url: req.url(), method: req.method(), body: req.postData() });
     });
 
@@ -183,8 +186,10 @@ test.describe('Admin / Cluster / Networks (smoke)', () => {
 
     // Filter by purpose
     await page.getByTestId('admin.cluster.networks.advanced.open').click();
-    await page.getByTestId('admin.cluster.networks.filter.purpose').selectOption('vps');
-    await page.waitForRequest((r) => r.url().includes('/api/v7.0/networks') && r.url().includes('network%5Bpurpose%5D=vps'));
+    await Promise.all([
+      page.waitForRequest((r) => isApiRequest(r.url(), 'networks') && r.url().includes('network%5Bpurpose%5D=vps')),
+      page.getByTestId('admin.cluster.networks.filter.purpose').selectOption('vps'),
+    ]);
     await expect.poll(() => seenPurpose).toBe('vps');
     await page.getByTestId('admin.cluster.networks.advanced').getByRole('button', { name: /done/i }).click();
 
@@ -194,17 +199,17 @@ test.describe('Admin / Cluster / Networks (smoke)', () => {
     await page.getByTestId('admin.cluster.networks.editor.address').fill('198.51.100.0');
     await page.getByTestId('admin.cluster.networks.editor.prefix').fill('24');
     await page.getByTestId('admin.cluster.networks.editor.split_prefix').fill('24');
-    const createRequest = page.waitForRequest((r) => r.method() === 'POST' && r.url().includes('/api/v7.0/networks'));
+    const createRequest = page.waitForRequest((r) => r.method() === 'POST' && isApiRequest(r.url(), 'networks'));
     await page.getByTestId('admin.cluster.networks.editor.save').click();
     await createRequest;
     await expect(page.getByTestId('admin.cluster.networks.row.200')).toBeVisible();
 
-    const createCall = apiCalls.find((c) => c.method === 'POST' && c.url.includes('/api/v7.0/networks'));
+    const createCall = apiCalls.find((c) => c.method === 'POST' && isApiRequest(c.url, 'networks'));
     expect(createCall?.body).toContain('"network"');
     expect(createCall?.body).toContain('"address"');
 
     // Open detail
-    const detailRequest = page.waitForRequest((r) => r.url().includes('/api/v7.0/networks/101'));
+    const detailRequest = page.waitForRequest((r) => isApiRequest(r.url(), 'networks/101'));
     await page.getByTestId('admin.cluster.networks.row.101.open').click({ force: true });
     await detailRequest;
     await expect(page).toHaveURL(/\/admin\/cluster\/networks\/101/);
