@@ -95,30 +95,27 @@ test('@workflow-matrix @smoke VPS detail tabs expose storage, access, lifecycle,
   await expect(page.getByTestId('vps.header')).toBeVisible();
   await expect(page.getByRole('link', { name: /^Storage$/ })).toHaveAttribute('href', '/app/vps/123/storage');
   await expect(page.getByRole('link', { name: /^Access$/ })).toHaveAttribute('href', '/app/vps/123/access');
-  await expect(page.getByRole('link', { name: /^Lifecycle$/ })).toHaveAttribute('href', '/app/vps/123/lifecycle');
   await expect(page.getByRole('link', { name: /^Console$/ }).first()).toHaveAttribute('href', '/app/vps/123/console');
 
-  await expect(page.getByTestId('vps.overview.management.card')).toBeVisible();
-  await expect(page.getByTestId('vps.overview.management.action.reinstall')).toHaveAttribute('href', '/app/vps/123/lifecycle/reinstall');
-  await expect(page.getByTestId('vps.overview.management.action.clone')).toHaveAttribute('href', '/app/vps/123/lifecycle/clone');
-  await expect(page.getByTestId('vps.overview.management.action.swap')).toHaveAttribute('href', '/app/vps/123/lifecycle/swap');
-  await expect(page.getByTestId('vps.overview.management.action.delete')).toHaveAttribute('href', '/app/vps/123/lifecycle/delete');
-  await expect(page.getByTestId('vps.overview.management.action.migrate')).toHaveCount(0);
-  await expect(page.getByTestId('vps.overview.management.section.storage')).toHaveAttribute('href', '/app/vps/123/storage');
-  await expect(page.getByTestId('vps.overview.management.section.access')).toHaveAttribute('href', '/app/vps/123/access');
-  await expect(page.getByTestId('vps.overview.management.section.console')).toHaveAttribute('href', '/app/vps/123/console');
+  await expect(page.getByTestId('vps.overview.lifecycle')).toBeVisible();
+  const moreActions = page.getByTestId('vps.actions.menu');
+  await expect(moreActions).toBeVisible();
+  await expect(moreActions.locator('option[value="/app/vps/123/lifecycle/reinstall"]')).toHaveCount(1);
+  await expect(moreActions.locator('option[value="/app/vps/123/lifecycle/clone"]')).toHaveCount(1);
+  await expect(moreActions.locator('option[value="/app/vps/123/lifecycle/swap"]')).toHaveCount(1);
+  await expect(moreActions.locator('option[value="/app/vps/123/lifecycle/delete"]')).toHaveCount(1);
+  await expect(moreActions.locator('option[value="/app/vps/123/lifecycle/migrate"]')).toHaveCount(0);
+  await expect(moreActions.locator('option[value="/app/vps/123/storage"]')).toHaveCount(1);
+  await expect(moreActions.locator('option[value="/app/vps/123/access"]')).toHaveCount(1);
+  await expect(moreActions.locator('option[value="/app/vps/123/console"]')).toHaveCount(0);
 
   await page.getByRole('link', { name: /^Storage$/ }).click();
   await expect(page).toHaveURL(/\/app\/vps\/123\/storage$/);
   await expect(page.getByTestId('vps.storage.page')).toBeVisible();
   await expect(page.getByTestId('vps.storage.mounts.table')).toBeVisible();
 
-  await page.getByRole('link', { name: /^Lifecycle$/ }).click();
-  await expect(page).toHaveURL(/\/app\/vps\/123\/lifecycle$/);
-  await expect(page.getByTestId('vps.lifecycle.page')).toBeVisible();
-  await expect(page.getByTestId('vps.lifecycle.action_index')).toBeVisible();
-  await expect(page.getByTestId('vps.lifecycle.action_link.clone')).toBeVisible();
-  await page.getByTestId('vps.lifecycle.action_link.clone').click();
+  await page.goto('/app/vps/123');
+  await page.getByTestId('vps.actions.menu').selectOption('/app/vps/123/lifecycle/clone');
   await expect(page).toHaveURL(/\/app\/vps\/123\/lifecycle\/clone$/);
   await expect(page.getByTestId('vps.lifecycle.clone')).toBeVisible();
   await expect(page.getByTestId('vps.lifecycle.replace')).toHaveCount(0);
