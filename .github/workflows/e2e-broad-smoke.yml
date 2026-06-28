@@ -35,8 +35,13 @@ jobs:
           node-version: 22
           cache: npm
 
+      - name: Pin npm
+        run: |
+          npm install -g npm@9.9.4
+          npm --version
+
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --include=dev
 
       - name: Install Playwright browsers
         run: npm run e2e:install -- --with-deps chromium
