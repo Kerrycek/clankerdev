@@ -33,6 +33,8 @@ Optional environment:
   POOL_ID                     default: 104
   POOL_LABEL                  default: dev NAS backup pool
   POOL_FILESYSTEM             default: tank/backup
+  PRIMARY_POOL_ID             default: 105
+  PRIMARY_POOL_FILESYSTEM     default: tank/nas
   POOL_EXPORT_ROOT            default: /export
   POOL_MAX_DATASETS           default: 200
   DB_NAME                     default: vpsadmin
@@ -137,6 +139,8 @@ service_name="${SERVICE_NAME:-${node_name}.service}"
 pool_id="${POOL_ID:-104}"
 pool_label="${POOL_LABEL:-dev NAS backup pool}"
 pool_filesystem="${POOL_FILESYSTEM:-tank/backup}"
+primary_pool_id="${PRIMARY_POOL_ID:-105}"
+primary_pool_filesystem="${PRIMARY_POOL_FILESYSTEM:-tank/nas}"
 pool_export_root="${POOL_EXPORT_ROOT:-/export}"
 pool_max_datasets="${POOL_MAX_DATASETS:-200}"
 db_name="${DB_NAME:-vpsadmin}"
@@ -182,6 +186,37 @@ write_file "$nix_config" <<EOF
 
   config = {
     services.openssh.enable = true;
+    services.nfs.server.enable = true;
+    services.nfs.server.exports = ''
+      /${pool_filesystem}/vpsadmin/download ${services_addr}(rw,sync,no_subtree_check,no_root_squash,insecure,fsid=${pool_id})
+      /${primary_pool_filesystem}/vpsadmin/download ${services_addr}(rw,sync,no_subtree_check,no_root_squash,insecure,fsid=${primary_pool_id})
+    '';
+    networking.firewall.interfaces.eth1.allowedTCPPorts = [ 111 2049 20048 ];
+    networking.firewall.interfaces.eth1.allowedUDPPorts = [ 111 20048 ];
+
+    system.activationScripts.vpsadminDevDownloadExports.text = ''
+      install -d -m 0755 /${pool_filesystem}/vpsadmin/download
+      install -d -m 0755 /${primary_pool_filesystem}/vpsadmin/download
+      printf '%s\n' '${pool_id}' > /${pool_filesystem}/vpsadmin/download/_vpsadmin-download-healthcheck
+      printf '%s\n' '${primary_pool_id}' > /${primary_pool_filesystem}/vpsadmin/download/_vpsadmin-download-healthcheck
+    '';
+
+    systemd.services.vpsadmin-dev-download-export-init = {
+      description = "Prepare dev snapshot download export directories";
+      wantedBy = [ "multi-user.target" ];
+      before = [ "nfs-server.service" ];
+      serviceConfig.Type = "oneshot";
+      script = ''
+        install -d -m 0755 /${pool_filesystem}/vpsadmin/download
+        install -d -m 0755 /${primary_pool_filesystem}/vpsadmin/download
+        printf '%s\n' '${pool_id}' > /${pool_filesystem}/vpsadmin/download/_vpsadmin-download-healthcheck
+        printf '%s\n' '${primary_pool_id}' > /${primary_pool_filesystem}/vpsadmin/download/_vpsadmin-download-healthcheck
+      '';
+    };
+
+    # Dev lab: do not wait 90 minutes before running ZFS transfer queues.
+    vpsadmin.nodectld.settings.vpsadmin.queues.zfs_send.start_delay = 0;
+    vpsadmin.nodectld.settings.vpsadmin.queues.zfs_recv.start_delay = 0;
 
     networking.hostId = builtins.substring 0 8 (builtins.hashString "md5" "${node_name}");
     networking.hostName = "${node_name}";
@@ -225,6 +260,15 @@ write_file "$nix_config" <<EOF
       "backup/webui-next-smoke".properties.quota = "10G";
       "backup/webui-next-restore".properties.quota = "10G";
       "backup/webui-next-datasets".properties.quota = "20G";
+      "nas" = {
+        properties = {
+          compression = "zstd";
+          refquota = "120G";
+        };
+      };
+      "nas/webui-next-smoke".properties.quota = "10G";
+      "nas/webui-next-restore".properties.quota = "10G";
+      "nas/webui-next-datasets".properties.quota = "20G";
     };
 
     vpsadmin.test.node = {
