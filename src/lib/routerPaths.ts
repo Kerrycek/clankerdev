@@ -18,6 +18,18 @@ export function sanitizeLocalPath(path: string | null | undefined, fallback: str
   return candidate;
 }
 
+export function sanitizePostLoginPath(path: string | null | undefined, fallback = '/app'): string {
+  const localPath = sanitizeLocalPath(path, fallback);
+
+  try {
+    const u = new URL(localPath, 'http://local.invalid');
+    if (u.searchParams.get('session') === 'expired') return fallback;
+    return `${u.pathname}${u.search}${u.hash}`;
+  } catch {
+    return fallback;
+  }
+}
+
 export function withRouterBasename(path: string, routerBasename: string | undefined): string {
   const safePath = sanitizeLocalPath(path, '/');
   const base = normalizeRouterBasename(routerBasename);

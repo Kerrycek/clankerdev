@@ -72,6 +72,7 @@ function sanitizeNext(next) {
     if (!path.startsWith('/')) return '/app';
     // avoid protocol-relative weirdness
     if (path.startsWith('//')) return '/app';
+    if (u.searchParams.get('session') === 'expired') return '/app';
     return path;
   } catch {
     return '/app';

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   normalizeRouterBasename,
   sanitizeLocalPath,
+  sanitizePostLoginPath,
   withRouterBasename,
   withSameOriginNextParam,
 } from './routerPaths';
@@ -30,6 +31,12 @@ describe('routerPaths', () => {
     expect(withRouterBasename('/', '/ui-next')).toBe('/ui-next/');
     expect(withRouterBasename('/ui-next/app', '/ui-next')).toBe('/ui-next/app');
     expect(withRouterBasename('/app', '')).toBe('/app');
+  });
+
+  it('does not preserve the expired session notice as a post-login target', () => {
+    expect(sanitizePostLoginPath('/?session=expired')).toBe('/app');
+    expect(sanitizePostLoginPath('/?session=expired#top', '/admin')).toBe('/admin');
+    expect(sanitizePostLoginPath('/admin/users?limit=50')).toBe('/admin/users?limit=50');
   });
 
   it('retargets same-origin urls with next while leaving cross-origin urls untouched', () => {

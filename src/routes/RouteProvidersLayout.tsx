@@ -8,10 +8,12 @@ import { ThemeProvider } from '../app/theme';
 import { I18nProvider } from '../app/i18n';
 import { ToastsProvider } from '../app/toasts';
 import { DocumentTitleManager } from '../components/layout/DocumentTitleManager';
+import { sanitizePostLoginPath, withRouterBasename } from '../lib/routerPaths';
 
-function currentBrowserPath(): string {
-  if (typeof window === 'undefined') return '/';
-  return window.location.pathname + window.location.search + window.location.hash;
+function currentRouterPath(location: ReturnType<typeof useLocation>): string {
+  const cfg = getRuntimeConfig();
+  const localPath = sanitizePostLoginPath(`${location.pathname}${location.search}${location.hash}`);
+  return withRouterBasename(localPath, cfg.routerBasename);
 }
 
 function stripRouterBasename(pathname: string): string {
@@ -33,7 +35,7 @@ export function RouteProvidersLayout() {
   const location = useLocation();
 
   return (
-    <AuthProvider nextPath={currentBrowserPath()}>
+    <AuthProvider nextPath={currentRouterPath(location)}>
       <UiSettingsProvider serverSyncEnabled={shouldSyncUiSettings(location.pathname)}>
         <ThemeProvider>
           <I18nProvider>

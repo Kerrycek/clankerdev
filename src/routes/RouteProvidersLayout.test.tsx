@@ -7,12 +7,19 @@ const runtimeConfig = vi.hoisted(() => ({
   routerBasename: '',
 }));
 
+const authProviderProps = vi.hoisted(() => ({
+  nextPath: '',
+}));
+
 vi.mock('../app/config', () => ({
   getRuntimeConfig: () => runtimeConfig,
 }));
 
 vi.mock('../app/auth', () => ({
-  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  AuthProvider: ({ children, nextPath }: { children: React.ReactNode; nextPath: string }) => {
+    authProviderProps.nextPath = nextPath;
+    return <>{children}</>;
+  },
 }));
 
 vi.mock('../app/uiSettings', () => ({
@@ -60,6 +67,20 @@ function renderAt(pathname: string) {
 }
 
 describe('RouteProvidersLayout', () => {
+  it('does not use the expired-session status URL as the post-login target', () => {
+    runtimeConfig.routerBasename = '';
+
+    renderAt('/?session=expired');
+    expect(authProviderProps.nextPath).toBe('/app');
+  });
+
+  it('keeps normal deep links as the post-login target', () => {
+    runtimeConfig.routerBasename = '';
+
+    renderAt('/admin/users?limit=50');
+    expect(authProviderProps.nextPath).toBe('/admin/users?limit=50');
+  });
+
   it('enables settings server sync for authenticated app routes', () => {
     runtimeConfig.routerBasename = '';
 
