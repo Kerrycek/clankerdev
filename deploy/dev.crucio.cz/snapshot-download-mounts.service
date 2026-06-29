@@ -1,0 +1,8 @@
+[Unit]
+Description=Mount dev snapshot download directories
+After=network-online.target vpsadminos-node.service vpsadmin-nas-storage1.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/root/vpsadmin-dev-lab/mount-snapshot-downloads.sh

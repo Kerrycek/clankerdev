@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh dev snapshot download mounts
+
+[Timer]
+OnBootSec=2min
+OnUnitInactiveSec=15min
+Unit=snapshot-download-mounts.service
+
+[Install]
+WantedBy=timers.target

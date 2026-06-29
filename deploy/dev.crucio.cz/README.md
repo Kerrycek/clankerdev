@@ -116,6 +116,17 @@ and checks the `_vpsadmin-download-healthcheck` file. It intentionally skips
 unavailable pools unless `--strict` is used, because some lab nodes may be
 temporarily offline while storage work is in progress.
 
+Install the matching systemd timer when the helper changes:
+
+```sh
+rsync -az deploy/dev.crucio.cz/mount-snapshot-downloads.sh \
+  root@admin.crucio.cz:/root/vpsadmin-dev-lab/mount-snapshot-downloads.sh
+rsync -az deploy/dev.crucio.cz/snapshot-download-mounts.{service,timer} \
+  root@admin.crucio.cz:/etc/systemd/system/
+ssh root@admin.crucio.cz \
+  'systemctl daemon-reload && systemctl enable --now snapshot-download-mounts.timer'
+```
+
 ## Live parity workflow
 
 Real VPS and dataset operation checks are documented in
