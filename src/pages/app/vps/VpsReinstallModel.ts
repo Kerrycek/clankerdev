@@ -11,7 +11,6 @@ export type ReinstallUserDataFormat =
 
 export type ReinstallForm = {
   osTemplate: string;
-  confirmText: string;
   userDataEnabled: boolean;
   userDataFormat: ReinstallUserDataFormat;
   userDataContent: string;
@@ -29,7 +28,6 @@ export const reinstallUserDataFormats: ReadonlyArray<ReinstallUserDataFormat> = 
 export function defaultReinstallForm(osTemplateId: number | null | undefined): ReinstallForm {
   return {
     osTemplate: osTemplateId ? String(osTemplateId) : '',
-    confirmText: '',
     userDataEnabled: false,
     userDataFormat: 'cloudinit_config',
     userDataContent: '',
@@ -60,10 +58,6 @@ export function buildVpsReinstallPayload(form: ReinstallForm): VpsReinstallPaylo
 
 export function vpsReinstallConfirmationTarget(vps: Pick<Vps, 'id' | 'hostname'>): string {
   return String(vps.hostname || `#${vps.id}`).trim();
-}
-
-export function isVpsReinstallConfirmationSatisfied(form: ReinstallForm, target: string): boolean {
-  return form.confirmText.trim() === target;
 }
 
 export function vpsReinstallTemplateLabel(tpl: OsTemplate | undefined): string {

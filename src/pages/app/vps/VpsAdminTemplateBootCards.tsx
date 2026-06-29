@@ -8,8 +8,6 @@ import { Select } from '../../../components/ui/Select';
 import type { OsTemplate } from '../../../lib/api/osTemplates';
 import type { GateDecision } from '../../../lib/gates/types';
 import {
-  adminConfirmTarget,
-  isAdminConfirmSatisfied,
   type BootForm,
   type TemplateForm,
 } from './VpsAdminLifecycleModel';
@@ -18,7 +16,6 @@ import {
   ActionGateAlert,
   ActionImpactSummary,
   AsyncActionResult,
-  DangerTypedConfirm,
   Field,
   ImpactItem,
   LifecycleActionShell,
@@ -57,8 +54,6 @@ export function VpsAdminTemplateCard(props: {
   onSubmit: () => void;
 }) {
   const { t } = useI18n();
-  const confirmTarget = adminConfirmTarget(props.vps);
-  const confirmSatisfied = isAdminConfirmSatisfied(props.form.confirmText, confirmTarget);
   const currentTemplate = templateDisplay(props.templates, String(props.vps.os_template?.id ?? ''), t('common.none'));
   const selectedTemplate = templateDisplay(props.templates, props.form.osTemplate, t('vps.lifecycle.placeholder.os_template'));
 
@@ -73,7 +68,7 @@ export function VpsAdminTemplateCard(props: {
         <LifecycleSubmitButton
           variant="primary"
           testId="vps.lifecycle.template.submit"
-          disabled={!confirmSatisfied || !props.form.osTemplate}
+          disabled={!props.form.osTemplate}
           gate={props.gate}
           loading={props.pending}
           onClick={props.onSubmit}
@@ -89,7 +84,7 @@ export function VpsAdminTemplateCard(props: {
         <Field label={t('vps.lifecycle.field.os_template')} help={t('vps.lifecycle.template.os_template_help')}>
           <Select
             value={props.form.osTemplate}
-            onChange={(e) => setForm({ osTemplate: e.target.value, confirmText: '' })}
+            onChange={(e) => setForm({ osTemplate: e.target.value })}
             disabled={props.pending || props.templatesLoading}
             testId="vps.lifecycle.template.os_template"
           >
@@ -104,7 +99,7 @@ export function VpsAdminTemplateCard(props: {
         <div className="flex items-end">
           <Checkbox
             checked={props.form.autoUpdate}
-            onChange={(autoUpdate) => setForm({ autoUpdate, confirmText: '' })}
+            onChange={(autoUpdate) => setForm({ autoUpdate })}
             label={t('vps.lifecycle.template.auto_update')}
             description={t('vps.lifecycle.template.auto_update_help')}
             testId="vps.lifecycle.template.auto_update"
@@ -125,19 +120,6 @@ export function VpsAdminTemplateCard(props: {
           })}
         </ImpactItem>
       </ActionImpactSummary>
-
-      <DangerTypedConfirm
-        label={t('vps.lifecycle.admin_confirm.label')}
-        help={t('vps.lifecycle.admin_confirm.help', { target: confirmTarget })}
-        target={confirmTarget}
-        value={props.form.confirmText}
-        onChange={(confirmText) => setForm({ confirmText })}
-        disabled={props.pending}
-        testId="vps.lifecycle.template.confirm"
-        satisfied={confirmSatisfied}
-        mismatchTitle={t('vps.lifecycle.admin_confirm.mismatch_title')}
-        mismatchBody={t('vps.lifecycle.admin_confirm.mismatch_body')}
-      />
 
       <AsyncActionResult
         succeeded={props.succeeded}
@@ -164,8 +146,6 @@ export function VpsAdminBootCard(props: {
   onSubmit: () => void;
 }) {
   const { t } = useI18n();
-  const confirmTarget = adminConfirmTarget(props.vps);
-  const confirmSatisfied = isAdminConfirmSatisfied(props.form.confirmText, confirmTarget);
   const selectedTemplate = templateDisplay(props.templates, props.form.osTemplate, t('vps.lifecycle.placeholder.os_template'));
 
   const setForm = (patch: Partial<BootForm>) => {
@@ -179,7 +159,7 @@ export function VpsAdminBootCard(props: {
         <LifecycleSubmitButton
           variant="danger"
           testId="vps.lifecycle.boot.submit"
-          disabled={!confirmSatisfied || !props.form.osTemplate}
+          disabled={!props.form.osTemplate}
           gate={props.gate}
           loading={props.pending}
           onClick={props.onSubmit}
@@ -197,7 +177,7 @@ export function VpsAdminBootCard(props: {
         <Field label={t('vps.lifecycle.field.os_template')} help={t('vps.lifecycle.boot.os_template_help')}>
           <Select
             value={props.form.osTemplate}
-            onChange={(e) => setForm({ osTemplate: e.target.value, confirmText: '' })}
+            onChange={(e) => setForm({ osTemplate: e.target.value })}
             disabled={props.pending || props.templatesLoading}
             testId="vps.lifecycle.boot.os_template"
           >
@@ -212,7 +192,7 @@ export function VpsAdminBootCard(props: {
         <Field label={t('vps.lifecycle.boot.mountpoint')} help={t('vps.lifecycle.boot.mountpoint_help')}>
           <Input
             value={props.form.mountpoint}
-            onChange={(e) => setForm({ mountpoint: e.target.value, confirmText: '' })}
+            onChange={(e) => setForm({ mountpoint: e.target.value })}
             disabled={props.pending || !props.form.mountRootDataset}
             testId="vps.lifecycle.boot.mountpoint"
           />
@@ -221,7 +201,7 @@ export function VpsAdminBootCard(props: {
 
       <Checkbox
         checked={props.form.mountRootDataset}
-        onChange={(mountRootDataset) => setForm({ mountRootDataset, confirmText: '' })}
+        onChange={(mountRootDataset) => setForm({ mountRootDataset })}
         label={t('vps.lifecycle.boot.mount_root_dataset')}
         description={t('vps.lifecycle.boot.mount_root_dataset_help')}
         testId="vps.lifecycle.boot.mount_root_dataset"
@@ -240,19 +220,6 @@ export function VpsAdminBootCard(props: {
             : t('vps.lifecycle.boot.review.mount_disabled')}
         </ImpactItem>
       </ActionImpactSummary>
-
-      <DangerTypedConfirm
-        label={t('vps.lifecycle.admin_confirm.label')}
-        help={t('vps.lifecycle.admin_confirm.help', { target: confirmTarget })}
-        target={confirmTarget}
-        value={props.form.confirmText}
-        onChange={(confirmText) => setForm({ confirmText })}
-        disabled={props.pending}
-        testId="vps.lifecycle.boot.confirm"
-        satisfied={confirmSatisfied}
-        mismatchTitle={t('vps.lifecycle.admin_confirm.mismatch_title')}
-        mismatchBody={t('vps.lifecycle.admin_confirm.mismatch_body')}
-      />
 
       <AsyncActionResult
         succeeded={props.succeeded}
