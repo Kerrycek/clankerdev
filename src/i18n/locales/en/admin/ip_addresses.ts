@@ -1,5 +1,9 @@
 // Admin locale chunk: ip_addresses
 export const enAdmin_ip_addresses = {
+  "admin.ip_addresses.action.assign_route": "Assign route",
+  "admin.ip_addresses.action.assignments": "Assignments",
+  "admin.ip_addresses.action.incidents": "Incidents",
+  "admin.ip_addresses.action.unassign_route": "Remove route",
   "admin.ip_addresses.advanced.addr": "Exact address",
   "admin.ip_addresses.advanced.addr.placeholder": "e.g. 192.0.2.10",
   "admin.ip_addresses.advanced.assigned": "Assigned to interface",

@@ -66,6 +66,8 @@ export function IpAddressesListMobile({ pageData, ipDetailBasePath, basePath, na
           const userId = ipUserId(ip);
           const assigned = isAssignedToInterface(ip);
           const rowVariant = ipRowVariant(ip);
+          const ipAddr = ipAddressText(ip);
+          const detailPath = `${ipDetailBasePath}/${id}`;
           return (
             <Card key={id} testId={`admin.ip_addresses.card.${id}`} className={clsx(rowVariant ? toneSurfaceClass(rowVariant) : undefined)}>
               <div className="p-4">
@@ -77,7 +79,7 @@ export function IpAddressesListMobile({ pageData, ipDetailBasePath, basePath, na
                         ariaLabel={assigned ? t('admin.ip_addresses.chip.assigned_true') : t('admin.ip_addresses.chip.assigned_false')}
                         testId={`admin.ip_addresses.card.${id}.dot`}
                       />
-                      <Link className="block truncate text-base font-semibold text-accent hover:underline" to={`${ipDetailBasePath}/${id}`}>
+                      <Link className="block truncate text-base font-semibold text-accent hover:underline" to={detailPath}>
                         {ipLabel(ip)}
                       </Link>
                     </div>
@@ -112,7 +114,17 @@ export function IpAddressesListMobile({ pageData, ipDetailBasePath, basePath, na
                 </div>
 
                 <div className="mt-4 flex flex-wrap items-center gap-2">
-                  {ipAddressText(ip) ? <CopyButton text={ipAddressText(ip) ?? ''} label={t('common.copy')} /> : null}
+                  {ipAddr ? <CopyButton text={ipAddr} label={t('common.copy')} /> : null}
+                  {ipAddr ? (
+                    <Link className="text-xs text-accent hover:underline" to={`${basePath}/incidents?ip_addr=${encodeURIComponent(ipAddr)}`}>
+                      {t('admin.ip_addresses.action.incidents')}
+                    </Link>
+                  ) : null}
+                  {ipAddr ? (
+                    <Link className="text-xs text-accent hover:underline" to={`${basePath}/networking/ip-address-assignments?q=${encodeURIComponent(ipAddr)}`}>
+                      {t('admin.ip_addresses.action.assignments')}
+                    </Link>
+                  ) : null}
                   {vpsId ? (
                     <Link className="text-xs text-accent hover:underline" to={`${basePath}/vps/${vpsId}`}>
                       {t('object_kind.vps')} #{vpsId}
@@ -123,13 +135,13 @@ export function IpAddressesListMobile({ pageData, ipDetailBasePath, basePath, na
                       {t('admin.user.heading')} #{userId}
                     </Link>
                   ) : null}
-                  <Link className="text-xs text-accent hover:underline" to={`${ipDetailBasePath}/${id}`}>
-                    {t('admin.ip.route.title')}
+                  <Link className="text-xs text-accent hover:underline" to={`${detailPath}#route`}>
+                    {assigned ? t('admin.ip_addresses.action.unassign_route') : t('admin.ip_addresses.action.assign_route')}
                   </Link>
-                  <Link className="text-xs text-accent hover:underline" to={`${ipDetailBasePath}/${id}`}>
+                  <Link className="text-xs text-accent hover:underline" to={`${detailPath}#owner`}>
                     {t('admin.ip.owner.title')}
                   </Link>
-                  <Link className="text-xs text-accent hover:underline" to={`${ipDetailBasePath}/${id}`}>
+                  <Link className="text-xs text-accent hover:underline" to={`${detailPath}#hosts`}>
                     {t('admin.ip.hosts.title')}
                   </Link>
                 </div>

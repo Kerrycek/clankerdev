@@ -1,9 +1,10 @@
 import React from 'react';
 import { clsx } from './clsx';
 
-export function Card(props: { testId?: string; className?: string; children: React.ReactNode }) {
+export function Card(props: { id?: string; testId?: string; className?: string; children: React.ReactNode }) {
   return (
     <div
+      id={props.id}
       data-testid={props.testId}
       className={clsx('rounded-lg border border-border bg-surface shadow-card', props.className)}
     >

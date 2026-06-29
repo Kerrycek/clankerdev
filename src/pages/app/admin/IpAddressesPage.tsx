@@ -227,6 +227,7 @@ export function IpAddressesPage() {
           version: versionNum,
           assignedToInterface,
           order,
+          purpose: 'vps',
           includes: 'network,network_interface,vps,user',
         })
       ).data,

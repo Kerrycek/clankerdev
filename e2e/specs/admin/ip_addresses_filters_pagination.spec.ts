@@ -6,6 +6,7 @@ test('admin ip addresses: filters + keyset pagination (from_id)', async ({ page 
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
   let seenFilterAddr: string | null = null;
+  let seenPurpose: string | null = null;
 
   await installHaveApiMock(page, {
     user: { id: 1, login: 'admin', level: 100 },
@@ -18,6 +19,7 @@ test('admin ip addresses: filters + keyset pagination (from_id)', async ({ page 
         const addr = ctx.searchParams.get('ip_address[addr]');
         const vps = ctx.searchParams.get('ip_address[vps]');
         const version = ctx.searchParams.get('ip_address[version]');
+        seenPurpose = ctx.searchParams.get('ip_address[purpose]');
 
         if (addr) seenFilterAddr = addr;
 
@@ -51,8 +53,12 @@ test('admin ip addresses: filters + keyset pagination (from_id)', async ({ page 
   await page.goto('/admin/ip-addresses');
 
   await expect(page.getByTestId('admin.ip_addresses.row.125')).toBeVisible();
+  await expect.poll(() => seenPurpose).toBe('vps');
   await expect(page.getByTestId('admin.ip_addresses.row.125')).toHaveAttribute('data-row-variant', 'warn');
   await expect(page.getByTestId('admin.ip_addresses.row.125.dot')).toBeVisible();
+  await expect(page.getByTestId('admin.ip_addresses.row.125')).toContainText('Incidents');
+  await expect(page.getByTestId('admin.ip_addresses.row.125')).toContainText('Assign route');
+  await expect(page.getByTestId('admin.ip_addresses.row.125')).toContainText('Ownership');
 
   // Apply a server-side filter.
   const sfi = page.getByTestId('admin.ip_addresses.smart_filter.input');

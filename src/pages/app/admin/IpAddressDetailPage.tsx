@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAppMode } from '../../../app/appMode';
@@ -98,6 +98,7 @@ export function IpAddressDetailPage() {
   const { pushToast } = useToasts();
   const qc = useQueryClient();
   const params = useParams();
+  const location = useLocation();
   const ipId = parseIdParam(params['ipAddressId']);
   const [routeOpen, setRouteOpen] = useState(false);
   const [routeVps, setRouteVps] = useState<number | null>(null);
@@ -149,6 +150,17 @@ export function IpAddressDetailPage() {
   });
   const isLoading = Boolean(ipId) && q.isLoading;
   const isError = Boolean(ipId) && (q.isError || !ip);
+
+  useEffect(() => {
+    if (!ip || !location.hash) return;
+
+    const target = document.getElementById(location.hash.slice(1));
+    if (!target) return;
+
+    window.setTimeout(() => {
+      target.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }, 0);
+  }, [ip, location.hash]);
 
   const invalidate = async () => {
     await Promise.all([
@@ -424,7 +436,7 @@ export function IpAddressDetailPage() {
                   </Alert>
                 ) : null}
 
-                <Card testId="admin.ip_address.route.card">
+                <Card testId="admin.ip_address.route.card" className="scroll-mt-24" id="route">
                   <CardHeader
                     title={t('admin.ip.route.title')}
                     subtitle={t('admin.ip.route.subtitle')}
@@ -475,7 +487,7 @@ export function IpAddressDetailPage() {
                   </CardBody>
                 </Card>
 
-                <Card testId="admin.ip_address.owner.card">
+                <Card testId="admin.ip_address.owner.card" className="scroll-mt-24" id="owner">
                   <CardHeader title={t('admin.ip.owner.title')} subtitle={t('admin.ip.owner.subtitle')} />
                   <CardBody className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
                     <label className="block">
@@ -503,7 +515,7 @@ export function IpAddressDetailPage() {
                   </CardBody>
                 </Card>
 
-                <Card testId="admin.ip_address.hosts.card">
+                <Card testId="admin.ip_address.hosts.card" className="scroll-mt-24" id="hosts">
                   <CardHeader
                     title={t('admin.ip.hosts.title')}
                     subtitle={t('admin.ip.hosts.subtitle')}

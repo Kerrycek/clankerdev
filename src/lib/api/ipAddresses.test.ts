@@ -3,6 +3,7 @@ import { describe, expect, test, vi } from 'vitest';
 import {
   assignIpAddressRoute,
   assignIpAddressRouteWithHostAddress,
+  fetchIpAddresses,
   freeIpAddressRoute,
   updateIpAddress,
 } from './ipAddresses';
@@ -24,6 +25,22 @@ function lastFetchCall() {
 }
 
 describe('network address API wrappers', () => {
+  test('fetchIpAddresses forwards purpose and include filters used by admin networking', async () => {
+    globalThis.fetch = mockFetchOk({ ip_addresses: [] }) as any;
+
+    await fetchIpAddresses({
+      limit: 50,
+      purpose: 'vps',
+      includes: 'network,network_interface,vps,user',
+    });
+
+    const [url] = lastFetchCall();
+    const parsed = new URL(url);
+    expect(parsed.pathname).toBe('/v7.0/ip_addresses');
+    expect(parsed.searchParams.get('ip_address[purpose]')).toBe('vps');
+    expect(parsed.searchParams.get('_meta[includes]')).toBe('network,network_interface,vps,user');
+  });
+
   test('assignIpAddressRoute posts the legacy route assign payload', async () => {
     globalThis.fetch = mockFetchOk({ ip_address: { id: 42 } }) as any;
 

@@ -14,6 +14,7 @@ import { TableRowLink } from '../../../../components/ui/TableRowLink';
 
 import {
   ifaceLabel,
+  ipAddressText,
   ipCreatedAt,
   ipDotVariant,
   ipId,
@@ -96,11 +97,13 @@ export function IpAddressesListTable({ pageData, ipDetailBasePath, basePath, na,
           const userId = ipUserId(ip);
           const assigned = isAssignedToInterface(ip);
           const createdAt = ipCreatedAt(ip);
+          const ipAddr = ipAddressText(ip);
+          const detailPath = `${ipDetailBasePath}/${id}`;
           return (
             <TableRowLink
               key={id}
               testId={`admin.ip_addresses.row.${id}`}
-              to={`${ipDetailBasePath}/${id}`}
+              to={detailPath}
               variant={ipRowVariant(ip)}
               className="border-b border-border/60 last:border-b-0"
             >
@@ -112,7 +115,7 @@ export function IpAddressesListTable({ pageData, ipDetailBasePath, basePath, na,
                 />
               </td>
               <td className="px-4 py-2">
-                <Link className="font-medium text-accent hover:underline" to={`${ipDetailBasePath}/${id}`}>
+                <Link className="font-medium text-accent hover:underline" to={detailPath}>
                   {ipLabel(ip)}
                 </Link>
                 <div className="mt-1 text-xs text-faint">#{id}</div>
@@ -148,13 +151,23 @@ export function IpAddressesListTable({ pageData, ipDetailBasePath, basePath, na,
               <td className="px-4 py-2 text-xs text-muted">{createdAt ? formatDateTime(createdAt) : na}</td>
               <td className="px-4 py-2 text-right text-xs">
                 <div className="flex flex-wrap justify-end gap-2">
-                  <Link className="text-accent hover:underline" to={`${ipDetailBasePath}/${id}`}>
-                    {t('admin.ip.route.title')}
+                  {ipAddr ? (
+                    <Link className="text-accent hover:underline" to={`${basePath}/incidents?ip_addr=${encodeURIComponent(ipAddr)}`}>
+                      {t('admin.ip_addresses.action.incidents')}
+                    </Link>
+                  ) : null}
+                  {ipAddr ? (
+                    <Link className="text-accent hover:underline" to={`${basePath}/networking/ip-address-assignments?q=${encodeURIComponent(ipAddr)}`}>
+                      {t('admin.ip_addresses.action.assignments')}
+                    </Link>
+                  ) : null}
+                  <Link className="text-accent hover:underline" to={`${detailPath}#route`}>
+                    {assigned ? t('admin.ip_addresses.action.unassign_route') : t('admin.ip_addresses.action.assign_route')}
                   </Link>
-                  <Link className="text-accent hover:underline" to={`${ipDetailBasePath}/${id}`}>
+                  <Link className="text-accent hover:underline" to={`${detailPath}#owner`}>
                     {t('admin.ip.owner.title')}
                   </Link>
-                  <Link className="text-accent hover:underline" to={`${ipDetailBasePath}/${id}`}>
+                  <Link className="text-accent hover:underline" to={`${detailPath}#hosts`}>
                     {t('admin.ip.hosts.title')}
                   </Link>
                 </div>
