@@ -103,6 +103,19 @@ Review the dry-run output, then rerun with `--apply` on `admin.crucio.cz` only.
 See `storage-lab-node.md` for the expected node/pool rows, status commands and
 UI smoke path.
 
+Snapshot download URLs are served by nginx from `/var/lib/web/download`, but
+the files live on the nested vpsAdminOS node pools. After changing storage
+nodes or after a reboot, refresh the dev-only NFS mounts with:
+
+```sh
+deploy/dev.crucio.cz/mount-snapshot-downloads.sh
+```
+
+The helper mounts the known dev pools below `/var/lib/web/download/<node>/<pool>`
+and checks the `_vpsadmin-download-healthcheck` file. It intentionally skips
+unavailable pools unless `--strict` is used, because some lab nodes may be
+temporarily offline while storage work is in progress.
+
 ## Live parity workflow
 
 Real VPS and dataset operation checks are documented in
