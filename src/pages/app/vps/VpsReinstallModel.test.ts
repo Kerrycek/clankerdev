@@ -1,7 +1,6 @@
 import {
   buildVpsReinstallPayload,
   defaultReinstallForm,
-  isVpsReinstallConfirmationSatisfied,
   vpsReinstallConfirmationTarget,
   type ReinstallForm,
 } from './VpsReinstallModel';
@@ -47,11 +46,8 @@ describe('VPS reinstall model', () => {
     ).toEqual({ os_template: 8 });
   });
 
-  it('requires typing the exact VPS hostname before submit can be enabled', () => {
-    const target = vpsReinstallConfirmationTarget({ id: 123, hostname: 'vps123.example' });
-
-    expect(isVpsReinstallConfirmationSatisfied(form({ confirmText: 'vps123.example' }), target)).toBe(true);
-    expect(isVpsReinstallConfirmationSatisfied(form({ confirmText: 'VPS123.EXAMPLE' }), target)).toBe(false);
+  it('uses the VPS hostname as the review target label', () => {
+    expect(vpsReinstallConfirmationTarget({ id: 123, hostname: 'vps123.example' })).toBe('vps123.example');
     expect(vpsReinstallConfirmationTarget({ id: 123, hostname: '' })).toBe('#123');
   });
 

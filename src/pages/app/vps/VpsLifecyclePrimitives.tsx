@@ -6,7 +6,6 @@ import { Alert } from '../../../components/ui/Alert';
 import { Button } from '../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
 import { Checkbox } from '../../../components/ui/Checkbox';
-import { Input } from '../../../components/ui/Input';
 import type { ButtonVariant } from '../../../components/ui/buttonStyles';
 import type { GateDecision } from '../../../lib/gates/types';
 
@@ -79,44 +78,6 @@ export function ActionConfirmChecklist(props: { items: ActionChecklistItem[]; cl
         />
       ))}
     </div>
-  );
-}
-
-export function DangerTypedConfirm(props: {
-  label: ReactNode;
-  help: ReactNode;
-  target: string;
-  value: string;
-  onChange: (value: string) => void;
-  disabled?: boolean;
-  placeholder?: string;
-  testId?: string;
-  ariaLabel?: string;
-  inputClassName?: string;
-  satisfied: boolean;
-  mismatchTitle: ReactNode;
-  mismatchBody: ReactNode;
-}) {
-  return (
-    <>
-      <Field label={props.label} help={props.help}>
-        <Input
-          value={props.value}
-          onChange={(e) => props.onChange(e.target.value)}
-          disabled={props.disabled}
-          placeholder={props.placeholder ?? props.target}
-          className={props.inputClassName}
-          testId={props.testId}
-          ariaLabel={props.ariaLabel}
-        />
-      </Field>
-
-      {props.value && !props.satisfied ? (
-        <Alert variant="warn" title={props.mismatchTitle}>
-          {props.mismatchBody}
-        </Alert>
-      ) : null}
-    </>
   );
 }
 

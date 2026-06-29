@@ -9,11 +9,9 @@ import type { GateDecision } from '../../../lib/gates/types';
 import {
   ActionGateAlert,
   ActionImpactSummary,
-  DangerTypedConfirm,
   ImpactItem,
 } from './VpsLifecyclePrimitives';
 import {
-  isVpsDeleteConfirmationSatisfied,
   vpsDeleteConfirmationTarget,
   vpsDeleteObjectLabel,
   type VpsDeleteConfirmationSource,
@@ -21,7 +19,6 @@ import {
 
 export type VpsDeleteDangerForm = {
   lazy: boolean;
-  confirmText: string;
 };
 
 export type VpsListDeleteConfirm = {
@@ -29,7 +26,6 @@ export type VpsListDeleteConfirm = {
   kind: 'delete';
   force: false;
   lazy: boolean;
-  confirmText: string;
 };
 
 function vpsIdFallback(vpsId: number): VpsDeleteConfirmationSource {
@@ -73,19 +69,14 @@ export function VpsDeleteDangerContent(props: {
   vps: VpsDeleteConfirmationSource;
   isAdminMode: boolean;
   lazy: boolean;
-  confirmText: string;
   onLazyChange?: (lazy: boolean) => void;
-  onConfirmTextChange: (confirmText: string) => void;
   pending?: boolean;
   gate?: GateDecision;
   onOpenTasks?: () => void;
   impactTestId?: string;
   lazyTestId: string;
-  confirmTestId: string;
 }) {
   const { t } = useI18n();
-  const target = vpsDeleteConfirmationTarget(props.vps);
-  const confirmSatisfied = isVpsDeleteConfirmationSatisfied(props.confirmText, target);
 
   return (
     <>
@@ -114,21 +105,6 @@ export function VpsDeleteDangerContent(props: {
       )}
 
       {props.gate ? <ActionGateAlert gate={props.gate} onOpenTasks={props.onOpenTasks} /> : null}
-
-      <DangerTypedConfirm
-        label={t('vps.lifecycle.delete.confirm.label')}
-        help={t('vps.lifecycle.delete.confirm.help', { target })}
-        target={target}
-        value={props.confirmText}
-        onChange={props.onConfirmTextChange}
-        disabled={props.pending}
-        inputClassName="font-mono"
-        testId={props.confirmTestId}
-        ariaLabel={t('vps.lifecycle.delete.confirm.label')}
-        satisfied={confirmSatisfied}
-        mismatchTitle={t('vps.lifecycle.delete.confirm.mismatch_title')}
-        mismatchBody={t('vps.lifecycle.delete.confirm.mismatch_body')}
-      />
     </>
   );
 }
@@ -146,8 +122,6 @@ export function VpsDeleteConfirmDialog(props: {
 }) {
   const { t } = useI18n();
   const vps = props.vps ?? vpsIdFallback(props.vpsId);
-  const target = vpsDeleteConfirmationTarget(vps);
-  const confirmSatisfied = isVpsDeleteConfirmationSatisfied(props.form.confirmText, target);
 
   const setForm = (patch: Partial<VpsDeleteDangerForm>) => {
     props.onChange((prev) => ({ ...prev, ...patch }));
@@ -162,10 +136,8 @@ export function VpsDeleteConfirmDialog(props: {
       danger
       confirmLabel={t('action.vps.delete.label')}
       confirmLoading={props.loading}
-      confirmDisabled={!confirmSatisfied}
       onCancel={props.onCancel}
       onConfirm={() => {
-        if (!confirmSatisfied) return;
         props.onConfirm({
           vpsId: props.vpsId,
           lazy: props.form.lazy,
@@ -178,13 +150,10 @@ export function VpsDeleteConfirmDialog(props: {
           vps={vps}
           isAdminMode={props.isAdminMode}
           lazy={props.form.lazy}
-          confirmText={props.form.confirmText}
           onLazyChange={(lazy) => setForm({ lazy })}
-          onConfirmTextChange={(confirmText) => setForm({ confirmText })}
           pending={props.loading}
           impactTestId="vps.list.delete_confirm.impact"
           lazyTestId="vps.list.delete_confirm.lazy"
-          confirmTestId="vps.list.delete_confirm.confirm_text"
         />
       </div>
     </ConfirmDialog>

@@ -100,7 +100,6 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.getByTestId('vps.lifecycle.boot.os_template').selectOption('7');
     await page.getByTestId('vps.lifecycle.boot.mountpoint').fill('/mnt/rescue-root');
-    await page.getByTestId('vps.lifecycle.boot.confirm').fill('vps123.example');
 
     const reqPromise = page.waitForRequest(
       (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/vpses/123/boot')
@@ -245,7 +244,6 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.getByTestId('vps.lifecycle.boot.mount_root_dataset').uncheck();
     await expect(page.getByTestId('vps.lifecycle.boot.mountpoint')).toBeDisabled();
-    await page.getByTestId('vps.lifecycle.boot.confirm').fill('vps123.example');
 
     const reqPromise = page.waitForRequest(
       (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/vpses/123/boot')
@@ -269,7 +267,6 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await expect(page.getByTestId('vps.lifecycle.reinstall.impact')).toBeVisible();
     await page.getByTestId('vps.lifecycle.reinstall.os_template').selectOption('7');
-    await page.getByTestId('vps.lifecycle.reinstall.confirm').fill('vps123.example');
 
     const reqPromise = page.waitForRequest(
       (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/vpses/123/reinstall')
@@ -296,7 +293,6 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await page.getByTestId('vps.lifecycle.reinstall.user_data.enable').check();
     await page.getByTestId('vps.lifecycle.reinstall.user_data.format').selectOption('cloudinit_script');
     await page.getByTestId('vps.lifecycle.reinstall.user_data.content').fill('  #cloud-config\npackages: []\n  ');
-    await page.getByTestId('vps.lifecycle.reinstall.confirm').fill('vps123.example');
 
     const reqPromise = page.waitForRequest(
       (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/vpses/123/reinstall')
@@ -491,7 +487,6 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.getByTestId('vps.lifecycle.template.os_template').selectOption('7');
     await page.getByTestId('vps.lifecycle.template.auto_update').check();
-    await page.getByTestId('vps.lifecycle.template.confirm').fill('vps123.example');
 
     const reqPromise = page.waitForRequest(
       (r) => r.method() === 'PUT' && r.url().includes('/api/v7.0/vpses/123')
@@ -520,7 +515,6 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await page.getByTestId('vps.lifecycle.replace.expiration').fill(expirationInput);
     await page.getByTestId('vps.lifecycle.replace.start').check();
     await page.getByTestId('vps.lifecycle.replace.reason').fill('staging replacement');
-    await page.getByTestId('vps.lifecycle.replace.confirm').fill('vps123.example');
 
     const reqPromise = page.waitForRequest(
       (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/vpses/123/replace')
@@ -633,7 +627,6 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await page.goto('/admin/vps/123/lifecycle/delete');
 
     await page.getByTestId('vps.lifecycle.delete.lazy').check();
-    await page.getByTestId('vps.lifecycle.delete.confirm').fill('vps123.example');
 
     const reqPromise = page.waitForRequest(
       (r) => r.method() === 'DELETE' && r.url().includes('/api/v7.0/vpses/123')
@@ -679,9 +672,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.goto('/app/vps/123/lifecycle/delete');
     await expect(page.getByTestId('vps.lifecycle.delete.lazy')).toHaveCount(0);
-    await expect(page.getByTestId('vps.lifecycle.delete.submit')).toHaveAttribute('aria-disabled', 'true');
-
-    await page.getByTestId('vps.lifecycle.delete.confirm').fill('vps123.example');
+    await expect(page.getByTestId('vps.lifecycle.delete.submit')).not.toHaveAttribute('aria-disabled', 'true');
 
     const reqPromise = page.waitForRequest(
       (r) => r.method() === 'DELETE' && r.url().includes('/api/v7.0/vpses/123')
@@ -904,7 +895,6 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     const submit = page.getByTestId('vps.lifecycle.delete.submit');
     await expect(submit).toBeVisible();
-    await page.getByTestId('vps.lifecycle.delete.confirm').fill('vps123.example');
     await expect(submit).toHaveAttribute('aria-disabled', 'true');
     await expect(submit).toHaveAttribute('title', 'Operation in progress');
   });

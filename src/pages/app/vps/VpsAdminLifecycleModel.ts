@@ -16,14 +16,12 @@ import {
 export type TemplateForm = {
   osTemplate: string;
   autoUpdate: boolean;
-  confirmText: string;
 };
 
 export type BootForm = {
   osTemplate: string;
   mountRootDataset: boolean;
   mountpoint: string;
-  confirmText: string;
 };
 
 export type ReplaceForm = {
@@ -31,7 +29,6 @@ export type ReplaceForm = {
   expirationDate: string;
   start: boolean;
   reason: string;
-  confirmText: string;
 };
 
 export type MigrateScheduleMode = 'now' | 'maintenance' | 'custom';
@@ -76,7 +73,6 @@ export function defaultTemplateForm(osTemplateId: number | null, autoUpdate: boo
   return {
     osTemplate: osTemplateId ? String(osTemplateId) : '',
     autoUpdate,
-    confirmText: '',
   };
 }
 
@@ -85,7 +81,6 @@ export function defaultBootForm(osTemplateId: number | null): BootForm {
     osTemplate: osTemplateId ? String(osTemplateId) : '',
     mountRootDataset: true,
     mountpoint: '/mnt/vps',
-    confirmText: '',
   };
 }
 
@@ -95,7 +90,6 @@ export function defaultReplaceForm(nodeId: number | null, now = new Date()): Rep
     expirationDate: defaultExpirationInput(now),
     start: false,
     reason: '',
-    confirmText: '',
   };
 }
 
@@ -115,14 +109,6 @@ export function defaultMigrateForm(): MigrateForm {
     reason: '',
     confirm: false,
   };
-}
-
-export function adminConfirmTarget(vps: Pick<Vps, 'id' | 'hostname'>): string {
-  return vpsHostname(vps);
-}
-
-export function isAdminConfirmSatisfied(value: string, target: string): boolean {
-  return value.trim() === target;
 }
 
 export function toIsoDateTime(value: string): string | undefined {

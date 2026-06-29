@@ -15,12 +15,10 @@ import type { GateDecision } from '../../../lib/gates/types';
 import {
   ActionImpactSummary,
   AsyncActionResult,
-  DangerTypedConfirm,
   Field,
   ImpactItem,
 } from './VpsLifecyclePrimitives';
 import {
-  isVpsReinstallConfirmationSatisfied,
   reinstallUserDataFormats,
   vpsCurrentTemplateLabel,
   vpsReinstallConfirmationTarget,
@@ -100,13 +98,12 @@ export function VpsReinstallCard(props: {
 }) {
   const { t } = useI18n();
   const target = vpsReinstallConfirmationTarget(props.vps);
-  const confirmSatisfied = isVpsReinstallConfirmationSatisfied(props.form, target);
   const tpl = selectedTemplate(props.form, props.templates);
   const userDataContent = props.form.userDataContent.trim();
   const userDataMissing = props.form.userDataEnabled && !userDataContent;
   const userDataWillRun = props.form.userDataEnabled && Boolean(userDataContent);
   const selectedTemplateSupportsCloudInit = tpl?.enable_cloud_init === true;
-  const disabled = !props.form.osTemplate || !confirmSatisfied || userDataMissing || !props.gate.allowed;
+  const disabled = !props.form.osTemplate || userDataMissing || !props.gate.allowed;
 
   const setForm = (patch: Partial<ReinstallForm>) => {
     props.onChange((prev) => ({ ...prev, ...patch }));
@@ -160,7 +157,7 @@ export function VpsReinstallCard(props: {
           <Field label={t('vps.lifecycle.field.os_template')} help={t('vps.lifecycle.reinstall.os_template_help')}>
             <Select
               value={props.form.osTemplate}
-              onChange={(e) => setForm({ osTemplate: e.target.value, confirmText: '' })}
+              onChange={(e) => setForm({ osTemplate: e.target.value })}
               disabled={props.pending || props.templatesLoading}
               testId="vps.lifecycle.reinstall.os_template"
             >
@@ -247,21 +244,6 @@ export function VpsReinstallCard(props: {
             )}
           </div>
         </details>
-
-        <DangerTypedConfirm
-          label={t('vps.lifecycle.reinstall.confirm.label')}
-          help={t('vps.lifecycle.reinstall.confirm.help', { target })}
-          target={target}
-          value={props.form.confirmText}
-          onChange={(confirmText) => setForm({ confirmText })}
-          disabled={props.pending}
-          inputClassName="font-mono"
-          testId="vps.lifecycle.reinstall.confirm"
-          ariaLabel={t('vps.lifecycle.reinstall.confirm.label')}
-          satisfied={confirmSatisfied}
-          mismatchTitle={t('vps.lifecycle.reinstall.confirm.mismatch_title')}
-          mismatchBody={t('vps.lifecycle.reinstall.confirm.mismatch_body')}
-        />
 
         <AsyncActionResult
           succeeded={props.succeeded}
