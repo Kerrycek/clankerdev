@@ -226,7 +226,7 @@ export function IpAddressesPage() {
           location: locationId,
           version: versionNum,
           assignedToInterface,
-          order,
+          order: order === 'desc' ? undefined : order,
           purpose: 'vps',
           includes: 'network,network_interface,vps,user',
         })

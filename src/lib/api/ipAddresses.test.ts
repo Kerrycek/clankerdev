@@ -38,6 +38,7 @@ describe('network address API wrappers', () => {
     const parsed = new URL(url);
     expect(parsed.pathname).toBe('/v7.0/ip_addresses');
     expect(parsed.searchParams.get('ip_address[purpose]')).toBe('vps');
+    expect(parsed.searchParams.has('ip_address[order]')).toBe(false);
     expect(parsed.searchParams.get('_meta[includes]')).toBe('network,network_interface,vps,user');
   });
 

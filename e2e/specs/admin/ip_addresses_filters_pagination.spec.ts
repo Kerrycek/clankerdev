@@ -7,6 +7,7 @@ test('admin ip addresses: filters + keyset pagination (from_id)', async ({ page 
 
   let seenFilterAddr: string | null = null;
   let seenPurpose: string | null = null;
+  let seenOrder: string | null = null;
 
   await installHaveApiMock(page, {
     user: { id: 1, login: 'admin', level: 100 },
@@ -20,6 +21,7 @@ test('admin ip addresses: filters + keyset pagination (from_id)', async ({ page 
         const vps = ctx.searchParams.get('ip_address[vps]');
         const version = ctx.searchParams.get('ip_address[version]');
         seenPurpose = ctx.searchParams.get('ip_address[purpose]');
+        seenOrder = ctx.searchParams.get('ip_address[order]');
 
         if (addr) seenFilterAddr = addr;
 
@@ -54,6 +56,7 @@ test('admin ip addresses: filters + keyset pagination (from_id)', async ({ page 
 
   await expect(page.getByTestId('admin.ip_addresses.row.125')).toBeVisible();
   await expect.poll(() => seenPurpose).toBe('vps');
+  expect(seenOrder).toBeNull();
   await expect(page.getByTestId('admin.ip_addresses.row.125')).toHaveAttribute('data-row-variant', 'warn');
   await expect(page.getByTestId('admin.ip_addresses.row.125.dot')).toBeVisible();
   await expect(page.getByTestId('admin.ip_addresses.row.125')).toContainText('Incidents');
