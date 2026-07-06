@@ -33,10 +33,11 @@ export function RouteProvidersLayout() {
   // Re-render on navigation so auth/login/logout URLs always use the full browser path,
   // including any configured router basename.
   const location = useLocation();
+  const shouldSyncSettings = shouldSyncUiSettings(location.pathname);
 
   return (
-    <AuthProvider nextPath={currentRouterPath(location)}>
-      <UiSettingsProvider serverSyncEnabled={shouldSyncUiSettings(location.pathname)}>
+    <AuthProvider nextPath={currentRouterPath(location)} redirectExpiredSessions={shouldSyncSettings}>
+      <UiSettingsProvider serverSyncEnabled={shouldSyncSettings}>
         <ThemeProvider>
           <I18nProvider>
             <DocumentTitleManager />

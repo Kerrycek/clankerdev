@@ -9,6 +9,7 @@ const runtimeConfig = vi.hoisted(() => ({
 
 const authProviderProps = vi.hoisted(() => ({
   nextPath: '',
+  redirectExpiredSessions: undefined as boolean | undefined,
 }));
 
 vi.mock('../app/config', () => ({
@@ -16,8 +17,17 @@ vi.mock('../app/config', () => ({
 }));
 
 vi.mock('../app/auth', () => ({
-  AuthProvider: ({ children, nextPath }: { children: React.ReactNode; nextPath: string }) => {
+  AuthProvider: ({
+    children,
+    nextPath,
+    redirectExpiredSessions,
+  }: {
+    children: React.ReactNode;
+    nextPath: string;
+    redirectExpiredSessions?: boolean;
+  }) => {
     authProviderProps.nextPath = nextPath;
+    authProviderProps.redirectExpiredSessions = redirectExpiredSessions;
     return <>{children}</>;
   },
 }));
@@ -100,6 +110,20 @@ describe('RouteProvidersLayout', () => {
 
     renderAt('/outages');
     expect(screen.getByTestId('ui-settings-provider')).toHaveAttribute('data-server-sync', 'false');
+  });
+
+  it('does not hard-redirect expired sessions on public routes', () => {
+    runtimeConfig.routerBasename = '';
+
+    renderAt('/');
+    expect(authProviderProps.redirectExpiredSessions).toBe(false);
+  });
+
+  it('keeps expired-session redirects enabled on authenticated routes', () => {
+    runtimeConfig.routerBasename = '';
+
+    renderAt('/app/vps');
+    expect(authProviderProps.redirectExpiredSessions).toBe(true);
   });
 
   it('keeps the public route gate correct when a router basename is configured', () => {

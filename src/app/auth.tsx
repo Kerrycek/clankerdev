@@ -64,9 +64,14 @@ function sessionExpiredRedirectPath(routerBasename: string): string {
   return withRouterBasename('/?session=expired', routerBasename);
 }
 
-export function AuthProvider(props: { children: React.ReactNode; nextPath: string }) {
+export function AuthProvider(props: {
+  children: React.ReactNode;
+  nextPath: string;
+  redirectExpiredSessions?: boolean;
+}) {
   const cfg = getRuntimeConfig();
   const [sessionExpired, setSessionExpired] = useState(false);
+  const redirectExpiredSessions = props.redirectExpiredSessions ?? true;
 
   const enabled = cfg.auth.kind !== 'none';
 
@@ -80,6 +85,11 @@ export function AuthProvider(props: { children: React.ReactNode; nextPath: strin
       (window as any).vpsAdmin.sessionToken = undefined;
     }
 
+    if (!redirectExpiredSessions) {
+      setSessionExpired(false);
+      return;
+    }
+
     setSessionExpired(true);
     markSessionExpiredNotice();
 
@@ -88,7 +98,7 @@ export function AuthProvider(props: { children: React.ReactNode; nextPath: strin
     if (current !== target) {
       hardReplace(target);
     }
-  }, []);
+  }, [redirectExpiredSessions]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -167,6 +177,17 @@ export function AuthProvider(props: { children: React.ReactNode; nextPath: strin
       // We rely on HTTP status which is surfaced on HaveApiError.
       if (err instanceof HaveApiError) {
         if (isExpiredSessionError(err)) {
+          if (!redirectExpiredSessions) {
+            return {
+              status: 'anonymous',
+              user: undefined,
+              role: 'unknown',
+              canUseAdminUi: false,
+              loginUrl,
+              logoutUrl,
+            };
+          }
+
           return {
             status: 'expired',
             user: undefined,
@@ -212,7 +233,7 @@ export function AuthProvider(props: { children: React.ReactNode; nextPath: strin
       loginUrl,
       logoutUrl,
     };
-  }, [enabled, q.isLoading, q.isError, q.data, q.error, sessionExpired, loginUrl, logoutUrl]);
+  }, [enabled, q.isLoading, q.isError, q.data, q.error, sessionExpired, loginUrl, logoutUrl, redirectExpiredSessions]);
 
   return <AuthContext.Provider value={value}>{props.children}</AuthContext.Provider>;
 }
