@@ -2,9 +2,9 @@
   "version": 1,
   "root": "src",
   "limits": {
-    "asAny": 1180,
-    "filesOver500": 57,
-    "filesOver1000": 11
+    "asAny": 1156,
+    "filesOver500": 53,
+    "filesOver1000": 9
   },
   "note": "Structural debt ratchet baseline. Lower counts are allowed; any new or expanded over-budget file, or added as-any cast, fails audit:structural.",
   "files": {
@@ -312,10 +312,6 @@
       "lines": 329,
       "asAny": 8
     },
-    "src/pages/app/admin/IncomingPaymentsPage.tsx": {
-      "lines": 661,
-      "asAny": 0
-    },
     "src/pages/app/admin/IpAddressDetailPage.tsx": {
       "lines": 763,
       "asAny": 24
@@ -376,10 +372,6 @@
       "lines": 603,
       "asAny": 0
     },
-    "src/pages/app/admin/NodesPage.tsx": {
-      "lines": 1135,
-      "asAny": 15
-    },
     "src/pages/app/admin/RequestDetailPage.tsx": {
       "lines": 367,
       "asAny": 39
@@ -391,10 +383,6 @@
     "src/pages/app/admin/user/AdminUserHistoryPage.tsx": {
       "lines": 918,
       "asAny": 0
-    },
-    "src/pages/app/admin/UsersPage.tsx": {
-      "lines": 1096,
-      "asAny": 1
     },
     "src/pages/app/datasets/DatasetExpansionPage.tsx": {
       "lines": 635,
@@ -547,10 +535,6 @@
     "src/pages/public/OutagesPage.tsx": {
       "lines": 209,
       "asAny": 3
-    },
-    "src/pages/public/OverviewPage.tsx": {
-      "lines": 502,
-      "asAny": 8
     },
     "src/pages/public/RegistrationCorrectionPage.test.tsx": {
       "lines": 164,

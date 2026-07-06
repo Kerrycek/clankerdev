@@ -11,6 +11,22 @@ export function isOpenUserSession(session: UserSession): boolean {
 }
 
 
+export const USER_SESSION_CLOSE_CONFIRMATION = 'CLOSE';
+
+export function isUserSessionAccessToken(session: UserSession): boolean {
+  return (
+    session.auth_type === 'token' ||
+    typeof session.token_fragment === 'string' ||
+    typeof session.token_lifetime === 'string'
+  );
+}
+
+export function userSessionCloseRequiresTypedConfirmation(session: UserSession | null | undefined): boolean {
+  if (!session) return false;
+  return Boolean(session.current || isUserSessionAccessToken(session));
+}
+
+
 export function userSessionDisplayLabel(session: UserSession): string {
   const label = String(session.label ?? '').trim();
   return label || `#${session.id}`;

@@ -35,8 +35,13 @@ export function IncomingPaymentsListContent(props: {
   pagination: PaginationController;
   pageCursor: number | null;
   canNext: boolean;
+  selectedIds?: ReadonlySet<number>;
+  onToggleSelected?: (id: number, selected: boolean) => void;
+  onToggleAllVisible?: (selected: boolean) => void;
 }) {
   const { t } = useI18n();
+  const selectedIds = props.selectedIds ?? new Set<number>();
+  const allVisibleSelected = props.rows.length > 0 && props.rows.every((row) => selectedIds.has(row.id));
 
   return (
     <>
@@ -59,6 +64,14 @@ export function IncomingPaymentsListContent(props: {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(p.id)}
+                      onChange={(event) => props.onToggleSelected?.(p.id, event.target.checked)}
+                      aria-label={t('payments.incoming.bulk.select_row', { id: p.id })}
+                      data-testid={`admin.payments.incoming.bulk.select.${p.id}.mobile`}
+                      className="h-4 w-4 rounded border-border"
+                    />
                     <StatusDot variant={dotVar} testId={`admin.payments.incoming.row.${p.id}.dot`} />
                     <div className="text-sm font-semibold">#{p.id}</div>
                     <Badge variant={incomingPaymentBadgeVariant(st)}>{t(incomingPaymentStateLabelKey(st))}</Badge>
@@ -136,6 +149,16 @@ export function IncomingPaymentsListContent(props: {
       >
         <thead>
           <tr className="border-b border-border text-left text-xs text-muted">
+            <th className="px-4 py-2">
+              <input
+                type="checkbox"
+                checked={allVisibleSelected}
+                onChange={(event) => props.onToggleAllVisible?.(event.target.checked)}
+                aria-label={t('payments.incoming.bulk.select_visible')}
+                data-testid="admin.payments.incoming.bulk.select_all.desktop"
+                className="h-4 w-4 rounded border-border"
+              />
+            </th>
             <th className="px-4 py-2">{t('common.id')}</th>
             <th className="px-4 py-2">{t('common.date')}</th>
             <th className="px-4 py-2">{t('payments.incoming.list.col.amount')}</th>
@@ -173,6 +196,16 @@ export function IncomingPaymentsListContent(props: {
                 variant={rowVar}
                 className="border-b border-border/60 last:border-b-0"
               >
+                <td className="px-4 py-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(p.id)}
+                    onChange={(event) => props.onToggleSelected?.(p.id, event.target.checked)}
+                    aria-label={t('payments.incoming.bulk.select_row', { id: p.id })}
+                    data-testid={`admin.payments.incoming.bulk.select.${p.id}`}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                </td>
                 <td className="px-4 py-2">
                   <div className="flex items-center gap-2">
                     <StatusDot variant={dotVar} testId={`admin.payments.incoming.row.${p.id}.dot`} />

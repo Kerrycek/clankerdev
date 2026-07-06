@@ -1,12 +1,21 @@
 import React from 'react';
 
 import { useI18n } from '../../app/i18n';
+import type { UserSession } from '../../lib/api/userDossier';
+import { formatDateTime } from '../../lib/time';
 
 import { Alert } from '../ui/Alert';
 import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input } from '../ui/Input';
 import { Modal } from '../ui/Modal';
+
+import {
+  USER_SESSION_CLOSE_CONFIRMATION,
+  isUserSessionAccessToken,
+  userSessionCloseRequiresTypedConfirmation,
+  userSessionDisplayLabel,
+} from './UserSessionsModel';
 
 export function UserSessionRenameDialog(props: {
   open: boolean;
@@ -62,25 +71,61 @@ export function UserSessionRenameDialog(props: {
 }
 
 export function UserSessionCloseDialog(props: {
-  open: boolean;
+  session: UserSession | null;
+  confirmationValue: string;
   closing: boolean;
   testIdPrefix: string;
+  onConfirmationValueChange: (value: string) => void;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
   const { t } = useI18n();
+  const session = props.session;
+  const requiresTypedConfirmation = userSessionCloseRequiresTypedConfirmation(session);
+  const isAccessToken = session ? isUserSessionAccessToken(session) : false;
 
   return (
     <ConfirmDialog
-      open={props.open}
+      open={session !== null}
       onCancel={props.onCancel}
       title={t('profile.sessions.close.title')}
       description={t('profile.sessions.close.description')}
       confirmLabel={t('profile.sessions.action.close')}
       danger
       confirmLoading={props.closing}
+      confirmationText={requiresTypedConfirmation ? USER_SESSION_CLOSE_CONFIRMATION : undefined}
+      confirmationValue={props.confirmationValue}
+      onConfirmationValueChange={props.onConfirmationValueChange}
       onConfirm={props.onConfirm}
       testId={`${props.testIdPrefix}.close_dialog`}
-    />
+    >
+      {session ? (
+        <div className="space-y-3">
+          <div className="rounded-md border border-border bg-surface-2 p-3 text-sm text-muted" data-testid={`${props.testIdPrefix}.close_dialog.review`}>
+            <div>{t('profile.sessions.close.review_label', { label: userSessionDisplayLabel(session) })}</div>
+            <div className="mt-1">
+              {t('profile.sessions.close.review_last', {
+                last: session.last_request_at ? formatDateTime(session.last_request_at) : '—',
+              })}
+            </div>
+            {session.token_fragment ? (
+              <div className="mt-1 font-mono text-xs">{t('profile.sessions.close.review_fragment', { fragment: session.token_fragment })}</div>
+            ) : null}
+          </div>
+
+          {isAccessToken ? (
+            <Alert variant="warn" title={t('profile.sessions.close.token_warning.title')}>
+              {t('profile.sessions.close.token_warning.body')}
+            </Alert>
+          ) : null}
+
+          {session.current ? (
+            <Alert variant="danger" title={t('profile.sessions.close.current_warning.title')}>
+              {t('profile.sessions.close.current_warning.body')}
+            </Alert>
+          ) : null}
+        </div>
+      ) : null}
+    </ConfirmDialog>
   );
 }

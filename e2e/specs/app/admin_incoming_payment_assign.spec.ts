@@ -98,7 +98,11 @@ test('admin incoming payment: assign to user', async ({ page }) => {
 
   await page.getByTestId('admin.payments.incoming.state.select').selectOption('ignored');
   await expect(page.getByTestId('admin.payments.incoming.state.review.warning')).toContainText(/Ignored payments leave/);
+  await expect(page.getByTestId('admin.payments.incoming.state.review.confirm_required')).toContainText(/Type IGNORE/);
+  await expect(page.getByTestId('admin.payments.incoming.state.save')).toBeDisabled();
+  await page.getByTestId('admin.payments.incoming.state.confirm').fill('IGNORE');
   await expect(page.getByTestId('admin.payments.incoming.state.save')).toBeEnabled();
+  await expect(page.getByTestId('admin.payments.incoming.reconciliation.detail')).toContainText(/Reconciliation review/);
 
   await expect(page.getByTestId('admin.payments.incoming.assign.open')).toBeEnabled();
   await page.getByTestId('admin.payments.incoming.assign.open').click();
@@ -116,6 +120,6 @@ test('admin incoming payment: assign to user', async ({ page }) => {
 
   // After refetch, the user should be visible and the assign button disabled.
   await expect(page.getByTestId('admin.payments.incoming.detail.300.state')).toHaveText(/Processed/);
-  await expect(page.getByText('alice')).toBeVisible();
+  await expect(page.getByTestId('admin.payments.incoming.reconciliation.detail.assignment')).toContainText('alice');
   await expect(page.getByTestId('admin.payments.incoming.assign.open')).toBeDisabled();
 });

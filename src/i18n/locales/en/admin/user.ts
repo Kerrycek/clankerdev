@@ -130,6 +130,8 @@ export const enAdmin_user = {
   "admin.user.payments.review.target": "Target account",
   "admin.user.payments.settings.validation.no_changes": "Change at least one payment setting before saving",
   "admin.user.payments.history.col.accounted_by": "Accounted by",
+  "admin.user.payments.history.col.source": "Source",
+  "admin.user.payments.history.source.manual": "Manual",
   "admin.user.payments.settings.edit": "Edit payment settings",
   "admin.user.payments.settings.field.monthly_payment": "Monthly payment",
   "admin.user.payments.settings.field.paid_until": "Paid until",

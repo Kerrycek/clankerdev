@@ -14,7 +14,7 @@ export function UserSessionsList(props: {
   sessions: readonly UserSession[];
   testIdPrefix: string;
   onRename: (session: UserSession) => void;
-  onClose: (sessionId: number) => void;
+  onClose: (session: UserSession) => void;
 }) {
   const { t } = useI18n();
   const prefix = props.testIdPrefix;
@@ -157,7 +157,7 @@ function SessionRowActions(props: {
   testIdPrefix: string;
   align?: 'left' | 'right';
   onRename: (session: UserSession) => void;
-  onClose: (sessionId: number) => void;
+  onClose: (session: UserSession) => void;
 }) {
   const { t } = useI18n();
   const className = props.align === 'right' ? 'flex justify-end gap-2' : 'mt-3 flex flex-wrap items-center gap-2';
@@ -177,7 +177,7 @@ function SessionRowActions(props: {
         <Button
           variant="danger"
           size="sm"
-          onClick={() => props.onClose(props.session.id)}
+          onClick={() => props.onClose(props.session)}
           testId={`${props.testIdPrefix}.row.${props.session.id}.close`}
         >
           {t('profile.sessions.action.close')}

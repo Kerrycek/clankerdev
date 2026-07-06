@@ -116,7 +116,8 @@ export function UserSessionsPanel(props: {
   const [renamingSession, setRenamingSession] = useState<UserSession | null>(null);
   const [sessionLabel, setSessionLabel] = useState('');
   const [sessionLabelError, setSessionLabelError] = useState<string | null>(null);
-  const [closeSessionId, setCloseSessionId] = useState<number | null>(null);
+  const [closeSession, setCloseSession] = useState<UserSession | null>(null);
+  const [closeConfirmation, setCloseConfirmation] = useState('');
 
   const renameM = useMutation({
     mutationFn: async () => {
@@ -137,7 +138,8 @@ export function UserSessionsPanel(props: {
   const closeM = useMutation({
     mutationFn: async (id: number) => closeUserSession(id),
     onSuccess: async () => {
-      setCloseSessionId(null);
+      setCloseSession(null);
+      setCloseConfirmation('');
       await qc.invalidateQueries({ queryKey: ['user_sessions'] });
     },
   });
@@ -209,7 +211,7 @@ export function UserSessionsPanel(props: {
           ) : sessions.length === 0 ? (
             <SessionsEmptyState hasFilters={hasFilters} testIdPrefix={prefix} onClearFilters={clearFilters} />
           ) : (
-            <UserSessionsList sessions={sessions} testIdPrefix={prefix} onRename={startRename} onClose={setCloseSessionId} />
+            <UserSessionsList sessions={sessions} testIdPrefix={prefix} onRename={startRename} onClose={setCloseSession} />
           )}
         </CardBody>
 
@@ -243,16 +245,19 @@ export function UserSessionsPanel(props: {
       />
 
       <UserSessionCloseDialog
-        open={closeSessionId !== null}
+        session={closeSession}
+        confirmationValue={closeConfirmation}
         closing={closeM.isPending}
         testIdPrefix={prefix}
+        onConfirmationValueChange={setCloseConfirmation}
         onCancel={() => {
           if (closeM.isPending) return;
-          setCloseSessionId(null);
+          setCloseSession(null);
+          setCloseConfirmation('');
         }}
         onConfirm={() => {
-          if (!closeSessionId) return;
-          closeM.mutate(closeSessionId);
+          if (!closeSession) return;
+          closeM.mutate(closeSession.id);
         }}
       />
     </>

@@ -3,13 +3,16 @@ import { describe, expect, it } from 'vitest';
 import type { UserSession } from '../../lib/api/userDossier';
 
 import {
+  USER_SESSION_CLOSE_CONFIRMATION,
   buildUserSessionSummary,
   formatUserSessionPrimaryIp,
   filterUserSessions,
   isOpenUserSession,
+  isUserSessionAccessToken,
   isUserSessionStateFilter,
   looksLikeSessionIpSearch,
   sessionSearchHaystack,
+  userSessionCloseRequiresTypedConfirmation,
   userSessionDisplayLabel,
 } from './UserSessionsModel';
 
@@ -58,6 +61,16 @@ describe('UserSessionsModel', () => {
     expect(userSessionDisplayLabel({ id: 99 })).toBe('#99');
     expect(formatUserSessionPrimaryIp(sessions[0]!)).toBe('203.0.113.10');
     expect(formatUserSessionPrimaryIp({ id: 100 })).toBe('—');
+  });
+
+
+
+  it('requires explicit confirmation for current sessions and API tokens', () => {
+    expect(USER_SESSION_CLOSE_CONFIRMATION).toBe('CLOSE');
+    expect(isUserSessionAccessToken(sessions[1]!)).toBe(true);
+    expect(userSessionCloseRequiresTypedConfirmation(sessions[0]!)).toBe(true);
+    expect(userSessionCloseRequiresTypedConfirmation(sessions[1]!)).toBe(true);
+    expect(userSessionCloseRequiresTypedConfirmation({ id: 20, auth_type: 'oauth2' })).toBe(false);
   });
 
   it('builds session visibility summaries', () => {

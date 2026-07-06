@@ -100,10 +100,12 @@ export async function fetchPublicNodeStatus() {
   return { ...res, data: expectArray<PublicNodeStatus>(res.data, 'nodes/public_status') };
 }
 
-export async function fetchOutages() {
+export async function fetchOutages(opts?: { limit?: number }) {
   const res = await haveApiCall<Outage[]>({
     method: 'GET',
     path: '/outages',
+    namespace: 'outage',
+    params: opts?.limit ? { limit: opts.limit } : undefined,
   });
   return { ...res, data: expectArray<Outage>(res.data, 'outages') };
 }
@@ -142,10 +144,12 @@ export async function fetchOutageUpdates(outageId: number) {
   return { ...res, data: expectArray<OutageUpdate>(res.data, 'outage_updates') };
 }
 
-export async function fetchNews() {
+export async function fetchNews(opts?: { limit?: number }) {
   const res = await haveApiCall<NewsLog[]>({
     method: 'GET',
     path: '/news_logs',
+    namespace: 'news_log',
+    params: opts?.limit ? { limit: opts.limit } : undefined,
   });
   return { ...res, data: expectArray<NewsLog>(res.data, 'news_logs') };
 }

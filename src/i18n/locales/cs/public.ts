@@ -23,6 +23,9 @@ export const csPublic = {
   'public.overview.outage_alert.link': 'Zobrazit detail',
   'public.overview.nominal.title': 'Vše běží normálně',
   'public.overview.nominal.body': 'Žádné probíhající výpadky.',
+  'public.overview.checking.title': 'Kontroluji aktuální stav',
+  'public.overview.checking.body': 'Podrobnosti stavu se načítají po prvním vykreslení stránky.',
+
   'public.overview.ipv4_critical.title': 'Dochází IPv4 adresy',
   'public.overview.ipv4_critical.body':
     'Dochází veřejné IPv4 adresy (volných: {count}). Nové VPS nemusí dostat IPv4 adresu.',

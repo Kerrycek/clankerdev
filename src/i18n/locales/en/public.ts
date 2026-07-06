@@ -23,6 +23,9 @@ export const enPublic = {
   'public.overview.outage_alert.link': 'View details',
   'public.overview.nominal.title': 'All systems nominal',
   'public.overview.nominal.body': 'No ongoing outages reported.',
+  'public.overview.checking.title': 'Checking current status',
+  'public.overview.checking.body': 'Status details are loading after the first paint.',
+
   'public.overview.ipv4_critical.title': 'IPv4 addresses running low',
   'public.overview.ipv4_critical.body': 'Public IPv4 pool is running low ({count} free). New VPS may not get an IPv4 address.',
   'public.overview.ipv4_warn.hint': 'IPv4 is getting low — prefer IPv6.',

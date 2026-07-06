@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 
+import { useAppMode } from '../../../../app/appMode';
 import { useI18n } from '../../../../app/i18n';
 import { useToasts } from '../../../../app/toasts';
 
@@ -46,6 +47,7 @@ import { ManualPaymentReviewCard, PaymentSettingsReviewCard } from './AdminUserP
 import { useAdminUserContext } from './AdminUserLayout';
 
 export function AdminUserPaymentsPage() {
+  const { basePath } = useAppMode();
   const { t, tc } = useI18n();
   const toasts = useToasts();
   const qc = useQueryClient();
@@ -300,6 +302,7 @@ export function AdminUserPaymentsPage() {
                         <th className="px-3 py-2">{t('payments.my.history.col.created')}</th>
                         <th className="px-3 py-2 text-right">{t('payments.my.history.col.amount')}</th>
                         <th className="px-3 py-2">{t('payments.my.history.col.period')}</th>
+                        <th className="px-3 py-2">{t('admin.user.payments.history.col.source')}</th>
                         <th className="px-3 py-2">{t('admin.user.payments.history.col.accounted_by')}</th>
                       </tr>
                     </thead>
@@ -311,6 +314,21 @@ export function AdminUserPaymentsPage() {
                           <td className="px-3 py-2 text-xs text-muted">
                             <span className="tabular-nums">{formatDateTime(p.from_date)}</span> →{' '}
                             <span className="tabular-nums">{formatDateTime(p.to_date)}</span>
+                          </td>
+                          <td className="px-3 py-2 text-xs text-muted">
+                            {p.incoming_payment?.id ? (
+                              <Link
+                                className="text-accent hover:underline"
+                                to={`${basePath}/payments/incoming/${p.incoming_payment.id}`}
+                                data-testid={`admin.user.payments.history.row.${p.id}.source`}
+                              >
+                                #{p.incoming_payment.id}
+                              </Link>
+                            ) : (
+                              <span className="text-faint" data-testid={`admin.user.payments.history.row.${p.id}.source`}>
+                                {t('admin.user.payments.history.source.manual')}
+                              </span>
+                            )}
                           </td>
                           <td className="px-3 py-2 text-xs text-muted">
                             <span className="tabular-nums">{resourceRefLabel(p.accounted_by)}</span>

@@ -8,6 +8,10 @@ import { useI18n } from '../../app/i18n';
 import { clsx } from '../ui/clsx';
 import { withRouterBasename, withSameOriginNextParam } from '../../lib/routerPaths';
 
+type IdleCapableWindow = Window & {
+  requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+  cancelIdleCallback?: (handle: number) => void;
+};
 
 const LazyContextualHelpPanel = React.lazy(async () => {
   const mod = await import('./ContextualHelpPanel');
@@ -15,6 +19,31 @@ const LazyContextualHelpPanel = React.lazy(async () => {
 });
 
 function DeferredPublicHelpPanel(props: { pathname: string; scope: 'public' }) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (ready) return undefined;
+    if (typeof window === 'undefined') {
+      setReady(true);
+      return undefined;
+    }
+
+    const win = window as IdleCapableWindow;
+    let idleHandle: number | undefined;
+    let timerHandle: number | undefined;
+
+    const show = () => setReady(true);
+    if (win.requestIdleCallback) idleHandle = win.requestIdleCallback(show, { timeout: 1500 });
+    else timerHandle = window.setTimeout(show, 250);
+
+    return () => {
+      if (idleHandle !== undefined) win.cancelIdleCallback?.(idleHandle);
+      if (timerHandle !== undefined) window.clearTimeout(timerHandle);
+    };
+  }, [ready]);
+
+  if (!ready) return null;
+
   return (
     <React.Suspense fallback={null}>
       <LazyContextualHelpPanel pathname={props.pathname} scope={props.scope} />

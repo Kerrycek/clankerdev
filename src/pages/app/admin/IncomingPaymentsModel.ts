@@ -149,16 +149,44 @@ export type IncomingPaymentStateReview = {
   badgeVariant: 'neutral' | 'ok' | 'warn' | 'danger' | 'info';
   impactKey: string;
   warningKey?: string;
+  requiresConfirmation: boolean;
+  confirmationTarget?: string;
+  confirmationMatches: boolean;
 };
+
+function normalizeConfirmation(value: string | undefined | null): string {
+  return String(value ?? '').trim().toUpperCase();
+}
+
+function incomingPaymentStateConfirmationTarget(input: {
+  nextState: KnownIncomingPaymentState | '';
+  hasAssignedUser: boolean;
+}): string | undefined {
+  if (input.nextState === 'ignored') return 'IGNORE';
+  if (input.nextState === 'processed' && !input.hasAssignedUser) return 'PROCESSED';
+  return undefined;
+}
+
+function confirmationFields(target: string | undefined, confirmationText: string | undefined | null) {
+  const confirmationTarget = target;
+  const requiresConfirmation = Boolean(confirmationTarget);
+  const confirmationMatches = !confirmationTarget || normalizeConfirmation(confirmationText) === confirmationTarget;
+  return { confirmationTarget, requiresConfirmation, confirmationMatches };
+}
 
 export function buildIncomingPaymentStateReview(input: {
   payment: IncomingPayment | null | undefined;
   nextState: IncomingPaymentState | '';
+  confirmationText?: string;
 }): IncomingPaymentStateReview {
   const currentState = normalizeIncomingPaymentState(input.payment?.state);
   const nextState = normalizeIncomingPaymentState(input.nextState) || currentState;
   const hasChange = Boolean(currentState && nextState && currentState !== nextState);
   const hasAssignedUser = Boolean(input.payment?.user);
+  const confirmation = confirmationFields(
+    incomingPaymentStateConfirmationTarget({ nextState, hasAssignedUser }),
+    input.confirmationText
+  );
 
   if (!input.payment) {
     return {
@@ -168,6 +196,7 @@ export function buildIncomingPaymentStateReview(input: {
       canSubmit: false,
       badgeVariant: 'neutral',
       impactKey: 'payments.incoming.review.state.no_payment',
+      ...confirmation,
     };
   }
 
@@ -179,6 +208,7 @@ export function buildIncomingPaymentStateReview(input: {
       canSubmit: false,
       badgeVariant: 'neutral',
       impactKey: 'payments.incoming.review.state.no_change',
+      ...confirmation,
     };
   }
 
@@ -187,12 +217,13 @@ export function buildIncomingPaymentStateReview(input: {
       currentState,
       nextState,
       hasChange,
-      canSubmit: true,
+      canSubmit: confirmation.confirmationMatches,
       badgeVariant: hasAssignedUser ? 'ok' : 'warn',
       impactKey: hasAssignedUser
         ? 'payments.incoming.review.state.impact.processed'
         : 'payments.incoming.review.state.impact.processed_without_user',
       warningKey: hasAssignedUser ? undefined : 'payments.incoming.review.state.warning.processed_without_user',
+      ...confirmation,
     };
   }
 
@@ -201,10 +232,11 @@ export function buildIncomingPaymentStateReview(input: {
       currentState,
       nextState,
       hasChange,
-      canSubmit: true,
+      canSubmit: confirmation.confirmationMatches,
       badgeVariant: 'warn',
       impactKey: 'payments.incoming.review.state.impact.ignored',
       warningKey: 'payments.incoming.review.state.warning.ignored',
+      ...confirmation,
     };
   }
 
@@ -216,6 +248,7 @@ export function buildIncomingPaymentStateReview(input: {
       canSubmit: true,
       badgeVariant: 'danger',
       impactKey: 'payments.incoming.review.state.impact.unmatched',
+      ...confirmation,
     };
   }
 
@@ -227,6 +260,7 @@ export function buildIncomingPaymentStateReview(input: {
       canSubmit: true,
       badgeVariant: 'warn',
       impactKey: 'payments.incoming.review.state.impact.queued',
+      ...confirmation,
     };
   }
 
@@ -237,5 +271,151 @@ export function buildIncomingPaymentStateReview(input: {
     canSubmit: false,
     badgeVariant: 'neutral',
     impactKey: 'payments.incoming.review.state.invalid',
+    ...confirmation,
   };
+}
+
+export type IncomingPaymentReconciliationSummary = {
+  total: number;
+  queued: number;
+  unmatched: number;
+  processed: number;
+  ignored: number;
+  unknown: number;
+  assigned: number;
+  unassigned: number;
+  needsReview: number;
+  processedWithoutUser: number;
+};
+
+export function buildIncomingPaymentsReconciliationSummary(rows: IncomingPayment[]): IncomingPaymentReconciliationSummary {
+  const summary: IncomingPaymentReconciliationSummary = {
+    total: rows.length,
+    queued: 0,
+    unmatched: 0,
+    processed: 0,
+    ignored: 0,
+    unknown: 0,
+    assigned: 0,
+    unassigned: 0,
+    needsReview: 0,
+    processedWithoutUser: 0,
+  };
+
+  for (const row of rows) {
+    const state = normalizeIncomingPaymentState(row.state);
+    const assigned = Boolean(row.user);
+
+    if (assigned) summary.assigned += 1;
+    else summary.unassigned += 1;
+
+    if (state === 'queued') summary.queued += 1;
+    else if (state === 'unmatched') summary.unmatched += 1;
+    else if (state === 'processed') summary.processed += 1;
+    else if (state === 'ignored') summary.ignored += 1;
+    else summary.unknown += 1;
+
+    if (state === 'queued' || state === 'unmatched') summary.needsReview += 1;
+    if (state === 'processed' && !assigned) summary.processedWithoutUser += 1;
+  }
+
+  return summary;
+}
+
+export type IncomingPaymentStateDescriptor = {
+  state: KnownIncomingPaymentState | '';
+  badgeVariant: 'neutral' | 'ok' | 'warn' | 'danger' | 'info';
+  explanationKey: string;
+  nextActionKey: string;
+  warningKey?: string;
+};
+
+export function describeIncomingPaymentState(input: {
+  state?: IncomingPaymentState | null;
+  user?: ResourceRef | null;
+}): IncomingPaymentStateDescriptor {
+  const state = normalizeIncomingPaymentState(input.state);
+  const hasAssignedUser = Boolean(input.user);
+
+  if (state === 'queued') {
+    return {
+      state,
+      badgeVariant: 'warn',
+      explanationKey: 'payments.incoming.reconcile.state.queued.explanation',
+      nextActionKey: 'payments.incoming.reconcile.state.queued.next',
+    };
+  }
+
+  if (state === 'unmatched') {
+    return {
+      state,
+      badgeVariant: 'danger',
+      explanationKey: 'payments.incoming.reconcile.state.unmatched.explanation',
+      nextActionKey: 'payments.incoming.reconcile.state.unmatched.next',
+    };
+  }
+
+  if (state === 'processed') {
+    return {
+      state,
+      badgeVariant: hasAssignedUser ? 'ok' : 'warn',
+      explanationKey: hasAssignedUser
+        ? 'payments.incoming.reconcile.state.processed.explanation'
+        : 'payments.incoming.reconcile.state.processed_unassigned.explanation',
+      nextActionKey: hasAssignedUser
+        ? 'payments.incoming.reconcile.state.processed.next'
+        : 'payments.incoming.reconcile.state.processed_unassigned.next',
+      warningKey: hasAssignedUser ? undefined : 'payments.incoming.reconcile.state.processed_unassigned.warning',
+    };
+  }
+
+  if (state === 'ignored') {
+    return {
+      state,
+      badgeVariant: 'neutral',
+      explanationKey: 'payments.incoming.reconcile.state.ignored.explanation',
+      nextActionKey: 'payments.incoming.reconcile.state.ignored.next',
+      warningKey: 'payments.incoming.reconcile.state.ignored.warning',
+    };
+  }
+
+  return {
+    state: '',
+    badgeVariant: 'neutral',
+    explanationKey: 'payments.incoming.reconcile.state.unknown.explanation',
+    nextActionKey: 'payments.incoming.reconcile.state.unknown.next',
+  };
+}
+
+export type IncomingPaymentReviewSearchTarget = {
+  key: 'vs' | 'transaction' | 'account' | 'ident';
+  value: string;
+  labelKey: string;
+};
+
+function addSearchTarget(
+  list: IncomingPaymentReviewSearchTarget[],
+  seen: Set<string>,
+  key: IncomingPaymentReviewSearchTarget['key'],
+  value: unknown,
+  labelKey: string
+) {
+  const text = String(value ?? '').trim();
+  if (!text) return;
+  const dedupeKey = `${key}:${text.toLowerCase()}`;
+  if (seen.has(dedupeKey)) return;
+  seen.add(dedupeKey);
+  list.push({ key, value: text, labelKey });
+}
+
+export function buildIncomingPaymentReviewSearchTargets(payment: IncomingPayment): IncomingPaymentReviewSearchTarget[] {
+  const seen = new Set<string>();
+  const targets: IncomingPaymentReviewSearchTarget[] = [];
+
+  addSearchTarget(targets, seen, 'vs', payment.vs, 'payments.incoming.reconcile.link.same_vs');
+  addSearchTarget(targets, seen, 'transaction', payment.transaction_id, 'payments.incoming.reconcile.link.same_transaction');
+  addSearchTarget(targets, seen, 'account', payment.account_name, 'payments.incoming.reconcile.link.same_account');
+  addSearchTarget(targets, seen, 'ident', payment.user_ident, 'payments.incoming.reconcile.link.same_ident');
+
+  return targets;
 }

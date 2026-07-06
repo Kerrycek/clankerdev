@@ -107,6 +107,16 @@ export function IncomingPaymentStateReviewCard(props: {
         </Alert>
       ) : null}
 
+      {props.review.requiresConfirmation && !props.review.confirmationMatches ? (
+        <Alert
+          variant="warn"
+          title={t('payments.incoming.review.state.confirm.required.title')}
+          testId="admin.payments.incoming.state.review.confirm_required"
+        >
+          {t('payments.incoming.review.state.confirm.required.body', { target: props.review.confirmationTarget })}
+        </Alert>
+      ) : null}
+
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <ReviewRow label={t('payments.incoming.review.target_payment')} testId="admin.payments.incoming.state.review.target">
           #{props.payment.id}

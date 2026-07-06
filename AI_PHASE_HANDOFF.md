@@ -2179,14 +2179,377 @@ Known verification limits:
 - A full repository-wide Playwright run was not repeated; the touched profile sessions/keys and MFA recovery smokes passed.
 - `npm run build` and the Playwright dev server still emit the existing stale Browserslist/caniuse-lite warning.
 
+
+## Current admin migration task — Phase 9: Billing reconciliation follow-up
+
+Completed in this tarball:
+
+- Reworked the admin incoming-payments list into a smaller route orchestrator plus extracted filter/help components, keeping the existing `/payments/incoming` route, query params and backend calls intact:
+  - `IncomingPaymentsPage.tsx` now handles URL state, pagination and fetch orchestration only,
+  - `IncomingPaymentsFilters.tsx` owns smart filter state/chips and the filter bar,
+  - `IncomingPaymentsFiltersHelp.tsx` owns the smart-filter help drawer and advanced user lookup drawer.
+- Added a current-page reconciliation summary above the incoming-payment list:
+  - highlights queued/unmatched payments that need review,
+  - shows unassigned/processed/ignored counts,
+  - warns when processed rows are not linked to a user payment,
+  - provides one-click state filters for queued, unmatched and ignored.
+- Added a detail-page reconciliation review card:
+  - explains the current state and recommended next action,
+  - warns on ignored and processed-without-user states,
+  - adds review links for the assigned user payments page and same VS/transaction/account/ident searches,
+  - adds a copy action for the bank transaction id.
+- Added explicit confirmation gates for risky manual reconciliation state changes:
+  - changing to `ignored` now requires typing `IGNORE`,
+  - changing to `processed` without an assigned user now requires typing `PROCESSED`,
+  - ordinary safe/no-op states retain their previous disabled/enabled behavior.
+- Extended typed incoming-payment model helpers for reconciliation summaries, state descriptors, confirmation review and review-search targets; added targeted Vitest coverage for these helpers.
+- Improved the admin user payment history table with a direct source link back to the originating incoming payment when `incoming_payment.id` is present, while showing a localized manual-source label otherwise.
+- Added EN/CS copy for all new reconciliation and source-link UI.
+- Continued the structural ratchet without adding `as any`:
+  - `IncomingPaymentsPage.tsx` reduced from the over-budget list/detail orchestration surface to 144 lines,
+  - new incoming-payments helper components remain under 500 lines,
+  - global structural baseline was lowered to:
+    - `asAny`: 1180,
+    - `filesOver500`: 56,
+    - `filesOver1000`: 11.
+
+Verification performed in Phase 9:
+
+```bash
+npm ci
+npm run typecheck
+npm run lint
+npm run audit:i18n
+npm run audit:ui-strings:check
+npm run audit:i18n-structure
+npm run audit:component-contracts
+npm run audit:pages
+npm run audit:active-docs
+npm run audit:overlays
+npm run audit:lookup-primitives
+npm run audit:api-barrel-imports
+npm run audit:mutations:check
+npm run audit:structural:baseline
+npm run audit:structural
+npm run test:scripts
+npm test -- --run src/pages/app/admin/IncomingPaymentsModel.test.ts
+npm run build
+npm audit --omit=dev
+npm audit
+E2E_START_SERVER=1 node scripts/playwright.mjs test --container e2e/specs/app/admin_incoming_payment_assign.spec.ts --project=chromium --workers=1
+E2E_START_SERVER=1 node scripts/playwright.mjs test --container e2e/specs/admin/user_payments_smoke.spec.ts --project=chromium --workers=1
+```
+
+Targeted results:
+
+- `npm ci` completed successfully and npm audit is clean: 0 known vulnerabilities for both production-only and full audit modes.
+- TypeScript typecheck passed.
+- Lint passed.
+- i18n, i18n-structure, UI-string, component-contract, page, active-docs, overlay, lookup-primitive, API barrel import and mutation audits passed (`en=3421`, `cs=3421`).
+- Structural baseline was lowered and the follow-up structural audit passed against the new lower baseline.
+- Script harness Node tests passed: 6 tests.
+- Targeted Vitest suite passed: `IncomingPaymentsModel.test.ts` — 8 tests.
+- Build passed.
+- Incoming-payment assignment Playwright smoke passed with system Chromium: 1 test.
+- Admin user payments Playwright smoke passed with system Chromium: 1 test.
+
+Known verification limits:
+
+- A full repository-wide `npm test` run was attempted in this sandbox and timed out after 180 seconds before Vitest printed a final summary. No failing assertion summary was produced before timeout; the touched model suite passed.
+- A first direct Playwright attempt without `--container` failed because the default cached Playwright browser executable was not installed in the sandbox. The same targeted specs passed in container/system-Chromium mode, which is the established local E2E mode for these handoffs.
+- A full repository-wide Playwright run was not repeated; the touched incoming-payment and admin-user-payment smokes passed.
+- `npm run build` and the Playwright dev server still emit the existing stale Browserslist/caniuse-lite warning.
+
+## Current admin migration task — Phase 10: Metrics/access-token account security follow-up
+
+Completed in this tarball:
+
+- Added typed metrics access-token review/state helpers in `UserMetricsTokensModel.ts`:
+  - safe metric-prefix normalization and warning review,
+  - active/stale/unused/unknown token-state classification,
+  - summary counts,
+  - stable display labels and scrape URL generation.
+- Reworked the shared profile/admin metrics-token panel without changing backend endpoints or payload namespaces:
+  - added a security notice explaining access-token handling,
+  - added summary metrics for total/active/stale/unused tokens,
+  - added per-row state badges and missing-secret handling,
+  - added create-modal prefix review with non-blocking warnings and disabled empty-prefix submission,
+  - added created-token next-step guidance and scrape URL display,
+  - changed revoke from a one-click confirmation to a typed `REVOKE` gate with token/state/use review.
+- Hardened user-session/API-token closure:
+  - added typed session helpers for API-token detection and explicit close-confirmation requirements,
+  - close dialogs now review the selected session before closing,
+  - API-token-backed sessions and the current session now require typing `CLOSE`,
+  - token/current-session impact warnings are shown in the close dialog.
+- Extended EN/CS i18n for the new metrics-token and session-close copy while keeping the existing route/test-id contracts intact.
+- Added targeted Vitest coverage for metrics-token helpers and the new session close-confirmation helpers.
+- Added a new profile metrics-token Playwright smoke spec and updated the existing profile keys/sessions smoke spec for the `CLOSE` gate.
+- Preserved the structural ratchet without adding `as any` or increasing over-budget file counts:
+  - `asAny`: 1180,
+  - `filesOver500`: 56,
+  - `filesOver1000`: 11.
+
+Verification performed in Phase 10:
+
+```bash
+npm ci
+npm run typecheck
+npm test -- --run src/components/user/UserMetricsTokensModel.test.ts src/components/user/UserSessionsModel.test.ts src/i18n/index.test.ts
+npm run lint
+npm run audit:i18n
+npm run audit:ui-strings:check
+npm run audit:i18n-structure
+npm run audit:component-contracts
+npm run audit:pages
+npm run audit:active-docs
+npm run audit:overlays
+npm run audit:lookup-primitives
+npm run audit:api-barrel-imports
+npm run audit:mutations:check
+npm run audit:structural
+npm run build
+npm run test:scripts
+npm audit --omit=dev
+npm audit
+npm run e2e:container -- --project=chromium --workers=1 --reporter=list e2e/specs/app/profile_metrics_tokens.spec.ts e2e/specs/app/profile_keys_sessions.spec.ts
+```
+
+Targeted results:
+
+- `npm ci` completed successfully and npm audit is clean: 0 known vulnerabilities for both production-only and full audit modes.
+- TypeScript typecheck passed.
+- Targeted Vitest suites passed: `UserMetricsTokensModel.test.ts`, `UserSessionsModel.test.ts` and `src/i18n/index.test.ts` — 3 files / 8 tests total.
+- Lint passed.
+- i18n, UI-string, i18n-structure, component-contract, page, active-docs, overlay, lookup-primitive, API barrel import, mutation and structural audits passed.
+- Script harness Node tests passed: 6 tests.
+- Build passed.
+- Profile metrics-token Playwright smoke passed with system Chromium: 1 test.
+- Profile keys/sessions Playwright smoke passed with system Chromium: 1 test.
+
+Known verification limits:
+
+- A full repository-wide `npm test` run was not repeated; targeted metrics/session/i18n suites passed.
+- A full repository-wide Playwright run was not repeated; the touched profile metrics-token and profile keys/sessions smokes passed.
+- `npm run build` and the Playwright dev server still emit the existing stale Browserslist/caniuse-lite warning.
+
+## Current admin migration task — Phase 11: Remaining structural paydown
+
+Completed in this tarball:
+
+- Split the over-budget admin users list route into focused modules while preserving `/admin/users`, existing HaveAPI calls, query params and E2E test IDs:
+  - `UsersModel.ts` for role/smart-filter normalization and create-user payload validation/building,
+  - `UsersFilters.tsx` for smart filters, active chips, help and advanced filters,
+  - `UsersCreateModal.tsx` for the create-user form,
+  - `UsersListContent.tsx` for loading/error/empty/list rendering.
+- Kept backend compatibility for admin user creation:
+  - create still posts the legacy `user` namespace fields (`login`, `password`, `full_name`, `email`, `address`, `level`, `info`, `monthly_payment`, `mailer_enabled`),
+  - successful creation still closes the modal, refreshes the list and opens the created user detail when the API returns an id.
+- Preserved existing admin users list behavior:
+  - keyset pagination and `from_id` cursor handling,
+  - smart filters including numeric open, `role:`, `level:`, `mailer:`, `lockout:`, `password_reset:` and `mfa:`,
+  - advanced filter drawer, copy-link action, empty-state clear-filters action and create-user modal test IDs.
+- Removed the remaining `as any` cast from `UsersPage.tsx` by relying on the typed `createUser()` response.
+- Added focused unit coverage for users model helpers: role/smart-key normalization, boolean smart tokens and create-user payload validation/building.
+- Continued the structural ratchet:
+  - `UsersPage.tsx` was reduced from about 1,096 lines to 482 lines,
+  - global structural baseline was lowered to:
+    - `asAny`: 1179,
+    - `filesOver500`: 55,
+    - `filesOver1000`: 10.
+
+Verification performed in Phase 11:
+
+```bash
+npm ci
+npm run typecheck
+npm test -- --run src/pages/app/admin/users/UsersModel.test.ts src/i18n/index.test.ts
+npm run lint
+npm run audit:i18n
+npm run audit:ui-strings:check
+npm run audit:i18n-structure
+npm run audit:component-contracts
+npm run audit:pages
+npm run audit:active-docs
+npm run audit:overlays
+npm run audit:lookup-primitives
+npm run audit:api-barrel-imports
+npm run audit:mutations:check
+npm run audit:structural:baseline
+npm run audit:structural
+npm run test:scripts
+npm run build
+npm audit --omit=dev
+npm audit
+npm run e2e:container -- --project=chromium --workers=1 --reporter=list e2e/specs/admin/users_keyset_pagination.spec.ts e2e/specs/admin/users_empty_clear_filters.spec.ts
+```
+
+Targeted results:
+
+- `npm ci` completed successfully and npm audit is clean: 0 known vulnerabilities for both production-only and full audit modes.
+- TypeScript typecheck passed.
+- Targeted Vitest suites passed: `UsersModel.test.ts` and `src/i18n/index.test.ts` — 2 files / 4 tests total.
+- Lint passed.
+- i18n, UI-string, i18n-structure, component-contract, page, active-docs, overlay, lookup-primitive, API barrel import and mutation audits passed (`en=3421`, `cs=3421`).
+- Structural baseline was lowered and the follow-up structural audit passed against the new lower baseline.
+- Script harness Node tests passed: 6 tests.
+- Build passed.
+- Admin users Playwright coverage passed with system Chromium: empty clear-filters, keyset pagination, create-user payload/navigation and non-admin access gate — 4 tests.
+
+Known verification limits:
+
+- A full repository-wide `npm test` run was not repeated; targeted users-model/i18n suites and touched Playwright smokes passed.
+- A full repository-wide Playwright run was not repeated; the touched admin-users smokes passed.
+- `npm run build` and the Playwright dev server still emit the existing stale Browserslist/caniuse-lite warning.
+
+## Current admin migration task — Phase 12: Additional structural paydown
+
+Completed in this tarball:
+
+- Split the over-budget admin nodes list route while preserving `/admin/nodes`, existing HaveAPI calls, URL query params and E2E test IDs:
+  - `NodesPage.tsx` now handles URL/query state, keyset pagination and fetch orchestration,
+  - `NodesModel.ts` owns typed row/status normalization, smart-token parsing helpers, presentation state helpers and client-side fallback filtering,
+  - `NodesFilters.tsx` owns smart filter input/help, active chips and the advanced filter drawer,
+  - `NodesListContent.tsx` owns error/warn/loading/empty states, summary cards, mobile cards, desktop table and pagination rendering.
+- Kept node list behavior intact:
+  - authenticated `/nodes` index remains the primary paginated source,
+  - `/nodes/public_status` still enriches rows with up/down/maintenance/runtime context,
+  - public-status fallback still works when the authenticated index fails,
+  - q filtering remains backend-driven for the authenticated index and client-side only for the public-status fallback,
+  - issues-only filtering still treats down and maintenance nodes as actionable issues.
+- Added focused unit coverage for nodes model helpers: state/issue smart values, node/status row joining, public-status fallback filtering, row presentation helpers and summary counts.
+- Removed all `as any` casts from the nodes list route surface by moving row extraction to typed helpers.
+- Continued the structural ratchet:
+  - `NodesPage.tsx` was reduced from 1,135 lines to 443 lines,
+  - all new nodes modules remain below 500 lines,
+  - global structural baseline was lowered to:
+    - `asAny`: 1164,
+    - `filesOver500`: 54,
+    - `filesOver1000`: 9.
+
+Verification performed in Phase 12:
+
+```bash
+npm ci
+npm run typecheck
+npm test -- --run src/pages/app/admin/NodesModel.test.ts src/i18n/index.test.ts
+npm run lint
+npm run audit:i18n
+npm run audit:ui-strings:check
+npm run audit:i18n-structure
+npm run audit:component-contracts
+npm run audit:pages
+npm run audit:active-docs
+npm run audit:overlays
+npm run audit:lookup-primitives
+npm run audit:api-barrel-imports
+npm run audit:mutations:check
+npm run audit:structural:baseline
+npm run audit:structural
+npm run test:scripts
+npm run build
+npm audit --omit=dev
+npm audit
+npm run e2e:container -- --project=chromium --workers=1 --reporter=list e2e/specs/admin/nodes_issues_only_filter.spec.ts e2e/specs/admin/nodes_keyset_pagination.spec.ts
+```
+
+Targeted results:
+
+- `npm ci` completed successfully and npm audit is clean: 0 known vulnerabilities for both production-only and full audit modes.
+- TypeScript typecheck passed.
+- Targeted Vitest suites passed: `NodesModel.test.ts` and `src/i18n/index.test.ts` — 2 files / 5 tests total.
+- Lint passed.
+- i18n, UI-string, i18n-structure, component-contract, page, active-docs, overlay, lookup-primitive, API barrel import, mutation and structural audits passed (`en=3421`, `cs=3421`).
+- Structural baseline was lowered and the follow-up structural audit passed against the new lower baseline.
+- Script harness Node tests passed: 6 tests.
+- Build passed.
+- Admin nodes Playwright coverage passed with system Chromium: issues-only filtering and keyset pagination — 2 tests.
+
+Known verification limits:
+
+- A full repository-wide `npm test` run was not repeated; targeted nodes-model/i18n suites and touched Playwright smokes passed.
+- A full repository-wide Playwright run was not repeated; the touched admin-nodes smokes passed.
+- `npm run build` and the Playwright dev server still emit the existing stale Browserslist/caniuse-lite warning.
+
 ## Suggested immediate next choice
 
-Best next implementation target: **Phase 9 — Billing reconciliation follow-up**.
+Best next implementation target: **Phase 13 — Billing bulk reconciliation follow-up**, unless the product owner wants to stop after this structural pass.
 
-Reason: Phases 7–8 finished the account-security detail polish and sessions/known-devices split. The next highest-leverage continuation is to revisit incoming-payment and reconciliation workflows where admin users need clearer failed/ignored-state explanations and safer transaction-link review.
+Reason: Phase 12 paid down one more over-1000-line admin/list surface without changing API or E2E contracts. The handoff from Phase 11 already identified billing bulk reconciliation as the next functional follow-up, but it is best tackled only if supported bulk operations and desired operator workflow are confirmed.
 
-Likely follow-up phases are:
+Likely follow-up options are:
 
-- **Phase 9 — Billing reconciliation follow-up:** revisit incoming-payment list/detail workflows after backend/API feedback, especially transaction links, bulk reconciliation and clearer failed/ignored-state explanations.
-- **Phase 10 — Metrics/access-token account security follow-up:** polish profile/admin metrics token states if the account-security track continues.
-- **Phase 11 — Remaining structural paydown:** reduce one of the over-1000-line admin/list pages without changing API behavior.
+- **Phase 13 — Billing bulk reconciliation follow-up:** revisit incoming-payment bulk workflows after backend/API feedback on supported bulk operations.
+- **Optional extra structural ratchet:** reduce another over-1000-line surface if no billing/API feedback is available yet.
+
+## Current admin migration task — Phase 13: Billing bulk reconciliation + public overview performance
+
+Completed in this tarball:
+
+- Added a safe bulk reconciliation workflow to `/admin/payments/incoming` without introducing a new backend contract:
+  - operators can select visible rows, select all visible rows or select visible payments that need review,
+  - bulk state changes reuse the existing per-payment `PUT /incoming_payments/:id` state endpoint,
+  - assigned payments are skipped for non-processed targets,
+  - ignored and unassigned-processed bulk changes require typed confirmation (`IGNORE {count}` / `PROCESSED {count}`),
+  - partial failures keep the remaining selection clear and show a toast with the first error.
+- Added typed bulk helpers and focused model coverage in `IncomingPaymentsBulkModel.ts` / `.test.ts`.
+- Added Playwright coverage for the incoming-payment bulk reconciliation path.
+- Improved public landing-page perceived load:
+  - `/cluster/public_stats` remains the first critical request,
+  - public node status, outages and news queries are deferred until idle / after first paint,
+  - the public contextual help panel is also deferred so it no longer competes with the first render,
+  - overview outages/news are requested with small index limits for the landing surface,
+  - the large `OverviewPage.tsx` was split into typed model and presentational sections.
+- Continued the structural ratchet:
+  - `OverviewPage.tsx` was reduced from 501 lines to 134 lines,
+  - removed 8 `as any` casts from the overview surface,
+  - lowered structural baseline to:
+    - `asAny`: 1156,
+    - `filesOver500`: 53,
+    - `filesOver1000`: 9.
+
+Verification performed in Phase 13:
+
+```bash
+npm ci
+npm run typecheck
+npm test -- --run src/pages/app/admin/IncomingPaymentsBulkModel.test.ts src/pages/app/admin/IncomingPaymentsModel.test.ts src/pages/public/OverviewModel.test.ts src/i18n/index.test.ts
+npm run lint
+npm run audit:i18n
+npm run audit:ui-strings:check
+npm run audit:i18n-structure
+npm run audit:component-contracts
+npm run audit:pages
+npm run audit:active-docs
+npm run audit:overlays
+npm run audit:lookup-primitives
+npm run audit:api-barrel-imports
+npm run audit:mutations:check
+npm run audit:structural:baseline
+npm run audit:structural
+npm run test:scripts
+npm run build
+npm audit --omit=dev
+npm audit
+npm run e2e:container -- --project=chromium --workers=1 --reporter=list e2e/specs/app/admin_incoming_payment_assign.spec.ts e2e/specs/app/admin_incoming_payments_bulk_reconciliation.spec.ts e2e/specs/public/overview.spec.ts e2e/specs/app/contextual_help_boxes_smoke.spec.ts
+```
+
+Targeted results:
+
+- TypeScript typecheck passed.
+- Targeted Vitest suites passed: 4 files / 16 tests.
+- Lint, i18n, UI-string, i18n-structure, component-contract, page, active-docs, overlay, lookup-primitive, API barrel import, mutation and structural audits passed (`en=3451`, `cs=3451`).
+- Structural baseline was lowered and the follow-up structural audit passed against the new lower baseline.
+- Script harness Node tests passed: 6 tests.
+- Build passed.
+- npm audit is clean: 0 known vulnerabilities for both production-only and full audit modes.
+- Targeted Playwright coverage passed with system Chromium: incoming-payment assignment, incoming-payment bulk reconciliation, public overview and contextual help smoke — 5 tests.
+
+Known verification limits:
+
+- A full repository-wide Vitest run was not repeated; touched model/i18n suites passed.
+- A full repository-wide Playwright run was not repeated; touched functional and public overview smokes passed.
+- `npm run build` and the Playwright dev server still emit the existing stale Browserslist/caniuse-lite warning.
+
+## Suggested immediate next choice
+
+This phase closes the previously suggested billing bulk reconciliation follow-up and improves the slow public overview first-render path. The next best choice is either another user-facing VPS flow polish pass (restart/destroy/update/network are still high-signal actions from the roadmap) or another optional structural ratchet on one of the remaining over-budget surfaces.

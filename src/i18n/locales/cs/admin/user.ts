@@ -130,6 +130,8 @@ export const csAdmin_user = {
   "admin.user.payments.review.target": "Cílový účet",
   "admin.user.payments.settings.validation.no_changes": "Před uložením změň alespoň jedno platební nastavení",
   "admin.user.payments.history.col.accounted_by": "Zaúčtoval",
+  "admin.user.payments.history.col.source": "Zdroj",
+  "admin.user.payments.history.source.manual": "Ruční",
   "admin.user.payments.settings.edit": "Upravit nastavení plateb",
   "admin.user.payments.settings.field.monthly_payment": "Měsíční platba",
   "admin.user.payments.settings.field.paid_until": "Zaplaceno do",

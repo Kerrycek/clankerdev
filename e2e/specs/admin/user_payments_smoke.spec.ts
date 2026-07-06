@@ -49,6 +49,7 @@ test.describe('@smoke Admin user payments', () => {
               from_date: '2026-02-01T00:00:00.000Z',
               to_date: '2026-03-01T00:00:00.000Z',
               accounted_by: { id: 1, login: 'admin' },
+              incoming_payment: { id: 300 },
             },
           ],
         }),
@@ -76,6 +77,8 @@ test.describe('@smoke Admin user payments', () => {
   
     await expect(page.getByTestId('admin.user.payments.history.table')).toBeVisible();
     await expect(page.getByTestId('admin.user.payments.history.row.9001')).toBeVisible();
+    await expect(page.getByTestId('admin.user.payments.history.row.9001.source')).toHaveText('#300');
+    await expect(page.getByTestId('admin.user.payments.history.row.9001.source')).toHaveAttribute('href', '/admin/payments/incoming/300');
   
     await expect(page.getByTestId('admin.user.payments.settings.open')).toBeVisible();
     await expect(page.getByTestId('admin.user.payments.add.open')).toBeVisible();

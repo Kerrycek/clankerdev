@@ -2,8 +2,11 @@ import { describe, expect, test } from 'vitest';
 
 import {
   buildIncomingPaymentAssignReview,
+  buildIncomingPaymentReviewSearchTargets,
   buildIncomingPaymentStateReview,
+  buildIncomingPaymentsReconciliationSummary,
   canonicalIncomingPaymentSmartKey,
+  describeIncomingPaymentState,
   formatIncomingPaymentMoney,
   incomingPaymentAccountedAmountLabel,
   incomingPaymentReceivedAmountLabel,
@@ -78,24 +81,103 @@ describe('IncomingPaymentsModel', () => {
     });
   });
 
-  test('builds state review impact and warning descriptors', () => {
+  test('builds state review impact, warnings and confirmation gates', () => {
     expect(buildIncomingPaymentStateReview({ payment, nextState: 'unmatched' })).toMatchObject({
       hasChange: false,
       canSubmit: false,
       impactKey: 'payments.incoming.review.state.no_change',
+      requiresConfirmation: false,
+      confirmationMatches: true,
     });
 
     expect(buildIncomingPaymentStateReview({ payment, nextState: 'processed' })).toMatchObject({
       hasChange: true,
-      canSubmit: true,
+      canSubmit: false,
       badgeVariant: 'warn',
       warningKey: 'payments.incoming.review.state.warning.processed_without_user',
+      requiresConfirmation: true,
+      confirmationTarget: 'PROCESSED',
+      confirmationMatches: false,
+    });
+
+    expect(buildIncomingPaymentStateReview({ payment, nextState: 'processed', confirmationText: 'processed' })).toMatchObject({
+      hasChange: true,
+      canSubmit: true,
+      confirmationTarget: 'PROCESSED',
+      confirmationMatches: true,
     });
 
     expect(buildIncomingPaymentStateReview({ payment, nextState: 'ignored' })).toMatchObject({
       hasChange: true,
-      canSubmit: true,
+      canSubmit: false,
       warningKey: 'payments.incoming.review.state.warning.ignored',
+      requiresConfirmation: true,
+      confirmationTarget: 'IGNORE',
     });
+
+    expect(buildIncomingPaymentStateReview({ payment, nextState: 'ignored', confirmationText: 'IGNORE' })).toMatchObject({
+      hasChange: true,
+      canSubmit: true,
+      confirmationMatches: true,
+    });
+
+    expect(
+      buildIncomingPaymentStateReview({
+        payment: { ...payment, user: { id: 123, login: 'alice' } },
+        nextState: 'processed',
+      })
+    ).toMatchObject({
+      canSubmit: true,
+      badgeVariant: 'ok',
+      requiresConfirmation: false,
+    });
+  });
+
+  test('summarizes reconciliation state for the current page', () => {
+    expect(
+      buildIncomingPaymentsReconciliationSummary([
+        { ...payment, id: 1, state: 'queued' },
+        { ...payment, id: 2, state: 'unmatched' },
+        { ...payment, id: 3, state: 'processed' },
+        { ...payment, id: 4, state: 'processed', user: { id: 7, login: 'alice' } },
+        { ...payment, id: 5, state: 'ignored' },
+        { ...payment, id: 6, state: 'unexpected' },
+      ])
+    ).toEqual({
+      total: 6,
+      queued: 1,
+      unmatched: 1,
+      processed: 2,
+      ignored: 1,
+      unknown: 1,
+      assigned: 1,
+      unassigned: 5,
+      needsReview: 2,
+      processedWithoutUser: 1,
+    });
+  });
+
+  test('describes reconciliation state and review search targets', () => {
+    expect(describeIncomingPaymentState({ state: 'processed' })).toMatchObject({
+      badgeVariant: 'warn',
+      explanationKey: 'payments.incoming.reconcile.state.processed_unassigned.explanation',
+      warningKey: 'payments.incoming.reconcile.state.processed_unassigned.warning',
+    });
+
+    expect(describeIncomingPaymentState({ state: 'processed', user: { id: 7, login: 'alice' } })).toMatchObject({
+      badgeVariant: 'ok',
+      explanationKey: 'payments.incoming.reconcile.state.processed.explanation',
+      warningKey: undefined,
+    });
+
+    expect(
+      buildIncomingPaymentReviewSearchTargets({
+        ...payment,
+        vs: '123456',
+        transaction_id: 'TX-300',
+        account_name: 'Main account',
+        user_ident: 'VS:123456',
+      }).map((target) => `${target.key}:${target.value}`)
+    ).toEqual(['vs:123456', 'transaction:TX-300', 'account:Main account', 'ident:VS:123456']);
   });
 });

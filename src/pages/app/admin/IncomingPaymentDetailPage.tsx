@@ -36,10 +36,12 @@ import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
 import { ErrorState } from '../../../components/ui/ErrorState';
 import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 import { LoadingState } from '../../../components/ui/LoadingState';
+import { Input } from '../../../components/ui/Input';
 import { Modal } from '../../../components/ui/Modal';
 import { Select } from '../../../components/ui/Select';
 import { StatusDot } from '../../../components/ui/StatusDot';
 import { IncomingPaymentAssignReviewCard, IncomingPaymentStateReviewCard } from './IncomingPaymentReviewCards';
+import { IncomingPaymentReconciliationCard } from './IncomingPaymentsReconciliationCards';
 import {
   buildIncomingPaymentAssignReview,
   buildIncomingPaymentStateReview,
@@ -81,6 +83,7 @@ export function IncomingPaymentDetailPage() {
   const dotVar = dotVariantFromBadgeVariant(primaryVar);
 
   const [stateEdit, setStateEdit] = useState('');
+  const [stateConfirm, setStateConfirm] = useState('');
   const effectiveStateEdit = stateEdit || st;
 
   const [assignOpen, setAssignOpen] = useState(false);
@@ -92,8 +95,8 @@ export function IncomingPaymentDetailPage() {
   const acctAmount = useMemo(() => incomingPaymentAccountedAmountLabel(payment), [payment]);
 
   const stateReview = useMemo(
-    () => buildIncomingPaymentStateReview({ payment, nextState: effectiveStateEdit }),
-    [effectiveStateEdit, payment]
+    () => buildIncomingPaymentStateReview({ payment, nextState: effectiveStateEdit, confirmationText: stateConfirm }),
+    [effectiveStateEdit, payment, stateConfirm]
   );
 
   const assignReview = useMemo(
@@ -117,6 +120,7 @@ export function IncomingPaymentDetailPage() {
       });
 
       setStateEdit('');
+      setStateConfirm('');
       q.refetch();
       qc.invalidateQueries({ queryKey: ['incoming_payments', 'index'] });
     } catch (e: unknown) {
@@ -168,6 +172,7 @@ export function IncomingPaymentDetailPage() {
       setAssignOpen(false);
       setAssignUserId('');
       setStateEdit('');
+      setStateConfirm('');
 
       await q.refetch();
       qc.invalidateQueries({ queryKey: ['incoming_payments', 'index'] });
@@ -243,7 +248,8 @@ export function IncomingPaymentDetailPage() {
       />
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+        <div className="space-y-3 lg:col-span-2">
+          <Card>
           <CardHeader title={t('payments.incoming.detail.card.payment')} />
           <CardBody>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -290,7 +296,10 @@ export function IncomingPaymentDetailPage() {
               </div>
             </div>
           </CardBody>
-        </Card>
+          </Card>
+
+          <IncomingPaymentReconciliationCard payment={payment} basePath={basePath} />
+        </div>
 
         <div className="space-y-3">
           <Card>
@@ -332,7 +341,14 @@ export function IncomingPaymentDetailPage() {
               <div className="mt-3 space-y-3">
                 <div>
                   <div className="text-xs text-muted">{t('payments.incoming.detail.change_state')}</div>
-                  <Select value={effectiveStateEdit} onChange={(e) => setStateEdit(e.target.value)} testId="admin.payments.incoming.state.select">
+                  <Select
+                    value={effectiveStateEdit}
+                    onChange={(e) => {
+                      setStateEdit(e.target.value);
+                      setStateConfirm('');
+                    }}
+                    testId="admin.payments.incoming.state.select"
+                  >
                     {incomingPaymentStateOptions().map((s) => (
                       <option key={s} value={s}>
                         {t(incomingPaymentStateLabelKey(s))}
@@ -342,6 +358,23 @@ export function IncomingPaymentDetailPage() {
                 </div>
 
                 <IncomingPaymentStateReviewCard payment={payment} review={stateReview} />
+
+                {stateReview.requiresConfirmation ? (
+                  <div>
+                    <div className="text-xs text-muted">
+                      {t('payments.incoming.review.state.confirm.label', { target: stateReview.confirmationTarget })}
+                    </div>
+                    <Input
+                      value={stateConfirm}
+                      onChange={(e) => setStateConfirm(e.target.value)}
+                      placeholder={stateReview.confirmationTarget}
+                      testId="admin.payments.incoming.state.confirm"
+                    />
+                    <div className="mt-1 text-xs text-muted">
+                      {t('payments.incoming.review.state.confirm.hint', { target: stateReview.confirmationTarget })}
+                    </div>
+                  </div>
+                ) : null}
 
                 <div>
                   <Button
