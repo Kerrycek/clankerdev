@@ -2,7 +2,7 @@ import { expect, test } from '../../fixtures/playwright';
 import { bootstrapVpsAdminWindow } from '../../fixtures/bootstrap';
 import { installHaveApiMock, jsonFulfill } from '../../fixtures/haveapi';
 
-test('@smoke expired session redirects to public overview with a clear notice', async ({ page }) => {
+test('@smoke expired session redirects to public overview without a stale notice', async ({ page }) => {
   await bootstrapVpsAdminWindow(page, { sessionToken: 'EXPIRED_SESSION' });
   await installHaveApiMock(page, {
     handlers: {
@@ -18,8 +18,7 @@ test('@smoke expired session redirects to public overview with a clear notice', 
 
   await page.goto('/app/vps');
 
-  await expect(page).toHaveURL(/\/\?session=expired$/);
+  await expect(page).toHaveURL(/\/$/);
   await expect(page.getByTestId('public.overview.page')).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByTestId('auth.session-expired.notice')).toBeVisible();
-  await expect(page.getByText('Your session expired due to inactivity. Please sign in again.')).toBeVisible();
+  await expect(page.getByTestId('auth.session-expired.notice')).toBeHidden();
 });
