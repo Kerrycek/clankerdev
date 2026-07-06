@@ -130,14 +130,14 @@ export function DashboardPage() {
   });
 
   const outagesQ = useQuery({
-    queryKey: ["dashboard", "outages", "recent"],
-    queryFn: async () => (await fetchOutages()).data,
+    queryKey: ["dashboard", "outages", "recent", { limit: 25 }],
+    queryFn: async () => (await fetchOutages({ limit: 25 })).data,
     refetchInterval: tierSlowRefetchMs,
   });
 
   const newsQ = useQuery({
-    queryKey: ["dashboard", "news_logs", "latest"],
-    queryFn: async () => (await fetchNews()).data,
+    queryKey: ["dashboard", "news_logs", "latest", { limit: 5 }],
+    queryFn: async () => (await fetchNews({ limit: 5 })).data,
     refetchInterval: tierSlowRefetchMs,
   });
 

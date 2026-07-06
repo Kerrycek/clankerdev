@@ -71,5 +71,6 @@ describe('OutagesPage', () => {
     expect(detailLink).not.toBeNull();
     expect(detailLink).toHaveAttribute('href', '/ui-next/outages/7');
     expect(fetchOutages).toHaveBeenCalledTimes(1);
+    expect(fetchOutages).toHaveBeenCalledWith({ limit: 100 });
   });
 });

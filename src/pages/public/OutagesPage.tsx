@@ -17,6 +17,8 @@ import { formatDateTime, formatDurationMinutes } from '../../lib/time';
 import { pickTranslation } from '../../lib/translations';
 import { useI18n } from '../../app/i18n';
 
+const PUBLIC_OUTAGES_LIST_LIMIT = 100;
+
 function OutageRow(props: { outage: Outage }) {
   const i18n = useI18n();
   const summary = pickTranslation(props.outage as any, 'summary', i18n.preferredLanguageCodes);
@@ -79,8 +81,8 @@ function OutageRow(props: { outage: Outage }) {
 export function OutagesPage() {
   const i18n = useI18n();
   const outagesQ = useQuery({
-    queryKey: ['outages', 'index'],
-    queryFn: async () => (await fetchOutages()).data,
+    queryKey: ['outages', 'index', { limit: PUBLIC_OUTAGES_LIST_LIMIT }],
+    queryFn: async () => (await fetchOutages({ limit: PUBLIC_OUTAGES_LIST_LIMIT })).data,
   });
 
   const grouped = useMemo(() => {
