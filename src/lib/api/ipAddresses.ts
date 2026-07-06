@@ -151,7 +151,7 @@ export async function fetchIpAddressesForVps(vpsId: number, opts?: { limit?: num
       order: 'interface',
       limit: opts?.limit ?? 250,
     },
-    meta: { includes: 'network' },
+    meta: { includes: 'network,user,network_interface' },
   });
   return { ...res, data: expectArray<IpAddress>(res.data, 'ip_addresses') };
 }

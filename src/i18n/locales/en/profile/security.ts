@@ -2,6 +2,7 @@
 export const enProfile_security = {
   "profile.security.known_devices.action.forget": "Forget",
   "profile.security.known_devices.empty": "No known devices.",
+  "profile.security.known_devices.empty_filtered": "No known devices match the current filter.",
   "profile.security.known_devices.field.api_ip": "API IP",
   "profile.security.known_devices.field.client_ip": "Client IP",
   "profile.security.known_devices.field.last_seen": "Last seen",
@@ -15,4 +16,8 @@ export const enProfile_security = {
   "profile.security.known_devices.subtitle": "Devices you have used to sign in. Trusted devices can temporarily skip multi-factor authentication.",
   "profile.security.known_devices.title": "Known devices",
   "profile.security.subtitle": "Password and authentication settings.",
+  "profile.security.known_devices.summary.total": "Known devices",
+  "profile.security.known_devices.summary.trusted": "Trusted for MFA",
+  "profile.security.known_devices.summary.client_ips": "Client IPs",
+  "profile.security.known_devices.summary.api_ips": "API IPs",
 } as const;

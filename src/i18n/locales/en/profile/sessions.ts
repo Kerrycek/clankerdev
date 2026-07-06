@@ -29,4 +29,9 @@ export const enProfile_sessions = {
   "profile.sessions.table.state": "State",
   "profile.sessions.title": "Sessions",
   "profile.sessions.validation.label_required": "Label is required.",
+  "profile.sessions.empty_filtered": "No sessions match the current filters.",
+  "profile.sessions.summary.open": "Open sessions",
+  "profile.sessions.summary.current": "Current",
+  "profile.sessions.summary.tokens": "API tokens",
+  "profile.sessions.summary.closed": "Closed",
 } as const;

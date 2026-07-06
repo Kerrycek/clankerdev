@@ -107,9 +107,14 @@ export default defineConfig(({ mode }) => {
         : undefined,
     },
     build: {
+      modulePreload: {
+        resolveDependencies: (_url, deps) =>
+          deps.filter((dep) => !dep.includes('locale-cs') && !dep.includes('app-chrome-overlays')),
+      },
       rollupOptions: {
         output: {
           manualChunks: manualVendorChunk,
+          onlyExplicitManualChunks: true,
         },
       },
     },

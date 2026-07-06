@@ -22,48 +22,40 @@ export function eventBadgeVariant(eventType: string | undefined): BadgeVariant {
 }
 
 export function eventDataSummary(ev: ObjectHistoryEvent): string {
-  const d = (ev as any).event_data;
-  if (!d) return '';
-  if (typeof d !== 'object') return String(d);
-  const keys = Object.keys(d as any);
+  const data = ev.event_data;
+  if (!data) return '';
+  if (typeof data !== 'object') return String(data);
+  const keys = Object.keys(data);
   if (keys.length === 0) return '';
   const head = keys.slice(0, 3).join(', ');
   return keys.length > 3 ? `${head}, …` : head;
 }
 
 export function userLabel(ev: ObjectHistoryEvent, na: string): string {
-  const u = (ev as any).user;
-  if (!u) return na;
-  if (typeof u === 'string') return u || na;
-  if (typeof u === 'number') return `#${u}`;
-  if (typeof u === 'object') {
-    const login = typeof u.login === 'string' && u.login ? u.login : undefined;
-    const id = typeof u.id === 'number' ? u.id : undefined;
-    if (login && id) return `${login} (#${id})`;
-    if (login) return login;
-    if (id) return `#${id}`;
-  }
+  const user = ev.user;
+  if (!user) return na;
+  const login = typeof user.login === 'string' && user.login ? user.login : undefined;
+  const id = typeof user.id === 'number' ? user.id : undefined;
+  if (login && id) return `${login} (#${id})`;
+  if (login) return login;
+  if (id) return `#${id}`;
   return na;
 }
 
 export function sessionLabel(ev: ObjectHistoryEvent, na: string): string {
-  const s = (ev as any).user_session;
-  if (!s) return na;
-  if (typeof s === 'string') return s || na;
-  if (typeof s === 'number') return `#${s}`;
-  if (typeof s === 'object') {
-    const ip = typeof s.api_ip_addr === 'string' && s.api_ip_addr ? s.api_ip_addr : undefined;
-    const id = typeof s.id === 'number' ? s.id : undefined;
-    if (ip && id) return `${ip} (#${id})`;
-    if (ip) return ip;
-    if (id) return `#${id}`;
-  }
+  const session = ev.user_session;
+  if (!session) return na;
+  const ip = typeof session.api_ip_addr === 'string' && session.api_ip_addr ? session.api_ip_addr : undefined;
+  const id = typeof session.id === 'number' ? session.id : undefined;
+  if (ip && id) return `${ip} (#${id})`;
+  if (ip) return ip;
+  if (id) return `#${id}`;
   return na;
 }
 
 export function trackedObjectLabel(ev: ObjectHistoryEvent, na: string): string {
-  const obj = typeof (ev as any).object === 'string' ? String((ev as any).object).trim() : '';
-  const id = typeof (ev as any).object_id === 'number' ? (ev as any).object_id : undefined;
+  const obj = typeof ev.object === 'string' ? ev.object.trim() : '';
+  const id = typeof ev.object_id === 'number' ? ev.object_id : undefined;
   if (obj && id) return `${obj} #${id}`;
   if (obj) return obj;
   if (id) return `#${id}`;

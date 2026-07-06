@@ -1,9 +1,39 @@
 import { loadOptionalRuntimeScripts } from './app/runtimeBootstrap';
-import { staticTForDocument } from './lib/staticI18n';
+
+
+type BootstrapLanguage = 'en' | 'cs';
+
+const BOOTSTRAP_STRINGS: Record<BootstrapLanguage, Record<string, string>> = {
+  en: {
+    'bootstrap.failure.title': 'App failed to start',
+    'bootstrap.failure.body': 'The UI could not initialize correctly.',
+    'common.reload': 'Reload',
+    'common.technical_details': 'Technical details',
+    'common.unknown_error': 'Unknown error',
+  },
+  cs: {
+    'bootstrap.failure.title': 'Aplikaci se nepodařilo spustit',
+    'bootstrap.failure.body': 'Uživatelské rozhraní se nepodařilo správně inicializovat.',
+    'common.reload': 'Znovu načíst',
+    'common.technical_details': 'Technické detaily',
+    'common.unknown_error': 'Neznámá chyba',
+  },
+};
+
+function detectBootstrapLanguage(doc?: Document): BootstrapLanguage {
+  const docLang = doc?.documentElement?.lang;
+  const primary = String(docLang || '').trim().toLowerCase().split('-')[0];
+  return primary === 'cs' ? 'cs' : 'en';
+}
+
+function bootstrapTForDocument(doc: Document | undefined, key: string): string {
+  const lang = detectBootstrapLanguage(doc);
+  return BOOTSTRAP_STRINGS[lang][key] ?? BOOTSTRAP_STRINGS.en[key] ?? key;
+}
 
 function describeBootstrapError(error: unknown, doc?: Document): string {
   if (error instanceof Error) {
-    return error.stack || error.message || error.name || staticTForDocument(doc, 'common.unknown_error');
+    return error.stack || error.message || error.name || bootstrapTForDocument(doc, 'common.unknown_error');
   }
 
   if (typeof error === 'string') return error;
@@ -42,11 +72,11 @@ export function renderBootstrapFailure(error: unknown, doc: Document = document)
   ].join(';');
 
   const title = doc.createElement('h1');
-  title.textContent = staticTForDocument(doc, 'bootstrap.failure.title');
+  title.textContent = bootstrapTForDocument(doc, 'bootstrap.failure.title');
   title.style.cssText = 'margin:0;font-size:1.25rem;line-height:1.4;font-weight:700;';
 
   const body = doc.createElement('p');
-  body.textContent = staticTForDocument(doc, 'bootstrap.failure.body');
+  body.textContent = bootstrapTForDocument(doc, 'bootstrap.failure.body');
   body.style.cssText = 'margin:12px 0 0 0;font-size:0.95rem;line-height:1.6;color:#cbd5e1;';
 
   const actions = doc.createElement('div');
@@ -54,7 +84,7 @@ export function renderBootstrapFailure(error: unknown, doc: Document = document)
 
   const reloadButton = doc.createElement('button');
   reloadButton.type = 'button';
-  reloadButton.textContent = staticTForDocument(doc, 'common.reload');
+  reloadButton.textContent = bootstrapTForDocument(doc, 'common.reload');
   reloadButton.style.cssText = [
     'border:0',
     'border-radius:10px',
@@ -70,7 +100,7 @@ export function renderBootstrapFailure(error: unknown, doc: Document = document)
   details.style.cssText = 'margin-top:16px;';
 
   const summary = doc.createElement('summary');
-  summary.textContent = staticTForDocument(doc, 'common.technical_details');
+  summary.textContent = bootstrapTForDocument(doc, 'common.technical_details');
   summary.style.cssText = 'cursor:pointer;font-weight:600;';
 
   const pre = doc.createElement('pre');

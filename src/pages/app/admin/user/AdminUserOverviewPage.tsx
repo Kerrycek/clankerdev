@@ -29,6 +29,13 @@ interface EditUserDraft {
   mailerEnabled: boolean;
 }
 
+function optionalStringField(record: Record<string, unknown>, key: string): string | undefined {
+  const value = record[key];
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed ? value : undefined;
+}
+
 function makeEditDraft(u: Record<string, unknown>): EditUserDraft {
   return {
     fullName: typeof u['full_name'] === 'string' ? u['full_name'] : '',
@@ -50,6 +57,7 @@ export function AdminUserOverviewPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteState, setDeleteState] = useState('deleted');
+  const userInfo = optionalStringField(u, 'info');
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const openEdit = () => {
@@ -152,10 +160,10 @@ export function AdminUserOverviewPage() {
                 <div className="text-sm whitespace-pre-wrap">{u.address}</div>
               </div>
             ) : null}
-            {typeof (u as any).info === 'string' && String((u as any).info).trim() ? (
+            {userInfo ? (
               <div className="sm:col-span-2">
                 <div className="text-xs text-muted">{t('admin.user.edit.field.info')}</div>
-                <div className="text-sm whitespace-pre-wrap">{String((u as any).info)}</div>
+                <div className="text-sm whitespace-pre-wrap">{userInfo}</div>
               </div>
             ) : null}
           </div>
@@ -166,9 +174,9 @@ export function AdminUserOverviewPage() {
         kind="user"
         id={u.id}
         objectLabel={u.login}
-        objectState={(u as any).object_state as any}
-        expirationDate={(u as any).expiration_date as any}
-        remindAfterDate={(u as any).remind_after_date as any}
+        objectState={u.object_state}
+        expirationDate={u.expiration_date}
+        remindAfterDate={u.remind_after_date}
         onUpdated={refetch}
         testId="admin.user.lifecycle"
       />

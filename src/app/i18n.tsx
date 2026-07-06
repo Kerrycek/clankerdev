@@ -1,8 +1,20 @@
-import React, { createContext, useContext, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
-import { dictionaries, type TranslationKey, type UiLanguage } from '../i18n';
-export type { TranslationKey, UiLanguage } from '../i18n';
+import { en } from '../i18n/en';
 import { useUiSettings, type UiLanguagePreference } from './uiSettings';
+
+export type UiLanguage = 'en' | 'cs';
+export type TranslationKey = keyof typeof en;
+
+type TranslationDictionary = Record<string, string>;
+
+const englishDictionary = en as TranslationDictionary;
+let czechDictionaryPromise: Promise<TranslationDictionary> | null = null;
+
+function loadCzechDictionary(): Promise<TranslationDictionary> {
+  czechDictionaryPromise ??= import('../i18n/cs').then((mod) => mod.cs as TranslationDictionary);
+  return czechDictionaryPromise;
+}
 
 export interface I18nContextValue {
   lang: UiLanguage;
@@ -56,25 +68,48 @@ function interpolate(template: string, vars?: Record<string, unknown>): string {
   });
 }
 
+function lookup(dict: TranslationDictionary, key: string): string | undefined {
+  const value = dict[key];
+  return typeof value === 'string' ? value : undefined;
+}
+
 export function I18nProvider(props: { children: React.ReactNode }) {
   const ui = useUiSettings();
   const pref = ui.settings.language;
   const lang = resolveUiLanguage(pref);
+  const [czechDictionary, setCzechDictionary] = useState<TranslationDictionary | null>(null);
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
     document.documentElement.lang = lang;
   }, [lang]);
 
-  const dict = dictionaries[lang] as Record<string, string>;
-  const fallbackDict = dictionaries.en as Record<string, string>;
+  useEffect(() => {
+    if (lang !== 'cs' || czechDictionary) return;
+
+    let cancelled = false;
+    loadCzechDictionary()
+      .then((dictionary) => {
+        if (!cancelled) setCzechDictionary(dictionary);
+      })
+      .catch(() => {
+        if (!cancelled) setCzechDictionary(englishDictionary);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [czechDictionary, lang]);
+
+  const dict = lang === 'cs' ? (czechDictionary ?? englishDictionary) : englishDictionary;
+  const fallbackDict = englishDictionary;
 
   const value: I18nContextValue = useMemo(() => {
     const preferredLanguageCodes = lang === 'cs' ? ['cs', 'en'] : ['en', 'cs'];
 
     const t = (key: TranslationKey | string, vars?: Record<string, unknown>) => {
       const lookupKey = String(key);
-      const raw = dict[lookupKey] ?? fallbackDict[lookupKey] ?? lookupKey;
+      const raw = lookup(dict, lookupKey) ?? lookup(fallbackDict, lookupKey) ?? lookupKey;
       return interpolate(raw, vars);
     };
 
@@ -83,11 +118,17 @@ export function I18nProvider(props: { children: React.ReactNode }) {
       const rules = new Intl.PluralRules(lang);
       const category = rules.select(count);
 
-      const k1 = `${baseKey}.${category}` as TranslationKey;
-      const k2 = `${baseKey}.other` as TranslationKey;
+      const k1 = `${baseKey}.${category}`;
+      const k2 = `${baseKey}.other`;
 
-      const chosen = (dict as any)[k1] ?? (dict as any)[k2] ?? (dict as any)[baseKey] ?? (dictionaries.en as any)[k2] ?? (dictionaries.en as any)[baseKey];
-      const raw = typeof chosen === 'string' ? chosen : String(baseKey);
+      const raw =
+        lookup(dict, k1) ??
+        lookup(dict, k2) ??
+        lookup(dict, baseKey) ??
+        lookup(fallbackDict, k2) ??
+        lookup(fallbackDict, baseKey) ??
+        String(baseKey);
+
       return interpolate(raw, { count, ...(vars ?? {}) });
     };
 
@@ -98,7 +139,7 @@ export function I18nProvider(props: { children: React.ReactNode }) {
       t,
       tc,
     };
-  }, [dict, lang, pref]);
+  }, [dict, fallbackDict, lang, pref]);
 
   return <I18nContext.Provider value={value}>{props.children}</I18nContext.Provider>;
 }

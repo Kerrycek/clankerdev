@@ -2,6 +2,7 @@
 export const csProfile_security = {
   "profile.security.known_devices.action.forget": "Zapomenout",
   "profile.security.known_devices.empty": "Žádná známá zařízení.",
+  "profile.security.known_devices.empty_filtered": "Aktuálnímu filtru neodpovídají žádná známá zařízení.",
   "profile.security.known_devices.field.api_ip": "API IP",
   "profile.security.known_devices.field.client_ip": "Klientská IP",
   "profile.security.known_devices.field.last_seen": "Naposledy viděno",
@@ -15,4 +16,8 @@ export const csProfile_security = {
   "profile.security.known_devices.subtitle": "Zařízení, ze kterých ses přihlašoval(a). Důvěryhodná zařízení mohou dočasně přeskočit MFA.",
   "profile.security.known_devices.title": "Známá zařízení",
   "profile.security.subtitle": "Důvěryhodná zařízení a bezpečnost přihlášení.",
+  "profile.security.known_devices.summary.total": "Známá zařízení",
+  "profile.security.known_devices.summary.trusted": "Důvěryhodná pro MFA",
+  "profile.security.known_devices.summary.client_ips": "Klientské IP",
+  "profile.security.known_devices.summary.api_ips": "API IP",
 } as const;

@@ -446,6 +446,7 @@ export function VpsLayout() {
         chainsStale,
         busyLocalLock,
         activeChainIds,
+        ipAddresses: ipsQ.data ?? [], ipAddressesLoading: ipsQ.isLoading, ipAddressesError: ipsQ.isError,
         sshCommand,
       }}
     >

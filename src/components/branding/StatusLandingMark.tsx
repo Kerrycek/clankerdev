@@ -1,6 +1,5 @@
 import React from 'react';
 
-import { staticT } from '../../lib/staticI18n';
 import { clsx } from '../ui/clsx';
 
 /**
@@ -13,7 +12,7 @@ export function StatusLandingMark(props: {
   className?: string;
   title?: string;
 }) {
-  const title = props.title ?? staticT('public.overview.title');
+  const title = props.title ?? 'vpsAdmin status';
 
   return (
     <svg

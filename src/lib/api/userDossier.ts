@@ -1,3 +1,5 @@
+import type { WebauthnPublicKeyCredentialJson } from '../webauthn';
+
 import { expectArray, haveApiCall } from './haveapi';
 
 /**
@@ -288,6 +290,11 @@ export async function deleteUserKnownDevice(userId: number, deviceId: number) {
 
 // ---- TOTP devices ----------------------------------------------------------
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+
 export interface UserTotpDevice {
   id: number;
   label?: string;
@@ -336,15 +343,15 @@ export async function createUserTotpDevice(userId: number, payload: { label: str
     params: payload,
   });
 
-  const d: any = res.data as any;
-  if (!d || typeof d !== 'object') {
-    throw new Error(`users/${userId}/totp_devices#create: expected object, got ${typeof d}`);
+  const data = res.data;
+  if (!isRecord(data)) {
+    throw new Error(`users/${userId}/totp_devices#create: expected object, got ${typeof data}`);
   }
-  if (typeof d.secret !== 'string' || typeof d.provisioning_uri !== 'string') {
+  if (typeof data['secret'] !== 'string' || typeof data['provisioning_uri'] !== 'string') {
     throw new Error(`users/${userId}/totp_devices#create: missing secret/provisioning_uri`);
   }
 
-  return { ...res, data: d as UserTotpDeviceCreateResponse };
+  return { ...res, data: data as UserTotpDeviceCreateResponse };
 }
 
 export async function confirmUserTotpDevice(userId: number, deviceId: number, payload: { code: string }) {
@@ -355,16 +362,16 @@ export async function confirmUserTotpDevice(userId: number, deviceId: number, pa
     params: payload,
   });
 
-  const d: any = res.data as any;
+  const data = res.data;
 
   // HaveAPI responses differ across versions:
   // - either `{ recovery_code: "..." }`
   // - or directly `"..."` when the top-level key is `recovery_code`
   const recovery =
-    typeof d === 'string'
-      ? d
-      : d && typeof d === 'object' && typeof d.recovery_code === 'string'
-        ? d.recovery_code
+    typeof data === 'string'
+      ? data
+      : isRecord(data) && typeof data['recovery_code'] === 'string'
+        ? data['recovery_code']
         : null;
 
   if (!recovery) {
@@ -453,7 +460,7 @@ export async function deleteUserWebauthnCredential(userId: number, credId: numbe
 
 export interface WebauthnRegistrationBeginResponse {
   challenge_token: string;
-  options: any;
+  options: unknown;
 }
 
 export async function beginWebauthnRegistration() {
@@ -466,7 +473,7 @@ export async function beginWebauthnRegistration() {
 export async function finishWebauthnRegistration(payload: {
   challenge_token: string;
   label: string;
-  public_key_credential: any;
+  public_key_credential: WebauthnPublicKeyCredentialJson;
 }) {
   return haveApiCall<void>({
     method: 'POST',

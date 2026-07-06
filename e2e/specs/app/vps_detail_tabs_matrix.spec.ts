@@ -21,7 +21,7 @@ const vps = {
   node: {
     id: 1,
     domain_name: 'node1.example',
-    location: { id: 2, label: 'Praha', remote_console_server: '/_console' },
+    location: { id: 2, label: 'Praha', remote_console_server: '/_console', environment: { id: 1, label: 'prod' } },
   },
   user: { id: 10, login: 'alice' },
   os_template: { id: 6, label: 'Debian 12' },
@@ -98,6 +98,8 @@ test('@workflow-matrix @smoke VPS detail tabs expose storage, access, lifecycle,
   await expect(page.getByRole('link', { name: /^Console$/ }).first()).toHaveAttribute('href', '/app/vps/123/console');
 
   await expect(page.getByTestId('vps.overview.lifecycle')).toBeVisible();
+  await expect(page.getByTestId('vps.overview.config.owner')).toHaveCount(0);
+  await expect(page.getByTestId('vps.overview.admin_ops.card')).toHaveCount(0);
   const moreActions = page.getByTestId('vps.actions.menu');
   await expect(moreActions).toBeVisible();
   await expect(moreActions.locator('option[value="/app/vps/123/lifecycle/reinstall"]')).toHaveCount(1);
@@ -124,4 +126,67 @@ test('@workflow-matrix @smoke VPS detail tabs expose storage, access, lifecycle,
   await expect(page).toHaveURL(/\/app\/vps\/123\/console$/);
   await expect(page.getByTestId('vps.console.page')).toBeVisible();
   await expect(page.getByTestId('vps.console.iframe')).toBeVisible();
+});
+
+
+test('@workflow-matrix VPS detail shows admin operational metadata in admin mode', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_ADMIN_SESSION' });
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 99 },
+    handlers: {
+      'GET vpses/123': () => ({
+        vps: {
+          ...vps,
+          pool: { id: 9, name: 'tank' },
+          dataset: { id: 10, full_name: 'tank/data', name: 'tank/data' },
+          expiration_date: '2027-01-31T00:00:00Z',
+          created_at: '2026-01-01T12:00:00Z',
+        },
+      }),
+      'GET ip_addresses': () => ({
+        ip_addresses: [
+          {
+            id: 501,
+            addr: '198.51.100.10',
+            prefix: 32,
+            routed: true,
+            network: { id: 55, label: 'public 198.51.100.0/24', role: 'public' },
+            user: { id: 10, login: 'alice' },
+          },
+        ],
+      }),
+      'GET transaction_chains': () => ({
+        transaction_chains: [
+          {
+            id: 9001,
+            label: 'Start VPS',
+            state: 'done',
+            created_at: '2026-01-02T12:00:00Z',
+            finished_at: '2026-01-02T12:01:00Z',
+          },
+        ],
+      }),
+      'GET vpses/123/statuses': () => ({ statuses: [] }),
+      'GET vpses/123/state_logs': () => ({ state_logs: [] }),
+    },
+  });
+
+  await page.goto('/admin/vps/123');
+
+  await expect(page.getByTestId('vps.header')).toBeVisible();
+  await expect(page.getByTestId('vps.overview.config.owner')).toContainText('alice');
+  await expect(page.getByTestId('vps.overview.admin_ops.card')).toBeVisible();
+  await expect(page.getByTestId('vps.overview.admin_ops.owner')).toContainText('alice');
+  await expect(page.getByTestId('vps.overview.admin_ops.user_id')).toContainText('#10');
+  await expect(page.getByTestId('vps.overview.admin_ops.node')).toContainText('node1.example');
+  await expect(page.getByTestId('vps.overview.admin_ops.location_environment')).toContainText('prod');
+  await expect(page.getByTestId('vps.overview.admin_ops.dataset')).toContainText('tank/data');
+  await expect(page.getByTestId('vps.overview.admin_ops.ips')).toContainText('198.51.100.10/32');
+  await expect(page.getByTestId('vps.overview.admin_ops.ips')).toContainText('Owner: alice');
+  await expect(page.getByTestId('vps.overview.tx.card')).toBeVisible();
+  await expect(page.getByTestId('vps.overview.management.admin_context')).toBeVisible();
+
+  const moreActions = page.getByTestId('vps.actions.menu');
+  await expect(moreActions.locator('option[value="/admin/vps/123/lifecycle/migrate"]')).toHaveCount(1);
 });

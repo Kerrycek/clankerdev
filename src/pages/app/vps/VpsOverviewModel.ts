@@ -28,6 +28,18 @@ export function resourceLabel(value: unknown): string | undefined {
   const name = value['name'];
   if (typeof name === 'string' && name.trim()) return name;
 
+  const fullName = value['full_name'];
+  if (typeof fullName === 'string' && fullName.trim()) return fullName;
+
+  const domainName = value['domain_name'];
+  if (typeof domainName === 'string' && domainName.trim()) return domainName;
+
+  const login = value['login'];
+  if (typeof login === 'string' && login.trim()) return login;
+
+  const addr = value['addr'];
+  if (typeof addr === 'string' && addr.trim()) return addr;
+
   const id = value['id'];
   if (typeof id === 'number' && Number.isFinite(id)) return `#${id}`;
   if (typeof id === 'string' && id.trim()) return `#${id}`;
@@ -48,6 +60,16 @@ export function ownerLabel(vps: Vps): string | undefined {
 export function ownerId(vps: Vps): number | undefined {
   const id = vps.user?.id;
   return typeof id === 'number' && Number.isFinite(id) ? id : undefined;
+}
+
+export function shouldShowVpsOwner(props: {
+  mode: 'user' | 'admin';
+  ownerId?: number;
+  currentUserId?: number;
+}): boolean {
+  if (props.mode === 'admin') return true;
+  if (props.ownerId === undefined || props.currentUserId === undefined) return false;
+  return props.ownerId !== props.currentUserId;
 }
 
 export function nodeLabel(vps: Vps, fallback: string): string {

@@ -4,7 +4,6 @@ import { Navigate, createBrowserRouter } from 'react-router-dom';
 import { getRuntimeConfig } from '../app/config';
 
 import { PublicLayout } from '../components/layout/PublicLayout';
-import { AppShell } from '../components/layout/AppShell';
 import { RouteProvidersLayout } from './RouteProvidersLayout';
 import { lazyRoute } from './lazyRoute';
 
@@ -12,6 +11,7 @@ import { ErrorPage } from '../pages/ErrorPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { RootErrorPage } from '../pages/RootErrorPage';
 
+const AppShell = lazyRoute(() => import('../components/layout/AppShell'), 'AppShell');
 const OverviewPage = lazyRoute(() => import('../pages/public/OverviewPage'), 'OverviewPage');
 const OutagesPage = lazyRoute(() => import('../pages/public/OutagesPage'), 'OutagesPage');
 const OutageDetailPage = lazyRoute(() => import('../pages/public/OutageDetailPage'), 'OutageDetailPage');

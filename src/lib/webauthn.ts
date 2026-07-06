@@ -112,7 +112,7 @@ export function creationOptionsFromJson(raw: unknown): PublicKeyCredentialCreati
   };
 }
 
-export async function credentialToJson(credential: PublicKeyCredential): Promise<{
+export interface WebauthnPublicKeyCredentialJson {
   id: string;
   rawId: string;
   type: PublicKeyCredential['type'];
@@ -122,7 +122,9 @@ export async function credentialToJson(credential: PublicKeyCredential): Promise
     clientDataJSON: string;
     transports?: AuthenticatorTransport[];
   };
-}> {
+}
+
+export async function credentialToJson(credential: PublicKeyCredential): Promise<WebauthnPublicKeyCredentialJson> {
   const response = credential.response;
   if (!(response instanceof AuthenticatorAttestationResponse)) {
     throw new Error('Expected an attestation response from navigator.credentials.create()');

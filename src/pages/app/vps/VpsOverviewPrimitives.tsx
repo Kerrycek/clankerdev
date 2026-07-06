@@ -30,14 +30,15 @@ import {
   ownerLabel,
   resourceId,
   resourceLabel,
+  shouldShowVpsOwner,
   sortChainsForOverview,
   usageValue,
   type ManagementAction,
 } from './VpsOverviewModel';
 
-function FieldRow(props: { label: React.ReactNode; value: React.ReactNode }) {
+function FieldRow(props: { label: React.ReactNode; value: React.ReactNode; testId?: string }) {
   return (
-    <div className="grid grid-cols-3 gap-2 py-1">
+    <div className="grid grid-cols-3 gap-2 py-1" data-testid={props.testId}>
       <div className="text-sm text-faint">{props.label}</div>
       <div className="col-span-2 text-sm text-fg">{props.value ?? '—'}</div>
     </div>
@@ -175,11 +176,23 @@ export function OverviewStatusAccessCard(props: {
   );
 }
 
-export function OverviewResourceUsageCard(props: { vps: Vps; basePath: string; mode: 'user' | 'admin' }) {
+export function OverviewResourceUsageCard(props: {
+  vps: Vps;
+  basePath: string;
+  mode: 'user' | 'admin';
+  currentUserId?: number;
+}) {
   const { t } = useI18n();
   const mapId = resourceId(props.vps.user_namespace_map);
   const mapLabel = resourceLabel(props.vps.user_namespace_map);
   const owner = ownerLabel(props.vps);
+  const showOwner =
+    Boolean(owner) &&
+    shouldShowVpsOwner({
+      mode: props.mode,
+      ownerId: ownerId(props.vps),
+      currentUserId: props.currentUserId,
+    });
 
   return (
     <Card className="lg:col-span-2" testId="vps.overview.resources_usage.card">
@@ -190,7 +203,13 @@ export function OverviewResourceUsageCard(props: { vps: Vps; basePath: string; m
             <div className="mb-2 text-sm font-medium text-fg">{t('vps.overview.config.title')}</div>
             <FieldRow label={t('vps.overview.config.vps_id')} value={<span className="font-medium">#{props.vps.id}</span>} />
             <FieldRow label={t('vps.overview.config.hostname')} value={<span className="font-medium">{props.vps.hostname}</span>} />
-            {owner ? <FieldRow label={t('vps.overview.config.owner')} value={<span className="font-medium">{owner}</span>} /> : null}
+            {showOwner ? (
+              <FieldRow
+                testId="vps.overview.config.owner"
+                label={t('vps.overview.config.owner')}
+                value={<span className="font-medium">{owner}</span>}
+              />
+            ) : null}
             <FieldRow label={t('vps.overview.config.os_template')} value={resourceLabel(props.vps.os_template) ?? '—'} />
             <FieldRow label={t('vps.overview.config.dns_resolver')} value={resourceLabel(props.vps.dns_resolver) ?? '—'} />
             <FieldRow
@@ -338,6 +357,9 @@ export function OverviewAdminContextCard(props: { vps: Vps; basePath: string }) 
           </ChipLink>
           <ChipLink to={`${props.basePath}/outages?vps=${props.vps.id}`} title={t('vps.overview.admin_actions.outages_title')}>
             {t('vps.overview.admin_actions.outages')}
+          </ChipLink>
+          <ChipLink to={`${props.basePath}/transactions?class_name=Vps&row_id=${props.vps.id}`} title={t('vps.overview.admin_actions.transaction_log_title')}>
+            {t('vps.overview.admin_actions.transaction_log')}
           </ChipLink>
           {id ? (
             <ChipLink to={`${props.basePath}/users/${id}/user-data`} title={t('vps.overview.admin_actions.user_data_title')}>

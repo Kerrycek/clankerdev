@@ -10,6 +10,7 @@ This file is intentionally included in every complete tarball so a new ChatGPT c
 - Prefer UX/UI improvements for flows that already exist: create, reinstall, start/stop/restart, destroy, clone, swap, modify/configuration, access, network and DNS.
 - Keep pages clear, intuitive and low-noise. Add review/impact summaries and safer confirmations rather than merely adding more buttons.
 - Continue the structural ratchet: avoid growing over-budget files, avoid new `as any`, and lower `scripts/fixtures/structural-baseline.json` when debt is paid down.
+- For the current admin migration task, continue local numbering from Phase 1 → Phase 2 → Phase 3. The older Phase 10–35 entries below are legacy history and must not drive the next phase number.
 
 ## Data signal used for the roadmap
 
@@ -29,6 +30,40 @@ Important interpretation:
   - ssh_key: 634 actions / 197 users / 100% success
   - reinstall: 298 actions / 99 users / 4 failures
   - dns_change: 183 actions / 10 users / 12 failures
+
+
+## Current admin migration task — Phase 1: VPS detail by role
+
+Completed in this tarball:
+
+- Hid the self-owner row from the user VPS overview so `/app/vps/:id` stays low-noise for a member viewing their own VPS.
+- Kept existing user actions discoverable through the header/menu and lifecycle pages: start, stop, restart, console, root password, access/SSH keys, reinstall, clone, swap and delete.
+- Added an admin-only operational metadata card to `/admin/vps/:id` showing owner, user ID, node, location/environment, dataset/pool, runtime/lifecycle state, action/transaction lock state and assigned IP address ownership context.
+- Added admin recent transaction chains to the overview and added a transaction-log chip to the admin-only support context.
+- Extended the VPS IP-address fetch include set to `network,user,network_interface` so admin IP ownership context can be displayed when the API provides it.
+- Added role-aware owner display tests and Playwright assertions for user/admin VPS detail behavior.
+
+Maintainer bug log for this phase:
+
+- No maintainer-reported bugs were received during this phase.
+
+Verification performed in this phase:
+
+```bash
+npm ci
+npm run typecheck
+npm run lint
+npm run audit:i18n
+npm test -- src/pages/app/vps/VpsOverviewModel.test.ts
+npm run build
+```
+
+Known verification limits:
+
+- `npm run e2e -- e2e/specs/app/vps_detail_tabs_matrix.spec.ts --project=chromium` could not run because the Playwright Chromium executable is missing in the container.
+- `npm run e2e:install -- chromium` could not download Chromium because DNS resolution for `cdn.playwright.dev` failed with `EAI_AGAIN`.
+- `npm test -- src/pages/app/vps` was attempted, but the broader Vitest selection timed out in the container after 300 seconds.
+- `npm run audit:structural` still fails on pre-existing/non-phase files (`src/lib/api/ipAddresses.test.ts`, `src/pages/app/admin/IpAddressDetailPage.tsx`, `src/pages/app/admin/IpAddressesPage.tsx`). The phase changes no longer grow `VpsLayout.tsx` past its structural baseline.
 
 ## Completed phases
 
@@ -1669,14 +1704,489 @@ Known verification limits:
 - A full repository-wide Vitest run with single-worker settings also exceeded the environment command window before completion. Targeted suites for the changed/security-critical surfaces passed.
 - `npm run build` and the Playwright dev server still emit the existing stale Browserslist/caniuse-lite warning.
 
+## Current admin migration task — Phase 2: Profile security/account settings follow-up
+
+Completed in this tarball:
+
+- Reworked the shared profile/admin user security panel into focused components while preserving existing routes and test IDs:
+  - `UserSecurityPasswordCard.tsx` for password changes,
+  - `UserSecuritySettingsCard.tsx` for authentication preferences,
+  - `UserSecurityReviewCards.tsx` for password/settings review summaries,
+  - `UserSecurityModel.ts` for typed field normalization, validation, payload builders and impersonation response parsing.
+- Added review-first password change UX:
+  - save is disabled until required fields are complete,
+  - the review card summarizes that a new password is entered without showing the password value,
+  - profile mode requires the current password before submit,
+  - the “log out other sessions” impact is explicit before saving.
+- Added review-first authentication settings UX:
+  - only changed fields are shown in the pending-change review,
+  - save is disabled when there are no changes or the session-length value is invalid,
+  - session length now has local validation for empty/negative/non-numeric values,
+  - changing to never-expiring preferred sessions shows a warning,
+  - disabling all interactive login methods when OAuth2 is already disabled shows a warning.
+- Preserved backend payload compatibility for `updateUser()`:
+  - password still sends `new_password`, optional profile-mode `password` and `logout_sessions`,
+  - authentication settings still send only changed fields using the existing HaveAPI field names.
+- Removed all `as any` casts from the touched shared security panel path by using typed model helpers and the existing `UserSession` response type.
+- Added focused unit coverage for user-field normalization, password validation/payloads, settings review/payloads, session-length validation and impersonation token parsing.
+- Added a profile-security Playwright smoke test covering password review gating, authentication settings review, warning copy and exact update payloads.
+- Continued the structural ratchet:
+  - `UserSecurityPanel.tsx` was reduced from about 678 lines to 304 lines,
+  - global structural baseline was lowered to:
+    - `asAny`: 1235,
+    - `filesOver500`: 60,
+    - `filesOver1000`: 11.
+
+Verification performed in Phase 2:
+
+```bash
+npm ci
+npm audit --omit=dev
+npm audit
+npm run typecheck
+npm test -- src/components/user/UserSecurityModel.test.ts
+npm test -- src/i18n/index.test.ts
+npm run lint
+npm run audit:i18n
+npm run audit:i18n-structure
+npm run audit:ui-strings:check
+npm run audit:component-contracts
+npm run audit:pages
+npm run audit:active-docs
+npm run audit:overlays
+npm run audit:lookup-primitives
+npm run audit:api-barrel-imports
+npm run audit:mutations:check
+npm run build
+npm run test:scripts
+npm run audit:structural:baseline
+npm run audit:structural
+npm run e2e:container -- --project=chromium --workers=1 --reporter=list --timeout=90000 e2e/specs/app/profile_security_settings.spec.ts
+```
+
+Targeted results:
+
+- `npm ci` completed successfully and npm audit is clean: 0 known vulnerabilities for both production-only and full audit modes.
+- TypeScript typecheck passed.
+- Targeted Vitest suites passed: `UserSecurityModel.test.ts` (6 tests) and `src/i18n/index.test.ts` (1 test).
+- Lint passed.
+- i18n, i18n-structure, UI string, page, component-contract, active-docs, overlay, lookup-primitive, API barrel import, mutation and structural audits passed.
+- Build passed.
+- Script harness Node tests passed: 6 tests.
+- Profile security Playwright smoke spec passed with system Chromium: 1 test.
+
+Known verification limits:
+
+- A full repository-wide `npm test` run was not repeated; targeted security-model/i18n suites passed.
+- One combined targeted Vitest invocation (`UserSecurityModel.test.ts` + `src/i18n/index.test.ts`) was interrupted by the sandbox after the model suite had passed, so the suites were re-run separately and passed.
+- `npm run build` and the Playwright dev server still emit the existing stale Browserslist/caniuse-lite warning.
+
+## Current admin migration task — Phase 3: Structural debt ratchet follow-up
+
+Completed in this tarball:
+
+- Split the profile/admin user-data templates surface into focused files while preserving existing routes, payloads and test IDs:
+  - `UserDataTemplatesModel.ts` for typed format helpers, safe field normalization, form initialization, validation, payload builders and timestamp selection,
+  - `UserDataTemplatesFilters.tsx` for smart search, filter chips, advanced filter drawer and help content,
+  - `UserDataTemplatesList.tsx` for loading/error/empty/table states and row actions,
+  - `UserDataTemplatesDrawers.tsx` for create/edit and deploy drawers.
+- Kept the existing smart filter behavior for free-text/id searches and `format:` shortcuts, including unresolved-option and numeric validation errors.
+- Kept backend compatibility for user-data templates:
+  - create still sends `label`, `format`, `content` and admin-scoped `user` when applicable,
+  - update still sends `label`, `format` and `content`,
+  - deploy still posts the selected VPS id and tracks the returned action state with a local VPS lock.
+- Removed all `as any` casts from the touched `UserDataTemplates*` component path by using typed model helpers and direct `VpsUserData` fields.
+- Added `UserDataTemplatesModel.test.ts` covering field normalization, format resolution, content-shape validators, save gating, validation hints and create/update payload builders.
+- Continued the structural ratchet:
+  - `UserDataTemplatesPanel.tsx` was reduced from about 938 lines to 408 lines,
+  - global structural baseline was lowered to:
+    - `asAny`: 1226,
+    - `filesOver500`: 59,
+    - `filesOver1000`: 11.
+
+Verification performed in Phase 3:
+
+```bash
+npm ci
+npm audit --omit=dev
+npm audit
+npm run typecheck
+npm test -- src/components/user/UserDataTemplatesModel.test.ts src/components/user/UserSecurityModel.test.ts src/i18n/index.test.ts
+npm run lint
+npm run audit:i18n
+npm run audit:i18n-structure
+npm run audit:ui-strings:check
+npm run audit:component-contracts
+npm run audit:pages
+npm run audit:active-docs
+npm run audit:overlays
+npm run audit:lookup-primitives
+npm run audit:api-barrel-imports
+npm run audit:mutations:check
+npm run audit:structural
+npm run audit:structural:baseline
+npm run audit:structural
+npm run test:scripts
+npm run build
+npm run e2e:container -- --project=chromium --workers=1 --reporter=list --timeout=90000 e2e/specs/app/profile_user_data.spec.ts
+```
+
+Targeted results:
+
+- `npm ci` completed successfully and npm audit is clean: 0 known vulnerabilities for both production-only and full audit modes.
+- TypeScript typecheck passed.
+- Targeted Vitest suites passed: `UserDataTemplatesModel.test.ts` (5 tests), `UserSecurityModel.test.ts` (6 tests) and `src/i18n/index.test.ts` (1 test).
+- Lint passed.
+- i18n, i18n-structure, UI string, page, component-contract, active-docs, overlay, lookup-primitive, API barrel import, mutation and structural audits passed.
+- Structural baseline was lowered and the follow-up structural audit passed against the new lower baseline.
+- Build passed.
+- Script harness Node tests passed: 6 tests.
+- Profile user-data Playwright smoke spec passed with system Chromium: 1 test.
+
+Known verification limits:
+
+- A full repository-wide `npm test` run was not repeated; targeted model/security/i18n suites passed.
+- A full repository-wide Playwright run was not repeated; the touched profile user-data smoke passed.
+- `npm run build` and the Playwright dev server still emit the existing stale Browserslist/caniuse-lite warning.
+
+## Current admin migration task — Phase 4: Profile MFA/mail structural follow-up
+
+Completed in this tarball:
+
+- Split the profile/admin mail-preferences surface into focused files while preserving existing routes, payloads and test IDs:
+  - `UserMailPreferencesModel.ts` for e-mail normalization/formatting, language id resolution, recipient/template derivation, template filtering and settings payload building,
+  - `UserMailSettingsCard.tsx` for the mail transport/language settings form,
+  - `UserMailRecipientsTables.tsx` for effective role recipients and template-recipient tables,
+  - `UserMailPreferencesPanel.tsx` as the orchestration shell.
+- Split the profile/admin TOTP devices surface into focused files while preserving existing add/edit/delete/confirm/wizard test IDs and API behavior:
+  - `UserTotpDevicesModel.ts` for small device formatting helpers,
+  - `UserTotpDevicesCard.tsx` for list/loading/error/empty/action states,
+  - `UserTotpDeviceModals.tsx` for create/edit/delete/confirm/recovery-code dialogs,
+  - `UserTotpDevicesPanel.tsx` as the orchestration shell.
+- Fixed and typed the existing TOTP confirm-existing response path: `confirmUserTotpDevice()` now accepts both scalar recovery-code responses and `{ recovery_code }` object responses without `as any`, and the panel stores the returned recovery code string directly.
+- Removed all `as any` casts from the touched mail/TOTP component path and from the touched TOTP API wrapper path.
+- Added targeted model/API tests:
+  - `UserMailPreferencesModel.test.ts`,
+  - `UserTotpDevicesModel.test.ts`,
+  - `src/lib/api/userDossier.test.ts`.
+- Continued the structural ratchet:
+  - `UserMailPreferencesPanel.tsx` was reduced from about 688 lines to 159 lines,
+  - `UserTotpDevicesPanel.tsx` was reduced from about 733 lines to 278 lines,
+  - `src/lib/api/userDossier.ts` dropped below the 500-line structural threshold,
+  - global structural baseline was lowered to:
+    - `asAny`: 1216,
+    - `filesOver500`: 57,
+    - `filesOver1000`: 11.
+
+Verification performed in Phase 4:
+
+```bash
+npm ci
+npm run typecheck
+npm test -- src/lib/api/userDossier.test.ts src/components/user/UserMailPreferencesModel.test.ts src/components/user/UserTotpDevicesModel.test.ts src/components/user/UserDataTemplatesModel.test.ts src/components/user/UserSecurityModel.test.ts src/i18n/index.test.ts
+npm run lint
+npm run audit:i18n
+npm run audit:i18n-structure
+npm run audit:ui-strings:check
+npm run audit:component-contracts
+npm run audit:pages
+npm run audit:active-docs
+npm run audit:overlays
+npm run audit:lookup-primitives
+npm run audit:api-barrel-imports
+npm run audit:mutations:check
+npm run audit:structural
+npm run audit:structural:baseline
+npm run audit:structural
+npm audit --omit=dev
+npm audit
+npm run test:scripts
+npm run build
+```
+
+Targeted results:
+
+- `npm ci` completed successfully and npm audit is clean: 0 known vulnerabilities for both production-only and full audit modes.
+- TypeScript typecheck passed.
+- Targeted Vitest suites passed: `userDossier.test.ts`, `UserMailPreferencesModel.test.ts`, `UserTotpDevicesModel.test.ts`, `UserDataTemplatesModel.test.ts`, `UserSecurityModel.test.ts` and `src/i18n/index.test.ts` — 6 files / 23 tests total.
+- Lint passed.
+- i18n, i18n-structure, UI string, page, component-contract, active-docs, overlay, lookup-primitive, API barrel import, mutation and structural audits passed.
+- Structural baseline was lowered and the follow-up structural audit passed against the new lower baseline.
+- Build passed.
+- Script harness Node tests passed: 6 tests.
+
+Known verification limits:
+
+- A full repository-wide `npm test` run was not repeated; targeted model/API/security/i18n suites passed.
+- A full repository-wide Playwright run was not repeated in this phase; no new profile mail/MFA E2E spec was added.
+- `npm run build` still emits the existing stale Browserslist/caniuse-lite warning.
+
+## Current admin migration task — Phase 5: Profile MFA/account recovery polish
+
+Completed in this tarball:
+
+- Added an MFA recovery-readiness card to the shared profile/admin MFA panel while preserving existing routes, payloads and existing TOTP/WebAuthn/known-device test IDs:
+  - summarizes whether account-level MFA is required,
+  - counts active TOTP devices, active passkeys and known devices that can currently skip MFA,
+  - surfaces `disabled`, `staged`, `setup_pending`, `needs_factor`, `single_path` and `ready` states,
+  - renders a checklist for requirement, first factor, backup path, trusted devices and unfinished setup.
+- Added `UserMfaRecoveryModel.ts` and `UserMfaRecoveryModel.test.ts` for typed recovery-state derivation outside React.
+- Added `UserKnownDevicesModel.ts` and `UserKnownDevicesModel.test.ts` for known-device search haystacks, user-agent summaries, MFA-trust expiry handling and summary counts.
+- Added `UserSessionsModel.ts` and `UserSessionsModel.test.ts` for typed session state filters, IP-search detection, session search haystacks and session summary counts.
+- Improved the existing known-devices and sessions panels without changing backend calls or row/action test IDs:
+  - known devices now show total/trusted/client-IP/API-IP summary metrics,
+  - sessions now show open/current/token/closed summary metrics,
+  - filtered session empty states now distinguish “no filtered results” from “no sessions”.
+- Tightened typed MFA/WebAuthn paths:
+  - `UserMfaMasterPanel.tsx` now reads `enable_multi_factor_auth` through the shared typed user-field helper,
+  - the WebAuthn registration begin response now uses `unknown` options instead of `any`,
+  - the WebAuthn finish payload now uses a typed `WebauthnPublicKeyCredentialJson`,
+  - the WebAuthn panel no longer needs `as any` for secure-context/challenge/error-name handling.
+- Added EN/CS i18n strings for the new recovery card, known-device summaries and session summaries; the i18n audits confirm key parity.
+- Added a profile-MFA Playwright smoke test covering the recovery card, status badge, summary metrics and known-device summary.
+- Continued the structural ratchet:
+  - removed 10 global `as any` casts from the touched MFA/session/known-device/WebAuthn path,
+  - global structural baseline was lowered to:
+    - `asAny`: 1206,
+    - `filesOver500`: 57,
+    - `filesOver1000`: 11.
+
+Verification performed in Phase 5:
+
+```bash
+npm ci
+npm run typecheck
+npm test -- src/components/user/UserMfaRecoveryModel.test.ts src/components/user/UserKnownDevicesModel.test.ts src/components/user/UserSessionsModel.test.ts src/components/user/UserTotpDevicesModel.test.ts src/components/user/UserSecurityModel.test.ts src/i18n/index.test.ts
+npm run lint
+npm run audit:i18n
+npm run audit:i18n-structure
+npm run audit:ui-strings:check
+npm run audit:component-contracts
+npm run audit:pages
+npm run audit:active-docs
+npm run audit:overlays
+npm run audit:lookup-primitives
+npm run audit:api-barrel-imports
+npm run audit:mutations:check
+npm run audit:structural
+npm run audit:structural:baseline
+npm run audit:structural
+npm run test:scripts
+npm run build
+npm audit --omit=dev
+npm audit
+npm run e2e:container -- --project=chromium --workers=1 --reporter=list --timeout=90000 e2e/specs/app/profile_keys_sessions.spec.ts
+npm run e2e:container -- --project=chromium --workers=1 --reporter=list --timeout=90000 e2e/specs/app/profile_mfa_recovery.spec.ts
+```
+
+Targeted results:
+
+- `npm ci` completed successfully and npm audit is clean: 0 known vulnerabilities for both production-only and full audit modes.
+- TypeScript typecheck passed.
+- Targeted Vitest suites passed: `UserMfaRecoveryModel.test.ts`, `UserKnownDevicesModel.test.ts`, `UserSessionsModel.test.ts`, `UserTotpDevicesModel.test.ts`, `UserSecurityModel.test.ts` and `src/i18n/index.test.ts` — 6 files / 18 tests total.
+- Lint passed.
+- i18n, i18n-structure, UI string, page, component-contract, active-docs, overlay, lookup-primitive, API barrel import, mutation and structural audits passed.
+- Structural baseline was lowered and the follow-up structural audit passed against the new lower baseline.
+- Build passed.
+- Script harness Node tests passed: 6 tests.
+- Profile sessions/keys Playwright smoke spec passed with system Chromium: 1 test.
+- New profile MFA recovery Playwright smoke spec passed with system Chromium: 1 test.
+
+Known verification limits:
+
+- A full repository-wide `npm test` was attempted twice in this sandbox but did not finish before the command limit: the default run timed out after 300 seconds, and a serialized dot-reporter run timed out after 600 seconds without a final Vitest summary. No failing assertion summary was produced before timeout; the targeted touched suites passed.
+- A full repository-wide Playwright run was not repeated; the touched profile sessions/keys and profile MFA recovery smokes passed.
+- `npm run build` and the Playwright dev server still emit the existing stale Browserslist/caniuse-lite warning.
+
+## Current admin migration task — Phase 6: WebAuthn/known-device/session structural follow-up
+
+Completed in this tarball:
+
+- Split the shared profile/admin WebAuthn credentials surface while preserving existing routes, payloads and test IDs:
+  - `UserWebauthnCredentialsPanel.tsx` now owns query/mutation wiring and modal state only,
+  - `UserWebauthnCredentialsModel.ts` owns sorting, labels, badge state, label validation, registration readiness and begin-response parsing,
+  - `UserWebauthnCredentialsList.tsx` owns mobile cards and the desktop table,
+  - `UserWebauthnCredentialModals.tsx` owns create/edit/delete modal and confirm-dialog UI.
+- Kept WebAuthn registration behavior stable:
+  - begin still calls `/webauthn/registration/begin`,
+  - finish still sends `challenge_token`, typed `public_key_credential` JSON and trimmed `label`,
+  - cancellation still maps `NotAllowedError` to the existing cancelled validation copy,
+  - edit still sends `{ label, enabled }` under the `webauthn_credential` namespace,
+  - delete still calls the existing credential delete endpoint.
+- Added model/unit coverage:
+  - `UserWebauthnCredentialsModel.test.ts` covers descending sort, fallback labels, badge descriptors, edit payload validation, secure-context registration readiness, begin-response parsing and cancellation-error detection,
+  - `src/lib/webauthn.test.ts` covers creation-option JSON decoding, invalid option rejection and attestation credential JSON serialization.
+- Added a profile WebAuthn Playwright smoke test covering edit and delete payloads after the component split: `e2e/specs/app/profile_mfa_webauthn.spec.ts`.
+- Paid down adjacent account-security/admin-user `as any` debt without changing UI behavior:
+  - `src/lib/auditUi.ts` now uses typed `ObjectHistoryEvent` fields directly,
+  - `AdminUserHistoryPage.tsx` no longer casts history pages, filter-chip tone or load errors,
+  - `AdminUserOverviewPage.tsx` no longer casts user info/lifetime fields,
+  - `AdminUserUserDataPage.tsx` now uses the typed `user.login` field.
+- Continued the structural ratchet:
+  - removed 21 global `as any` casts,
+  - global structural baseline was lowered to:
+    - `asAny`: 1185,
+    - `filesOver500`: 57,
+    - `filesOver1000`: 11.
+
+Verification performed in Phase 6:
+
+```bash
+npm ci
+npm run typecheck
+npm test -- src/components/user/UserWebauthnCredentialsModel.test.ts src/lib/webauthn.test.ts src/components/user/UserMfaRecoveryModel.test.ts src/components/user/UserKnownDevicesModel.test.ts src/components/user/UserSessionsModel.test.ts src/components/user/UserTotpDevicesModel.test.ts src/components/user/UserSecurityModel.test.ts src/i18n/index.test.ts
+npm run lint
+npm run audit:i18n
+npm run audit:i18n-structure
+npm run audit:ui-strings:check
+npm run audit:component-contracts
+npm run audit:pages
+npm run audit:active-docs
+npm run audit:overlays
+npm run audit:lookup-primitives
+npm run audit:api-barrel-imports
+npm run audit:mutations:check
+npm run audit:structural
+npm run audit:structural:baseline
+npm run audit:structural
+npm run test:scripts
+npm run build
+npm audit --omit=dev
+npm audit
+npm run e2e:container -- --project=chromium --workers=1 --reporter=list --timeout=90000 e2e/specs/app/profile_mfa_webauthn.spec.ts
+npm run e2e:container -- --project=chromium --workers=1 --reporter=list --timeout=90000 e2e/specs/app/profile_mfa_recovery.spec.ts
+npm run e2e:container -- --project=chromium --workers=1 --reporter=list --timeout=90000 e2e/specs/app/profile_keys_sessions.spec.ts
+```
+
+Targeted results:
+
+- `npm ci` completed successfully and npm audit is clean: 0 known vulnerabilities for both production-only and full audit modes.
+- TypeScript typecheck passed.
+- Targeted Vitest suites passed: `UserWebauthnCredentialsModel.test.ts`, `src/lib/webauthn.test.ts`, `UserMfaRecoveryModel.test.ts`, `UserKnownDevicesModel.test.ts`, `UserSessionsModel.test.ts`, `UserTotpDevicesModel.test.ts`, `UserSecurityModel.test.ts` and `src/i18n/index.test.ts` — 8 files / 25 tests total.
+- Lint passed.
+- i18n, i18n-structure, UI string, page, component-contract, active-docs, overlay, lookup-primitive, API barrel import, mutation and structural audits passed.
+- Structural baseline was lowered and the follow-up structural audit passed against the new lower baseline.
+- Build passed.
+- Script harness Node tests passed: 6 tests.
+- New profile WebAuthn Playwright smoke spec passed with system Chromium: 1 test.
+- Existing profile MFA recovery Playwright smoke spec passed with system Chromium: 1 test.
+- Existing profile sessions/keys Playwright smoke spec passed with system Chromium: 1 test.
+
+Known verification limits:
+
+- A full repository-wide `npm test` was not repeated in Phase 6; the Phase 5 sandbox already showed full Vitest timing out before a final summary, and the touched model/helper/i18n suites passed here.
+- A full repository-wide Playwright run was not repeated; the touched profile WebAuthn/MFA/session smokes passed.
+- `npm run build` and the Playwright dev server still emit the existing stale Browserslist/caniuse-lite warning.
+
+## Current admin migration task — Phase 7: Profile/admin security detail polish
+
+Completed in the previous tarball:
+
+- Added a shared read-only `UserSecurityPostureCard` for profile/admin security pages.
+- Added typed posture derivation in `UserSecurityModel.ts` covering interactive sign-in, MFA, new-login notification and session-expiry state.
+- Included admin-only posture checks for account lockout and forced password reset without changing payloads or existing test IDs.
+- Added EN/CS translations and targeted unit coverage through `UserSecurityModel.test.ts`.
+- Fixed landing-page startup weight from the previous tarball by keeping app/admin shell and contextual help code out of the public landing-page bootstrap and by preventing the Czech locale/app overlays from being preloaded on `/`.
+
+Verification performed in Phase 7:
+
+```bash
+npm run lint
+npm run typecheck
+npm run audit:i18n
+npm run audit:ui-strings:check
+npm run audit:structural
+npm test -- src/components/user/UserSecurityModel.test.ts
+npm run build
+```
+
+Known verification limits:
+
+- The Phase 7 handoff section was added during Phase 8 because the previous tarball already contained the Phase 7 code but did not update this file.
+
+## Current admin migration task — Phase 8: Sessions/known-devices structural follow-up
+
+Completed in this tarball:
+
+- Split the shared profile/admin sessions surface while preserving existing routes, API calls, payloads and row/dialog test IDs:
+  - `UserSessionsPanel.tsx` now owns URL state, pagination and mutations,
+  - `UserSessionsList.tsx` owns mobile cards and desktop table rendering,
+  - `UserSessionsDialogs.tsx` owns rename and close dialogs.
+- Split the known-devices surface while preserving existing routes, API calls and forget-device test IDs:
+  - `UserKnownDevicesPanel.tsx` now owns URL state, pagination and delete mutation,
+  - `UserKnownDevicesList.tsx` owns mobile cards and desktop table rendering,
+  - `UserKnownDevicesDialogs.tsx` owns the forget-device confirmation dialog.
+- Added `UserSecurityMetricGrid.tsx` and reused it for sessions and known-device summary metrics.
+- Added typed model helpers:
+  - `userSessionDisplayLabel()` and `formatUserSessionPrimaryIp()` for stable session rendering,
+  - `filterKnownDevices()` for local known-device filtering outside React.
+- Improved filtered empty states without adding new backend behavior:
+  - sessions now show a clear-filters action when state/search filters remove all results,
+  - known devices now distinguish no devices from no matches and offer a clear-filters action.
+- Added EN/CS copy for the known-device filtered empty state.
+- Continued the structural ratchet:
+  - `UserSessionsPanel.tsx` reduced from 486 to 327 lines,
+  - `UserKnownDevicesPanel.tsx` reduced from 423 to 226 lines,
+  - global structural baseline was lowered to:
+    - `asAny`: 1180,
+    - `filesOver500`: 57,
+    - `filesOver1000`: 11.
+
+Verification performed in Phase 8:
+
+```bash
+npm ci
+npm run typecheck
+npm run lint
+npm run audit:i18n
+npm run audit:ui-strings:check
+npm test -- src/components/user/UserSessionsModel.test.ts src/components/user/UserKnownDevicesModel.test.ts src/components/user/UserSecurityModel.test.ts src/i18n/index.test.ts
+npm run audit:structural
+npm run audit:structural:baseline
+npm run audit:structural
+npm run audit:i18n-structure
+npm run audit:component-contracts
+npm run audit:pages
+npm run audit:active-docs
+npm run audit:overlays
+npm run audit:lookup-primitives
+npm run audit:api-barrel-imports
+npm run audit:mutations:check
+npm run test:scripts
+npm run build
+npm audit --omit=dev
+npm audit
+npm run e2e:container -- --project=chromium --workers=1 --reporter=list --timeout=90000 e2e/specs/app/profile_keys_sessions.spec.ts
+npm run e2e:container -- --project=chromium --workers=1 --reporter=list --timeout=90000 e2e/specs/app/profile_mfa_recovery.spec.ts
+```
+
+Targeted results:
+
+- `npm ci` completed successfully and npm audit is clean: 0 known vulnerabilities for both production-only and full audit modes.
+- TypeScript typecheck passed.
+- Targeted Vitest suites passed: `UserSessionsModel.test.ts`, `UserKnownDevicesModel.test.ts`, `UserSecurityModel.test.ts` and `src/i18n/index.test.ts` — 4 files / 15 tests total.
+- Lint passed.
+- i18n, UI string, structural, i18n-structure, component-contract, page, active-docs, overlay, lookup-primitive, API barrel import and mutation audits passed.
+- Structural baseline was lowered and the follow-up structural audit passed against the new lower baseline.
+- Script harness Node tests passed: 6 tests.
+- Build passed.
+- Profile sessions/keys Playwright smoke spec passed with system Chromium: 1 test.
+- Profile MFA recovery Playwright smoke spec passed with system Chromium: 1 test.
+
+Known verification limits:
+
+- A full repository-wide `npm test` run was not repeated; targeted model/security/i18n suites and touched Playwright smokes passed.
+- A full repository-wide Playwright run was not repeated; the touched profile sessions/keys and MFA recovery smokes passed.
+- `npm run build` and the Playwright dev server still emit the existing stale Browserslist/caniuse-lite warning.
+
 ## Suggested immediate next choice
 
-Best next implementation target: **Phase 36 — Profile security/account settings follow-up**.
+Best next implementation target: **Phase 9 — Billing reconciliation follow-up**.
 
-Reason: Phase 35 cleaned dependency/security debt and made the Playwright harness easier to run on isolated local ports. The next product-facing daily-workflow target can now return to profile/security/account settings with stronger typed model helpers, clearer pre-submit summaries and better empty/error states.
+Reason: Phases 7–8 finished the account-security detail polish and sessions/known-devices split. The next highest-leverage continuation is to revisit incoming-payment and reconciliation workflows where admin users need clearer failed/ignored-state explanations and safer transaction-link review.
 
 Likely follow-up phases are:
 
-- **Phase 36 — Profile security/account settings follow-up:** continue replacing raw or scattered profile/security panels with focused model helpers, better empty/error states and stronger pre-submit summaries.
-- **Phase 37 — Structural debt ratchet follow-up:** keep splitting the largest admin/profile modules without adding new casts or expanding over-budget files.
-- **Phase 38 — Billing reconciliation follow-up:** revisit incoming-payment list/detail workflows after backend/API feedback, especially transaction links, bulk reconciliation and clearer failed/ignored-state explanations.
+- **Phase 9 — Billing reconciliation follow-up:** revisit incoming-payment list/detail workflows after backend/API feedback, especially transaction links, bulk reconciliation and clearer failed/ignored-state explanations.
+- **Phase 10 — Metrics/access-token account security follow-up:** polish profile/admin metrics token states if the account-security track continues.
+- **Phase 11 — Remaining structural paydown:** reduce one of the over-1000-line admin/list pages without changing API behavior.

@@ -8,18 +8,13 @@ import { fetchUser, updateUser, type User } from '../../lib/api/users';
 import { fetchUserTotpDevices, fetchUserWebauthnCredentials } from '../../lib/api/userDossier';
 import { formatErrorMessage } from '../../lib/errors';
 
+import { userBooleanField } from './UserSecurityModel';
+
 import { Alert } from '../ui/Alert';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { Card, CardBody, CardHeader } from '../ui/Card';
 import { SwitchRow } from '../ui/SwitchRow';
-
-function boolField(user: User | undefined, key: string, fallback: boolean): boolean {
-  const v = user ? (user as any)[key] : undefined;
-  if (typeof v === 'boolean') return v;
-  if (typeof v === 'number') return v !== 0;
-  return fallback;
-}
 
 export function UserMfaMasterPanel(props: {
   userId: number;
@@ -52,14 +47,14 @@ export function UserMfaMasterPanel(props: {
     staleTime: 30_000,
   });
 
-  const masterEnabled = boolField(user, 'enable_multi_factor_auth', false);
+  const masterEnabled = userBooleanField(user, 'enable_multi_factor_auth', false);
 
   const enabledDeviceCount = useMemo(() => {
     const totp = Array.isArray(totpQ.data) ? totpQ.data : [];
     const creds = Array.isArray(webauthnQ.data) ? webauthnQ.data : [];
 
-    const enabledTotp = totp.filter((d: any) => d && d.confirmed && d.enabled).length;
-    const enabledCreds = creds.filter((c: any) => c && c.enabled).length;
+    const enabledTotp = totp.filter((d) => d.confirmed && d.enabled).length;
+    const enabledCreds = creds.filter((c) => c.enabled).length;
 
     return {
       enabledTotp,

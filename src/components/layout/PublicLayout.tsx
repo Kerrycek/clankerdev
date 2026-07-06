@@ -7,7 +7,20 @@ import { useAuth } from '../../app/auth';
 import { useI18n } from '../../app/i18n';
 import { clsx } from '../ui/clsx';
 import { withRouterBasename, withSameOriginNextParam } from '../../lib/routerPaths';
-import { ContextualHelpPanel } from './ContextualHelpPanel';
+
+
+const LazyContextualHelpPanel = React.lazy(async () => {
+  const mod = await import('./ContextualHelpPanel');
+  return { default: mod.ContextualHelpPanel };
+});
+
+function DeferredPublicHelpPanel(props: { pathname: string; scope: 'public' }) {
+  return (
+    <React.Suspense fallback={null}>
+      <LazyContextualHelpPanel pathname={props.pathname} scope={props.scope} />
+    </React.Suspense>
+  );
+}
 
 function NavItem(props: { to: string; children: React.ReactNode }) {
   return (
@@ -102,7 +115,7 @@ function PublicLayoutInner() {
       <main className="flex-1" data-document-title-region>
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6">
           <div className="space-y-6">
-            <ContextualHelpPanel pathname={location.pathname} scope="public" />
+            <DeferredPublicHelpPanel pathname={location.pathname} scope="public" />
             <Outlet />
           </div>
         </div>

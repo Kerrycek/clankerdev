@@ -29,4 +29,9 @@ export const csProfile_sessions = {
   "profile.sessions.table.state": "Stav",
   "profile.sessions.title": "Relace",
   "profile.sessions.validation.label_required": "Název je povinný.",
+  "profile.sessions.empty_filtered": "Aktuálním filtrům neodpovídají žádné relace.",
+  "profile.sessions.summary.open": "Otevřené relace",
+  "profile.sessions.summary.current": "Aktuální",
+  "profile.sessions.summary.tokens": "API tokeny",
+  "profile.sessions.summary.closed": "Zavřené",
 } as const;

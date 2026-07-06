@@ -2,8 +2,8 @@
   "version": 1,
   "root": "src",
   "limits": {
-    "asAny": 1243,
-    "filesOver500": 61,
+    "asAny": 1180,
+    "filesOver500": 57,
     "filesOver1000": 11
   },
   "note": "Structural debt ratchet baseline. Lower counts are allowed; any new or expanded over-budget file, or added as-any cast, fails audit:structural.",
@@ -19,10 +19,6 @@
     "src/app/designSandbox.ts": {
       "lines": 26,
       "asAny": 2
-    },
-    "src/app/i18n.tsx": {
-      "lines": 111,
-      "asAny": 5
     },
     "src/app/uiSettings.test.tsx": {
       "lines": 268,
@@ -76,38 +72,6 @@
       "lines": 175,
       "asAny": 2
     },
-    "src/components/user/UserDataTemplatesPanel.tsx": {
-      "lines": 939,
-      "asAny": 9
-    },
-    "src/components/user/UserKnownDevicesPanel.tsx": {
-      "lines": 368,
-      "asAny": 1
-    },
-    "src/components/user/UserMailPreferencesPanel.tsx": {
-      "lines": 688,
-      "asAny": 7
-    },
-    "src/components/user/UserMfaMasterPanel.tsx": {
-      "lines": 160,
-      "asAny": 1
-    },
-    "src/components/user/UserSecurityPanel.tsx": {
-      "lines": 678,
-      "asAny": 4
-    },
-    "src/components/user/UserSessionsPanel.tsx": {
-      "lines": 498,
-      "asAny": 4
-    },
-    "src/components/user/UserTotpDevicesPanel.tsx": {
-      "lines": 733,
-      "asAny": 1
-    },
-    "src/components/user/UserWebauthnCredentialsPanel.tsx": {
-      "lines": 462,
-      "asAny": 4
-    },
     "src/components/userNamespaces/UserNamespaceDetail.tsx": {
       "lines": 83,
       "asAny": 8
@@ -141,8 +105,8 @@
       "asAny": 2
     },
     "src/lib/api/ipAddresses.test.ts": {
-      "lines": 130,
-      "asAny": 6
+      "lines": 148,
+      "asAny": 7
     },
     "src/lib/api/mailer.test.ts": {
       "lines": 91,
@@ -188,10 +152,6 @@
       "lines": 86,
       "asAny": 5
     },
-    "src/lib/api/userDossier.ts": {
-      "lines": 478,
-      "asAny": 2
-    },
     "src/lib/api/users.test.ts": {
       "lines": 268,
       "asAny": 4
@@ -204,12 +164,8 @@
       "lines": 111,
       "asAny": 6
     },
-    "src/lib/auditUi.ts": {
-      "lines": 72,
-      "asAny": 8
-    },
     "src/lib/auth/oauth2Client.ts": {
-      "lines": 272,
+      "lines": 294,
       "asAny": 1
     },
     "src/lib/concerns.ts": {
@@ -361,11 +317,11 @@
       "asAny": 0
     },
     "src/pages/app/admin/IpAddressDetailPage.tsx": {
-      "lines": 751,
+      "lines": 763,
       "asAny": 24
     },
     "src/pages/app/admin/IpAddressesPage.tsx": {
-      "lines": 625,
+      "lines": 626,
       "asAny": 0
     },
     "src/pages/app/admin/mailer/MailboxDetailPage.tsx": {
@@ -434,15 +390,7 @@
     },
     "src/pages/app/admin/user/AdminUserHistoryPage.tsx": {
       "lines": 918,
-      "asAny": 3
-    },
-    "src/pages/app/admin/user/AdminUserOverviewPage.tsx": {
-      "lines": 323,
-      "asAny": 9
-    },
-    "src/pages/app/admin/user/AdminUserUserDataPage.tsx": {
-      "lines": 25,
-      "asAny": 1
+      "asAny": 0
     },
     "src/pages/app/admin/UsersPage.tsx": {
       "lines": 1096,
@@ -469,8 +417,8 @@
       "asAny": 15
     },
     "src/pages/app/datasets/DatasetSnapshotsPage.tsx": {
-      "lines": 832,
-      "asAny": 10
+      "lines": 719,
+      "asAny": 5
     },
     "src/pages/app/DesignSandboxPage.tsx": {
       "lines": 851,
@@ -565,7 +513,7 @@
       "asAny": 4
     },
     "src/pages/app/vps/VpsLayout.tsx": {
-      "lines": 796,
+      "lines": 795,
       "asAny": 15
     },
     "src/pages/app/vps/VpsLifecyclePage.tsx": {
@@ -577,7 +525,7 @@
       "asAny": 6
     },
     "src/pages/app/vps/VpsNetworkPage.tsx": {
-      "lines": 1172,
+      "lines": 1165,
       "asAny": 0
     },
     "src/pages/app/vps/vpsPreflight.test.ts": {

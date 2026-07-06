@@ -197,7 +197,7 @@ export function AdminUserHistoryPage() {
     },
   });
 
-  const pageCursor = useMemo(() => cursorFromDescendingPage(qHistory.data as any), [qHistory.data]);
+  const pageCursor = useMemo(() => cursorFromDescendingPage(qHistory.data, (event) => event.id), [qHistory.data]);
   const hasMore = (qHistory.data ?? []).length >= pagination.limit;
 
   const shareUrl = useMemo(() => (typeof window !== 'undefined' ? window.location.href : ''), [searchParams]);
@@ -493,13 +493,13 @@ export function AdminUserHistoryPage() {
         />
       );
     }
-
     if (eventTypeTrim) {
+      const tone = eventBadgeVariant(eventTypeTrim);
       chips.push(
         <FilterChip
           key="event"
           label={`event:${eventTypeTrim}`}
-          tone={eventBadgeVariant(eventTypeTrim) as any}
+          tone={tone === 'black' ? 'neutral' : tone}
           onRemove={() => setEventType('')}
           testId="admin.user.history.chip.event"
         />
@@ -868,7 +868,7 @@ export function AdminUserHistoryPage() {
           {qHistory.isError ? (
             <tr>
               <td colSpan={6} className="p-4">
-                <ErrorState title={t('audit.load_error.title')} error={qHistory.error as any} showDetails />
+                <ErrorState title={t('audit.load_error.title')} error={qHistory.error} showDetails />
               </td>
             </tr>
           ) : null}

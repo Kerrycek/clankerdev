@@ -1,5 +1,6 @@
 import React, { createContext, useContext } from 'react';
 
+import { type IpAddress } from '../../../lib/api/ipAddresses';
 import { type Vps } from '../../../lib/api/vps';
 import type { ObjectRef } from '../../../lib/objectRef';
 
@@ -14,6 +15,9 @@ export interface VpsContextValue {
   chainsStale: boolean;
   busyLocalLock: boolean;
   activeChainIds: number[];
+  ipAddresses: IpAddress[];
+  ipAddressesLoading: boolean;
+  ipAddressesError: boolean;
   sshCommand?: string | null;
 }
 
