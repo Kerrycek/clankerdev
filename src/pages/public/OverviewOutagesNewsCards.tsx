@@ -5,6 +5,7 @@ import { useI18n } from '../../app/i18n';
 import { Alert } from '../../components/ui/Alert';
 import { Badge } from '../../components/ui/Badge';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
+import { NewsMessage } from '../../components/ui/NewsMessage';
 import { Spinner } from '../../components/ui/Spinner';
 import { StackedBar } from '../../components/ui/StackedBar';
 import { StatusDot } from '../../components/ui/StatusDot';
@@ -114,7 +115,7 @@ export function OverviewOutagesNewsCards(props: {
                 {props.news?.slice(0, 5).map((news) => (
                   <div key={news.id} className="space-y-1">
                     <div className="text-xs text-muted">{formatDateTime(news.published_at)}</div>
-                    <div className="whitespace-pre-wrap text-sm">{news.message}</div>
+                    <NewsMessage html={news.message} />
                   </div>
                 ))}
               </div>

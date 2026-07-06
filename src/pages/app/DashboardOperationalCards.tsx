@@ -7,6 +7,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { Card, CardBody, CardHeader } from "../../components/ui/Card";
 import { LinkButton } from "../../components/ui/LinkButton";
+import { NewsMessage } from "../../components/ui/NewsMessage";
 import { Spinner } from "../../components/ui/Spinner";
 import { StackedBar } from "../../components/ui/StackedBar";
 import { StatusDot } from "../../components/ui/StatusDot";
@@ -48,7 +49,7 @@ export function DashboardNewsItem(props: { news: NewsLog }) {
   return (
     <div className="space-y-1 rounded-md border border-border bg-surface-2 p-3" data-testid="app.dashboard.news.item">
       <div className="text-xs text-muted">{formatDateTime(props.news.published_at ?? props.news.created_at)}</div>
-      <div className="text-sm whitespace-pre-wrap">{props.news.message}</div>
+      <NewsMessage html={props.news.message} />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { fetchNews } from '../../lib/api/public';
 import { Alert } from '../../components/ui/Alert';
 import { Card, CardBody, CardHeader } from '../../components/ui/Card';
+import { NewsMessage } from '../../components/ui/NewsMessage';
 import { Spinner } from '../../components/ui/Spinner';
 import { formatDateTime } from '../../lib/time';
 import { useI18n } from '../../app/i18n';
@@ -36,7 +37,7 @@ export function NewsPage() {
             <Card key={n.id}>
               <CardHeader title={formatDateTime(n.published_at)} subtitle={`#${n.id}`} />
               <CardBody>
-                <div className="whitespace-pre-wrap text-sm">{n.message}</div>
+                <NewsMessage html={n.message} />
               </CardBody>
             </Card>
           ))}
