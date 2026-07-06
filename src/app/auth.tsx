@@ -6,6 +6,7 @@ import { fetchCurrentUser, type User } from '../lib/api/users';
 import { canUseAdminUi, roleFromLevel, type UserRole } from '../lib/roles';
 import { clearStoredOAuthToken } from '../lib/auth/tokenStore';
 import { HaveApiError, isExpiredSessionError, SESSION_EXPIRED_EVENT } from '../lib/api/haveapi';
+import { markSessionExpiredNotice } from '../lib/auth/sessionExpiredNotice';
 import { hardReplace } from '../lib/browserNavigation';
 import { withRouterBasename } from '../lib/routerPaths';
 
@@ -80,6 +81,7 @@ export function AuthProvider(props: { children: React.ReactNode; nextPath: strin
     }
 
     setSessionExpired(true);
+    markSessionExpiredNotice();
 
     const target = sessionExpiredRedirectPath(currentCfg.routerBasename);
     const current = window.location.pathname + window.location.search;

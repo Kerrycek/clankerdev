@@ -1,12 +1,13 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { getRuntimeConfig } from '../../app/config';
 import { useI18n } from '../../app/i18n';
 import { StatusLandingMark } from '../../components/branding/StatusLandingMark';
 import { Alert } from '../../components/ui/Alert';
 import { fetchNews, fetchOutages, fetchPublicNodeStatus, fetchPublicStats } from '../../lib/api/public';
+import { consumeSessionExpiredNotice } from '../../lib/auth/sessionExpiredNotice';
 import {
   categorizePublicOutages,
   groupPublicNodesByLocation,
@@ -24,8 +25,35 @@ export function OverviewPage() {
   const i18n = useI18n();
   const cfg = useMemo(() => getRuntimeConfig(), []);
   const deferredEnabled = useDeferredOverviewQueries();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const showSessionExpired = searchParams.get('session') === 'expired';
+  const [showSessionExpired, setShowSessionExpired] = useState(false);
+  const consumedExpiredParamRef = useRef(false);
+  const hasSessionExpiredParam = searchParams.get('session') === 'expired';
+
+  useEffect(() => {
+    if (!hasSessionExpiredParam) {
+      if (!consumedExpiredParamRef.current) {
+        setShowSessionExpired(false);
+      }
+      return;
+    }
+
+    consumedExpiredParamRef.current = true;
+    setShowSessionExpired(consumeSessionExpiredNotice());
+
+    const nextParams = new URLSearchParams(location.search);
+    nextParams.delete('session');
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextParams.toString() ? `?${nextParams.toString()}` : '',
+        hash: location.hash,
+      },
+      { replace: true },
+    );
+  }, [hasSessionExpiredParam, location.hash, location.pathname, location.search, navigate]);
 
   const statsQ = useQuery({
     queryKey: ['cluster', 'public_stats'],
