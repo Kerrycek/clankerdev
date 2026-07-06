@@ -1,7 +1,7 @@
 import { getRuntimeConfig } from '../../app/config';
 import { expectArray, HaveApiError, type HaveApiEnvelope, unwrapSingleResponse } from './haveapi';
 
-interface PublicApiCallOpts {
+export interface PublicApiCallOpts {
   path: string;
   namespace?: string;
   params?: Record<string, unknown>;
@@ -48,7 +48,7 @@ async function safePublicJson(res: Response): Promise<HaveApiEnvelope> {
   }
 }
 
-async function publicApiCall<T>(opts: PublicApiCallOpts): Promise<{ data: T; meta?: Record<string, unknown>; envelope: HaveApiEnvelope }> {
+export async function publicApiCall<T>(opts: PublicApiCallOpts): Promise<{ data: T; meta?: Record<string, unknown>; envelope: HaveApiEnvelope }> {
   const cfg = getRuntimeConfig();
   let url = `${cfg.apiBaseUrl}${opts.path.startsWith('/') ? '' : '/'}${opts.path}`;
 

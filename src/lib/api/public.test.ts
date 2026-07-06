@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { fetchContextualHelpBoxes } from './helpBoxes';
 import { fetchNews, fetchOutages, fetchPublicStats } from './public';
 
 function makeOkResponse(response: unknown) {
@@ -25,6 +26,10 @@ function installFetch() {
       return makeOkResponse({ news_logs: [] });
     }
 
+    if (href.includes('/help_boxes?')) {
+      return makeOkResponse({ help_boxes: [] });
+    }
+
     throw new Error(`unexpected fetch ${href}`);
   });
 
@@ -48,14 +53,16 @@ describe('public API helpers', () => {
     await fetchPublicStats();
     await fetchOutages({ limit: 25 });
     await fetchNews({ limit: 5 });
+    await fetchContextualHelpBoxes('public', 'index');
 
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
 
     const urls = fetchMock.mock.calls.map(([url]) => String(url));
     expect(urls).toEqual([
       'https://api.example.test/v7.0/cluster/public_stats',
       'https://api.example.test/v7.0/outages?outage%5Blimit%5D=25',
       'https://api.example.test/v7.0/news_logs?news_log%5Blimit%5D=5',
+      'https://api.example.test/v7.0/help_boxes?help_box%5Bpage%5D=public&help_box%5Baction%5D=index&help_box%5Bview%5D=true',
     ]);
 
     expect(urls.some((url) => url === 'https://api.example.test/v7.0' || url === 'https://api.example.test/v7.0/')).toBe(false);

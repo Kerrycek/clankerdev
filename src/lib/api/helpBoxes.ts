@@ -1,4 +1,5 @@
 import { expectArray, haveApiCall } from './haveapi';
+import { publicApiCall } from './public';
 
 export interface HelpBoxLanguage {
   id: number;
@@ -102,8 +103,7 @@ export async function deleteHelpBox(id: number) {
 }
 
 export async function fetchContextualHelpBoxes(page: string, action: string) {
-  const res = await haveApiCall<HelpBox[]>({
-    method: 'GET',
+  const res = await publicApiCall<HelpBox[]>({
     path: '/help_boxes',
     namespace: 'help_box',
     params: { page, action, view: true },
