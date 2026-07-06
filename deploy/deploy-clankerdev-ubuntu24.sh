@@ -19,6 +19,7 @@ CURRENT_RELEASE_LINK="${BASE_DIR}/current-release"
 
 WEBROOT="/var/www/${DOMAIN}/current"
 NGINX_CONF="/etc/nginx/sites-available/${DOMAIN}.conf"
+NGINX_GZIP_CONF="/etc/nginx/conf.d/webui-next-gzip.conf"
 
 BFF_USER="webui-bff"
 BFF_GROUP="webui-bff"
@@ -109,6 +110,26 @@ if t2 != t:
     p.write_text(t2)
     print("==> Patched package-lock.json resolved URLs to registry.npmjs.org")
 PY
+}
+
+write_nginx_gzip_conf() {
+  cat > "${NGINX_GZIP_CONF}" <<'NG'
+# WebUI Next serves large hashed JavaScript chunks. The base nginx.conf keeps
+# `gzip on`; this snippet expands compression to JS/CSS/JSON assets.
+gzip_vary on;
+gzip_proxied any;
+gzip_comp_level 6;
+gzip_min_length 1024;
+gzip_types
+    text/plain
+    text/css
+    text/javascript
+    application/javascript
+    application/json
+    application/xml
+    application/xml+rss
+    image/svg+xml;
+NG
 }
 
 write_nginx_http_only() {
@@ -436,6 +457,7 @@ systemctl enable --now webui-next-bff
 
 # Nginx
 echo "==> Configuring nginx..."
+write_nginx_gzip_conf
 write_nginx_http_only
 ln -sfn "${NGINX_CONF}" "/etc/nginx/sites-enabled/${DOMAIN}.conf"
 rm -f /etc/nginx/sites-enabled/default || true
