@@ -96,6 +96,10 @@ export function buildSidebarNavItems(opts: {
   return items;
 }
 
+function isExactNavItem(item: NavItem): boolean {
+  return item.id === 'dashboard' || item.to === '/';
+}
+
 export function AppLogo(props: { subtitle: string; collapsed?: boolean }) {
   if (props.collapsed) {
     return (
@@ -145,6 +149,7 @@ export function AppSidebar(props: {
               <NavLink
                 key={it.to}
                 to={it.to}
+                end={isExactNavItem(it)}
                 data-testid={`nav.drawer.${it.id}`}
                 className={({ isActive }) =>
                   clsx(
@@ -179,6 +184,7 @@ export function AppSidebar(props: {
               <NavLink
                 key={it.to}
                 to={it.to}
+                end={isExactNavItem(it)}
                 data-testid={`nav.sidebar.${it.id}`}
                 className={({ isActive }) =>
                   clsx(
