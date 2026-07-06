@@ -13,18 +13,20 @@ describe('OverviewModel', () => {
   test('groups public nodes by location and summarizes health', () => {
     const groups = groupPublicNodesByLocation(
       [
-        { name: 'n1', status: true, location: { label: 'DC1' } },
-        { name: 'n2', status: false, location: { label: 'DC1' } },
+        { name: 'n1', status: true, location: { label: 'Praha' } },
+        { name: 'n2', status: false, location: { label: 'Praha' } },
+        { name: 'n4', status: true, location: { label: 'Brno' } },
         { name: 'n3', status: true },
       ],
       'Unknown'
     );
 
     expect(groups.map((group) => [group.location, group.ok, group.down, group.total])).toEqual([
-      ['DC1', 1, 1, 2],
+      ['Praha', 1, 1, 2],
+      ['Brno', 1, 0, 1],
       ['Unknown', 1, 0, 1],
     ]);
-    expect(summarizePublicNodes(groups)).toEqual({ ok: 2, down: 1, total: 3 });
+    expect(summarizePublicNodes(groups)).toEqual({ ok: 3, down: 1, total: 4 });
   });
 
   test('categorizes outages newest first', () => {

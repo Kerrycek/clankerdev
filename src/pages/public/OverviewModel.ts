@@ -44,7 +44,7 @@ export function groupPublicNodesByLocation(nodes: readonly PublicNodeStatus[], u
     groups.set(location, group);
   }
 
-  return Array.from(groups.values()).sort((a, b) => a.location.localeCompare(b.location));
+  return Array.from(groups.values()).sort((a, b) => b.total - a.total || a.location.localeCompare(b.location));
 }
 
 export function summarizePublicNodes(groups: readonly PublicNodeLocationGroup[]): PublicNodeSummary {
