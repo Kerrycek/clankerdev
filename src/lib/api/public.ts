@@ -1,4 +1,79 @@
-import { expectArray, haveApiCall } from './haveapi';
+import { getRuntimeConfig } from '../../app/config';
+import { expectArray, HaveApiError, type HaveApiEnvelope, unwrapSingleResponse } from './haveapi';
+
+interface PublicApiCallOpts {
+  path: string;
+  namespace?: string;
+  params?: Record<string, unknown>;
+}
+
+function buildPublicQuery(namespace: string, params: Record<string, unknown>): URLSearchParams {
+  const qs = new URLSearchParams();
+
+  for (const [k, v] of Object.entries(params)) {
+    if (v === undefined) continue;
+    if (v === null) {
+      qs.append(`${namespace}[${k}]`, '');
+      continue;
+    }
+
+    const t = typeof v;
+    if (t === 'string' || t === 'number' || t === 'boolean') {
+      qs.append(`${namespace}[${k}]`, String(v));
+      continue;
+    }
+
+    throw new HaveApiError(
+      {
+        status: false,
+        message: `Invalid query parameter ${namespace}[${k}] (must be string/number/boolean/null)`,
+        response: { key: k, value: v },
+      },
+      'Invalid query parameter'
+    );
+  }
+
+  return qs;
+}
+
+async function safePublicJson(res: Response): Promise<HaveApiEnvelope> {
+  try {
+    return (await res.json()) as HaveApiEnvelope;
+  } catch {
+    return {
+      status: false,
+      message: `Invalid JSON response (HTTP ${res.status})`,
+      response: null,
+    };
+  }
+}
+
+async function publicApiCall<T>(opts: PublicApiCallOpts): Promise<{ data: T; meta?: Record<string, unknown>; envelope: HaveApiEnvelope }> {
+  const cfg = getRuntimeConfig();
+  let url = `${cfg.apiBaseUrl}${opts.path.startsWith('/') ? '' : '/'}${opts.path}`;
+
+  if (opts.namespace && opts.params) {
+    const qs = buildPublicQuery(opts.namespace, opts.params);
+    if ([...qs.keys()].length > 0) {
+      url += (url.includes('?') ? '&' : '?') + qs.toString();
+    }
+  }
+
+  const reqInfo = { method: 'GET', path: opts.path, url };
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    credentials: 'same-origin',
+  });
+  const envelope = await safePublicJson(res);
+
+  if (!res.ok) {
+    throw new HaveApiError(envelope, `HTTP ${res.status}`, res.status, reqInfo);
+  }
+
+  const unwrapped = unwrapSingleResponse<T>(envelope, cfg.haveApi?.metaNamespace ?? '_meta');
+  return { ...unwrapped, envelope };
+}
 
 export interface PublicClusterStats {
   user_count: number;
@@ -86,23 +161,20 @@ export interface NewsLog {
 }
 
 export async function fetchPublicStats() {
-  return haveApiCall<PublicClusterStats>({
-    method: 'GET',
+  return publicApiCall<PublicClusterStats>({
     path: '/cluster/public_stats',
   });
 }
 
 export async function fetchPublicNodeStatus() {
-  const res = await haveApiCall<PublicNodeStatus[]>({
-    method: 'GET',
+  const res = await publicApiCall<PublicNodeStatus[]>({
     path: '/nodes/public_status',
   });
   return { ...res, data: expectArray<PublicNodeStatus>(res.data, 'nodes/public_status') };
 }
 
 export async function fetchOutages(opts?: { limit?: number }) {
-  const res = await haveApiCall<Outage[]>({
-    method: 'GET',
+  const res = await publicApiCall<Outage[]>({
     path: '/outages',
     namespace: 'outage',
     params: opts?.limit ? { limit: opts.limit } : undefined,
@@ -111,23 +183,20 @@ export async function fetchOutages(opts?: { limit?: number }) {
 }
 
 export async function fetchOutage(outageId: number) {
-  return haveApiCall<Outage>({
-    method: 'GET',
+  return publicApiCall<Outage>({
     path: `/outages/${outageId}`,
   });
 }
 
 export async function fetchOutageEntities(outageId: number) {
-  const res = await haveApiCall<OutageEntity[]>({
-    method: 'GET',
+  const res = await publicApiCall<OutageEntity[]>({
     path: `/outages/${outageId}/entities`,
   });
   return { ...res, data: expectArray<OutageEntity>(res.data, `outages/${outageId}/entities`) };
 }
 
 export async function fetchOutageHandlers(outageId: number) {
-  const res = await haveApiCall<OutageHandler[]>({
-    method: 'GET',
+  const res = await publicApiCall<OutageHandler[]>({
     path: `/outages/${outageId}/handlers`,
   });
   return { ...res, data: expectArray<OutageHandler>(res.data, `outages/${outageId}/handlers`) };
@@ -135,8 +204,7 @@ export async function fetchOutageHandlers(outageId: number) {
 
 export async function fetchOutageUpdates(outageId: number) {
   // Index input is namespaced under outage_update[...] in the query string.
-  const res = await haveApiCall<OutageUpdate[]>({
-    method: 'GET',
+  const res = await publicApiCall<OutageUpdate[]>({
     path: '/outage_updates',
     namespace: 'outage_update',
     params: { outage: outageId },
@@ -145,12 +213,10 @@ export async function fetchOutageUpdates(outageId: number) {
 }
 
 export async function fetchNews(opts?: { limit?: number }) {
-  const res = await haveApiCall<NewsLog[]>({
-    method: 'GET',
+  const res = await publicApiCall<NewsLog[]>({
     path: '/news_logs',
     namespace: 'news_log',
     params: opts?.limit ? { limit: opts.limit } : undefined,
   });
   return { ...res, data: expectArray<NewsLog>(res.data, 'news_logs') };
 }
-
