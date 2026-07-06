@@ -15,13 +15,15 @@ interface VpsListRowActionsProps {
   onRequestStop: (row: VpsListRecord) => void;
   onRequestRestart: (row: VpsListRecord) => void;
   onRequestDelete: (row: VpsListRecord) => void;
+  showLabels?: boolean;
 }
 
-const iconButtonClass = 'h-8 w-8 px-0';
-const iconClass = 'h-4 w-4';
+const iconOnlyButtonClass = 'h-10 min-w-10 px-0';
+const labeledButtonClass = 'min-h-11 px-3';
+const iconClass = 'h-[18px] w-[18px] shrink-0';
 
-function IconLabel(props: { children: React.ReactNode }) {
-  return <span className="sr-only">{props.children}</span>;
+function IconLabel(props: { children: React.ReactNode; visible?: boolean }) {
+  return <span className={props.visible ? 'text-sm' : 'sr-only'}>{props.children}</span>;
 }
 
 export function VpsListRowActions({
@@ -33,18 +35,23 @@ export function VpsListRowActions({
   onRequestStop,
   onRequestRestart,
   onRequestDelete,
+  showLabels = false,
 }: VpsListRowActionsProps) {
   const { vps } = row;
   const detailPath = `${basePath}/vps/${vps.id}`;
   const consolePath = `${detailPath}/console`;
+  const buttonClass = showLabels ? labeledButtonClass : iconOnlyButtonClass;
 
   return (
-    <div className="flex flex-nowrap items-center gap-1" data-row-no-nav>
+    <div
+      className={showLabels ? 'grid grid-cols-2 gap-2 sm:flex sm:flex-wrap' : 'flex flex-wrap items-center justify-end gap-2'}
+      data-row-no-nav
+    >
       {row.primaryAction === 'start' ? (
         <ActionButton
           variant="primary"
           size="sm"
-          className={iconButtonClass}
+          className={buttonClass}
           testId={`${testIdPrefix}.action.start`}
           disabled={!row.startGate.allowed}
           disabledReason={!row.startGate.allowed ? row.startGate.reason : undefined}
@@ -54,20 +61,20 @@ export function VpsListRowActions({
           onClick={() => onStart(row)}
         >
           <Play className={iconClass} aria-hidden="true" />
-          <IconLabel>{t('action.vps.start.label')}</IconLabel>
+          <IconLabel visible={showLabels}>{t('action.vps.start.label')}</IconLabel>
         </ActionButton>
       ) : row.primaryAction === 'console' ? (
         <Button
           to={consolePath}
           variant="primary"
           size="sm"
-          className={iconButtonClass}
+          className={buttonClass}
           testId={`${testIdPrefix}.action.console`}
           title={t('vps.tabs.console')}
           ariaLabel={t('vps.tabs.console')}
         >
           <Terminal className={iconClass} aria-hidden="true" />
-          <IconLabel>{t('vps.tabs.console')}</IconLabel>
+          <IconLabel visible={showLabels}>{t('vps.tabs.console')}</IconLabel>
         </Button>
       ) : null}
 
@@ -75,7 +82,7 @@ export function VpsListRowActions({
         <ActionButton
           variant="secondary"
           size="sm"
-          className={iconButtonClass}
+          className={buttonClass}
           testId={`${testIdPrefix}.action.restart`}
           disabled={!row.restartGate.allowed}
           disabledReason={!row.restartGate.allowed ? row.restartGate.reason : undefined}
@@ -85,7 +92,7 @@ export function VpsListRowActions({
           onClick={() => onRequestRestart(row)}
         >
           <RotateCw className={iconClass} aria-hidden="true" />
-          <IconLabel>{t('action.vps.restart.label')}</IconLabel>
+          <IconLabel visible={showLabels}>{t('action.vps.restart.label')}</IconLabel>
         </ActionButton>
       ) : null}
 
@@ -93,7 +100,7 @@ export function VpsListRowActions({
         <ActionButton
           variant="secondary"
           size="sm"
-          className={iconButtonClass}
+          className={buttonClass}
           testId={`${testIdPrefix}.action.stop`}
           disabled={!row.stopGate.allowed}
           disabledReason={!row.stopGate.allowed ? row.stopGate.reason : undefined}
@@ -103,7 +110,7 @@ export function VpsListRowActions({
           onClick={() => onRequestStop(row)}
         >
           <Square className={iconClass} aria-hidden="true" />
-          <IconLabel>{t('action.vps.stop.label')}</IconLabel>
+          <IconLabel visible={showLabels}>{t('action.vps.stop.label')}</IconLabel>
         </ActionButton>
       ) : null}
 
@@ -111,19 +118,19 @@ export function VpsListRowActions({
         to={detailPath}
         variant="secondary"
         size="sm"
-        className={iconButtonClass}
+        className={buttonClass}
         testId={`${testIdPrefix}.action.details`}
         title={t('common.detail')}
         ariaLabel={t('common.detail')}
       >
         <ExternalLink className={iconClass} aria-hidden="true" />
-        <IconLabel>{t('common.detail')}</IconLabel>
+        <IconLabel visible={showLabels}>{t('common.detail')}</IconLabel>
       </Button>
 
       <ActionButton
         variant="danger"
         size="sm"
-        className={iconButtonClass}
+        className={buttonClass}
         testId={`${testIdPrefix}.action.delete`}
         disabled={!row.deleteGate.allowed}
         disabledReason={!row.deleteGate.allowed ? row.deleteGate.reason : undefined}
@@ -133,7 +140,7 @@ export function VpsListRowActions({
         onClick={() => onRequestDelete(row)}
       >
         <Trash2 className={iconClass} aria-hidden="true" />
-        <IconLabel>{t('action.vps.delete.label')}</IconLabel>
+        <IconLabel visible={showLabels}>{t('action.vps.delete.label')}</IconLabel>
       </ActionButton>
     </div>
   );

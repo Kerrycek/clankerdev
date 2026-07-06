@@ -23,6 +23,7 @@ interface VpsListTableProps {
   canPaginate: boolean;
   hasMore: boolean;
   pageCursor: number | null;
+  showOwnerContext: boolean;
   onStart: (row: VpsListRecord) => void;
   onRequestStop: (row: VpsListRecord) => void;
   onRequestRestart: (row: VpsListRecord) => void;
@@ -37,6 +38,7 @@ export function VpsListTable({
   canPaginate,
   hasMore,
   pageCursor,
+  showOwnerContext,
   onStart,
   onRequestStop,
   onRequestRestart,
@@ -70,7 +72,9 @@ export function VpsListTable({
           <th className="w-8 px-4 py-2"><span className="sr-only">{t('common.state')}</span></th>
           <th className="px-4 py-2">{t('vps.list.col.vps')}</th>
           <th className="px-4 py-2">{t('common.state')}</th>
-          <th className="px-4 py-2">{t('vps.list.col.owner_location')}</th>
+          <th className="px-4 py-2">
+            {showOwnerContext ? t('vps.list.col.owner_location') : t('vps.list.col.location_node')}
+          </th>
           <th className="px-4 py-2">{t('vps.overview.resources.title')}</th>
           <th className="px-4 py-2">{t('vps.list.col.activity')}</th>
           <th className="px-4 py-2">{t('common.actions')}</th>
@@ -116,7 +120,9 @@ export function VpsListTable({
               </td>
               <td className="px-4 py-2 align-top text-xs">
                 <div className="flex flex-col gap-1">
-                  <div><span className="text-muted">{t('vps.list.context.owner')}:</span> {row.ownerLabel}</div>
+                  {showOwnerContext ? (
+                    <div><span className="text-muted">{t('vps.list.context.owner')}:</span> {row.ownerLabel}</div>
+                  ) : null}
                   <div><span className="text-muted">{t('vps.list.context.location')}:</span> {row.locationLabel}</div>
                   <div><span className="text-muted">{t('common.node')}:</span> {row.nodeLabel}</div>
                 </div>
@@ -147,6 +153,7 @@ export function VpsListTable({
                   basePath={basePath}
                   t={t}
                   testIdPrefix={`vps.row.${vps.id}`}
+                  showLabels={false}
                   onStart={onStart}
                   onRequestStop={onRequestStop}
                   onRequestRestart={onRequestRestart}

@@ -16,6 +16,7 @@ export const enVps_core = {
   'vps.list.ip.none': 'No IP shown',
   'vps.list.col.vps': 'VPS',
   'vps.list.col.owner_location': 'Owner / location',
+  'vps.list.col.location_node': 'Location / node',
   'vps.list.col.network': 'Network',
   'vps.list.col.activity': 'Activity',
   'vps.list.context.owner': 'Owner',

@@ -16,6 +16,7 @@ export const csVps_core = {
   'vps.list.ip.none': 'IP není zobrazená',
   'vps.list.col.vps': 'VPS',
   'vps.list.col.owner_location': 'Vlastník / lokace',
+  'vps.list.col.location_node': 'Lokace / uzel',
   'vps.list.col.network': 'Síť',
   'vps.list.col.activity': 'Aktivita',
   'vps.list.context.owner': 'Vlastník',

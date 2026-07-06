@@ -285,6 +285,7 @@ export function VpsListPage() {
       ? t('empty.vps.none.body_basic')
       : t('empty.list.none.body')
     : t('empty.list.no_matches.body');
+  const showOwnerContext = scope.scope !== 'mine';
 
   const onStart = (row: (typeof displayRows)[number]) =>
     powerM.mutate({
@@ -358,6 +359,7 @@ export function VpsListPage() {
             canPaginate={canPaginate}
             hasMore={hasMore}
             pageCursor={pageCursor}
+            showOwnerContext={showOwnerContext}
             onStart={onStart}
             onRequestStop={(row) => setConfirm({ vpsId: row.vps.id, kind: 'stop', force: false })}
             onRequestRestart={(row) => setConfirm({ vpsId: row.vps.id, kind: 'restart', force: false })}
@@ -372,6 +374,7 @@ export function VpsListPage() {
             canPaginate={canPaginate}
             hasMore={hasMore}
             pageCursor={pageCursor}
+            showOwnerContext={showOwnerContext}
             onStart={onStart}
             onRequestStop={(row) => setConfirm({ vpsId: row.vps.id, kind: 'stop', force: false })}
             onRequestRestart={(row) => setConfirm({ vpsId: row.vps.id, kind: 'restart', force: false })}

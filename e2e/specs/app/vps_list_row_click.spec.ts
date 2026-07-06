@@ -1,3 +1,5 @@
+import type { Locator, Page } from '@playwright/test';
+
 import { expect, test } from '../../fixtures/playwright';
 import { bootstrapVpsAdminWindow } from '../../fixtures/bootstrap';
 import { installHaveApiMock } from '../../fixtures/haveapi';
@@ -13,7 +15,22 @@ function makeVps(id: number) {
     memory: 4096,
     diskspace: 200_000,
     node: { id: 1, domain_name: 'node1', location: { id: 1, label: 'Praha' } },
+    user: { id: 42, login: 'RowOwnerOnly' },
   };
+}
+
+async function visibleVpsItem(page: Page, id: number): Promise<{ item: Locator; actionPrefix: string }> {
+  const viewport = page.viewportSize();
+
+  if (!viewport || viewport.width >= 768) {
+    const row = page.getByTestId(`vps.row.${id}`);
+    await expect(row).toBeVisible();
+    return { item: row, actionPrefix: `vps.row.${id}` };
+  }
+
+  const card = page.getByTestId(`vps.card.${id}`);
+  await expect(card).toBeVisible();
+  return { item: card, actionPrefix: `vps.card.${id}` };
 }
 
 test.describe('@workflow-matrix @smoke VPS list row navigation', () => {
@@ -32,9 +49,9 @@ test.describe('@workflow-matrix @smoke VPS list row navigation', () => {
     await bootstrapVpsAdminWindow(page);
 
     await page.goto('/app/vps');
-    await expect(page.getByTestId('vps.row.300')).toBeVisible();
+    const { item } = await visibleVpsItem(page, 300);
 
-    await page.getByTestId('vps.row.300').click();
+    await item.getByRole('link', { name: 'vps300.example' }).click();
 
     await expect(page).toHaveURL(/\/app\/vps\/300/);
     await expect(page.getByTestId('vps.header')).toBeVisible();
@@ -52,10 +69,9 @@ test.describe('@workflow-matrix @smoke VPS list row navigation', () => {
     await bootstrapVpsAdminWindow(page);
 
     await page.goto('/app/vps');
-    const row = page.getByTestId('vps.row.300');
-    await expect(row).toBeVisible();
+    const { actionPrefix } = await visibleVpsItem(page, 300);
 
-    await row.getByTestId('vps.row.300.action.stop').click();
+    await page.getByTestId(`${actionPrefix}.action.stop`).click();
 
     await expect(page).toHaveURL(/\/app\/vps(?:\?|$)/);
     await expect(page.getByTestId('vps.list.power_confirm')).toBeVisible();
@@ -76,10 +92,9 @@ test.describe('@workflow-matrix @smoke VPS list row navigation', () => {
     await bootstrapVpsAdminWindow(page);
 
     await page.goto('/app/vps');
-    const row = page.getByTestId('vps.row.300');
-    await expect(row).toBeVisible();
+    const { actionPrefix } = await visibleVpsItem(page, 300);
 
-    await row.getByTestId('vps.row.300.action.delete').click();
+    await page.getByTestId(`${actionPrefix}.action.delete`).click();
 
     await expect(page).toHaveURL(/\/app\/vps(?:\?|$)/);
     await expect(page.getByTestId('vps.list.delete_confirm')).toBeVisible();
@@ -113,10 +128,9 @@ test.describe('@workflow-matrix @smoke VPS list row navigation', () => {
     await bootstrapVpsAdminWindow(page);
 
     await page.goto('/admin/vps');
-    const row = page.getByTestId('vps.row.300');
-    await expect(row).toBeVisible();
+    const { actionPrefix } = await visibleVpsItem(page, 300);
 
-    await row.getByTestId('vps.row.300.action.delete').click();
+    await page.getByTestId(`${actionPrefix}.action.delete`).click();
 
     await expect(page).toHaveURL(/\/admin\/vps(?:\?|$)/);
     await expect(page.getByTestId('vps.list.delete_confirm')).toBeVisible();
@@ -133,5 +147,49 @@ test.describe('@workflow-matrix @smoke VPS list row navigation', () => {
     const req = await reqPromise;
     expect(req.postDataJSON()).toEqual({ vps: { lazy: true } });
     await expect(page).toHaveURL(/\/admin\/vps(?:\?|$)/);
+  });
+
+  test('my VPS view hides redundant owner context while admin view keeps it', async ({ page }) => {
+    const vps = makeVps(300);
+
+    await installHaveApiMock(page, {
+      user: { id: 42, login: 'RowOwnerOnly', level: 99 },
+      handlers: {
+        'GET vpses': () => ({ vpses: [vps] }),
+      },
+    });
+
+    await bootstrapVpsAdminWindow(page);
+
+    await page.goto('/app/vps');
+    const { item: myItem } = await visibleVpsItem(page, 300);
+    await expect(myItem.getByText('RowOwnerOnly')).toHaveCount(0);
+    await expect(myItem.getByText('Praha')).toBeVisible();
+    await expect(myItem.getByText('node1')).toBeVisible();
+
+    await page.goto('/admin/vps');
+    const { item: adminItem } = await visibleVpsItem(page, 300);
+    await expect(adminItem.getByText('RowOwnerOnly')).toBeVisible();
+  });
+
+  test('mobile row actions keep touch-friendly targets', async ({ page }) => {
+    const vps = makeVps(300);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await installHaveApiMock(page, {
+      handlers: {
+        'GET vpses': () => ({ vpses: [vps] }),
+      },
+    });
+
+    await bootstrapVpsAdminWindow(page);
+
+    await page.goto('/app/vps');
+    const action = page.getByTestId('vps.card.300.action.console');
+    await expect(action).toBeVisible();
+
+    const box = await action.boundingBox();
+    expect(box?.width).toBeGreaterThanOrEqual(44);
+    expect(box?.height).toBeGreaterThanOrEqual(44);
   });
 });

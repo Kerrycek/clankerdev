@@ -23,6 +23,7 @@ interface VpsListMobileProps {
   canPaginate: boolean;
   hasMore: boolean;
   pageCursor: number | null;
+  showOwnerContext: boolean;
   onStart: (row: VpsListRecord) => void;
   onRequestStop: (row: VpsListRecord) => void;
   onRequestRestart: (row: VpsListRecord) => void;
@@ -37,6 +38,7 @@ export function VpsListMobile({
   canPaginate,
   hasMore,
   pageCursor,
+  showOwnerContext,
   onStart,
   onRequestStop,
   onRequestRestart,
@@ -79,10 +81,12 @@ export function VpsListMobile({
                 </div>
 
                 <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <div className="text-xs text-muted">{t('vps.list.context.owner')}</div>
-                    <div className="truncate">{row.ownerLabel}</div>
-                  </div>
+                  {showOwnerContext ? (
+                    <div>
+                      <div className="text-xs text-muted">{t('vps.list.context.owner')}</div>
+                      <div className="truncate">{row.ownerLabel}</div>
+                    </div>
+                  ) : null}
                   <div>
                     <div className="text-xs text-muted">{t('vps.list.context.location')}</div>
                     <div className="truncate">{row.locationLabel}</div>
@@ -127,6 +131,7 @@ export function VpsListMobile({
                     basePath={basePath}
                     t={t}
                     testIdPrefix={`vps.card.${vps.id}`}
+                    showLabels
                     onStart={onStart}
                     onRequestStop={onRequestStop}
                     onRequestRestart={onRequestRestart}
