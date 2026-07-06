@@ -7,7 +7,6 @@ import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { Spinner } from '../../components/ui/Spinner';
 import { StackedBar } from '../../components/ui/StackedBar';
 import { Table } from '../../components/ui/Table';
-import { formatDateTime } from '../../lib/time';
 import type { PublicNodeLocationGroup, PublicNodeSummary } from './OverviewModel';
 
 function NodeStatusBadge(props: { up: boolean }) {
@@ -56,13 +55,8 @@ function NodeMobileCards(props: { group: PublicNodeLocationGroup; open: boolean 
               <div className="font-medium">{node.name}</div>
               <NodeStatusBadge up={node.status} />
             </div>
-            <div className="mt-2 text-xs text-muted">{i18n.t('public.overview.nodes.last_report')}: {formatDateTime(node.last_report)}</div>
-            <div className="mt-1 text-xs text-muted">
+            <div className="mt-2 text-xs text-muted">
               {i18n.t('public.overview.nodes.vps')}: {typeof node.vps_count === 'number' ? node.vps_count : '—'}
-              {typeof node.vps_free === 'number' ? ` · ${i18n.t('public.overview.nodes.vps_free', { count: node.vps_free })}` : null}
-            </div>
-            <div className="mt-1 text-xs text-muted">
-              {i18n.t('public.overview.nodes.cpu_idle')}: {typeof node.cpu_idle === 'number' ? `${node.cpu_idle.toFixed(1)}%` : '—'}
             </div>
           </div>
         ))}
@@ -83,9 +77,7 @@ function NodeDesktopTable(props: { group: PublicNodeLocationGroup }) {
             <tr>
               <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.node')}</th>
               <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.status')}</th>
-              <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.last_report')}</th>
               <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.vps')}</th>
-              <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.cpu_idle')}</th>
             </tr>
           </thead>
           <tbody>
@@ -93,12 +85,9 @@ function NodeDesktopTable(props: { group: PublicNodeLocationGroup }) {
               <tr key={node.name} className="border-t border-border" data-row-variant={node.status ? undefined : 'danger'}>
                 <td className="px-3 py-2 font-medium">{node.name}</td>
                 <td className="px-3 py-2"><NodeStatusBadge up={node.status} /></td>
-                <td className="px-3 py-2 text-muted">{formatDateTime(node.last_report)}</td>
                 <td className="px-3 py-2 text-muted">
                   {typeof node.vps_count === 'number' ? node.vps_count : '—'}
-                  {typeof node.vps_free === 'number' ? ` · ${i18n.t('public.overview.nodes.vps_free', { count: node.vps_free })}` : null}
                 </td>
-                <td className="px-3 py-2 text-muted">{typeof node.cpu_idle === 'number' ? `${node.cpu_idle.toFixed(1)}%` : '—'}</td>
               </tr>
             ))}
           </tbody>
