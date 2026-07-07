@@ -88,6 +88,10 @@ function datasetLabel(ds: Dataset): string {
   return String(label ?? `#${ds.id}`);
 }
 
+function datasetObjectState(ds: Dataset): string {
+  return String((ds as any).object_state ?? '').trim();
+}
+
 function canonicalKey(raw: string): 'q' | 'user' | 'vps' | 'id' | null {
   const k = String(raw ?? '')
     .trim()
@@ -660,9 +664,10 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
           {/* Mobile: cards */}
           <div className="space-y-3 md:hidden">
             {rows.map((ds) => {
-              const state = objectStateBadge((ds as any).object_state, t);
-              const rowVariant = datasetRowVariant(ds, state.variant);
-              const dotVariant = dotVariantFromRowVariant(rowVariant) ?? dotVariantFromBadgeVariant(state.variant);
+              const rawState = datasetObjectState(ds);
+              const state = rawState ? objectStateBadge(rawState, t) : null;
+              const rowVariant = datasetRowVariant(ds, state?.variant ?? 'neutral');
+              const dotVariant = dotVariantFromRowVariant(rowVariant) ?? dotVariantFromBadgeVariant(state?.variant ?? 'neutral');
               const label = datasetLabel(ds);
               const vpsId =
                 ds.vps && typeof ds.vps === 'object' && 'id' in ds.vps ? Number((ds.vps as any).id) : undefined;
@@ -687,7 +692,7 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
                         </div>
                         <div className="mt-0.5 text-xs text-faint">#{ds.id}</div>
                       </div>
-                      <Badge variant={state.variant}>{state.label}</Badge>
+                      {state ? <Badge variant={state.variant}>{state.label}</Badge> : null}
                     </div>
 
                     <div className="mt-3">
@@ -786,9 +791,10 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
             </thead>
             <tbody>
               {rows.map((ds) => {
-                const state = objectStateBadge((ds as any).object_state, t);
-                const rowVariant = datasetRowVariant(ds, state.variant);
-                const dotVariant = dotVariantFromRowVariant(rowVariant) ?? dotVariantFromBadgeVariant(state.variant);
+                const rawState = datasetObjectState(ds);
+                const state = rawState ? objectStateBadge(rawState, t) : null;
+                const rowVariant = datasetRowVariant(ds, state?.variant ?? 'neutral');
+                const dotVariant = dotVariantFromRowVariant(rowVariant) ?? dotVariantFromBadgeVariant(state?.variant ?? 'neutral');
                 const label = datasetLabel(ds);
                 const vpsId =
                   ds.vps && typeof ds.vps === 'object' && 'id' in ds.vps ? Number((ds.vps as any).id) : undefined;
@@ -842,7 +848,7 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
                     <td className="px-4 py-2">{ds.mount_count ?? t('common.na')}</td>
                     <td className="px-4 py-2">{ds.export_count ?? t('common.na')}</td>
                     <td className="px-4 py-2">
-                      <Badge variant={state.variant}>{state.label}</Badge>
+                      {state ? <Badge variant={state.variant}>{state.label}</Badge> : <span className="text-faint">—</span>}
                     </td>
                   </TableRowLink>
                 );
