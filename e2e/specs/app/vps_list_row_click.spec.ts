@@ -104,7 +104,7 @@ test.describe('@workflow-matrix @smoke VPS list row navigation', () => {
       (r) => r.method() === 'DELETE' && r.url().includes('/api/v7.0/vpses/300')
     );
 
-    await page.getByTestId('vps.list.delete_confirm.confirm_text').fill('vps300.example');
+    await expect(page.getByTestId('vps.list.delete_confirm.confirm_text')).toHaveCount(0);
 
     await page.getByTestId('vps.list.delete_confirm.confirm').click();
 
@@ -140,7 +140,7 @@ test.describe('@workflow-matrix @smoke VPS list row navigation', () => {
       (r) => r.method() === 'DELETE' && r.url().includes('/api/v7.0/vpses/300')
     );
 
-    await page.getByTestId('vps.list.delete_confirm.confirm_text').fill('vps300.example');
+    await expect(page.getByTestId('vps.list.delete_confirm.confirm_text')).toHaveCount(0);
 
     await page.getByTestId('vps.list.delete_confirm.confirm').click();
 

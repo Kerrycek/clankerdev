@@ -26,7 +26,8 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile @smoke @smoke-mobile authentic
   await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
   await expect(page.getByText('Signed in as alice')).toBeVisible();
   await expect(page.getByTestId('app.dashboard.kpi.vps')).toContainText('VPS');
-  await expect(page.getByText('Running:')).toBeVisible();
+  await expect(page.getByTestId('app.dashboard.kpi.vps')).toContainText('2');
+  await expect(page.getByText('Running:')).toHaveCount(0);
 
   await page.getByTestId('app.dashboard.kpi.vps').getByRole('link', { name: 'Open' }).click();
 
