@@ -37,6 +37,68 @@ import {
   getChainState,
 } from './transactionChainSemantics';
 
+function shortClassName(value: string): string {
+  return value.split('::').filter(Boolean).slice(-1)[0] ?? value;
+}
+
+function rawLabelKey(value: string | undefined): string {
+  return String(value ?? '')
+    .trim()
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    .replace(/[._:/\\-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function translatedOrFallback(t: TransactionChainsTranslator, key: string, fallback: string, params?: Record<string, unknown>): string {
+  const translated = t(key, params);
+  return translated && translated !== key ? translated : fallback;
+}
+
+function concernKindLabel(t: TransactionChainsTranslator, className: string): string {
+  const short = shortClassName(className);
+  const key = `operation.concern.${short.toLowerCase()}`;
+  return translatedOrFallback(t, key, short);
+}
+
+function concernDisplay(t: TransactionChainsTranslator, ref: ReturnType<typeof extractConcernRefs>[number]): string {
+  const kind = concernKindLabel(t, ref.class_name);
+  const suffix = ref.label ? `${ref.label} (#${ref.row_id})` : `#${ref.row_id}`;
+  return `${kind} ${suffix}`;
+}
+
+function chainActionLabel(
+  t: TransactionChainsTranslator,
+  rawLabel: string | undefined,
+  operationName: string,
+  primaryConcern?: ReturnType<typeof extractConcernRefs>[number]
+): string {
+  const raw = rawLabelKey(rawLabel);
+  const cls = primaryConcern ? shortClassName(primaryConcern.class_name).toLowerCase() : '';
+
+  if (raw === 'state change' || raw === 'state') return t('operation.chain.action.state_change');
+  if (raw === 'resolve' && cls === 'registrationrequest') return t('operation.chain.action.resolve_registration');
+  if (raw === 'resolve') return t('operation.chain.action.resolve');
+  if (raw === 'create' || raw === 'new') return t('operation.chain.action.create');
+  if (raw === 'modify' || raw === 'update' || raw === 'change') return t('operation.chain.action.modify');
+  if (raw === 'delete' || raw === 'destroy' || raw === 'remove') return t('operation.chain.action.delete');
+
+  return operationName;
+}
+
+function chainSummary(
+  t: TransactionChainsTranslator,
+  rawLabel: string | undefined,
+  operationName: string,
+  primaryConcern?: ReturnType<typeof extractConcernRefs>[number]
+): string {
+  const action = chainActionLabel(t, rawLabel, operationName, primaryConcern);
+  if (!primaryConcern) return action;
+  return t('operation.chain.summary.with_object', { action, object: concernDisplay(t, primaryConcern) });
+}
+
 interface TransactionChainsTableProps {
   rows: TransactionChainRow[];
   basePath: string;
@@ -119,7 +181,9 @@ export function TransactionChainsTable({
           const operation = classifyTransactionChain(chain);
           const operationName = operationLabel(operation, t);
           const concerns = extractConcernRefs(chain.concerns, { maxDepth: 3 });
+          const primaryConcern = concerns[0];
           const shownConcerns = concerns.slice(0, 3);
+          const summary = chainSummary(t, label, operationName, primaryConcern);
           const actionStateId = extractRelatedActionStateIdFromTransactionChain(chain);
           const createdAt = getChainCreatedAt(chain);
 
@@ -148,15 +212,18 @@ export function TransactionChainsTable({
               </td>
               <td className="px-4 py-2 text-xs text-muted">{id}</td>
               <td className="px-4 py-2">
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <Link className="font-medium underline" to={`${basePath}/transactions/${id}`}>
-                    {operationName}
+                    {summary}
                   </Link>
                   <ChipLink to={`${basePath}/transactions/items?transaction_chain=${id}`} title={t('transactions.chains.row.open_items_title', { id })}>
                     {t('transactions.items.short')}
                   </ChipLink>
                 </div>
-                {label !== operationName ? <div className="mt-1 text-xs text-faint">{t('operation.raw_name', { name: label })}</div> : null}
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-faint">
+                  <span>{t('operation.chain.id_meta', { id })}</span>
+                  {label !== summary ? <span>{t('operation.raw_name', { name: label })}</span> : null}
+                </div>
                 <div className="mt-2 flex flex-wrap gap-1">
                   <Badge variant={operationBadgeVariant(operation)}>{operationCategoryLabel(operation, t)}</Badge>
                   {operation.severity !== 'normal' ? <Badge variant={operationBadgeVariant(operation)}>{operationSeverityLabel(operation, t)}</Badge> : null}
@@ -164,6 +231,7 @@ export function TransactionChainsTable({
                 </div>
                 {shownConcerns.length > 0 ? (
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
+                    <span className="font-medium text-faint">{t('operation.chain.objects')}:</span>
                     {shownConcerns.map((ref) => {
                       const directHref = directConcernLink(basePath, ref.class_name, ref.row_id);
                       const txHref = (() => {
