@@ -115,36 +115,40 @@ function NodeMobileCards(props: { group: PublicNodeLocationGroup; open: boolean 
   );
 }
 
-function NodeDesktopTable(props: { group: PublicNodeLocationGroup }) {
+function NodeDesktopTable(props: { groups: PublicNodeLocationGroup[] }) {
   const i18n = useI18n();
 
   return (
-    <div className="hidden space-y-2 md:block">
-      <NodeGroupHeader group={props.group} />
-      <div className="overflow-auto rounded-lg border border-border">
-        <Table className="table-fixed" minWidth="md" testId={`public.nodes.table.${props.group.location}`}>
-          <colgroup>
-            <col style={{ width: '18%' }} />
-            <col style={{ width: '16%' }} />
-            <col style={{ width: '16%' }} />
-            <col style={{ width: '11%' }} />
-            <col style={{ width: '13%' }} />
-            <col style={{ width: '16%' }} />
-            <col style={{ width: '10%' }} />
-          </colgroup>
-          <thead className="bg-surface-2 text-left text-xs text-muted">
-            <tr>
-              <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.node')}</th>
-              <th className="px-3 py-2 text-center font-medium">{i18n.t('public.overview.nodes.table.status')}</th>
-              <th className="px-3 py-2 text-center font-medium">{i18n.t('public.overview.nodes.table.storage')}</th>
-              <th className="px-3 py-2 text-center font-medium">{i18n.t('public.overview.nodes.table.vps')}</th>
-              <th className="px-3 py-2 text-center font-medium">{i18n.t('public.overview.nodes.table.cpu_used')}</th>
-              <th className="px-3 py-2 text-center font-medium">{i18n.t('public.overview.nodes.table.kernel')}</th>
-              <th className="px-3 py-2 text-center font-medium">{i18n.t('public.overview.nodes.table.cgroups')}</th>
+    <div className="hidden overflow-auto rounded-lg border border-border md:block">
+      <Table className="table-fixed" minWidth="md" testId="public.nodes.table">
+        <colgroup>
+          <col style={{ width: '18%' }} />
+          <col style={{ width: '16%' }} />
+          <col style={{ width: '16%' }} />
+          <col style={{ width: '11%' }} />
+          <col style={{ width: '13%' }} />
+          <col style={{ width: '16%' }} />
+          <col style={{ width: '10%' }} />
+        </colgroup>
+        <thead className="bg-surface-2 text-left text-xs text-muted">
+          <tr>
+            <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.node')}</th>
+            <th className="px-3 py-2 text-center font-medium">{i18n.t('public.overview.nodes.table.status')}</th>
+            <th className="px-3 py-2 text-center font-medium">{i18n.t('public.overview.nodes.table.storage')}</th>
+            <th className="px-3 py-2 text-center font-medium">{i18n.t('public.overview.nodes.table.vps')}</th>
+            <th className="px-3 py-2 text-center font-medium">{i18n.t('public.overview.nodes.table.cpu_used')}</th>
+            <th className="px-3 py-2 text-center font-medium">{i18n.t('public.overview.nodes.table.kernel')}</th>
+            <th className="px-3 py-2 text-center font-medium">{i18n.t('public.overview.nodes.table.cgroups')}</th>
+          </tr>
+        </thead>
+        {props.groups.map((group) => (
+          <tbody key={group.location} data-testid={`public.nodes.table.${group.location}`}>
+            <tr className="border-t border-border bg-surface">
+              <td colSpan={7} className="px-3 py-3">
+                <NodeGroupHeader group={group} />
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {props.group.nodes.map((node) => (
+            {group.nodes.map((node) => (
               <tr key={node.name} className="border-t border-border" data-row-variant={node.status ? undefined : 'danger'}>
                 <td className="px-3 py-2 font-medium">{node.name}</td>
                 <td className="px-3 py-2 text-center"><NodeStatusBadge up={node.status} /></td>
@@ -158,8 +162,8 @@ function NodeDesktopTable(props: { group: PublicNodeLocationGroup }) {
               </tr>
             ))}
           </tbody>
-        </Table>
-      </div>
+        ))}
+      </Table>
     </div>
   );
 }
@@ -184,16 +188,14 @@ export function OverviewNodesSection(props: {
           ) : props.groups.length === 0 ? (
             <div className="text-sm text-muted">{i18n.t('public.overview.nodes.empty')}</div>
           ) : (
-            <div className="space-y-6">
-              {props.groups.map((group, index) => {
-                const openMobile = group.down > 0 || (props.summary.down === 0 && index === 0);
-                return (
-                  <div key={group.location} className="space-y-2">
-                    <NodeMobileCards group={group} open={openMobile} />
-                    <NodeDesktopTable group={group} />
-                  </div>
-                );
-              })}
+            <div>
+              <div className="space-y-3 md:hidden">
+                {props.groups.map((group, index) => {
+                  const openMobile = group.down > 0 || (props.summary.down === 0 && index === 0);
+                  return <NodeMobileCards key={group.location} group={group} open={openMobile} />;
+                })}
+              </div>
+              <NodeDesktopTable groups={props.groups} />
             </div>
           )}
         </CardBody>
