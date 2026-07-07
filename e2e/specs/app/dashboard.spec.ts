@@ -198,14 +198,14 @@ test.describe("Dashboard", () => {
     );
 
     await expect(page.getByTestId("app.dashboard.preferences.card")).toContainText(
-      "Comfortable",
+      "Compact",
     );
     await page.getByTestId("app.dashboard.preferences.toggle").click();
     await page
       .getByTestId("app.dashboard.preferences.density")
-      .selectOption("compact");
+      .selectOption("comfortable");
     await expect(page.getByTestId("app.dashboard.preferences.card")).toContainText(
-      "Compact",
+      "Comfortable",
     );
 
     await expect(

@@ -9,7 +9,6 @@ import { Card, CardBody, CardHeader } from "../../components/ui/Card";
 import { LinkButton } from "../../components/ui/LinkButton";
 import { NewsMessage } from "../../components/ui/NewsMessage";
 import { Spinner } from "../../components/ui/Spinner";
-import { StackedBar } from "../../components/ui/StackedBar";
 import { StatusDot } from "../../components/ui/StatusDot";
 import { Table } from "../../components/ui/Table";
 import type { NewsLog, Outage, PublicNodeStatus } from "../../lib/api/public";
@@ -312,12 +311,9 @@ export function ClusterHealthCard(props: { isLoading: boolean; isError: boolean;
   const { basePath, mode } = useAppMode();
   const compact = props.density === "compact";
   const collapsed = props.collapsed === true;
-  const locationLimit = compact ? 3 : 6;
-  const visibleLocations = props.nodeData.byLocation.slice(0, locationLimit);
-  const hiddenLocationCount = Math.max(0, props.nodeData.byLocation.length - visibleLocations.length);
-  const nodeRows = props.nodeData.byLocation.flatMap(([location, group]) => group.nodes.map((node) => ({ location, node })));
-  const visibleNodeRows = compact ? nodeRows.slice(0, 8) : nodeRows;
-  const hiddenNodeCount = Math.max(0, nodeRows.length - visibleNodeRows.length);
+  const nodeRows = props.nodeData.byLocation.flatMap(([, group]) => group.nodes);
+  const visibleNodeLimit = compact ? 12 : Number.POSITIVE_INFINITY;
+  let renderedNodeCount = 0;
   const statusBadges = (
     <div className="flex flex-wrap gap-2 text-sm">
       <Badge variant="ok">{t("dashboard.section.cluster.status_summary.up", { count: props.nodeData.summary.ok })}</Badge>
@@ -381,53 +377,19 @@ export function ClusterHealthCard(props: { isLoading: boolean; isError: boolean;
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  {visibleLocations.map(([location, group]) => (
-                    <div key={location} className="rounded-md border border-border bg-surface-2 p-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="font-medium">{location}</div>
-                        <div className="text-xs text-muted">
-                          {t("dashboard.section.cluster.location_summary", {
-                            up: group.ok,
-                            maintenance: group.maintenance,
-                            down: group.down,
-                            total: group.total,
-                          })}
-                        </div>
-                      </div>
-                      <StackedBar
-                        className="mt-3"
-                        ariaLabel={t("dashboard.section.cluster.location_bar_aria", { location })}
-                        segments={[
-                          { value: group.ok, variant: "ok", title: t("state.up") },
-                          { value: group.maintenance, variant: "warn", title: t("state.maintenance") },
-                          { value: group.down, variant: "danger", title: t("state.down") },
-                          { value: group.unknown, variant: "neutral", title: t("state.unknown") },
-                        ]}
-                      />
-                    </div>
-                  ))}
-                </div>
-                {hiddenLocationCount > 0 ? (
-                  <div className="text-xs text-muted">
-                    {t("dashboard.section.cluster.more_locations", { count: hiddenLocationCount })}
-                  </div>
-                ) : null}
                 <div className="overflow-auto rounded-lg border border-border">
-                  <Table className="table-fixed" minWidth="lg" testId="app.dashboard.cluster.table" variant="list">
+                  <Table className="table-fixed" minWidth="md" testId="app.dashboard.cluster.table" variant="list">
                     <colgroup>
-                      <col style={{ width: "13%" }} />
-                      <col style={{ width: "17%" }} />
-                      <col style={{ width: "13%" }} />
-                      <col style={{ width: "13%" }} />
+                      <col style={{ width: "22%" }} />
+                      <col style={{ width: "14%" }} />
+                      <col style={{ width: "14%" }} />
                       <col style={{ width: "10%" }} />
-                      <col style={{ width: "11%" }} />
-                      <col style={{ width: "13%" }} />
-                      <col style={{ width: "10%" }} />
+                      <col style={{ width: "12%" }} />
+                      <col style={{ width: "16%" }} />
+                      <col style={{ width: "12%" }} />
                     </colgroup>
                     <thead className="bg-surface-2 text-left text-xs text-muted">
                       <tr>
-                        <th className="px-3 py-2 font-medium">{t("dashboard.section.cluster.table.location")}</th>
                         <th className="px-3 py-2 font-medium">{t("dashboard.section.cluster.table.node")}</th>
                         <th className="px-3 py-2 text-center font-medium">{t("dashboard.section.cluster.table.status")}</th>
                         <th className="px-3 py-2 text-center font-medium">{t("dashboard.section.cluster.table.storage")}</th>
@@ -437,54 +399,79 @@ export function ClusterHealthCard(props: { isLoading: boolean; isError: boolean;
                         <th className="px-3 py-2 text-center font-medium">{t("dashboard.section.cluster.table.cgroups")}</th>
                       </tr>
                     </thead>
-                    <tbody>
-                      {visibleNodeRows.map(({ location, node }) => {
-                        const health = nodeHealthBadge(node, t);
-                        const rowVariant = nodeRowVariant(node);
-                        const maintenanceReason = typeof node.maintenance_lock_reason === "string" ? node.maintenance_lock_reason : undefined;
-                        const nodeId = typeof node["id"] === "number" ? Number(node["id"]) : null;
-                        const nodeName = node.name || node.fqdn || "—";
-                        return (
-                          <tr key={`${location}:${nodeId ?? nodeName}`} className="border-t border-border" data-row-variant={rowVariant}>
-                            <td className="px-3 py-2 text-muted">{location}</td>
-                            <td className="px-3 py-2 font-medium">
-                              {mode === "admin" && nodeId ? (
-                                <Link to={`${basePath}/nodes/${nodeId}`} className="hover:underline">
-                                  {nodeName}
-                                </Link>
-                              ) : (
-                                nodeName
-                              )}
-                            </td>
-                            <td className="px-3 py-2 text-center">
-                              <span className="inline-flex min-w-24 justify-center">
-                                <Badge variant={health.variant} title={maintenanceReason}>
-                                  {health.label}
-                                </Badge>
-                              </span>
-                            </td>
-                            <td className="px-3 py-2 text-center">
-                              <span className="inline-flex min-w-20 justify-center">
-                                <Badge variant={nodeStorageVariant(node)}>{nodeStorageLabel(node, t)}</Badge>
-                              </span>
-                            </td>
-                            <td className="px-3 py-2 text-center text-muted">
-                              {typeof node.vps_count === "number" ? formatNumber(node.vps_count) : "—"}
-                            </td>
-                            <td className="px-3 py-2 text-center text-muted">{cpuUsedLabel(node)}</td>
-                            <td className="px-3 py-2 text-center text-muted">{node.kernel ? String(node.kernel) : "—"}</td>
-                            <td className="px-3 py-2 text-center text-muted">
-                              {typeof node["cgroup_version"] === "string" ? node["cgroup_version"] : "—"}
-                            </td>
+                    {props.nodeData.byLocation.map(([location, group]) => {
+                      const remaining = visibleNodeLimit - renderedNodeCount;
+                      const visibleGroupNodes = remaining > 0 ? group.nodes.slice(0, remaining) : [];
+                      renderedNodeCount += visibleGroupNodes.length;
+
+                      if (visibleGroupNodes.length === 0) return null;
+
+                      return (
+                        <tbody key={location}>
+                          <tr className="border-t border-border bg-surface-2/70">
+                            <th className="px-3 py-2 text-left font-semibold" colSpan={7}>
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <span>{location}</span>
+                                <span className="text-xs font-normal text-muted">
+                                  {t("dashboard.section.cluster.location_summary", {
+                                    up: group.ok,
+                                    maintenance: group.maintenance,
+                                    down: group.down,
+                                    total: group.total,
+                                  })}
+                                </span>
+                              </div>
+                            </th>
                           </tr>
-                        );
-                      })}
-                    </tbody>
+                          {visibleGroupNodes.map((node) => {
+                            const health = nodeHealthBadge(node, t);
+                            const rowVariant = nodeRowVariant(node);
+                            const maintenanceReason =
+                              typeof node.maintenance_lock_reason === "string" ? node.maintenance_lock_reason : undefined;
+                            const nodeId = typeof node["id"] === "number" ? Number(node["id"]) : null;
+                            const nodeName = node.name || node.fqdn || "—";
+                            return (
+                              <tr key={`${location}:${nodeId ?? nodeName}`} className="border-t border-border" data-row-variant={rowVariant}>
+                                <td className="px-3 py-2 font-medium">
+                                  {mode === "admin" && nodeId ? (
+                                    <Link to={`${basePath}/nodes/${nodeId}`} className="hover:underline">
+                                      {nodeName}
+                                    </Link>
+                                  ) : (
+                                    nodeName
+                                  )}
+                                </td>
+                                <td className="px-3 py-2 text-center">
+                                  <span className="inline-flex min-w-24 justify-center">
+                                    <Badge variant={health.variant} title={maintenanceReason}>
+                                      {health.label}
+                                    </Badge>
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2 text-center">
+                                  <span className="inline-flex min-w-20 justify-center">
+                                    <Badge variant={nodeStorageVariant(node)}>{nodeStorageLabel(node, t)}</Badge>
+                                  </span>
+                                </td>
+                                <td className="px-3 py-2 text-center text-muted">
+                                  {typeof node.vps_count === "number" ? formatNumber(node.vps_count) : "—"}
+                                </td>
+                                <td className="px-3 py-2 text-center text-muted">{cpuUsedLabel(node)}</td>
+                                <td className="px-3 py-2 text-center text-muted">{node.kernel ? String(node.kernel) : "—"}</td>
+                                <td className="px-3 py-2 text-center text-muted">
+                                  {typeof node["cgroup_version"] === "string" ? node["cgroup_version"] : "—"}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      );
+                    })}
                   </Table>
                 </div>
-                {hiddenNodeCount > 0 ? (
+                {nodeRows.length > renderedNodeCount ? (
                   <div className="text-xs text-muted">
-                    {t("dashboard.section.cluster.more_nodes_compact", { count: hiddenNodeCount })}
+                    {t("dashboard.section.cluster.more_nodes_compact", { count: nodeRows.length - renderedNodeCount })}
                   </div>
                 ) : null}
               </>

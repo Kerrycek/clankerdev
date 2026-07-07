@@ -12,7 +12,7 @@ export interface DashboardSettings {
 }
 
 export const DEFAULT_DASHBOARD_SETTINGS: DashboardSettings = {
-  density: 'comfortable',
+  density: 'compact',
   hiddenWidgets: [],
   collapsedWidgets: [],
   widgetOrder: [...DASHBOARD_WIDGET_IDS],
@@ -64,7 +64,7 @@ export function normalizeDashboardSettings(input: unknown): DashboardSettings {
   if (!isRecord(input)) return cloneDashboardSettings(DEFAULT_DASHBOARD_SETTINGS);
 
   const densityRaw = input['density'];
-  const density: DashboardDensity = densityRaw === 'compact' ? 'compact' : 'comfortable';
+  const density: DashboardDensity = densityRaw === 'comfortable' ? 'comfortable' : 'compact';
 
   return {
     density,

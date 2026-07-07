@@ -1,8 +1,7 @@
 import { useI18n } from '../../app/i18n';
 import type { DashboardDensity } from '../../app/dashboardSettingsModel';
-import { SummaryGrid } from '../../components/layout/SummaryGrid';
+import { Card, CardBody } from '../../components/ui/Card';
 import { LinkButton } from '../../components/ui/LinkButton';
-import { StatCard } from '../../components/ui/StatCard';
 
 export function formatDashboardNumber(value: unknown): string {
   if (typeof value !== 'number' || !Number.isFinite(value)) return '—';
@@ -30,54 +29,52 @@ export function DashboardSummaryCards(props: {
 }) {
   const { t } = useI18n();
   const compact = props.density === 'compact';
-  const vpsTotalCount = props.vps.totalCount;
+  const items = [
+    {
+      testId: 'app.dashboard.kpi.vps',
+      openTestId: 'app.dashboard.kpi.vps.open',
+      label: t('nav.vps'),
+      value: props.vps.isLoading ? '…' : props.vps.isError ? '—' : formatDashboardNumber(props.vps.totalCount),
+      to: `${props.basePath}/vps`,
+    },
+    {
+      testId: 'app.dashboard.kpi.datasets',
+      openTestId: 'app.dashboard.kpi.datasets.open',
+      label: t('nav.datasets'),
+      value: props.datasets.isLoading ? '…' : props.datasets.isError ? '—' : formatDashboardNumber(props.datasets.totalCount),
+      to: `${props.basePath}/datasets`,
+    },
+    {
+      testId: 'app.dashboard.kpi.dns',
+      openTestId: 'app.dashboard.kpi.dns.open',
+      label: t('nav.dns'),
+      value: props.dns.isLoading ? '…' : props.dns.isError ? '—' : formatDashboardNumber(props.dns.totalCount),
+      to: `${props.basePath}/dns`,
+    },
+  ];
 
   return (
-    <SummaryGrid testId="app.dashboard.summary-grid">
-      <div className={compact ? 'md:col-span-4' : 'md:col-span-6'}>
-        <StatCard
-          testId="app.dashboard.kpi.vps"
-          variant={compact ? 'standard' : 'featured'}
-          title={t('nav.vps')}
-          subtitle={t('dashboard.kpi.scope_hint')}
-          value={props.vps.isLoading ? '…' : props.vps.isError ? '—' : formatDashboardNumber(vpsTotalCount)}
-          actions={
-            <LinkButton to={`${props.basePath}/vps`} variant="secondary" size="sm" testId="app.dashboard.kpi.vps.open">
-              {t('common.open')}
-            </LinkButton>
-          }
-        />
-      </div>
-
-      <div className={compact ? 'md:col-span-4' : 'md:col-span-3'}>
-        <StatCard
-          testId="app.dashboard.kpi.datasets"
-          variant={compact ? 'compact' : 'standard'}
-          title={t('nav.datasets')}
-          subtitle={t('dashboard.kpi.scope_hint')}
-          value={props.datasets.isLoading ? '…' : props.datasets.isError ? '—' : formatDashboardNumber(props.datasets.totalCount)}
-          actions={
-            <LinkButton to={`${props.basePath}/datasets`} variant="secondary" size="sm" testId="app.dashboard.kpi.datasets.open">
-              {t('common.open')}
-            </LinkButton>
-          }
-        />
-      </div>
-
-      <div className={compact ? 'md:col-span-4' : 'md:col-span-3'}>
-        <StatCard
-          testId="app.dashboard.kpi.dns"
-          variant={compact ? 'compact' : 'standard'}
-          title={t('nav.dns')}
-          subtitle={t('dashboard.kpi.scope_hint')}
-          value={props.dns.isLoading ? '…' : props.dns.isError ? '—' : formatDashboardNumber(props.dns.totalCount)}
-          actions={
-            <LinkButton to={`${props.basePath}/dns`} variant="secondary" size="sm" testId="app.dashboard.kpi.dns.open">
-              {t('common.open')}
-            </LinkButton>
-          }
-        />
-      </div>
-    </SummaryGrid>
+    <Card testId="app.dashboard.summary-grid" className="shadow-none">
+      <CardBody className={compact ? 'p-2' : 'p-3'}>
+        <div className="grid gap-2 md:grid-cols-3">
+          {items.map((item) => (
+            <div
+              key={item.testId}
+              data-testid={item.testId}
+              className="flex items-center justify-between gap-3 rounded-md bg-surface-2 px-3 py-2"
+            >
+              <div className="min-w-0">
+                <div className="text-xs font-medium uppercase text-muted">{item.label}</div>
+                <div className="mt-0.5 text-2xl font-semibold leading-none">{item.value}</div>
+                <div className="mt-1 text-xs text-muted">{t('dashboard.kpi.scope_hint')}</div>
+              </div>
+              <LinkButton to={item.to} variant="secondary" size="sm" testId={item.openTestId}>
+                {t('common.open')}
+              </LinkButton>
+            </div>
+          ))}
+        </div>
+      </CardBody>
+    </Card>
   );
 }

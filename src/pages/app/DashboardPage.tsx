@@ -171,10 +171,10 @@ export function DashboardPage() {
 
   return (
     <PageContainer testId="app.dashboard.page">
-      <div className="space-y-6">
+      <div className="space-y-4">
         <PageHeader testId="app.dashboard.header" title={t("nav.dashboard")} description={t("dashboard.description")} meta={signedInMeta} />
 
-        <Alert title={statusAlert.title} variant={statusAlert.variant} testId="app.dashboard.status-alert">
+        <Alert title={statusAlert.title} variant={statusAlert.variant} className="p-2.5" testId="app.dashboard.status-alert">
           <span>{statusAlert.body}</span>
           {outagesByCategory.current.length > 0 ? (
             <span className="ml-2">
