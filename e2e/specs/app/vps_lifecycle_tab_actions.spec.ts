@@ -633,7 +633,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await page.goto('/admin/vps/123/lifecycle/delete');
 
     await page.getByTestId('vps.lifecycle.delete.lazy').check();
-    await page.getByTestId('vps.lifecycle.delete.confirm').fill('vps123.example');
+    await expect(page.getByTestId('vps.lifecycle.delete.confirm')).toHaveCount(0);
 
     const reqPromise = page.waitForRequest(
       (r) => r.method() === 'DELETE' && r.url().includes('/api/v7.0/vpses/123')
@@ -679,9 +679,8 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.goto('/app/vps/123/lifecycle/delete');
     await expect(page.getByTestId('vps.lifecycle.delete.lazy')).toHaveCount(0);
-    await expect(page.getByTestId('vps.lifecycle.delete.submit')).toHaveAttribute('aria-disabled', 'true');
-
-    await page.getByTestId('vps.lifecycle.delete.confirm').fill('vps123.example');
+    await expect(page.getByTestId('vps.lifecycle.delete.confirm')).toHaveCount(0);
+    await expect(page.getByTestId('vps.lifecycle.delete.submit')).toHaveAttribute('aria-disabled', 'false');
 
     const reqPromise = page.waitForRequest(
       (r) => r.method() === 'DELETE' && r.url().includes('/api/v7.0/vpses/123')
@@ -904,7 +903,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     const submit = page.getByTestId('vps.lifecycle.delete.submit');
     await expect(submit).toBeVisible();
-    await page.getByTestId('vps.lifecycle.delete.confirm').fill('vps123.example');
+    await expect(page.getByTestId('vps.lifecycle.delete.confirm')).toHaveCount(0);
     await expect(submit).toHaveAttribute('aria-disabled', 'true');
     await expect(submit).toHaveAttribute('title', 'Operation in progress');
   });
