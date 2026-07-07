@@ -414,17 +414,27 @@ export function ClusterHealthCard(props: { isLoading: boolean; isError: boolean;
                   </div>
                 ) : null}
                 <div className="overflow-auto rounded-lg border border-border">
-                  <Table minWidth="lg" testId="app.dashboard.cluster.table" variant="list">
+                  <Table className="table-fixed" minWidth="lg" testId="app.dashboard.cluster.table" variant="list">
+                    <colgroup>
+                      <col style={{ width: "13%" }} />
+                      <col style={{ width: "17%" }} />
+                      <col style={{ width: "13%" }} />
+                      <col style={{ width: "13%" }} />
+                      <col style={{ width: "10%" }} />
+                      <col style={{ width: "11%" }} />
+                      <col style={{ width: "13%" }} />
+                      <col style={{ width: "10%" }} />
+                    </colgroup>
                     <thead className="bg-surface-2 text-left text-xs text-muted">
                       <tr>
                         <th className="px-3 py-2 font-medium">{t("dashboard.section.cluster.table.location")}</th>
                         <th className="px-3 py-2 font-medium">{t("dashboard.section.cluster.table.node")}</th>
-                        <th className="px-3 py-2 font-medium">{t("dashboard.section.cluster.table.status")}</th>
-                        <th className="px-3 py-2 font-medium">{t("dashboard.section.cluster.table.storage")}</th>
-                        <th className="px-3 py-2 font-medium">{t("dashboard.section.cluster.table.vps")}</th>
-                        <th className="px-3 py-2 font-medium">{t("dashboard.section.cluster.table.cpu")}</th>
-                        <th className="px-3 py-2 font-medium">{t("dashboard.section.cluster.table.kernel")}</th>
-                        <th className="px-3 py-2 font-medium">{t("dashboard.section.cluster.table.cgroups")}</th>
+                        <th className="px-3 py-2 text-center font-medium">{t("dashboard.section.cluster.table.status")}</th>
+                        <th className="px-3 py-2 text-center font-medium">{t("dashboard.section.cluster.table.storage")}</th>
+                        <th className="px-3 py-2 text-center font-medium">{t("dashboard.section.cluster.table.vps")}</th>
+                        <th className="px-3 py-2 text-center font-medium">{t("dashboard.section.cluster.table.cpu")}</th>
+                        <th className="px-3 py-2 text-center font-medium">{t("dashboard.section.cluster.table.kernel")}</th>
+                        <th className="px-3 py-2 text-center font-medium">{t("dashboard.section.cluster.table.cgroups")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -446,20 +456,24 @@ export function ClusterHealthCard(props: { isLoading: boolean; isError: boolean;
                                 nodeName
                               )}
                             </td>
-                            <td className="px-3 py-2">
-                              <Badge variant={health.variant} title={maintenanceReason}>
-                                {health.label}
-                              </Badge>
+                            <td className="px-3 py-2 text-center">
+                              <span className="inline-flex min-w-24 justify-center">
+                                <Badge variant={health.variant} title={maintenanceReason}>
+                                  {health.label}
+                                </Badge>
+                              </span>
                             </td>
-                            <td className="px-3 py-2">
-                              <Badge variant={nodeStorageVariant(node)}>{nodeStorageLabel(node, t)}</Badge>
+                            <td className="px-3 py-2 text-center">
+                              <span className="inline-flex min-w-20 justify-center">
+                                <Badge variant={nodeStorageVariant(node)}>{nodeStorageLabel(node, t)}</Badge>
+                              </span>
                             </td>
-                            <td className="px-3 py-2 text-muted">
+                            <td className="px-3 py-2 text-center text-muted">
                               {typeof node.vps_count === "number" ? formatNumber(node.vps_count) : "—"}
                             </td>
-                            <td className="px-3 py-2 text-muted">{cpuUsedLabel(node)}</td>
-                            <td className="px-3 py-2 text-muted">{node.kernel ? String(node.kernel) : "—"}</td>
-                            <td className="px-3 py-2 text-muted">
+                            <td className="px-3 py-2 text-center text-muted">{cpuUsedLabel(node)}</td>
+                            <td className="px-3 py-2 text-center text-muted">{node.kernel ? String(node.kernel) : "—"}</td>
+                            <td className="px-3 py-2 text-center text-muted">
                               {typeof node["cgroup_version"] === "string" ? node["cgroup_version"] : "—"}
                             </td>
                           </tr>

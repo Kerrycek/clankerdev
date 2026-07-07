@@ -43,11 +43,19 @@ function cgroupVersionLabel(value: unknown): string {
 
 function NodeStatusBadge(props: { up: boolean }) {
   const i18n = useI18n();
-  return props.up ? <Badge variant="ok">{i18n.t('state.up')}</Badge> : <Badge variant="danger">{i18n.t('state.down')}</Badge>;
+  return (
+    <span className="inline-flex min-w-24 justify-center">
+      {props.up ? <Badge variant="ok">{i18n.t('state.up')}</Badge> : <Badge variant="danger">{i18n.t('state.down')}</Badge>}
+    </span>
+  );
 }
 
 function NodeStorageBadge(props: { node: PublicNodeLocationGroup['nodes'][number] }) {
-  return <Badge variant={nodeStorageVariant(props.node)}>{nodeStorageLabel(props.node)}</Badge>;
+  return (
+    <span className="inline-flex min-w-20 justify-center">
+      <Badge variant={nodeStorageVariant(props.node)}>{nodeStorageLabel(props.node)}</Badge>
+    </span>
+  );
 }
 
 function NodeGroupHeader(props: { group: PublicNodeLocationGroup }) {
@@ -114,30 +122,39 @@ function NodeDesktopTable(props: { group: PublicNodeLocationGroup }) {
     <div className="hidden space-y-2 md:block">
       <NodeGroupHeader group={props.group} />
       <div className="overflow-auto rounded-lg border border-border">
-        <Table minWidth="md" testId={`public.nodes.table.${props.group.location}`}>
+        <Table className="table-fixed" minWidth="md" testId={`public.nodes.table.${props.group.location}`}>
+          <colgroup>
+            <col style={{ width: '18%' }} />
+            <col style={{ width: '16%' }} />
+            <col style={{ width: '16%' }} />
+            <col style={{ width: '11%' }} />
+            <col style={{ width: '13%' }} />
+            <col style={{ width: '16%' }} />
+            <col style={{ width: '10%' }} />
+          </colgroup>
           <thead className="bg-surface-2 text-left text-xs text-muted">
             <tr>
               <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.node')}</th>
-              <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.status')}</th>
-              <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.storage')}</th>
-              <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.vps')}</th>
-              <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.cpu_used')}</th>
-              <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.kernel')}</th>
-              <th className="px-3 py-2 font-medium">{i18n.t('public.overview.nodes.table.cgroups')}</th>
+              <th className="px-3 py-2 text-center font-medium">{i18n.t('public.overview.nodes.table.status')}</th>
+              <th className="px-3 py-2 text-center font-medium">{i18n.t('public.overview.nodes.table.storage')}</th>
+              <th className="px-3 py-2 text-center font-medium">{i18n.t('public.overview.nodes.table.vps')}</th>
+              <th className="px-3 py-2 text-center font-medium">{i18n.t('public.overview.nodes.table.cpu_used')}</th>
+              <th className="px-3 py-2 text-center font-medium">{i18n.t('public.overview.nodes.table.kernel')}</th>
+              <th className="px-3 py-2 text-center font-medium">{i18n.t('public.overview.nodes.table.cgroups')}</th>
             </tr>
           </thead>
           <tbody>
             {props.group.nodes.map((node) => (
               <tr key={node.name} className="border-t border-border" data-row-variant={node.status ? undefined : 'danger'}>
                 <td className="px-3 py-2 font-medium">{node.name}</td>
-                <td className="px-3 py-2"><NodeStatusBadge up={node.status} /></td>
-                <td className="px-3 py-2"><NodeStorageBadge node={node} /></td>
-                <td className="px-3 py-2 text-muted">
+                <td className="px-3 py-2 text-center"><NodeStatusBadge up={node.status} /></td>
+                <td className="px-3 py-2 text-center"><NodeStorageBadge node={node} /></td>
+                <td className="px-3 py-2 text-center text-muted">
                   {typeof node.vps_count === 'number' ? node.vps_count : '—'}
                 </td>
-                <td className="px-3 py-2 text-muted">{cpuUsedLabel(node)}</td>
-                <td className="px-3 py-2 text-muted">{node.kernel ? String(node.kernel) : '—'}</td>
-                <td className="px-3 py-2 text-muted">{cgroupVersionLabel(node['cgroup_version'])}</td>
+                <td className="px-3 py-2 text-center text-muted">{cpuUsedLabel(node)}</td>
+                <td className="px-3 py-2 text-center text-muted">{node.kernel ? String(node.kernel) : '—'}</td>
+                <td className="px-3 py-2 text-center text-muted">{cgroupVersionLabel(node['cgroup_version'])}</td>
               </tr>
             ))}
           </tbody>
