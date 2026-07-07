@@ -1,7 +1,6 @@
 import { useI18n } from '../../app/i18n';
 import type { DashboardDensity } from '../../app/dashboardSettingsModel';
 import { SummaryGrid } from '../../components/layout/SummaryGrid';
-import { GaugeRing } from '../../components/ui/GaugeRing';
 import { LinkButton } from '../../components/ui/LinkButton';
 import { StatCard } from '../../components/ui/StatCard';
 
@@ -17,11 +16,6 @@ export function DashboardSummaryCards(props: {
     isLoading: boolean;
     isError: boolean;
     totalCount?: number;
-    runningCount: number;
-    stoppedCount: number;
-    unknownCount: number;
-    truncated: boolean;
-    loadedItemsCount: number;
   };
   datasets: {
     isLoading: boolean;
@@ -36,10 +30,7 @@ export function DashboardSummaryCards(props: {
 }) {
   const { t } = useI18n();
   const compact = props.density === 'compact';
-  const vpsCountsComplete = !props.vps.truncated;
   const vpsTotalCount = props.vps.totalCount;
-  const vpsRatio = vpsTotalCount && vpsTotalCount > 0 ? props.vps.runningCount / vpsTotalCount : 0;
-  const vpsRatioLabel = vpsCountsComplete && vpsTotalCount && vpsTotalCount > 0 ? `${Math.round(vpsRatio * 100)}%` : '—';
 
   return (
     <SummaryGrid testId="app.dashboard.summary-grid">
@@ -50,51 +41,6 @@ export function DashboardSummaryCards(props: {
           title={t('nav.vps')}
           subtitle={t('dashboard.kpi.scope_hint')}
           value={props.vps.isLoading ? '…' : props.vps.isError ? '—' : formatDashboardNumber(vpsTotalCount)}
-          footer={
-            props.vps.isLoading || props.vps.isError ? null : (
-              <span className="inline-flex flex-wrap items-center gap-2">
-                <span>
-                  {t('state.running')}:{' '}
-                  <span className="font-medium text-fg">{formatDashboardNumber(props.vps.runningCount)}</span>
-                </span>
-                <span className="text-faint">·</span>
-                <span>
-                  {t('state.stopped')}:{' '}
-                  <span className="font-medium text-fg">{formatDashboardNumber(props.vps.stoppedCount)}</span>
-                </span>
-                {props.vps.unknownCount > 0 ? (
-                  <>
-                    <span className="text-faint">·</span>
-                    <span>
-                      {t('state.unknown')}:{' '}
-                      <span className="font-medium text-fg">{formatDashboardNumber(props.vps.unknownCount)}</span>
-                    </span>
-                  </>
-                ) : null}
-                {props.vps.truncated ? (
-                  <>
-                    <span className="text-faint">·</span>
-                    <span className="text-faint">
-                      {t('dashboard.kpi.vps.partial_counts', {
-                        n: props.vps.loadedItemsCount,
-                      })}
-                    </span>
-                  </>
-                ) : null}
-              </span>
-            )
-          }
-          visual={
-            vpsCountsComplete && vpsTotalCount !== undefined && vpsTotalCount > 0 && !props.vps.isLoading && !props.vps.isError ? (
-              <GaugeRing
-                ariaLabel={t('dashboard.kpi.vps.running_ratio')}
-                value={props.vps.runningCount}
-                max={vpsTotalCount}
-                center={vpsRatioLabel}
-                size={compact ? 'sm' : 'md'}
-              />
-            ) : null
-          }
           actions={
             <LinkButton to={`${props.basePath}/vps`} variant="secondary" size="sm" testId="app.dashboard.kpi.vps.open">
               {t('common.open')}

@@ -456,7 +456,6 @@ export function ClusterHealthCard(props: { isLoading: boolean; isError: boolean;
                             </td>
                             <td className="px-3 py-2 text-muted">
                               {typeof node.vps_count === "number" ? formatNumber(node.vps_count) : "—"}
-                              {typeof node.vps_free === "number" ? ` · ${t("common.free_count", { count: formatNumber(node.vps_free) })}` : null}
                             </td>
                             <td className="px-3 py-2 text-muted">{cpuUsedLabel(node)}</td>
                             <td className="px-3 py-2 text-muted">{node.kernel ? String(node.kernel) : "—"}</td>

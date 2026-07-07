@@ -7,11 +7,13 @@ test.describe("Dashboard", () => {
     page,
   }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: "TEST" });
+    const vpsRequests: string[] = [];
 
     await installHaveApiMock(page, {
       user: { id: 1, login: "test", level: 1 },
       handlers: {
-        "GET vpses": () => {
+        "GET vpses": (ctx) => {
+          vpsRequests.push(ctx.url.search);
           const vpses = [
             {
               id: 101,
@@ -141,6 +143,8 @@ test.describe("Dashboard", () => {
     await expect(page.getByTestId("app.dashboard.summary-grid")).toBeVisible();
 
     await expect(page.getByTestId("app.dashboard.kpi.vps")).toContainText("3");
+    expect(vpsRequests).toHaveLength(1);
+    expect(new URLSearchParams(vpsRequests[0]).get("vps[limit]")).toBe("1");
     await expect(page.getByTestId("app.dashboard.kpi.datasets")).toContainText(
       "7",
     );
@@ -182,6 +186,9 @@ test.describe("Dashboard", () => {
     );
     await expect(page.getByTestId("app.dashboard.cluster.table")).toContainText(
       "node-b.prg",
+    );
+    await expect(page.getByTestId("app.dashboard.cluster.table")).not.toContainText(
+      "free",
     );
     await expect(page.getByTestId("app.dashboard.cluster.table")).toContainText(
       "ONLINE",

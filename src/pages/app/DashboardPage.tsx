@@ -15,7 +15,7 @@ import { fetchDnsZones } from "../../lib/api/dns";
 import { getMetaTotalCount } from "../../lib/api/haveapi";
 import { fetchNews, fetchOutages, fetchPublicNodeStatus, type Outage } from "../../lib/api/public";
 import { fetchSecurityAdvisoriesWithCves } from "../../lib/api/securityAdvisories";
-import { fetchVpsList, type Vps } from "../../lib/api/vps";
+import { fetchVpsList } from "../../lib/api/vps";
 import { categorizeOutage, sortOutagesNewestFirst } from "../../lib/outage";
 import { useTierBIntervalMs, useTierSlowIntervalMs } from "../../lib/refreshTiers";
 
@@ -25,58 +25,6 @@ import { DashboardSummaryCards } from "./DashboardSummaryCards";
 import { DashboardWidgetGrid } from "./DashboardWidgets";
 import { summarizeNodes } from "./DashboardOperationalCards";
 import { useDashboardSettingsState } from "./useDashboardSettings";
-
-function countRunning(vpses: Vps[]): {
-  running: number;
-  stopped: number;
-  unknown: number;
-} {
-  let running = 0;
-  let stopped = 0;
-  let unknown = 0;
-
-  for (const vps of vpses) {
-    if (vps.is_running === true) running += 1;
-    else if (vps.is_running === false) stopped += 1;
-    else unknown += 1;
-  }
-
-  return { running, stopped, unknown };
-}
-
-async function fetchAllVpsesForSummary(opts: { user?: number; maxItems?: number }) {
-  const limit = 200;
-  const maxItems = opts.maxItems ?? 1000;
-
-  let fromId: number | undefined = undefined;
-  let items: Vps[] = [];
-  let totalCount: number | undefined = undefined;
-
-  // Keyset pagination: keep fetching pages until we either exhaust the list or hit maxItems.
-  for (let i = 0; i < 50; i++) {
-    const res = await fetchVpsList({ limit, fromId, user: opts.user });
-    if (totalCount === undefined) totalCount = getMetaTotalCount(res.meta) ?? res.data.length;
-
-    const page = res.data ?? [];
-    if (page.length === 0) break;
-
-    items = items.concat(page);
-    if (items.length >= maxItems) {
-      items = items.slice(0, maxItems);
-      break;
-    }
-
-    const lastId = page[page.length - 1]?.id;
-    if (!lastId || page.length < limit) break;
-
-    // Defensive: prevent infinite loops in case the backend returns a stable last id.
-    if (fromId === lastId) break;
-    fromId = lastId;
-  }
-
-  const truncated = totalCount !== undefined && items.length < totalCount;
-  return { items, totalCount, truncated };
-}
 
 function thirtyDaysAgoIso(): string {
   const d = new Date();
@@ -103,8 +51,11 @@ export function DashboardPage() {
   const mineUserId = scope.mineUserId;
 
   const vpsQ = useQuery({
-    queryKey: ["dashboard", "vps_summary", { user: mineUserId ?? null }],
-    queryFn: async () => fetchAllVpsesForSummary({ user: mineUserId, maxItems: 1000 }),
+    queryKey: ["dashboard", "vps_count", { user: mineUserId ?? null }],
+    queryFn: async () => {
+      const res = await fetchVpsList({ limit: 1, user: mineUserId });
+      return { totalCount: getMetaTotalCount(res.meta) ?? res.data.length };
+    },
   });
 
   const datasetsQ = useQuery({
@@ -155,9 +106,6 @@ export function DashboardPage() {
       ).data,
     refetchInterval: tierSlowRefetchMs,
   });
-
-  const runningCounts = useMemo(() => countRunning(vpsQ.data?.items ?? []), [vpsQ.data]);
-  const vpsTotalCount = vpsQ.data?.totalCount ?? (vpsQ.data ? vpsQ.data.items.length : undefined);
 
   const outagesByCategory = useMemo(() => {
     const list = (outagesQ.data ?? []).slice().sort(sortOutagesNewestFirst);
@@ -245,12 +193,7 @@ export function DashboardPage() {
           vps={{
             isLoading: vpsQ.isLoading,
             isError: vpsQ.isError,
-            totalCount: vpsTotalCount,
-            runningCount: runningCounts.running,
-            stoppedCount: runningCounts.stopped,
-            unknownCount: runningCounts.unknown,
-            truncated: vpsQ.data?.truncated === true,
-            loadedItemsCount: vpsQ.data?.items.length ?? 0,
+            totalCount: vpsQ.data?.totalCount,
           }}
           datasets={{
             isLoading: datasetsQ.isLoading,
