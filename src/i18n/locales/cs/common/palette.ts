@@ -1,6 +1,9 @@
 // Common command palette copy
 export const csCommon_palette = {
   'palette.open': 'Hledat',
+  'palette.shortcut_title': 'Otevřít rychlé vyhledávání',
+  'search.inline.aria': 'Hledat na aktuální stránce',
+  'search.inline.placeholder': 'Hledat na stránce…',
   'palette.placeholder.admin': 'Hledej VPS, uživatele, IP adresy…',
   'palette.placeholder.user': 'Hledej své VPS…',
   'palette.loading': 'Vyhledávám…',

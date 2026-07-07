@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Activity, AlertTriangle, Globe, LogOut, Menu, Search, User, WifiOff } from 'lucide-react';
 
 import { Badge } from '../ui/Badge';
@@ -12,7 +13,6 @@ interface AppHeaderProps {
   canSwitchMode: boolean;
   shortcutHint: string;
   onOpenMobileNav: () => void;
-  onOpenPalette: () => void;
   showSyncIndicator: boolean;
   syncRef: React.RefObject<HTMLDivElement | null>;
   syncOpen: boolean;
@@ -49,7 +49,7 @@ function AppSyncPopover(props: Pick<AppHeaderProps,
     <div className="relative order-8 md:order-6" ref={syncRef}>
       <button
         className={clsx(
-          'inline-flex h-11 w-11 items-center justify-center rounded-md border border-border bg-overlay-surface text-sm shadow-card hover:bg-surface-2',
+          'inline-flex h-11 w-12 items-center justify-center rounded-md border border-border bg-overlay-surface text-sm shadow-card hover:bg-surface-2',
           'sm:h-10 sm:w-auto sm:justify-start sm:gap-2 sm:px-3',
           syncStatus === 'offline' ? 'text-danger' : 'text-warn'
         )}
@@ -134,7 +134,7 @@ function AppUserMenu(props: Pick<AppHeaderProps,
     <div className="relative order-10 md:order-8" ref={userMenuRef}>
       <button
         className={clsx(
-          'inline-flex h-11 w-11 items-center justify-center gap-2 rounded-md border border-border bg-overlay-surface text-sm shadow-card hover:bg-surface-2',
+          'inline-flex h-11 w-12 items-center justify-center gap-2 rounded-md border border-border bg-overlay-surface text-sm shadow-card hover:bg-surface-2',
           'sm:h-10 sm:w-auto sm:justify-start sm:px-3'
         )}
         onClick={() => setUserMenuOpen((v) => !v)}
@@ -306,7 +306,6 @@ export function AppHeader(props: AppHeaderProps) {
     canSwitchMode,
     shortcutHint,
     onOpenMobileNav,
-    onOpenPalette,
     showSyncIndicator,
     syncRef,
     syncOpen,
@@ -333,6 +332,37 @@ export function AppHeader(props: AppHeaderProps) {
     onGoToPublicStatus,
     loginLogoutHref,
   } = props;
+  const navigate = useNavigate();
+  const location = useLocation();
+  const urlQuery = new URLSearchParams(location.search).get('q') ?? '';
+  const [search, setSearch] = useState(urlQuery);
+
+  useEffect(() => {
+    setSearch(urlQuery);
+  }, [urlQuery]);
+
+  const setInlineSearch = (value: string) => {
+    setSearch(value);
+    const next = new URLSearchParams(location.search);
+    const trimmed = value.trim();
+
+    if (trimmed) next.set('q', trimmed);
+    else next.delete('q');
+
+    // Reset common list cursors when the global header search changes.
+    next.delete('from_id');
+    next.delete('page');
+    next.delete('cursor');
+
+    navigate(
+      {
+        pathname: location.pathname,
+        search: next.toString() ? `?${next.toString()}` : '',
+        hash: location.hash,
+      },
+      { replace: true }
+    );
+  };
 
   return (
     <header className="sticky top-0 z-10 border-b border-border bg-bg" data-testid="shell.header">
@@ -346,23 +376,29 @@ export function AppHeader(props: AppHeaderProps) {
           <Menu size={20} />
         </button>
 
-        <button
-          type="button"
+        <form
           className={clsx(
-            'inline-flex h-11 w-11 items-center justify-center gap-2 rounded-md border border-border bg-overlay-surface px-0 text-sm shadow-card',
-            'text-muted hover:bg-surface-2 hover:text-fg',
-            'order-6 md:order-3 md:h-10 md:w-auto md:justify-start md:px-3'
+            'order-6 flex h-11 min-w-[48px] items-center gap-2 rounded-md border border-border bg-overlay-surface px-3 text-sm shadow-card',
+            'focus-within:ring-2 focus-within:ring-accent/40',
+            'md:order-3 md:h-10 md:w-72 lg:w-80'
           )}
-          onClick={onOpenPalette}
-          aria-label={t('palette.open')}
-          data-testid="palette.open"
+          role="search"
+          onSubmit={(e) => e.preventDefault()}
+          data-testid="shell.inline-search"
         >
-          <Search size={18} />
-          <span className="hidden md:inline">{t('palette.open')}</span>
-          <span className="ml-2 hidden rounded border border-border bg-surface-2 px-2 py-0.5 text-xs text-faint md:inline">
+          <Search size={18} className="shrink-0 text-muted" />
+          <input
+            value={search}
+            onChange={(e) => setInlineSearch(e.target.value)}
+            className="min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-muted"
+            placeholder={t('search.inline.placeholder')}
+            aria-label={t('search.inline.aria')}
+            data-testid="shell.inline-search.input"
+          />
+          <span className="hidden shrink-0 rounded border border-border bg-surface-2 px-2 py-0.5 text-xs text-faint lg:inline" title={t('palette.shortcut_title')}>
             {shortcutHint}
           </span>
-        </button>
+        </form>
 
         <div className="order-5 flex-1 md:order-4" />
 
@@ -398,7 +434,7 @@ export function AppHeader(props: AppHeaderProps) {
 
         <button
           className={clsx(
-            'relative inline-flex h-11 w-11 items-center justify-center rounded-md border border-border bg-overlay-surface text-sm shadow-card hover:bg-surface-2',
+            'relative inline-flex h-11 w-12 items-center justify-center rounded-md border border-border bg-overlay-surface text-sm shadow-card hover:bg-surface-2',
             'order-9 md:order-7 sm:h-10 sm:w-auto sm:justify-start sm:gap-2 sm:px-3'
           )}
           onClick={onOpenTasks}

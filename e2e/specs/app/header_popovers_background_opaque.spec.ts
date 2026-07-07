@@ -42,10 +42,10 @@ test.describe('@smoke Header popovers', () => {
     const headerBg = await header.evaluate((el) => window.getComputedStyle(el).backgroundColor);
     expect(alphaFromComputedBg(headerBg)).toBeGreaterThanOrEqual(0.999);
 
-    const paletteButton = page.getByTestId('palette.open');
-    await expect(paletteButton).toBeVisible();
-    const paletteBg = await paletteButton.evaluate((el) => window.getComputedStyle(el).backgroundColor);
-    expect(alphaFromComputedBg(paletteBg)).toBeGreaterThanOrEqual(0.999);
+    const inlineSearch = page.getByTestId('shell.inline-search');
+    await expect(inlineSearch).toBeVisible();
+    const searchBg = await inlineSearch.evaluate((el) => window.getComputedStyle(el).backgroundColor);
+    expect(alphaFromComputedBg(searchBg)).toBeGreaterThanOrEqual(0.999);
 
     const tasksButton = page.getByTestId('tasks.open-button');
     await expect(tasksButton).toBeVisible();

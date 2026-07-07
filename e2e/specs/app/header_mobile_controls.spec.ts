@@ -18,7 +18,7 @@ test.describe('@smoke @smoke-mobile Header controls', () => {
 
     await expect(page.getByTestId('shell.header')).toBeVisible();
 
-    const search = page.getByTestId('palette.open');
+    const search = page.getByTestId('shell.inline-search');
     const tasks = page.getByTestId('tasks.open-button');
     const account = page.getByTestId('shell.user-menu-button');
     const nav = page.getByTestId('shell.mobile-nav-button');

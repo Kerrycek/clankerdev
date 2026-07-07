@@ -1,6 +1,9 @@
 // Common command palette copy
 export const enCommon_palette = {
   'palette.open': 'Search',
+  'palette.shortcut_title': 'Open quick search',
+  'search.inline.aria': 'Search the current page',
+  'search.inline.placeholder': 'Search this page…',
   'palette.placeholder.admin': 'Search VPS, users, IP addresses…',
   'palette.placeholder.user': 'Search your VPS…',
   'palette.loading': 'Searching…',

@@ -1,6 +1,20 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
+
+async function openCommandPalette(page: Page) {
+  await page.evaluate(() => {
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'k',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+  });
+  await expect(page.getByTestId('palette.modal')).toBeVisible();
+}
 
 test.describe('Command palette', () => {
   test('opens and searches VPSes in user view', async ({ page }) => {
@@ -79,8 +93,7 @@ test.describe('Command palette', () => {
     await page.goto('/app/vps');
     await expect(page.getByTestId('vps.list')).toBeVisible();
 
-    await page.getByTestId('palette.open').click();
-    await expect(page.getByTestId('palette.modal')).toBeVisible();
+    await openCommandPalette(page);
 
     await page.getByTestId('palette.input').fill('vps3');
     await expect(page.getByTestId('palette.result.0')).toBeVisible();
@@ -140,8 +153,7 @@ test.describe('Command palette', () => {
     await page.goto('/app/vps');
     await expect(page.getByTestId('vps.list')).toBeVisible();
 
-    await page.getByTestId('palette.open').click();
-    await expect(page.getByTestId('palette.modal')).toBeVisible();
+    await openCommandPalette(page);
 
     await page.getByTestId('palette.input').fill('3');
     await expect(page.getByTestId('palette.result.0')).toBeVisible();
@@ -166,8 +178,8 @@ test.describe('Command palette', () => {
     });
 
     await page.goto('/admin/vps');
-    await page.getByTestId('palette.open').click();
-    await expect(page.getByTestId('palette.modal')).toBeVisible();
+    await expect(page.getByTestId('vps.list')).toBeVisible();
+    await openCommandPalette(page);
 
     await page.getByTestId('palette.input').fill('alice');
     await expect(page.getByTestId('palette.result.0')).toBeVisible();
@@ -202,8 +214,8 @@ test.describe('Command palette', () => {
     });
 
     await page.goto('/admin/vps');
-    await page.getByTestId('palette.open').click();
-    await expect(page.getByTestId('palette.modal')).toBeVisible();
+    await expect(page.getByTestId('vps.list')).toBeVisible();
+    await openCommandPalette(page);
 
     await page.getByTestId('palette.input').fill('203.0.113.10');
     await expect(page.getByTestId('palette.result.0')).toBeVisible();
@@ -230,8 +242,8 @@ test.describe('Command palette', () => {
     });
 
     await page.goto('/admin/vps');
-    await page.getByTestId('palette.open').click();
-    await expect(page.getByTestId('palette.modal')).toBeVisible();
+    await expect(page.getByTestId('vps.list')).toBeVisible();
+    await openCommandPalette(page);
 
     await page.getByTestId('palette.input').fill('?');
     await expect(page.getByTestId('palette.help')).toBeVisible();

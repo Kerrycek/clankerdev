@@ -714,7 +714,6 @@ export function AppLayout(props: { children: React.ReactNode }) {
               canSwitchMode={canSwitchMode}
               shortcutHint={shortcutHint}
               onOpenMobileNav={() => setMobileNavOpen(true)}
-              onOpenPalette={() => setPaletteOpen(true)}
               showSyncIndicator={showSyncIndicator}
               syncRef={syncRef}
               syncOpen={syncOpen}
