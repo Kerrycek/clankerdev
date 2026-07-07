@@ -18,9 +18,9 @@ interface VpsListRowActionsProps {
   showLabels?: boolean;
 }
 
-const iconOnlyButtonClass = 'h-10 min-w-10 px-0';
+const iconOnlyButtonClass = 'h-8 min-w-8 px-0';
 const labeledButtonClass = 'min-h-11 px-3';
-const iconClass = 'h-5 w-5 shrink-0';
+const iconClass = 'h-4 w-4 shrink-0';
 
 function IconLabel(props: { children: React.ReactNode; visible?: boolean }) {
   return <span className={props.visible ? 'text-sm' : 'sr-only'}>{props.children}</span>;
@@ -44,7 +44,7 @@ export function VpsListRowActions({
 
   return (
     <div
-      className={showLabels ? 'grid grid-cols-2 gap-2 sm:flex sm:flex-wrap' : 'flex flex-wrap items-center justify-end gap-2'}
+      className={showLabels ? 'grid grid-cols-2 gap-2 sm:flex sm:flex-wrap' : 'flex flex-nowrap items-center justify-end gap-1.5'}
       data-row-no-nav
     >
       {row.primaryAction === 'start' ? (

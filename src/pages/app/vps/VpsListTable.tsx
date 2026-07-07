@@ -47,7 +47,8 @@ export function VpsListTable({
   return (
     <TableCard
       className="hidden md:block"
-      minWidth="xl"
+      minWidth="lg"
+      tableClassName="table-fixed"
       tableTestId="vps.table"
       footer={
         canPaginate ? (
@@ -67,17 +68,26 @@ export function VpsListTable({
         ) : null
       }
     >
+      <colgroup>
+        <col style={{ width: '3%' }} />
+        <col style={{ width: '16%' }} />
+        <col style={{ width: '17%' }} />
+        <col style={{ width: '14%' }} />
+        <col style={{ width: '21%' }} />
+        <col style={{ width: '10%' }} />
+        <col style={{ width: '19%' }} />
+      </colgroup>
       <thead>
         <tr className="border-b border-border text-left text-xs text-muted">
-          <th className="w-8 px-4 py-2"><span className="sr-only">{t('common.state')}</span></th>
-          <th className="px-4 py-2">{t('vps.list.col.vps')}</th>
-          <th className="px-4 py-2">{t('common.state')}</th>
-          <th className="px-4 py-2">
+          <th className="px-3 py-2"><span className="sr-only">{t('common.state')}</span></th>
+          <th className="px-3 py-2">{t('vps.list.col.vps')}</th>
+          <th className="px-3 py-2">{t('common.state')}</th>
+          <th className="px-3 py-2">
             {showOwnerContext ? t('vps.list.col.owner_location') : t('vps.list.col.location_node')}
           </th>
-          <th className="px-4 py-2">{t('vps.overview.resources.title')}</th>
-          <th className="px-4 py-2">{t('vps.list.col.activity')}</th>
-          <th className="px-4 py-2">{t('common.actions')}</th>
+          <th className="px-3 py-2">{t('vps.overview.resources.title')}</th>
+          <th className="px-3 py-2">{t('vps.list.col.activity')}</th>
+          <th className="px-3 py-2 text-right">{t('common.actions')}</th>
         </tr>
       </thead>
       <tbody>
@@ -93,10 +103,10 @@ export function VpsListTable({
               variant={row.rowVariant}
               className="border-b border-border/60 last:border-b-0"
             >
-              <td className="px-4 py-2 align-top">
+              <td className="px-3 py-2 align-top">
                 <StatusDot variant={row.dotVariant} testId={`vps.row.${vps.id}.dot`} ariaLabel={row.runtimeBadge.label} />
               </td>
-              <td className="px-4 py-2 align-top">
+              <td className="px-3 py-2 align-top">
                 <div className="flex flex-col gap-1">
                   <Link to={`${basePath}/vps/${vps.id}`} className="font-medium text-fg underline">
                     {vps.hostname}
@@ -104,7 +114,7 @@ export function VpsListTable({
                   <div className="text-xs text-muted">{t('common.id')} {vps.id}</div>
                 </div>
               </td>
-              <td className="px-4 py-2 align-top">
+              <td className="px-3 py-2 align-top">
                 <div className="flex flex-wrap items-center gap-2" data-testid={`vps.row.${vps.id}.state`}>
                   <Badge variant={row.runtimeBadge.variant}>{row.runtimeBadge.label}</Badge>
                   <Badge variant={row.objectBadge.variant}>{row.objectBadge.label}</Badge>
@@ -118,7 +128,7 @@ export function VpsListTable({
                   ) : null}
                 </div>
               </td>
-              <td className="px-4 py-2 align-top text-xs">
+              <td className="px-3 py-2 align-top text-xs">
                 <div className="flex flex-col gap-1">
                   {showOwnerContext ? (
                     <div><span className="text-muted">{t('vps.list.context.owner')}:</span> {row.ownerLabel}</div>
@@ -127,7 +137,7 @@ export function VpsListTable({
                   <div><span className="text-muted">{t('common.node')}:</span> {row.nodeLabel}</div>
                 </div>
               </td>
-              <td className="px-4 py-2 align-top text-xs text-muted">
+              <td className="px-3 py-2 align-top text-xs text-muted">
                 <div className="flex flex-col gap-1">
                   <div className="text-faint">
                     {vps.cpu ? t('vps.list.resources.cpu', { count: vps.cpu }) : t('common.na')} ·{' '}
@@ -141,13 +151,13 @@ export function VpsListTable({
                   ) : null}
                 </div>
               </td>
-              <td className="px-4 py-2 align-top text-xs text-muted">
+              <td className="px-3 py-2 align-top text-xs text-muted">
                 <div className="flex flex-col gap-1">
                   <span>{formatUptimeSeconds(vps.uptime)}</span>
                   {row.busyTx ? <span>{t('vps.list.activity.busy')}</span> : null}
                 </div>
               </td>
-              <td className="px-4 py-2 align-top">
+              <td className="px-3 py-2 align-top">
                 <VpsListRowActions
                   row={row}
                   basePath={basePath}

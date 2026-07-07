@@ -192,4 +192,28 @@ test.describe('@workflow-matrix @smoke VPS list row navigation', () => {
     expect(box?.width).toBeGreaterThanOrEqual(44);
     expect(box?.height).toBeGreaterThanOrEqual(44);
   });
+
+  test('desktop row actions fit inside the viewport without clipping', async ({ page }) => {
+    const vps = makeVps(300);
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await installHaveApiMock(page, {
+      handlers: {
+        'GET vpses': () => ({ vpses: [vps] }),
+      },
+    });
+
+    await bootstrapVpsAdminWindow(page);
+
+    await page.goto('/app/vps');
+    await visibleVpsItem(page, 300);
+
+    const tableFits = await page.getByTestId('vps.table').evaluate((table) => {
+      const rect = table.getBoundingClientRect();
+      return rect.left >= 0 && rect.right <= document.documentElement.clientWidth;
+    });
+
+    expect(tableFits).toBe(true);
+    await expect(page.getByTestId('vps.row.300.action.delete')).toBeInViewport();
+  });
 });
