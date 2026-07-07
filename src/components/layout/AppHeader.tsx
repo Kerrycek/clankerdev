@@ -378,9 +378,9 @@ export function AppHeader(props: AppHeaderProps) {
 
         <form
           className={clsx(
-            'order-6 flex h-11 min-w-[48px] items-center gap-2 rounded-md border border-border bg-overlay-surface px-3 text-sm shadow-card',
+            'order-6 flex h-11 w-12 items-center gap-2 overflow-hidden rounded-md border border-border bg-overlay-surface px-3 text-sm shadow-card',
             'focus-within:ring-2 focus-within:ring-accent/40',
-            'md:order-3 md:h-10 md:w-72 lg:w-80'
+            'sm:w-56 md:order-3 md:h-10 md:w-72 lg:w-80'
           )}
           role="search"
           onSubmit={(e) => e.preventDefault()}
