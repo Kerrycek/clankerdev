@@ -130,6 +130,7 @@ export function AppSidebar(props: {
   sidebarTips?: React.ReactNode;
 }) {
   const { mobileNavOpen, onCloseMobileNav, navItems, sidebarCollapsed, onToggleSidebar, t, sidebarTips } = props;
+  const compactDesktopNav = !sidebarCollapsed && navItems.length > 18;
 
   return (
     <>
@@ -174,12 +175,15 @@ export function AppSidebar(props: {
           sidebarCollapsed ? 'w-16' : 'w-64'
         )}
       >
-        <div className="flex h-full flex-col">
-          <div className="p-4">
+        <div className="flex h-full min-h-0 flex-col">
+          <div className="shrink-0 p-4">
             <AppLogo subtitle={t('app.logo.subtitle')} collapsed={sidebarCollapsed} />
           </div>
 
-          <nav className="flex-1 space-y-1 px-2" data-document-title-nav="section">
+          <nav
+            className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-2 pb-2"
+            data-document-title-nav="section"
+          >
             {navItems.map((it) => (
               <NavLink
                 key={it.to}
@@ -188,21 +192,22 @@ export function AppSidebar(props: {
                 data-testid={`nav.sidebar.${it.id}`}
                 className={({ isActive }) =>
                   clsx(
-                    'flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors',
+                    'flex min-w-0 items-center gap-2 rounded-md px-3 text-sm transition-colors',
+                    compactDesktopNav ? 'py-1.5' : 'py-2',
                     isActive ? 'bg-accent/15 text-fg' : 'text-muted hover:bg-surface-2 hover:text-fg'
                   )
                 }
                 title={sidebarCollapsed ? it.label : undefined}
               >
-                {it.icon}
-                {sidebarCollapsed ? null : <span>{it.label}</span>}
+                <span className="shrink-0">{it.icon}</span>
+                {sidebarCollapsed ? null : <span className="min-w-0 truncate">{it.label}</span>}
               </NavLink>
             ))}
           </nav>
 
-          {sidebarTips}
+          {sidebarTips ? <div className="shrink-0">{sidebarTips}</div> : null}
 
-          <div className="border-t border-border p-2">
+          <div className="shrink-0 border-t border-border p-2">
             <Button
               variant="ghost"
               onClick={onToggleSidebar}
