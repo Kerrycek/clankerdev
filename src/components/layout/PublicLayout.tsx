@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 
 import { getRuntimeConfig } from '../../app/config';
@@ -70,6 +70,7 @@ function NavItem(props: { to: string; children: React.ReactNode }) {
 function PublicLayoutInner() {
   const cfg = useMemo(() => getRuntimeConfig(), []);
   const location = useLocation();
+  const navigate = useNavigate();
   const auth = useAuth();
   const i18n = useI18n();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -88,6 +89,14 @@ function PublicLayoutInner() {
   const isLoggedIn = auth.status === 'authenticated';
   const primaryHref = isLoggedIn ? appHref : loginHref;
   const primaryLabel = isLoggedIn ? i18n.t('public.primary.back_to_app') : i18n.t('public.primary.log_in');
+
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    if (location.pathname !== '/') return;
+    if (new URLSearchParams(location.search).get('session') === 'expired') return;
+
+    navigate('/app', { replace: true });
+  }, [isLoggedIn, location.pathname, location.search, navigate]);
 
   return (
     <div className="min-h-screen flex flex-col">
