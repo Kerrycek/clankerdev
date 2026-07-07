@@ -22,6 +22,19 @@ function setMockRuntime(metaNamespace = '_meta') {
   };
 }
 
+function setStandaloneRuntime() {
+  window.vpsAdmin = {
+    api: { url: 'https://api.example.test', version: 'v7.0' },
+    accessToken: 'oauth_123',
+    webuiNext: {
+      haveApi: {
+        authHeader: 'X-HaveAPI-OAuth2-Token',
+        metaNamespace: '_meta',
+      },
+    },
+  };
+}
+
 function installOkFetch(response: unknown) {
   const fetchMock = vi.fn(async (..._args: Parameters<typeof fetch>) =>
     makeOkResponse({ status: true, response })
@@ -116,6 +129,18 @@ describe('haveApiCall', () => {
     await haveApiCall<any>({ method: 'GET', path: '/users/current' });
     const [, init2] = getFetchCall(fetchMock, 1);
     expect(new Headers(init2?.headers).get('X-Auth-Token')).toBe('tok_456');
+  });
+
+  it('skips description bootstrap when standalone config provides HaveAPI details', async () => {
+    setStandaloneRuntime();
+    const fetchMock = installOkFetch({ _meta: { elapsed: 1 }, user: { id: 1 } });
+
+    await haveApiCall<any>({ method: 'GET', path: '/users/current' });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = getFetchCall(fetchMock);
+    expect(String(url)).toBe('https://api.example.test/v7.0/users/current');
+    expect(new Headers(init?.headers).get('X-HaveAPI-OAuth2-Token')).toBe('oauth_123');
   });
 
   it('emits a session-expired event on HTTP 401 responses', async () => {

@@ -148,6 +148,10 @@ async function fetchHaveApiDescriptionFromApi(): Promise<any | undefined> {
 async function getHaveApiDescription(): Promise<any | undefined> {
   const winDesc = getHaveApiDescriptionFromWindow();
   if (winDesc) return winDesc;
+
+  const cfg = getRuntimeConfig();
+  if (cfg.haveApi?.authHeader && cfg.haveApi?.metaNamespace) return undefined;
+
   if (cachedDescription) return cachedDescription;
 
   if (!descriptionPromise) {

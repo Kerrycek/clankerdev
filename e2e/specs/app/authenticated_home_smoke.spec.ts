@@ -35,3 +35,43 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile @smoke @smoke-mobile authentic
   await expect(page.getByRole('heading', { name: 'VPS' })).toBeVisible();
   await expect(page.getByRole('link', { name: /alpha/i })).toBeVisible();
 });
+
+test('@smoke authenticated dashboard skips HaveAPI description bootstrap in standalone mode', async ({ page }) => {
+  const descriptionRequests: string[] = [];
+
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (
+      request.method() === 'GET' &&
+      ['/api', '/api/', '/api/v7.0', '/api/v7.0/'].includes(url.pathname)
+    ) {
+      descriptionRequests.push(url.pathname);
+    }
+  });
+
+  await bootstrapVpsAdminWindow(page, {
+    sessionToken: 'TEST_USER_SESSION',
+    description: false,
+    webuiNext: {
+      haveApi: {
+        authHeader: 'X-HaveAPI-Auth-Token',
+        metaNamespace: '_meta',
+      },
+    },
+  });
+
+  await installHaveApiMock(page, {
+    user: { id: 10, login: 'alice', level: 1 },
+    handlers: {
+      'GET vpses': () => ({ vpses: [], _meta: { total_count: 0 } }),
+      'GET datasets': () => ({ datasets: [], _meta: { total_count: 0 } }),
+      'GET dns_zones': () => ({ dns_zones: [], _meta: { total_count: 0 } }),
+      'GET transaction_chains': () => ({ transaction_chains: [], _meta: { total_count: 0 } }),
+    },
+  });
+
+  await page.goto('/app');
+
+  await expect(page.getByTestId('app.dashboard.page')).toBeVisible();
+  expect(descriptionRequests).toEqual([]);
+});
