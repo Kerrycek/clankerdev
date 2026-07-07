@@ -68,34 +68,25 @@ function renderDeleteDialog(onConfirm = vi.fn()) {
 }
 
 describe('VpsDeleteCard', () => {
-  it('keeps lifecycle delete disabled until the exact target is typed', async () => {
+  it('submits lifecycle delete without typed hostname confirmation', async () => {
     const user = userEvent.setup();
     const { onSubmit } = renderDeleteCard();
     const submit = screen.getByTestId('vps.lifecycle.delete.submit');
 
-    expect(submit).toBeDisabled();
-
-    await user.type(screen.getByTestId('vps.lifecycle.delete.confirm'), 'wrong-host');
-    expect(submit).toBeDisabled();
-    expect(screen.getByText('vps.lifecycle.delete.confirm.mismatch_title')).toBeInTheDocument();
-
-    await user.clear(screen.getByTestId('vps.lifecycle.delete.confirm'));
-    await user.type(screen.getByTestId('vps.lifecycle.delete.confirm'), 'vps123.example');
-
     expect(submit).not.toBeDisabled();
+    expect(screen.queryByTestId('vps.lifecycle.delete.confirm')).not.toBeInTheDocument();
+
     await user.click(submit);
     expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
-  it('uses the same typed confirmation in the VPS list delete dialog', async () => {
+  it('confirms VPS list delete without typed hostname confirmation', async () => {
     const user = userEvent.setup();
     const { onConfirm } = renderDeleteDialog();
     const submit = screen.getByTestId('vps.list.delete_confirm.confirm');
 
-    expect(submit).toBeDisabled();
-
-    await user.type(screen.getByTestId('vps.list.delete_confirm.confirm_text'), 'vps123.example');
     expect(submit).not.toBeDisabled();
+    expect(screen.queryByTestId('vps.list.delete_confirm.confirm_text')).not.toBeInTheDocument();
 
     await user.click(submit);
     expect(onConfirm).toHaveBeenCalledWith({

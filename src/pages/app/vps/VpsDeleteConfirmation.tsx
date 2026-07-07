@@ -9,11 +9,9 @@ import type { GateDecision } from '../../../lib/gates/types';
 import {
   ActionGateAlert,
   ActionImpactSummary,
-  DangerTypedConfirm,
   ImpactItem,
 } from './VpsLifecyclePrimitives';
 import {
-  isVpsDeleteConfirmationSatisfied,
   vpsDeleteConfirmationTarget,
   vpsDeleteObjectLabel,
   type VpsDeleteConfirmationSource,
@@ -84,8 +82,6 @@ export function VpsDeleteDangerContent(props: {
   confirmTestId: string;
 }) {
   const { t } = useI18n();
-  const target = vpsDeleteConfirmationTarget(props.vps);
-  const confirmSatisfied = isVpsDeleteConfirmationSatisfied(props.confirmText, target);
 
   return (
     <>
@@ -114,21 +110,6 @@ export function VpsDeleteDangerContent(props: {
       )}
 
       {props.gate ? <ActionGateAlert gate={props.gate} onOpenTasks={props.onOpenTasks} /> : null}
-
-      <DangerTypedConfirm
-        label={t('vps.lifecycle.delete.confirm.label')}
-        help={t('vps.lifecycle.delete.confirm.help', { target })}
-        target={target}
-        value={props.confirmText}
-        onChange={props.onConfirmTextChange}
-        disabled={props.pending}
-        inputClassName="font-mono"
-        testId={props.confirmTestId}
-        ariaLabel={t('vps.lifecycle.delete.confirm.label')}
-        satisfied={confirmSatisfied}
-        mismatchTitle={t('vps.lifecycle.delete.confirm.mismatch_title')}
-        mismatchBody={t('vps.lifecycle.delete.confirm.mismatch_body')}
-      />
     </>
   );
 }
@@ -146,8 +127,6 @@ export function VpsDeleteConfirmDialog(props: {
 }) {
   const { t } = useI18n();
   const vps = props.vps ?? vpsIdFallback(props.vpsId);
-  const target = vpsDeleteConfirmationTarget(vps);
-  const confirmSatisfied = isVpsDeleteConfirmationSatisfied(props.form.confirmText, target);
 
   const setForm = (patch: Partial<VpsDeleteDangerForm>) => {
     props.onChange((prev) => ({ ...prev, ...patch }));
@@ -162,10 +141,8 @@ export function VpsDeleteConfirmDialog(props: {
       danger
       confirmLabel={t('action.vps.delete.label')}
       confirmLoading={props.loading}
-      confirmDisabled={!confirmSatisfied}
       onCancel={props.onCancel}
       onConfirm={() => {
-        if (!confirmSatisfied) return;
         props.onConfirm({
           vpsId: props.vpsId,
           lazy: props.form.lazy,

@@ -5,11 +5,7 @@ import type { Vps } from '../../../lib/api/vps';
 import type { GateDecision } from '../../../lib/gates/types';
 import { AsyncActionResult, LifecycleActionShell, LifecycleSubmitButton } from './VpsLifecyclePrimitives';
 import { VpsDeleteDangerContent } from './VpsDeleteConfirmation';
-import {
-  isVpsDeleteConfirmationSatisfied,
-  vpsDeleteConfirmationTarget,
-  type DeleteForm,
-} from './VpsDeleteModel';
+import { type DeleteForm } from './VpsDeleteModel';
 
 export type { DeleteForm } from './VpsDeleteModel';
 
@@ -25,8 +21,6 @@ export function VpsDeleteCard(props: {
   onSubmit: () => void;
 }) {
   const { t } = useI18n();
-  const target = vpsDeleteConfirmationTarget(props.vps);
-  const confirmSatisfied = isVpsDeleteConfirmationSatisfied(props.form.confirmText, target);
 
   const setForm = (patch: Partial<DeleteForm>) => {
     props.onChange((prev) => ({ ...prev, ...patch }));
@@ -39,7 +33,7 @@ export function VpsDeleteCard(props: {
         <LifecycleSubmitButton
           variant="danger"
           testId="vps.lifecycle.delete.submit"
-          disabled={!confirmSatisfied}
+          disabled={false}
           gate={props.gate}
           loading={props.pending}
           onClick={props.onSubmit}

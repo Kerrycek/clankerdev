@@ -20,7 +20,7 @@ interface VpsListRowActionsProps {
 
 const iconOnlyButtonClass = 'h-10 min-w-10 px-0';
 const labeledButtonClass = 'min-h-11 px-3';
-const iconClass = 'h-[18px] w-[18px] shrink-0';
+const iconClass = 'h-5 w-5 shrink-0';
 
 function IconLabel(props: { children: React.ReactNode; visible?: boolean }) {
   return <span className={props.visible ? 'text-sm' : 'sr-only'}>{props.children}</span>;
