@@ -67,8 +67,9 @@ export function PaymentsPage() {
   });
 
   const historyQ = useQuery({
-    queryKey: ['user_payments', 'list', { limit: pagination.limit, fromId: pagination.fromId }],
-    queryFn: async () => (await fetchUserPayments({ limit: pagination.limit, fromId: pagination.fromId })).data,
+    queryKey: ['user_payments', 'list', { limit: pagination.limit, fromId: pagination.fromId, userId }],
+    queryFn: async () => (await fetchUserPayments({ limit: pagination.limit, fromId: pagination.fromId, userId })).data,
+    enabled: Boolean(userId),
     refetchInterval: tierBRefetchMs,
   });
 

@@ -5,6 +5,7 @@ import { CircleHelp, SlidersHorizontal } from 'lucide-react';
 
 import { useAppMode } from '../../../app/appMode';
 import { useI18n } from '../../../app/i18n';
+import { useObjectScope } from '../../../app/objectScope';
 import { useToasts } from '../../../app/toasts';
 import { FilterBar } from '../../../components/layout/FilterBar';
 import { ListShell } from '../../../components/layout/ListShell';
@@ -127,6 +128,7 @@ function ruleLabelKey(action?: string): string {
 
 export function OomReportsPage() {
   const { basePath, mode } = useAppMode();
+  const scope = useObjectScope();
   const { t } = useI18n();
   const navigate = useNavigate();
   const toasts = useToasts();
@@ -171,6 +173,7 @@ export function OomReportsPage() {
 
   const vpsId = useMemo(() => safeNumber(vps), [vps]);
   const userId = useMemo(() => (mode === 'admin' ? safeNumber(user) : undefined), [mode, user]);
+  const effectiveUserId = mode === 'admin' ? userId : scope.mineUserId;
   const nodeId = useMemo(() => safeNumber(node), [node]);
   const locationId = useMemo(() => safeNumber(location), [location]);
   const envId = useMemo(() => safeNumber(environment), [environment]);
@@ -271,7 +274,7 @@ export function OomReportsPage() {
       scope: basePath,
       q: qTrim,
       vps: vpsId,
-      user: userId,
+      user: effectiveUserId,
       node: nodeId,
       location: locationId,
       environment: envId,
@@ -295,7 +298,7 @@ export function OomReportsPage() {
         from: pagination.cursor,
         q: qTrim,
         vps: vpsId,
-        user: userId,
+        user: effectiveUserId,
         node: nodeId,
         location: locationId,
         environment: envId,
@@ -313,7 +316,7 @@ export function OomReportsPage() {
           fromId: pagination.cursor as number | undefined,
           q: qTrim || undefined,
           vpsId,
-          userId,
+          userId: effectiveUserId,
           nodeId,
           locationId,
           environmentId: envId,

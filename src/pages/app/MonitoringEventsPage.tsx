@@ -13,6 +13,7 @@ import { searchUsers } from '../../lib/api/users';
 import { useDebouncedValue } from '../../lib/hooks/useDebouncedValue';
 import { useAppMode } from '../../app/appMode';
 import { useI18n } from '../../app/i18n';
+import { useObjectScope } from '../../app/objectScope';
 import { useToasts } from '../../app/toasts';
 import { FilterBar } from '../../components/layout/FilterBar';
 import { ListShell } from '../../components/layout/ListShell';
@@ -134,6 +135,7 @@ function inferState(value: string, allowed: MonitoredEventState[]): MonitoredEve
 
 export function MonitoringEventsPage() {
   const { basePath, mode } = useAppMode();
+  const scope = useObjectScope();
   const { t } = useI18n();
   const toasts = useToasts();
   const navigate = useNavigate();
@@ -206,6 +208,7 @@ export function MonitoringEventsPage() {
 
   const objectIdNum = safeNumber(objectId);
   const userIdNum = mode === 'admin' ? safeNumber(userId) : undefined;
+  const effectiveUserId = mode === 'admin' ? userIdNum : scope.mineUserId;
 
   const userSuggestQuery = useQuery({
     queryKey: ['users', 'search', { q: debouncedSmartNeedle }],
@@ -233,7 +236,7 @@ export function MonitoringEventsPage() {
       object_name: objectName.trim(),
       object_id: objectIdNum,
       state: state.trim(),
-      user: userIdNum,
+      user: effectiveUserId,
     }),
     searchParams: sp,
     setSearchParams: setSp,
@@ -259,7 +262,7 @@ export function MonitoringEventsPage() {
         objectName: objectName.trim(),
         objectId: objectIdNum,
         state: state.trim(),
-        userId: userIdNum,
+        userId: effectiveUserId,
       },
     ],
     queryFn: async () =>
@@ -274,7 +277,7 @@ export function MonitoringEventsPage() {
           objectName: objectName.trim() || undefined,
           objectId: objectIdNum,
           state: state.trim() || undefined,
-          userId: userIdNum,
+          userId: effectiveUserId,
         })
       ).data,
     refetchInterval: tierARefetchMs,

@@ -5,6 +5,7 @@ import { CircleHelp, SlidersHorizontal } from 'lucide-react';
 
 import { useAppMode } from '../../../app/appMode';
 import { useI18n } from '../../../app/i18n';
+import { useObjectScope } from '../../../app/objectScope';
 import { useToasts } from '../../../app/toasts';
 import { FilterBar } from '../../../components/layout/FilterBar';
 import { ListShell } from '../../../components/layout/ListShell';
@@ -117,6 +118,7 @@ function mailboxLabel(m: Mailbox): string {
 
 export function IncidentsPage() {
   const { basePath, mode } = useAppMode();
+  const scope = useObjectScope();
   const { t } = useI18n();
   const navigate = useNavigate();
   const toasts = useToasts();
@@ -158,6 +160,7 @@ export function IncidentsPage() {
 
   const vpsId = useMemo(() => safeNumber(vps), [vps]);
   const userId = useMemo(() => (mode === 'admin' ? safeNumber(user) : undefined), [mode, user]);
+  const effectiveUserId = mode === 'admin' ? userId : scope.mineUserId;
   const filedById = useMemo(() => (mode === 'admin' ? safeNumber(filedBy) : undefined), [filedBy, mode]);
   const assignmentId = useMemo(() => safeNumber(assignment), [assignment]);
   const mailboxId = useMemo(() => (mode === 'admin' ? safeNumber(mailbox) : undefined), [mode, mailbox]);
@@ -223,7 +226,7 @@ export function IncidentsPage() {
       scope: basePath,
       q: qTrim,
       vps: vpsId,
-      user: userId,
+      user: effectiveUserId,
       filedBy: filedById,
       ip: ip.trim(),
       assignment: assignmentId,
@@ -245,7 +248,7 @@ export function IncidentsPage() {
         from: pagination.cursor,
         q: qTrim,
         vps: vpsId,
-        user: userId,
+        user: effectiveUserId,
         filedBy: filedById,
         ip: ip.trim(),
         assignment: assignmentId,
@@ -261,7 +264,7 @@ export function IncidentsPage() {
           fromId: pagination.cursor as number | undefined,
           q: qTrim || undefined,
           vpsId,
-          userId,
+          userId: effectiveUserId,
           filedById,
           ipAddr: ip.trim() || undefined,
           ipAddressAssignmentId: assignmentId,
