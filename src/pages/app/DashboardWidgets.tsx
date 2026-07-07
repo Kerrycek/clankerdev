@@ -92,6 +92,7 @@ export function DashboardWidgetGrid(props: {
       return (
         <Card key={id} testId="app.dashboard.outages.card">
           <CardHeader
+            className="items-center p-3"
             title={t('dashboard.section.outages.title')}
             subtitle={t('dashboard.section.outages.subtitle_compact', {
               current: props.outages.currentCount,
@@ -106,7 +107,7 @@ export function DashboardWidgetGrid(props: {
               </>
             }
           />
-          <CardBody className={compact ? 'p-3' : undefined}>
+          <CardBody className={compact ? 'p-2.5' : 'p-3'}>
             {props.outages.isLoading ? (
               <Spinner label={t('dashboard.section.outages.loading')} />
             ) : props.outages.isError ? (
@@ -122,7 +123,7 @@ export function DashboardWidgetGrid(props: {
                 })}
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="divide-y divide-border overflow-hidden rounded-md border border-border">
                 {props.outages.highlighted.slice(0, itemLimit).map((o) => (
                   <DashboardOutageSummary key={o.id} outage={o} to={props.outages.detailPath(o.id)} />
                 ))}
@@ -154,6 +155,7 @@ export function DashboardWidgetGrid(props: {
       return (
         <Card key={id} testId="app.dashboard.news.card">
           <CardHeader
+            className="items-center p-3"
             title={t('dashboard.section.news.title')}
             subtitle={t('dashboard.section.news.subtitle_compact')}
             actions={
@@ -165,7 +167,7 @@ export function DashboardWidgetGrid(props: {
               </>
             }
           />
-          <CardBody className={compact ? 'p-3' : undefined}>
+          <CardBody className={compact ? 'p-2.5' : 'p-3'}>
             {props.news.isLoading ? (
               <Spinner label={t('dashboard.section.news.loading')} />
             ) : props.news.isError ? (
@@ -177,7 +179,7 @@ export function DashboardWidgetGrid(props: {
                 {t('dashboard.widget.news.collapsed_summary', { count: props.news.items.length })}
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="divide-y divide-border overflow-hidden rounded-md border border-border">
                 {props.news.items.slice(0, itemLimit).map((news) => (
                   <DashboardNewsItem key={news.id} news={news} />
                 ))}
@@ -204,5 +206,5 @@ export function DashboardWidgetGrid(props: {
 
   const widgets = visibleDashboardWidgets(props.dashboardSettings);
 
-  return <div className="space-y-4">{widgets.map(renderWidget)}</div>;
+  return <div className="space-y-3">{widgets.map(renderWidget)}</div>;
 }

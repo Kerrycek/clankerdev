@@ -26,8 +26,8 @@ export function DashboardOutageSummary(props: { outage: Outage; to: string }) {
   const badges = outageBadges(props.outage, i18n.t);
   const dotVariant = dotVariantFromBadgeVariant(badges.primaryVariant);
   return (
-    <div className="space-y-1 rounded-md border border-border bg-surface-2 p-3" data-testid="app.dashboard.outage.item">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="bg-surface-2 px-3 py-2.5" data-testid="app.dashboard.outage.item">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <StatusDot variant={dotVariant} ariaLabel={badges.lifecycle.label} />
         <Link to={props.to} className="font-medium hover:underline">
           {summary ?? i18n.t("public.outage.fallback_title", { id: props.outage.id })}
@@ -35,7 +35,7 @@ export function DashboardOutageSummary(props: { outage: Outage; to: string }) {
         <Badge variant={badges.lifecycle.variant}>{badges.lifecycle.label}</Badge>
         {badges.impact ? <Badge variant={badges.impact.variant}>{badges.impact.label}</Badge> : null}
       </div>
-      <div className="text-xs text-muted">
+      <div className="mt-0.5 text-xs text-muted">
         {i18n.t("public.outage.field.begins")}: {formatDateTime(props.outage.begins_at)}
         {props.outage.finished_at
           ? ` · ${i18n.t("public.outage.field.finished")}: ${formatDateTime(props.outage.finished_at)}`
@@ -46,8 +46,11 @@ export function DashboardOutageSummary(props: { outage: Outage; to: string }) {
 }
 export function DashboardNewsItem(props: { news: NewsLog }) {
   return (
-    <div className="space-y-1 rounded-md border border-border bg-surface-2 p-3" data-testid="app.dashboard.news.item">
-      <div className="text-xs text-muted">{formatDateTime(props.news.published_at ?? props.news.created_at)}</div>
+    <div
+      className="grid gap-1 bg-surface-2 px-3 py-2.5 text-sm sm:grid-cols-[9.5rem_minmax(0,1fr)] sm:gap-3"
+      data-testid="app.dashboard.news.item"
+    >
+      <div className="text-xs text-muted sm:pt-0.5">{formatDateTime(props.news.published_at ?? props.news.created_at)}</div>
       <NewsMessage html={props.news.message} />
     </div>
   );
@@ -214,8 +217,8 @@ function SecurityAdvisoryItem(props: { advisory: SecurityAdvisory; legacyHref?: 
   const affectedVpsCount = typeof advisory.affected_vps_count === "number" ? advisory.affected_vps_count : null;
   const affectedNodeCount = typeof advisory.affected_node_count === "number" ? advisory.affected_node_count : null;
   return (
-    <div className="space-y-2 rounded-md border border-border bg-surface-2 p-3" data-testid="app.dashboard.security.item">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="space-y-1.5 bg-surface-2 px-3 py-2.5" data-testid="app.dashboard.security.item">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         {detailHref ? (
           <a href={detailHref} target="_blank" rel="noreferrer" className="font-medium hover:underline">
             {title}
@@ -230,7 +233,7 @@ function SecurityAdvisoryItem(props: { advisory: SecurityAdvisory; legacyHref?: 
           <Badge variant="neutral">{i18n.t("dashboard.section.security.not_affected")}</Badge>
         ) : null}
       </div>
-      <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
         <span>
           {i18n.t("dashboard.section.security.published")}: {formatDateTime(advisory.published_at)}
         </span>
@@ -269,6 +272,7 @@ export function SecurityAdvisoriesCard(props: { isLoading: boolean; isError: boo
   return (
     <Card testId="app.dashboard.security.card">
       <CardHeader
+        className="items-center p-3"
         title={t("dashboard.section.security.title")}
         subtitle={t("dashboard.section.security.subtitle")}
         actions={
@@ -291,7 +295,7 @@ export function SecurityAdvisoriesCard(props: { isLoading: boolean; isError: boo
           </>
         }
       />
-      <CardBody className={compact ? "p-3" : undefined}>
+      <CardBody className={compact ? "p-2.5" : "p-3"}>
         {props.isLoading ? (
           <Spinner label={t("dashboard.section.security.loading")} />
         ) : props.isError ? (
@@ -303,7 +307,7 @@ export function SecurityAdvisoriesCard(props: { isLoading: boolean; isError: boo
             {t("dashboard.widget.security.collapsed_summary", { count: props.advisories.length })}
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="divide-y divide-border overflow-hidden rounded-md border border-border">
             {props.advisories.slice(0, itemLimit).map((advisory) => (
               <SecurityAdvisoryItem key={advisory.id} advisory={advisory} legacyHref={props.legacyBaseUrl} />
             ))}
