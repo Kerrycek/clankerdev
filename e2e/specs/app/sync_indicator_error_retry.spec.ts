@@ -50,14 +50,22 @@ test.describe('@smoke Sync indicator', () => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
     let actionStatesCalls = 0;
+    let sessionExpired = false;
 
     await installHaveApiMock(page, {
       user: { id: 1, login: 'test', level: 1 },
       handlers: {
+        'GET users/current': () => {
+          if (sessionExpired) {
+            return jsonFulfill({ status: false, message: 'Unauthorized', response: null }, 401);
+          }
+          return { user: { id: 1, login: 'test', level: 1 } };
+        },
         'GET vpses': () => ({ vpses: [], _meta: { total_count: 0 } }),
         'GET action_states': () => {
           actionStatesCalls += 1;
           if (actionStatesCalls === 1) {
+            sessionExpired = true;
             return jsonFulfill({ status: false, message: 'Unauthorized', response: null }, 401);
           }
           return { action_states: [] };
@@ -67,7 +75,7 @@ test.describe('@smoke Sync indicator', () => {
 
     await page.goto('/app/vps');
 
-    await expect(page).toHaveURL(/\/$/);
+    await expect(page).toHaveURL(/\/(?:\?session=expired)?$/);
     await expect(page.getByTestId('public.overview.page')).toBeVisible();
     await expect(page.getByTestId('auth.session-expired.notice')).toBeHidden();
     await expect(page.getByTestId('shell.sync-indicator')).toBeHidden();

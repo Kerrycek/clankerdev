@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
+import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock, jsonFulfill } from '../../fixtures';
 
 async function ensureContextualHelpExpanded(page: Page) {
   const toggle = page.getByTestId('contextual.help.toggle');
@@ -11,20 +11,16 @@ async function ensureContextualHelpExpanded(page: Page) {
   }
 }
 
-test('@smoke contextual help renders on public, user, and admin surfaces', async ({ page }) => {
-  await bootstrapVpsAdminWindow(page, {
-    sessionToken: 'TEST',
-  });
+test('@smoke contextual help renders on the public surface', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
 
   await installHaveApiMock(page, {
-    user: { id: 1, login: 'admin', level: 90 },
     handlers: {
+      'GET users/current': () => jsonFulfill(failEnvelope('Unauthorized'), 401),
       'GET cluster/public_stats': () => ({ public_stats: { user_count: 1, vps_count: 1, ipv4_left: 100 } }),
       'GET nodes/public_status': () => ({ nodes: [] }),
       'GET outages': () => ({ outages: [] }),
       'GET news_logs': () => ({ news_logs: [] }),
-      'GET cluster/full_stats': () => ({ full_stats: { nodes_online: 2, nodes_total: 3, vps_count: 10, users_count: 5, ipv4_total: 100, ipv4_used: 60 } }),
-      'GET languages': () => ({ languages: [] }),
       'GET help_boxes': ({ searchParams }) => {
         const pageKey = searchParams.get('help_box[page]');
         const actionKey = searchParams.get('help_box[action]');
@@ -32,6 +28,32 @@ test('@smoke contextual help renders on public, user, and admin surfaces', async
         if (pageKey === 'public' && actionKey === 'index' && view === 'true') {
           return { help_boxes: [{ id: 1, page: 'public', action: 'index', order: 10, content: '<p>Public page help</p>' }] };
         }
+        return { help_boxes: [] };
+      },
+    },
+  });
+
+  await page.goto('/');
+  await expect(page.getByTestId('contextual.help.panel')).toBeVisible();
+  await ensureContextualHelpExpanded(page);
+  await expect(page.frameLocator('[data-testid="contextual.help.box.1"] iframe').getByText('Public page help')).toBeVisible();
+  await expect(page.getByTestId('contextual.help.manage')).toHaveCount(0);
+});
+
+test('@smoke contextual help renders on user and admin surfaces', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page, {
+    sessionToken: 'TEST',
+  });
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 90 },
+    handlers: {
+      'GET cluster/full_stats': () => ({ full_stats: { nodes_online: 2, nodes_total: 3, vps_count: 10, users_count: 5, ipv4_total: 100, ipv4_used: 60 } }),
+      'GET languages': () => ({ languages: [] }),
+      'GET help_boxes': ({ searchParams }) => {
+        const pageKey = searchParams.get('help_box[page]');
+        const actionKey = searchParams.get('help_box[action]');
+        const view = searchParams.get('help_box[view]');
         if (pageKey === 'profile' && actionKey === 'overview' && view === 'true') {
           return { help_boxes: [{ id: 2, page: 'profile', action: 'overview', order: 10, content: '<p>Profile help</p>' }] };
         }
@@ -45,12 +67,6 @@ test('@smoke contextual help renders on public, user, and admin surfaces', async
       },
     },
   });
-
-  await page.goto('/');
-  await expect(page.getByTestId('contextual.help.panel')).toBeVisible();
-  await ensureContextualHelpExpanded(page);
-  await expect(page.frameLocator('[data-testid="contextual.help.box.1"] iframe').getByText('Public page help')).toBeVisible();
-  await expect(page.getByTestId('contextual.help.manage')).toHaveAttribute('href', /\/admin\/content\/help-boxes\?page=public&action=index/);
 
   await page.goto('/app/profile');
   await expect(page.getByTestId('contextual.help.panel')).toBeVisible();
