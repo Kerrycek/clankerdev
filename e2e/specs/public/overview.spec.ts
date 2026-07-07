@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
+import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock, jsonFulfill } from '../../fixtures';
 
 /**
  * Public status landing smoke.
@@ -46,6 +46,7 @@ test('@pr-smoke @pr-smoke-mobile @smoke public overview shows key status surface
       'GET outages': () => ({ outages: [] }),
       'GET news_logs': () => ({ news_logs: [] }),
       'GET help_boxes': () => ({ help_boxes: [] }),
+      'GET users/current': () => jsonFulfill(failEnvelope('Unauthorized'), 401),
     },
   });
 
@@ -86,6 +87,7 @@ test('public overview shows IPv4 critical alert when low', async ({ page }) => {
       'GET outages': () => ({ outages: [] }),
       'GET news_logs': () => ({ news_logs: [] }),
       'GET help_boxes': () => ({ help_boxes: [] }),
+      'GET users/current': () => jsonFulfill(failEnvelope('Unauthorized'), 401),
     },
   });
 
