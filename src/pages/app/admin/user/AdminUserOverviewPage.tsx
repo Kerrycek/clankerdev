@@ -6,6 +6,7 @@ import { useI18n } from '../../../../app/i18n';
 import { useToasts } from '../../../../app/toasts';
 
 import { Alert } from '../../../../components/ui/Alert';
+import { Badge } from '../../../../components/ui/Badge';
 import { Button } from '../../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../../components/ui/Card';
 import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog';
@@ -17,6 +18,7 @@ import { LifecyclePanel } from '../../../../components/lifetimes/LifecyclePanel'
 
 import { deleteUser, updateUser } from '../../../../lib/api/users';
 import { formatDateTime } from '../../../../lib/format';
+import { roleFromLevel } from '../../../../lib/roles';
 
 import { useAdminUserContext } from './AdminUserLayout';
 
@@ -59,6 +61,7 @@ export function AdminUserOverviewPage() {
   const [deleteState, setDeleteState] = useState('deleted');
   const userInfo = optionalStringField(u, 'info');
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const userRole = roleFromLevel(typeof u.level === 'number' ? u.level : undefined);
 
   const openEdit = () => {
     setEditDraft(makeEditDraft(u));
@@ -139,8 +142,10 @@ export function AdminUserOverviewPage() {
               <div className="text-sm">{u.email ?? t('common.na')}</div>
             </div>
             <div>
-              <div className="text-xs text-muted">{t('admin.user.field.level')}</div>
-              <div className="text-sm">{u.level}</div>
+              <div className="text-xs text-muted">{t('admin.users.field.role')}</div>
+              <div className="text-sm">
+                <Badge variant="neutral">{t(`admin.users.role.${userRole}`)}</Badge>
+              </div>
             </div>
             <div>
               <div className="text-xs text-muted">{t('admin.user.edit.field.mailer_enabled')}</div>

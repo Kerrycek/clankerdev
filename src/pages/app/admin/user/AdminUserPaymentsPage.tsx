@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 
@@ -17,7 +17,6 @@ import { ErrorState } from '../../../../components/ui/ErrorState';
 import { Input } from '../../../../components/ui/Input';
 import { KeysetPagination } from '../../../../components/ui/KeysetPagination';
 import { LoadingState } from '../../../../components/ui/LoadingState';
-import { Modal } from '../../../../components/ui/Modal';
 import { StatCard } from '../../../../components/ui/StatCard';
 
 import { createUserPayment, fetchPaymentInstructions, fetchUserPayments } from '../../../../lib/api/payments';
@@ -26,7 +25,6 @@ import { getMetaActionStateId } from '../../../../lib/api/haveapi';
 import { objectRef } from '../../../../lib/objectRef';
 import type { ObjectRef } from '../../../../lib/objectRef';
 
-import { localInputToIso, isoToLocalInput } from '../../../../lib/datetimeLocal';
 import { formatErrorMessage } from '../../../../lib/errors';
 import { formatDateTime } from '../../../../lib/format';
 import { cursorFromDescendingPage } from '../../../../lib/lockIndex';
@@ -35,16 +33,23 @@ import { formatMoneyLike, safeInt } from '../../../../lib/paymentsFormat';
 import { useKeysetPagination } from '../../../../lib/hooks/useKeysetPagination';
 
 import {
-  buildManualPaymentPreview,
-  buildPaymentSettingsReview,
   normalizePaymentInstructions,
   paidUntilSubtitleToken,
   parsePositiveInt,
   resourceRefLabel,
 } from '../../payments/PaymentsModel';
 
-import { ManualPaymentReviewCard, PaymentSettingsReviewCard } from './AdminUserPaymentsReviewCards';
 import { useAdminUserContext } from './AdminUserLayout';
+
+function isoToDateInput(value: unknown): string {
+  if (typeof value !== 'string' || !value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) {
+    const trimmed = value.trim();
+    return /^\d{4}-\d{2}-\d{2}/.test(trimmed) ? trimmed.slice(0, 10) : '';
+  }
+  return d.toISOString().slice(0, 10);
+}
 
 export function AdminUserPaymentsPage() {
   const { basePath } = useAppMode();
@@ -106,53 +111,32 @@ export function AdminUserPaymentsPage() {
   const cursor = useMemo(() => cursorFromDescendingPage(historyQ.data), [historyQ.data]);
 
   const instructions = normalizePaymentInstructions(instructionsQ.data);
-  const userLabel = resourceRefLabel({ id: userId, login: user.login, label: user.full_name });
+  const [quickPaidUntil, setQuickPaidUntil] = useState('');
+  const [quickMonthlyPayment, setQuickMonthlyPayment] = useState('');
+  const [quickAmount, setQuickAmount] = useState('');
 
-  // -----------------------
-  // Edit payment settings
-  // -----------------------
+  useEffect(() => {
+    setQuickPaidUntil(isoToDateInput(paidUntil));
+  }, [paidUntil]);
 
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsMonthly, setSettingsMonthly] = useState('');
-  const [settingsPaidUntilLocal, setSettingsPaidUntilLocal] = useState('');
+  useEffect(() => {
+    setQuickMonthlyPayment(monthlyPayment !== undefined ? String(monthlyPayment) : '');
+  }, [monthlyPayment]);
 
-  const openSettings = () => {
-    const mp = monthlyPayment ?? safeInt(user.monthly_payment) ?? undefined;
-    setSettingsMonthly(mp !== undefined ? String(mp) : '');
-    setSettingsPaidUntilLocal(isoToLocalInput(paidUntil));
-    setSettingsOpen(true);
-  };
+  const monthlyPaymentParsed = parsePositiveInt(quickMonthlyPayment);
+  const amountParsed = parsePositiveInt(quickAmount);
+  const paidUntilChanged = quickPaidUntil !== isoToDateInput(paidUntil);
+  const monthlyPaymentChanged = monthlyPaymentParsed !== null && monthlyPaymentParsed !== monthlyPayment;
 
-  const settingsMonthlyParsed = parsePositiveInt(settingsMonthly);
-  const settingsPaidUntilParsed = useMemo(() => localInputToIso(settingsPaidUntilLocal), [settingsPaidUntilLocal]);
-  const settingsReview = useMemo(
-    () =>
-      buildPaymentSettingsReview({
-        currentMonthly: monthlyPayment,
-        nextMonthly: settingsMonthlyParsed,
-        currentPaidUntil: paidUntil,
-        nextPaidUntilIso: settingsPaidUntilParsed.iso,
-      }),
-    [monthlyPayment, paidUntil, settingsMonthlyParsed, settingsPaidUntilParsed.iso]
-  );
-  const settingsCanSave = settingsMonthlyParsed !== null && settingsPaidUntilParsed.valid && settingsReview.hasChanges;
-
-  const settingsM = useMutation({
+  const paidUntilM = useMutation({
     mutationFn: async () => {
-      if (settingsMonthlyParsed === null) throw new Error(t('admin.user.payments.settings.validation.monthly_payment'));
-      if (!settingsPaidUntilParsed.valid) throw new Error(t('admin.user.payments.settings.validation.paid_until'));
-      if (!settingsReview.hasChanges) throw new Error(t('admin.user.payments.settings.validation.no_changes'));
-
       await updateUserAccount(userId, {
-        monthly_payment: settingsMonthlyParsed,
-        paid_until: settingsPaidUntilParsed.iso,
+        paid_until: quickPaidUntil ? quickPaidUntil : null,
       });
     },
     onSuccess: () => {
-      toasts.pushToast({ variant: 'ok', title: t('admin.user.payments.settings.toast.saved') });
-      setSettingsOpen(false);
+      toasts.pushToast({ variant: 'ok', title: t('admin.user.payments.settings.toast.paid_until_saved') });
       void qc.invalidateQueries({ queryKey: ['user_accounts', userId] });
-      void qc.invalidateQueries({ queryKey: ['user_payments'] });
       refetch();
     },
     onError: (e) => {
@@ -161,25 +145,31 @@ export function AdminUserPaymentsPage() {
     },
   });
 
-  // -----------------------
-  // Add manual payment
-  // -----------------------
-
-  const [addOpen, setAddOpen] = useState(false);
-  const [addMonths, setAddMonths] = useState('1');
-
-  const addPreview = useMemo(
-    () => buildManualPaymentPreview({ monthlyPayment, rawMonths: addMonths }),
-    [addMonths, monthlyPayment]
-  );
+  const monthlyPaymentM = useMutation({
+    mutationFn: async () => {
+      if (monthlyPaymentParsed === null) throw new Error(t('admin.user.payments.settings.validation.monthly_payment'));
+      await updateUserAccount(userId, {
+        monthly_payment: monthlyPaymentParsed,
+      });
+    },
+    onSuccess: () => {
+      toasts.pushToast({ variant: 'ok', title: t('admin.user.payments.settings.toast.monthly_saved') });
+      void qc.invalidateQueries({ queryKey: ['user_accounts', userId] });
+      refetch();
+    },
+    onError: (e) => {
+      const msg = formatErrorMessage(e);
+      toasts.pushToast({ variant: 'danger', title: t('common.error'), body: msg, autoDismissMs: false });
+    },
+  });
 
   const addM = useMutation({
     mutationFn: async () => {
-      if (!addPreview.canSubmit || addPreview.amount === undefined) {
-        throw new Error(t(addPreview.validationKey ?? 'admin.user.payments.add_payment.validation.months'));
+      if (amountParsed === null) {
+        throw new Error(t('admin.user.payments.add_payment.validation.amount'));
       }
 
-      const res = await createUserPayment({ user: userId, amount: addPreview.amount });
+      const res = await createUserPayment({ user: userId, amount: amountParsed });
 
       const asId = getMetaActionStateId(res.meta);
       if (asId) {
@@ -200,8 +190,7 @@ export function AdminUserPaymentsPage() {
     },
     onSuccess: () => {
       toasts.pushToast({ variant: 'ok', title: t('admin.user.payments.add_payment.toast.created') });
-      setAddOpen(false);
-      setAddMonths('1');
+      setQuickAmount('');
       void qc.invalidateQueries({ queryKey: ['user_payments'] });
       void qc.invalidateQueries({ queryKey: ['user_accounts', userId] });
       refetch();
@@ -212,29 +201,31 @@ export function AdminUserPaymentsPage() {
     },
   });
 
+  const submitPaidUntil = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!paidUntilChanged) {
+      toasts.pushToast({ variant: 'neutral', title: t('admin.user.payments.settings.validation.no_changes') });
+      return;
+    }
+    paidUntilM.mutate();
+  };
+
+  const submitMonthlyPayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!monthlyPaymentChanged) {
+      toasts.pushToast({ variant: 'neutral', title: t('admin.user.payments.settings.validation.no_changes') });
+      return;
+    }
+    monthlyPaymentM.mutate();
+  };
+
+  const submitAddPayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    addM.mutate();
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={openSettings}
-          disabled={accountQ.isLoading}
-          testId="admin.user.payments.settings.open"
-        >
-          {t('admin.user.payments.settings.edit')}
-        </Button>
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => setAddOpen(true)}
-          disabled={!monthlyPayment}
-          testId="admin.user.payments.add.open"
-        >
-          {t('admin.user.payments.add_payment')}
-        </Button>
-      </div>
-
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <StatCard
           title={t('payments.my.stat.paid_until')}
@@ -258,6 +249,92 @@ export function AdminUserPaymentsPage() {
           testId="admin.user.payments.stat.payment_id"
         />
       </div>
+
+      <Card testId="admin.user.payments.quick.card">
+        <CardHeader title={t('admin.user.payments.quick.title')} subtitle={t('admin.user.payments.quick.subtitle')} />
+        <CardBody>
+          {accountQ.isError ? (
+            <ErrorState
+              title={t('admin.user.payments.settings.load_error.title')}
+              error={accountQ.error}
+              showDetails
+            />
+          ) : null}
+
+          <div className="grid gap-4 xl:grid-cols-3">
+            <form className="space-y-2" onSubmit={submitPaidUntil} data-testid="admin.user.payments.paid_until.form">
+              <Input
+                label={t('admin.user.payments.settings.field.paid_until')}
+                testId="admin.user.payments.settings.paid_until"
+                type="date"
+                value={quickPaidUntil}
+                onChange={(e) => setQuickPaidUntil(e.target.value)}
+                disabled={accountQ.isLoading || paidUntilM.isPending}
+              />
+              <div className="text-xs text-muted">{t('admin.user.payments.settings.hint.paid_until')}</div>
+              <Button
+                type="submit"
+                variant="secondary"
+                size="sm"
+                loading={paidUntilM.isPending}
+                disabled={accountQ.isLoading || !paidUntilChanged}
+                testId="admin.user.payments.settings.paid_until.save"
+              >
+                {t('admin.user.payments.settings.save_paid_until')}
+              </Button>
+            </form>
+
+            <form className="space-y-2" onSubmit={submitAddPayment} data-testid="admin.user.payments.add.form">
+              <Input
+                label={t('admin.user.payments.add_payment.field.amount')}
+                testId="admin.user.payments.add.amount_input"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                value={quickAmount}
+                onChange={(e) => setQuickAmount(e.target.value)}
+                placeholder={monthlyPayment !== undefined ? String(monthlyPayment) : undefined}
+                disabled={addM.isPending}
+              />
+              <div className="text-xs text-muted">{t('admin.user.payments.add_payment.hint.amount')}</div>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                loading={addM.isPending}
+                disabled={amountParsed === null}
+                testId="admin.user.payments.add.save"
+              >
+                {t('admin.user.payments.add_payment')}
+              </Button>
+            </form>
+
+            <form className="space-y-2" onSubmit={submitMonthlyPayment} data-testid="admin.user.payments.monthly.form">
+              <Input
+                label={t('admin.user.payments.settings.field.monthly_payment')}
+                testId="admin.user.payments.settings.monthly_payment"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                value={quickMonthlyPayment}
+                onChange={(e) => setQuickMonthlyPayment(e.target.value)}
+                disabled={accountQ.isLoading || monthlyPaymentM.isPending}
+              />
+              <div className="text-xs text-muted">{t('admin.user.payments.settings.hint.monthly_payment')}</div>
+              <Button
+                type="submit"
+                variant="secondary"
+                size="sm"
+                loading={monthlyPaymentM.isPending}
+                disabled={accountQ.isLoading || !monthlyPaymentChanged}
+                testId="admin.user.payments.settings.monthly.save"
+              >
+                {t('common.save')}
+              </Button>
+            </form>
+          </div>
+        </CardBody>
+      </Card>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <Card>
@@ -362,131 +439,6 @@ export function AdminUserPaymentsPage() {
         </Card>
       </div>
 
-      {/* Edit settings modal */}
-      <Modal
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        title={t('admin.user.payments.settings.modal.title')}
-        testId="admin.user.payments.settings.modal"
-      >
-        <div className="space-y-3">
-          {accountQ.isError ? (
-            <ErrorState
-              title={t('admin.user.payments.settings.load_error.title')}
-              error={accountQ.error}
-              showDetails
-            />
-          ) : null}
-
-          <div>
-            <div className="text-xs font-medium text-muted">{t('admin.user.payments.settings.field.monthly_payment')}</div>
-            <div className="mt-1">
-              <Input
-                testId="admin.user.payments.settings.monthly_payment"
-                type="number"
-                inputMode="numeric"
-                value={settingsMonthly}
-                onChange={(e) => setSettingsMonthly(e.target.value)}
-                placeholder={monthlyPayment !== undefined ? String(monthlyPayment) : '0'}
-              />
-            </div>
-          </div>
-
-          <div>
-            <div className="text-xs font-medium text-muted">{t('admin.user.payments.settings.field.paid_until')}</div>
-            <div className="mt-1">
-              <Input
-                testId="admin.user.payments.settings.paid_until"
-                type="datetime-local"
-                value={settingsPaidUntilLocal}
-                onChange={(e) => setSettingsPaidUntilLocal(e.target.value)}
-              />
-            </div>
-            <div className="mt-1 text-xs text-muted">{t('admin.user.payments.settings.hint.paid_until')}</div>
-          </div>
-
-          <PaymentSettingsReviewCard
-            userLabel={userLabel}
-            userId={userId}
-            currentMonthly={monthlyPayment}
-            nextMonthly={settingsMonthlyParsed}
-            currentPaidUntil={paidUntil}
-            nextPaidUntilIso={settingsPaidUntilParsed.iso}
-            review={settingsReview}
-          />
-
-          <div className="flex items-center justify-end gap-2 pt-2">
-            <Button variant="secondary" onClick={() => setSettingsOpen(false)} testId="admin.user.payments.settings.cancel">
-              {t('common.cancel')}
-            </Button>
-            <Button
-              onClick={() => settingsM.mutate()}
-              loading={settingsM.isPending}
-              disabled={!settingsCanSave}
-              testId="admin.user.payments.settings.save"
-            >
-              {t('common.save')}
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Add manual payment modal */}
-      <Modal
-        open={addOpen}
-        onClose={() => setAddOpen(false)}
-        title={t('admin.user.payments.add_payment.modal.title')}
-        testId="admin.user.payments.add.modal"
-      >
-        <div className="space-y-3">
-          <div>
-            <div className="text-xs font-medium text-muted">{t('admin.user.payments.add_payment.field.months')}</div>
-            <div className="mt-1">
-              <Input
-                testId="admin.user.payments.add.months"
-                type="number"
-                inputMode="numeric"
-                min={1}
-                value={addMonths}
-                onChange={(e) => setAddMonths(e.target.value)}
-              />
-            </div>
-            <div className="mt-1 text-xs text-muted">
-              {monthlyPayment
-                ? t('admin.user.payments.add_payment.hint.multiple', { monthly: formatMoneyLike(monthlyPayment) })
-                : t('admin.user.payments.add_payment.validation.no_monthly_payment')}
-            </div>
-          </div>
-
-          <div>
-            <div className="text-xs font-medium text-muted">{t('admin.user.payments.add_payment.field.amount')}</div>
-            <div className="mt-1 text-sm tabular-nums" data-testid="admin.user.payments.add.amount">
-              {addPreview.amount !== undefined ? formatMoneyLike(addPreview.amount) : '—'}
-            </div>
-          </div>
-
-          <ManualPaymentReviewCard
-            userLabel={userLabel}
-            userId={userId}
-            monthlyPayment={monthlyPayment}
-            preview={addPreview}
-          />
-
-          <div className="flex items-center justify-end gap-2 pt-2">
-            <Button variant="secondary" onClick={() => setAddOpen(false)} testId="admin.user.payments.add.cancel">
-              {t('common.cancel')}
-            </Button>
-            <Button
-              onClick={() => addM.mutate()}
-              loading={addM.isPending}
-              disabled={!addPreview.canSubmit}
-              testId="admin.user.payments.add.save"
-            >
-              {t('common.create')}
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 }
