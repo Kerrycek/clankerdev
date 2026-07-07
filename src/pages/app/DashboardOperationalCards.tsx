@@ -136,6 +136,13 @@ function cpuUsedLabel(n: PublicNodeStatus): string {
   const used = Math.max(0, Math.min(100, 100 - n.cpu_idle));
   return `${used.toFixed(1)}%`;
 }
+function cgroupVersionLabel(value: unknown): string {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (!normalized) return "—";
+  if (normalized === "1" || normalized === "v1" || normalized === "cgroup_v1") return "v1";
+  if (normalized === "2" || normalized === "v2" || normalized === "cgroup_v2") return "v2";
+  return String(value);
+}
 export function summarizeNodes(nodes: PublicNodeStatus[], unknownLocationLabel: string) {
   const groups = new Map<string, NodeLocationGroup>();
   let ok = 0;
@@ -458,9 +465,7 @@ export function ClusterHealthCard(props: { isLoading: boolean; isError: boolean;
                                 </td>
                                 <td className="px-3 py-2 text-center text-muted">{cpuUsedLabel(node)}</td>
                                 <td className="px-3 py-2 text-center text-muted">{node.kernel ? String(node.kernel) : "—"}</td>
-                                <td className="px-3 py-2 text-center text-muted">
-                                  {typeof node["cgroup_version"] === "string" ? node["cgroup_version"] : "—"}
-                                </td>
+                                <td className="px-3 py-2 text-center text-muted">{cgroupVersionLabel(node["cgroup_version"])}</td>
                               </tr>
                             );
                           })}

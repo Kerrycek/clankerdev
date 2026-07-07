@@ -204,5 +204,5 @@ export function DashboardWidgetGrid(props: {
 
   const widgets = visibleDashboardWidgets(props.dashboardSettings);
 
-  return <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">{widgets.map(renderWidget)}</div>;
+  return <div className="space-y-4">{widgets.map(renderWidget)}</div>;
 }
