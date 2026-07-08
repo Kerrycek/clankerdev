@@ -66,11 +66,11 @@ test('@smoke profile: MFA recovery readiness summary', async ({ page }) => {
 
   await page.goto('/app/profile/mfa');
 
-  await expect(page.getByTestId('profile.mfa.recovery.card')).toBeVisible();
+  await expect(page.getByTestId('profile.mfa.recovery.ready')).toBeVisible();
   await expect(page.getByTestId('profile.mfa.recovery.status')).toHaveText('Ready');
-  await expect(page.getByTestId('profile.mfa.recovery.metrics')).toContainText('Active factors');
-  await expect(page.getByTestId('profile.mfa.recovery.metrics')).toContainText('2');
-  await expect(page.getByTestId('profile.mfa.recovery.check.backup_factor')).toContainText('2 independent recovery path(s) are active.');
+  await expect(page.getByTestId('profile.mfa.recovery.ready')).toContainText('Recovery posture looks ready');
+  await expect(page.getByTestId('profile.mfa.recovery.metrics')).toHaveCount(0);
+  await expect(page.getByTestId('profile.mfa.recovery.checklist')).toHaveCount(0);
   await expect(page.getByTestId('profile.mfa.known_devices.summary')).toContainText('Trusted for MFA');
   await expect(page.getByTestId('profile.mfa.mfa_master.status')).toContainText('Active');
 });

@@ -64,30 +64,63 @@ export function UserMfaRecoveryCard(props: {
   const loading = totpQ.isLoading || webauthnQ.isLoading || knownDevicesQ.isLoading;
   const error = totpQ.error ?? webauthnQ.error ?? knownDevicesQ.error;
 
+  const actions = (
+    <div className="flex items-center gap-2">
+      <Badge variant={toneToBadgeVariant(summary.statusTone)} testId={`${prefix}.recovery.status`}>
+        {t(`profile.mfa.recovery.status.${summary.status}`)}
+      </Badge>
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={() => {
+          void qc.invalidateQueries({ queryKey: ['users', props.userId, 'totp_devices'] });
+          void qc.invalidateQueries({ queryKey: ['users', props.userId, 'webauthn_credentials'] });
+          void qc.invalidateQueries({ queryKey: ['users', props.userId, 'known_devices'] });
+        }}
+        testId={`${prefix}.recovery.refresh`}
+      >
+        {t('common.refresh')}
+      </Button>
+    </div>
+  );
+
+  if (!loading && !error && summary.status === 'ready') {
+    return (
+      <div
+        className="flex flex-col gap-2 rounded-lg border border-ok/30 bg-ok/10 p-3 sm:flex-row sm:items-center sm:justify-between"
+        data-testid={`${prefix}.recovery.ready`}
+      >
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="ok" testId={`${prefix}.recovery.status`}>
+              {t('profile.mfa.recovery.status.ready')}
+            </Badge>
+            <div className="text-sm font-medium text-fg">{t('profile.mfa.recovery.alert.ready.title')}</div>
+          </div>
+          <div className="mt-1 text-xs text-muted">{t('profile.mfa.recovery.alert.ready.body')}</div>
+        </div>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => {
+            void qc.invalidateQueries({ queryKey: ['users', props.userId, 'totp_devices'] });
+            void qc.invalidateQueries({ queryKey: ['users', props.userId, 'webauthn_credentials'] });
+            void qc.invalidateQueries({ queryKey: ['users', props.userId, 'known_devices'] });
+          }}
+          testId={`${prefix}.recovery.refresh`}
+        >
+          {t('common.refresh')}
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <Card testId={`${prefix}.recovery.card`}>
       <CardHeader
         title={t('profile.mfa.recovery.title')}
         subtitle={t('profile.mfa.recovery.subtitle')}
-        actions={
-          <div className="flex items-center gap-2">
-            <Badge variant={toneToBadgeVariant(summary.statusTone)} testId={`${prefix}.recovery.status`}>
-              {t(`profile.mfa.recovery.status.${summary.status}`)}
-            </Badge>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                void qc.invalidateQueries({ queryKey: ['users', props.userId, 'totp_devices'] });
-                void qc.invalidateQueries({ queryKey: ['users', props.userId, 'webauthn_credentials'] });
-                void qc.invalidateQueries({ queryKey: ['users', props.userId, 'known_devices'] });
-              }}
-              testId={`${prefix}.recovery.refresh`}
-            >
-              {t('common.refresh')}
-            </Button>
-          </div>
-        }
+        actions={actions}
       />
       <CardBody>
         {loading ? (
