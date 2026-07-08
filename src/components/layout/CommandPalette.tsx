@@ -9,9 +9,16 @@ import { useI18n } from '../../app/i18n';
 import { useToasts } from '../../app/toasts';
 import { useObjectScope } from '../../app/objectScope';
 import { clusterSearch, type ClusterSearchHit } from '../../lib/api/clusterSearch';
-import { fetchUser, type User } from '../../lib/api/users';
 import { fetchVps, fetchVpsList, type Vps } from '../../lib/api/vps';
 import { useDebouncedValue } from '../../lib/hooks/useDebouncedValue';
+import {
+  clusterResourceHref,
+  clusterResourceKey,
+  clusterResourceRefLabel,
+  enrichUserSearchResults,
+  normalizeClusterResource,
+  parseClusterId,
+} from '../../lib/search/clusterSearchResults';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Modal } from '../ui/Modal';
@@ -167,132 +174,11 @@ function parseVpsIdFromQuery(raw: string): number | null {
   return Math.trunc(n);
 }
 
-function normalizeResourceName(value: unknown): string {
-  const s = String(value ?? '').trim();
-  if (!s) return '';
-  // Most deployments use PascalCase (Vps, User...). Be tolerant.
-  const lower = s.toLowerCase();
-  if (lower === 'vps') return 'Vps';
-  if (lower === 'user') return 'User';
-  if (lower === 'node') return 'Node';
-  if (lower === 'migrationplan' || lower === 'migration_plan' || lower === 'migration-plan') return 'MigrationPlan';
-  if (lower === 'dataset') return 'Dataset';
-  if (lower === 'dnszone' || lower === 'dns_zone' || lower === 'dns-zone') return 'DnsZone';
-  if (lower === 'transaction') return 'Transaction';
-  if (lower === 'actionstate' || lower === 'action_state' || lower === 'action-state') return 'ActionState';
-  if (lower === 'ipaddress' || lower === 'ip_address' || lower === 'ip-address') return 'IpAddress';
-  if (lower === 'transactionchain' || lower === 'transaction_chain' || lower === 'transaction-chain') return 'TransactionChain';
-  return s;
-}
-
-function parseId(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (typeof value === 'string') {
-    const n = Number(value);
-    if (Number.isFinite(n)) return n;
-  }
-  return null;
-}
-
 function buildHrefWithBasename(path: string): string {
   const cfg = getRuntimeConfig();
   const base = (cfg.routerBasename ?? '').replace(/\/$/, '');
   if (!base) return path;
   return `${base}${path}`;
-}
-
-function resourceKindLabel(
-  t: (key: string, vars?: Record<string, unknown>) => string,
-  resource: string
-): string {
-  if (resource === 'Vps') return t('object_kind.vps');
-  if (resource === 'User') return t('object_kind.user');
-  if (resource === 'Node') return t('object_kind.node');
-  if (resource === 'IpAddress') return t('object_kind.ip_address');
-  if (resource === 'Transaction') return t('object_kind.transaction');
-  if (resource === 'TransactionChain') return t('object_kind.transaction_chain');
-  if (resource === 'ActionState') return t('object_kind.action_state');
-  if (resource === 'Dataset') return t('object_kind.dataset');
-  if (resource === 'DnsZone') return t('object_kind.dns_zone');
-  if (resource === 'MigrationPlan') return t('object_kind.migration_plan');
-  if (resource === 'Network') return t('object_kind.network');
-  return resource;
-}
-
-function resourceRefLabel(
-  t: (key: string, vars?: Record<string, unknown>) => string,
-  resource: string,
-  id: number
-): string {
-  if (resource === 'Vps') return t('common.vps_ref', { id });
-  return t('common.resource_ref', { resource: resourceKindLabel(t, resource), id });
-}
-
-function compactPaletteParts(parts: Array<string | null | undefined>): string[] {
-  const out: string[] = [];
-  const seen = new Set<string>();
-
-  for (const part of parts) {
-    const value = String(part ?? '').trim();
-    if (!value) continue;
-
-    const key = value.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(value);
-  }
-
-  return out;
-}
-
-function formatPaletteUserResult(
-  t: (key: string, vars?: Record<string, unknown>) => string,
-  user: User,
-  fallback: PaletteResult
-): PaletteResult {
-  const login = String(user.login ?? '').trim();
-  const fullName = String(user.full_name ?? '').trim();
-  const email = String(user.email ?? '').trim();
-  const userRef = resourceRefLabel(t, 'User', user.id);
-  const primary = login || fullName || email || fallback.primary || userRef;
-  const secondaryParts = compactPaletteParts([
-    userRef,
-    fullName !== primary ? fullName : null,
-    email !== primary ? email : null,
-    fallback.attribute,
-  ]);
-
-  return {
-    ...fallback,
-    primary,
-    secondary: secondaryParts.join(' · ') || fallback.secondary,
-  };
-}
-
-async function enrichPaletteUserResults(
-  results: PaletteResult[],
-  t: (key: string, vars?: Record<string, unknown>) => string,
-  signal: AbortSignal
-): Promise<PaletteResult[]> {
-  if (!results.some((result) => result.resource === 'User' && typeof result.id === 'number')) {
-    return results;
-  }
-
-  return Promise.all(
-    results.map(async (result) => {
-      if (result.resource !== 'User' || typeof result.id !== 'number') return result;
-      if (signal.aborted) return result;
-
-      try {
-        const res = await fetchUser(result.id, { signal });
-        if (signal.aborted) return result;
-        return formatPaletteUserResult(t, res.data, result);
-      } catch (e: any) {
-        if (e?.name === 'AbortError') return result;
-        return result;
-      }
-    })
-  );
 }
 
 function vpsResultsFromList(
@@ -320,181 +206,39 @@ function resultsFromClusterSearch(
   const out: PaletteResult[] = [];
 
   for (const h of hits ?? []) {
-    const resource = normalizeResourceName((h as any)?.resource);
-    const id = parseId((h as any)?.id);
+    const resource = normalizeClusterResource((h as any)?.resource);
+    const id = parseClusterId((h as any)?.id);
     if (!resource || id === null) continue;
 
-    const fallbackRef = resourceRefLabel(t, resource, id);
+    const href = clusterResourceHref(basePath, resource, id);
+    if (!href) continue;
+
+    const fallbackRef = clusterResourceRefLabel(t, resource, id);
     const primary = String((h as any)?.value ?? (h as any)?.label ?? fallbackRef).trim();
     const attr = String((h as any)?.attribute ?? '').trim();
     const secondary = attr ? `${fallbackRef} · ${attr}` : fallbackRef;
+    const group =
+      resource === 'Vps'
+        ? 'vps'
+        : resource === 'User'
+          ? 'users'
+          : resource === 'IpAddress'
+            ? 'ips'
+            : resource === 'TransactionChain'
+              ? 'tx_chains'
+              : 'other';
 
-    if (resource === 'Vps') {
-      out.push({
-        key: `vps:${id}`,
-        group: 'vps',
-        primary,
-        secondary,
-        href: `${basePath}/vps/${id}`,
-        id,
-        resource,
-        attribute: attr || undefined,
-        raw: h,
-      });
-      continue;
-    }
-
-    if (resource === 'User') {
-      out.push({
-        key: `user:${id}`,
-        group: 'users',
-        primary,
-        secondary,
-        href: `${basePath}/users/${id}`,
-        id,
-        resource,
-        attribute: attr || undefined,
-        raw: h,
-      });
-      continue;
-    }
-
-    if (resource === 'IpAddress') {
-      out.push({
-        key: `ip:${id}`,
-        group: 'ips',
-        primary,
-        secondary,
-        href: `${basePath}/ip-addresses/${id}`,
-        id,
-        resource,
-        attribute: attr || undefined,
-        raw: h,
-      });
-      continue;
-    }
-
-    if (resource === 'TransactionChain') {
-      out.push({
-        key: `txc:${id}`,
-        group: 'tx_chains',
-        primary,
-        secondary,
-        href: `${basePath}/transactions/${id}`,
-        id,
-        resource,
-        attribute: attr || undefined,
-        raw: h,
-      });
-      continue;
-    }
-
-    if (resource === 'Node') {
-      out.push({
-        key: `node:${id}`,
-        group: 'other',
-        primary,
-        secondary,
-        href: `${basePath}/nodes/${id}`,
-        id,
-        resource,
-        attribute: attr || undefined,
-        raw: h,
-      });
-      continue;
-    }
-
-    if (resource === 'MigrationPlan') {
-      out.push({
-        key: `mp:${id}`,
-        group: 'other',
-        primary,
-        secondary,
-        href: `${basePath}/migration-plans/${id}`,
-        id,
-        resource,
-        attribute: attr || undefined,
-        raw: h,
-      });
-      continue;
-    }
-
-    if (resource === 'Dataset') {
-      out.push({
-        key: `ds:${id}`,
-        group: 'other',
-        primary,
-        secondary,
-        href: `${basePath}/datasets/${id}`,
-        id,
-        resource,
-        attribute: attr || undefined,
-        raw: h,
-      });
-      continue;
-    }
-
-    if (resource === 'DnsZone') {
-      out.push({
-        key: `dns:${id}`,
-        group: 'other',
-        primary,
-        secondary,
-        href: `${basePath}/dns/zones/${id}`,
-        id,
-        resource,
-        attribute: attr || undefined,
-        raw: h,
-      });
-      continue;
-    }
-
-    if (resource === 'Transaction') {
-      out.push({
-        key: `tx:${id}`,
-        group: 'other',
-        primary,
-        secondary,
-        href: `${basePath}/transactions/items/${id}`,
-        id,
-        resource,
-        attribute: attr || undefined,
-        raw: h,
-      });
-      continue;
-    }
-
-    if (resource === 'ActionState') {
-      out.push({
-        key: `as:${id}`,
-        group: 'other',
-        primary,
-        secondary,
-        href: `${basePath}/action-states/${id}`,
-        id,
-        resource,
-        attribute: attr || undefined,
-        raw: h,
-      });
-      continue;
-    }
-
-    if (resource === 'Network') {
-      out.push({
-        key: `net:${id}`,
-        group: 'other',
-        primary,
-        secondary,
-        href: `${basePath}/cluster/networks/${id}`,
-        id,
-        resource,
-        attribute: attr || undefined,
-        raw: h,
-      });
-      continue;
-    }
-
-    // Unknown types are ignored in v1 (we avoid presenting results that cannot be opened).
+    out.push({
+      key: clusterResourceKey(resource, id),
+      group,
+      primary,
+      secondary,
+      href,
+      id,
+      resource,
+      attribute: attr || undefined,
+      raw: h,
+    });
   }
 
   return out;
@@ -594,7 +338,7 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
             parsed = parsed.filter((r) => (r.resource ? allowed.has(r.resource) : false));
           }
 
-          parsed = await enrichPaletteUserResults(parsed, t, ac.signal);
+          parsed = await enrichUserSearchResults(parsed, t, ac.signal);
 
           if (!alive || ac.signal.aborted) return;
           setResults(parsed);

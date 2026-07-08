@@ -6,8 +6,15 @@ import { useAuth } from '../../app/auth';
 import { useAppMode } from '../../app/appMode';
 import { useObjectScope } from '../../app/objectScope';
 import { clusterSearch, type ClusterSearchHit } from '../../lib/api/clusterSearch';
-import { fetchUser, type User as ApiUser } from '../../lib/api/users';
 import { fetchVps, fetchVpsList, type Vps } from '../../lib/api/vps';
+import {
+  clusterResourceHref,
+  clusterResourceKey,
+  clusterResourceRefLabel,
+  enrichUserSearchResults,
+  normalizeClusterResource,
+  parseClusterId,
+} from '../../lib/search/clusterSearchResults';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { clsx } from '../ui/clsx';
@@ -408,42 +415,6 @@ function parseInlineVpsId(raw: string): number | null {
   return Number.isFinite(id) && id > 0 ? Math.trunc(id) : null;
 }
 
-function normalizeInlineResource(value: unknown): string {
-  const lower = String(value ?? '').trim().toLowerCase();
-  if (lower === 'vps') return 'Vps';
-  if (lower === 'user') return 'User';
-  if (lower === 'ipaddress' || lower === 'ip_address' || lower === 'ip-address') return 'IpAddress';
-  if (lower === 'transactionchain' || lower === 'transaction_chain' || lower === 'transaction-chain') return 'TransactionChain';
-  if (lower === 'transaction') return 'Transaction';
-  if (lower === 'actionstate' || lower === 'action_state' || lower === 'action-state') return 'ActionState';
-  if (lower === 'dataset') return 'Dataset';
-  if (lower === 'dnszone' || lower === 'dns_zone' || lower === 'dns-zone') return 'DnsZone';
-  if (lower === 'migrationplan' || lower === 'migration_plan' || lower === 'migration-plan') return 'MigrationPlan';
-  if (lower === 'node') return 'Node';
-  if (lower === 'network') return 'Network';
-  return String(value ?? '').trim();
-}
-
-function parseInlineId(value: unknown): number | null {
-  const id = typeof value === 'number' ? value : Number(value);
-  return Number.isFinite(id) && id > 0 ? Math.trunc(id) : null;
-}
-
-function inlineResourceHref(basePath: string, resource: string, id: number): string | null {
-  if (resource === 'Vps') return `${basePath}/vps/${id}`;
-  if (resource === 'User') return `${basePath}/users/${id}`;
-  if (resource === 'IpAddress') return `${basePath}/ip-addresses/${id}`;
-  if (resource === 'TransactionChain') return `${basePath}/transactions/${id}`;
-  if (resource === 'Transaction') return `${basePath}/transactions/items/${id}`;
-  if (resource === 'ActionState') return `${basePath}/action-states/${id}`;
-  if (resource === 'Dataset') return `${basePath}/datasets/${id}`;
-  if (resource === 'DnsZone') return `${basePath}/dns/zones/${id}`;
-  if (resource === 'MigrationPlan') return `${basePath}/migration-plans/${id}`;
-  if (resource === 'Node') return `${basePath}/nodes/${id}`;
-  if (resource === 'Network') return `${basePath}/cluster/networks/${id}`;
-  return null;
-}
-
 function inlineResultFromVps(basePath: string, t: AppHeaderProps['t'], vps: Vps): InlineSearchResult {
   return {
     key: `vps:${vps.id}`,
@@ -455,90 +426,23 @@ function inlineResultFromVps(basePath: string, t: AppHeaderProps['t'], vps: Vps)
   };
 }
 
-function compactInlineParts(parts: Array<string | null | undefined>): string[] {
-  const out: string[] = [];
-  const seen = new Set<string>();
-
-  for (const part of parts) {
-    const value = String(part ?? '').trim();
-    if (!value) continue;
-
-    const key = value.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(value);
-  }
-
-  return out;
-}
-
-function formatInlineUserResult(
-  t: AppHeaderProps['t'],
-  user: ApiUser,
-  fallback: InlineSearchResult
-): InlineSearchResult {
-  const login = String(user.login ?? '').trim();
-  const fullName = String(user.full_name ?? '').trim();
-  const email = String(user.email ?? '').trim();
-  const userRef = t('common.resource_ref', { resource: 'User', id: user.id });
-  const primary = login || fullName || email || fallback.primary || userRef;
-  const secondaryParts = compactInlineParts([
-    userRef,
-    fullName !== primary ? fullName : null,
-    email !== primary ? email : null,
-    fallback.attribute,
-  ]);
-
-  return {
-    ...fallback,
-    primary,
-    secondary: secondaryParts.join(' · ') || fallback.secondary,
-  };
-}
-
-async function enrichInlineUserResults(
-  results: InlineSearchResult[],
-  t: AppHeaderProps['t'],
-  signal: AbortSignal
-): Promise<InlineSearchResult[]> {
-  if (!results.some((result) => result.resource === 'User' && typeof result.id === 'number')) {
-    return results;
-  }
-
-  return Promise.all(
-    results.map(async (result) => {
-      if (result.resource !== 'User' || typeof result.id !== 'number') return result;
-      if (signal.aborted) return result;
-
-      try {
-        const res = await fetchUser(result.id, { signal });
-        if (signal.aborted) return result;
-        return formatInlineUserResult(t, res.data, result);
-      } catch (e: any) {
-        if (e?.name === 'AbortError') return result;
-        return result;
-      }
-    })
-  );
-}
-
 function inlineResultsFromClusterSearch(basePath: string, t: AppHeaderProps['t'], hits: ClusterSearchHit[]): InlineSearchResult[] {
   const out: InlineSearchResult[] = [];
   const seen = new Set<string>();
 
   for (const hit of hits ?? []) {
-    const resource = normalizeInlineResource(hit.resource);
-    const id = parseInlineId(hit.id);
+    const resource = normalizeClusterResource(hit.resource);
+    const id = parseClusterId(hit.id);
     if (!resource || id === null) continue;
 
-    const href = inlineResourceHref(basePath, resource, id);
+    const href = clusterResourceHref(basePath, resource, id);
     if (!href) continue;
 
-    const key = `${resource}:${id}`;
+    const key = clusterResourceKey(resource, id);
     if (seen.has(key)) continue;
     seen.add(key);
 
-    const fallback = t('common.resource_ref', { resource, id });
+    const fallback = clusterResourceRefLabel(t, resource, id);
     const primary = String(hit.value ?? hit.label ?? fallback).trim();
     const attr = String(hit.attribute ?? '').trim();
 
@@ -631,7 +535,7 @@ export function AppHeader(props: AppHeaderProps) {
         if (canUseClusterSearch) {
           const res = await clusterSearch({ query: q, signal: ac.signal });
           const results = inlineResultsFromClusterSearch(basePath, t, res.data);
-          const enrichedResults = await enrichInlineUserResults(results, t, ac.signal);
+          const enrichedResults = await enrichUserSearchResults(results, t, ac.signal);
           if (!alive || ac.signal.aborted) return;
           setSearchResults(enrichedResults);
           return;
