@@ -10,6 +10,8 @@ test('profile: user namespaces - create map and edit entries', async ({ page }) 
   let entries: any[] = [];
   let nextMapId = 501;
   let nextEntryId = 1001;
+  let namespacesListCalls = 0;
+  let mapListCalls = 0;
 
   await installHaveApiMock({
     page,
@@ -21,9 +23,17 @@ test('profile: user namespaces - create map and edit entries', async ({ page }) 
       },
     },
     handlers: {
-      'GET user_namespaces': async () => ({ user_namespaces: namespaces }),
+      'GET user_namespaces': async (ctx) => {
+        namespacesListCalls += 1;
+        expect(ctx.searchParams.get('user_namespace[user]')).toBe('1');
+        return { user_namespaces: namespaces };
+      },
 
-      'GET user_namespace_maps': async () => ({ user_namespace_maps: maps }),
+      'GET user_namespace_maps': async (ctx) => {
+        mapListCalls += 1;
+        expect(ctx.searchParams.get('user_namespace_map[user]')).toBe('1');
+        return { user_namespace_maps: maps };
+      },
 
       'POST user_namespace_maps': async (ctx) => {
         const b = await ctx.request.postDataJSON();
@@ -87,6 +97,8 @@ test('profile: user namespaces - create map and edit entries', async ({ page }) 
   // Landing should redirect to maps when the user has exactly one namespace
   await page.goto('/app/profile/user-namespaces');
   await expect(page.getByTestId('profile.userns.maps.create')).toBeVisible({ timeout: 30_000 });
+  expect(namespacesListCalls).toBeGreaterThan(0);
+  expect(mapListCalls).toBeGreaterThan(0);
 
   // Create a new map
   await page.getByTestId('profile.userns.maps.create').click();
