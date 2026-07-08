@@ -17,7 +17,6 @@ import { ErrorState } from '../../../../components/ui/ErrorState';
 import { Input } from '../../../../components/ui/Input';
 import { KeysetPagination } from '../../../../components/ui/KeysetPagination';
 import { LoadingState } from '../../../../components/ui/LoadingState';
-import { SandboxedHtml } from '../../../../components/ui/SandboxedHtml';
 import { StatCard } from '../../../../components/ui/StatCard';
 
 import { createUserPayment, fetchPaymentInstructions, fetchUserPayments } from '../../../../lib/api/payments';
@@ -39,6 +38,7 @@ import {
   parsePositiveInt,
   resourceRefLabel,
 } from '../../payments/PaymentsModel';
+import { PaymentInstructionsHtml } from '../../payments/PaymentInstructionsHtml';
 
 import { useAdminUserContext } from './AdminUserLayout';
 
@@ -337,7 +337,7 @@ export function AdminUserPaymentsPage() {
         </CardBody>
       </Card>
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+      <div className="space-y-3">
         <Card>
           <CardHeader
             title={t('payments.my.instructions.title')}
@@ -350,11 +350,8 @@ export function AdminUserPaymentsPage() {
             ) : null}
             {!instructionsQ.isLoading && !instructionsQ.isError ? (
               instructions ? (
-                <SandboxedHtml
+                <PaymentInstructionsHtml
                   html={instructions}
-                  title={t('payments.my.instructions.title')}
-                  autoHeight
-                  maxAutoHeight={900}
                   testId="admin.user.payments.instructions.text"
                 />
               ) : (

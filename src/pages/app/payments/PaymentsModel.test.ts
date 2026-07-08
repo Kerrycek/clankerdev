@@ -7,6 +7,7 @@ import {
   paidUntilSubtitleToken,
   parsePositiveInt,
   resourceRefLabel,
+  sanitizePaymentInstructionsHtml,
 } from './PaymentsModel';
 
 describe('PaymentsModel', () => {
@@ -44,6 +45,26 @@ describe('PaymentsModel', () => {
   test('normalizes payment instructions safely', () => {
     expect(normalizePaymentInstructions({ instructions: '  VS: 42\n' })).toBe('VS: 42');
     expect(normalizePaymentInstructions(undefined)).toBe('');
+  });
+
+  test('sanitizes payment instructions while preserving tables and QR images', () => {
+    const html = sanitizePaymentInstructionsHtml(`
+      <style>.x{display:none}</style>
+      <script>alert(1)</script>
+      <h3 onclick="bad()">Payment in CZK</h3>
+      <table style="width:750px"><tr><td>Variable symbol:</td><td><em>53</em></td><td><img src="/qr.php?vs=53" onerror="bad()" alt="QR"></td></tr></table>
+      <a href="javascript:alert(1)">bad</a>
+      <a href="https://example.com" target="_blank" onclick="bad()">ok</a>
+    `);
+
+    expect(html).toContain('<table>');
+    expect(html).toContain('<img src="/qr.php?vs=53" alt="QR" loading="lazy">');
+    expect(html).toContain('<a>bad</a>');
+    expect(html).toContain('<a href="https://example.com" rel="noopener noreferrer" target="_blank">ok</a>');
+    expect(html).not.toContain('<script>');
+    expect(html).not.toContain('onclick');
+    expect(html).not.toContain('onerror');
+    expect(html).not.toContain('style=');
   });
 
   test('buildPaymentSettingsReview flags backward and cleared paid-until changes', () => {

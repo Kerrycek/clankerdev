@@ -14,6 +14,7 @@ import { cursorFromDescendingPage } from '../../../lib/lockIndex';
 import { getPaidUntilStatus, paidUntilBadgeVariant, paidUntilStatusLabelKey } from '../../../lib/paymentsBadges';
 import { formatMoneyLike, safeInt } from '../../../lib/paymentsFormat';
 import { normalizePaymentInstructions, paidUntilSubtitleToken } from './PaymentsModel';
+import { PaymentInstructionsHtml } from './PaymentInstructionsHtml';
 
 import { ListShell } from '../../../components/layout/ListShell';
 import { PageHeader } from '../../../components/layout/PageHeader';
@@ -25,7 +26,6 @@ import { EmptyState } from '../../../components/ui/EmptyState';
 import { ErrorState } from '../../../components/ui/ErrorState';
 import { KeysetPagination } from '../../../components/ui/KeysetPagination';
 import { LoadingState } from '../../../components/ui/LoadingState';
-import { SandboxedHtml } from '../../../components/ui/SandboxedHtml';
 import { StatCard } from '../../../components/ui/StatCard';
 
 export function PaymentsPage() {
@@ -109,7 +109,7 @@ export function PaymentsPage() {
         />
       </div>
 
-      <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
+      <div className="mt-3 space-y-3">
         <Card>
           <CardHeader
             title={t('payments.my.instructions.title')}
@@ -122,11 +122,8 @@ export function PaymentsPage() {
             ) : null}
             {!instructionsQ.isLoading && !instructionsQ.isError ? (
               instructions ? (
-                <SandboxedHtml
+                <PaymentInstructionsHtml
                   html={instructions}
-                  title={t('payments.my.instructions.title')}
-                  autoHeight
-                  maxAutoHeight={900}
                   testId="payments.my.instructions.text"
                 />
               ) : (
