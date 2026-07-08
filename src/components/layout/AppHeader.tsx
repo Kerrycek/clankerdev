@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Activity, AlertTriangle, Globe, LogOut, Menu, Search, User, WifiOff } from 'lucide-react';
+import { Activity, AlertTriangle, Clock3, Globe, LogOut, Menu, Search, User, WifiOff } from 'lucide-react';
 
 import { useAuth } from '../../app/auth';
 import { useAppMode } from '../../app/appMode';
@@ -142,13 +142,11 @@ function AppUserMenu(props: Pick<AppHeaderProps,
   const sessionIdleLimit = formatSessionIdleLimit(t, sessionIdleLimitSeconds);
   const sessionDisplay = sessionIdleLimit
     ? {
-        compact: t('auth.session_idle.compact', { time: sessionIdleLimit }),
         menuLabel: t('auth.session_idle.menu_label'),
         value: sessionIdleLimit,
       }
     : sessionRemaining
       ? {
-          compact: t('auth.session_remaining.compact', { time: sessionRemaining }),
           menuLabel: t('auth.session_remaining.menu_label'),
           value: sessionRemaining,
         }
@@ -161,7 +159,23 @@ function AppUserMenu(props: Pick<AppHeaderProps,
     );
 
   return (
-    <div className="relative order-10 md:order-8" ref={userMenuRef}>
+    <div className="relative order-10 flex items-center gap-2 md:order-8" ref={userMenuRef}>
+      {sessionDisplay ? (
+        <button
+          type="button"
+          className={clsx(
+            'hidden h-10 items-center gap-1.5 rounded-md border border-border bg-overlay-surface px-2.5 text-xs font-medium text-muted shadow-card hover:bg-surface-2',
+            'lg:inline-flex'
+          )}
+          onClick={() => setUserMenuOpen((v) => !v)}
+          aria-label={`${sessionDisplay.menuLabel}: ${sessionDisplay.value}`}
+          title={`${sessionDisplay.menuLabel}: ${sessionDisplay.value}`}
+          data-testid="shell.session-remaining"
+        >
+          <Clock3 size={15} />
+          <span>{sessionDisplay.value}</span>
+        </button>
+      ) : null}
       <button
         className={clsx(
           'inline-flex h-11 w-12 items-center justify-center gap-2 rounded-md border border-border bg-overlay-surface text-sm shadow-card hover:bg-surface-2',
@@ -174,11 +188,6 @@ function AppUserMenu(props: Pick<AppHeaderProps,
         <User size={18} />
         <span className="hidden sm:inline font-medium">{authLogin ?? '—'}</span>
         <span className="hidden md:inline text-xs text-muted">{String(authRole ?? '—')}</span>
-        {sessionDisplay ? (
-          <span className="hidden lg:inline text-xs text-muted" data-testid="shell.session-remaining">
-            {sessionDisplay.compact}
-          </span>
-        ) : null}
       </button>
 
       {userMenuOpen ? (
