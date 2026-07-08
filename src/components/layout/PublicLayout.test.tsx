@@ -48,6 +48,7 @@ function renderAt(path: string) {
         >
           <Route index element={<div data-testid="public.index" />} />
           <Route path="outages" element={<div data-testid="public.outages" />} />
+          <Route path="security-advisories" element={<div data-testid="public.security" />} />
         </Route>
         <Route path="/app" element={<div data-testid="app.index" />} />
       </Routes>
@@ -82,6 +83,13 @@ describe('PublicLayout', () => {
 
     expect(screen.getByTestId('public.outages')).toBeVisible();
     expect(screen.getByTestId('location')).toHaveTextContent('/outages');
+  });
+
+  it('shows security advisories in the public nav instead of news', () => {
+    renderAt('/');
+
+    expect(screen.getAllByText('public.nav.security_advisories')).toHaveLength(1);
+    expect(screen.queryByText('public.nav.news')).not.toBeInTheDocument();
   });
 
   it('does not redirect the expired-session public notice URL', () => {

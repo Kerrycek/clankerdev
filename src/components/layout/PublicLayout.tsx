@@ -110,7 +110,7 @@ function PublicLayoutInner() {
             <nav className="hidden md:flex items-center gap-1" data-document-title-nav="section">
               <NavItem to="/">{i18n.t('public.nav.overview')}</NavItem>
               <NavItem to="/outages">{i18n.t('public.nav.outages')}</NavItem>
-              <NavItem to="/news">{i18n.t('public.nav.news')}</NavItem>
+              <NavItem to="/security-advisories">{i18n.t('public.nav.security_advisories')}</NavItem>
             </nav>
 
             <div className="flex-1" />
@@ -137,7 +137,7 @@ function PublicLayoutInner() {
               <div className="flex flex-col gap-1" data-document-title-nav="section">
                 <NavItem to="/">{i18n.t('public.nav.overview')}</NavItem>
                 <NavItem to="/outages">{i18n.t('public.nav.outages')}</NavItem>
-                <NavItem to="/news">{i18n.t('public.nav.news')}</NavItem>
+                <NavItem to="/security-advisories">{i18n.t('public.nav.security_advisories')}</NavItem>
                 <a
                   href={primaryHref}
                   className="mt-2 inline-flex items-center justify-center rounded-md border border-border bg-overlay-surface px-3 py-2 text-sm font-medium shadow-card hover:bg-surface-2"

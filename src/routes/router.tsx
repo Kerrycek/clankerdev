@@ -16,6 +16,10 @@ const OverviewPage = lazyRoute(() => import('../pages/public/OverviewPage'), 'Ov
 const OutagesPage = lazyRoute(() => import('../pages/public/OutagesPage'), 'OutagesPage');
 const OutageDetailPage = lazyRoute(() => import('../pages/public/OutageDetailPage'), 'OutageDetailPage');
 const NewsPage = lazyRoute(() => import('../pages/public/NewsPage'), 'NewsPage');
+const SecurityAdvisoriesPage = lazyRoute(
+  () => import('../pages/public/SecurityAdvisoriesPage'),
+  'SecurityAdvisoriesPage',
+);
 const RegistrationCorrectionPage = lazyRoute(() => import('../pages/public/RegistrationCorrectionPage'), 'RegistrationCorrectionPage');
 const DashboardPage = lazyRoute(() => import('../pages/app/DashboardPage'), 'DashboardPage');
 const VpsListPage = lazyRoute(() => import('../pages/app/VpsListPage'), 'VpsListPage');
@@ -178,6 +182,7 @@ export const router = createBrowserRouter([
             { path: 'outages', element: <OutagesPage /> },
             { path: 'outages/:outageId', element: <OutageDetailPage /> },
             { path: 'news', element: <NewsPage /> },
+            { path: 'security-advisories', element: <SecurityAdvisoriesPage /> },
             { path: 'requests/registrations/:requestId/:token', element: <RegistrationCorrectionPage /> },
             { path: '*', element: <NotFoundPage /> },
             // The old webui has a useful index page. We keep public status pages accessible.
