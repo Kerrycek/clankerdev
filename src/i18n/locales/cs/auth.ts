@@ -4,6 +4,8 @@ export const csAuth = {
   'auth.login_required.body': 'Tato část vpsAdmin vyžaduje přihlášení.',
   'auth.session_expired.title': 'Relace vypršela',
   'auth.session_expired.body': 'Relace vypršela kvůli nečinnosti. Přihlas se prosím znovu.',
+  'auth.session_idle.compact': 'Nečinnost {time}',
+  'auth.session_idle.menu_label': 'Limit nečinnosti',
   'auth.session_remaining.compact': 'Relace {time}',
   'auth.session_remaining.expired': 'vypršela',
   'auth.session_remaining.hours': '{hours} h',

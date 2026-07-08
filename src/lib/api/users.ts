@@ -20,6 +20,7 @@ export interface User {
   object_state?: string;
   expiration_date?: string | null;
   remind_after_date?: string | null;
+  preferred_session_length?: number | string | null;
 
   // Mailer / localization
   mailer_enabled?: boolean;

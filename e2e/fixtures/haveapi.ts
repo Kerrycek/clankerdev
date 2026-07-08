@@ -47,6 +47,7 @@ export interface HaveApiMockUser {
    * - >= 90: admin
    */
   level: number;
+  preferred_session_length?: number | string | null;
 }
 
 export interface HaveApiRequestCtx {

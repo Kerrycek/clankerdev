@@ -4,6 +4,8 @@ export const enAuth = {
   'auth.login_required.body': 'This part of vpsAdmin requires authentication.',
   'auth.session_expired.title': 'Session expired',
   'auth.session_expired.body': 'Your session expired due to inactivity. Please sign in again.',
+  'auth.session_idle.compact': 'Idle {time}',
+  'auth.session_idle.menu_label': 'Inactivity limit',
   'auth.session_remaining.compact': 'Session {time}',
   'auth.session_remaining.expired': 'expired',
   'auth.session_remaining.hours': '{hours} h',

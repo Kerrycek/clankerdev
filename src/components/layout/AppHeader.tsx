@@ -117,7 +117,7 @@ function AppSyncPopover(props: Pick<AppHeaderProps,
 function AppUserMenu(props: Pick<AppHeaderProps,
   't' | 'mode' | 'canSwitchMode' | 'userMenuRef' | 'userMenuOpen' | 'setUserMenuOpen' | 'authLogin' | 'authRole' |
   'sessionExpiresAt' | 'theme' | 'language' | 'onSetTheme' | 'onSetLanguage' | 'onGoToOtherMode' | 'onGoToProfile' | 'onGoToPublicStatus' | 'loginLogoutHref'
->) {
+> & { sessionIdleLimitSeconds: number | null }) {
   const {
     t,
     mode,
@@ -128,6 +128,7 @@ function AppUserMenu(props: Pick<AppHeaderProps,
     authLogin,
     authRole,
     sessionExpiresAt,
+    sessionIdleLimitSeconds,
     theme,
     language,
     onSetTheme,
@@ -138,6 +139,20 @@ function AppUserMenu(props: Pick<AppHeaderProps,
     loginLogoutHref,
   } = props;
   const sessionRemaining = useSessionRemainingLabel(t, sessionExpiresAt);
+  const sessionIdleLimit = formatSessionIdleLimit(t, sessionIdleLimitSeconds);
+  const sessionDisplay = sessionIdleLimit
+    ? {
+        compact: t('auth.session_idle.compact', { time: sessionIdleLimit }),
+        menuLabel: t('auth.session_idle.menu_label'),
+        value: sessionIdleLimit,
+      }
+    : sessionRemaining
+      ? {
+          compact: t('auth.session_remaining.compact', { time: sessionRemaining }),
+          menuLabel: t('auth.session_remaining.menu_label'),
+          value: sessionRemaining,
+        }
+      : null;
 
   return (
     <div className="relative order-10 md:order-8" ref={userMenuRef}>
@@ -153,9 +168,9 @@ function AppUserMenu(props: Pick<AppHeaderProps,
         <User size={18} />
         <span className="hidden sm:inline font-medium">{authLogin ?? '—'}</span>
         <span className="hidden md:inline text-xs text-muted">{String(authRole ?? '—')}</span>
-        {sessionRemaining ? (
+        {sessionDisplay ? (
           <span className="hidden lg:inline text-xs text-muted" data-testid="shell.session-remaining">
-            {t('auth.session_remaining.compact', { time: sessionRemaining })}
+            {sessionDisplay.compact}
           </span>
         ) : null}
       </button>
@@ -167,15 +182,15 @@ function AppUserMenu(props: Pick<AppHeaderProps,
           data-overlay="popover"
           data-overlay-surface="overlay"
         >
-          {sessionRemaining ? (
+          {sessionDisplay ? (
             <div className="px-2 py-1" data-testid="shell.user-menu.session-remaining">
-              <div className="text-xs text-muted">{t('auth.session_remaining.menu_label')}</div>
-              <div className="mt-0.5 text-sm font-medium">{sessionRemaining}</div>
+              <div className="text-xs text-muted">{sessionDisplay.menuLabel}</div>
+              <div className="mt-0.5 text-sm font-medium">{sessionDisplay.value}</div>
             </div>
           ) : null}
 
           {canSwitchMode ? (
-            <div className={clsx('px-2 py-1', sessionRemaining ? 'mt-2 border-t border-border pt-2' : '')}>
+            <div className={clsx('px-2 py-1', sessionDisplay ? 'mt-2 border-t border-border pt-2' : '')}>
               <div className="text-xs text-muted">{t('settings.scope.label')}</div>
               <div className="mt-1 grid grid-cols-2 gap-2">
                 <Button
@@ -348,6 +363,26 @@ function useSessionRemainingLabel(t: AppHeaderProps['t'], expiresAt?: number): s
   return formatSessionRemaining(t, expiresAt, now);
 }
 
+function readSessionIdleLimitSeconds(value: unknown): number | null {
+  const n = typeof value === 'number' ? value : typeof value === 'string' && value.trim() ? Number(value) : NaN;
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.floor(n);
+}
+
+function formatSessionIdleLimit(t: AppHeaderProps['t'], seconds: number | null): string | null {
+  if (seconds === null) return null;
+  if (seconds === 0) return t('security.settings.session_length.preset.never');
+  if (seconds < 60) return t('auth.session_remaining.less_than_minute');
+
+  const minutesTotal = Math.ceil(seconds / 60);
+  if (minutesTotal < 60) return t('auth.session_remaining.minutes', { minutes: minutesTotal });
+
+  const hours = Math.floor(minutesTotal / 60);
+  const minutes = minutesTotal % 60;
+  if (minutes === 0) return t('auth.session_remaining.hours', { hours });
+  return t('auth.session_remaining.hours_minutes', { hours, minutes });
+}
+
 interface InlineSearchResult {
   key: string;
   primary: string;
@@ -484,6 +519,7 @@ export function AppHeader(props: AppHeaderProps) {
   const [searchResults, setSearchResults] = useState<InlineSearchResult[]>([]);
   const [selectedSearchResult, setSelectedSearchResult] = useState(0);
   const debouncedSearch = useDebouncedValue(search.trim(), 180);
+  const sessionIdleLimitSeconds = readSessionIdleLimitSeconds(auth.user?.preferred_session_length);
 
   useEffect(() => {
     setSearch('');
@@ -753,6 +789,7 @@ export function AppHeader(props: AppHeaderProps) {
           authLogin={authLogin}
           authRole={authRole}
           sessionExpiresAt={sessionExpiresAt}
+          sessionIdleLimitSeconds={sessionIdleLimitSeconds}
           theme={theme}
           language={language}
           onSetTheme={onSetTheme}
