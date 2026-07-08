@@ -170,7 +170,7 @@ export function DashboardPage() {
   });
 
   return (
-    <PageContainer testId="app.dashboard.page">
+    <PageContainer variant="wide" testId="app.dashboard.page">
       <div className="space-y-4">
         <PageHeader testId="app.dashboard.header" title={t("nav.dashboard")} description={t("dashboard.description")} meta={signedInMeta} />
 
