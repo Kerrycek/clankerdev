@@ -5,13 +5,18 @@ import { useQuery } from '@tanstack/react-query';
 import { useAppMode } from '../../../app/appMode';
 import { useI18n } from '../../../app/i18n';
 import { useToasts } from '../../../app/toasts';
+import { useChrome } from '../../../components/layout/ChromeContext';
 
+import { getMetaActionStateId } from '../../../lib/api/haveapi';
 import { searchUsers } from '../../../lib/api/users';
 import {
   fetchChangeRequest,
   fetchChangeRequests,
   fetchRegistrationRequest,
   fetchRegistrationRequests,
+  resolveChangeRequest,
+  resolveRegistrationRequest,
+  type ResolveUserRequestAction,
 } from '../../../lib/api/requests';
 import { formatDateTime } from '../../../lib/format';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
@@ -34,10 +39,14 @@ import { ListShell } from '../../../components/layout/ListShell';
 import { PageHeader } from '../../../components/layout/PageHeader';
 
 import { Badge } from '../../../components/ui/Badge';
+import { Button } from '../../../components/ui/Button';
+import { Card, CardBody } from '../../../components/ui/Card';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { ErrorState } from '../../../components/ui/ErrorState';
 import { LoadingState } from '../../../components/ui/LoadingState';
+import { Select } from '../../../components/ui/Select';
 import type { SmartFilterSuggestion } from '../../../components/ui/SmartFilterInput';
+import { Textarea } from '../../../components/ui/Textarea';
 import {
   RequestOperationalLinks,
   RequestReviewActions,
@@ -65,11 +74,18 @@ import {
   visibleRequestRows,
 } from './RequestsModel';
 
+function actionVariantForBulk(action: ResolveUserRequestAction): 'primary' | 'secondary' | 'danger' {
+  if (action === 'approve') return 'primary';
+  if (action === 'deny' || action === 'ignore') return 'danger';
+  return 'secondary';
+}
+
 export function RequestsPage() {
   const { basePath, mode } = useAppMode();
   const isAdmin = mode === 'admin';
   const { t } = useI18n();
   const toasts = useToasts();
+  const chrome = useChrome();
   const navigate = useNavigate();
 
   const tierSlowRefetchMs = useTierSlowIntervalMs();
@@ -89,6 +105,10 @@ export function RequestsPage() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
+  const [bulkAction, setBulkAction] = useState<ResolveUserRequestAction>('approve');
+  const [bulkReason, setBulkReason] = useState('');
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
   const smartInputRef = useRef<HTMLInputElement>(null);
 
   // Sync from URL on navigation.
@@ -286,6 +306,18 @@ export function RequestsPage() {
     });
   }, [visibleKeys]);
 
+  useEffect(() => {
+    setSelectedKeys((prev) => {
+      let changed = false;
+      const next = new Set<string>();
+      for (const key of prev) {
+        if (visibleKeys.has(key)) next.add(key);
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [visibleKeys]);
+
   const refreshRequests = useCallback(async () => {
     const tasks: Promise<unknown>[] = [];
     if (needRegs) tasks.push(regQ.refetch());
@@ -308,6 +340,84 @@ export function RequestsPage() {
 
   function collapseAllVisible() {
     setExpandedKeys(new Set());
+  }
+
+  function toggleSelected(key: string, selected: boolean) {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      if (selected) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }
+
+  function toggleAllVisible(selected: boolean) {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      for (const row of rows) {
+        const key = requestKey(row);
+        if (selected) next.add(key);
+        else next.delete(key);
+      }
+      return next;
+    });
+  }
+
+  const selectedRows = useMemo(() => rows.filter((row) => selectedKeys.has(requestKey(row))), [rows, selectedKeys]);
+  const bulkNeedsReason = bulkAction === 'deny' || bulkAction === 'request_correction';
+
+  async function applyBulkAction() {
+    if (selectedRows.length === 0 || bulkSubmitting) return;
+    const reason = bulkReason.trim();
+    if (bulkNeedsReason && !reason) {
+      toasts.pushToast({ variant: 'danger', title: t('requests.bulk.reason_required') });
+      return;
+    }
+
+    setBulkSubmitting(true);
+    let ok = 0;
+    const failures: string[] = [];
+
+    for (const row of selectedRows) {
+      const id = requestId(row);
+      try {
+        const payload = { action: bulkAction, reason: reason || undefined };
+        const res =
+          requestType(row) === 'registration'
+            ? await resolveRegistrationRequest(id, {
+                ...payload,
+                ...(bulkAction === 'approve' ? { create_vps: true, activate: true } : {}),
+              })
+            : await resolveChangeRequest(id, payload);
+        const asId = getMetaActionStateId(res.meta);
+        if (asId) chrome.trackActionState(asId);
+        ok += 1;
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        failures.push(`#${id}: ${message}`);
+      }
+    }
+
+    setBulkSubmitting(false);
+    if (ok > 0) {
+      toasts.pushToast({
+        variant: 'ok',
+        title: t('requests.bulk.toast.title', { count: String(ok) }),
+        body: failures.length ? t('requests.bulk.toast.partial', { count: String(failures.length) }) : undefined,
+      });
+      setSelectedKeys(new Set());
+      setBulkReason('');
+      await refreshRequests();
+    }
+
+    if (failures.length > 0) {
+      toasts.pushToast({
+        variant: 'danger',
+        title: t('requests.bulk.toast.error.title'),
+        body: failures.slice(0, 3).join('\n'),
+        autoDismissMs: false,
+      });
+    }
   }
 
   const pageCursor = useMemo(() => cursorFromDescendingPage(rows, requestId) ?? undefined, [rows]);
@@ -844,6 +954,76 @@ export function RequestsPage() {
       }
 
     >
+      {isAdmin && rows.length > 0 ? (
+        <Card className="mb-4" testId="admin.requests.bulk">
+          <CardBody className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div className="min-w-0">
+              <div className="text-sm font-semibold">{t('requests.bulk.title')}</div>
+              <div className="mt-1 text-sm text-muted">
+                {t('requests.bulk.selected', { count: String(selectedRows.length) })}
+              </div>
+              {bulkNeedsReason && !bulkReason.trim() ? (
+                <div className="mt-1 text-xs text-danger">{t('requests.bulk.reason_required')}</div>
+              ) : null}
+            </div>
+
+            <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 md:grid-cols-[minmax(180px,240px)_1fr_auto_auto] lg:max-w-4xl">
+              <Select
+                value={bulkAction}
+                onChange={(e) => setBulkAction(e.target.value as ResolveUserRequestAction)}
+                aria-label={t('requests.bulk.action')}
+                testId="admin.requests.bulk.action"
+              >
+                <option value="approve">{t('requests.resolve.action.approve')}</option>
+                <option value="deny">{t('requests.resolve.action.deny')}</option>
+                <option value="ignore">{t('requests.resolve.action.ignore')}</option>
+                <option value="request_correction">{t('requests.resolve.action.request_correction')}</option>
+              </Select>
+
+              <Textarea
+                value={bulkReason}
+                onChange={(e) => setBulkReason(e.target.value)}
+                rows={1}
+                placeholder={t('requests.bulk.reason_placeholder')}
+                ariaLabel={t('requests.resolve.reason')}
+                disabled={!bulkNeedsReason}
+                className="min-h-9"
+                testId="admin.requests.bulk.reason"
+              />
+
+              <Button
+                variant="secondary"
+                onClick={() => toggleAllVisible(true)}
+                disabled={rows.length === 0}
+                testId="admin.requests.bulk.select_visible"
+              >
+                {t('requests.bulk.select_visible')}
+              </Button>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => setSelectedKeys(new Set())}
+                  disabled={selectedRows.length === 0}
+                  testId="admin.requests.bulk.clear"
+                >
+                  {t('common.clear')}
+                </Button>
+                <Button
+                  variant={actionVariantForBulk(bulkAction)}
+                  onClick={applyBulkAction}
+                  loading={bulkSubmitting}
+                  disabled={selectedRows.length === 0 || (bulkNeedsReason && !bulkReason.trim())}
+                  testId="admin.requests.bulk.apply"
+                >
+                  {t('requests.bulk.apply')}
+                </Button>
+              </div>
+            </div>
+          </CardBody>
+        </Card>
+      ) : null}
+
       {isLoading ? (
         <LoadingState testId="admin.requests.loading" title={t('common.loading')} />
       ) : error ? (
@@ -876,6 +1056,9 @@ export function RequestsPage() {
           pageCursor={pageCursor}
           pagination={pagination}
           onToggleExpanded={toggleExpanded}
+          selectedKeys={selectedKeys}
+          onToggleSelected={toggleSelected}
+          onToggleAllVisible={toggleAllVisible}
           renderExpandedContent={renderExpandedContent}
         />
       )}

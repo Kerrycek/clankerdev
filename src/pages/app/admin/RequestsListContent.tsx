@@ -74,13 +74,18 @@ export function RequestsListContent(props: {
   isAdmin: boolean;
   basePath: string;
   expandedKeys: Set<string>;
+  selectedKeys?: ReadonlySet<string>;
   canNext: boolean;
   pageCursor: number | undefined;
   pagination: RequestsPaginationProps;
   onToggleExpanded: (key: string) => void;
+  onToggleSelected?: (key: string, selected: boolean) => void;
+  onToggleAllVisible?: (selected: boolean) => void;
   renderExpandedContent: (request: UnifiedRequestRow, compact?: boolean) => React.ReactNode;
 }) {
   const { t } = useI18n();
+  const allVisibleSelected =
+    props.rows.length > 0 && props.selectedKeys ? props.rows.every((request) => props.selectedKeys?.has(requestKey(request))) : false;
 
   return (
     <>
@@ -101,6 +106,17 @@ export function RequestsListContent(props: {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
+                    {props.selectedKeys && props.onToggleSelected ? (
+                      <input
+                        className="h-4 w-4 rounded border-border"
+                        type="checkbox"
+                        checked={props.selectedKeys.has(key)}
+                        onChange={(e) => props.onToggleSelected?.(key, e.target.checked)}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label={t('requests.bulk.select_one', { id: String(id) })}
+                        data-testid={`admin.requests.bulk.select.mobile.${reqType}.${id}`}
+                      />
+                    ) : null}
                     <StatusDot variant={dotVar} testId={`admin.requests.row.${reqType}.${id}.dot`} />
                     <div className="text-sm font-semibold">#{id}</div>
                     <Badge variant={requestTypeBadgeVariant(reqType)}>{t(requestTypeLabelKey(reqType))}</Badge>
@@ -169,6 +185,18 @@ export function RequestsListContent(props: {
       >
         <thead>
           <tr className="border-b border-border text-left text-xs text-muted">
+            {props.selectedKeys && props.onToggleAllVisible ? (
+              <th className="w-10 px-3 py-2">
+                <input
+                  className="h-4 w-4 rounded border-border"
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  onChange={(e) => props.onToggleAllVisible?.(e.target.checked)}
+                  aria-label={t('requests.bulk.select_visible')}
+                  data-testid="admin.requests.bulk.select_all"
+                />
+              </th>
+            ) : null}
             <th className="w-10 px-2 py-2"></th>
             <th className="px-4 py-2">{t('common.id')}</th>
             <th className="px-4 py-2">{t('common.type')}</th>
@@ -192,7 +220,7 @@ export function RequestsListContent(props: {
             const risk = request._type === 'registration' ? fraudRiskBadge(request) : null;
             const key = requestKey(request);
             const expanded = props.expandedKeys.has(key);
-            const colSpan = props.isAdmin ? 10 : 8;
+            const colSpan = (props.isAdmin ? 10 : 8) + (props.selectedKeys ? 1 : 0);
             const createdAt = requestDateValue(request, 'created_at');
 
             return (
@@ -203,6 +231,19 @@ export function RequestsListContent(props: {
                   variant={rowVar}
                   className={expanded ? 'border-b border-border/30' : 'border-b border-border/60 last:border-b-0'}
                 >
+                  {props.selectedKeys && props.onToggleSelected ? (
+                    <td className="px-3 py-2">
+                      <input
+                        className="h-4 w-4 rounded border-border"
+                        type="checkbox"
+                        checked={props.selectedKeys.has(key)}
+                        onChange={(e) => props.onToggleSelected?.(key, e.target.checked)}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label={t('requests.bulk.select_one', { id: String(id) })}
+                        data-testid={`admin.requests.bulk.select.${reqType}.${id}`}
+                      />
+                    </td>
+                  ) : null}
                   <td className="px-2 py-2">
                     <Button
                       variant="ghost"

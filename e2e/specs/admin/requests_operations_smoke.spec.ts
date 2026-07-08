@@ -63,9 +63,6 @@ test('@workflow-matrix @smoke admin requests: detail actions, inline expansion, 
   await expect(expanded123.getByTestId('admin.requests.expanded.registration.123.resolve.action.approve')).toBeVisible();
 
   await expanded123.getByTestId('admin.requests.expanded.registration.123.resolve.action.approve').click();
-  await expect(page.getByTestId('admin.requests.expanded.registration.123.resolve.review')).toContainText('#123');
-  await expect(page.getByTestId('admin.requests.expanded.registration.123.resolve.review.risk')).toBeVisible();
-  await page.getByTestId('admin.requests.expanded.registration.123.resolve.submit').click();
   await expect.poll(() => resolveBodies.length).toBe(1);
   expect(resolveBodies[0]).toEqual({
     registration: {
@@ -100,8 +97,63 @@ test('@workflow-matrix @smoke admin requests: rejected action error is visible',
   await page.goto('/admin/requests/registration/124');
   await expect(page.getByTestId('admin.requests.resolve.action.approve')).toBeVisible();
   await page.getByTestId('admin.requests.resolve.action.approve').click();
-  await page.getByTestId('admin.requests.resolve.submit').click();
   await expect(page.getByRole('alert')).toContainText('Cannot approve this request');
+});
+
+test('@workflow-matrix @smoke admin requests: correction prefills overrides and bulk approve resolves rows', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+
+  const resolveBodies: unknown[] = [];
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100 },
+    handlers: {
+      'GET user_request/registrations': () => ({ registrations: [registration(401), registration(400)] }),
+      'GET user_request/changes': () => ({ changes: [] }),
+      'GET user_request/registrations/401': () => ({ registration: registration(401) }),
+      'POST user_request/registrations/401/resolve': ({ reqJson }) => {
+        resolveBodies.push(reqJson);
+        return { registration: { ...registration(401), state: 'pending_correction' } };
+      },
+      'POST user_request/registrations/400/resolve': ({ reqJson }) => {
+        resolveBodies.push(reqJson);
+        return { registration: { ...registration(400), state: 'approved' } };
+      },
+    },
+  });
+
+  await page.goto('/admin/requests');
+  await expect(page.getByTestId('admin.requests.table')).toBeVisible();
+
+  await page.getByTestId('admin.requests.row.registration.401').getByTestId('admin.requests.expand.registration.401').click();
+  const expanded401 = page.getByTestId('admin.requests.expanded_row.registration.401');
+  await expanded401.getByTestId('admin.requests.expanded.registration.401.resolve.action.request_correction').click();
+  await expect(page.getByTestId('admin.requests.expanded.registration.401.resolve.override.login')).toHaveValue('alice');
+  await expect(page.getByTestId('admin.requests.expanded.registration.401.resolve.override.full_name')).toHaveValue('Alice Example');
+  await page.getByTestId('admin.requests.expanded.registration.401.resolve.reason').fill('Please fix the address');
+  await page.getByTestId('admin.requests.expanded.registration.401.resolve.submit').click();
+  await expect.poll(() => resolveBodies.length).toBe(1);
+  expect(resolveBodies[0]).toEqual({
+    registration: {
+      action: 'request_correction',
+      reason: 'Please fix the address',
+      login: 'alice',
+      full_name: 'Alice Example',
+      email: 'alice@example.test',
+      address: 'Example street',
+    },
+  });
+
+  await page.getByTestId('admin.requests.table').getByTestId('admin.requests.bulk.select.registration.400').check();
+  await page.getByTestId('admin.requests.bulk.apply').click();
+  await expect.poll(() => resolveBodies.length).toBe(2);
+  expect(resolveBodies[1]).toEqual({
+    registration: {
+      action: 'approve',
+      create_vps: true,
+      activate: true,
+    },
+  });
 });
 
 test('@workflow-matrix @smoke admin requests: expand all and collapse all affect visible rows', async ({ page }) => {

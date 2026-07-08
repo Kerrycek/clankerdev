@@ -22,7 +22,7 @@ import { LinkButton } from '../../../components/ui/LinkButton';
 import { Modal } from '../../../components/ui/Modal';
 import { Select } from '../../../components/ui/Select';
 import { Textarea } from '../../../components/ui/Textarea';
-import { RequestResolveReview } from './RequestResolveReview';
+import { RequestResolveReview, type RequestResolveOverrides } from './RequestResolveReview';
 
 export type RequestReviewType = 'registration' | 'change';
 export type ReviewableRequest = RegistrationRequest | ChangeRequest;
@@ -83,10 +83,12 @@ export function requestOperationalLinks(request: ReviewableRequest | undefined) 
 export function requestReviewActions(request: ReviewableRequest | undefined, isAdmin: boolean): ResolveUserRequestAction[] {
   if (!isAdmin || !request) return [];
   const state = String(request.state ?? '').trim();
-  if (state !== 'awaiting' && state !== 'pending_correction') return [];
+  if (state === 'approved') return [];
 
   const actions: ResolveUserRequestAction[] = ['approve', 'deny', 'ignore'];
-  if (state === 'awaiting') actions.push('request_correction');
+  if (state === 'denied') return ['approve', 'ignore', 'request_correction'];
+  if (state === 'ignored') return ['approve', 'deny', 'request_correction'];
+  if (state === 'awaiting' || state === 'pending_correction') actions.push('request_correction');
   return actions;
 }
 
@@ -101,7 +103,49 @@ function actionNeedsReason(action: ResolveUserRequestAction): boolean {
 }
 
 function actionNeedsConfirmation(action: ResolveUserRequestAction): boolean {
-  return action === 'deny' || action === 'ignore';
+  void action;
+  return false;
+}
+
+function stringField(request: ReviewableRequest, key: string): string {
+  const value = (request as Record<string, unknown>)[key];
+  return typeof value === 'string' ? value : '';
+}
+
+function emptyOverrides(): RequestResolveOverrides {
+  return {
+    login: '',
+    fullName: '',
+    orgName: '',
+    orgId: '',
+    email: '',
+    address: '',
+    changeReason: '',
+  };
+}
+
+function requestOverrides(reqType: RequestReviewType, request: ReviewableRequest): RequestResolveOverrides {
+  if (reqType === 'registration') {
+    return {
+      login: stringField(request, 'login'),
+      fullName: stringField(request, 'full_name'),
+      orgName: stringField(request, 'org_name'),
+      orgId: stringField(request, 'org_id'),
+      email: stringField(request, 'email'),
+      address: stringField(request, 'address'),
+      changeReason: '',
+    };
+  }
+
+  return {
+    login: '',
+    fullName: stringField(request, 'full_name'),
+    orgName: '',
+    orgId: '',
+    email: stringField(request, 'email'),
+    address: stringField(request, 'address'),
+    changeReason: stringField(request, 'change_reason'),
+  };
 }
 
 export function RequestOperationalLinks(props: {
@@ -198,34 +242,63 @@ export function RequestReviewActions(props: {
   const confirmationMissing = requiresConfirmation && !confirmed;
   const canSubmit = !submitting && !reasonMissing && !confirmationMissing;
 
+  function setOverrideState(overrides: RequestResolveOverrides) {
+    setOLogin(overrides.login);
+    setOFullName(overrides.fullName);
+    setOOrgName(overrides.orgName);
+    setOOrgId(overrides.orgId);
+    setOEmail(overrides.email);
+    setOAddress(overrides.address);
+    setOChangeReason(overrides.changeReason);
+  }
+
   function openAction(action: ResolveUserRequestAction) {
     setResolveAction(action);
     setResolveReason('');
     setConfirmed(false);
+    setOverrideState(action === 'request_correction' ? requestOverrides(props.reqType, props.request) : emptyOverrides());
+
+    if (action === 'approve' || action === 'ignore') {
+      void submitResolveAction(action, {
+        reason: undefined,
+        overrides: emptyOverrides(),
+        approveCreateVps,
+        approveActivate,
+        approveNode,
+      });
+      return;
+    }
+
     setResolveOpen(true);
   }
 
-  async function submitResolve() {
-    if (!canSubmit) return;
-
-    const reason = resolveReason.trim() || undefined;
+  async function submitResolveAction(
+    action: ResolveUserRequestAction,
+    options: {
+      reason: string | undefined;
+      overrides: RequestResolveOverrides;
+      approveCreateVps: boolean;
+      approveActivate: boolean;
+      approveNode: string;
+    }
+  ) {
     setSubmitting(true);
 
     try {
       if (props.reqType === 'registration') {
-        const p: Parameters<typeof resolveRegistrationRequest>[1] = { action: resolveAction, reason };
+        const p: Parameters<typeof resolveRegistrationRequest>[1] = { action, reason: options.reason };
 
-        if (oLogin.trim()) p.login = oLogin.trim();
-        if (oFullName.trim()) p.full_name = oFullName.trim();
-        if (oOrgName.trim()) p.org_name = oOrgName.trim();
-        if (oOrgId.trim()) p.org_id = oOrgId.trim();
-        if (oEmail.trim()) p.email = oEmail.trim();
-        if (oAddress.trim()) p.address = oAddress.trim();
+        if (options.overrides.login.trim()) p.login = options.overrides.login.trim();
+        if (options.overrides.fullName.trim()) p.full_name = options.overrides.fullName.trim();
+        if (options.overrides.orgName.trim()) p.org_name = options.overrides.orgName.trim();
+        if (options.overrides.orgId.trim()) p.org_id = options.overrides.orgId.trim();
+        if (options.overrides.email.trim()) p.email = options.overrides.email.trim();
+        if (options.overrides.address.trim()) p.address = options.overrides.address.trim();
 
-        if (resolveAction === 'approve') {
-          p.create_vps = approveCreateVps;
-          p.activate = approveActivate;
-          const nodeId = safeNumber(approveNode);
+        if (action === 'approve') {
+          p.create_vps = options.approveCreateVps;
+          p.activate = options.approveActivate;
+          const nodeId = safeNumber(options.approveNode);
           if (nodeId) p.node = nodeId;
         }
 
@@ -233,12 +306,12 @@ export function RequestReviewActions(props: {
         const asId = getMetaActionStateId(res.meta);
         if (asId) chrome.trackActionState(asId);
       } else {
-        const p: Parameters<typeof resolveChangeRequest>[1] = { action: resolveAction, reason };
+        const p: Parameters<typeof resolveChangeRequest>[1] = { action, reason: options.reason };
 
-        if (oFullName.trim()) p.full_name = oFullName.trim();
-        if (oEmail.trim()) p.email = oEmail.trim();
-        if (oAddress.trim()) p.address = oAddress.trim();
-        if (oChangeReason.trim()) p.change_reason = oChangeReason.trim();
+        if (options.overrides.fullName.trim()) p.full_name = options.overrides.fullName.trim();
+        if (options.overrides.email.trim()) p.email = options.overrides.email.trim();
+        if (options.overrides.address.trim()) p.address = options.overrides.address.trim();
+        if (options.overrides.changeReason.trim()) p.change_reason = options.overrides.changeReason.trim();
 
         const res = await resolveChangeRequest(props.reqId, p);
         const asId = getMetaActionStateId(res.meta);
@@ -267,6 +340,26 @@ export function RequestReviewActions(props: {
     }
   }
 
+  async function submitResolve() {
+    if (!canSubmit) return;
+
+    await submitResolveAction(resolveAction, {
+      reason: resolveReason.trim() || undefined,
+      overrides: {
+        login: oLogin,
+        fullName: oFullName,
+        orgName: oOrgName,
+        orgId: oOrgId,
+        email: oEmail,
+        address: oAddress,
+        changeReason: oChangeReason,
+      },
+      approveCreateVps,
+      approveActivate,
+      approveNode,
+    });
+  }
+
   if (!actions.length) {
     return props.isAdmin ? (
       <div className="text-sm text-muted" data-testid={`${props.testIdPrefix}.actions.none`}>
@@ -284,6 +377,7 @@ export function RequestReviewActions(props: {
             variant={actionVariant(action)}
             size={props.compact ? 'sm' : undefined}
             onClick={() => openAction(action)}
+            disabled={submitting}
             testId={`${props.testIdPrefix}.action.${action}`}
           >
             {t(`requests.resolve.action.${action}`)}
@@ -325,8 +419,10 @@ export function RequestReviewActions(props: {
             <Select
               value={resolveAction}
               onChange={(e) => {
-                setResolveAction(e.target.value as ResolveUserRequestAction);
+                const next = e.target.value as ResolveUserRequestAction;
+                setResolveAction(next);
                 setConfirmed(false);
+                setOverrideState(next === 'request_correction' ? requestOverrides(props.reqType, props.request) : emptyOverrides());
               }}
               testId={`${props.testIdPrefix}.action_select`}
             >
@@ -430,22 +526,68 @@ export function RequestReviewActions(props: {
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
             {props.reqType === 'registration' ? (
               <>
-                <Input value={oLogin} onChange={(e) => setOLogin(e.target.value)} placeholder={t('requests.override.login')} />
-                <Input value={oFullName} onChange={(e) => setOFullName(e.target.value)} placeholder={t('requests.override.full_name')} />
-                <Input value={oOrgName} onChange={(e) => setOOrgName(e.target.value)} placeholder={t('requests.override.org_name')} />
-                <Input value={oOrgId} onChange={(e) => setOOrgId(e.target.value)} placeholder={t('requests.override.org_id')} />
-                <Input value={oEmail} onChange={(e) => setOEmail(e.target.value)} placeholder={t('requests.override.email')} />
-                <Input value={oAddress} onChange={(e) => setOAddress(e.target.value)} placeholder={t('requests.override.address')} />
+                <Input
+                  value={oLogin}
+                  onChange={(e) => setOLogin(e.target.value)}
+                  placeholder={t('requests.override.login')}
+                  testId={`${props.testIdPrefix}.override.login`}
+                />
+                <Input
+                  value={oFullName}
+                  onChange={(e) => setOFullName(e.target.value)}
+                  placeholder={t('requests.override.full_name')}
+                  testId={`${props.testIdPrefix}.override.full_name`}
+                />
+                <Input
+                  value={oOrgName}
+                  onChange={(e) => setOOrgName(e.target.value)}
+                  placeholder={t('requests.override.org_name')}
+                  testId={`${props.testIdPrefix}.override.org_name`}
+                />
+                <Input
+                  value={oOrgId}
+                  onChange={(e) => setOOrgId(e.target.value)}
+                  placeholder={t('requests.override.org_id')}
+                  testId={`${props.testIdPrefix}.override.org_id`}
+                />
+                <Input
+                  value={oEmail}
+                  onChange={(e) => setOEmail(e.target.value)}
+                  placeholder={t('requests.override.email')}
+                  testId={`${props.testIdPrefix}.override.email`}
+                />
+                <Input
+                  value={oAddress}
+                  onChange={(e) => setOAddress(e.target.value)}
+                  placeholder={t('requests.override.address')}
+                  testId={`${props.testIdPrefix}.override.address`}
+                />
               </>
             ) : (
               <>
-                <Input value={oFullName} onChange={(e) => setOFullName(e.target.value)} placeholder={t('requests.override.full_name')} />
-                <Input value={oEmail} onChange={(e) => setOEmail(e.target.value)} placeholder={t('requests.override.email')} />
-                <Input value={oAddress} onChange={(e) => setOAddress(e.target.value)} placeholder={t('requests.override.address')} />
+                <Input
+                  value={oFullName}
+                  onChange={(e) => setOFullName(e.target.value)}
+                  placeholder={t('requests.override.full_name')}
+                  testId={`${props.testIdPrefix}.override.full_name`}
+                />
+                <Input
+                  value={oEmail}
+                  onChange={(e) => setOEmail(e.target.value)}
+                  placeholder={t('requests.override.email')}
+                  testId={`${props.testIdPrefix}.override.email`}
+                />
+                <Input
+                  value={oAddress}
+                  onChange={(e) => setOAddress(e.target.value)}
+                  placeholder={t('requests.override.address')}
+                  testId={`${props.testIdPrefix}.override.address`}
+                />
                 <Input
                   value={oChangeReason}
                   onChange={(e) => setOChangeReason(e.target.value)}
                   placeholder={t('requests.override.change_reason')}
+                  testId={`${props.testIdPrefix}.override.change_reason`}
                 />
               </>
             )}
