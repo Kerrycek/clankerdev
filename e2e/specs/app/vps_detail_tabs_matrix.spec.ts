@@ -93,9 +93,10 @@ test('@workflow-matrix @smoke VPS detail tabs expose storage, access, lifecycle,
 
   await expect(page).toHaveURL(/\/app\/vps\/123$/);
   await expect(page.getByTestId('vps.header')).toBeVisible();
-  await expect(page.getByRole('link', { name: /^Storage$/ })).toHaveAttribute('href', '/app/vps/123/storage');
-  await expect(page.getByRole('link', { name: /^Access$/ })).toHaveAttribute('href', '/app/vps/123/access');
-  await expect(page.getByRole('link', { name: /^Console$/ }).first()).toHaveAttribute('href', '/app/vps/123/console');
+  const vpsHeader = page.getByTestId('vps.header');
+  await expect(vpsHeader.getByRole('link', { name: /^Storage$/ })).toHaveAttribute('href', '/app/vps/123/storage');
+  await expect(vpsHeader.getByRole('link', { name: /^Access$/ })).toHaveAttribute('href', '/app/vps/123/access');
+  await expect(vpsHeader.getByRole('link', { name: /^Console$/ }).first()).toHaveAttribute('href', '/app/vps/123/console');
 
   await expect(page.getByTestId('vps.overview.lifecycle')).toBeVisible();
   await expect(page.getByTestId('vps.overview.config.owner')).toHaveCount(0);

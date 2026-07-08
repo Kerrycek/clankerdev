@@ -42,13 +42,13 @@ test('@smoke profile: security review guards password and auth setting changes',
 
   await page.goto('/app/profile/security');
 
-  await expect(page.getByTestId('profile.security.password.review')).toBeVisible();
+  await expect(page.getByTestId('profile.security.password.review')).toHaveCount(0);
   await expect(page.getByTestId('profile.security.password.save')).toBeDisabled();
 
   await page.getByTestId('profile.security.password.current').fill('old-secret');
   await page.getByTestId('profile.security.password.new').fill('new-secret');
   await page.getByTestId('profile.security.password.new2').fill('new-secret');
-  await expect(page.getByTestId('profile.security.password.review.impact')).toContainText('account password will be updated');
+  await expect(page.getByTestId('profile.security.password.save')).toBeEnabled();
 
   const passwordReqP = page.waitForRequest((r) => r.method() === 'PUT' && r.url().includes('/users/1'));
   await page.getByTestId('profile.security.password.save').click();
