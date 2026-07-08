@@ -33,6 +33,7 @@ export const csOps_incidents = {
   "incidents.list.empty": "Žádná hlášení incidentů",
   "incidents.list.load_error": "Nepodařilo se načíst hlášení incidentů",
   "incidents.list.new": "Nové hlášení",
+  "incidents.list.open_detail": "Otevřít detail",
   "incidents.list.title": "Hlášení incidentů",
   "incidents.new.assignment": "Přiřazení IP",
   "incidents.new.assignment.help": "Volitelně přiřaď konkrétní IP.",

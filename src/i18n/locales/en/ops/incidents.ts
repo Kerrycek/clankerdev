@@ -33,6 +33,7 @@ export const enOps_incidents = {
   "incidents.list.empty": "No incident reports",
   "incidents.list.load_error": "Failed to load incident reports",
   "incidents.list.new": "New report",
+  "incidents.list.open_detail": "Open detail",
   "incidents.list.title": "Incident reports",
   "incidents.new.assignment": "IP assignment",
   "incidents.new.assignment.help": "Optionally link a specific IP assignment.",

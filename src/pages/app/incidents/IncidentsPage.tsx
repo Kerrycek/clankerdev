@@ -1029,7 +1029,7 @@ export function IncidentsPage() {
         <>
           <div className="hidden md:block">
             <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-              <table className="min-w-full text-sm" data-testid="incidents.list.table">
+              <table className="table-list min-w-full text-sm" data-testid="incidents.list.table">
                 <thead>
                   <tr className="border-b border-border text-left text-xs text-muted">
                     <th className="w-8 px-4 py-2" aria-label={t('common.state')} />
@@ -1072,7 +1072,11 @@ export function IncidentsPage() {
                         <td className="px-4 py-2">
                           <StatusDot variant={dotVariant} testId={`incidents.list.row.${r.id}.dot`} />
                         </td>
-                        <td className="px-4 py-2 font-mono text-xs">{r.id}</td>
+                        <td className="px-4 py-2 font-mono text-xs">
+                          <MiniLink data-row-no-nav to={to}>
+                            #{r.id}
+                          </MiniLink>
+                        </td>
                         <td className="px-4 py-2">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="text-sm">{det}</span>
@@ -1138,9 +1142,17 @@ export function IncidentsPage() {
                         ) : null}
 
                         <td className="px-4 py-2 text-right">
-                          <MiniLink data-row-no-nav to={to}>
-                            {t('common.open')}
-                          </MiniLink>
+                          <span data-row-no-nav>
+                            <Button
+                              to={to}
+                              variant="secondary"
+                              size="sm"
+                              className="whitespace-nowrap"
+                              testId={`incidents.list.row.${r.id}.open`}
+                            >
+                              {t('incidents.list.open_detail')}
+                            </Button>
+                          </span>
                         </td>
                       </TableRowLink>
                     );
@@ -1199,6 +1211,19 @@ export function IncidentsPage() {
                         ? { label: t('incidents.field.vps_action'), value: t(vpsActionLabelKey(action)) }
                         : null,
                     ].filter(Boolean) as any}
+                    footer={
+                      <div className="border-t border-border px-4 py-3">
+                        <Button
+                          to={to}
+                          variant="secondary"
+                          size="sm"
+                          className="w-full justify-center"
+                          testId={`incidents.list.card.${r.id}.open`}
+                        >
+                          {t('incidents.list.open_detail')}
+                        </Button>
+                      </div>
+                    }
                   />
                 );
               })}

@@ -40,6 +40,7 @@ export const enOps_oom = {
   "oom.list.description": "Kernel OOM kill events.",
   "oom.list.empty": "No OOM reports",
   "oom.list.load_error": "Failed to load OOM reports",
+  "oom.list.open_detail": "Open detail",
   "oom.list.title": "Out-of-memory reports",
   "oom.rule.ignore": "Ignore",
   "oom.rule.implicit": "Implicit",

@@ -40,6 +40,7 @@ export const csOps_oom = {
   "oom.list.description": "Události kernelu (OOM kill).",
   "oom.list.empty": "Žádná OOM hlášení",
   "oom.list.load_error": "Nepodařilo se načíst OOM hlášení",
+  "oom.list.open_detail": "Otevřít detail",
   "oom.list.title": "OOM hlášení",
   "oom.rule.ignore": "Ignorovat",
   "oom.rule.implicit": "Implicitní",
