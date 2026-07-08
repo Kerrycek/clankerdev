@@ -6,6 +6,7 @@ import { useAppMode } from '../../../app/appMode';
 import { useI18n } from '../../../app/i18n';
 
 import { fetchIncomingPayments, updateIncomingPaymentState } from '../../../lib/api/payments';
+import { getMetaTotalCount } from '../../../lib/api/haveapi';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 import { cursorFromDescendingPage } from '../../../lib/lockIndex';
 import { useTierSlowIntervalMs } from '../../../lib/refreshTiers';
@@ -24,6 +25,25 @@ import { IncomingPaymentsListContent } from './IncomingPaymentsListContent';
 import { IncomingPaymentsReconciliationSummary } from './IncomingPaymentsReconciliationCards';
 import { incomingPaymentStateFilterOptions, parsePositiveIntInput } from './IncomingPaymentsModel';
 import { type IncomingPaymentBulkAction, type IncomingPaymentBulkReview } from './IncomingPaymentsBulkModel';
+
+async function fetchIncomingPaymentStateTotal(input: {
+  state: 'queued' | 'unmatched' | 'ignored';
+  q?: string;
+  userId?: number;
+}): Promise<number | undefined> {
+  try {
+    const res = await fetchIncomingPayments({
+      limit: 1,
+      state: input.state,
+      q: input.q,
+      userId: input.userId,
+    });
+
+    return getMetaTotalCount(res.meta);
+  } catch {
+    return undefined;
+  }
+}
 
 export function IncomingPaymentsPage() {
   const { basePath } = useAppMode();
@@ -95,6 +115,25 @@ export function IncomingPaymentsPage() {
           userId: userIdNum,
         })
       ).data,
+    refetchInterval: tierSlowMs,
+  });
+
+  const reconciliationTotalsQ = useQuery({
+    queryKey: [
+      'incoming_payments',
+      'reconciliation_totals',
+      { q: qText.trim() || undefined, user: userIdNum },
+    ],
+    queryFn: async () => {
+      const q = qText.trim() || undefined;
+      const [queued, unmatched, ignored] = await Promise.all([
+        fetchIncomingPaymentStateTotal({ state: 'queued', q, userId: userIdNum }),
+        fetchIncomingPaymentStateTotal({ state: 'unmatched', q, userId: userIdNum }),
+        fetchIncomingPaymentStateTotal({ state: 'ignored', q, userId: userIdNum }),
+      ]);
+
+      return { queued, unmatched, ignored };
+    },
     refetchInterval: tierSlowMs,
   });
 
@@ -227,7 +266,12 @@ export function IncomingPaymentsPage() {
             onClearSelection={clearSelection}
             onApply={applyBulkReview}
           />
-          <IncomingPaymentsReconciliationSummary rows={rows} activeState={state} onSetState={setStateFilter} />
+          <IncomingPaymentsReconciliationSummary
+            rows={rows}
+            activeState={state}
+            onSetState={setStateFilter}
+            stateTotals={reconciliationTotalsQ.data}
+          />
           <IncomingPaymentsListContent
             rows={rows}
             basePath={basePath}

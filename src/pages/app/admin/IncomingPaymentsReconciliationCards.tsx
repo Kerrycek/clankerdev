@@ -22,6 +22,7 @@ function MetricTile(props: {
   label: React.ReactNode;
   value: React.ReactNode;
   description?: React.ReactNode;
+  action?: React.ReactNode;
   badge?: React.ReactNode;
   testId?: string;
 }) {
@@ -33,6 +34,7 @@ function MetricTile(props: {
       </div>
       <div className="mt-2 text-2xl font-semibold leading-none tabular-nums">{props.value}</div>
       {props.description ? <div className="mt-2 text-xs text-muted">{props.description}</div> : null}
+      {props.action ? <div className="mt-3">{props.action}</div> : null}
     </div>
   );
 }
@@ -50,11 +52,17 @@ export function IncomingPaymentsReconciliationSummary(props: {
   rows: IncomingPayment[];
   activeState: string;
   onSetState: (state: string) => void;
+  stateTotals?: Partial<Record<'queued' | 'unmatched' | 'ignored', number>>;
 }) {
   const { t } = useI18n();
   const summary = useMemo(() => buildIncomingPaymentsReconciliationSummary(props.rows), [props.rows]);
 
   const activeStateLabel = props.activeState ? t(incomingPaymentStateLabelKey(props.activeState)) : t('common.all');
+  const queuedCount = props.stateTotals?.queued ?? summary.queued;
+  const unmatchedCount = props.stateTotals?.unmatched ?? summary.unmatched;
+  const ignoredCount = props.stateTotals?.ignored ?? summary.ignored;
+  const needsReviewCount = queuedCount + unmatchedCount;
+  const openReviewState = unmatchedCount > 0 ? 'unmatched' : queuedCount > 0 ? 'queued' : '';
 
   return (
     <Card testId="admin.payments.incoming.reconciliation.summary">
@@ -94,12 +102,43 @@ export function IncomingPaymentsReconciliationSummary(props: {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
           <MetricTile
             label={t('payments.incoming.reconcile.summary.needs_review')}
-            value={summary.needsReview}
-            description={t('payments.incoming.reconcile.summary.needs_review.detail', {
-              queued: summary.queued,
-              unmatched: summary.unmatched,
-            })}
-            badge={<Badge variant={summary.needsReview > 0 ? 'danger' : 'ok'}>{summary.needsReview > 0 ? t('payments.incoming.reconcile.summary.badge.review') : t('payments.incoming.reconcile.summary.badge.ok')}</Badge>}
+            value={needsReviewCount}
+            description={
+              <span className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  className="text-accent underline-offset-2 hover:underline disabled:pointer-events-none disabled:text-muted"
+                  onClick={() => props.onSetState('queued')}
+                  disabled={queuedCount === 0}
+                  data-testid="admin.payments.incoming.reconciliation.summary.open_queued"
+                >
+                  {t('payments.incoming.reconcile.summary.needs_review.queued', { count: queuedCount })}
+                </button>
+                <span aria-hidden="true">·</span>
+                <button
+                  type="button"
+                  className="text-accent underline-offset-2 hover:underline disabled:pointer-events-none disabled:text-muted"
+                  onClick={() => props.onSetState('unmatched')}
+                  disabled={unmatchedCount === 0}
+                  data-testid="admin.payments.incoming.reconciliation.summary.open_unmatched"
+                >
+                  {t('payments.incoming.reconcile.summary.needs_review.unmatched', { count: unmatchedCount })}
+                </button>
+              </span>
+            }
+            action={
+              openReviewState ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => props.onSetState(openReviewState)}
+                  testId="admin.payments.incoming.reconciliation.summary.open_review"
+                >
+                  {t(openReviewState === 'unmatched' ? 'payments.incoming.reconcile.summary.open_unmatched' : 'payments.incoming.reconcile.summary.open_queued')}
+                </Button>
+              ) : null
+            }
+            badge={<Badge variant={needsReviewCount > 0 ? 'danger' : 'ok'}>{needsReviewCount > 0 ? t('payments.incoming.reconcile.summary.badge.review') : t('payments.incoming.reconcile.summary.badge.ok')}</Badge>}
             testId="admin.payments.incoming.reconciliation.metric.needs_review"
           />
           <MetricTile
@@ -116,8 +155,20 @@ export function IncomingPaymentsReconciliationSummary(props: {
           />
           <MetricTile
             label={t('payments.incoming.reconcile.summary.ignored')}
-            value={summary.ignored}
+            value={ignoredCount}
             description={t('payments.incoming.reconcile.summary.ignored.detail')}
+            action={
+              ignoredCount > 0 ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => props.onSetState('ignored')}
+                  testId="admin.payments.incoming.reconciliation.summary.open_ignored"
+                >
+                  {t('payments.incoming.reconcile.summary.open_ignored')}
+                </Button>
+              ) : null
+            }
             testId="admin.payments.incoming.reconciliation.metric.ignored"
           />
         </div>
