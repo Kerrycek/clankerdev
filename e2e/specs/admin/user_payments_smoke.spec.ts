@@ -38,7 +38,7 @@ test.describe('@smoke Admin user payments', () => {
           },
         }),
         'GET users/42/get_payment_instructions': () => ({
-          instructions: 'Account: 123456/0100\nVS: 42\nMessage: alice',
+          instructions: '<h3>Payment in EUR</h3><table><tr><td>Account:</td><td>123456/0100</td></tr><tr><td>VS:</td><td>42</td></tr></table>',
         }),
         'GET user_payments': () => ({
           user_payments: [
@@ -73,7 +73,10 @@ test.describe('@smoke Admin user payments', () => {
     await expect(page.getByTestId('admin.user.payments.stat.monthly_payment')).toBeVisible();
     await expect(page.getByTestId('admin.user.payments.stat.payment_id')).toBeVisible();
   
-    await expect(page.getByTestId('admin.user.payments.instructions.text')).toContainText('VS: 42');
+    const instructionsFrame = page.frameLocator('[data-testid="admin.user.payments.instructions.text"]');
+    await expect(instructionsFrame.getByRole('heading', { name: 'Payment in EUR' })).toBeVisible();
+    await expect(instructionsFrame.getByText('123456/0100')).toBeVisible();
+    await expect(instructionsFrame.locator('body')).not.toContainText('<h3>');
   
     await expect(page.getByTestId('admin.user.payments.history.table')).toBeVisible();
     await expect(page.getByTestId('admin.user.payments.history.row.9001')).toBeVisible();

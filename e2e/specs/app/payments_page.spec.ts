@@ -25,7 +25,7 @@ test('user payments page: shows status, instructions and history', async ({ page
   haveApiMock.addHandler('GET users/1/get_payment_instructions', () => {
     return {
       hash: {
-        instructions: 'IBAN: CZ00TEST\nVS: 1\nMessage: vpsFree.cz membership',
+        instructions: '<h3>Payment in CZK</h3><table><tr><td>IBAN:</td><td>CZ00TEST</td></tr><tr><td>VS:</td><td>1</td></tr></table>',
       },
     };
   });
@@ -58,7 +58,10 @@ test('user payments page: shows status, instructions and history', async ({ page
   await expect(page.getByTestId('payments.my.stat.paid_until')).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId('payments.my.stat.paid_until').getByText('Paid', { exact: true })).toBeVisible();
 
-  await expect(page.getByTestId('payments.my.instructions.text')).toContainText('IBAN: CZ00TEST');
+  const instructionsFrame = page.frameLocator('[data-testid="payments.my.instructions.text"]');
+  await expect(instructionsFrame.getByRole('heading', { name: 'Payment in CZK' })).toBeVisible();
+  await expect(instructionsFrame.getByText('CZ00TEST')).toBeVisible();
+  await expect(instructionsFrame.locator('body')).not.toContainText('<h3>');
   await expect(page.getByTestId('payments.my.instructions.copy')).toBeVisible();
 
   await expect(page.getByTestId('payments.my.history.table')).toBeVisible();

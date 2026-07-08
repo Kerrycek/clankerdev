@@ -17,6 +17,7 @@ import { ErrorState } from '../../../../components/ui/ErrorState';
 import { Input } from '../../../../components/ui/Input';
 import { KeysetPagination } from '../../../../components/ui/KeysetPagination';
 import { LoadingState } from '../../../../components/ui/LoadingState';
+import { SandboxedHtml } from '../../../../components/ui/SandboxedHtml';
 import { StatCard } from '../../../../components/ui/StatCard';
 
 import { createUserPayment, fetchPaymentInstructions, fetchUserPayments } from '../../../../lib/api/payments';
@@ -349,12 +350,13 @@ export function AdminUserPaymentsPage() {
             ) : null}
             {!instructionsQ.isLoading && !instructionsQ.isError ? (
               instructions ? (
-                <pre
-                  className="whitespace-pre-wrap break-words rounded-md border border-border bg-surface-2 p-3 text-sm"
-                  data-testid="admin.user.payments.instructions.text"
-                >
-                  {instructions}
-                </pre>
+                <SandboxedHtml
+                  html={instructions}
+                  title={t('payments.my.instructions.title')}
+                  autoHeight
+                  maxAutoHeight={900}
+                  testId="admin.user.payments.instructions.text"
+                />
               ) : (
                 <div className="text-sm text-muted" data-testid="admin.user.payments.instructions.empty">
                   {t('common.na')}

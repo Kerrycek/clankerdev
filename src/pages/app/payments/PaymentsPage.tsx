@@ -25,6 +25,7 @@ import { EmptyState } from '../../../components/ui/EmptyState';
 import { ErrorState } from '../../../components/ui/ErrorState';
 import { KeysetPagination } from '../../../components/ui/KeysetPagination';
 import { LoadingState } from '../../../components/ui/LoadingState';
+import { SandboxedHtml } from '../../../components/ui/SandboxedHtml';
 import { StatCard } from '../../../components/ui/StatCard';
 
 export function PaymentsPage() {
@@ -121,7 +122,13 @@ export function PaymentsPage() {
             ) : null}
             {!instructionsQ.isLoading && !instructionsQ.isError ? (
               instructions ? (
-                <pre className="whitespace-pre-wrap break-words rounded-md border border-border bg-surface-2 p-3 text-sm" data-testid="payments.my.instructions.text">{instructions}</pre>
+                <SandboxedHtml
+                  html={instructions}
+                  title={t('payments.my.instructions.title')}
+                  autoHeight
+                  maxAutoHeight={900}
+                  testId="payments.my.instructions.text"
+                />
               ) : (
                 <div className="text-sm text-muted" data-testid="payments.my.instructions.empty">{t('common.na')}</div>
               )
