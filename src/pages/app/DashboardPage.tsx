@@ -12,13 +12,13 @@ import { PageHeader } from "../../components/layout/PageHeader";
 import { Alert } from "../../components/ui/Alert";
 import { fetchDatasets } from "../../lib/api/datasets";
 import { fetchDnsZones } from "../../lib/api/dns";
-import { getMetaTotalCount } from "../../lib/api/haveapi";
 import { fetchNews, fetchOutages, fetchPublicNodeStatus, type Outage } from "../../lib/api/public";
 import { fetchSecurityAdvisoriesWithCves } from "../../lib/api/securityAdvisories";
 import { fetchVpsList } from "../../lib/api/vps";
 import { categorizeOutage, sortOutagesNewestFirst } from "../../lib/outage";
 import { useTierBIntervalMs, useTierSlowIntervalMs } from "../../lib/refreshTiers";
 
+import { countDashboardRows } from "./DashboardCounts";
 import { DashboardOperationalSummary } from "./DashboardPageStatus";
 import { DashboardPreferencesCard } from "./DashboardPreferencesCard";
 import { DashboardSummaryCards } from "./DashboardSummaryCards";
@@ -53,24 +53,24 @@ export function DashboardPage() {
   const vpsQ = useQuery({
     queryKey: ["dashboard", "vps_count", { user: mineUserId ?? null }],
     queryFn: async () => {
-      const res = await fetchVpsList({ limit: 1, user: mineUserId });
-      return { totalCount: getMetaTotalCount(res.meta) ?? res.data.length };
+      const totalCount = await countDashboardRows(({ limit, fromId }) => fetchVpsList({ limit, fromId, user: mineUserId }));
+      return { totalCount };
     },
   });
 
   const datasetsQ = useQuery({
     queryKey: ["dashboard", "datasets_count", { user: mineUserId ?? null }],
     queryFn: async () => {
-      const res = await fetchDatasets({ limit: 1, user: mineUserId });
-      return { totalCount: getMetaTotalCount(res.meta) ?? res.data.length };
+      const totalCount = await countDashboardRows(({ limit, fromId }) => fetchDatasets({ limit, fromId, user: mineUserId }));
+      return { totalCount };
     },
   });
 
   const dnsZonesQ = useQuery({
     queryKey: ["dashboard", "dns_zones_count", { user: mineUserId ?? null }],
     queryFn: async () => {
-      const res = await fetchDnsZones({ limit: 1, user: mineUserId });
-      return { totalCount: getMetaTotalCount(res.meta) ?? res.data.length };
+      const totalCount = await countDashboardRows(({ limit, fromId }) => fetchDnsZones({ limit, fromId, user: mineUserId }));
+      return { totalCount };
     },
   });
 
