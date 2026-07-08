@@ -153,6 +153,12 @@ function AppUserMenu(props: Pick<AppHeaderProps,
           value: sessionRemaining,
         }
       : null;
+  const segmentedButtonClass = (active: boolean) =>
+    clsx(
+      'inline-flex min-h-8 w-full items-center justify-center rounded-md border px-2 py-1 text-center text-xs font-medium leading-tight transition-colors',
+      'focus:outline-none focus:ring-2 focus:ring-focus/35 focus:ring-offset-2 focus:ring-offset-bg',
+      active ? 'border-accent bg-accent text-accent-fg hover:bg-accent-hover' : 'border-border bg-surface text-fg hover:bg-surface-2'
+    );
 
   return (
     <div className="relative order-10 md:order-8" ref={userMenuRef}>
@@ -177,7 +183,7 @@ function AppUserMenu(props: Pick<AppHeaderProps,
 
       {userMenuOpen ? (
         <div
-          className="absolute right-0 mt-2 w-64 rounded-md border border-border bg-overlay-surface p-2 shadow-panel"
+          className="absolute right-0 mt-2 w-72 rounded-md border border-border bg-overlay-surface p-2 shadow-panel"
           data-testid="shell.user-menu"
           data-overlay="popover"
           data-overlay-surface="overlay"
@@ -192,12 +198,11 @@ function AppUserMenu(props: Pick<AppHeaderProps,
           {canSwitchMode ? (
             <div className={clsx('px-2 py-1', sessionDisplay ? 'mt-2 border-t border-border pt-2' : '')}>
               <div className="text-xs text-muted">{t('settings.scope.label')}</div>
-              <div className="mt-1 grid grid-cols-2 gap-2">
-                <Button
-                  testId="shell.user-menu.scope.mine"
-                  variant={mode === 'user' ? 'primary' : 'secondary'}
-                  size="sm"
-                  className="w-full"
+              <div className="mt-1 grid grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] gap-2">
+                <button
+                  type="button"
+                  data-testid="shell.user-menu.scope.mine"
+                  className={segmentedButtonClass(mode === 'user')}
                   onClick={() => {
                     if (mode === 'user') return;
                     setUserMenuOpen(false);
@@ -205,12 +210,11 @@ function AppUserMenu(props: Pick<AppHeaderProps,
                   }}
                 >
                   {t('settings.scope.mine')}
-                </Button>
-                <Button
-                  testId="shell.user-menu.scope.all"
-                  variant={mode === 'admin' ? 'primary' : 'secondary'}
-                  size="sm"
-                  className="w-full"
+                </button>
+                <button
+                  type="button"
+                  data-testid="shell.user-menu.scope.all"
+                  className={segmentedButtonClass(mode === 'admin')}
                   onClick={() => {
                     if (mode === 'admin') return;
                     setUserMenuOpen(false);
@@ -218,7 +222,7 @@ function AppUserMenu(props: Pick<AppHeaderProps,
                   }}
                 >
                   {t('settings.scope.all')}
-                </Button>
+                </button>
               </div>
               <p className={clsx('mt-2 text-xs', mode === 'admin' ? 'text-warn' : 'text-muted')}>
                 {mode === 'admin' ? t('scope.indicator.admin_hint') : t('scope.indicator.my_hint')}
@@ -229,68 +233,62 @@ function AppUserMenu(props: Pick<AppHeaderProps,
           <div className="mt-2 border-t border-border px-2 pt-2">
             <div className="text-xs text-muted">{t('settings.theme.label')}</div>
             <div className="mt-1 grid grid-cols-3 gap-2">
-              <Button
-                testId="shell.user-menu.theme.system"
-                variant={theme === 'system' ? 'primary' : 'secondary'}
-                size="sm"
-                className="w-full"
+              <button
+                type="button"
+                data-testid="shell.user-menu.theme.system"
+                className={segmentedButtonClass(theme === 'system')}
                 onClick={() => onSetTheme('system')}
               >
                 {t('settings.theme.system')}
-              </Button>
-              <Button
-                testId="shell.user-menu.theme.light"
-                variant={theme === 'light' ? 'primary' : 'secondary'}
-                size="sm"
-                className="w-full"
+              </button>
+              <button
+                type="button"
+                data-testid="shell.user-menu.theme.light"
+                className={segmentedButtonClass(theme === 'light')}
                 onClick={() => onSetTheme('light')}
               >
                 {t('settings.theme.light')}
-              </Button>
-              <Button
-                testId="shell.user-menu.theme.dark"
-                variant={theme === 'dark' ? 'primary' : 'secondary'}
-                size="sm"
-                className="w-full"
+              </button>
+              <button
+                type="button"
+                data-testid="shell.user-menu.theme.dark"
+                className={segmentedButtonClass(theme === 'dark')}
                 onClick={() => onSetTheme('dark')}
               >
                 {t('settings.theme.dark')}
-              </Button>
+              </button>
             </div>
           </div>
 
           <div className="mt-2 border-t border-border px-2 pt-2">
             <div className="text-xs text-muted">{t('settings.language.label')}</div>
             <div className="mt-1 grid grid-cols-3 gap-2">
-              <Button
-                testId="shell.user-menu.language.system"
-                variant={language === 'system' ? 'primary' : 'secondary'}
-                size="sm"
-                className="w-full"
+              <button
+                type="button"
+                data-testid="shell.user-menu.language.system"
+                className={segmentedButtonClass(language === 'system')}
                 onClick={() => onSetLanguage('system')}
               >
                 {t('settings.language.system')}
-              </Button>
-              <Button
-                testId="shell.user-menu.language.en"
-                variant={language === 'en' ? 'primary' : 'secondary'}
-                size="sm"
-                className="w-full"
+              </button>
+              <button
+                type="button"
+                data-testid="shell.user-menu.language.en"
                 title={t('settings.language.en')}
+                className={segmentedButtonClass(language === 'en')}
                 onClick={() => onSetLanguage('en')}
               >
                 EN
-              </Button>
-              <Button
-                testId="shell.user-menu.language.cs"
-                variant={language === 'cs' ? 'primary' : 'secondary'}
-                size="sm"
-                className="w-full"
+              </button>
+              <button
+                type="button"
+                data-testid="shell.user-menu.language.cs"
                 title={t('settings.language.cs')}
+                className={segmentedButtonClass(language === 'cs')}
                 onClick={() => onSetLanguage('cs')}
               >
                 CS
-              </Button>
+              </button>
             </div>
           </div>
 
