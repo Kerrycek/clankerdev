@@ -15,6 +15,7 @@ export interface DashboardCountPage<T extends DashboardCountRow> {
 interface DashboardCountOptions {
   pageSize?: number;
   maxPages?: number;
+  allowFallbackPagination?: boolean;
 }
 
 function getNumericId(row: DashboardCountRow | undefined): number | undefined {
@@ -33,6 +34,7 @@ export async function countDashboardRows<T extends DashboardCountRow>(
 ): Promise<number> {
   const pageSize = opts.pageSize ?? DEFAULT_PAGE_SIZE;
   const maxPages = opts.maxPages ?? DEFAULT_MAX_PAGES;
+  const allowFallbackPagination = opts.allowFallbackPagination ?? true;
   let fromId: number | undefined;
   let count = 0;
 
@@ -42,6 +44,7 @@ export async function countDashboardRows<T extends DashboardCountRow>(
     if (totalCount !== undefined) return totalCount;
 
     count += res.data.length;
+    if (!allowFallbackPagination) return count;
     if (res.data.length < pageSize) return count;
 
     const nextFromId = getNumericId(res.data[res.data.length - 1]);

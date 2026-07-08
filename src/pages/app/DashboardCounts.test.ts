@@ -44,4 +44,13 @@ describe("countDashboardRows", () => {
     await expect(countDashboardRows(fetchPage, { pageSize: 1, maxPages: 3 })).resolves.toBe(3);
     expect(fetchPage).toHaveBeenCalledTimes(3);
   });
+
+  test("can avoid fallback pagination when metadata is missing", async () => {
+    const fetchPage = vi.fn(async () => ({
+      data: [{ id: 20 }, { id: 19 }],
+    }));
+
+    await expect(countDashboardRows(fetchPage, { pageSize: 2, allowFallbackPagination: false })).resolves.toBe(2);
+    expect(fetchPage).toHaveBeenCalledTimes(1);
+  });
 });

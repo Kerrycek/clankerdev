@@ -10,6 +10,7 @@ import { useObjectScope } from "../../app/objectScope";
 import { PageContainer } from "../../components/layout/PageContainer";
 import { PageHeader } from "../../components/layout/PageHeader";
 import { Alert } from "../../components/ui/Alert";
+import { fetchClusterFullStats } from "../../lib/api/cluster";
 import { fetchDatasets } from "../../lib/api/datasets";
 import { fetchDnsZones } from "../../lib/api/dns";
 import { fetchNews, fetchOutages, fetchPublicNodeStatus, type Outage } from "../../lib/api/public";
@@ -49,6 +50,14 @@ export function DashboardPage() {
   const { dashboardSettings, setDashboardSettings } = useDashboardSettingsState();
 
   const mineUserId = scope.mineUserId;
+  const isAdminScope = scope.scope === "all";
+
+  const clusterStatsQ = useQuery({
+    queryKey: ["dashboard", "cluster_full_stats"],
+    queryFn: async () => (await fetchClusterFullStats()).data,
+    enabled: isAdminScope,
+    refetchInterval: tierSlowRefetchMs,
+  });
 
   const vpsQ = useQuery({
     queryKey: ["dashboard", "vps_count", { user: mineUserId ?? null }],
@@ -56,20 +65,27 @@ export function DashboardPage() {
       const totalCount = await countDashboardRows(({ limit, fromId }) => fetchVpsList({ limit, fromId, user: mineUserId }));
       return { totalCount };
     },
+    enabled: !isAdminScope,
   });
 
   const datasetsQ = useQuery({
-    queryKey: ["dashboard", "datasets_count", { user: mineUserId ?? null }],
+    queryKey: ["dashboard", "datasets_count", { user: mineUserId ?? null, scope: scope.scope }],
     queryFn: async () => {
-      const totalCount = await countDashboardRows(({ limit, fromId }) => fetchDatasets({ limit, fromId, user: mineUserId }));
+      const totalCount = await countDashboardRows(
+        ({ limit, fromId }) => fetchDatasets({ limit, fromId, user: mineUserId }),
+        { allowFallbackPagination: !isAdminScope },
+      );
       return { totalCount };
     },
   });
 
   const dnsZonesQ = useQuery({
-    queryKey: ["dashboard", "dns_zones_count", { user: mineUserId ?? null }],
+    queryKey: ["dashboard", "dns_zones_count", { user: mineUserId ?? null, scope: scope.scope }],
     queryFn: async () => {
-      const totalCount = await countDashboardRows(({ limit, fromId }) => fetchDnsZones({ limit, fromId, user: mineUserId }));
+      const totalCount = await countDashboardRows(
+        ({ limit, fromId }) => fetchDnsZones({ limit, fromId, user: mineUserId }),
+        { allowFallbackPagination: !isAdminScope },
+      );
       return { totalCount };
     },
   });
@@ -191,9 +207,9 @@ export function DashboardPage() {
           basePath={basePath}
           density={dashboardSettings.density}
           vps={{
-            isLoading: vpsQ.isLoading,
-            isError: vpsQ.isError,
-            totalCount: vpsQ.data?.totalCount,
+            isLoading: isAdminScope ? clusterStatsQ.isLoading : vpsQ.isLoading,
+            isError: isAdminScope ? clusterStatsQ.isError : vpsQ.isError,
+            totalCount: isAdminScope ? clusterStatsQ.data?.vps_count : vpsQ.data?.totalCount,
           }}
           datasets={{
             isLoading: datasetsQ.isLoading,
