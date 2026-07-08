@@ -228,6 +228,18 @@ export const router = createBrowserRouter([
                 { path: 'expansion', element: <DatasetExpansionPage /> },
               ],
             },
+            {
+              path: 'nas/:datasetId',
+              element: <DatasetLayout />,
+              children: [
+                { index: true, element: <DatasetOverviewPage /> },
+                { path: 'snapshots', element: <DatasetSnapshotsPage /> },
+                { path: 'downloads', element: <DatasetDownloadsPage /> },
+                { path: 'exports', element: <DatasetExportsPage /> },
+                { path: 'plans', element: <DatasetPlansPage /> },
+                { path: 'expansion', element: <DatasetExpansionPage /> },
+              ],
+            },
             { path: 'dns', element: <DnsZonesPage /> },
             {
               path: 'dns/zones/:zoneId',
@@ -390,6 +402,18 @@ export const router = createBrowserRouter([
             { path: 'exports/:exportId', element: <ExportDetailPage /> },
             {
               path: 'datasets/:datasetId',
+              element: <DatasetLayout />,
+              children: [
+                { index: true, element: <DatasetOverviewPage /> },
+                { path: 'snapshots', element: <DatasetSnapshotsPage /> },
+                { path: 'downloads', element: <DatasetDownloadsPage /> },
+                { path: 'exports', element: <DatasetExportsPage /> },
+                { path: 'plans', element: <DatasetPlansPage /> },
+                { path: 'expansion', element: <DatasetExpansionPage /> },
+              ],
+            },
+            {
+              path: 'nas/:datasetId',
               element: <DatasetLayout />,
               children: [
                 { index: true, element: <DatasetOverviewPage /> },

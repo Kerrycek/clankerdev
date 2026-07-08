@@ -294,6 +294,7 @@ function DetailsCard(props: { dataset: any }) {
 function QuickActionsCard(props: { dataset: any }) {
   const { t } = useI18n();
   const { basePath } = useAppMode();
+  const { detailPath } = useDatasetContext();
 
   const ds = props.dataset;
 
@@ -306,10 +307,10 @@ function QuickActionsCard(props: { dataset: any }) {
       <CardHeader title={t('dataset.overview.actions.title')} subtitle={t('dataset.overview.actions.subtitle')} />
       <CardBody>
         <div className="flex flex-wrap gap-2">
-          <ChipLink to={`${basePath}/datasets/${ds.id}/snapshots`}>
+          <ChipLink to={`${detailPath}/snapshots`}>
             {t('dataset.overview.actions.snapshots')}
           </ChipLink>
-          <ChipLink to={`${basePath}/datasets/${ds.id}/downloads`}>
+          <ChipLink to={`${detailPath}/downloads`}>
             {t('dataset.overview.actions.downloads')}
           </ChipLink>
 
@@ -380,10 +381,9 @@ function buildEditablePayload(form: DatasetEditForm, isAdmin: boolean): DatasetE
 function DatasetManagementCard() {
   const { t } = useI18n();
   const { role } = useAuth();
-  const { basePath } = useAppMode();
   const chrome = useChrome();
   const navigate = useNavigate();
-  const { dataset, refetch, refetchChains, datasetRef, busyLocalLock, busyTransaction } = useDatasetContext();
+  const { dataset, refetch, refetchChains, datasetRef, busyLocalLock, busyTransaction, listPath } = useDatasetContext();
   const isAdmin = role === 'admin';
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -444,7 +444,7 @@ function DatasetManagementCard() {
       setCreateOpen(false);
       setChildName('');
       const newId = Number((res.data as Dataset | undefined)?.id);
-      if (Number.isInteger(newId) && newId > 0) navigate(`${basePath}/datasets/${newId}`);
+      if (Number.isInteger(newId) && newId > 0) navigate(`${listPath}/${newId}`);
     },
     onError: (e: any) => {
       if (e?.code === 'BUSY') chrome.openTasks();
@@ -471,7 +471,7 @@ function DatasetManagementCard() {
     onSuccess: (res) => {
       track(res.meta, 'action.dataset.delete.label');
       setDeleteOpen(false);
-      navigate(`${basePath}/datasets`);
+      navigate(listPath);
     },
     onError: (e: any) => {
       if (e?.code === 'BUSY') chrome.openTasks();

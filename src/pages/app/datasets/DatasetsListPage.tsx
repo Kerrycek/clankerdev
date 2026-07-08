@@ -142,6 +142,7 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
   const vpsIdNum = useMemo(() => parsePositiveInt(vpsRaw), [vpsRaw]);
   const showOwnerColumn = requestedOwnerColumn && mode === 'admin';
   const listId = rolePreset === 'primary' ? 'nas.list' : 'datasets.list';
+  const detailSection = rolePreset === 'primary' ? 'nas' : 'datasets';
   const includes = showOwnerColumn ? 'user' : showVpsFilter ? 'vps' : undefined;
 
   // URL hygiene: keep unsupported/invalid params from lingering.
@@ -269,7 +270,7 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
   }
 
   async function openDatasetById(id: number) {
-    navigate(`${basePath}/datasets/${id}`);
+    navigate(`${basePath}/${detailSection}/${id}`);
   }
 
   // Smart filter input
@@ -685,7 +686,7 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
                           <StatusDot variant={dotVariant} testId={`datasets.card.${ds.id}.dot`} />
                           <Link
                             className="block truncate text-base font-semibold text-accent hover:underline"
-                            to={`${basePath}/datasets/${ds.id}`}
+                            to={`${basePath}/${detailSection}/${ds.id}`}
                           >
                             {label}
                           </Link>
@@ -807,7 +808,7 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
                   <TableRowLink
                     key={ds.id}
                     testId={`datasets.row.${ds.id}`}
-                    to={`${basePath}/datasets/${ds.id}`}
+                    to={`${basePath}/${detailSection}/${ds.id}`}
                     variant={rowVariant}
                     className="border-b border-border/60 last:border-b-0"
                   >
@@ -815,7 +816,7 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
                       <StatusDot variant={dotVariant} testId={`datasets.row.${ds.id}.dot`} />
                     </td>
                     <td className="px-4 py-2">
-                      <Link className="font-medium text-accent hover:underline" to={`${basePath}/datasets/${ds.id}`}>
+                      <Link className="font-medium text-accent hover:underline" to={`${basePath}/${detailSection}/${ds.id}`}>
                         {label}
                       </Link>
                       <div className="mt-0.5 text-xs text-faint">#{ds.id}</div>

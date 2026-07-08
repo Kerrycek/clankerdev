@@ -8,6 +8,10 @@ export interface DatasetContextValue {
   dataset: Dataset;
   refetch: () => void;
 
+  section: 'datasets' | 'nas';
+  listPath: string;
+  detailPath: string;
+
   datasetRef: ObjectRef;
 
   /** True when this tab has a local lock for the dataset (i.e. we started an action,

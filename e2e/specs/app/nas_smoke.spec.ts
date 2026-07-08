@@ -49,6 +49,83 @@ test.describe('NAS datasets alias', () => {
     await expect(page.getByTestId('datasets.advanced.vps')).toHaveCount(0);
   });
 
+  test('keeps NAS dataset details and management navigation under NAS', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    const datasets: Record<number, any> = {
+      901: {
+        id: 901,
+        full_name: 'tank/nas/alice',
+        name: 'alice',
+        user: { id: 44, login: 'alice' },
+        used: 1024,
+        avail: 10240,
+        quota: 0,
+        refquota: 4096,
+        recordsize: 131072,
+        compression: true,
+        atime: false,
+        relatime: false,
+        sync: 'standard',
+        snapshots_count: 1,
+        mount_count: 0,
+        export_count: 0,
+        object_state: 'active',
+      },
+      902: {
+        id: 902,
+        full_name: 'tank/nas/alice/projects',
+        name: 'projects',
+        user: { id: 44, login: 'alice' },
+        used: 0,
+        avail: 10240,
+        quota: 0,
+        refquota: 8192,
+        recordsize: 131072,
+        compression: true,
+        atime: false,
+        relatime: false,
+        sync: 'standard',
+        snapshots_count: 0,
+        mount_count: 0,
+        export_count: 0,
+        object_state: 'active',
+      },
+    };
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
+      handlers: {
+        'GET datasets': ({ searchParams }) => {
+          const role = searchParams.get('dataset[role]');
+          if (role !== 'primary') return { datasets: [], _meta: { total_count: 0 } };
+          return { datasets: [datasets[901]], _meta: { total_count: 1 } };
+        },
+        'GET datasets/901': () => datasets[901],
+        'GET datasets/902': () => datasets[902],
+        'GET transaction_chains': () => ({ transaction_chains: [], _meta: { total_count: 0 } }),
+        'POST datasets': () => {
+          return { dataset: datasets[902] };
+        },
+      },
+    });
+
+    await page.goto('/admin/nas');
+    await page.getByRole('link', { name: 'tank/nas/alice' }).click();
+
+    await expect(page).toHaveURL(/\/admin\/nas\/901$/);
+    await expect(page.getByTestId('dataset.header')).toContainText('NAS');
+    await expect(page.getByRole('link', { name: 'Snapshots' })).toHaveAttribute('href', '/admin/nas/901/snapshots');
+    await expect(page.getByRole('link', { name: 'Downloads' })).toHaveAttribute('href', '/admin/nas/901/downloads');
+
+    await page.getByTestId('dataset.manage.create.open').click();
+    await page.getByTestId('dataset.manage.create.name').fill('projects');
+    await page.getByTestId('dataset.manage.refquota').fill('8');
+    await page.getByTestId('dataset.manage.create.submit').click();
+
+    await expect(page).toHaveURL(/\/admin\/nas\/902$/);
+  });
+
   test('shows NAS-specific empty state and keeps filter clearing available', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 

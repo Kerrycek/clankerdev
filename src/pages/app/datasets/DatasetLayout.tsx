@@ -38,6 +38,8 @@ export function DatasetLayout() {
   const chrome = useChrome();
   const location = useLocation();
   const online = useNetworkStatus();
+  const section = location.pathname.includes('/nas/') ? 'nas' : 'datasets';
+  const listPath = `${basePath}/${section}`;
 
   const datasetRef = React.useMemo(() => {
     if (!Number.isFinite(id) || id <= 0) return null;
@@ -68,7 +70,7 @@ export function DatasetLayout() {
         kindOverride="not_found"
         title={t('dataset.layout.invalid_id')}
         body={t('error.not_found.body')}
-        backTo={`${basePath}/datasets`}
+        backTo={listPath}
         showStatusLink={false}
         showDetails={false}
         detailsExtra={{ page: 'dataset.detail', datasetId }}
@@ -85,7 +87,7 @@ export function DatasetLayout() {
         title={t('dataset.layout.load_error.title')}
         error={q.error}
         onRetry={() => void q.refetch()}
-        backTo={`${basePath}/datasets`}
+        backTo={listPath}
         detailsExtra={{ page: 'dataset.detail', datasetId: id, scope: scope.scope }}
       />
     );
@@ -123,7 +125,7 @@ export function DatasetLayout() {
         objectLabel={name}
         ownerUserId={ownerId}
         adminHref={adminHref}
-        backHref={`${basePath}/datasets`}
+        backHref={listPath}
         testId="datasets.scope-mismatch"
       />
     );
@@ -132,13 +134,15 @@ export function DatasetLayout() {
   const vpsId = ds.vps && typeof ds.vps === 'object' && 'id' in ds.vps ? Number((ds.vps as any).id) : undefined;
   const vpsHostname = ds.vps && typeof ds.vps === 'object' ? String((ds.vps as any).hostname ?? '') : '';
 
+  const detailPath = `${listPath}/${ds.id}`;
+
   const tabs = [
-    { label: t('dataset.tabs.overview'), to: `${basePath}/datasets/${ds.id}`, end: true },
-    { label: t('dataset.tabs.snapshots'), to: `${basePath}/datasets/${ds.id}/snapshots` },
-    { label: t('dataset.tabs.downloads'), to: `${basePath}/datasets/${ds.id}/downloads` },
-    { label: t('dataset.tabs.exports'), to: `${basePath}/datasets/${ds.id}/exports` },
-    { label: t('dataset.tabs.plans'), to: `${basePath}/datasets/${ds.id}/plans` },
-    { label: t('dataset.tabs.expansion'), to: `${basePath}/datasets/${ds.id}/expansion` },
+    { label: t('dataset.tabs.overview'), to: detailPath, end: true },
+    { label: t('dataset.tabs.snapshots'), to: `${detailPath}/snapshots` },
+    { label: t('dataset.tabs.downloads'), to: `${detailPath}/downloads` },
+    { label: t('dataset.tabs.exports'), to: `${detailPath}/exports` },
+    { label: t('dataset.tabs.plans'), to: `${detailPath}/plans` },
+    { label: t('dataset.tabs.expansion'), to: `${detailPath}/expansion` },
   ];
 
   return (
@@ -146,6 +150,9 @@ export function DatasetLayout() {
       value={{
         dataset: ds,
         refetch: () => void q.refetch(),
+        section,
+        listPath,
+        detailPath,
         datasetRef: datasetRef!,
         busyLocalLock,
         chains,
@@ -162,8 +169,8 @@ export function DatasetLayout() {
           testId="dataset.header"
           kicker={
             <>
-              <Link className="text-accent hover:underline" to={`${basePath}/datasets`}>
-                {t('nav.datasets')}
+              <Link className="text-accent hover:underline" to={listPath}>
+                {section === 'nas' ? t('nav.nas') : t('nav.datasets')}
               </Link>
               <span className="text-faint"> · </span>
               <span>#{ds.id}</span>

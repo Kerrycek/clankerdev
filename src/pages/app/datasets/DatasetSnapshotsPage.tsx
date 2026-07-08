@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
-import { useAppMode } from '../../../app/appMode';
 import { useAuth } from '../../../app/auth';
 import { getRuntimeConfig } from '../../../app/config';
 import { useI18n } from '../../../app/i18n';
@@ -72,9 +71,9 @@ export function DatasetSnapshotsPage() {
     refetchChains,
     datasetRef,
     busyLocalLock,
+    detailPath,
   } = useDatasetContext();
   const chrome = useChrome();
-  const { basePath } = useAppMode();
   const { t } = useI18n();
   const { role } = useAuth();
   const isAdmin = role === 'admin';
@@ -321,7 +320,7 @@ export function DatasetSnapshotsPage() {
     ? snapshotDownloadCanOpen(createdDownloadStatus, createdDownloadHref)
     : false;
   const pendingDownloadSnapshotId = createDl.isPending ? Number((createDl.variables as Snapshot | undefined)?.id) : null;
-  const downloadsPath = `${basePath}/datasets/${dataset.id}/downloads`;
+  const downloadsPath = `${detailPath}/downloads`;
 
   return (
     <div className="space-y-6" data-testid="dataset.snapshots.list">
