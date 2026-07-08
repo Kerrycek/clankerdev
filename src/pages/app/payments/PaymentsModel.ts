@@ -89,6 +89,25 @@ const PAYMENT_INSTRUCTIONS_CS_TEXT_REPLACEMENTS: Array<[RegExp, string]> = [
   [/EUR per month/gi, 'EUR měsíčně'],
 ];
 
+const PAYMENT_INSTRUCTIONS_CS_BLOCK_REPLACEMENTS = new Map<string, string>([
+  [
+    'Payments can be made either in CZK or EUR, see below for bank account numbers.',
+    'Platbu můžeš provést v CZK nebo EUR. Čísla účtů najdeš níže.',
+  ],
+  [
+    'Payments for at least three months are preferred, but not mandatory. Please pay for longer periods if you require invoices.',
+    'Preferujeme platby alespoň na tři měsíce, není to ale povinné. Pokud potřebuješ faktury, plať prosím na delší období.',
+  ],
+  [
+    'If you need an invoice, please write to support at podpora@vpsfree.cz or support@vpsfree.org and we will issue it. Do not forget to include your billing credentials.',
+    'Pokud potřebuješ fakturu, napiš na podpora@vpsfree.cz nebo support@vpsfree.org. Nezapomeň přiložit fakturační údaje.',
+  ],
+]);
+
+function normalizePaymentInstructionSentence(value: string): string {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
 function translatePaymentInstructionText(value: string, lang: PaymentInstructionsLanguage): string {
   if (lang !== 'cs') return value;
 
@@ -201,6 +220,9 @@ function sanitizePaymentElement(el: Element): void {
     if (rawAlt.trim()) el.setAttribute('alt', rawAlt.trim());
     else el.setAttribute('alt', 'QR');
     el.setAttribute('loading', 'lazy');
+    el.setAttribute('width', '160');
+    el.setAttribute('height', '160');
+    el.setAttribute('data-payment-qr-image', 'true');
   }
 
   if ((tag === 'td' || tag === 'th') && /^\d{1,2}$/.test(rawColspan.trim())) {
@@ -214,6 +236,14 @@ function sanitizePaymentElement(el: Element): void {
 
 function localizePaymentInstructionsFragment(fragment: DocumentFragment, lang: PaymentInstructionsLanguage): void {
   if (lang !== 'cs') return;
+
+  for (const el of Array.from(fragment.querySelectorAll('p, h1, h2, h3, h4, h5, h6'))) {
+    const normalized = normalizePaymentInstructionSentence(el.textContent ?? '');
+    const replacement = PAYMENT_INSTRUCTIONS_CS_BLOCK_REPLACEMENTS.get(normalized);
+    if (replacement) {
+      el.textContent = replacement;
+    }
+  }
 
   const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_TEXT);
   const textNodes: Text[] = [];

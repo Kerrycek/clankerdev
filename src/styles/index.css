@@ -539,14 +539,17 @@
 
   .payment-instructions td[data-payment-qr-cell='true'],
   .payment-instructions th[data-payment-qr-cell='true'] {
-    width: 10rem;
+    width: 11.5rem;
     text-align: center;
     vertical-align: middle;
   }
 
   .payment-instructions img {
     display: inline-block;
-    max-width: 9rem;
+    width: 10rem;
+    height: 10rem;
+    max-width: 10rem;
+    object-fit: contain;
   }
 
   @media (max-width: 767px) {
@@ -561,7 +564,14 @@
 
     .payment-instructions td[data-payment-qr-cell='true'],
     .payment-instructions th[data-payment-qr-cell='true'] {
+      width: 100%;
       text-align: left;
+    }
+
+    .payment-instructions img {
+      width: 9rem;
+      height: 9rem;
+      max-width: 9rem;
     }
   }
 }

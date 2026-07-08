@@ -61,7 +61,7 @@ describe('PaymentsModel', () => {
     expect(html).toContain('data-payment-table="true"');
     expect(html).toContain('data-payment-qr-table="true"');
     expect(html).toContain('data-payment-qr-cell="true"');
-    expect(html).toContain('<img src="/qr.php?vs=53" alt="QR" loading="lazy">');
+    expect(html).toContain('<img src="/qr.php?vs=53" alt="QR" loading="lazy" width="160" height="160" data-payment-qr-image="true">');
     expect(html).toContain('<a>bad</a>');
     expect(html).toContain('<a href="https://example.com" rel="noopener noreferrer" target="_blank">ok</a>');
     expect(html).not.toContain('<script>');
@@ -74,6 +74,10 @@ describe('PaymentsModel', () => {
     const html = sanitizePaymentInstructionsHtml(`
       <h3>Payment in CZK</h3>
       <p>Payments can be made either in CZK or EUR, see below for bank account numbers.</p>
+      <p>
+        Payments for at least three months are preferred, but not mandatory.
+        Please pay for longer periods if you require invoices.
+      </p>
       <table>
         <tr><td>Back account for CZK (CZ):</td><td>2200041594/2010</td></tr>
         <tr><td>Variable symbol:</td><td>53</td></tr>
@@ -84,6 +88,7 @@ describe('PaymentsModel', () => {
 
     expect(html).toContain('Platba v CZK');
     expect(html).toContain('Platbu můžeš provést v CZK nebo EUR.');
+    expect(html).toContain('Preferujeme platby alespoň na tři měsíce');
     expect(html).toContain('Bankovní účet pro CZK (CZ):');
     expect(html).toContain('Variabilní symbol:');
     expect(html).toContain('Zpráva');
@@ -91,6 +96,7 @@ describe('PaymentsModel', () => {
     expect(html).toContain('Částka:');
     expect(html).toContain('0 CZK měsíčně');
     expect(html).not.toContain('Payment in CZK');
+    expect(html).not.toContain('Payments for at least three months');
     expect(html).not.toContain('Back account');
   });
 
