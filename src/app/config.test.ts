@@ -132,6 +132,18 @@ describe('getRuntimeConfig', () => {
     expect(cfg.webuiUrl).toBe('https://vpsadmin.example.test');
   });
 
+  it('reads integrated BFF session expiry from window.vpsAdmin.webuiNext', () => {
+    window.vpsAdmin = {
+      api: { url: 'https://api.example.test', version: '7.0' },
+      webuiNext: {
+        sessionExpiresAt: 1_800_000_000_000,
+      },
+    };
+
+    const cfg = getRuntimeConfig();
+    expect(cfg.sessionExpiresAt).toBe(1_800_000_000_000);
+  });
+
   it('reads server time zone from env', () => {
     process.env['VITE_SERVER_TIME_ZONE'] = 'UTC';
     const cfg = getRuntimeConfig();

@@ -20,6 +20,7 @@ export interface AuthContextValue {
   error?: unknown;
   loginUrl: string;
   logoutUrl: string;
+  sessionExpiresAt?: number;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -145,6 +146,7 @@ export function AuthProvider(props: {
         error: undefined,
         loginUrl,
         logoutUrl,
+        sessionExpiresAt: cfg.sessionExpiresAt,
       };
     }
 
@@ -156,6 +158,7 @@ export function AuthProvider(props: {
         canUseAdminUi: false,
         loginUrl,
         logoutUrl,
+        sessionExpiresAt: cfg.sessionExpiresAt,
       };
     }
 
@@ -167,6 +170,7 @@ export function AuthProvider(props: {
         canUseAdminUi: false,
         loginUrl,
         logoutUrl,
+        sessionExpiresAt: cfg.sessionExpiresAt,
       };
     }
 
@@ -185,6 +189,7 @@ export function AuthProvider(props: {
               canUseAdminUi: false,
               loginUrl,
               logoutUrl,
+              sessionExpiresAt: cfg.sessionExpiresAt,
             };
           }
 
@@ -196,6 +201,7 @@ export function AuthProvider(props: {
             error: undefined,
             loginUrl,
             logoutUrl,
+            sessionExpiresAt: cfg.sessionExpiresAt,
           };
         }
 
@@ -208,6 +214,7 @@ export function AuthProvider(props: {
             error: err,
             loginUrl,
             logoutUrl,
+            sessionExpiresAt: cfg.sessionExpiresAt,
           };
         }
       }
@@ -220,6 +227,7 @@ export function AuthProvider(props: {
         error: err,
         loginUrl,
         logoutUrl,
+        sessionExpiresAt: cfg.sessionExpiresAt,
       };
     }
 
@@ -232,8 +240,9 @@ export function AuthProvider(props: {
       canUseAdminUi: canUseAdminUi(role),
       loginUrl,
       logoutUrl,
+      sessionExpiresAt: cfg.sessionExpiresAt,
     };
-  }, [enabled, q.isLoading, q.isError, q.data, q.error, sessionExpired, loginUrl, logoutUrl, redirectExpiredSessions]);
+  }, [cfg.sessionExpiresAt, enabled, q.isLoading, q.isError, q.data, q.error, sessionExpired, loginUrl, logoutUrl, redirectExpiredSessions]);
 
   return <AuthContext.Provider value={value}>{props.children}</AuthContext.Provider>;
 }

@@ -30,6 +30,7 @@ interface AppHeaderProps {
   setUserMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
   authLogin?: string;
   authRole?: string;
+  sessionExpiresAt?: number;
   theme: 'system' | 'light' | 'dark';
   language: 'system' | 'en' | 'cs';
   onSetTheme: (next: 'system' | 'light' | 'dark') => void;
@@ -109,7 +110,7 @@ function AppSyncPopover(props: Pick<AppHeaderProps,
 
 function AppUserMenu(props: Pick<AppHeaderProps,
   't' | 'mode' | 'canSwitchMode' | 'userMenuRef' | 'userMenuOpen' | 'setUserMenuOpen' | 'authLogin' | 'authRole' |
-  'theme' | 'language' | 'onSetTheme' | 'onSetLanguage' | 'onGoToOtherMode' | 'onGoToProfile' | 'onGoToPublicStatus' | 'loginLogoutHref'
+  'sessionExpiresAt' | 'theme' | 'language' | 'onSetTheme' | 'onSetLanguage' | 'onGoToOtherMode' | 'onGoToProfile' | 'onGoToPublicStatus' | 'loginLogoutHref'
 >) {
   const {
     t,
@@ -120,6 +121,7 @@ function AppUserMenu(props: Pick<AppHeaderProps,
     setUserMenuOpen,
     authLogin,
     authRole,
+    sessionExpiresAt,
     theme,
     language,
     onSetTheme,
@@ -129,6 +131,7 @@ function AppUserMenu(props: Pick<AppHeaderProps,
     onGoToPublicStatus,
     loginLogoutHref,
   } = props;
+  const sessionRemaining = useSessionRemainingLabel(t, sessionExpiresAt);
 
   return (
     <div className="relative order-10 md:order-8" ref={userMenuRef}>
@@ -144,6 +147,11 @@ function AppUserMenu(props: Pick<AppHeaderProps,
         <User size={18} />
         <span className="hidden sm:inline font-medium">{authLogin ?? '—'}</span>
         <span className="hidden md:inline text-xs text-muted">{String(authRole ?? '—')}</span>
+        {sessionRemaining ? (
+          <span className="hidden lg:inline text-xs text-muted" data-testid="shell.session-remaining">
+            {t('auth.session_remaining.compact', { time: sessionRemaining })}
+          </span>
+        ) : null}
       </button>
 
       {userMenuOpen ? (
@@ -153,8 +161,15 @@ function AppUserMenu(props: Pick<AppHeaderProps,
           data-overlay="popover"
           data-overlay-surface="overlay"
         >
+          {sessionRemaining ? (
+            <div className="px-2 py-1" data-testid="shell.user-menu.session-remaining">
+              <div className="text-xs text-muted">{t('auth.session_remaining.menu_label')}</div>
+              <div className="mt-0.5 text-sm font-medium">{sessionRemaining}</div>
+            </div>
+          ) : null}
+
           {canSwitchMode ? (
-            <div className="px-2 py-1">
+            <div className={clsx('px-2 py-1', sessionRemaining ? 'mt-2 border-t border-border pt-2' : '')}>
               <div className="text-xs text-muted">{t('settings.scope.label')}</div>
               <div className="mt-1 grid grid-cols-2 gap-2">
                 <Button
@@ -299,6 +314,34 @@ function AppUserMenu(props: Pick<AppHeaderProps,
   );
 }
 
+function formatSessionRemaining(t: AppHeaderProps['t'], expiresAt: number, now: number): string {
+  const remainingMs = expiresAt - now;
+  if (remainingMs <= 0) return t('auth.session_remaining.expired');
+  if (remainingMs < 60_000) return t('auth.session_remaining.less_than_minute');
+
+  const minutesTotal = Math.ceil(remainingMs / 60_000);
+  if (minutesTotal < 60) return t('auth.session_remaining.minutes', { minutes: minutesTotal });
+
+  const hours = Math.floor(minutesTotal / 60);
+  const minutes = minutesTotal % 60;
+  if (minutes === 0) return t('auth.session_remaining.hours', { hours });
+  return t('auth.session_remaining.hours_minutes', { hours, minutes });
+}
+
+function useSessionRemainingLabel(t: AppHeaderProps['t'], expiresAt?: number): string | null {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!expiresAt) return undefined;
+
+    const id = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, [expiresAt]);
+
+  if (!expiresAt || !Number.isFinite(expiresAt)) return null;
+  return formatSessionRemaining(t, expiresAt, now);
+}
+
 export function AppHeader(props: AppHeaderProps) {
   const {
     t,
@@ -323,6 +366,7 @@ export function AppHeader(props: AppHeaderProps) {
     setUserMenuOpen,
     authLogin,
     authRole,
+    sessionExpiresAt,
     theme,
     language,
     onSetTheme,
@@ -469,6 +513,7 @@ export function AppHeader(props: AppHeaderProps) {
           setUserMenuOpen={setUserMenuOpen}
           authLogin={authLogin}
           authRole={authRole}
+          sessionExpiresAt={sessionExpiresAt}
           theme={theme}
           language={language}
           onSetTheme={onSetTheme}

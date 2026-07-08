@@ -48,6 +48,9 @@ declare global {
         /** Optional override for the logout endpoint URL (e.g. '/logout'). */
         logoutUrl?: string;
 
+        /** Unix timestamp in milliseconds when the integrated BFF session expires. */
+        sessionExpiresAt?: number | null;
+
         /** Optional HaveAPI client overrides for standalone deployments */
         haveApi?: {
           /**

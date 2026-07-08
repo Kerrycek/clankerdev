@@ -141,6 +141,23 @@ function computeExpiresAt(expiresIn) {
   return Date.now() + Math.max(0, n) * 1000;
 }
 
+function currentSessionExpiresAt(req) {
+  const cookie = req.session?.cookie;
+  if (!cookie) return null;
+
+  const expires = cookie.expires;
+  if (expires instanceof Date && Number.isFinite(expires.getTime())) {
+    return expires.getTime();
+  }
+
+  const maxAge = cookie.maxAge;
+  if (typeof maxAge === 'number' && Number.isFinite(maxAge)) {
+    return Date.now() + maxAge;
+  }
+
+  return null;
+}
+
 async function ensureFreshToken(req) {
   const oauth = req.session.oauth;
   if (!oauth || !oauth.access_token) return undefined;
@@ -224,6 +241,7 @@ app.get('/config.js', async (req, res) => {
       loginUrl: '/oauth/login',
       logoutUrl: '/oauth/logout',
       basePath: '',
+      sessionExpiresAt: oauth?.access_token ? currentSessionExpiresAt(req) : null,
       haveApi: {
         authHeader: HAVEAPI_AUTH_HEADER,
         metaNamespace: HAVEAPI_META_NAMESPACE,

@@ -43,6 +43,8 @@ export interface RuntimeConfig {
   loginUrl?: string;
   /** Optional absolute/relative URL for the logout endpoint (overrides legacy /?page=logout). */
   logoutUrl?: string;
+  /** Unix timestamp in milliseconds when the integrated BFF session expires. */
+  sessionExpiresAt?: number;
   /** React Router basename for sub-path deployments (e.g. '/ui-next'). Empty means root. */
   routerBasename: string;
   auth: AuthConfig;
@@ -102,6 +104,15 @@ function readNumber(value: unknown, fallback: number): number {
     if (Number.isFinite(n)) return n;
   }
   return fallback;
+}
+
+function readOptionalTimestamp(value: unknown): number | undefined {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) return value;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const n = Number(value);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return undefined;
 }
 
 function normalizeApiVersion(version: string): string {
@@ -260,6 +271,7 @@ export function getRuntimeConfig(): RuntimeConfig {
   const logoutUrlCandidate = win?.vpsAdmin?.webuiNext?.logoutUrl ?? env('VITE_LOGOUT_URL');
   const loginUrl = loginUrlCandidate ? loginUrlCandidate.trim() : `${routerBasename}/oauth/login`;
   const logoutUrl = logoutUrlCandidate ? logoutUrlCandidate.trim() : `${routerBasename}/oauth/logout`;
+  const sessionExpiresAt = readOptionalTimestamp(win?.vpsAdmin?.webuiNext?.sessionExpiresAt);
 
   const haveApiAuthHeader =
     win?.vpsAdmin?.webuiNext?.haveApi?.authHeader ?? env('VITE_HAVEAPI_AUTH_HEADER');
@@ -302,6 +314,7 @@ export function getRuntimeConfig(): RuntimeConfig {
     webuiUrl,
     loginUrl,
     logoutUrl,
+    sessionExpiresAt,
     routerBasename,
     auth,
     oauth2,
