@@ -29,6 +29,22 @@ function isUiLanguagePreference(value: string): value is UiLanguagePreference {
   return value === 'system' || value === 'en' || value === 'cs';
 }
 
+function PreferenceRow(props: {
+  label: React.ReactNode;
+  description: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="grid gap-3 rounded-md border border-border bg-surface-2 p-3 sm:grid-cols-[minmax(0,1fr)_minmax(12rem,16rem)] sm:items-start">
+      <div>
+        <div className="text-sm font-semibold text-fg">{props.label}</div>
+        <div className="mt-1 text-xs leading-5 text-muted">{props.description}</div>
+      </div>
+      <div className="min-w-0">{props.children}</div>
+    </div>
+  );
+}
+
 export function ProfilePage() {
   const auth = useAuth();
   const appMode = useAppMode();
@@ -132,7 +148,7 @@ export function ProfilePage() {
       <ProfileTabs />
 
       <SummaryGrid testId="profile.summary">
-        <Card testId="profile.user.card" className="md:col-span-4">
+        <Card testId="profile.user.card" className="md:col-span-5 lg:col-span-3">
           <CardHeader title={t('profile.user.title')} subtitle={t('profile.user.subtitle')} />
           <CardBody>
             {auth.user ? (
@@ -156,16 +172,20 @@ export function ProfilePage() {
           </CardBody>
         </Card>
 
-        <Card testId="profile.prefs.card" className="md:col-span-5">
+        <Card testId="profile.prefs.card" className="md:col-span-7">
           <CardHeader title={t('profile.prefs.title')} subtitle={t('profile.prefs.subtitle')} />
           <CardBody>
-            <div
-              className={`grid grid-cols-1 gap-3 ${canSwitchScope ? 'sm:grid-cols-4' : 'sm:grid-cols-3'}`}
-            >
+            <div className="space-y-3">
               {canSwitchScope ? (
-                <div>
-                  <div className="text-xs font-medium text-muted">{t('settings.scope.label')}</div>
-                  <div className="mt-1 grid grid-cols-2 gap-2">
+                <PreferenceRow
+                  label={t('settings.scope.label')}
+                  description={
+                    appMode.mode === 'admin'
+                      ? t('scope.indicator.admin_hint')
+                      : t('scope.indicator.my_hint')
+                  }
+                >
+                  <div className="grid grid-cols-2 gap-2">
                     <Button
                       testId="prefs.scope.mine"
                       variant={appMode.mode === 'user' ? 'primary' : 'secondary'}
@@ -185,66 +205,63 @@ export function ProfilePage() {
                       {t('settings.scope.all')}
                     </Button>
                   </div>
-                  <div
-                    className={`mt-1 text-xs ${appMode.mode === 'admin' ? 'text-warn' : 'text-faint'}`}
-                  >
-                    {appMode.mode === 'admin'
-                      ? t('scope.indicator.admin_hint')
-                      : t('scope.indicator.my_hint')}
-                  </div>
-                </div>
+                </PreferenceRow>
               ) : null}
 
-              <div>
-                <div className="text-xs font-medium text-muted">{t('settings.theme.label')}</div>
-                <div className="mt-1">
-                  <Select
-                    value={ui.settings.theme}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (isUiThemePreference(value)) ui.setTheme(value);
-                    }}
-                    options={[
-                      { value: 'system', label: t('settings.theme.system') },
-                      { value: 'light', label: t('settings.theme.light') },
-                      { value: 'dark', label: t('settings.theme.dark') },
-                    ]}
-                    testId="prefs.theme"
-                  />
-                </div>
-              </div>
+              <PreferenceRow
+                label={t('settings.theme.label')}
+                description={t('profile.prefs.theme.desc')}
+              >
+                <Select
+                  value={ui.settings.theme}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (isUiThemePreference(value)) ui.setTheme(value);
+                  }}
+                  options={[
+                    { value: 'system', label: t('settings.theme.system') },
+                    { value: 'light', label: t('settings.theme.light') },
+                    { value: 'dark', label: t('settings.theme.dark') },
+                  ]}
+                  testId="prefs.theme"
+                />
+              </PreferenceRow>
 
-              <div>
-                <div className="text-xs font-medium text-muted">{t('settings.language.label')}</div>
-                <div className="mt-1">
-                  <Select
-                    value={ui.settings.language}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (isUiLanguagePreference(value)) ui.setLanguage(value);
-                    }}
-                    options={[
-                      { value: 'system', label: t('settings.language.system') },
-                      { value: 'en', label: t('settings.language.en') },
-                      { value: 'cs', label: t('settings.language.cs') },
-                    ]}
-                    testId="prefs.language"
-                  />
-                </div>
-              </div>
+              <PreferenceRow
+                label={t('settings.language.label')}
+                description={t('profile.prefs.language.desc')}
+              >
+                <Select
+                  value={ui.settings.language}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (isUiLanguagePreference(value)) ui.setLanguage(value);
+                  }}
+                  options={[
+                    { value: 'system', label: t('settings.language.system') },
+                    { value: 'en', label: t('settings.language.en') },
+                    { value: 'cs', label: t('settings.language.cs') },
+                  ]}
+                  testId="prefs.language"
+                />
+              </PreferenceRow>
             </div>
 
-            <div className="mt-3 space-y-1 text-xs" data-testid="profile.prefs.sync">
-              <div className="text-faint">
-                {t('profile.prefs.persistence.label')}: <span className="font-medium text-fg">{syncModeLabel}</span>
-                <span className="mx-2">•</span>
-                {t('profile.prefs.sync_status.label')}: <span className="font-medium text-fg">{syncStatusLabel}</span>
-                {ui.sync.error ? <span className="ml-2 text-danger">{ui.sync.error}</span> : null}
-              </div>
-              <div className="text-muted">
-                {t('profile.prefs.last_loaded')}: <span className="font-medium text-fg">{lastLoadedAtLabel}</span>
-                <span className="mx-2">•</span>
-                {t('profile.prefs.last_saved')}: <span className="font-medium text-fg">{lastSavedAtLabel}</span>
+            <div className="mt-4 rounded-md border border-border bg-surface-2 px-3 py-2 text-xs" data-testid="profile.prefs.sync">
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-muted">
+                <span>
+                  {t('profile.prefs.persistence.label')}: <span className="font-medium text-fg">{syncModeLabel}</span>
+                </span>
+                <span>
+                  {t('profile.prefs.sync_status.label')}: <span className="font-medium text-fg">{syncStatusLabel}</span>
+                </span>
+                <span>
+                  {t('profile.prefs.last_loaded')}: <span className="font-medium text-fg">{lastLoadedAtLabel}</span>
+                </span>
+                <span>
+                  {t('profile.prefs.last_saved')}: <span className="font-medium text-fg">{lastSavedAtLabel}</span>
+                </span>
+                {ui.sync.error ? <span className="text-danger">{ui.sync.error}</span> : null}
               </div>
             </div>
 
@@ -328,7 +345,7 @@ export function ProfilePage() {
           </CardBody>
         </Card>
 
-        <Card testId="profile.tips.card" className="md:col-span-3">
+        <Card testId="profile.tips.card" className="md:col-span-12 lg:col-span-2">
           <CardHeader title={t('profile.tips.title')} subtitle={t('profile.tips.subtitle')} />
           <CardBody>
             <ul className="list-disc space-y-1 pl-4 text-sm text-muted">
