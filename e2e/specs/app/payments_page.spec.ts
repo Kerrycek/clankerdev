@@ -58,10 +58,10 @@ test('user payments page: shows status, instructions and history', async ({ page
   await expect(page.getByTestId('payments.my.stat.paid_until')).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId('payments.my.stat.paid_until').getByText('Paid', { exact: true })).toBeVisible();
 
-  const instructionsFrame = page.frameLocator('[data-testid="payments.my.instructions.text"]');
-  await expect(instructionsFrame.getByRole('heading', { name: 'Payment in CZK' })).toBeVisible();
-  await expect(instructionsFrame.getByText('CZ00TEST')).toBeVisible();
-  await expect(instructionsFrame.locator('body')).not.toContainText('<h3>');
+  const instructions = page.getByTestId('payments.my.instructions.text');
+  await expect(instructions.getByRole('heading', { name: 'Payment in CZK' })).toBeVisible();
+  await expect(instructions.getByText('CZ00TEST')).toBeVisible();
+  await expect(instructions).not.toContainText('<h3>');
   await expect(page.getByTestId('payments.my.instructions.copy')).toBeVisible();
 
   await expect(page.getByTestId('payments.my.history.table')).toBeVisible();
