@@ -9,6 +9,7 @@ import { useI18n } from '../../app/i18n';
 import { useToasts } from '../../app/toasts';
 import { useObjectScope } from '../../app/objectScope';
 import { clusterSearch, type ClusterSearchHit } from '../../lib/api/clusterSearch';
+import { fetchUser, type User } from '../../lib/api/users';
 import { fetchVps, fetchVpsList, type Vps } from '../../lib/api/vps';
 import { useDebouncedValue } from '../../lib/hooks/useDebouncedValue';
 import { Button } from '../ui/Button';
@@ -225,6 +226,73 @@ function resourceRefLabel(
 ): string {
   if (resource === 'Vps') return t('common.vps_ref', { id });
   return t('common.resource_ref', { resource: resourceKindLabel(t, resource), id });
+}
+
+function compactPaletteParts(parts: Array<string | null | undefined>): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+
+  for (const part of parts) {
+    const value = String(part ?? '').trim();
+    if (!value) continue;
+
+    const key = value.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(value);
+  }
+
+  return out;
+}
+
+function formatPaletteUserResult(
+  t: (key: string, vars?: Record<string, unknown>) => string,
+  user: User,
+  fallback: PaletteResult
+): PaletteResult {
+  const login = String(user.login ?? '').trim();
+  const fullName = String(user.full_name ?? '').trim();
+  const email = String(user.email ?? '').trim();
+  const userRef = resourceRefLabel(t, 'User', user.id);
+  const primary = login || fullName || email || fallback.primary || userRef;
+  const secondaryParts = compactPaletteParts([
+    userRef,
+    fullName !== primary ? fullName : null,
+    email !== primary ? email : null,
+    fallback.attribute,
+  ]);
+
+  return {
+    ...fallback,
+    primary,
+    secondary: secondaryParts.join(' · ') || fallback.secondary,
+  };
+}
+
+async function enrichPaletteUserResults(
+  results: PaletteResult[],
+  t: (key: string, vars?: Record<string, unknown>) => string,
+  signal: AbortSignal
+): Promise<PaletteResult[]> {
+  if (!results.some((result) => result.resource === 'User' && typeof result.id === 'number')) {
+    return results;
+  }
+
+  return Promise.all(
+    results.map(async (result) => {
+      if (result.resource !== 'User' || typeof result.id !== 'number') return result;
+      if (signal.aborted) return result;
+
+      try {
+        const res = await fetchUser(result.id, { signal });
+        if (signal.aborted) return result;
+        return formatPaletteUserResult(t, res.data, result);
+      } catch (e: any) {
+        if (e?.name === 'AbortError') return result;
+        return result;
+      }
+    })
+  );
 }
 
 function vpsResultsFromList(
@@ -525,6 +593,8 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
             const allowed = new Set(allowlist);
             parsed = parsed.filter((r) => (r.resource ? allowed.has(r.resource) : false));
           }
+
+          parsed = await enrichPaletteUserResults(parsed, t, ac.signal);
 
           if (!alive || ac.signal.aborted) return;
           setResults(parsed);

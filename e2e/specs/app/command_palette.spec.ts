@@ -171,7 +171,7 @@ test.describe('Command palette', () => {
       handlers: {
         'GET vpses': () => ({ vpses: [] }),
         'POST cluster/search': () => ({
-          cluster_search: [{ resource: 'User', id: 5, value: 'alice', attribute: 'login' }],
+          cluster_search: [{ resource: 'User', id: 5, value: '5', attribute: 'id' }],
         }),
         'GET users/5': () => ({ user: { id: 5, login: 'alice', full_name: 'Alice A.', email: 'alice@example', level: 1 } }),
       },
@@ -183,6 +183,8 @@ test.describe('Command palette', () => {
 
     await page.getByTestId('palette.input').fill('alice');
     await expect(page.getByTestId('palette.result.0')).toBeVisible();
+    await expect(page.getByTestId('palette.result.0')).toContainText('Alice A.');
+    await expect(page.getByTestId('palette.result.0')).toContainText('alice@example');
     await page.getByTestId('palette.result.0').click();
 
     await expect(page).toHaveURL(/\/admin\/users\/5$/);
@@ -199,7 +201,7 @@ test.describe('Command palette', () => {
         'POST cluster/search': (ctx) => {
           expect((ctx.reqJson as any)?.cluster?.value).toBe('53');
           return {
-            cluster_search: [{ resource: 'User', id: 53, value: 'KerryCZE', attribute: 'login' }],
+            cluster_search: [{ resource: 'User', id: 53, value: '53', attribute: 'id' }],
           };
         },
         'GET users/53': () => ({ user: { id: 53, login: 'KerryCZE', full_name: 'Kerry', email: 'kerry@example', level: 99 } }),
@@ -211,6 +213,7 @@ test.describe('Command palette', () => {
 
     await page.getByTestId('shell.inline-search.input').fill('53');
     await expect(page.getByTestId('shell.inline-search.result.0')).toContainText('KerryCZE');
+    await expect(page.getByTestId('shell.inline-search.result.0')).toContainText('kerry@example');
     await page.getByTestId('shell.inline-search.input').press('Enter');
 
     await expect(page).toHaveURL(/\/admin\/users\/53$/);

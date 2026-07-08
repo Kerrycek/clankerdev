@@ -295,10 +295,11 @@ export async function fetchUsers(opts?: FetchUsersOpts): Promise<UserListResult>
   };
 }
 
-export async function fetchUser(userId: number) {
+export async function fetchUser(userId: number, opts?: { signal?: AbortSignal }) {
   return haveApiCall<User>({
     method: 'GET',
     path: `/users/${userId}`,
+    signal: opts?.signal,
   });
 }
 

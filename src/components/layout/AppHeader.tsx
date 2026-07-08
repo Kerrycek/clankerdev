@@ -6,6 +6,7 @@ import { useAuth } from '../../app/auth';
 import { useAppMode } from '../../app/appMode';
 import { useObjectScope } from '../../app/objectScope';
 import { clusterSearch, type ClusterSearchHit } from '../../lib/api/clusterSearch';
+import { fetchUser, type User as ApiUser } from '../../lib/api/users';
 import { fetchVps, fetchVpsList, type Vps } from '../../lib/api/vps';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -395,6 +396,9 @@ interface InlineSearchResult {
   primary: string;
   secondary: string;
   href: string;
+  id?: number;
+  resource?: string;
+  attribute?: string;
 }
 
 function parseInlineVpsId(raw: string): number | null {
@@ -446,7 +450,76 @@ function inlineResultFromVps(basePath: string, t: AppHeaderProps['t'], vps: Vps)
     primary: vps.hostname ?? t('common.vps_ref', { id: vps.id }),
     secondary: t('common.vps_ref', { id: vps.id }),
     href: `${basePath}/vps/${vps.id}`,
+    id: vps.id,
+    resource: 'Vps',
   };
+}
+
+function compactInlineParts(parts: Array<string | null | undefined>): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+
+  for (const part of parts) {
+    const value = String(part ?? '').trim();
+    if (!value) continue;
+
+    const key = value.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(value);
+  }
+
+  return out;
+}
+
+function formatInlineUserResult(
+  t: AppHeaderProps['t'],
+  user: ApiUser,
+  fallback: InlineSearchResult
+): InlineSearchResult {
+  const login = String(user.login ?? '').trim();
+  const fullName = String(user.full_name ?? '').trim();
+  const email = String(user.email ?? '').trim();
+  const userRef = t('common.resource_ref', { resource: 'User', id: user.id });
+  const primary = login || fullName || email || fallback.primary || userRef;
+  const secondaryParts = compactInlineParts([
+    userRef,
+    fullName !== primary ? fullName : null,
+    email !== primary ? email : null,
+    fallback.attribute,
+  ]);
+
+  return {
+    ...fallback,
+    primary,
+    secondary: secondaryParts.join(' · ') || fallback.secondary,
+  };
+}
+
+async function enrichInlineUserResults(
+  results: InlineSearchResult[],
+  t: AppHeaderProps['t'],
+  signal: AbortSignal
+): Promise<InlineSearchResult[]> {
+  if (!results.some((result) => result.resource === 'User' && typeof result.id === 'number')) {
+    return results;
+  }
+
+  return Promise.all(
+    results.map(async (result) => {
+      if (result.resource !== 'User' || typeof result.id !== 'number') return result;
+      if (signal.aborted) return result;
+
+      try {
+        const res = await fetchUser(result.id, { signal });
+        if (signal.aborted) return result;
+        return formatInlineUserResult(t, res.data, result);
+      } catch (e: any) {
+        if (e?.name === 'AbortError') return result;
+        return result;
+      }
+    })
+  );
 }
 
 function inlineResultsFromClusterSearch(basePath: string, t: AppHeaderProps['t'], hits: ClusterSearchHit[]): InlineSearchResult[] {
@@ -474,6 +547,9 @@ function inlineResultsFromClusterSearch(basePath: string, t: AppHeaderProps['t']
       primary: primary || fallback,
       secondary: attr ? `${fallback} · ${attr}` : fallback,
       href,
+      id,
+      resource,
+      attribute: attr || undefined,
     });
   }
 
@@ -554,8 +630,10 @@ export function AppHeader(props: AppHeaderProps) {
       try {
         if (canUseClusterSearch) {
           const res = await clusterSearch({ query: q, signal: ac.signal });
+          const results = inlineResultsFromClusterSearch(basePath, t, res.data);
+          const enrichedResults = await enrichInlineUserResults(results, t, ac.signal);
           if (!alive || ac.signal.aborted) return;
-          setSearchResults(inlineResultsFromClusterSearch(basePath, t, res.data));
+          setSearchResults(enrichedResults);
           return;
         }
 
