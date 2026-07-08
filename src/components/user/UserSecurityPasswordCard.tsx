@@ -12,7 +12,6 @@ import { Checkbox } from '../ui/Checkbox';
 import { Input } from '../ui/Input';
 
 import { buildPasswordChangeReview, buildPasswordPayload, type UserSecurityVariant } from './UserSecurityModel';
-import { UserPasswordReviewCard } from './UserSecurityReviewCards';
 
 export function UserSecurityPasswordCard(props: {
   userId: number;
@@ -118,10 +117,6 @@ export function UserSecurityPasswordCard(props: {
               <span>{t('security.password.logout_sessions')}</span>
             </label>
             <div className="mt-1 text-xs text-faint">{t('security.password.logout_sessions.hint')}</div>
-          </div>
-
-          <div className="md:col-span-2">
-            <UserPasswordReviewCard prefix={prefix} variant={props.variant} review={review} />
           </div>
 
           <div className="md:col-span-2 flex items-center gap-2">

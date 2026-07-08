@@ -5,7 +5,7 @@ import { useI18n } from '../../app/i18n';
 import { Alert } from '../ui/Alert';
 import { Badge } from '../ui/Badge';
 
-import type { PasswordChangeReview, SecuritySettingValue, SecuritySettingsChange, SecuritySettingsReview, UserSecurityVariant } from './UserSecurityModel';
+import type { SecuritySettingValue, SecuritySettingsChange, SecuritySettingsReview } from './UserSecurityModel';
 
 function ReviewRow(props: { label: React.ReactNode; children: React.ReactNode; testId?: string }) {
   return (
@@ -46,64 +46,6 @@ function ChangeRow(props: { change: SecuritySettingsChange; testId: string }) {
         <span className="tabular-nums text-fg">{settingValueLabel(t, props.change.next)}</span>
       </div>
       <div className="mt-1 text-xs text-muted">{t(props.change.impactKey)}</div>
-    </div>
-  );
-}
-
-export function UserPasswordReviewCard(props: {
-  prefix: string;
-  variant: UserSecurityVariant;
-  review: PasswordChangeReview;
-}) {
-  const { t } = useI18n();
-
-  return (
-    <div className="space-y-3 rounded-lg border border-border bg-surface-2 p-3" data-testid={`${props.prefix}.password.review`}>
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <div className="text-sm font-semibold">{t('security.password.review.title')}</div>
-          <div className="mt-1 text-xs text-muted">{t('security.password.review.subtitle')}</div>
-        </div>
-        <Badge variant={props.review.canSubmit ? 'warn' : 'neutral'}>
-          {props.review.canSubmit
-            ? t('security.password.review.badge.ready')
-            : t('security.password.review.badge.incomplete')}
-        </Badge>
-      </div>
-
-      {props.review.validationKey ? (
-        <Alert variant="warn" title={t('security.password.review.validation.title')} testId={`${props.prefix}.password.review.validation`}>
-          {t(props.review.validationKey)}
-        </Alert>
-      ) : null}
-
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <ReviewRow label={t('security.password.review.field.password')} testId={`${props.prefix}.password.review.password`}>
-          {props.review.hasNewPassword
-            ? t('security.password.review.value.password_pending')
-            : t('security.password.review.value.no_password')}
-        </ReviewRow>
-
-        {props.variant === 'profile' ? (
-          <ReviewRow label={t('security.password.review.field.current_password')} testId={`${props.prefix}.password.review.current`}>
-            {props.review.currentPasswordProvided
-              ? t('security.password.review.value.current_provided')
-              : t('security.password.review.value.current_missing')}
-          </ReviewRow>
-        ) : null}
-
-        <ReviewRow label={t('security.password.review.field.sessions')} testId={`${props.prefix}.password.review.sessions`}>
-          {props.review.logoutSessions
-            ? t('security.password.review.value.sessions_logout')
-            : t('security.password.review.value.sessions_keep')}
-        </ReviewRow>
-
-        <ReviewRow label={t('security.password.review.field.impact')} testId={`${props.prefix}.password.review.impact`}>
-          {props.review.canSubmit
-            ? t('security.password.review.impact.ready')
-            : t('security.password.review.impact.incomplete')}
-        </ReviewRow>
-      </div>
     </div>
   );
 }
