@@ -51,6 +51,63 @@ export function normalizePaymentInstructions(data: { instructions?: string | nul
   return String(data?.instructions ?? '').trim();
 }
 
+export type PaymentInstructionsLanguage = 'en' | 'cs';
+
+const PAYMENT_INSTRUCTIONS_CS_REPLACEMENTS: Array<[RegExp, string]> = [
+  [/^General info$/i, 'Obecné informace'],
+  [/^Payment in CZK$/i, 'Platba v CZK'],
+  [/^Payment in EUR$/i, 'Platba v EUR'],
+  [/^Back account for CZK \(CZ\):$/i, 'Bankovní účet pro CZK (CZ):'],
+  [/^Bank account for CZK \(CZ\):$/i, 'Bankovní účet pro CZK (CZ):'],
+  [/^Back account for EUR \(SK\):$/i, 'Bankovní účet pro EUR (SK):'],
+  [/^Bank account for EUR \(SK\):$/i, 'Bankovní účet pro EUR (SK):'],
+  [/^Variable symbol:$/i, 'Variabilní symbol:'],
+  [/^Message \($/i, 'Zpráva ('],
+  [/^Message$/i, 'Zpráva'],
+  [/^Message:$/i, 'Zpráva:'],
+  [/^Sum:$/i, 'Částka:'],
+  [/^Bank account overview:$/i, 'Přehled bankovního účtu:'],
+  [/^\(more info\)$/i, '(více informací)'],
+  [/^more info$/i, 'více informací'],
+  [/^per month$/i, 'měsíčně'],
+];
+
+const PAYMENT_INSTRUCTIONS_CS_TEXT_REPLACEMENTS: Array<[RegExp, string]> = [
+  [
+    /Payments can be made either in CZK or EUR, see below for bank account numbers\./gi,
+    'Platbu můžeš provést v CZK nebo EUR. Čísla účtů najdeš níže.',
+  ],
+  [
+    /Payments for at least three months are preferred, but not mandatory\. Please pay for longer periods if you require invoices\./gi,
+    'Preferujeme platby alespoň na tři měsíce, není to ale povinné. Pokud potřebuješ faktury, plať prosím na delší období.',
+  ],
+  [
+    /If you need an invoice, please write to support at podpora@vpsfree\.cz or support@vpsfree\.org and we will issue it\. Do not forget to include your billing credentials\./gi,
+    'Pokud potřebuješ fakturu, napiš na podpora@vpsfree.cz nebo support@vpsfree.org. Nezapomeň přiložit fakturační údaje.',
+  ],
+  [/CZK per month/gi, 'CZK měsíčně'],
+  [/EUR per month/gi, 'EUR měsíčně'],
+];
+
+function translatePaymentInstructionText(value: string, lang: PaymentInstructionsLanguage): string {
+  if (lang !== 'cs') return value;
+
+  let next = value;
+  for (const [pattern, replacement] of PAYMENT_INSTRUCTIONS_CS_TEXT_REPLACEMENTS) {
+    next = next.replace(pattern, replacement);
+  }
+
+  const trimmed = next.trim();
+  const leading = next.slice(0, next.indexOf(trimmed));
+  const trailing = next.slice(leading.length + trimmed.length);
+
+  for (const [pattern, replacement] of PAYMENT_INSTRUCTIONS_CS_REPLACEMENTS) {
+    if (pattern.test(trimmed)) return `${leading}${trimmed.replace(pattern, replacement)}${trailing}`;
+  }
+
+  return next;
+}
+
 const PAYMENT_ALLOWED_TAGS = new Set([
   'a',
   'b',
@@ -142,6 +199,7 @@ function sanitizePaymentElement(el: Element): void {
   if (tag === 'img' && isSafePaymentUrl(rawSrc)) {
     el.setAttribute('src', rawSrc.trim());
     if (rawAlt.trim()) el.setAttribute('alt', rawAlt.trim());
+    else el.setAttribute('alt', 'QR');
     el.setAttribute('loading', 'lazy');
   }
 
@@ -154,7 +212,36 @@ function sanitizePaymentElement(el: Element): void {
   }
 }
 
-export function sanitizePaymentInstructionsHtml(rawHtml: string): string {
+function localizePaymentInstructionsFragment(fragment: DocumentFragment, lang: PaymentInstructionsLanguage): void {
+  if (lang !== 'cs') return;
+
+  const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_TEXT);
+  const textNodes: Text[] = [];
+
+  while (walker.nextNode()) {
+    textNodes.push(walker.currentNode as Text);
+  }
+
+  for (const node of textNodes) {
+    node.nodeValue = translatePaymentInstructionText(node.nodeValue ?? '', lang);
+  }
+}
+
+function markPaymentInstructionTables(fragment: DocumentFragment): void {
+  for (const table of Array.from(fragment.querySelectorAll('table'))) {
+    table.setAttribute('data-payment-table', 'true');
+    if (table.querySelector('img')) table.setAttribute('data-payment-qr-table', 'true');
+  }
+
+  for (const cell of Array.from(fragment.querySelectorAll('td, th'))) {
+    if (cell.querySelector('img')) cell.setAttribute('data-payment-qr-cell', 'true');
+  }
+}
+
+export function sanitizePaymentInstructionsHtml(
+  rawHtml: string,
+  lang: PaymentInstructionsLanguage = 'en',
+): string {
   const raw = String(rawHtml ?? '');
   if (!raw.trim()) return '';
 
@@ -175,6 +262,9 @@ export function sanitizePaymentInstructionsHtml(rawHtml: string): string {
   for (const node of Array.from(template.content.childNodes)) {
     if (node.nodeType === Node.COMMENT_NODE) node.remove();
   }
+
+  localizePaymentInstructionsFragment(template.content, lang);
+  markPaymentInstructionTables(template.content);
 
   return template.innerHTML;
 }

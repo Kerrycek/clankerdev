@@ -512,4 +512,56 @@
     outline: 2px solid rgb(var(--c-focus) / 1);
     outline-offset: -2px;
   }
+
+  /*
+    Legacy payment instructions come from the API as old web UI HTML. Keep the
+    content readable, but do not let table widths or QR images dictate page
+    layout in the new UI.
+  */
+  .payment-instructions {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  .payment-instructions table[data-payment-table='true'] {
+    table-layout: fixed;
+  }
+
+  .payment-instructions table[data-payment-qr-table='true'] {
+    table-layout: auto;
+  }
+
+  .payment-instructions td,
+  .payment-instructions th {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .payment-instructions td[data-payment-qr-cell='true'],
+  .payment-instructions th[data-payment-qr-cell='true'] {
+    width: 10rem;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  .payment-instructions img {
+    display: inline-block;
+    max-width: 9rem;
+  }
+
+  @media (max-width: 767px) {
+    .payment-instructions table[data-payment-table='true'],
+    .payment-instructions table[data-payment-table='true'] tbody,
+    .payment-instructions table[data-payment-table='true'] tr,
+    .payment-instructions table[data-payment-table='true'] td,
+    .payment-instructions table[data-payment-table='true'] th {
+      display: block;
+      width: 100%;
+    }
+
+    .payment-instructions td[data-payment-qr-cell='true'],
+    .payment-instructions th[data-payment-qr-cell='true'] {
+      text-align: left;
+    }
+  }
 }

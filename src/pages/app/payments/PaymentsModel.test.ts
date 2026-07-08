@@ -57,7 +57,10 @@ describe('PaymentsModel', () => {
       <a href="https://example.com" target="_blank" onclick="bad()">ok</a>
     `);
 
-    expect(html).toContain('<table>');
+    expect(html).toContain('<table');
+    expect(html).toContain('data-payment-table="true"');
+    expect(html).toContain('data-payment-qr-table="true"');
+    expect(html).toContain('data-payment-qr-cell="true"');
     expect(html).toContain('<img src="/qr.php?vs=53" alt="QR" loading="lazy">');
     expect(html).toContain('<a>bad</a>');
     expect(html).toContain('<a href="https://example.com" rel="noopener noreferrer" target="_blank">ok</a>');
@@ -65,6 +68,30 @@ describe('PaymentsModel', () => {
     expect(html).not.toContain('onclick');
     expect(html).not.toContain('onerror');
     expect(html).not.toContain('style=');
+  });
+
+  test('localizes legacy payment instructions for Czech UI', () => {
+    const html = sanitizePaymentInstructionsHtml(`
+      <h3>Payment in CZK</h3>
+      <p>Payments can be made either in CZK or EUR, see below for bank account numbers.</p>
+      <table>
+        <tr><td>Back account for CZK (CZ):</td><td>2200041594/2010</td></tr>
+        <tr><td>Variable symbol:</td><td>53</td></tr>
+        <tr><td>Message (<a href="https://example.test">more info</a>):</td><td>/VS/53</td></tr>
+        <tr><td>Sum:</td><td>0 CZK per month</td></tr>
+      </table>
+    `, 'cs');
+
+    expect(html).toContain('Platba v CZK');
+    expect(html).toContain('Platbu můžeš provést v CZK nebo EUR.');
+    expect(html).toContain('Bankovní účet pro CZK (CZ):');
+    expect(html).toContain('Variabilní symbol:');
+    expect(html).toContain('Zpráva');
+    expect(html).toContain('více informací');
+    expect(html).toContain('Částka:');
+    expect(html).toContain('0 CZK měsíčně');
+    expect(html).not.toContain('Payment in CZK');
+    expect(html).not.toContain('Back account');
   });
 
   test('buildPaymentSettingsReview flags backward and cleared paid-until changes', () => {
