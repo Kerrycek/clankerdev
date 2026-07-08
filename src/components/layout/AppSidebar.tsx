@@ -91,7 +91,6 @@ export function buildSidebarNavItems(opts: {
     items.push({ id: 'admin-info', to: `${basePath}/admin-info`, label: t('nav.admin'), icon: <Shield size={18} /> });
   }
 
-  items.push({ id: 'status', to: '/', label: t('nav.status'), icon: <Activity size={18} /> });
   items.push({ id: 'account', to: `${basePath}/profile`, label: t('nav.account'), icon: <User size={18} /> });
   return items;
 }
