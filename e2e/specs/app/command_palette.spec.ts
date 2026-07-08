@@ -189,6 +189,34 @@ test.describe('Command palette', () => {
     await expect(page.getByTestId('admin.user.page')).toBeVisible();
   });
 
+  test('searches cluster objects from the header inline field in admin view', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    await installHaveApiMock(page, {
+      user: { id: 99, login: 'admin', level: 100 },
+      handlers: {
+        'GET vpses': () => ({ vpses: [] }),
+        'POST cluster/search': (ctx) => {
+          expect((ctx.reqJson as any)?.cluster?.value).toBe('53');
+          return {
+            cluster_search: [{ resource: 'User', id: 53, value: 'KerryCZE', attribute: 'login' }],
+          };
+        },
+        'GET users/53': () => ({ user: { id: 53, login: 'KerryCZE', full_name: 'Kerry', email: 'kerry@example', level: 99 } }),
+      },
+    });
+
+    await page.goto('/admin');
+    await expect(page.getByTestId('shell.inline-search.input')).toBeVisible();
+
+    await page.getByTestId('shell.inline-search.input').fill('53');
+    await expect(page.getByTestId('shell.inline-search.result.0')).toContainText('KerryCZE');
+    await page.getByTestId('shell.inline-search.input').press('Enter');
+
+    await expect(page).toHaveURL(/\/admin\/users\/53$/);
+    await expect(page.getByTestId('admin.user.page')).toBeVisible();
+  });
+
   test('navigates to IP address detail from cluster search (admin view)', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
