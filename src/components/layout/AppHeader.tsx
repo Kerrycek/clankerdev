@@ -153,7 +153,7 @@ function AppUserMenu(props: Pick<AppHeaderProps,
       : null;
   const segmentedButtonClass = (active: boolean) =>
     clsx(
-      'inline-flex min-h-8 w-full items-center justify-center rounded-md border px-2 py-1 text-center text-xs font-medium leading-tight transition-colors',
+      'inline-flex min-h-8 w-full min-w-0 items-center justify-center rounded-md border px-2 py-1 text-center text-xs font-medium leading-tight transition-colors',
       'focus:outline-none focus:ring-2 focus:ring-focus/35 focus:ring-offset-2 focus:ring-offset-bg',
       active ? 'border-accent bg-accent text-accent-fg hover:bg-accent-hover' : 'border-border bg-surface text-fg hover:bg-surface-2'
     );
@@ -192,7 +192,7 @@ function AppUserMenu(props: Pick<AppHeaderProps,
 
       {userMenuOpen ? (
         <div
-          className="absolute right-0 mt-2 w-72 rounded-md border border-border bg-overlay-surface p-2 shadow-panel"
+          className="absolute right-0 top-full z-50 mt-2 max-h-[min(34rem,calc(100vh-5rem))] w-[min(20rem,calc(100vw-1rem))] overflow-y-auto overscroll-contain rounded-md border border-border bg-overlay-surface p-2 shadow-panel"
           data-testid="shell.user-menu"
           data-overlay="popover"
           data-overlay-surface="overlay"
