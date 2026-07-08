@@ -199,7 +199,7 @@ export function IpAddressesFilters({
             </label>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:w-[30rem]">
+          <div className="grid gap-3 sm:grid-cols-2 xl:w-drawer-lg">
             <Select
               label={t('admin.ip_addresses.advanced.version')}
               value={versionNum !== undefined ? String(versionNum) : ''}

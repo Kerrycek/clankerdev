@@ -87,7 +87,7 @@ export function UserMfaRecoveryCard(props: {
   if (!loading && !error && summary.status === 'ready') {
     return (
       <div
-        className="flex flex-col gap-2 rounded-lg border border-ok/30 bg-ok/10 p-3 sm:flex-row sm:items-center sm:justify-between"
+        className="flex flex-col gap-2 rounded-lg border border-ok-border bg-ok-bg p-3 sm:flex-row sm:items-center sm:justify-between"
         data-testid={`${prefix}.recovery.ready`}
       >
         <div className="min-w-0">

@@ -192,7 +192,7 @@ function AppUserMenu(props: Pick<AppHeaderProps,
 
       {userMenuOpen ? (
         <div
-          className="absolute right-0 top-full z-50 mt-2 max-h-[min(34rem,calc(100vh-5rem))] w-[min(20rem,calc(100vw-1rem))] overflow-y-auto overscroll-contain rounded-md border border-border bg-overlay-surface p-2 shadow-panel"
+          className="absolute right-0 top-full z-50 mt-2 max-h-modal w-drawer-md overflow-y-auto overscroll-contain rounded-md border border-border bg-overlay-surface p-2 shadow-panel"
           data-testid="shell.user-menu"
           data-overlay="popover"
           data-overlay-surface="overlay"
