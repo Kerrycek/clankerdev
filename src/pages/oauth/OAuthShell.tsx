@@ -9,10 +9,10 @@ export function OAuthShell(props: {
 }) {
   return (
     <main
-      className="min-h-dvh bg-bg px-4 py-8 text-fg sm:px-6 lg:px-8"
+      className="flex min-h-dvh items-center bg-bg px-4 py-8 text-fg sm:px-6 lg:px-8"
       data-testid={props.testId}
     >
-      <div className="mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-content-sm items-center">
+      <div className="mx-auto w-full max-w-content-sm">
         <div className="w-full">
           <div className="mb-5 flex items-center gap-3">
             <div className="grid h-10 w-10 place-items-center rounded-md bg-accent text-sm font-semibold text-accent-fg shadow-card">
@@ -27,7 +27,7 @@ export function OAuthShell(props: {
           <div
             className={clsx(
               'rounded-lg border bg-surface shadow-panel',
-              props.variant === 'error' ? 'border-danger/60' : 'border-border',
+              props.variant === 'error' ? 'border-danger-border' : 'border-border',
             )}
           >
             {props.children}
