@@ -9,10 +9,11 @@ import { clearImpersonationState } from '../../lib/auth/impersonation';
 import { sanitizeLocalPath, withRouterBasename } from '../../lib/routerPaths';
 import { hardReplace } from '../../lib/browserNavigation';
 import { Button } from '../../components/ui/Button';
-import { Card, CardBody, CardHeader } from '../../components/ui/Card';
+import { CardBody, CardHeader } from '../../components/ui/Card';
 import { LinkButton } from '../../components/ui/LinkButton';
 import { Spinner } from '../../components/ui/Spinner';
 import { DocumentTitleOverride } from '../../components/layout/DocumentTitleOverride';
+import { OAuthShell } from './OAuthShell';
 
 export function OAuthLogoutPage() {
   const { t } = useI18n();
@@ -41,37 +42,35 @@ export function OAuthLogoutPage() {
   }, [cfg.oauth2.storage, next]);
 
   return (
-    <div className="mx-auto max-w-content-sm p-6" data-testid="oauth.logout.page">
+    <OAuthShell testId="oauth.logout.page" variant={error ? 'error' : 'progress'}>
       <DocumentTitleOverride title={error ? t('oauth.logout.error.title') : t('oauth.logout.progress.signing_out')} />
-      <Card>
-        {error ? (
-          <>
-            <CardHeader title={t('oauth.logout.error.title')} />
-            <CardBody className="space-y-4">
-              <p className="text-sm text-muted">
-                {t('oauth.logout.error.body')}
-              </p>
-              <p className="text-sm text-danger">{error}</p>
+      {error ? (
+        <>
+          <CardHeader title={t('oauth.logout.error.title')} />
+          <CardBody className="space-y-4">
+            <p className="text-sm text-muted">
+              {t('oauth.logout.error.body')}
+            </p>
+            <p className="text-sm text-danger">{error}</p>
 
-              <div className="flex flex-wrap gap-2">
-                <Button variant="primary" onClick={() => window.location.reload()}>
-                  {t('common.retry')}
-                </Button>
-                <LinkButton to="/" variant="secondary">
-                  {t('nav.status')}
-                </LinkButton>
-              </div>
-            </CardBody>
-          </>
-        ) : (
-          <CardBody>
-            <div className="flex items-center gap-2 text-sm text-muted">
-              <Spinner />
-              <span>{t('oauth.logout.progress.signing_out')}</span>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="primary" onClick={() => window.location.reload()}>
+                {t('common.retry')}
+              </Button>
+              <LinkButton to="/" variant="secondary">
+                {t('nav.status')}
+              </LinkButton>
             </div>
           </CardBody>
-        )}
-      </Card>
-    </div>
+        </>
+      ) : (
+        <CardBody>
+          <div className="flex items-center gap-2 text-sm text-muted">
+            <Spinner />
+            <span>{t('oauth.logout.progress.signing_out')}</span>
+          </div>
+        </CardBody>
+      )}
+    </OAuthShell>
   );
 }

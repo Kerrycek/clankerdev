@@ -136,6 +136,7 @@ describe('OAuth auth flow pages', () => {
     expect(await findVisibleText('oauth.login.error.title')).toBeVisible();
     expect(startOAuth2Login).toHaveBeenCalledWith(createRuntimeConfig(), '/ui-next/admin/users');
     expect(screen.getByRole('link', { name: /nav.status/i })).toHaveAttribute('href', '/ui-next');
+    expect(screen.getByTestId('oauth.login.page')).toHaveClass('bg-bg', 'text-fg');
   });
 
   it('sanitizes callback redirects before performing the hard navigation', async () => {
