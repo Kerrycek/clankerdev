@@ -4,6 +4,7 @@ import { CircleHelp, Plus, SlidersHorizontal } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAppMode } from '../../../app/appMode';
+import { useObjectScope } from '../../../app/objectScope';
 import { useI18n } from '../../../app/i18n';
 import { useToasts } from '../../../app/toasts';
 import { useChrome } from '../../../components/layout/ChromeContext';
@@ -45,6 +46,7 @@ export function ExportsListPage(props?: { fixedDatasetId?: number; embedded?: bo
   const fixedDatasetId = props?.fixedDatasetId;
   const embedded = props?.embedded ?? false;
   const { basePath, mode } = useAppMode();
+  const scope = useObjectScope();
   const { t } = useI18n();
   const navigate = useNavigate();
   const { pushToast } = useToasts();
@@ -70,6 +72,8 @@ export function ExportsListPage(props?: { fixedDatasetId?: number; embedded?: bo
   const userTrim = useMemo(() => userFilter.trim(), [userFilter]);
   const enabledValue = useMemo(() => parseBoolToken(enabledFilter), [enabledFilter]);
   const activeDatasetId = fixedDatasetId ?? datasetFilter;
+  const adminUserId = useMemo(() => parsePositiveInt(userTrim), [userTrim]);
+  const effectiveUserId = isAdmin ? adminUserId ?? undefined : scope.mineUserId;
 
   useEffect(() => {
     const next = new URLSearchParams(searchParams);
@@ -85,7 +89,13 @@ export function ExportsListPage(props?: { fixedDatasetId?: number; embedded?: bo
 
   const pagination = useKeysetPagination({
     id: embedded ? `dataset.${fixedDatasetId}.exports.list` : 'exports.list',
-    filterKey: JSON.stringify({ q: qTrim, enabled: enabledValue, dataset: activeDatasetId ?? null, user: isAdmin ? userTrim || null : null }),
+    filterKey: JSON.stringify({
+      q: qTrim,
+      enabled: enabledValue,
+      dataset: activeDatasetId ?? null,
+      user: effectiveUserId ?? null,
+      scope: scope.scope,
+    }),
     searchParams,
     setSearchParams,
     defaultLimit: 50,
@@ -93,14 +103,22 @@ export function ExportsListPage(props?: { fixedDatasetId?: number; embedded?: bo
   });
 
   const listQ = useQuery({
-    queryKey: ['exports', 'list', { limit: pagination.limit, fromId: pagination.fromId, q: qTrim, enabled: enabledValue, dataset: activeDatasetId ?? null, user: isAdmin ? userTrim || null : null }],
+    queryKey: ['exports', 'list', {
+      limit: pagination.limit,
+      fromId: pagination.fromId,
+      q: qTrim,
+      enabled: enabledValue,
+      dataset: activeDatasetId ?? null,
+      user: effectiveUserId ?? null,
+      scope: scope.scope,
+    }],
     queryFn: async () => (await fetchExports({
       limit: pagination.limit,
       fromId: pagination.fromId,
       q: qTrim || undefined,
       enabled: enabledValue,
       dataset: activeDatasetId ?? undefined,
-      user: isAdmin && userTrim ? Number(userTrim) : undefined,
+      user: effectiveUserId,
       includes: 'dataset,snapshot,host_ip_address,user',
     })).data,
     staleTime: 10_000,

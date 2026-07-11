@@ -11,11 +11,13 @@ test.describe('Admin My view filtering', () => {
     let lastVpsUserParam: string | null = null;
     let lastDatasetsUserParam: string | null = null;
     let lastZonesUserParam: string | null = null;
+    let lastExportsUserParam: string | null = null;
 
     // Capture a second set for /admin.
     let lastVpsUserParamAdmin: string | null = null;
     let lastDatasetsUserParamAdmin: string | null = null;
     let lastZonesUserParamAdmin: string | null = null;
+    let lastExportsUserParamAdmin: string | null = null;
 
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
@@ -74,6 +76,12 @@ test.describe('Admin My view filtering', () => {
             ],
           };
         },
+        'GET exports': (ctx) => {
+          const user = ctx.searchParams.get('export[user]');
+          if (phase === 'app') lastExportsUserParam = user;
+          if (phase === 'admin') lastExportsUserParamAdmin = user;
+          return { exports: [] };
+        },
       },
     });
 
@@ -93,6 +101,11 @@ test.describe('Admin My view filtering', () => {
     await expect(page.getByTestId('dns.zones.list')).toBeVisible();
     expect(lastZonesUserParam).toBe(String(ADMIN_USER_ID));
 
+    phase = 'app';
+    await page.goto('/app/exports');
+    await expect(page.getByTestId('exports.page')).toBeVisible();
+    expect(lastExportsUserParam).toBe(String(ADMIN_USER_ID));
+
     // Admin scope (/admin)
     phase = 'admin';
     await page.goto('/admin/vps');
@@ -108,5 +121,10 @@ test.describe('Admin My view filtering', () => {
     await page.goto('/admin/dns');
     await expect(page.getByTestId('dns.zones.list')).toBeVisible();
     expect(lastZonesUserParamAdmin).toBeNull();
+
+    phase = 'admin';
+    await page.goto('/admin/exports');
+    await expect(page.getByTestId('exports.page')).toBeVisible();
+    expect(lastExportsUserParamAdmin).toBeNull();
   });
 });
