@@ -71,14 +71,18 @@ test('@workflow-matrix @smoke admin requests: detail actions, inline expansion, 
       activate: true,
     },
   });
-  await expect(expanded123.getByTestId('admin.requests.expanded.registration.123.resolve.actions.none')).toBeVisible();
+  await expect(expanded123.getByTestId('admin.requests.expanded.registration.123.resolve.action.deny')).toBeVisible();
+  await expect(expanded123.getByTestId('admin.requests.expanded.registration.123.resolve.action.ignore')).toBeVisible();
+  await expect(expanded123.getByTestId('admin.requests.expanded.registration.123.resolve.action.request_correction')).toBeVisible();
 
   await page.getByTestId('admin.requests.row.registration.123').click();
   await expect(page).toHaveURL('/admin/requests/registration/123');
   await expect(page.getByTestId('admin.requests.detail.ops.action_state')).toHaveAttribute('href', '/admin/action-states/177');
   await expect(page.getByTestId('admin.requests.detail.ops.chain')).toHaveAttribute('href', '/admin/transactions/88');
   await expect(page.getByTestId('admin.requests.detail.ops.transaction')).toHaveAttribute('href', '/admin/transactions/items/99');
-  await expect(page.getByTestId('admin.requests.resolve.actions.none')).toBeVisible();
+  await expect(page.getByTestId('admin.requests.resolve.action.deny')).toBeVisible();
+  await expect(page.getByTestId('admin.requests.resolve.action.ignore')).toBeVisible();
+  await expect(page.getByTestId('admin.requests.resolve.action.request_correction')).toBeVisible();
 });
 
 test('@workflow-matrix @smoke admin requests: rejected action error is visible', async ({ page }) => {

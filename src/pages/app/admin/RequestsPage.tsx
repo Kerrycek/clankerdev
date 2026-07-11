@@ -967,7 +967,7 @@ export function RequestsPage() {
               ) : null}
             </div>
 
-            <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 md:grid-cols-[minmax(180px,240px)_1fr_auto_auto] lg:max-w-4xl">
+            <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 md:grid-cols-[minmax(180px,240px)_1fr_auto] lg:max-w-5xl">
               <Select
                 value={bulkAction}
                 onChange={(e) => setBulkAction(e.target.value as ResolveUserRequestAction)}
@@ -991,16 +991,23 @@ export function RequestsPage() {
                 testId="admin.requests.bulk.reason"
               />
 
-              <Button
-                variant="secondary"
-                onClick={() => toggleAllVisible(true)}
-                disabled={rows.length === 0}
-                testId="admin.requests.bulk.select_visible"
-              >
-                {t('requests.bulk.select_visible')}
-              </Button>
-
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => toggleAllVisible(true)}
+                  disabled={rows.length === 0}
+                  testId="admin.requests.bulk.select_all"
+                >
+                  {t('requests.bulk.select_all')}
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => toggleAllVisible(false)}
+                  disabled={rows.length === 0 || selectedRows.length === 0}
+                  testId="admin.requests.bulk.deselect_all"
+                >
+                  {t('requests.bulk.deselect_all')}
+                </Button>
                 <Button
                   variant="secondary"
                   onClick={() => setSelectedKeys(new Set())}

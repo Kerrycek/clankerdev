@@ -83,11 +83,12 @@ export function requestOperationalLinks(request: ReviewableRequest | undefined) 
 export function requestReviewActions(request: ReviewableRequest | undefined, isAdmin: boolean): ResolveUserRequestAction[] {
   if (!isAdmin || !request) return [];
   const state = String(request.state ?? '').trim();
-  if (state === 'approved') return [];
 
-  const actions: ResolveUserRequestAction[] = ['approve', 'deny', 'ignore'];
+  if (state === 'approved') return ['deny', 'ignore', 'request_correction'];
   if (state === 'denied') return ['approve', 'ignore', 'request_correction'];
   if (state === 'ignored') return ['approve', 'deny', 'request_correction'];
+
+  const actions: ResolveUserRequestAction[] = ['approve', 'deny', 'ignore'];
   if (state === 'awaiting' || state === 'pending_correction') actions.push('request_correction');
   return actions;
 }
