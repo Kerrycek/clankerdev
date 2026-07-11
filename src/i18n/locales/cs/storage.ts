@@ -193,9 +193,12 @@ export const csStorage = {
   "dataset.download.send_mail.label": "Poslat notifikační e-mail",
   "dataset.download.create.error.title": "Vytvoření downloadu selhalo",
   "dataset.download.create_link": "Vytvořit odkaz",
-  "dataset.download.created.title": "Záloha je připravená",
-  "dataset.download.created.body":
-    "Vytvořil se dočasný odkaz pro stažení snapshotu. Pokud není ještě připravený, najdeš jeho stav na tabu Downloady.",
+  "dataset.download.created.title.pending": "Záloha se připravuje ke stažení",
+  "dataset.download.created.title.ready": "Záloha je připravená",
+  "dataset.download.created.body.pending":
+    "Příprava běží na pozadí. Jakmile bude odkaz hotový, pošleme ho e-mailem a uvidíš ho i v sekci Downloady.",
+  "dataset.download.created.body.ready":
+    "Dočasný odkaz pro stažení snapshotu je připravený. Poslali jsme ho e-mailem a najdeš ho i v sekci Downloady.",
   "dataset.download.created.open_downloads": "Otevřít downloady",
   "dataset.downloads.title": "Downloady",
   "dataset.downloads.subtitle":
@@ -214,7 +217,7 @@ export const csStorage = {
   "dataset.downloads.state.unknown": "Neznámé",
   "dataset.downloads.state_detail.ready": "Připraveno ke stažení a kopírování.",
   "dataset.downloads.state_detail.pending":
-    "Generování ještě běží; před sdílením odkaz obnov.",
+    "Příprava běží. Jakmile bude odkaz hotový, přijde e-mailem a zobrazí se i v sekci Downloady.",
   "dataset.downloads.state_detail.expired":
     "Vygenerovaný odkaz vypršel. Před sdílením vytvoř nový download.",
   "dataset.downloads.state_detail.failed":

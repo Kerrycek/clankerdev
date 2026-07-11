@@ -188,9 +188,12 @@ export const enStorage = {
   "dataset.download.send_mail.label": "Send notification email",
   "dataset.download.create.error.title": "Download creation failed",
   "dataset.download.create_link": "Create link",
-  "dataset.download.created.title": "Backup is ready",
-  "dataset.download.created.body":
-    "A temporary snapshot download link was created. If it is still preparing, its state is available on the Downloads tab.",
+  "dataset.download.created.title.pending": "Backup is being prepared",
+  "dataset.download.created.title.ready": "Backup is ready",
+  "dataset.download.created.body.pending":
+    "Preparation is running in the background. When the link is ready, we will send it by email and show it in Downloads.",
+  "dataset.download.created.body.ready":
+    "The temporary snapshot download link is ready. We sent it by email and it is also available in Downloads.",
   "dataset.download.created.open_downloads": "Open downloads",
   "dataset.downloads.title": "Downloads",
   "dataset.downloads.subtitle": "Create and manage snapshot download links.",
@@ -207,7 +210,7 @@ export const enStorage = {
   "dataset.downloads.state.unknown": "Unknown",
   "dataset.downloads.state_detail.ready": "Ready to download and copy.",
   "dataset.downloads.state_detail.pending":
-    "Generation is still running; refresh before sharing the link.",
+    "Preparation is still running. When the link is ready, it will be sent by email and shown in Downloads.",
   "dataset.downloads.state_detail.expired":
     "The generated link expired. Create a fresh download before sharing.",
   "dataset.downloads.state_detail.failed":

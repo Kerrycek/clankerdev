@@ -319,6 +319,14 @@ export function DatasetSnapshotsPage() {
   const createdDownloadCanOpen = createdDownloadStatus
     ? snapshotDownloadCanOpen(createdDownloadStatus, createdDownloadHref)
     : false;
+  const createdDownloadTitle =
+    createdDownloadStatus === 'ready'
+      ? t('dataset.download.created.title.ready')
+      : t('dataset.download.created.title.pending');
+  const createdDownloadBody =
+    createdDownloadStatus === 'ready'
+      ? t('dataset.download.created.body.ready')
+      : t('dataset.download.created.body.pending');
   const pendingDownloadSnapshotId = createDl.isPending ? Number((createDl.variables as Snapshot | undefined)?.id) : null;
   const downloadsPath = `${detailPath}/downloads`;
 
@@ -608,7 +616,7 @@ export function DatasetSnapshotsPage() {
       <Modal
         open={createdDownload !== null}
         onClose={() => setCreatedDownload(null)}
-        title={t('dataset.download.created.title')}
+        title={createdDownloadTitle}
         footer={
           <div className="flex flex-wrap items-center justify-end gap-2">
             {createdDownload && createdDownloadStatus ? (
@@ -630,7 +638,7 @@ export function DatasetSnapshotsPage() {
       >
         {createdDownload && createdDownloadStatus ? (
           <div className="space-y-4" data-testid="dataset.snapshots.download.created">
-            <div className="text-sm text-muted">{t('dataset.download.created.body')}</div>
+            <div className="text-sm text-muted">{createdDownloadBody}</div>
             <div className="rounded-md border border-border bg-surface-2 p-3 text-sm">
               <div className="flex flex-wrap items-center gap-2">
                 <DatasetDownloadStateBadge status={createdDownloadStatus} t={t} />
