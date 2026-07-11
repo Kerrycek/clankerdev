@@ -178,7 +178,7 @@ export async function fetchUserClusterResourcePackages(opts?: {
     path: '/user_cluster_resource_packages',
     namespace: 'user_cluster_resource_package',
     params,
-    meta: { includes: 'environment,user,added_by' },
+    meta: { includes: 'environment,user,added_by,cluster_resource_package' },
   });
 
   return {

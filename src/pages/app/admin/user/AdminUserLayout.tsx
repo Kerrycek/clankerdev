@@ -138,6 +138,7 @@ export function AdminUserLayout() {
           <TabsNav
             items={[
               { to: `${basePath}/users/${u.id}`, label: t('admin.user.tabs.overview'), end: true },
+              { to: `${basePath}/users/${u.id}/resources`, label: t('admin.user.tabs.resources') },
               { to: `${basePath}/users/${u.id}/payments`, label: t('admin.user.tabs.payments') },
               {
                 to: `${basePath}/users/${u.id}/environment-configs`,

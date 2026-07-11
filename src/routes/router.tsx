@@ -103,6 +103,7 @@ const AdminUserMetricsPage = lazyRoute(() => import('../pages/app/admin/user/Adm
 const AdminUserSecurityPage = lazyRoute(() => import('../pages/app/admin/user/AdminUserSecurityPage'), 'AdminUserSecurityPage');
 const AdminUserMfaPage = lazyRoute(() => import('../pages/app/admin/user/AdminUserMfaPage'), 'AdminUserMfaPage');
 const AdminUserOverviewPage = lazyRoute(() => import('../pages/app/admin/user/AdminUserOverviewPage'), 'AdminUserOverviewPage');
+const AdminUserResourcesPage = lazyRoute(() => import('../pages/app/admin/user/AdminUserResourcesPage'), 'AdminUserResourcesPage');
 const AdminUserEnvironmentConfigsPage = lazyRoute(() => import('../pages/app/admin/user/AdminUserEnvironmentConfigsPage'), 'AdminUserEnvironmentConfigsPage');
 const AdminUserUserDataPage = lazyRoute(() => import('../pages/app/admin/user/AdminUserUserDataPage'), 'AdminUserUserDataPage');
 const IpAddressesPage = lazyRoute(() => import('../pages/app/admin/IpAddressesPage'), 'IpAddressesPage');
@@ -351,6 +352,7 @@ export const router = createBrowserRouter([
               element: <AdminUserLayout />,
               children: [
                 { index: true, element: <AdminUserOverviewPage /> },
+                { path: 'resources', element: <AdminUserResourcesPage /> },
                 { path: 'payments', element: <AdminUserPaymentsPage /> },
                 { path: 'environment-configs', element: <AdminUserEnvironmentConfigsPage /> },
                 { path: 'security', element: <AdminUserSecurityPage /> },
