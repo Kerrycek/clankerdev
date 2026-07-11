@@ -49,6 +49,40 @@ test.describe('NAS datasets alias', () => {
     await expect(page.getByTestId('datasets.advanced.vps')).toHaveCount(0);
   });
 
+  test('hides empty relation columns in NAS list too', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
+      handlers: {
+        'GET datasets': ({ searchParams }) => {
+          const role = searchParams.get('dataset[role]');
+          if (role !== 'primary') return { datasets: [], _meta: { total_count: 0 } };
+          return {
+            datasets: [
+              {
+                id: 911,
+                full_name: 'tank/nas/plain',
+                name: 'plain',
+                user: { id: 55, login: 'plain' },
+                used: 128,
+                refquota: 4096,
+              },
+            ],
+            _meta: { total_count: 1 },
+          };
+        },
+      },
+    });
+
+    await page.goto('/admin/nas');
+
+    await expect(page.getByTestId('datasets.row.911')).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Snapshots' })).toHaveCount(0);
+    await expect(page.getByRole('columnheader', { name: 'Mounts' })).toHaveCount(0);
+    await expect(page.getByRole('columnheader', { name: 'Exports' })).toHaveCount(0);
+  });
+
   test('keeps NAS dataset details and management navigation under NAS', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
