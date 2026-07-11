@@ -42,6 +42,21 @@ describe('network address API wrappers', () => {
     expect(parsed.searchParams.get('_meta[includes]')).toBe('network,network_interface,vps,user');
   });
 
+  test('fetchIpAddresses forwards network and assignment filters', async () => {
+    globalThis.fetch = mockFetchOk({ ip_addresses: [] }) as any;
+
+    await fetchIpAddresses({
+      network: 12,
+      assignedToInterface: false,
+    });
+
+    const [url] = lastFetchCall();
+    const parsed = new URL(url);
+
+    expect(parsed.searchParams.get('ip_address[network]')).toBe('12');
+    expect(parsed.searchParams.get('ip_address[assigned_to_interface]')).toBe('false');
+  });
+
   test('assignIpAddressRoute posts the legacy route assign payload', async () => {
     globalThis.fetch = mockFetchOk({ ip_address: { id: 42 } }) as any;
 

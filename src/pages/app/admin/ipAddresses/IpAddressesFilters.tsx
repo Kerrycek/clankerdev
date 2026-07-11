@@ -14,6 +14,7 @@ import { Input } from '../../../../components/ui/Input';
 import { Select } from '../../../../components/ui/Select';
 import { SmartFilterInput } from '../../../../components/ui/SmartFilterInput';
 import { SmartInputHelp } from '../../../../components/ui/SmartInputHelp';
+import { NetworkLookupInput } from '../../../../components/ui/NetworkLookupInput';
 import { UserLookupInput } from '../../../../components/ui/UserLookupInput';
 import { VpsLookupInput } from '../../../../components/ui/VpsLookupInput';
 
@@ -89,34 +90,6 @@ export function IpAddressesFilters({
   setBoolParamInUrl,
 }: IpAddressesFiltersProps) {
   const { t } = useI18n();
-  const [subnetDraft, setSubnetDraft] = React.useState('');
-
-  React.useEffect(() => {
-    setSubnetDraft(addr ? (prefixNum !== undefined ? `${addr}/${prefixNum}` : addr) : '');
-  }, [addr, prefixNum]);
-
-  const applySubnetDraft = React.useCallback(() => {
-    const trimmed = subnetDraft.trim();
-    if (!trimmed) {
-      setTextParam('addr', undefined);
-      setTextParam('prefix', undefined);
-      return;
-    }
-
-    const slashIndex = trimmed.lastIndexOf('/');
-    if (slashIndex >= 0) {
-      const nextAddr = trimmed.slice(0, slashIndex).trim();
-      const nextPrefix = parseNonNegativeInt(trimmed.slice(slashIndex + 1).trim());
-      setTextParam('addr', nextAddr || undefined);
-      setTextParam('prefix', nextPrefix !== undefined && nextPrefix >= 0 && nextPrefix <= 128 ? String(nextPrefix) : undefined);
-      return;
-    }
-
-    setTextParam('addr', trimmed);
-    setTextParam('prefix', undefined);
-  }, [setTextParam, subnetDraft]);
-
-  const assignedValue = assignedToInterface === undefined ? '' : assignedToInterface ? '1' : '0';
 
   return (
     <>
@@ -176,102 +149,67 @@ export function IpAddressesFilters({
       </FilterBar>
 
       <div className="rounded-lg border border-border bg-surface p-3 shadow-sm" data-testid="admin.ip_addresses.quick_filters">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-end">
+        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_16rem_22rem] xl:items-end">
           <div className="min-w-0 flex-1">
             <label className="block">
               <span className="mb-1 block text-xs font-semibold text-muted">{t('admin.ip_addresses.quick.subnet')}</span>
-              <div className="flex gap-2">
-                <Input
-                  value={subnetDraft}
-                  onChange={(e) => setSubnetDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') applySubnetDraft();
-                  }}
-                  onBlur={applySubnetDraft}
-                  placeholder={t('admin.ip_addresses.quick.subnet.placeholder')}
-                  testId="admin.ip_addresses.quick.subnet"
-                  className="min-w-0"
-                />
-                <Button variant="secondary" size="sm" onClick={applySubnetDraft} testId="admin.ip_addresses.quick.subnet.apply">
-                  {t('admin.ip_addresses.quick.apply')}
-                </Button>
-              </div>
+              <NetworkLookupInput
+                value={networkId ?? null}
+                onChange={(id) => setIntParam('network', id ?? undefined)}
+                purpose="vps"
+                placeholder={t('admin.ip_addresses.quick.subnet.placeholder')}
+                testId="admin.ip_addresses.quick.subnet"
+                loadingLabel={t('common.loading')}
+                noResultsLabel={t('palette.empty.no_results')}
+              />
             </label>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 xl:w-drawer-lg">
-            <Select
-              label={t('admin.ip_addresses.advanced.version')}
-              value={versionNum !== undefined ? String(versionNum) : ''}
-              onChange={(e) => setTextParam('version', e.target.value || undefined)}
-              options={[
-                { value: '', label: t('admin.ip_addresses.advanced.version.any') },
-                { value: '4', label: 'IPv4' },
-                { value: '6', label: 'IPv6' },
-              ]}
-              testId="admin.ip_addresses.quick.version"
-            />
-            <Select
-              label={t('admin.ip_addresses.advanced.assigned')}
-              value={assignedValue}
-              onChange={(e) => setBoolParamInUrl('assigned_to_interface', parseBoolParam(e.target.value))}
-              options={[
-                { value: '', label: t('admin.ip_addresses.advanced.assigned.any') },
-                { value: '1', label: t('admin.ip_addresses.advanced.assigned.true') },
-                { value: '0', label: t('admin.ip_addresses.advanced.assigned.false') },
-              ]}
-              testId="admin.ip_addresses.quick.assigned"
-            />
-          </div>
-        </div>
+          <Select
+            label={t('admin.ip_addresses.advanced.version')}
+            value={versionNum !== undefined ? String(versionNum) : ''}
+            onChange={(e) => setTextParam('version', e.target.value || undefined)}
+            options={[
+              { value: '', label: t('admin.ip_addresses.advanced.version.any') },
+              { value: '4', label: 'IPv4' },
+              { value: '6', label: 'IPv6' },
+            ]}
+            testId="admin.ip_addresses.quick.version"
+          />
 
-        <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_14rem]">
-          <VpsLookupInput
-            value={vpsId ?? null}
-            onChange={(id) => setIntParam('vps', id ?? undefined)}
-            placeholder={t('admin.ip_addresses.advanced.vps.placeholder')}
-            testId="admin.ip_addresses.quick.vps"
-          />
-          <UserLookupInput
-            value={userLookup}
-            onChange={(value) => {
-              setUserLookup(value);
-              const id = parsePositiveInt(value);
-              if (id !== undefined) setIntParam('user', id);
-              else setIntParam('user', undefined);
-            }}
-            placeholder={t('admin.ip_addresses.advanced.user.placeholder')}
-            testId="admin.ip_addresses.quick.user"
-            loadingLabel={t('common.loading')}
-            noResultsLabel={t('palette.empty.no_results')}
-          />
-          <Input
-            value={networkId !== undefined ? String(networkId) : ''}
-            onChange={(e) => setIntParam('network', parsePositiveInt(e.target.value))}
-            placeholder={t('admin.ip_addresses.quick.network.placeholder')}
-            testId="admin.ip_addresses.quick.network"
-            inputMode="numeric"
-          />
+          <div>
+            <div className="mb-1 text-xs font-semibold text-muted">{t('admin.ip_addresses.quick.occupancy')}</div>
+            <div className="grid h-10 grid-cols-3 overflow-hidden rounded-md border border-border bg-surface-2 p-0.5">
+              <button
+                type="button"
+                onClick={() => setBoolParamInUrl('assigned_to_interface', undefined)}
+                className={assignedToInterface === undefined ? 'rounded bg-surface px-2 text-sm font-semibold shadow-sm' : 'px-2 text-sm text-muted hover:text-fg'}
+                data-testid="admin.ip_addresses.quick.occupancy.any"
+              >
+                {t('admin.ip_addresses.advanced.assigned.any')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setBoolParamInUrl('assigned_to_interface', true)}
+                className={assignedToInterface === true ? 'rounded bg-surface px-2 text-sm font-semibold shadow-sm' : 'px-2 text-sm text-muted hover:text-fg'}
+                data-testid="admin.ip_addresses.quick.occupancy.assigned"
+              >
+                {t('admin.ip_addresses.quick.assigned')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setBoolParamInUrl('assigned_to_interface', false)}
+                className={assignedToInterface === false ? 'rounded bg-surface px-2 text-sm font-semibold shadow-sm' : 'px-2 text-sm text-muted hover:text-fg'}
+                data-testid="admin.ip_addresses.quick.occupancy.unassigned"
+              >
+                {t('admin.ip_addresses.quick.unassigned')}
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="text-xs font-semibold uppercase text-faint">{t('admin.ip_addresses.quick.shortcuts')}</span>
-          <Button
-            variant={assignedToInterface === false ? 'warn' : 'secondary'}
-            size="sm"
-            onClick={() => setBoolParamInUrl('assigned_to_interface', false)}
-            testId="admin.ip_addresses.quick.shortcut.unassigned"
-          >
-            {t('admin.ip_addresses.quick.unassigned')}
-          </Button>
-          <Button
-            variant={assignedToInterface === true ? 'ok' : 'secondary'}
-            size="sm"
-            onClick={() => setBoolParamInUrl('assigned_to_interface', true)}
-            testId="admin.ip_addresses.quick.shortcut.assigned"
-          >
-            {t('admin.ip_addresses.quick.assigned')}
-          </Button>
           <Button variant={versionNum === 4 ? 'primary' : 'secondary'} size="sm" onClick={() => setTextParam('version', '4')} testId="admin.ip_addresses.quick.shortcut.ipv4">
             IPv4
           </Button>
@@ -438,12 +376,14 @@ export function IpAddressesFilters({
             <div>
               <div className="text-sm font-medium">{t('admin.ip_addresses.advanced.network')}</div>
               <div className="mt-1 max-w-xs">
-                <Input
-                  value={networkId !== undefined ? String(networkId) : ''}
-                  onChange={(e) => setIntParam('network', parsePositiveInt(e.target.value))}
+                <NetworkLookupInput
+                  value={networkId ?? null}
+                  onChange={(id) => setIntParam('network', id ?? undefined)}
+                  purpose="vps"
                   placeholder={t('admin.ip_addresses.advanced.network.placeholder')}
                   testId="admin.ip_addresses.advanced.network"
-                  inputMode="numeric"
+                  loadingLabel={t('common.loading')}
+                  noResultsLabel={t('palette.empty.no_results')}
                 />
               </div>
             </div>
