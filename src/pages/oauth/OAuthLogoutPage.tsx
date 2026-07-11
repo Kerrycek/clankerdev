@@ -1,12 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
 
 import { useI18n } from '../../app/i18n';
 
 import { getRuntimeConfig } from '../../app/config';
 import { clearStoredOAuthToken } from '../../lib/auth/tokenStore';
 import { clearImpersonationState } from '../../lib/auth/impersonation';
-import { sanitizeLocalPath, withRouterBasename } from '../../lib/routerPaths';
+import { withRouterBasename } from '../../lib/routerPaths';
 import { hardReplace } from '../../lib/browserNavigation';
 import { Button } from '../../components/ui/Button';
 import { CardBody, CardHeader } from '../../components/ui/Card';
@@ -19,10 +18,7 @@ export function OAuthLogoutPage() {
   const { t } = useI18n();
 
   const cfg = useMemo(() => getRuntimeConfig(), []);
-  const [params] = useSearchParams();
-
-  const fallbackNext = withRouterBasename('/', cfg.routerBasename);
-  const next = sanitizeLocalPath(params.get('next'), fallbackNext);
+  const publicHomePath = withRouterBasename('/', cfg.routerBasename);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -38,8 +34,8 @@ export function OAuthLogoutPage() {
     }
 
     // Prefer a hard navigation so any cached app state is reset.
-    hardReplace(next);
-  }, [cfg.oauth2.storage, next]);
+    hardReplace(publicHomePath);
+  }, [cfg.oauth2.storage, publicHomePath]);
 
   return (
     <OAuthShell testId="oauth.logout.page" variant={error ? 'error' : 'progress'}>

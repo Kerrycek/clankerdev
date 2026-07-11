@@ -167,8 +167,8 @@ describe('OAuth auth flow pages', () => {
     );
   });
 
-  it('clears auth state and falls back to the basename-aware public root on logout', async () => {
-    renderRoute('/oauth/logout?next=https://evil.test/logout');
+  it('clears auth state and always returns to the basename-aware public root on logout', async () => {
+    renderRoute('/oauth/logout?next=/ui-next/app/vps');
 
     await waitFor(() => {
       expect(clearStoredOAuthToken).toHaveBeenCalledWith('session');

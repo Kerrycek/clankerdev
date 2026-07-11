@@ -45,6 +45,9 @@ test.describe('@smoke @smoke-mobile Header controls', () => {
     await expect(page.getByTestId('shell.user-menu')).toBeVisible();
     await expect(page.getByTestId('shell.user-menu.account')).toBeVisible();
     await expect(page.getByTestId('shell.user-menu.public-status')).toBeVisible();
-    await expect(page.getByTestId('shell.user-menu.logout')).toBeVisible();
+    await expect(page.getByTestId('shell.user-menu.logout')).toHaveAttribute(
+      'href',
+      /\/oauth\/logout\?next=%2F$/,
+    );
   });
 });

@@ -130,10 +130,13 @@ export function AuthProvider(props: {
     buildLoginUrl(baseUrl, props.nextPath),
     props.nextPath
   );
+  // Logout must always land on the public overview. Returning to the current
+  // protected route would immediately render a "login required" screen.
+  const logoutNextPath = withRouterBasename('/', cfg.routerBasename);
   const logoutUrl = buildEndpointUrl(
     cfg.logoutUrl,
-    buildLogoutUrl(baseUrl, props.nextPath),
-    props.nextPath
+    buildLogoutUrl(baseUrl, logoutNextPath),
+    logoutNextPath
   );
 
   const value: AuthContextValue = useMemo(() => {
