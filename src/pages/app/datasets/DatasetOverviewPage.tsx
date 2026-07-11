@@ -5,6 +5,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useAppMode } from '../../../app/appMode';
 import { useAuth } from '../../../app/auth';
 import { useI18n } from '../../../app/i18n';
+import { useObjectScope } from '../../../app/objectScope';
 import { useChrome } from '../../../components/layout/ChromeContext';
 
 import { Alert } from '../../../components/ui/Alert';
@@ -291,40 +292,6 @@ function DetailsCard(props: { dataset: any }) {
   );
 }
 
-function QuickActionsCard(props: { dataset: any }) {
-  const { t } = useI18n();
-  const { basePath } = useAppMode();
-  const { detailPath } = useDatasetContext();
-
-  const ds = props.dataset;
-
-  const vpsId =
-    ds.vps && typeof ds.vps === 'object' && 'id' in ds.vps ? Number((ds.vps as any).id) : undefined;
-  const vpsHostname = ds.vps && typeof ds.vps === 'object' ? String((ds.vps as any).hostname ?? '') : '';
-
-  return (
-    <Card testId="dataset.overview.actions">
-      <CardHeader title={t('dataset.overview.actions.title')} subtitle={t('dataset.overview.actions.subtitle')} />
-      <CardBody>
-        <div className="flex flex-wrap gap-2">
-          <ChipLink to={`${detailPath}/snapshots`}>
-            {t('dataset.overview.actions.snapshots')}
-          </ChipLink>
-          <ChipLink to={`${detailPath}/downloads`}>
-            {t('dataset.overview.actions.downloads')}
-          </ChipLink>
-
-          {vpsId ? (
-            <ChipLink to={`${basePath}/vps/${vpsId}`} title={t('dataset.overview.actions.open_vps.title')}>
-              {t('dataset.overview.actions.open_vps.label', { vps: vpsHostname ? vpsHostname : `#${vpsId}` })}
-            </ChipLink>
-          ) : null}
-        </div>
-      </CardBody>
-    </Card>
-  );
-}
-
 function TipsCard() {
   const { t } = useI18n();
   return (
@@ -381,10 +348,11 @@ function buildEditablePayload(form: DatasetEditForm, isAdmin: boolean): DatasetE
 function DatasetManagementCard() {
   const { t } = useI18n();
   const { role } = useAuth();
+  const scope = useObjectScope();
   const chrome = useChrome();
   const navigate = useNavigate();
   const { dataset, refetch, refetchChains, datasetRef, busyLocalLock, busyTransaction, listPath } = useDatasetContext();
-  const isAdmin = role === 'admin';
+  const showAdminControls = role === 'admin' && scope.scope === 'all';
 
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -429,7 +397,7 @@ function DatasetManagementCard() {
     mutationFn: async () => {
       const name = childName.trim();
       if (!name) throw new Error('name-required');
-      const payload = buildEditablePayload(edit, isAdmin);
+      const payload = buildEditablePayload(edit, showAdminControls);
       return createDataset({
         ...payload,
         dataset: Number(dataset.id),
@@ -452,7 +420,7 @@ function DatasetManagementCard() {
   });
 
   const updateM = useMutation({
-    mutationFn: async () => updateDataset(dataset.id, buildEditablePayload(edit, isAdmin)),
+    mutationFn: async () => updateDataset(dataset.id, buildEditablePayload(edit, showAdminControls)),
     onMutate: () => chrome.acquireLocalLock(datasetRef),
     onSuccess: (res) => {
       track(res.meta, 'action.dataset.update.label');
@@ -485,7 +453,7 @@ function DatasetManagementCard() {
   const submitCreate = () => {
     setFormError(null);
     try {
-      buildEditablePayload(edit, isAdmin);
+      buildEditablePayload(edit, showAdminControls);
       createM.mutate();
     } catch {
       setFormError(t('dataset.manage.validation.properties'));
@@ -495,7 +463,7 @@ function DatasetManagementCard() {
   const submitUpdate = () => {
     setFormError(null);
     try {
-      buildEditablePayload(edit, isAdmin);
+      buildEditablePayload(edit, showAdminControls);
       updateM.mutate();
     } catch {
       setFormError(t('dataset.manage.validation.properties'));
@@ -561,7 +529,7 @@ function DatasetManagementCard() {
         <Checkbox checked={edit.relatime} onChange={(v) => setEdit((p) => ({ ...p, relatime: v }))} label={t('dataset.manage.field.relatime')} testId="dataset.manage.relatime" />
       </div>
 
-      {isAdmin ? (
+      {showAdminControls ? (
         <div className="grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
           <label className="block">
             <div className="text-xs font-medium text-muted">{t('dataset.manage.field.sharenfs')}</div>
@@ -598,7 +566,7 @@ function DatasetManagementCard() {
         title={t('dataset.manage.title')}
         subtitle={t('dataset.manage.subtitle')}
         actions={
-          isAdmin ? (
+          showAdminControls ? (
             <div className="flex flex-wrap gap-2">
               <ActionButton
                 variant="secondary"
@@ -809,7 +777,6 @@ export function DatasetOverviewPage() {
         <div className="space-y-6">
           <SpaceCard dataset={dataset as any} />
           <CountsCard dataset={dataset as any} />
-          <QuickActionsCard dataset={dataset as any} />
           <DatasetManagementCard />
         </div>
         <div className="space-y-6">

@@ -175,4 +175,44 @@ test.describe('Dataset management actions', () => {
       },
     });
   });
+
+  test('hides admin-only dataset controls for admins in my view', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
+      handlers: {
+        'GET datasets/10': () => ({
+          id: 10,
+          full_name: 'tank/vps/ds10',
+          name: 'ds10',
+          used: 2048,
+          avail: 10240,
+          quota: 0,
+          refquota: 10240,
+          recordsize: 131072,
+          compression: true,
+          atime: false,
+          relatime: false,
+          sync: 'standard',
+          snapshots_count: 2,
+          mount_count: 0,
+          export_count: 0,
+          object_state: 'active',
+          vps: { id: 300, hostname: 'alpha.example' },
+        }),
+        'GET transaction_chains': () => ({ transaction_chains: [], _meta: { total_count: 0 } }),
+      },
+    });
+
+    await page.goto('/app/datasets/10');
+    await expect(page.getByTestId('dataset.manage')).toBeVisible();
+
+    await expect(page.getByTestId('dataset.overview.actions')).toHaveCount(0);
+    await expect(page.getByTestId('dataset.manage.create.open')).toHaveCount(0);
+    await expect(page.getByTestId('dataset.manage.delete.open')).toHaveCount(0);
+    await expect(page.getByTestId('dataset.manage.sharenfs')).toHaveCount(0);
+    await expect(page.getByTestId('dataset.manage.admin_lock_type')).toHaveCount(0);
+    await expect(page.getByTestId('dataset.manage.admin_override')).toHaveCount(0);
+  });
 });
