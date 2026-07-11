@@ -56,4 +56,35 @@ test.describe('DNS zones keyset pagination', () => {
     await expect(page.getByTestId('dns.zones.row.299')).toHaveAttribute('data-row-variant', 'warn');
     await expect(page.getByTestId('dns.zones.row.299.dot')).toBeVisible();
   });
+
+  test('canonicalizes zone name when creating a DNS zone', async ({ page }) => {
+    let createPayload: any;
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'test', level: 1 },
+      handlers: {
+        'GET dns_zones': () => ({ dns_zones: [], _meta: { total_count: 0 } }),
+        'POST dns_zones': async ({ request }) => {
+          createPayload = await request.postDataJSON();
+          return {
+            dns_zone: {
+              id: 401,
+              name: createPayload?.dns_zone?.name,
+              enabled: true,
+              default_ttl: 3600,
+            },
+          };
+        },
+      },
+    });
+
+    await page.goto('/app/dns');
+    await page.getByTestId('dns.zones.create.open').click();
+    await page.getByTestId('dns.zones.create.name').fill('example.test');
+    await page.getByTestId('dns.zones.create.email').fill('hostmaster@example.test');
+    await page.getByTestId('dns.zones.create.submit').click();
+
+    await expect.poll(() => createPayload?.dns_zone?.name).toBe('example.test.');
+    expect(createPayload?.dns_zone?.email).toBe('hostmaster@example.test');
+  });
 });

@@ -58,7 +58,7 @@ export const csDns = {
   'dns.zones.create.failed': 'Vytvoření selhalo',
   'dns.zones.create.name.label': 'Název zóny',
   'dns.zones.create.name.placeholder': 'example.com',
-  'dns.zones.create.name.help': 'Použij plně kvalifikovaný název zóny bez koncové tečky.',
+  'dns.zones.create.name.help': 'Zadej doménu bez koncové tečky; UI ji pro API doplní automaticky.',
   'dns.zones.create.email.label': 'SOA e-mail',
   'dns.zones.create.email.placeholder': 'hostmaster@example.com',
   'dns.zones.create.ttl.label': 'Výchozí TTL',

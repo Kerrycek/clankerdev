@@ -7,6 +7,7 @@ import { useAppMode } from '../../../app/appMode';
 import { useObjectScope } from '../../../app/objectScope';
 import { useI18n } from '../../../app/i18n';
 import { fetchDnsZones, createDnsZone, type DnsZone } from '../../../lib/api/dns';
+import { formatErrorMessage } from '../../../lib/errors';
 import { searchUsers } from '../../../lib/api/users';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 import { cursorFromDescendingPage } from '../../../lib/lockIndex';
@@ -51,6 +52,12 @@ import { toneSurfaceClass } from '../../../components/ui/tone';
 function zoneName(z: DnsZone): string {
   if (typeof z.name === 'string' && z.name) return z.name;
   return `#${z.id}`;
+}
+
+function canonicalDnsZoneName(value: string): string {
+  const name = value.trim();
+  if (!name) return '';
+  return name.endsWith('.') ? name : `${name}.`;
 }
 
 function normalizeRole(value: string): 'forward_role' | 'reverse_role' | undefined {
@@ -641,7 +648,7 @@ export function DnsZonesPage() {
   const createZ = useMutation({
     mutationFn: async () =>
       createDnsZone({
-        name: createName.trim(),
+        name: canonicalDnsZoneName(createName),
         email: createEmail.trim() || undefined,
         enabled: createEnabled,
         dnssec_enabled: createDnssec,
@@ -1148,7 +1155,7 @@ export function DnsZonesPage() {
 
           {createZ.isError ? (
             <Alert title={t('dns.zones.create.failed')} variant="danger">
-              {String(createZ.error)}
+              {formatErrorMessage(createZ.error)}
             </Alert>
           ) : null}
         </div>

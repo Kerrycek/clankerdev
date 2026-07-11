@@ -58,7 +58,7 @@ export const enDns = {
   'dns.zones.create.failed': 'Create failed',
   'dns.zones.create.name.label': 'Zone name',
   'dns.zones.create.name.placeholder': 'example.com',
-  'dns.zones.create.name.help': 'Use a fully qualified zone name, without trailing dot.',
+  'dns.zones.create.name.help': 'Enter the domain without a trailing dot; the UI adds it for the API.',
   'dns.zones.create.email.label': 'SOA email',
   'dns.zones.create.email.placeholder': 'hostmaster@example.com',
   'dns.zones.create.ttl.label': 'Default TTL',
