@@ -1,5 +1,6 @@
-export const DASHBOARD_WIDGET_IDS = ['outages', 'security', 'news', 'cluster'] as const;
+export const DASHBOARD_WIDGET_IDS = ['news', 'outages', 'security', 'cluster'] as const;
 export const DASHBOARD_ESSENTIAL_WIDGET_IDS = ['security', 'cluster'] as const;
+const LEGACY_DEFAULT_WIDGET_ORDER: DashboardWidgetId[] = ['outages', 'security', 'news', 'cluster'];
 
 export type DashboardWidgetId = (typeof DASHBOARD_WIDGET_IDS)[number];
 export type DashboardDensity = 'comfortable' | 'compact';
@@ -43,6 +44,13 @@ function uniqueWidgetIds(value: unknown): DashboardWidgetId[] {
 
 function normalizeWidgetOrder(value: unknown): DashboardWidgetId[] {
   const fromInput = uniqueWidgetIds(value);
+  if (
+    fromInput.length === LEGACY_DEFAULT_WIDGET_ORDER.length &&
+    fromInput.every((id, index) => id === LEGACY_DEFAULT_WIDGET_ORDER[index])
+  ) {
+    return [...DASHBOARD_WIDGET_IDS];
+  }
+
   const missing = DASHBOARD_WIDGET_IDS.filter((id) => !fromInput.includes(id));
   return [...fromInput, ...missing];
 }

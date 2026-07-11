@@ -61,8 +61,8 @@ test('@pr-smoke @pr-smoke-mobile @smoke public overview shows key status surface
   await expect(page.getByTestId('public.stats.nodes')).toBeVisible();
   await expect(page.getByTestId('public.stats.vps')).toBeVisible();
 
-  // Supporting sections
-  await expect(page.getByTestId('public.outages.card')).toBeVisible();
+  // Supporting sections. Empty outages are intentionally hidden.
+  await expect(page.locator('[data-testid="public.outages.card"]')).toHaveCount(0);
   await expect(page.getByTestId('public.nodes.section')).toBeVisible();
 
   // Not shown when IPv4 is healthy.

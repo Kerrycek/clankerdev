@@ -22,16 +22,25 @@ describe('dashboardSettingsModel', () => {
     expect(
       normalizeDashboardSettings({
         density: 'compact',
-        widgetOrder: ['news', 'security', 'news', 'unknown'],
+        widgetOrder: ['security', 'news', 'security', 'unknown'],
         hiddenWidgets: ['news', 'cluster', 'bad'],
         collapsedWidgets: ['cluster', 'outages', 'cluster'],
       }),
     ).toEqual({
       density: 'compact',
-      widgetOrder: ['news', 'security', 'outages', 'cluster'],
+      widgetOrder: ['security', 'news', 'outages', 'cluster'],
       hiddenWidgets: ['news'],
       collapsedWidgets: ['cluster', 'outages'],
     });
+  });
+
+  it('migrates the old default widget order to put news before outages', () => {
+    expect(normalizeDashboardSettings({ widgetOrder: ['outages', 'security', 'news', 'cluster'] }).widgetOrder).toEqual([
+      'news',
+      'outages',
+      'security',
+      'cluster',
+    ]);
   });
 
   it('keeps security and cluster available even if old preferences tried to hide them', () => {
@@ -39,7 +48,7 @@ describe('dashboardSettingsModel', () => {
 
     expect(isDashboardEssentialWidget('security')).toBe(true);
     expect(isDashboardEssentialWidget('cluster')).toBe(true);
-    expect(visibleDashboardWidgets(normalized)).toEqual(['security', 'news', 'cluster']);
+    expect(visibleDashboardWidgets(normalized)).toEqual(['news', 'security', 'cluster']);
   });
 
   it('updates density and visibility without losing normalized order', () => {
@@ -62,7 +71,7 @@ describe('dashboardSettingsModel', () => {
   });
 
   it('moves widgets up and down within the normalized order', () => {
-    const movedUp = moveDashboardWidget(DEFAULT_DASHBOARD_SETTINGS, 'news', 'up');
+    const movedUp = moveDashboardWidget(DEFAULT_DASHBOARD_SETTINGS, 'outages', 'up');
     expect(movedUp.widgetOrder).toEqual(['outages', 'news', 'security', 'cluster']);
 
     const movedDown = moveDashboardWidget(movedUp, 'outages', 'down');

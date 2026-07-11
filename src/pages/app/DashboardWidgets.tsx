@@ -75,6 +75,9 @@ export function DashboardWidgetGrid(props: {
   const { t } = useI18n();
   const compact = props.density === 'compact';
   const itemLimit = compact ? 2 : 3;
+  const hasRecentOutages = props.outages.currentCount > 0 || props.outages.plannedCount > 0;
+  const showOutages = props.outages.isLoading || props.outages.isError || hasRecentOutages;
+  const showSecurity = props.security.isLoading || props.security.isError || props.security.advisories.length > 0;
 
   const toggleCollapsed = (id: DashboardWidgetId) => {
     props.setDashboardSettings(
@@ -89,6 +92,8 @@ export function DashboardWidgetGrid(props: {
     const collapsed = isDashboardWidgetCollapsed(props.dashboardSettings, id);
 
     if (id === 'outages') {
+      if (!showOutages) return null;
+
       return (
         <Card key={id} testId="app.dashboard.outages.card">
           <CardHeader
@@ -135,6 +140,8 @@ export function DashboardWidgetGrid(props: {
     }
 
     if (id === 'security') {
+      if (!showSecurity) return null;
+
       return (
         <SecurityAdvisoriesCard
           key={id}

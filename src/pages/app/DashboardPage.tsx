@@ -151,12 +151,7 @@ export function DashboardPage() {
   }, [outagesQ.data]);
 
   const highlightedOutages = useMemo(
-    () => [
-      ...outagesByCategory.current,
-      ...outagesByCategory.planned,
-      ...outagesByCategory.resolved,
-      ...outagesByCategory.unknown,
-    ].slice(0, 3),
+    () => [...outagesByCategory.current, ...outagesByCategory.planned].slice(0, 3),
     [outagesByCategory],
   );
 
@@ -230,7 +225,7 @@ export function DashboardPage() {
           outages={{
             isLoading: outagesQ.isLoading,
             isError: outagesQ.isError,
-            dataCount: outagesQ.data?.length ?? 0,
+            dataCount: outagesByCategory.current.length + outagesByCategory.planned.length,
             currentCount: outagesByCategory.current.length,
             plannedCount: outagesByCategory.planned.length,
             resolvedCount: outagesByCategory.resolved.length,
