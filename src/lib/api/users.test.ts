@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createUser, deleteUser, fetchUsers, updateUser } from './users';
+import { createUser, deleteUser, fetchUsers, searchUsers, updateUser } from './users';
 
 function makeOkResponse(body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -185,6 +185,119 @@ describe('updateUser', () => {
     });
     expect(init.method).toBe('PUT');
     expect(init.headers).toMatchObject({ 'X-Auth-Token': 'tok_123' });
+  });
+});
+
+describe('searchUsers', () => {
+  function installApiFixture() {
+    (window as any).vpsAdmin = {
+      api: { url: 'https://api.example.test', version: 'v7.0' },
+      sessionToken: 'tok_123',
+      description: {
+        meta: { namespace: '_meta' },
+        authentication: {
+          token: { http_header: 'X-Auth-Token' },
+        },
+      },
+    };
+  }
+
+  it('falls back to cluster search when direct login lookup returns no users', async () => {
+    installApiFixture();
+
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = new URL(String(input));
+
+      if (url.pathname === '/v7.0/users') {
+        return makeUsersResponse([]);
+      }
+
+      if (url.pathname === '/v7.0/cluster/search') {
+        return makeOkResponse({
+          status: true,
+          response: {
+            cluster: [
+              { resource: 'User', id: 4616, value: 'stevob', attribute: 'login' },
+              { resource: 'Vps', id: 12, value: 'stevob' },
+            ],
+          },
+        });
+      }
+
+      if (url.pathname === '/v7.0/users/4616') {
+        return makeOkResponse({
+          status: true,
+          response: {
+            user: {
+              id: 4616,
+              login: 'stevob',
+              full_name: 'Štefan Bystriansky',
+              email: 'bystriansky.stefan12@gmail.com',
+              level: 1,
+            },
+          },
+        });
+      }
+
+      throw new Error(`unexpected fetch ${url.pathname}`);
+    });
+
+    const res = await searchUsers({ q: 'stevob', limit: 8 });
+
+    expect(res.data).toEqual([
+      expect.objectContaining({
+        id: 4616,
+        login: 'stevob',
+        full_name: 'Štefan Bystriansky',
+      }),
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
+  });
+
+  it('merges login, full-name, email and cluster results without duplicates', async () => {
+    installApiFixture();
+
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = new URL(String(input));
+
+      if (url.pathname === '/v7.0/users') {
+        if (url.searchParams.has('user[login]')) {
+          return makeUsersResponse([{ id: 10, login: 'stevob', full_name: 'Stefan', level: 1 }]);
+        }
+        if (url.searchParams.has('user[full_name]')) {
+          return makeUsersResponse([{ id: 11, login: 'stefanb', full_name: 'Stevob Example', level: 1 }]);
+        }
+        if (url.searchParams.has('user[email]')) {
+          return makeUsersResponse([{ id: 10, login: 'stevob', full_name: 'Stefan', level: 1 }]);
+        }
+      }
+
+      if (url.pathname === '/v7.0/cluster/search') {
+        return makeOkResponse({
+          status: true,
+          response: {
+            cluster: [
+              { resource: 'User', id: 10, value: 'stevob', attribute: 'login' },
+              { resource: 'User', id: 12, value: 'stevob-note', attribute: 'info' },
+            ],
+          },
+        });
+      }
+
+      if (url.pathname === '/v7.0/users/12') {
+        return makeOkResponse({
+          status: true,
+          response: { user: { id: 12, login: 'notehit', full_name: 'Cluster Hit', level: 1 } },
+        });
+      }
+
+      throw new Error(`unexpected fetch ${url.pathname}`);
+    });
+
+    const res = await searchUsers({ q: 'stevob', limit: 8 });
+
+    expect(res.data.map((u) => u.id)).toEqual([10, 11, 12]);
+    expect(fetchMock).toHaveBeenCalledTimes(5);
   });
 });
 

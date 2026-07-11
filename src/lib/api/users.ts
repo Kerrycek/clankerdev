@@ -1,5 +1,6 @@
 import { roleFromLevel } from '../roles';
 
+import { clusterSearch } from './clusterSearch';
 import { expectArray, haveApiCall, type HaveApiEnvelope } from './haveapi';
 
 export interface User {
@@ -357,24 +358,86 @@ export async function searchUsers(opts: { q: string; limit?: number }) {
   }
 
   const like = `%${q}%`;
-  const params: Record<string, string | number | boolean> = { limit };
+  const directSearches: Array<Record<string, string | number | boolean>> = [];
+  const baseParams = { limit } as const;
 
-  // NOTE: the backend combines filters with AND, not OR.
-  // We pick the most likely field to keep search intuitive.
-  if (q.includes('@')) {
-    params['email'] = like;
-  } else if (q.includes(' ')) {
-    params['full_name'] = like;
-  } else {
-    params['login'] = like;
+  if (/^#?\d+$/.test(q)) {
+    const userId = Number(q.replace(/^#/, ''));
+    if (Number.isFinite(userId) && userId > 0) {
+      try {
+        const userRes = await fetchUser(Math.trunc(userId));
+        return { data: [userRes.data] };
+      } catch {
+        // Fall through to text/cluster search. Numeric strings can also be
+        // payment IDs or appear in profile fields on older deployments.
+      }
+    }
   }
 
-  const res = await haveApiCall<User[]>({
-    method: 'GET',
-    path: '/users',
-    namespace: 'user',
-    params,
+  // NOTE: the backend combines filters with AND, not OR. Search each likely
+  // field separately and merge the result so all user pickers behave like the
+  // global search box.
+  directSearches.push({ ...baseParams, login: like });
+  directSearches.push({ ...baseParams, full_name: like });
+  directSearches.push({ ...baseParams, email: like });
+
+  const settledDirect = await Promise.allSettled(
+    directSearches.map((params) =>
+      haveApiCall<User[]>({
+        method: 'GET',
+        path: '/users',
+        namespace: 'user',
+        params,
+      })
+    )
+  );
+
+  const directEnvelope = settledDirect.find((res) => res.status === 'fulfilled')?.value;
+  const directUsers = settledDirect.flatMap((res) => {
+    if (res.status !== 'fulfilled') return [];
+    return expectArray<User>(res.value.data, 'users#search');
   });
 
-  return { ...res, data: expectArray<User>(res.data, 'users#search') };
+  const clusterRes = await clusterSearch({ query: q }).catch(() => ({ data: [] }));
+  const seen = new Set<number>();
+  const userIds = clusterRes.data
+    .map((hit) => {
+      const resource = String(hit.resource ?? '').trim().toLowerCase();
+      const id = typeof hit.id === 'number' ? hit.id : Number(hit.id);
+      if (resource !== 'user' || !Number.isFinite(id) || id <= 0) return null;
+      const safeId = Math.trunc(id);
+      if (seen.has(safeId)) return null;
+      seen.add(safeId);
+      return safeId;
+    })
+    .filter((id): id is number => id !== null)
+    .slice(0, limit);
+
+  const directIds = new Set(directUsers.map((u) => u.id));
+  const clusterOnlyIds = userIds.filter((id) => !directIds.has(id));
+
+  let clusterUsers: User[] = [];
+  if (clusterOnlyIds.length > 0) {
+    const users = await Promise.all(
+      clusterOnlyIds.map(async (userId) => {
+        try {
+          return (await fetchUser(userId)).data;
+        } catch {
+          return null;
+        }
+      })
+    );
+    clusterUsers = users.filter((user): user is User => user !== null);
+  }
+
+  const merged: User[] = [];
+  const mergedIds = new Set<number>();
+  for (const user of [...directUsers, ...clusterUsers]) {
+    if (mergedIds.has(user.id)) continue;
+    mergedIds.add(user.id);
+    merged.push(user);
+    if (merged.length >= limit) break;
+  }
+
+  return { ...(directEnvelope ?? { envelope: { status: true, response: { users: [] } } }), data: merged };
 }
