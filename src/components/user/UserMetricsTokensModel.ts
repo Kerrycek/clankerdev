@@ -3,7 +3,6 @@ import type { MetricsAccessToken } from '../../lib/api/userDossier';
 export type MetricsTokenState = 'active' | 'unused' | 'stale' | 'unknown';
 
 export const METRICS_TOKEN_STALE_AFTER_DAYS = 90;
-export const METRICS_TOKEN_REVOKE_CONFIRMATION = 'REVOKE';
 
 const METRICS_TOKEN_STALE_AFTER_MS = METRICS_TOKEN_STALE_AFTER_DAYS * 24 * 60 * 60 * 1000;
 const SAFE_PROMETHEUS_PREFIX_RE = /^[A-Za-z_:][A-Za-z0-9_:]*$/;

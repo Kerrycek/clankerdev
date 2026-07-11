@@ -188,10 +188,6 @@ test.describe('@smoke VPS storage tab mounts', () => {
 
     await page.getByTestId('vps.storage.mounts.row.1.delete').click();
     await expect(page.getByTestId('vps.storage.mounts.delete_confirm')).toBeVisible();
-    await expect(page.getByTestId('vps.storage.mounts.delete_confirm.confirm')).toBeDisabled();
-    await page.getByTestId('vps.storage.mounts.delete_confirm.input').fill('/mnt/data');
-    await expect(page.getByTestId('vps.storage.mounts.delete_confirm.confirm')).toBeDisabled();
-    await page.getByTestId('vps.storage.mounts.delete_confirm.input').fill('/mnt/old');
     await expect(page.getByTestId('vps.storage.mounts.delete_confirm.confirm')).toBeEnabled();
 
     const reqPromise = page.waitForRequest(

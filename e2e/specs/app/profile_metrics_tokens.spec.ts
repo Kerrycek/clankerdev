@@ -91,8 +91,7 @@ test('@smoke profile: metrics token review and revoke guards', async ({ page }) 
   await page.getByTestId('profile.metrics.row.2.delete').click();
   await expect(page.getByTestId('profile.metrics.delete_dialog')).toBeVisible();
   await expect(page.getByTestId('profile.metrics.delete_dialog.review')).toContainText('stale_');
-  await expect(page.getByTestId('profile.metrics.delete_dialog.confirm')).toBeDisabled();
-  await page.getByTestId('profile.metrics.delete_dialog.input').fill('REVOKE');
+  await expect(page.getByTestId('profile.metrics.delete_dialog.confirm')).toBeEnabled();
 
   const deleteReqP = page.waitForRequest((r) => r.method() === 'DELETE' && r.url().includes('/metrics_access_tokens/2'));
   await page.getByTestId('profile.metrics.delete_dialog.confirm').click();

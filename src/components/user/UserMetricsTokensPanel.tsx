@@ -27,7 +27,6 @@ import { Table } from '../ui/Table';
 
 import { UserSecurityMetricGrid } from './UserSecurityMetricGrid';
 import {
-  METRICS_TOKEN_REVOKE_CONFIRMATION,
   buildMetricPrefixReview,
   buildMetricsTokenSummary,
   hasMetricsAccessTokenSecret,
@@ -84,7 +83,6 @@ export function UserMetricsTokensPanel(props: {
   const [metricPrefix, setMetricPrefix] = useState('vpsadmin_');
   const [created, setCreated] = useState<MetricsAccessToken | null>(null);
   const [deleteToken, setDeleteToken] = useState<MetricsAccessToken | null>(null);
-  const [deleteConfirmation, setDeleteConfirmation] = useState('');
 
   const tokensQ = useQuery({
     queryKey: ['metrics_access_tokens', props.userId ?? null],
@@ -116,7 +114,6 @@ export function UserMetricsTokensPanel(props: {
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['metrics_access_tokens'] });
       setDeleteToken(null);
-      setDeleteConfirmation('');
     },
   });
 
@@ -219,7 +216,6 @@ export function UserMetricsTokensPanel(props: {
                             size="sm"
                             onClick={() => {
                               setDeleteToken(tok);
-                              setDeleteConfirmation('');
                             }}
                             testId={`${prefix}.row.${tok.id}.delete`}
                           >
@@ -369,16 +365,12 @@ export function UserMetricsTokensPanel(props: {
         onCancel={() => {
           if (delM.isPending) return;
           setDeleteToken(null);
-          setDeleteConfirmation('');
         }}
         title={t('profile.metrics.delete.title')}
         description={t('profile.metrics.delete.description')}
         confirmLabel={t('common.revoke')}
         danger
         confirmLoading={delM.isPending}
-        confirmationText={METRICS_TOKEN_REVOKE_CONFIRMATION}
-        confirmationValue={deleteConfirmation}
-        onConfirmationValueChange={setDeleteConfirmation}
         onConfirm={() => {
           if (!deleteToken) return;
           delM.mutate(deleteToken.id);

@@ -13,7 +13,6 @@ import type { GateDecision } from '../../../lib/gates/types';
 import {
   buildMountDiff,
   datasetLabel,
-  mountDeleteConfirmation,
   type MountDiffField,
   type MountDiffItem,
   type MountDraft,
@@ -393,14 +392,11 @@ export function VpsStorageMountDeleteDialog(props: {
   target: VpsMount | null;
   gate: GateDecision;
   error: string | null;
-  confirmation: string;
   loading: boolean;
-  onConfirmationChange: (value: string) => void;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
   const { t } = useI18n();
-  const confirmationText = props.target ? mountDeleteConfirmation(props.target) : undefined;
 
   return (
     <ConfirmDialog
@@ -412,9 +408,6 @@ export function VpsStorageMountDeleteDialog(props: {
       confirmLabel={t('common.delete')}
       confirmLoading={props.loading}
       confirmDisabled={!props.gate.allowed}
-      confirmationText={confirmationText}
-      confirmationValue={props.confirmation}
-      onConfirmationValueChange={props.onConfirmationChange}
       onCancel={props.onCancel}
       onConfirm={props.onConfirm}
     >

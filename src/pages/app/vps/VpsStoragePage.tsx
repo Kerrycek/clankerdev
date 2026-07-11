@@ -18,7 +18,6 @@ import {
   defaultMountDraft,
   errorMessage,
   isMountDraftDirty,
-  mountDeleteConfirmation,
   mountDraftFromMount,
   rootDatasetSummary,
   storageOverviewSummary,
@@ -242,24 +241,20 @@ export function VpsStoragePage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<VpsMount | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [deleteConfirmation, setDeleteConfirmation] = useState('');
 
   const openDelete = (mount: VpsMount) => {
     setDeleteError(null);
-    setDeleteConfirmation('');
     setDeleteTarget(mount);
     setDeleteOpen(true);
   };
 
   const submitDelete = async () => {
     if (!deleteTarget) return;
-    if (deleteConfirmation !== mountDeleteConfirmation(deleteTarget)) return;
     setDeleteError(null);
     try {
       await deleteMountM.mutateAsync(deleteTarget.id);
       setDeleteOpen(false);
       setDeleteTarget(null);
-      setDeleteConfirmation('');
     } catch (error) {
       setDeleteError(errorMessage(error));
     }
@@ -348,12 +343,9 @@ export function VpsStoragePage() {
         target={deleteTarget}
         gate={gate}
         error={deleteError}
-        confirmation={deleteConfirmation}
         loading={deleteMountM.isPending}
-        onConfirmationChange={setDeleteConfirmation}
         onCancel={() => {
           setDeleteOpen(false);
-          setDeleteConfirmation('');
         }}
         onConfirm={() => void submitDelete()}
       />

@@ -4,7 +4,7 @@ import { bootstrapVpsAdminWindow } from '../../fixtures/bootstrap';
 import { installHaveApiMock } from '../../fixtures/haveapi';
 import { withAppUrl } from '../../fixtures/url';
 
-test('admin incoming payments: bulk reconciliation uses visible selection with typed confirmation', async ({ page }) => {
+test('admin incoming payments: bulk reconciliation uses visible selection with button confirmation', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
   const haveApiMock = await installHaveApiMock(page, { user: { id: 1, login: 'admin', level: 100 } });
 
@@ -65,9 +65,6 @@ test('admin incoming payments: bulk reconciliation uses visible selection with t
   await expect(page.getByTestId('admin.payments.incoming.bulk.summary')).toContainText(/Eligible: 2/);
   await page.getByTestId('admin.payments.incoming.bulk.review.open').click();
   await expect(page.getByTestId('admin.payments.incoming.bulk.review.warning')).toContainText(/Ignored payments are kept outside/);
-  await expect(page.getByTestId('admin.payments.incoming.bulk.review.confirm')).toBeDisabled();
-
-  await page.getByTestId('admin.payments.incoming.bulk.review.input').fill('IGNORE 2');
   await expect(page.getByTestId('admin.payments.incoming.bulk.review.confirm')).toBeEnabled();
   await page.getByTestId('admin.payments.incoming.bulk.review.confirm').click();
 

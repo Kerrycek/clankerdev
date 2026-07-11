@@ -23,7 +23,7 @@ describe('IncomingPaymentsBulkModel', () => {
     expect(incomingPaymentBulkActionTargetState('mark_processed')).toBe('processed');
   });
 
-  test('builds a safe ignore review with typed confirmation', () => {
+  test('builds an ignore review without typed confirmation', () => {
     const review = buildIncomingPaymentBulkReview({
       rows,
       selectedIds: [1, 2, 3, 4, 5, 999],
@@ -39,19 +39,10 @@ describe('IncomingPaymentsBulkModel', () => {
       skippedUnknownState: 1,
       skippedMissing: 1,
       requiresConfirmation: true,
-      confirmationTarget: 'IGNORE 3',
-      confirmationMatches: false,
-      canSubmit: false,
+      confirmationTarget: undefined,
+      confirmationMatches: true,
+      canSubmit: true,
     });
-
-    expect(
-      buildIncomingPaymentBulkReview({
-        rows,
-        selectedIds: [1, 2, 3],
-        action: 'mark_ignored',
-        confirmationText: 'IGNORE 3',
-      })
-    ).toMatchObject({ confirmationMatches: true, canSubmit: true });
   });
 
   test('allows processed state but highlights unassigned processed risk', () => {
@@ -66,8 +57,8 @@ describe('IncomingPaymentsBulkModel', () => {
       eligibleIds: [1, 4],
       unassignedProcessedCount: 1,
       requiresConfirmation: true,
-      confirmationTarget: 'PROCESSED 2',
-      canSubmit: false,
+      confirmationTarget: undefined,
+      canSubmit: true,
     });
   });
 

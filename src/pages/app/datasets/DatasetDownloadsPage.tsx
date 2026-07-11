@@ -34,7 +34,6 @@ import { DatasetDownloadsList } from "./DatasetDownloadsList";
 import {
   buildSnapshotDownloadPayload,
   defaultSnapshotDownloadDraft,
-  downloadConfirmText,
   findSnapshotById,
   snapshotDownloadDraftFromDownload,
   incrementalFromCandidates,
@@ -105,7 +104,6 @@ export function DatasetDownloadsPage() {
   }, [searchParams, setSearchParams]);
 
   const [confirm, setConfirm] = useState<SnapshotDownload | null>(null);
-  const [confirmPhrase, setConfirmPhrase] = useState("");
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
 
@@ -293,7 +291,6 @@ export function DatasetDownloadsPage() {
   });
 
   function openDeleteConfirm(download: SnapshotDownload) {
-    setConfirmPhrase("");
     setConfirmError(null);
     setConfirm(download);
   }
@@ -425,20 +422,15 @@ export function DatasetDownloadsPage() {
         danger
         confirmLoading={confirmBusy}
         confirmDisabled={confirmBusy || !deleteGate.allowed}
-        confirmationText={downloadConfirmText(confirm)}
-        confirmationValue={confirmPhrase}
-        onConfirmationValueChange={setConfirmPhrase}
         cancelDisabled={confirmBusy}
         onCancel={() => {
           if (confirmBusy) return;
           setConfirm(null);
-          setConfirmPhrase("");
           setConfirmError(null);
           setConfirmBusy(false);
         }}
         onConfirm={async () => {
           if (!confirm || confirmBusy || !deleteGate.allowed) return;
-          if (confirmPhrase !== String(confirm.id)) return;
           setConfirmBusy(true);
           setConfirmError(null);
           try {

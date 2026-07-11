@@ -116,7 +116,6 @@ export function DatasetSnapshotsPage() {
   const [createdDownload, setCreatedDownload] = useState<SnapshotDownload | null>(null);
 
   const [confirm, setConfirm] = useState<ConfirmState>(null);
-  const [confirmPhrase, setConfirmPhrase] = useState('');
   const [confirmBusy, setConfirmBusy] = useState(false);
   const [confirmError, setConfirmError] = useState<string | null>(null);
 
@@ -278,7 +277,6 @@ export function DatasetSnapshotsPage() {
   }
 
   function openConfirm(next: NonNullable<ConfirmState>) {
-    setConfirmPhrase('');
     setConfirmError(null);
     setConfirm(next);
   }
@@ -679,14 +677,10 @@ export function DatasetSnapshotsPage() {
         danger
         confirmLoading={confirmBusy}
         confirmDisabled={confirmBusy || (confirmGate ? !confirmGate.allowed : false)}
-        confirmationText={confirm ? snapshotLabel(confirm.snapshot) : undefined}
-        confirmationValue={confirmPhrase}
-        onConfirmationValueChange={setConfirmPhrase}
         cancelDisabled={confirmBusy}
         onCancel={() => {
           if (confirmBusy) return;
           setConfirm(null);
-          setConfirmPhrase('');
           setConfirmError(null);
           setConfirmBusy(false);
         }}
@@ -694,7 +688,6 @@ export function DatasetSnapshotsPage() {
           const c = confirm;
           if (!c || confirmBusy) return;
           if (confirmGate && !confirmGate.allowed) return;
-          if (confirmPhrase !== snapshotLabel(c.snapshot)) return;
           setConfirmBusy(true);
           setConfirmError(null);
           try {

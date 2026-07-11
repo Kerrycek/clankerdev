@@ -51,11 +51,11 @@ function normalizeSelectedIds(ids: Iterable<number>): number[] {
   return Array.from(new Set(Array.from(ids).filter((id) => Number.isFinite(id) && id > 0).map((id) => Math.floor(id))));
 }
 
-function buildConfirmationTarget(targetState: KnownIncomingPaymentState, eligibleCount: number, unassignedProcessedCount: number): string | undefined {
-  if (eligibleCount <= 0) return undefined;
-  if (targetState === 'ignored') return `IGNORE ${eligibleCount}`;
-  if (targetState === 'processed' && unassignedProcessedCount > 0) return `PROCESSED ${eligibleCount}`;
-  return undefined;
+function bulkActionNeedsReview(targetState: KnownIncomingPaymentState, eligibleCount: number, unassignedProcessedCount: number): boolean {
+  if (eligibleCount <= 0) return false;
+  if (targetState === 'ignored') return true;
+  if (targetState === 'processed' && unassignedProcessedCount > 0) return true;
+  return false;
 }
 
 export function buildIncomingPaymentBulkReview(input: {
@@ -103,9 +103,9 @@ export function buildIncomingPaymentBulkReview(input: {
     eligibleIds.push(id);
   }
 
-  const confirmationTarget = buildConfirmationTarget(targetState, eligibleIds.length, unassignedProcessedCount);
-  const requiresConfirmation = Boolean(confirmationTarget);
-  const confirmationMatches = !confirmationTarget || String(input.confirmationText ?? '') === confirmationTarget;
+  const confirmationTarget = undefined;
+  const requiresConfirmation = bulkActionNeedsReview(targetState, eligibleIds.length, unassignedProcessedCount);
+  const confirmationMatches = true;
 
   return {
     action: input.action,
@@ -121,7 +121,7 @@ export function buildIncomingPaymentBulkReview(input: {
     requiresConfirmation,
     confirmationTarget,
     confirmationMatches,
-    canSubmit: eligibleIds.length > 0 && confirmationMatches,
+    canSubmit: eligibleIds.length > 0,
   };
 }
 

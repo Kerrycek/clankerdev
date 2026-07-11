@@ -105,10 +105,6 @@ test.describe('Dataset management actions', () => {
 
     await page.getByTestId('dataset.manage.delete.open').click();
     await expect(page.getByTestId('dataset.manage.delete.confirm')).toBeVisible();
-    await expect(page.getByTestId('dataset.manage.delete.confirm.confirm')).toBeDisabled();
-    await page.getByTestId('dataset.manage.delete.confirm.input').fill('wrong dataset');
-    await expect(page.getByTestId('dataset.manage.delete.confirm.confirm')).toBeDisabled();
-    await page.getByTestId('dataset.manage.delete.confirm.input').fill('tank/vps/ds10/appdata');
     await expect(page.getByTestId('dataset.manage.delete.confirm.confirm')).toBeEnabled();
 
     const deleteReq = page.waitForRequest((r) => r.method() === 'DELETE' && r.url().includes('/api/v7.0/datasets/11'));

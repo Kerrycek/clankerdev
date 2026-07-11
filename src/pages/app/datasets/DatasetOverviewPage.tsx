@@ -319,7 +319,6 @@ function DatasetManagementCard() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
   const [childName, setChildName] = useState('');
   const [automount, setAutomount] = useState(true);
@@ -551,7 +550,6 @@ function DatasetManagementCard() {
                 disabled={!deleteGate.allowed}
                 disabledReason={!deleteGate.allowed ? deleteGate.reason : undefined}
                 onClick={() => {
-                  setDeleteConfirmation('');
                   setDeleteOpen(true);
                 }}
               >
@@ -628,15 +626,10 @@ function DatasetManagementCard() {
         confirmLabel={t('common.delete')}
         confirmLoading={deleteM.isPending}
         confirmDisabled={!deleteGate.allowed}
-        confirmationText={objectLabel}
-        confirmationValue={deleteConfirmation}
-        onConfirmationValueChange={setDeleteConfirmation}
         onCancel={() => {
           setDeleteOpen(false);
-          setDeleteConfirmation('');
         }}
         onConfirm={() => {
-          if (deleteConfirmation !== objectLabel) return;
           deleteM.mutate();
         }}
       >

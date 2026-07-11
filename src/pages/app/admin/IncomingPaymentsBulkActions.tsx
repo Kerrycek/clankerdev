@@ -34,7 +34,6 @@ export function IncomingPaymentsBulkActions(props: {
 }) {
   const { t } = useI18n();
   const [reviewOpen, setReviewOpen] = useState(false);
-  const [confirmationText, setConfirmationText] = useState('');
 
   const selectedIds = useMemo(() => Array.from(props.selectedIds), [props.selectedIds]);
   const review = useMemo(
@@ -43,9 +42,8 @@ export function IncomingPaymentsBulkActions(props: {
         rows: props.rows,
         selectedIds,
         action: props.action,
-        confirmationText,
       }),
-    [confirmationText, props.action, props.rows, selectedIds]
+    [props.action, props.rows, selectedIds]
   );
 
   const needsReviewIds = useMemo(() => selectIncomingPaymentNeedsReviewIds(props.rows), [props.rows]);
@@ -109,7 +107,6 @@ export function IncomingPaymentsBulkActions(props: {
                 value={props.action}
                 onChange={(event) => {
                   props.onActionChange(normalizeIncomingPaymentBulkAction(event.target.value));
-                  setConfirmationText('');
                 }}
                 testId="admin.payments.incoming.bulk.action"
               >
@@ -135,7 +132,6 @@ export function IncomingPaymentsBulkActions(props: {
             type="button"
             variant={review.requiresConfirmation ? 'danger' : 'primary'}
             onClick={() => {
-              setConfirmationText('');
               setReviewOpen(true);
             }}
             disabled={review.eligibleCount === 0 || props.applying}
@@ -171,23 +167,13 @@ export function IncomingPaymentsBulkActions(props: {
         confirmLabel={t('payments.incoming.bulk.apply')}
         confirmLoading={props.applying}
         confirmDisabled={!review.canSubmit}
-        confirmationText={review.confirmationTarget}
-        confirmationValue={confirmationText}
-        confirmationLabel={
-          review.confirmationTarget
-            ? t('payments.incoming.bulk.review.confirm.label', { target: review.confirmationTarget })
-            : undefined
-        }
-        onConfirmationValueChange={setConfirmationText}
         onCancel={() => {
           if (props.applying) return;
           setReviewOpen(false);
-          setConfirmationText('');
         }}
         onConfirm={async () => {
           await props.onApply(review);
           setReviewOpen(false);
-          setConfirmationText('');
         }}
         testId="admin.payments.incoming.bulk.review"
       >

@@ -374,18 +374,6 @@ test.describe("@smoke Dataset downloads", () => {
     ).toBeVisible();
     await expect(
       page.getByTestId("dataset.downloads.delete_confirm.confirm"),
-    ).toBeDisabled();
-    await page
-      .getByTestId("dataset.downloads.delete_confirm.input")
-      .fill("500");
-    await expect(
-      page.getByTestId("dataset.downloads.delete_confirm.confirm"),
-    ).toBeDisabled();
-    await page
-      .getByTestId("dataset.downloads.delete_confirm.input")
-      .fill("501");
-    await expect(
-      page.getByTestId("dataset.downloads.delete_confirm.confirm"),
     ).toBeEnabled();
 
     await page.getByTestId("dataset.downloads.delete_confirm.confirm").click();
@@ -536,7 +524,7 @@ test.describe("@smoke Dataset downloads", () => {
     );
     await expect(
       page.getByTestId("dataset.downloads.row.601.status_detail"),
-    ).toContainText("Generation is still running");
+    ).toContainText("Preparation is still running");
     await expect(
       page.getByTestId("dataset.downloads.row.601.download"),
     ).toBeDisabled();
