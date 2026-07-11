@@ -146,6 +146,22 @@ function cgroupVersionLabel(value: unknown): string {
   if (normalized === "2" || normalized === "v2" || normalized === "cgroup_v2") return "v2";
   return String(value);
 }
+
+function locationOrder(label: string): number {
+  const normalized = label.trim().toLocaleLowerCase('cs-CZ');
+  if (normalized === 'praha' || normalized === 'prague') return 0;
+  if (normalized === 'brno') return 1;
+  if (normalized === 'playground') return 2;
+  if (normalized === 'praha storage' || normalized === 'prague storage') return 3;
+  if (normalized === 'staging') return 4;
+  return 100;
+}
+
+function sortLocations(a: string, b: string): number {
+  const order = locationOrder(a) - locationOrder(b);
+  return order !== 0 ? order : a.localeCompare(b, 'cs-CZ');
+}
+
 export function summarizeNodes(nodes: PublicNodeStatus[], unknownLocationLabel: string) {
   const groups = new Map<string, NodeLocationGroup>();
   let ok = 0;
@@ -187,7 +203,7 @@ export function summarizeNodes(nodes: PublicNodeStatus[], unknownLocationLabel: 
     }
     groups.set(loc, group);
   }
-  const byLocation = [...groups.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  const byLocation = [...groups.entries()].sort((a, b) => sortLocations(a[0], b[0]));
   for (const [, group] of byLocation) {
     group.nodes.sort((a, b) => sortNodes(a, b, unknownLocationLabel));
   }
