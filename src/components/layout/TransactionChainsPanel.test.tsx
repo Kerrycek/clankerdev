@@ -5,10 +5,19 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
 import { fetchTransactionChain, fetchTransactionChains, fetchTransactions } from '../../lib/api/transactions';
+import type { ObjectScopeValue } from '../../app/objectScope';
 import { TransactionChainsPanel } from './TransactionChainsPanel';
+
+const objectScopeMock = vi.hoisted(() => ({
+  value: { scope: 'mine', mineUserId: 1, canSwitchScope: true } as ObjectScopeValue,
+}));
 
 vi.mock('../../app/appMode', () => ({
   useAppMode: () => ({ basePath: '/app' }),
+}));
+
+vi.mock('../../app/objectScope', () => ({
+  useObjectScope: () => objectScopeMock.value,
 }));
 
 vi.mock('../../app/i18n', () => ({
@@ -76,6 +85,8 @@ function renderPanel() {
 
 describe('TransactionChainsPanel', () => {
   beforeEach(() => {
+    objectScopeMock.value = { scope: 'mine', mineUserId: 1, canSwitchScope: true };
+
     vi.mocked(fetchTransactionChain).mockReset();
     vi.mocked(fetchTransactionChains).mockReset();
     vi.mocked(fetchTransactions).mockReset();
@@ -139,5 +150,27 @@ describe('TransactionChainsPanel', () => {
     });
 
     expect(fetchTransactions).toHaveBeenCalledWith({ transactionChainId: 75, limit: 100 });
+  });
+
+  it('filters transaction chains to the current admin user in my scope', async () => {
+    renderPanel();
+
+    await screen.findByRole('link', { name: 'Create' });
+
+    await waitFor(() => {
+      expect(fetchTransactionChains).toHaveBeenCalledWith({ limit: 10, userId: 1 });
+    });
+  });
+
+  it('does not apply a user filter in all-objects scope', async () => {
+    objectScopeMock.value = { scope: 'all', mineUserId: undefined, canSwitchScope: true };
+
+    renderPanel();
+
+    await screen.findByRole('link', { name: 'Create' });
+
+    await waitFor(() => {
+      expect(fetchTransactionChains).toHaveBeenCalledWith({ limit: 10, userId: undefined });
+    });
   });
 });

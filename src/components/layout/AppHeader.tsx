@@ -169,20 +169,18 @@ function AppUserMenu(props: Pick<AppHeaderProps,
   return (
     <div className="relative order-10 flex items-center gap-2 md:order-8" ref={userMenuRef}>
       {sessionDisplay ? (
-        <button
-          type="button"
+        <div
           className={clsx(
-            'hidden h-10 items-center gap-1.5 rounded-md border border-border bg-overlay-surface px-2.5 text-xs font-medium text-muted shadow-card hover:bg-surface-2',
+            'hidden h-10 items-center gap-1.5 rounded-md border border-border bg-overlay-surface px-2.5 text-xs font-medium text-muted shadow-card',
             'lg:inline-flex'
           )}
-          onClick={() => setUserMenuOpen((v) => !v)}
           aria-label={`${sessionDisplay.menuLabel}: ${sessionDisplay.value}`}
           title={`${sessionDisplay.menuLabel}: ${sessionDisplay.value}`}
           data-testid="shell.session-remaining"
         >
           <Clock3 size={15} />
           <span>{sessionDisplay.value}</span>
-        </button>
+        </div>
       ) : null}
       <button
         className={clsx(
@@ -200,20 +198,13 @@ function AppUserMenu(props: Pick<AppHeaderProps,
 
       {userMenuOpen ? (
         <div
-          className="absolute right-0 top-full z-50 mt-2 max-h-modal w-drawer-md overflow-y-auto overscroll-contain rounded-md border border-border bg-overlay-surface p-2 shadow-panel"
+          className="absolute right-0 top-[calc(100%+0.5rem)] z-50 max-h-modal w-drawer-md overflow-y-auto overscroll-contain rounded-md border border-border bg-overlay-surface p-2 shadow-panel"
           data-testid="shell.user-menu"
           data-overlay="popover"
           data-overlay-surface="overlay"
         >
-          {sessionDisplay ? (
-            <div className="px-2 py-1" data-testid="shell.user-menu.session-remaining">
-              <div className="text-xs text-muted">{sessionDisplay.menuLabel}</div>
-              <div className="mt-0.5 text-sm font-medium">{sessionDisplay.value}</div>
-            </div>
-          ) : null}
-
           {canSwitchMode ? (
-            <div className={clsx('px-2 py-1', sessionDisplay ? 'mt-2 border-t border-border pt-2' : '')}>
+            <div className="px-2 py-1">
               <div className="text-xs text-muted">{t('settings.scope.label')}</div>
               <div className="mt-1 grid grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] gap-2">
                 <button
@@ -674,7 +665,7 @@ export function AppHeader(props: AppHeaderProps) {
 
           {searchOpen && (search.trim() || searchResults.length > 0) ? (
             <div
-              className="absolute left-0 top-full z-50 mt-2 w-drawer-md overflow-hidden rounded-md border border-border bg-overlay-surface shadow-panel"
+              className="absolute left-0 top-[calc(100%+0.5rem)] z-50 w-drawer-md overflow-hidden rounded-md border border-border bg-overlay-surface shadow-panel"
               data-testid="shell.inline-search.results"
               data-overlay="popover"
               data-overlay-surface="overlay"

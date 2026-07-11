@@ -36,6 +36,7 @@ import {
   shouldCollapseSystemOperation,
 } from '../../lib/operationTaxonomy';
 import { TransactionInlineDetails } from '../ui/TransactionInlineDetails';
+import { useObjectScope } from '../../app/objectScope';
 
 function formatConcerns(chain: TransactionChain): string | null {
   const c = chain.concerns as any;
@@ -79,20 +80,22 @@ export function TransactionChainsPanel(props: {
   onTogglePin?: (chainId: number) => void;
 }) {
   const { basePath, mode } = useAppMode();
+  const scope = useObjectScope();
   const i18n = useI18n();
   const tierARefetchMs = useTierAIntervalMs();
   const [expandedChainId, setExpandedChainId] = useState<number | null>(null);
   const [expandedTransactionIds, setExpandedTransactionIds] = useState<Set<number>>(() => new Set());
   const [systemOpen, setSystemOpen] = useState(false);
+  const mineUserId = scope.mineUserId;
 
   const pinnedIds = useMemo(() => parseIds(props.pinnedIds, 50), [props.pinnedIds]);
   const pinnedSet = useMemo(() => new Set<number>(pinnedIds), [pinnedIds]);
 
   const pinnedQs = useQueries({
     queries: pinnedIds.map((id) => ({
-      queryKey: ['transaction_chains', 'show', { id }],
+      queryKey: ['transaction_chains', 'show', { id, mineUserId: mineUserId ?? null }],
       queryFn: async () => (await fetchTransactionChain(id)).data,
-      enabled: Number.isFinite(id) && id > 0,
+      enabled: mineUserId === undefined && Number.isFinite(id) && id > 0,
       refetchInterval: tierARefetchMs,
     })),
   });
@@ -122,8 +125,8 @@ export function TransactionChainsPanel(props: {
   };
 
   const q = useQuery({
-    queryKey: ['transaction_chains', 'list', { limit: props.limit ?? 10 }],
-    queryFn: async () => (await fetchTransactionChains({ limit: props.limit ?? 10 })).data,
+    queryKey: ['transaction_chains', 'list', { limit: props.limit ?? 10, userId: mineUserId ?? null, scope: scope.scope }],
+    queryFn: async () => (await fetchTransactionChains({ limit: props.limit ?? 10, userId: mineUserId })).data,
     refetchInterval: tierARefetchMs,
   });
 
