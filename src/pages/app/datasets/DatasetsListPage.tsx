@@ -92,6 +92,10 @@ function datasetObjectState(ds: Dataset): string {
   return String((ds as any).object_state ?? '').trim();
 }
 
+function hasValue(value: unknown): boolean {
+  return value !== undefined && value !== null && String(value).trim() !== '';
+}
+
 function canonicalKey(raw: string): 'q' | 'user' | 'vps' | 'id' | null {
   const k = String(raw ?? '')
     .trim()
@@ -219,6 +223,11 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
   });
 
   const rows = datasetsQ.data ?? [];
+  const showSnapshotColumn = rows.some((ds) => hasValue(ds.snapshots_count));
+  const showMountColumn = rows.some((ds) => hasValue(ds.mount_count));
+  const showExportColumn = rows.some((ds) => hasValue(ds.export_count));
+  const showStateColumn = rows.some((ds) => hasValue((ds as any).object_state));
+  const showRelatedMeta = showSnapshotColumn || showMountColumn || showExportColumn;
 
   const pageCursor = useMemo(() => cursorFromDescendingPage(rows as any), [rows]);
   const hasMore = rows.length >= pagination.limit;
@@ -726,15 +735,21 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
                           </span>
                         )
                       ) : null}
-                      <span>
-                        {t('dataset.field.snapshots')}: {ds.snapshots_count ?? t('common.na')}
-                      </span>
-                      <span>
-                        {t('dataset.field.mounts')}: {ds.mount_count ?? t('common.na')}
-                      </span>
-                      <span>
-                        {t('dataset.field.exports')}: {ds.export_count ?? t('common.na')}
-                      </span>
+                      {showRelatedMeta && showSnapshotColumn ? (
+                        <span>
+                          {t('dataset.field.snapshots')}: {ds.snapshots_count ?? 0}
+                        </span>
+                      ) : null}
+                      {showRelatedMeta && showMountColumn ? (
+                        <span>
+                          {t('dataset.field.mounts')}: {ds.mount_count ?? 0}
+                        </span>
+                      ) : null}
+                      {showRelatedMeta && showExportColumn ? (
+                        <span>
+                          {t('dataset.field.exports')}: {ds.export_count ?? 0}
+                        </span>
+                      ) : null}
                     </div>
                   </div>
                 </Card>
@@ -784,10 +799,10 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
                 <th className="px-4 py-2">{t('common.name')}</th>
                 {showOwnerColumn ? <th className="px-4 py-2">{t('common.user')}</th> : showVpsFilter ? <th className="px-4 py-2">{t('common.vps')}</th> : null}
                 <th className="px-4 py-2">{t('dataset.field.usage')}</th>
-                <th className="px-4 py-2">{t('dataset.field.snapshots')}</th>
-                <th className="px-4 py-2">{t('dataset.field.mounts')}</th>
-                <th className="px-4 py-2">{t('dataset.field.exports')}</th>
-                <th className="px-4 py-2">{t('common.state')}</th>
+                {showSnapshotColumn ? <th className="px-4 py-2">{t('dataset.field.snapshots')}</th> : null}
+                {showMountColumn ? <th className="px-4 py-2">{t('dataset.field.mounts')}</th> : null}
+                {showExportColumn ? <th className="px-4 py-2">{t('dataset.field.exports')}</th> : null}
+                {showStateColumn ? <th className="px-4 py-2">{t('common.state')}</th> : null}
               </tr>
             </thead>
             <tbody>
@@ -845,12 +860,14 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
                     <td className="px-4 py-2">
                       <DatasetUsage used={ds.used as any} refquota={ds.refquota as any} />
                     </td>
-                    <td className="px-4 py-2">{ds.snapshots_count ?? t('common.na')}</td>
-                    <td className="px-4 py-2">{ds.mount_count ?? t('common.na')}</td>
-                    <td className="px-4 py-2">{ds.export_count ?? t('common.na')}</td>
-                    <td className="px-4 py-2">
-                      {state ? <Badge variant={state.variant}>{state.label}</Badge> : <span className="text-faint">—</span>}
-                    </td>
+                    {showSnapshotColumn ? <td className="px-4 py-2">{ds.snapshots_count ?? 0}</td> : null}
+                    {showMountColumn ? <td className="px-4 py-2">{ds.mount_count ?? 0}</td> : null}
+                    {showExportColumn ? <td className="px-4 py-2">{ds.export_count ?? 0}</td> : null}
+                    {showStateColumn ? (
+                      <td className="px-4 py-2">
+                        {state ? <Badge variant={state.variant}>{state.label}</Badge> : <span className="text-faint">—</span>}
+                      </td>
+                    ) : null}
                   </TableRowLink>
                 );
               })}

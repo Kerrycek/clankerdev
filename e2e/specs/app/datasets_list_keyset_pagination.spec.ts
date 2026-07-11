@@ -58,3 +58,47 @@ test.describe('Datasets list keyset pagination', () => {
     await expect(page.getByTestId('datasets.row.299.dot')).toBeVisible();
   });
 });
+
+test.describe('Datasets list optional columns', () => {
+  test.beforeEach(async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, {
+      sessionToken: 'TEST',
+    });
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'test', level: 1 },
+      handlers: {
+        'GET datasets': () => ({
+          datasets: [
+            {
+              id: 8,
+              full_name: 'tank/vps/12',
+              name: '12',
+              used: 269,
+              refquota: 10240,
+              vps: { id: 12, hostname: 'dopici' },
+            },
+            {
+              id: 9,
+              full_name: 'tank/vps/13',
+              name: '13',
+              used: 269,
+              refquota: 10240,
+              vps: { id: 13, hostname: 'hjjh' },
+            },
+          ],
+        }),
+      },
+    });
+  });
+
+  test('hides related object columns when the API does not provide those values', async ({ page }) => {
+    await page.goto('/app/datasets');
+
+    await expect(page.getByTestId('datasets.list')).toBeVisible();
+    await expect(page.getByTestId('datasets.row.8')).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Snapshoty' })).toHaveCount(0);
+    await expect(page.getByRole('columnheader', { name: 'Mounty' })).toHaveCount(0);
+    await expect(page.getByRole('columnheader', { name: 'Exporty' })).toHaveCount(0);
+  });
+});
