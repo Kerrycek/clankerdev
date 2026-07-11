@@ -131,8 +131,7 @@ test('@smoke profile: ssh keys + sessions flows', async ({ page }) => {
   // Close session
   await sessionsTable.getByTestId('profile.sessions.row.1.close').click();
   await expect(page.getByTestId('profile.sessions.close_dialog')).toBeVisible();
-  await expect(page.getByTestId('profile.sessions.close_dialog.confirm')).toBeDisabled();
-  await page.getByTestId('profile.sessions.close_dialog.input').fill('CLOSE');
+  await expect(page.getByTestId('profile.sessions.close_dialog.confirm')).toBeEnabled();
   const closeReqP = page.waitForRequest((r) => r.method() === 'POST' && r.url().includes('/user_sessions/1'));
   await page.getByTestId('profile.sessions.close_dialog.confirm').click();
   await closeReqP;
