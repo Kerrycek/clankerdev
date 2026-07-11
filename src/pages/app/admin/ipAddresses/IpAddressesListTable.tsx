@@ -15,6 +15,7 @@ import { TableRowLink } from '../../../../components/ui/TableRowLink';
 import {
   ifaceLabel,
   environmentLabel,
+  locationMark,
   ipAddressText,
   ipCreatedAt,
   ipDotVariant,
@@ -48,11 +49,12 @@ interface IpAddressesListTableProps {
   ipDetailBasePath: string;
   basePath: string;
   na: string;
+  locationFallback?: { label?: string | null; environment?: { label?: string | null } | null } | null;
   canPaginate: boolean;
   pagination: PaginationProps;
 }
 
-export function IpAddressesListTable({ pageData, ipDetailBasePath, basePath, na, canPaginate, pagination }: IpAddressesListTableProps) {
+export function IpAddressesListTable({ pageData, ipDetailBasePath, basePath, na, locationFallback, canPaginate, pagination }: IpAddressesListTableProps) {
   const { t } = useI18n();
 
   return (
@@ -100,6 +102,7 @@ export function IpAddressesListTable({ pageData, ipDetailBasePath, basePath, na,
           const assigned = isAssignedToInterface(ip);
           const createdAt = ipCreatedAt(ip);
           const ipAddr = ipAddressText(ip);
+          const mark = locationMark(ip, locationFallback);
           const detailPath = `${ipDetailBasePath}/${id}`;
           return (
             <TableRowLink
@@ -123,7 +126,15 @@ export function IpAddressesListTable({ pageData, ipDetailBasePath, basePath, na,
                 <div className="mt-1 text-xs text-faint">#{id}</div>
               </td>
               <td className="px-4 py-2 text-xs text-muted">{networkLabel(ip, na)}</td>
-              <td className="px-4 py-2 text-xs text-muted">{environmentLabel(ip, na)}</td>
+              <td className="px-4 py-2 text-xs text-muted">
+                {mark ? (
+                  <span title={mark.label} aria-label={mark.label} className="inline-flex min-w-5 justify-center rounded border border-border bg-surface-2 px-1 font-semibold text-fg">
+                    {mark.code}
+                  </span>
+                ) : (
+                  environmentLabel(ip, na)
+                )}
+              </td>
               <td className="px-4 py-2 text-xs">
                 {vpsId ? (
                   <Link className="text-accent hover:underline" to={`${basePath}/vps/${vpsId}`}>

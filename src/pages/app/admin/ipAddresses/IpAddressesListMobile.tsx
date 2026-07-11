@@ -17,6 +17,7 @@ import { toneSurfaceClass } from '../../../../components/ui/tone';
 import {
   ifaceLabel,
   environmentLabel,
+  locationMark,
   ipAddressText,
   ipCreatedAt,
   ipDotVariant,
@@ -50,11 +51,12 @@ interface IpAddressesListMobileProps {
   ipDetailBasePath: string;
   basePath: string;
   na: string;
+  locationFallback?: { label?: string | null; environment?: { label?: string | null } | null } | null;
   canPaginate: boolean;
   pagination: PaginationProps;
 }
 
-export function IpAddressesListMobile({ pageData, ipDetailBasePath, basePath, na, canPaginate, pagination }: IpAddressesListMobileProps) {
+export function IpAddressesListMobile({ pageData, ipDetailBasePath, basePath, na, locationFallback, canPaginate, pagination }: IpAddressesListMobileProps) {
   const { t } = useI18n();
 
   return (
@@ -68,6 +70,7 @@ export function IpAddressesListMobile({ pageData, ipDetailBasePath, basePath, na
           const assigned = isAssignedToInterface(ip);
           const rowVariant = ipRowVariant(ip);
           const ipAddr = ipAddressText(ip);
+          const mark = locationMark(ip, locationFallback);
           const detailPath = `${ipDetailBasePath}/${id}`;
           return (
             <Card key={id} testId={`admin.ip_addresses.card.${id}`} className={clsx(rowVariant ? toneSurfaceClass(rowVariant) : undefined)}>
@@ -99,7 +102,7 @@ export function IpAddressesListMobile({ pageData, ipDetailBasePath, basePath, na
                     <span className="text-faint">{t('admin.ip.field.network')}:</span> {networkLabel(ip, na)}
                   </div>
                   <div>
-                    <span className="text-faint">{t('admin.ip_addresses.field.environment')}:</span> {environmentLabel(ip, na)}
+                    <span className="text-faint">{t('admin.ip_addresses.field.environment')}:</span> {mark ? mark.label : environmentLabel(ip, na)}
                   </div>
                   <div>
                     <span className="text-faint">{t('admin.ip.field.vps_id')}:</span> {vpsLabel(ip, na)}

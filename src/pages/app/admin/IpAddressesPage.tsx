@@ -28,6 +28,7 @@ import {
   canonicalKey,
   IpListOrder,
   ipId,
+  isDefaultHiddenLegacyNetwork,
   looksLikeIpish,
   parseBoolToken,
   resolveOrderValue,
@@ -266,11 +267,20 @@ export function IpAddressesPage() {
     enabled: locationReady,
   });
 
-  const pageData = listQ.data ?? [];
-  const pageCursor = useMemo(() => cursorFromDescendingPage(pageData), [pageData]);
-  const hasMore = pageData.length >= pagination.limit;
+  const rawPageData = listQ.data ?? [];
+  const hideLegacyNetworksByDefault = networkId === undefined && !qText.trim() && !addr.trim() && prefixNum === undefined && versionNum === undefined;
+  const pageData = useMemo(
+    () => (hideLegacyNetworksByDefault ? rawPageData.filter((ip) => !isDefaultHiddenLegacyNetwork(ip)) : rawPageData),
+    [hideLegacyNetworksByDefault, rawPageData]
+  );
+  const locationFallback = useMemo(
+    () => environmentLocations.find((item) => Number(item.id) === locationId) ?? null,
+    [environmentLocations, locationId]
+  );
+  const pageCursor = useMemo(() => cursorFromDescendingPage(rawPageData), [rawPageData]);
+  const hasMore = rawPageData.length >= pagination.limit;
   const canNext = pagination.hasForward || (hasMore && pageCursor !== null);
-  const canPaginate = pagination.stack.length > 1 || pageData.length > 0;
+  const canPaginate = pagination.stack.length > 1 || rawPageData.length > 0;
 
   const openIp = (ipId: number) => {
     navigate(`${ipDetailBasePath}/${ipId}`);
@@ -617,6 +627,7 @@ export function IpAddressesPage() {
             ipDetailBasePath={ipDetailBasePath}
             basePath={basePath}
             na={na}
+            locationFallback={locationFallback}
             canPaginate={canPaginate}
             pagination={{
               page: pagination.page,
@@ -637,6 +648,7 @@ export function IpAddressesPage() {
             ipDetailBasePath={ipDetailBasePath}
             basePath={basePath}
             na={na}
+            locationFallback={locationFallback}
             canPaginate={canPaginate}
             pagination={{
               page: pagination.page,

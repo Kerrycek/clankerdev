@@ -121,6 +121,38 @@ export function environmentLabel(ip: IpAddress, na: string): string {
   return locationLabel || environmentLabel || na;
 }
 
+export type IpLocationFallback = {
+  label?: string | null;
+  environment?: { label?: string | null } | null;
+};
+
+export function locationMark(ip: IpAddress, fallback?: IpLocationFallback | null): { code: string; label: string } | null {
+  const network = ipRow(ip).network;
+  const location = network && typeof network !== 'string' ? network.primary_location : undefined;
+  const source = location?.label ? location : fallback;
+  const label = typeof source?.label === 'string' ? source.label.trim() : '';
+  const environment = typeof source?.environment?.label === 'string' ? source.environment.label.trim() : '';
+
+  if (!label && !environment) return null;
+
+  return {
+    code: (label || environment).slice(0, 1).toUpperCase(),
+    label: label && environment ? `${label} · ${environment}` : label || environment,
+  };
+}
+
+export function isDefaultHiddenLegacyNetwork(ip: IpAddress): boolean {
+  const address = ipAddressText(ip)?.toLowerCase() ?? '';
+  const network = networkLabel(ip, '').toLowerCase();
+
+  return (
+    address.startsWith('83.167.228.') ||
+    network.startsWith('83.167.228.') ||
+    address.startsWith('2a01:430:17:') ||
+    network.startsWith('2a01:430:17:')
+  );
+}
+
 export function userLabel(ip: IpAddress, na: string): string {
   const user = ipRow(ip).user;
   if (!user) return na;
