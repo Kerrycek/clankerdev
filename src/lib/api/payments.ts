@@ -33,7 +33,14 @@ export interface IncomingPayment {
   [k: string]: unknown;
 }
 
-export async function fetchIncomingPayments(opts?: { limit?: number; fromId?: number; state?: string; q?: string; userId?: number }) {
+export async function fetchIncomingPayments(opts?: {
+  limit?: number;
+  fromId?: number;
+  state?: string;
+  q?: string;
+  userId?: number;
+  count?: boolean;
+}) {
   const params: Record<string, unknown> = {};
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
@@ -46,15 +53,17 @@ export async function fetchIncomingPayments(opts?: { limit?: number; fromId?: nu
     path: '/incoming_payments',
     namespace: 'incoming_payment',
     params,
+    meta: opts?.count ? { count: true } : undefined,
   });
 
   return { ...res, data: expectArray<IncomingPayment>(res.data, 'incoming_payments#index') };
 }
 
-export async function fetchIncomingPayment(paymentId: number) {
+export async function fetchIncomingPayment(paymentId: number, opts?: { includes?: string }) {
   return haveApiCall<IncomingPayment>({
     method: 'GET',
     path: `/incoming_payments/${paymentId}`,
+    meta: opts?.includes ? { includes: opts.includes } : undefined,
   });
 }
 

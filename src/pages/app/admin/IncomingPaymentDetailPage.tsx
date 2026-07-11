@@ -13,10 +13,12 @@ import {
   type IncomingPayment,
   updateIncomingPaymentState,
 } from '../../../lib/api/payments';
+import { fetchUser, type User } from '../../../lib/api/users';
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
 
 import { formatDateTime } from '../../../lib/format';
 import { formatErrorMessage } from '../../../lib/errors';
+import { parseLookupIdLike } from '../../../lib/lookupInput';
 import {
   getPaidUntilStatus,
   incomingPaymentBadgeVariant,
@@ -37,11 +39,9 @@ import { ErrorState } from '../../../components/ui/ErrorState';
 import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 import { LoadingState } from '../../../components/ui/LoadingState';
 import { Input } from '../../../components/ui/Input';
-import { Modal } from '../../../components/ui/Modal';
 import { Select } from '../../../components/ui/Select';
 import { StatusDot } from '../../../components/ui/StatusDot';
-import { IncomingPaymentAssignReviewCard, IncomingPaymentStateReviewCard } from './IncomingPaymentReviewCards';
-import { IncomingPaymentReconciliationCard } from './IncomingPaymentsReconciliationCards';
+import { IncomingPaymentAssignReviewCard } from './IncomingPaymentReviewCards';
 import {
   buildIncomingPaymentAssignReview,
   buildIncomingPaymentStateReview,
@@ -51,6 +51,70 @@ import {
   incomingPaymentUserLabel,
   parsePositivePaymentId,
 } from './IncomingPaymentsModel';
+
+function detailUserLabel(user: User): string {
+  const login = String(user.login ?? '').trim();
+  const name = String(user.full_name ?? '').trim();
+  if (login && name && login !== name) return `${login} · ${name}`;
+  return login || name || `#${user.id}`;
+}
+
+function AssignmentUserPreview(props: {
+  basePath: string;
+  userId: number | null;
+  user?: User;
+  loading: boolean;
+  error: boolean;
+}) {
+  const { t } = useI18n();
+
+  if (!props.userId) return null;
+
+  if (props.loading && !props.user) {
+    return (
+      <div className="rounded-md border border-border bg-surface-2 px-3 py-2 text-sm text-muted" data-testid="admin.payments.incoming.assign.user_lookup.loading">
+        {t('payments.incoming.assign.lookup.loading', { id: props.userId })}
+      </div>
+    );
+  }
+
+  if (props.error && !props.user) {
+    return (
+      <div className="rounded-md border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger" data-testid="admin.payments.incoming.assign.user_lookup.error">
+        {t('payments.incoming.assign.lookup.error', { id: props.userId })}
+      </div>
+    );
+  }
+
+  if (!props.user) return null;
+
+  return (
+    <div
+      className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-ok-border bg-ok-bg px-3 py-2"
+      data-testid="admin.payments.incoming.assign.user_lookup"
+    >
+      <div>
+        <div className="text-xs font-medium uppercase tracking-wide text-muted">
+          {t('payments.incoming.assign.lookup.title')}
+        </div>
+        <div className="mt-1 text-sm font-semibold text-fg">
+          <Link className="text-accent hover:underline" to={`${props.basePath}/users/${props.user.id}`}>
+            {detailUserLabel(props.user)}
+          </Link>
+          <span className="ml-2 text-xs font-medium text-muted">#{props.user.id}</span>
+        </div>
+        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
+          {props.user.email ? <span>{props.user.email}</span> : null}
+          {props.user.paid_until ? <span>{t('payments.incoming.detail.paid_until')}: {formatDateTime(props.user.paid_until)}</span> : null}
+          {typeof props.user.monthly_payment === 'number' ? (
+            <span>{t('payments.incoming.assign.lookup.monthly_payment')}: {props.user.monthly_payment}</span>
+          ) : null}
+        </div>
+      </div>
+      <Badge variant="ok">{t('payments.incoming.assign.lookup.found')}</Badge>
+    </div>
+  );
+}
 
 export function IncomingPaymentDetailPage() {
   const { basePath } = useAppMode();
@@ -67,7 +131,7 @@ export function IncomingPaymentDetailPage() {
     enabled: Boolean(paymentId),
     queryFn: async () => {
       if (!paymentId) throw new Error('invalid payment');
-      return (await fetchIncomingPayment(paymentId)).data;
+      return (await fetchIncomingPayment(paymentId, { includes: 'user' })).data;
     },
   });
 
@@ -83,10 +147,8 @@ export function IncomingPaymentDetailPage() {
   const dotVar = dotVariantFromBadgeVariant(primaryVar);
 
   const [stateEdit, setStateEdit] = useState('');
-  const [stateConfirm, setStateConfirm] = useState('');
   const effectiveStateEdit = stateEdit || st;
 
-  const [assignOpen, setAssignOpen] = useState(false);
   const [assignUserId, setAssignUserId] = useState('');
 
   const isAssigned = Boolean(payment?.user);
@@ -95,14 +157,25 @@ export function IncomingPaymentDetailPage() {
   const acctAmount = useMemo(() => incomingPaymentAccountedAmountLabel(payment), [payment]);
 
   const stateReview = useMemo(
-    () => buildIncomingPaymentStateReview({ payment, nextState: effectiveStateEdit, confirmationText: stateConfirm }),
-    [effectiveStateEdit, payment, stateConfirm]
+    () => buildIncomingPaymentStateReview({ payment, nextState: effectiveStateEdit }),
+    [effectiveStateEdit, payment]
   );
 
   const assignReview = useMemo(
     () => buildIncomingPaymentAssignReview({ payment, rawUserId: assignUserId }),
     [assignUserId, payment]
   );
+
+  const assignLookupUserId = useMemo(() => parseLookupIdLike(assignUserId), [assignUserId]);
+  const assignUserQ = useQuery({
+    queryKey: ['users', 'incoming_payment_assignment_lookup', assignLookupUserId],
+    enabled: assignLookupUserId !== null && !isAssigned,
+    queryFn: async () => {
+      if (assignLookupUserId === null) throw new Error('missing user id');
+      return (await fetchUser(assignLookupUserId)).data;
+    },
+    staleTime: 60_000,
+  });
 
   async function saveState() {
     if (!paymentId || !stateReview.canSubmit) return;
@@ -120,7 +193,6 @@ export function IncomingPaymentDetailPage() {
       });
 
       setStateEdit('');
-      setStateConfirm('');
       q.refetch();
       qc.invalidateQueries({ queryKey: ['incoming_payments', 'index'] });
     } catch (e: unknown) {
@@ -169,10 +241,8 @@ export function IncomingPaymentDetailPage() {
         body: t('payments.incoming.assign.toast.message'),
       });
 
-      setAssignOpen(false);
       setAssignUserId('');
       setStateEdit('');
-      setStateConfirm('');
 
       await q.refetch();
       qc.invalidateQueries({ queryKey: ['incoming_payments', 'index'] });
@@ -235,14 +305,6 @@ export function IncomingPaymentDetailPage() {
             <Link className="text-sm text-accent hover:underline" to={`${basePath}/payments/incoming`}>
               {t('common.back')}
             </Link>
-            <Button
-              variant="primary"
-              onClick={() => setAssignOpen(true)}
-              disabled={isAssigned}
-              testId="admin.payments.incoming.assign.open"
-            >
-              {t('payments.incoming.assign.button')}
-            </Button>
           </div>
         }
       />
@@ -250,9 +312,25 @@ export function IncomingPaymentDetailPage() {
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <div className="space-y-3 lg:col-span-2">
           <Card>
-          <CardHeader title={t('payments.incoming.detail.card.payment')} />
-          <CardBody>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <CardHeader
+              title={t('payments.incoming.detail.card.payment')}
+              subtitle={
+                <span className="inline-flex flex-wrap items-center gap-2">
+                  <Badge variant={incomingPaymentBadgeVariant(st)}>{t(incomingPaymentStateLabelKey(st))}</Badge>
+                  <span className="text-faint">#{paymentId}</span>
+                </span>
+              }
+              actions={
+                <div className="text-right">
+                  <div className="text-lg font-semibold tabular-nums text-fg">{recvAmount}</div>
+                  {acctAmount ? (
+                    <div className="text-xs text-muted">{t('payments.incoming.detail.accounted_amount')}: {acctAmount}</div>
+                  ) : null}
+                </div>
+              }
+            />
+            <CardBody>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
               <div>
                 <div className="text-xs text-muted">{t('common.date')}</div>
                 <div className="text-sm">{formatDateTime(payment.date)}</div>
@@ -263,7 +341,7 @@ export function IncomingPaymentDetailPage() {
               </div>
               <div>
                 <div className="text-xs text-muted">{t('payments.incoming.detail.received_amount')}</div>
-                <div className="text-lg font-semibold tabular-nums">{recvAmount}</div>
+                <div className="text-sm font-semibold tabular-nums">{recvAmount}</div>
                 {acctAmount ? <div className="text-xs text-muted">{t('payments.incoming.detail.accounted_amount')}: {acctAmount}</div> : null}
               </div>
               <div>
@@ -286,50 +364,76 @@ export function IncomingPaymentDetailPage() {
                 <div className="text-xs text-muted">{t('payments.incoming.detail.user_ident')}</div>
                 <div className="text-sm">{String(payment.user_ident ?? '—')}</div>
               </div>
-              <div className="md:col-span-2">
+              <div className="md:col-span-3">
                 <div className="text-xs text-muted">{t('payments.incoming.detail.user_message')}</div>
-                <div className="text-sm whitespace-pre-line">{String(payment.user_message ?? '—')}</div>
+                <div className="rounded-md border border-border bg-surface-2 px-3 py-2 text-sm whitespace-pre-line">
+                  {String(payment.user_message ?? '—')}
+                </div>
               </div>
-              <div className="md:col-span-2">
+              <div className="md:col-span-3">
                 <div className="text-xs text-muted">{t('payments.incoming.detail.comment')}</div>
-                <div className="text-sm whitespace-pre-line">{String(payment.comment ?? '—')}</div>
+                <div className="rounded-md border border-border bg-surface-2 px-3 py-2 text-sm whitespace-pre-line">
+                  {String(payment.comment ?? '—')}
+                </div>
               </div>
             </div>
           </CardBody>
           </Card>
 
-          <IncomingPaymentReconciliationCard payment={payment} basePath={basePath} />
+          {!isAssigned ? (
+            <Card testId="admin.payments.incoming.assign.inline">
+              <CardHeader
+                title={t('payments.incoming.assign.card.title')}
+                subtitle={t('payments.incoming.assign.card.unassigned_subtitle')}
+                actions={
+                  <Badge variant={assignReview.canSubmit ? 'warn' : 'neutral'}>
+                    {assignReview.canSubmit
+                      ? t('payments.incoming.review.badge.ready')
+                      : t('payments.incoming.review.badge.incomplete')}
+                  </Badge>
+                }
+              />
+              <CardBody>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+                    <div>
+                      <div className="text-sm font-medium">{t('payments.incoming.assign.user_id')}</div>
+                      <UserLookupInput
+                        value={assignUserId}
+                        onChange={setAssignUserId}
+                        placeholder={t('payments.incoming.assign.user_placeholder')}
+                        testId="admin.payments.incoming.assign.user_id"
+                        ariaLabel={t('payments.incoming.assign.user_id')}
+                        loadingLabel={t('common.loading')}
+                        noResultsLabel={t('empty.list.no_matches.title')}
+                      />
+                    </div>
+                    <Button
+                      variant="primary"
+                      onClick={submitAssign}
+                      disabled={!assignReview.canSubmit}
+                      testId="admin.payments.incoming.assign.submit"
+                    >
+                      {t('payments.incoming.assign.modal.submit')}
+                    </Button>
+                  </div>
+
+                  <AssignmentUserPreview
+                    basePath={basePath}
+                    userId={assignLookupUserId}
+                    user={assignUserQ.data}
+                    loading={assignUserQ.isFetching}
+                    error={assignUserQ.isError}
+                  />
+
+                  <IncomingPaymentAssignReviewCard payment={payment} review={assignReview} targetUser={assignUserQ.data} />
+                </div>
+              </CardBody>
+            </Card>
+          ) : null}
         </div>
 
         <div className="space-y-3">
-          <Card>
-            <CardHeader title={t('payments.incoming.detail.card.user')} />
-            <CardBody>
-              <div className="text-xs text-muted">{t('common.user')}</div>
-              <div className="text-sm">
-                {payment.user ? (
-                  <Link className="text-accent hover:underline" to={`${basePath}/users/${payment.user.id}`}>
-                    {incomingPaymentUserLabel(payment.user)}
-                  </Link>
-                ) : (
-                  '—'
-                )}
-              </div>
-
-              <div className="mt-3 text-xs text-muted">{t('payments.incoming.detail.paid_until')}</div>
-              <div className="text-sm">{payment.user_paid_until ? formatDateTime(payment.user_paid_until) : '—'}</div>
-              {acctStatus ? (
-                <div className="mt-1">
-                  <Badge variant={paidUntilBadgeVariant(acctStatus.status)}>{t(paidUntilStatusLabelKey(acctStatus.status))}</Badge>
-                </div>
-              ) : null}
-
-              {isAssigned ? null : (
-                <div className="mt-4 text-xs text-muted">{t('payments.incoming.detail.unassigned_hint')}</div>
-              )}
-            </CardBody>
-          </Card>
-
           <Card>
             <CardHeader title={t('payments.incoming.detail.card.state')} />
             <CardBody>
@@ -343,10 +447,7 @@ export function IncomingPaymentDetailPage() {
                   <div className="text-xs text-muted">{t('payments.incoming.detail.change_state')}</div>
                   <Select
                     value={effectiveStateEdit}
-                    onChange={(e) => {
-                      setStateEdit(e.target.value);
-                      setStateConfirm('');
-                    }}
+                    onChange={(e) => setStateEdit(e.target.value)}
                     testId="admin.payments.incoming.state.select"
                   >
                     {incomingPaymentStateOptions().map((s) => (
@@ -357,21 +458,22 @@ export function IncomingPaymentDetailPage() {
                   </Select>
                 </div>
 
-                <IncomingPaymentStateReviewCard payment={payment} review={stateReview} />
+                {stateReview.warningKey ? (
+                  <div className="rounded-md border border-warn-border bg-warn-bg px-3 py-2 text-sm text-warn">
+                    {t(stateReview.warningKey)}
+                  </div>
+                ) : null}
 
-                {stateReview.requiresConfirmation ? (
-                  <div>
-                    <div className="text-xs text-muted">
-                      {t('payments.incoming.review.state.confirm.label', { target: stateReview.confirmationTarget })}
+                {isAssigned ? (
+                  <div className="rounded-md border border-border bg-surface-2 px-3 py-2">
+                    <div className="text-xs text-muted">{t('common.user')}</div>
+                    <div className="mt-1 text-sm font-medium">
+                      <Link className="text-accent hover:underline" to={`${basePath}/users/${payment.user?.id}`}>
+                        {incomingPaymentUserLabel(payment.user)}
+                      </Link>
                     </div>
-                    <Input
-                      value={stateConfirm}
-                      onChange={(e) => setStateConfirm(e.target.value)}
-                      placeholder={stateReview.confirmationTarget}
-                      testId="admin.payments.incoming.state.confirm"
-                    />
                     <div className="mt-1 text-xs text-muted">
-                      {t('payments.incoming.review.state.confirm.hint', { target: stateReview.confirmationTarget })}
+                      {t('payments.incoming.detail.paid_until')}: {payment.user_paid_until ? formatDateTime(payment.user_paid_until) : '—'}
                     </div>
                   </div>
                 ) : null}
@@ -391,54 +493,6 @@ export function IncomingPaymentDetailPage() {
           </Card>
         </div>
       </div>
-
-      <Modal
-        open={assignOpen}
-        onClose={() => setAssignOpen(false)}
-        title={t('payments.incoming.assign.modal.title')}
-        size="md"
-        footer={
-          <div className="flex items-center justify-end gap-2">
-            <Button variant="secondary" onClick={() => setAssignOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button
-              variant="primary"
-              onClick={submitAssign}
-              disabled={!assignReview.canSubmit}
-              testId="admin.payments.incoming.assign.submit"
-            >
-              {t('payments.incoming.assign.modal.submit')}
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-3">
-          <div>
-            <div className="text-sm font-medium">{t('payments.incoming.assign.user_id')}</div>
-            <UserLookupInput
-              value={assignUserId}
-              onChange={setAssignUserId}
-              placeholder={t('payments.incoming.assign.user_placeholder')}
-              testId="admin.payments.incoming.assign.user_id"
-              ariaLabel={t('payments.incoming.assign.user_id')}
-              loadingLabel={t('common.loading')}
-              noResultsLabel={t('empty.list.no_matches.title')}
-            />
-          </div>
-
-          <IncomingPaymentAssignReviewCard payment={payment} review={assignReview} />
-
-          <div className="rounded-md border border-border bg-surface-2 p-3 text-xs text-muted">
-            <div>{t('payments.incoming.assign.hint.title')}</div>
-            <ul className="mt-2 list-disc pl-5">
-              <li>{t('payments.incoming.assign.hint.item1')}</li>
-              <li>{t('payments.incoming.assign.hint.item2')}</li>
-              <li>{t('payments.incoming.assign.hint.item3')}</li>
-            </ul>
-          </div>
-        </div>
-      </Modal>
     </ListShell>
   );
 }

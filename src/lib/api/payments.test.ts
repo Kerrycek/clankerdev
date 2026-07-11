@@ -33,6 +33,19 @@ describe('payments API wrappers', () => {
     expect(u.searchParams.get('incoming_payment[user]')).toBe('42');
   });
 
+  test('fetchIncomingPayments can request total count metadata', async () => {
+    globalThis.fetch = mockFetchOk({ incoming_payments: [], _meta: { total_count: 4 } }) as any;
+
+    await fetchIncomingPayments({ limit: 1, state: 'unmatched', count: true });
+
+    const [url] = lastFetchCall();
+    const u = new URL(url);
+
+    expect(u.searchParams.get('incoming_payment[limit]')).toBe('1');
+    expect(u.searchParams.get('incoming_payment[state]')).toBe('unmatched');
+    expect(u.searchParams.get('_meta[count]')).toBe('true');
+  });
+
   test('createUserPayment sends namespaced incoming-payment payload', async () => {
     globalThis.fetch = mockFetchOk({ user_payment: { id: 9 } }) as any;
 

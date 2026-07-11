@@ -69,21 +69,14 @@ test.describe('@smoke Admin user payments', () => {
   
     await page.goto('/admin/users/42/payments');
   
-    await expect(page.getByTestId('admin.user.payments.stat.paid_until')).toBeVisible();
-    await expect(page.getByTestId('admin.user.payments.stat.monthly_payment')).toBeVisible();
-    await expect(page.getByTestId('admin.user.payments.stat.payment_id')).toBeVisible();
-  
-    const instructions = page.getByTestId('admin.user.payments.instructions.text');
-    await expect(instructions.getByRole('heading', { name: 'Payment in EUR' })).toBeVisible();
-    await expect(instructions.getByText('123456/0100')).toBeVisible();
-    await expect(instructions).not.toContainText('<h3>');
-  
+    await expect(page.getByTestId('admin.user.payments.quick.card')).toBeVisible();
+    await expect(page.getByTestId('admin.user.payments.settings.paid_until')).toHaveValue('2026-03-01');
+    await expect(page.getByTestId('admin.user.payments.settings.monthly_payment')).toHaveValue('100');
+
     await expect(page.getByTestId('admin.user.payments.history.table')).toBeVisible();
     await expect(page.getByTestId('admin.user.payments.history.row.9001')).toBeVisible();
     await expect(page.getByTestId('admin.user.payments.history.row.9001.source')).toHaveText('#300');
     await expect(page.getByTestId('admin.user.payments.history.row.9001.source')).toHaveAttribute('href', '/admin/payments/incoming/300');
-  
-    await expect(page.getByTestId('admin.user.payments.quick.card')).toBeVisible();
 
     await page.getByTestId('admin.user.payments.settings.paid_until').fill('2026-04-01');
     await page.getByTestId('admin.user.payments.settings.paid_until.save').click();

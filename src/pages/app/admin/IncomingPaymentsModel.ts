@@ -162,8 +162,6 @@ function incomingPaymentStateConfirmationTarget(input: {
   nextState: KnownIncomingPaymentState | '';
   hasAssignedUser: boolean;
 }): string | undefined {
-  if (input.nextState === 'ignored') return 'IGNORE';
-  if (input.nextState === 'processed' && !input.hasAssignedUser) return 'PROCESSED';
   return undefined;
 }
 

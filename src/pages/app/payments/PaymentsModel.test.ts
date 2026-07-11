@@ -100,6 +100,29 @@ describe('PaymentsModel', () => {
     expect(html).not.toContain('Back account');
   });
 
+  test('rewrites Czech payment instructions to informal address', () => {
+    const html = sanitizePaymentInstructionsHtml(`
+      <h3>Obecné informace</h3>
+      <p>Platby je možné provádět v CZK nebo EUR, čísla bankovních účtů najdete níže.</p>
+      <p>Upřednostňujeme platby alespoň na tři měsíce, ale není to povinné. Pokud potřebujete faktury, plaťte prosím na delší období.</p>
+      <p>Pokud potřebujete fakturu, napište prosím na podporu na podpora@vpsfree.cz nebo support@vpsfree.org a vystavíme ji. Nezapomeňte uvést své fakturační údaje.</p>
+      <h3>Variabilní symbol a zpráva</h3>
+      <p>Pokud vaše banka nepodporuje variabilní symboly, můžete své členské ID poslat ve zprávě pro příjemce jako /VS/53 . Přesné znění závisí na vaší bance.</p>
+    `, 'cs');
+
+    expect(html).toContain('Platbu můžeš provést v CZK nebo EUR. Čísla účtů najdeš níže.');
+    expect(html).toContain('Pokud potřebuješ faktury, plať prosím na delší období.');
+    expect(html).toContain('Pokud potřebuješ fakturu, napiš na podpora@vpsfree.cz');
+    expect(html).toContain('Nezapomeň přiložit fakturační údaje.');
+    expect(html).toContain('Pokud tvoje banka nepodporuje variabilní symboly');
+    expect(html).toContain('můžeš svoje členské ID poslat ve zprávě pro příjemce jako /VS/53.');
+    expect(html).toContain('Přesné znění závisí na tvojí bance.');
+    expect(html).not.toContain('najdete');
+    expect(html).not.toContain('potřebujete');
+    expect(html).not.toContain('plaťte');
+    expect(html).not.toContain('vaší bance');
+  });
+
   test('buildPaymentSettingsReview flags backward and cleared paid-until changes', () => {
     expect(
       buildPaymentSettingsReview({

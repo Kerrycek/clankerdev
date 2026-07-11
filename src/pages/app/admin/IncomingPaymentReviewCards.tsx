@@ -4,6 +4,7 @@ import { useI18n } from '../../../app/i18n';
 import { Alert } from '../../../components/ui/Alert';
 import { Badge } from '../../../components/ui/Badge';
 import type { IncomingPayment, IncomingPaymentState } from '../../../lib/api/payments';
+import type { User } from '../../../lib/api/users';
 import { incomingPaymentBadgeVariant, incomingPaymentStateLabelKey } from '../../../lib/paymentsBadges';
 import type { IncomingPaymentAssignReview, IncomingPaymentStateReview } from './IncomingPaymentsModel';
 
@@ -21,9 +22,17 @@ function stateLabel(t: (key: string) => string, state: IncomingPaymentState | ''
   return t(incomingPaymentStateLabelKey(state));
 }
 
+function compactUserLabel(user: User): string {
+  const login = String(user.login ?? '').trim();
+  const name = String(user.full_name ?? '').trim();
+  if (login && name && login !== name) return `${login} · ${name}`;
+  return login || name || `#${user.id}`;
+}
+
 export function IncomingPaymentAssignReviewCard(props: {
   payment: IncomingPayment;
   review: IncomingPaymentAssignReview;
+  targetUser?: User;
 }) {
   const { t } = useI18n();
 
@@ -52,7 +61,17 @@ export function IncomingPaymentAssignReviewCard(props: {
           #{props.payment.id}
         </ReviewRow>
         <ReviewRow label={t('payments.incoming.review.target_user')} testId="admin.payments.incoming.assign.review.user">
-          {props.review.userId ? `#${props.review.userId}` : t('common.na')}
+          {props.targetUser ? (
+            <span>
+              <span className="font-medium">{compactUserLabel(props.targetUser)}</span>
+              <span className="ml-2 text-xs text-muted">#{props.targetUser.id}</span>
+              {props.targetUser.email ? <span className="mt-1 block text-xs text-muted">{props.targetUser.email}</span> : null}
+            </span>
+          ) : props.review.userId ? (
+            `#${props.review.userId}`
+          ) : (
+            t('common.na')
+          )}
         </ReviewRow>
         <ReviewRow label={t('payments.incoming.detail.received_amount')} testId="admin.payments.incoming.assign.review.amount">
           <span className="tabular-nums">{props.review.receivedAmountLabel}</span>

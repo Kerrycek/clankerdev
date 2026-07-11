@@ -11,34 +11,30 @@ import { useChrome } from '../../../../components/layout/ChromeContext';
 import { Badge } from '../../../../components/ui/Badge';
 import { Button } from '../../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../../components/ui/Card';
-import { CopyButton } from '../../../../components/ui/CopyButton';
 import { EmptyState } from '../../../../components/ui/EmptyState';
 import { ErrorState } from '../../../../components/ui/ErrorState';
 import { Input } from '../../../../components/ui/Input';
 import { KeysetPagination } from '../../../../components/ui/KeysetPagination';
 import { LoadingState } from '../../../../components/ui/LoadingState';
-import { StatCard } from '../../../../components/ui/StatCard';
 
-import { createUserPayment, fetchPaymentInstructions, fetchUserPayments } from '../../../../lib/api/payments';
+import { createUserPayment, fetchUserPayments } from '../../../../lib/api/payments';
 import { fetchUserAccount, updateUserAccount } from '../../../../lib/api/userAccounts';
 import { getMetaActionStateId } from '../../../../lib/api/haveapi';
 import { objectRef } from '../../../../lib/objectRef';
 import type { ObjectRef } from '../../../../lib/objectRef';
 
 import { formatErrorMessage } from '../../../../lib/errors';
-import { formatDateTime } from '../../../../lib/format';
+import { formatDate, formatDateTime } from '../../../../lib/format';
 import { cursorFromDescendingPage } from '../../../../lib/lockIndex';
 import { getPaidUntilStatus, paidUntilBadgeVariant, paidUntilStatusLabelKey } from '../../../../lib/paymentsBadges';
 import { formatMoneyLike, safeInt } from '../../../../lib/paymentsFormat';
 import { useKeysetPagination } from '../../../../lib/hooks/useKeysetPagination';
 
 import {
-  normalizePaymentInstructions,
   paidUntilSubtitleToken,
   parsePositiveInt,
   resourceRefLabel,
 } from '../../payments/PaymentsModel';
-import { PaymentInstructionsHtml } from '../../payments/PaymentInstructionsHtml';
 
 import { useAdminUserContext } from './AdminUserLayout';
 
@@ -89,12 +85,6 @@ export function AdminUserPaymentsPage() {
     allowedLimits: [25, 50, 100, 200],
   });
 
-  const instructionsQ = useQuery({
-    queryKey: ['users', 'payment_instructions', userId],
-    queryFn: async () => (await fetchPaymentInstructions(userId)).data,
-    staleTime: 10 * 60_000,
-  });
-
   const historyQ = useQuery({
     queryKey: ['user_payments', 'list', { userId, limit: pagination.limit, fromId: pagination.fromId }],
     queryFn: async () =>
@@ -111,7 +101,6 @@ export function AdminUserPaymentsPage() {
   const canNext = (historyQ.data?.length ?? 0) >= pagination.limit;
   const cursor = useMemo(() => cursorFromDescendingPage(historyQ.data), [historyQ.data]);
 
-  const instructions = normalizePaymentInstructions(instructionsQ.data);
   const [quickPaidUntil, setQuickPaidUntil] = useState('');
   const [quickMonthlyPayment, setQuickMonthlyPayment] = useState('');
   const [quickAmount, setQuickAmount] = useState('');
@@ -227,30 +216,6 @@ export function AdminUserPaymentsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-        <StatCard
-          title={t('payments.my.stat.paid_until')}
-          value={formatDateTime(typeof paidUntil === 'string' ? paidUntil : null)}
-          description={paidUntilSubtitle}
-          footer={<Badge variant={paidUntilBadgeVariant(status.status)}>{t(paidUntilStatusLabelKey(status.status))}</Badge>}
-          testId="admin.user.payments.stat.paid_until"
-        />
-
-        <StatCard
-          title={t('payments.my.stat.monthly_payment')}
-          value={formatMoneyLike(monthlyPayment)}
-          description={t('payments.my.stat.monthly_payment.subtitle')}
-          testId="admin.user.payments.stat.monthly_payment"
-        />
-
-        <StatCard
-          title={t('payments.my.stat.payment_id')}
-          value={userId}
-          description={t('payments.my.stat.payment_id.subtitle')}
-          testId="admin.user.payments.stat.payment_id"
-        />
-      </div>
-
       <Card testId="admin.user.payments.quick.card">
         <CardHeader title={t('admin.user.payments.quick.title')} subtitle={t('admin.user.payments.quick.subtitle')} />
         <CardBody>
@@ -262,30 +227,76 @@ export function AdminUserPaymentsPage() {
             />
           ) : null}
 
-          <div className="grid gap-4 xl:grid-cols-3">
-            <form className="space-y-2" onSubmit={submitPaidUntil} data-testid="admin.user.payments.paid_until.form">
-              <Input
-                label={t('admin.user.payments.settings.field.paid_until')}
-                testId="admin.user.payments.settings.paid_until"
-                type="date"
-                value={quickPaidUntil}
-                onChange={(e) => setQuickPaidUntil(e.target.value)}
-                disabled={accountQ.isLoading || paidUntilM.isPending}
-              />
-              <div className="text-xs text-muted">{t('admin.user.payments.settings.hint.paid_until')}</div>
-              <Button
-                type="submit"
-                variant="secondary"
-                size="sm"
-                loading={paidUntilM.isPending}
-                disabled={accountQ.isLoading || !paidUntilChanged}
-                testId="admin.user.payments.settings.paid_until.save"
-              >
-                {t('admin.user.payments.settings.save_paid_until')}
-              </Button>
-            </form>
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
+            <div className="space-y-4 rounded-lg border border-border bg-surface-2 p-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-semibold">{t('admin.user.payments.settings.title')}</div>
+                  <div className="mt-1 text-xs text-muted">{t('admin.user.payments.settings.description')}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xs text-muted">{t('payments.my.stat.payment_id')}</div>
+                  <div className="text-lg font-semibold tabular-nums text-fg">{userId}</div>
+                </div>
+              </div>
 
-            <form className="space-y-2" onSubmit={submitAddPayment} data-testid="admin.user.payments.add.form">
+              <div className="grid gap-4 md:grid-cols-2">
+                <form className="space-y-2" onSubmit={submitPaidUntil} data-testid="admin.user.payments.paid_until.form">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="text-xs font-semibold text-muted">{t('admin.user.payments.settings.field.paid_until')}</div>
+                    <Badge variant={paidUntilBadgeVariant(status.status)}>{t(paidUntilStatusLabelKey(status.status))}</Badge>
+                  </div>
+                  <Input
+                    testId="admin.user.payments.settings.paid_until"
+                    type="date"
+                    value={quickPaidUntil}
+                    onChange={(e) => setQuickPaidUntil(e.target.value)}
+                    disabled={accountQ.isLoading || paidUntilM.isPending}
+                  />
+                  <div className="text-xs text-muted">{paidUntilSubtitle}</div>
+                  <Button
+                    type="submit"
+                    variant="secondary"
+                    size="sm"
+                    loading={paidUntilM.isPending}
+                    disabled={accountQ.isLoading || !paidUntilChanged}
+                    testId="admin.user.payments.settings.paid_until.save"
+                  >
+                    {t('admin.user.payments.settings.save_paid_until')}
+                  </Button>
+                </form>
+
+                <form className="space-y-2" onSubmit={submitMonthlyPayment} data-testid="admin.user.payments.monthly.form">
+                  <Input
+                    label={t('admin.user.payments.settings.field.monthly_payment')}
+                    testId="admin.user.payments.settings.monthly_payment"
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    value={quickMonthlyPayment}
+                    onChange={(e) => setQuickMonthlyPayment(e.target.value)}
+                    disabled={accountQ.isLoading || monthlyPaymentM.isPending}
+                  />
+                  <div className="text-xs text-muted">{t('admin.user.payments.settings.hint.monthly_payment')}</div>
+                  <Button
+                    type="submit"
+                    variant="secondary"
+                    size="sm"
+                    loading={monthlyPaymentM.isPending}
+                    disabled={accountQ.isLoading || !monthlyPaymentChanged}
+                    testId="admin.user.payments.settings.monthly.save"
+                  >
+                    {t('common.save')}
+                  </Button>
+                </form>
+              </div>
+            </div>
+
+            <form className="space-y-3 rounded-lg border border-border bg-surface-2 p-3" onSubmit={submitAddPayment} data-testid="admin.user.payments.add.form">
+              <div>
+                <div className="text-sm font-semibold">{t('admin.user.payments.add_payment.title')}</div>
+                <div className="mt-1 text-xs text-muted">{t('admin.user.payments.add_payment.description')}</div>
+              </div>
               <Input
                 label={t('admin.user.payments.add_payment.field.amount')}
                 testId="admin.user.payments.add.amount_input"
@@ -297,7 +308,6 @@ export function AdminUserPaymentsPage() {
                 placeholder={monthlyPayment !== undefined ? String(monthlyPayment) : undefined}
                 disabled={addM.isPending}
               />
-              <div className="text-xs text-muted">{t('admin.user.payments.add_payment.hint.amount')}</div>
               <Button
                 type="submit"
                 variant="primary"
@@ -309,62 +319,13 @@ export function AdminUserPaymentsPage() {
                 {t('admin.user.payments.add_payment')}
               </Button>
             </form>
-
-            <form className="space-y-2" onSubmit={submitMonthlyPayment} data-testid="admin.user.payments.monthly.form">
-              <Input
-                label={t('admin.user.payments.settings.field.monthly_payment')}
-                testId="admin.user.payments.settings.monthly_payment"
-                type="number"
-                inputMode="numeric"
-                min={0}
-                value={quickMonthlyPayment}
-                onChange={(e) => setQuickMonthlyPayment(e.target.value)}
-                disabled={accountQ.isLoading || monthlyPaymentM.isPending}
-              />
-              <div className="text-xs text-muted">{t('admin.user.payments.settings.hint.monthly_payment')}</div>
-              <Button
-                type="submit"
-                variant="secondary"
-                size="sm"
-                loading={monthlyPaymentM.isPending}
-                disabled={accountQ.isLoading || !monthlyPaymentChanged}
-                testId="admin.user.payments.settings.monthly.save"
-              >
-                {t('common.save')}
-              </Button>
-            </form>
           </div>
         </CardBody>
       </Card>
 
       <div className="space-y-3">
         <Card>
-          <CardHeader
-            title={t('payments.my.instructions.title')}
-            actions={instructions ? <CopyButton text={instructions} testId="admin.user.payments.instructions.copy" /> : null}
-          />
-          <CardBody>
-            {instructionsQ.isLoading ? <LoadingState /> : null}
-            {instructionsQ.isError ? (
-              <ErrorState title={t('payments.my.instructions.load_error.title')} error={instructionsQ.error} />
-            ) : null}
-            {!instructionsQ.isLoading && !instructionsQ.isError ? (
-              instructions ? (
-                <PaymentInstructionsHtml
-                  html={instructions}
-                  testId="admin.user.payments.instructions.text"
-                />
-              ) : (
-                <div className="text-sm text-muted" data-testid="admin.user.payments.instructions.empty">
-                  {t('common.na')}
-                </div>
-              )
-            ) : null}
-          </CardBody>
-        </Card>
-
-        <Card>
-          <CardHeader title={t('payments.my.history.title')} subtitle={t('payments.my.history.description')} />
+          <CardHeader title={t('admin.user.payments.history.title')} subtitle={t('admin.user.payments.history.description')} />
           <CardBody>
             {historyQ.isLoading ? <LoadingState /> : null}
             {historyQ.isError ? <ErrorState title={t('payments.my.history.load_error.title')} error={historyQ.error} /> : null}
@@ -385,11 +346,12 @@ export function AdminUserPaymentsPage() {
                     <tbody className="divide-y divide-border">
                       {historyQ.data.map((p) => (
                         <tr key={p.id} data-testid={`admin.user.payments.history.row.${p.id}`}>
-                          <td className="px-3 py-2 font-medium tabular-nums">{formatDateTime(p.created_at)}</td>
+                          <td className="px-3 py-2 font-medium tabular-nums">{formatDate(p.created_at)}</td>
                           <td className="px-3 py-2 text-right tabular-nums">{formatMoneyLike(safeInt(p.amount))}</td>
-                          <td className="px-3 py-2 text-xs text-muted">
-                            <span className="tabular-nums">{formatDateTime(p.from_date)}</span> →{' '}
-                            <span className="tabular-nums">{formatDateTime(p.to_date)}</span>
+                          <td className="px-3 py-2">
+                            <span className="text-sm font-medium tabular-nums text-fg">{formatDate(p.from_date)}</span>
+                            <span className="mx-2 text-muted">→</span>
+                            <span className="text-sm font-medium tabular-nums text-fg">{formatDate(p.to_date)}</span>
                           </td>
                           <td className="px-3 py-2 text-xs text-muted">
                             {p.incoming_payment?.id ? (

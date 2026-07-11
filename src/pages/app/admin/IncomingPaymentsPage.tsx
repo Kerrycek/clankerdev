@@ -37,6 +37,7 @@ async function fetchIncomingPaymentStateTotal(input: {
       state: input.state,
       q: input.q,
       userId: input.userId,
+      count: true,
     });
 
     return getMetaTotalCount(res.meta);
