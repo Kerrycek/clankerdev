@@ -51,8 +51,8 @@ export function TableCard(props: TableModeProps | SummaryModeProps) {
     const body = (
       <div className="p-4">
         <div className="min-w-0">
-          <div className="text-sm font-semibold text-fg">{props.title}</div>
-          {props.subtitle ? <div className="mt-1 text-xs text-muted">{props.subtitle}</div> : null}
+          <div className="break-words text-sm font-semibold text-fg">{props.title}</div>
+          {props.subtitle ? <div className="mt-1 break-words text-xs text-muted">{props.subtitle}</div> : null}
         </div>
 
         <div className="mt-3 space-y-2">
@@ -61,7 +61,7 @@ export function TableCard(props: TableModeProps | SummaryModeProps) {
             return (
               <div key={idx} className="flex items-start justify-between gap-3 text-sm">
                 <div className="text-faint">{item.label}</div>
-                <div className="min-w-0 text-right text-fg">{item.value}</div>
+                <div className="min-w-0 break-words text-right text-fg">{item.value}</div>
               </div>
             );
           })}

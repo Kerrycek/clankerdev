@@ -13,7 +13,7 @@ import { PageHeader } from '../../../components/layout/PageHeader';
 import { searchUsers } from '../../../lib/api/users';
 import { fetchIncidentReports, type IncidentReport } from '../../../lib/api/incidents';
 import { fetchMailboxes, type Mailbox } from '../../../lib/api/mailer';
-import { formatDateTime } from '../../../lib/format';
+import { compactText, formatDateTime } from '../../../lib/format';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 import {
   parseNumericToken,
@@ -37,7 +37,6 @@ import { Select } from '../../../components/ui/Select';
 import { type SmartFilterSuggestion, SmartFilterInput } from '../../../components/ui/SmartFilterInput';
 import { SmartInputHelp } from '../../../components/ui/SmartInputHelp';
 import { StatusDot } from '../../../components/ui/StatusDot';
-import { TableCard } from '../../../components/ui/TableCard';
 import { TableRowLink } from '../../../components/ui/TableRowLink';
 import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 import { VpsLookupInput } from '../../../components/ui/VpsLookupInput';
@@ -1027,9 +1026,21 @@ export function IncidentsPage() {
         />
       ) : (
         <>
-          <div className="hidden md:block">
-            <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-              <table className="table-list min-w-full text-sm" data-testid="incidents.list.table">
+          <div className="hidden xl:block">
+            <div className="overflow-hidden rounded-lg border border-border bg-surface">
+              <table className="table-list w-full table-fixed text-sm" data-testid="incidents.list.table">
+                <colgroup>
+                  <col className="w-8" />
+                  <col className="w-24" />
+                  <col className="w-40" />
+                  {mode === 'admin' ? <col className="w-32" /> : null}
+                  <col className="w-36" />
+                  <col className="w-40" />
+                  <col />
+                  <col className="w-32" />
+                  {mode === 'admin' ? <col className="w-32" /> : null}
+                  <col className="w-32" />
+                </colgroup>
                 <thead>
                   <tr className="border-b border-border text-left text-xs text-muted">
                     <th className="w-8 px-4 py-2" aria-label={t('common.state')} />
@@ -1041,7 +1052,7 @@ export function IncidentsPage() {
                     <th className="px-4 py-2">{t('incidents.field.subject')}</th>
                     <th className="px-4 py-2">{t('incidents.field.codename')}</th>
                     {mode === 'admin' ? <th className="px-4 py-2">{t('incidents.field.filed_by')}</th> : null}
-                    <th className="px-4 py-2 text-right">{t('common.actions')}</th>
+                    <th className="px-2 py-2 text-right">{t('common.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1061,6 +1072,8 @@ export function IncidentsPage() {
                     const assignmentIp = (r.ip_address_assignment as any)?.ip_addr
                       ? String((r.ip_address_assignment as any).ip_addr)
                       : undefined;
+                    const subject = r.subject ? String(r.subject) : '';
+                    const codename = r.codename ? String(r.codename) : '';
 
                     const action = String(r.vps_action ?? 'none');
                     const cpu = typeof r.cpu_limit === 'number' && Number.isFinite(r.cpu_limit) ? Math.floor(r.cpu_limit) : null;
@@ -1096,7 +1109,7 @@ export function IncidentsPage() {
                         {mode === 'admin' ? (
                           <td className="px-4 py-2">
                             {userIdRow ? (
-                              <ChipLink data-row-no-nav to={`${basePath}/users/${userIdRow}`}>
+                              <ChipLink data-row-no-nav to={`${basePath}/users/${userIdRow}`} className="max-w-full">
                                 {userLogin || `#${userIdRow}`}
                               </ChipLink>
                             ) : userLogin ? (
@@ -1109,7 +1122,7 @@ export function IncidentsPage() {
 
                         <td className="px-4 py-2">
                           {vpsIdRow ? (
-                            <ChipLink data-row-no-nav to={`${basePath}/vps/${vpsIdRow}`}>
+                            <ChipLink data-row-no-nav to={`${basePath}/vps/${vpsIdRow}`} className="max-w-full">
                               {vpsHost || `#${vpsIdRow}`}
                             </ChipLink>
                           ) : r.raw_vps_id ? (
@@ -1119,18 +1132,22 @@ export function IncidentsPage() {
                           )}
                         </td>
 
-                        <td className="px-4 py-2 font-mono text-xs">{assignmentIp || '—'}</td>
+                        <td className="px-4 py-2 break-all font-mono text-xs">{assignmentIp || '—'}</td>
                         <td className="px-4 py-2">
-                          <div className="min-w-0">
-                            <div className="truncate text-sm font-medium">{r.subject ? String(r.subject) : '—'}</div>
+                          <div className="min-w-0 truncate text-sm font-medium leading-5" title={subject || undefined}>
+                            {subject ? compactText(subject, 72) : '—'}
                           </div>
                         </td>
-                        <td className="px-4 py-2 font-mono text-xs">{r.codename ? String(r.codename) : '—'}</td>
+                        <td className="px-4 py-2 font-mono text-xs">
+                          <span className="block truncate" title={codename || undefined}>
+                            {codename ? compactText(codename, 36) : '—'}
+                          </span>
+                        </td>
 
                         {mode === 'admin' ? (
                           <td className="px-4 py-2">
                             {filedId ? (
-                              <ChipLink data-row-no-nav to={`${basePath}/users/${filedId}`}>
+                              <ChipLink data-row-no-nav to={`${basePath}/users/${filedId}`} className="max-w-full">
                                 {filedLogin || `#${filedId}`}
                               </ChipLink>
                             ) : filedLogin ? (
@@ -1141,13 +1158,13 @@ export function IncidentsPage() {
                           </td>
                         ) : null}
 
-                        <td className="px-4 py-2 text-right">
-                          <span data-row-no-nav>
+                        <td className="px-2 py-2 text-right">
+                          <span data-row-no-nav className="inline-flex max-w-full">
                             <Button
                               to={to}
                               variant="secondary"
                               size="sm"
-                              className="whitespace-nowrap"
+                              className="max-w-full whitespace-nowrap"
                               testId={`incidents.list.row.${r.id}.open`}
                             >
                               {t('incidents.list.open_detail')}
@@ -1162,7 +1179,7 @@ export function IncidentsPage() {
             </div>
           </div>
 
-          <div className="md:hidden" data-testid="incidents.list.cards">
+          <div className="xl:hidden" data-testid="incidents.list.cards">
             <div className="space-y-3">
               {rows.map((r) => {
                 const to = `${basePath}/incidents/${r.id}`;
@@ -1177,54 +1194,83 @@ export function IncidentsPage() {
                 const assignmentIp = (r.ip_address_assignment as any)?.ip_addr
                   ? String((r.ip_address_assignment as any).ip_addr)
                   : undefined;
+                const subject = r.subject ? String(r.subject) : '';
+                const codename = r.codename ? String(r.codename) : '';
 
                 const action = String(r.vps_action ?? 'none');
+                const cpu = typeof r.cpu_limit === 'number' && Number.isFinite(r.cpu_limit) ? Math.floor(r.cpu_limit) : null;
+                const rowVariant = incidentRowVariant(r);
+                const dotVariant = dotVariantFromRowVariant(rowVariant);
 
                 return (
-                  <TableCard
+                  <div
                     key={r.id}
-                    to={to}
-                    title={`#${r.id} · ${det}`}
-                    subtitle={r.subject ? String(r.subject) : undefined}
-                    rows={[
-                      mode === 'admin' && userIdRow
-                        ? {
-                            label: t('common.user'),
-                            value: (
-                              <ChipLink to={`${basePath}/users/${userIdRow}`}>{userLogin || `#${userIdRow}`}</ChipLink>
-                            ),
-                          }
-                        : null,
-                      {
-                        label: t('common.vps'),
-                        value: vpsIdRow ? (
-                          <ChipLink to={`${basePath}/vps/${vpsIdRow}`}>{vpsHost || `#${vpsIdRow}`}</ChipLink>
-                        ) : r.raw_vps_id ? (
-                          `#${r.raw_vps_id}`
-                        ) : (
-                          '—'
-                        ),
-                      },
-                      { label: t('incidents.field.ip'), value: assignmentIp || '—' },
-                      r.codename ? { label: t('incidents.field.codename'), value: String(r.codename) } : null,
-                      action !== 'none'
-                        ? { label: t('incidents.field.vps_action'), value: t(vpsActionLabelKey(action)) }
-                        : null,
-                    ].filter(Boolean) as any}
-                    footer={
-                      <div className="border-t border-border px-4 py-3">
+                    className="overflow-hidden rounded-lg border border-border bg-surface"
+                    data-testid={`incidents.list.card.${r.id}`}
+                  >
+                    <div className="grid gap-2 px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+                      <div className="min-w-0">
+                        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                          <StatusDot variant={dotVariant} testId={`incidents.list.card.${r.id}.dot`} />
+                          <MiniLink to={to} className="font-mono text-sm">
+                            #{r.id}
+                          </MiniLink>
+                          <span className="text-sm font-semibold text-text">{det}</span>
+                          {action !== 'none' ? (
+                            <Badge variant={vpsActionVariant(action)} testId={`incidents.list.card.${r.id}.action`}>
+                              {t(vpsActionLabelKey(action))}
+                            </Badge>
+                          ) : null}
+                          {cpu !== null ? (
+                            <Badge variant="warn" testId={`incidents.list.card.${r.id}.cpu_limit`}>
+                              {t('incidents.badge.cpu_limit', { pct: cpu })}
+                            </Badge>
+                          ) : null}
+                        </div>
+
+                        <div className="mt-1 truncate text-sm font-medium text-text" title={subject || undefined}>
+                          {subject ? compactText(subject, 80) : '—'}
+                        </div>
+
+                        <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2 text-sm text-muted">
+                          {mode === 'admin' && userIdRow ? (
+                            <ChipLink to={`${basePath}/users/${userIdRow}`}>{userLogin || `#${userIdRow}`}</ChipLink>
+                          ) : userLogin ? (
+                            <span>{userLogin}</span>
+                          ) : null}
+                          {vpsIdRow ? (
+                            <ChipLink to={`${basePath}/vps/${vpsIdRow}`}>{vpsHost || `#${vpsIdRow}`}</ChipLink>
+                          ) : r.raw_vps_id ? (
+                            <span>#{r.raw_vps_id}</span>
+                          ) : (
+                            <span>{t('common.vps')}: —</span>
+                          )}
+                          {assignmentIp ? (
+                            <span className="font-mono text-xs" title={assignmentIp}>
+                              {compactText(assignmentIp, 42)}
+                            </span>
+                          ) : null}
+                          {codename ? (
+                            <span className="font-mono text-xs" title={codename}>
+                              {compactText(codename, 42)}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 sm:justify-end">
                         <Button
                           to={to}
                           variant="secondary"
                           size="sm"
-                          className="w-full justify-center"
+                          className="whitespace-nowrap"
                           testId={`incidents.list.card.${r.id}.open`}
                         >
                           {t('incidents.list.open_detail')}
                         </Button>
                       </div>
-                    }
-                  />
+                    </div>
+                  </div>
                 );
               })}
             </div>

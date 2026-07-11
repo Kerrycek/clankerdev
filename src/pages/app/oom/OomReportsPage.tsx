@@ -14,7 +14,7 @@ import { fetchNodes, type Node } from '../../../lib/api/nodes';
 import { searchUsers } from '../../../lib/api/users';
 import { fetchEnvironments, fetchLocations, fetchOomReports, type Environment, type Location, type OomReport } from '../../../lib/api/oom';
 import { localInputToIso } from '../../../lib/datetimeLocal';
-import { formatDateTime } from '../../../lib/format';
+import { compactText, formatDateTime } from '../../../lib/format';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 import {
   parseNumericToken,
@@ -38,7 +38,6 @@ import { Select } from '../../../components/ui/Select';
 import { type SmartFilterSuggestion, SmartFilterInput } from '../../../components/ui/SmartFilterInput';
 import { SmartInputHelp } from '../../../components/ui/SmartInputHelp';
 import { StatusDot } from '../../../components/ui/StatusDot';
-import { TableCard } from '../../../components/ui/TableCard';
 import { TableRowLink } from '../../../components/ui/TableRowLink';
 import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 import { VpsLookupInput } from '../../../components/ui/VpsLookupInput';
@@ -1056,9 +1055,21 @@ export function OomReportsPage() {
         />
       ) : (
         <>
-          <div className="hidden md:block">
-            <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-              <table className="table-list min-w-full text-sm" data-testid="oom.list.table">
+          <div className="hidden xl:block">
+            <div className="overflow-hidden rounded-lg border border-border bg-surface">
+              <table className="table-list w-full table-fixed text-sm" data-testid="oom.list.table">
+                <colgroup>
+                  <col className="w-8" />
+                  <col className="w-24" />
+                  <col className="w-40" />
+                  <col className="w-36" />
+                  {mode === 'admin' ? <col className="w-32" /> : null}
+                  <col className="w-24" />
+                  <col />
+                  <col className="w-24" />
+                  <col className="w-16" />
+                  <col className="w-40" />
+                </colgroup>
                 <thead>
                   <tr className="border-b border-border text-left text-xs text-muted">
                     <th className="w-8 px-4 py-2" aria-label={t('common.state')} />
@@ -1067,11 +1078,10 @@ export function OomReportsPage() {
                     <th className="px-4 py-2">{t('common.vps')}</th>
                     {mode === 'admin' ? <th className="px-4 py-2">{t('common.user')}</th> : null}
                     <th className="px-4 py-2">{t('common.node')}</th>
-                    <th className="px-4 py-2">{t('oom.field.cgroup')}</th>
                     <th className="px-4 py-2">{t('oom.field.killed')}</th>
                     <th className="px-4 py-2">{t('oom.field.rule_action')}</th>
                     <th className="px-4 py-2">{t('oom.field.count')}</th>
-                    <th className="px-4 py-2 text-right">{t('common.actions')}</th>
+                    <th className="px-2 py-2 text-right">{t('common.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1088,6 +1098,8 @@ export function OomReportsPage() {
                     const nodeName = (r.vps as any)?.node?.domain_name ? String((r.vps as any).node.domain_name) : undefined;
 
                     const killed = r.killed_name ? `${r.killed_name}${r.killed_pid ? ` (${r.killed_pid})` : ''}` : '—';
+                    const cgroupText = r.cgroup ? String(r.cgroup) : '';
+                    const cgroupShort = compactText(cgroupText, 64);
 
                     const action = (r.oom_report_rule as any)?.action ? String((r.oom_report_rule as any).action) : undefined;
                     const rowVariant = ruleVariant(action);
@@ -1106,7 +1118,7 @@ export function OomReportsPage() {
                         <td className="px-4 py-2 text-sm">{createdAt}</td>
                         <td className="px-4 py-2">
                           {vpsIdRow ? (
-                            <ChipLink data-row-no-nav to={`${basePath}/vps/${vpsIdRow}`}>
+                            <ChipLink data-row-no-nav to={`${basePath}/vps/${vpsIdRow}`} className="max-w-full">
                               {vpsHost || `#${vpsIdRow}`}
                             </ChipLink>
                           ) : (
@@ -1117,7 +1129,7 @@ export function OomReportsPage() {
                         {mode === 'admin' ? (
                           <td className="px-4 py-2">
                             {userIdRow ? (
-                              <ChipLink data-row-no-nav to={`${basePath}/users/${userIdRow}`}>
+                              <ChipLink data-row-no-nav to={`${basePath}/users/${userIdRow}`} className="max-w-full">
                                 {userLogin || `#${userIdRow}`}
                               </ChipLink>
                             ) : (
@@ -1126,12 +1138,23 @@ export function OomReportsPage() {
                           </td>
                         ) : null}
 
-                        <td className="px-4 py-2">{nodeName || '—'}</td>
-                        <td className="px-4 py-2 font-mono text-xs">{r.cgroup ? String(r.cgroup) : '—'}</td>
+                        <td className="px-4 py-2 break-words">{nodeName || '—'}</td>
                         <td className="px-4 py-2">
-                          <div className="text-sm font-medium">{killed}</div>
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-medium leading-5" title={killed}>
+                              {compactText(killed, 42)}
+                            </div>
+                            {r.cgroup ? (
+                              <div
+                                className="mt-1 max-w-full truncate font-mono text-xs leading-4 text-faint"
+                                title={`${t('oom.field.cgroup')}: ${cgroupText}`}
+                              >
+                                {t('oom.field.cgroup')}: {cgroupShort}
+                              </div>
+                            ) : null}
+                          </div>
                           {r.invoked_by_name || r.invoked_by_pid ? (
-                            <div className="text-xs text-faint">
+                            <div className="mt-1 break-words text-xs leading-4 text-faint">
                               {t('oom.field.invoked_by')}: {r.invoked_by_name ? String(r.invoked_by_name) : '—'}
                               {r.invoked_by_pid ? ` (${r.invoked_by_pid})` : ''}
                             </div>
@@ -1141,13 +1164,13 @@ export function OomReportsPage() {
                           <Badge variant={ruleVariant(action)}>{t(ruleLabelKey(action))}</Badge>
                         </td>
                         <td className="px-4 py-2 font-mono text-xs">{typeof r.count === 'number' ? r.count : '—'}</td>
-                        <td className="px-4 py-2 text-right">
-                          <span data-row-no-nav>
+                        <td className="px-2 py-2 text-right">
+                          <span data-row-no-nav className="inline-flex max-w-full">
                             <Button
                               to={to}
                               variant="secondary"
                               size="sm"
-                              className="whitespace-nowrap"
+                              className="max-w-full whitespace-nowrap"
                               testId={`oom.list.row.${r.id}.open`}
                             >
                               {t('oom.list.open_detail')}
@@ -1162,7 +1185,7 @@ export function OomReportsPage() {
             </div>
           </div>
 
-          <div className="md:hidden" data-testid="oom.list.cards">
+          <div className="xl:hidden" data-testid="oom.list.cards">
             <div className="space-y-3">
               {rows.map((r: OomReport) => {
                 const to = `${basePath}/oom-reports/${r.id}`;
@@ -1171,46 +1194,77 @@ export function OomReportsPage() {
                 const vpsIdRow = (r.vps as any)?.id ? Number((r.vps as any).id) : undefined;
                 const vpsHost = (r.vps as any)?.hostname ? String((r.vps as any).hostname) : undefined;
 
+                const userIdRow = (r.vps as any)?.user?.id ? Number((r.vps as any).user.id) : undefined;
+                const userLogin = (r.vps as any)?.user?.login ? String((r.vps as any).user.login) : undefined;
+
                 const nodeName = (r.vps as any)?.node?.domain_name ? String((r.vps as any).node.domain_name) : undefined;
 
                 const action = (r.oom_report_rule as any)?.action ? String((r.oom_report_rule as any).action) : undefined;
+                const rowVariant = ruleVariant(action);
+                const dotVariant = dotVariantFromRowVariant(rowVariant);
+                const killed = r.killed_name ? `${r.killed_name}${r.killed_pid ? ` (${r.killed_pid})` : ''}` : '';
+                const cgroupText = r.cgroup ? String(r.cgroup) : '';
 
                 return (
-                  <TableCard
+                  <div
                     key={r.id}
-                    to={to}
-                    title={`#${r.id} · ${createdAt}`}
-                    subtitle={r.killed_name ? String(r.killed_name) : undefined}
-                    rows={[
-                      {
-                        label: t('common.vps'),
-                        value: vpsIdRow ? (
-                          <ChipLink to={`${basePath}/vps/${vpsIdRow}`}>{vpsHost || `#${vpsIdRow}`}</ChipLink>
-                        ) : (
-                          '—'
-                        ),
-                      },
-                      { label: t('common.node'), value: nodeName || '—' },
-                      r.cgroup ? { label: t('oom.field.cgroup'), value: <span className="font-mono text-xs">{String(r.cgroup)}</span> } : null,
-                      {
-                        label: t('oom.field.rule_action'),
-                        value: <Badge variant={ruleVariant(action)}>{t(ruleLabelKey(action))}</Badge>,
-                      },
-                    ].filter(Boolean) as any}
-                    footer={
-                      <div className="border-t border-border px-4 py-3">
+                    className="overflow-hidden rounded-lg border border-border bg-surface"
+                    data-testid={`oom.list.card.${r.id}`}
+                  >
+                    <div className="grid gap-2 px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+                      <div className="min-w-0">
+                        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                          <StatusDot variant={dotVariant} testId={`oom.list.card.${r.id}.dot`} />
+                          <MiniLink to={to} className="font-mono text-sm">
+                            #{r.id}
+                          </MiniLink>
+                          <span className="text-sm font-semibold text-text">{createdAt}</span>
+                          <Badge variant={ruleVariant(action)}>{t(ruleLabelKey(action))}</Badge>
+                        </div>
+
+                        {killed ? (
+                          <div className="mt-1 truncate text-sm font-medium text-text" title={killed}>
+                            {compactText(killed, 54)}
+                          </div>
+                        ) : null}
+
+                        <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2 text-sm text-muted">
+                          {vpsIdRow ? (
+                            <ChipLink to={`${basePath}/vps/${vpsIdRow}`}>{vpsHost || `#${vpsIdRow}`}</ChipLink>
+                          ) : (
+                            <span>{t('common.vps')}: —</span>
+                          )}
+                          {mode === 'admin' && userIdRow ? (
+                            <ChipLink to={`${basePath}/users/${userIdRow}`}>{userLogin || `#${userIdRow}`}</ChipLink>
+                          ) : null}
+                          <span>{nodeName || '—'}</span>
+                        </div>
+
+                        {r.cgroup ? (
+                          <div className="mt-1 min-w-0 truncate font-mono text-xs leading-5 text-muted" title={cgroupText}>
+                            {compactText(cgroupText, 72)}
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div className="flex items-center gap-2 sm:justify-end">
+                        {typeof r.count === 'number' ? (
+                          <span className="rounded-full border border-border bg-control px-2 py-1 font-mono text-xs text-muted">
+                            {r.count}x
+                          </span>
+                        ) : null}
                         <Button
                           to={to}
                           variant="secondary"
                           size="sm"
-                          className="w-full justify-center"
+                          className="whitespace-nowrap"
                           testId={`oom.list.card.${r.id}.open`}
                         >
                           {t('oom.list.open_detail')}
                         </Button>
                       </div>
-                    }
-                  />
+                    </div>
+                  </div>
                 );
               })}
             </div>
