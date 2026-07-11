@@ -17,12 +17,10 @@ import { Alert } from '../ui/Alert';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { Card, CardBody, CardHeader } from '../ui/Card';
-import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Input } from '../ui/Input';
-import { Modal } from '../ui/Modal';
+import { Select } from '../ui/Select';
 import { Spinner } from '../ui/Spinner';
 import { Table } from '../ui/Table';
-import { SwitchRow } from '../ui/SwitchRow';
 
 function envLabel(cfg: UserEnvironmentConfig): string {
   const env: any = cfg.environment ?? {};
@@ -58,6 +56,46 @@ function daysStringToSeconds(daysStr: string): number {
   return Math.round(n * 86400);
 }
 
+interface EnvConfigDraft {
+  inherit: boolean;
+  canCreate: boolean;
+  canDestroy: boolean;
+  lifetimeDays: string;
+  maxVps: string;
+}
+
+function makeDraft(cfg: UserEnvironmentConfig): EnvConfigDraft {
+  return {
+    inherit: cfg.default === true,
+    canCreate: Boolean(cfg.can_create_vps),
+    canDestroy: Boolean(cfg.can_destroy_vps),
+    lifetimeDays: secondsToDaysString(cfg.vps_lifetime),
+    maxVps: String(typeof cfg.max_vps_count === 'number' ? cfg.max_vps_count : 0),
+  };
+}
+
+function draftChanged(cfg: UserEnvironmentConfig, draft: EnvConfigDraft): boolean {
+  const original = makeDraft(cfg);
+  if (draft.inherit !== original.inherit) return true;
+  if (draft.inherit) return false;
+
+  return (
+    draft.canCreate !== original.canCreate ||
+    draft.canDestroy !== original.canDestroy ||
+    draft.lifetimeDays !== original.lifetimeDays ||
+    draft.maxVps !== original.maxVps
+  );
+}
+
+function draftPreview(draft: EnvConfigDraft, unlimited: string): string {
+  try {
+    const seconds = daysStringToSeconds(draft.lifetimeDays);
+    return seconds === 0 ? unlimited : formatUptimeSeconds(seconds);
+  } catch {
+    return '—';
+  }
+}
+
 export function UserEnvironmentConfigsPanel(props: {
   userId: number;
   /** Allow editing (admin) */
@@ -77,88 +115,104 @@ export function UserEnvironmentConfigsPanel(props: {
 
   const rows = useMemo(() => sortConfigs(q.data ?? []), [q.data]);
 
-  const [editing, setEditing] = useState<UserEnvironmentConfig | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-
-  // form
-  const [inherit, setInherit] = useState(true);
-  const [canCreate, setCanCreate] = useState(true);
-  const [canDestroy, setCanDestroy] = useState(true);
-  const [lifetimeDays, setLifetimeDays] = useState('0');
-  const [maxVps, setMaxVps] = useState('0');
-
-  const [resetTarget, setResetTarget] = useState<UserEnvironmentConfig | null>(null);
+  const [drafts, setDrafts] = useState<Record<number, EnvConfigDraft>>({});
 
   const prefix = props.testIdPrefix;
 
-  const openEdit = (cfg: UserEnvironmentConfig) => {
-    setEditing(cfg);
-    const isDefault = cfg.default === true;
-    setInherit(isDefault);
-    setCanCreate(Boolean(cfg.can_create_vps));
-    setCanDestroy(Boolean(cfg.can_destroy_vps));
-    setLifetimeDays(secondsToDaysString(cfg.vps_lifetime));
-    setMaxVps(String(typeof cfg.max_vps_count === 'number' ? cfg.max_vps_count : 0));
-    setModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setModalOpen(false);
-    setEditing(null);
-  };
-
   const saveM = useMutation({
-    mutationFn: async () => {
-      if (!editing) throw new Error('Missing config');
-
-      if (inherit) {
-        return await updateUserEnvironmentConfig(props.userId, editing.id, { default: true });
+    mutationFn: async ({ cfg, draft }: { cfg: UserEnvironmentConfig; draft: EnvConfigDraft }) => {
+      if (draft.inherit) {
+        return await updateUserEnvironmentConfig(props.userId, cfg.id, { default: true });
       }
 
-      const max = Number(maxVps);
+      const max = Number(draft.maxVps);
       if (!Number.isFinite(max) || max < 0) throw new Error(t('admin.user.env_configs.validation.max_vps'));
 
       let seconds = 0;
       try {
-        seconds = daysStringToSeconds(lifetimeDays);
+        seconds = daysStringToSeconds(draft.lifetimeDays);
       } catch {
         throw new Error(t('admin.user.env_configs.validation.vps_lifetime'));
       }
 
-      return await updateUserEnvironmentConfig(props.userId, editing.id, {
+      return await updateUserEnvironmentConfig(props.userId, cfg.id, {
         default: false,
-        can_create_vps: canCreate,
-        can_destroy_vps: canDestroy,
+        can_create_vps: draft.canCreate,
+        can_destroy_vps: draft.canDestroy,
         vps_lifetime: seconds,
         max_vps_count: Math.floor(max),
       });
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, vars) => {
       await qc.invalidateQueries({ queryKey: ['user_environment_configs', props.userId] });
-      closeModal();
+      setDrafts((prev) => {
+        const next = { ...prev };
+        delete next[vars.cfg.id];
+        return next;
+      });
       pushToast({ variant: 'ok', title: t('admin.user.env_configs.toast.saved') });
-    },
-  });
-
-  const resetM = useMutation({
-    mutationFn: async (cfg: UserEnvironmentConfig) =>
-      updateUserEnvironmentConfig(props.userId, cfg.id, { default: true }),
-    onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ['user_environment_configs', props.userId] });
-      setResetTarget(null);
-      pushToast({ variant: 'ok', title: t('admin.user.env_configs.toast.reset') });
     },
     onError: (err) => pushToast({ variant: 'danger', title: t('common.error'), body: formatErrorMessage(err) }),
   });
 
-  const lifetimePreview = useMemo(() => {
+  function draftFor(cfg: UserEnvironmentConfig): EnvConfigDraft {
+    return drafts[cfg.id] ?? makeDraft(cfg);
+  }
+
+  function updateDraft<K extends keyof EnvConfigDraft>(cfg: UserEnvironmentConfig, key: K, value: EnvConfigDraft[K]) {
+    setDrafts((prev) => ({
+      ...prev,
+      [cfg.id]: {
+        ...(prev[cfg.id] ?? makeDraft(cfg)),
+        [key]: value,
+      },
+    }));
+  }
+
+  function saveDisabled(cfg: UserEnvironmentConfig, draft: EnvConfigDraft): boolean {
+    if (!draftChanged(cfg, draft)) return true;
+    if (draft.inherit) return false;
+
+    const max = Number(draft.maxVps);
+    if (!Number.isFinite(max) || max < 0) return true;
+
     try {
-      const s = daysStringToSeconds(lifetimeDays);
-      return s === 0 ? t('common.unlimited') : formatUptimeSeconds(s);
+      daysStringToSeconds(draft.lifetimeDays);
     } catch {
-      return '—';
+      return true;
     }
-  }, [lifetimeDays, t]);
+
+    return false;
+  }
+
+  function ModeCell(props2: { cfg: UserEnvironmentConfig; draft: EnvConfigDraft }) {
+    return (
+      <Select
+        value={props2.draft.inherit ? 'inherit' : 'custom'}
+        onChange={(e) => updateDraft(props2.cfg, 'inherit', e.target.value === 'inherit')}
+        testId={`${prefix}.row.${props2.cfg.id}.mode`}
+      >
+        <option value="inherit">{t('admin.user.env_configs.badge.inherited')}</option>
+        <option value="custom">{t('admin.user.env_configs.badge.custom')}</option>
+      </Select>
+    );
+  }
+
+  function BoolCell(props2: { cfg: UserEnvironmentConfig; draft: EnvConfigDraft; field: 'canCreate' | 'canDestroy' }) {
+    return (
+      <label className="inline-flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={props2.draft[props2.field]}
+          disabled={props2.draft.inherit}
+          onChange={(e) => updateDraft(props2.cfg, props2.field, e.target.checked)}
+          data-testid={`${prefix}.row.${props2.cfg.id}.${props2.field}`}
+          className="h-4 w-4 rounded border-border text-accent focus:ring-focus"
+        />
+        <span>{props2.draft[props2.field] ? t('common.yes') : t('common.no')}</span>
+      </label>
+    );
+  }
 
   return (
     <>
@@ -236,25 +290,62 @@ export function UserEnvironmentConfigsPanel(props: {
                       </div>
 
                       {props.editable ? (
-                        <div className="mt-3 flex items-center gap-2">
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            onClick={() => openEdit(cfg)}
-                            testId={`${prefix}.row.${cfg.id}.edit`}
-                          >
-                            {t('common.edit')}
-                          </Button>
-                          {isCustom ? (
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              onClick={() => setResetTarget(cfg)}
-                              testId={`${prefix}.row.${cfg.id}.reset`}
-                            >
-                              {t('admin.user.env_configs.reset')}
-                            </Button>
-                          ) : null}
+                        <div className="mt-3 space-y-3">
+                          {(() => {
+                            const draft = draftFor(cfg);
+                            return (
+                              <>
+                                <ModeCell cfg={cfg} draft={draft} />
+                                <div
+                                  className={
+                                    draft.inherit ? 'grid grid-cols-2 gap-2 opacity-60' : 'grid grid-cols-2 gap-2'
+                                  }
+                                >
+                                  <BoolCell cfg={cfg} draft={draft} field="canCreate" />
+                                  <BoolCell cfg={cfg} draft={draft} field="canDestroy" />
+                                  <div>
+                                    <div className="text-xs text-faint">
+                                      {t('admin.user.env_configs.field.vps_lifetime_days')}
+                                    </div>
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      value={draft.lifetimeDays}
+                                      onChange={(e) => updateDraft(cfg, 'lifetimeDays', e.target.value)}
+                                      disabled={draft.inherit}
+                                      testId={`${prefix}.row.${cfg.id}.vps_lifetime_days`}
+                                    />
+                                    <div className="mt-1 text-xs text-muted">
+                                      {draftPreview(draft, t('common.unlimited'))}
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <div className="text-xs text-faint">
+                                      {t('admin.user.env_configs.field.max_vps')}
+                                    </div>
+                                    <Input
+                                      type="number"
+                                      min={0}
+                                      value={draft.maxVps}
+                                      onChange={(e) => updateDraft(cfg, 'maxVps', e.target.value)}
+                                      disabled={draft.inherit}
+                                      testId={`${prefix}.row.${cfg.id}.max_vps`}
+                                    />
+                                  </div>
+                                </div>
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  onClick={() => saveM.mutate({ cfg, draft })}
+                                  loading={saveM.isPending}
+                                  disabled={saveDisabled(cfg, draft)}
+                                  testId={`${prefix}.row.${cfg.id}.save`}
+                                >
+                                  {t('common.save')}
+                                </Button>
+                              </>
+                            );
+                          })()}
                         </div>
                       ) : null}
                     </div>
@@ -284,6 +375,7 @@ export function UserEnvironmentConfigsPanel(props: {
                       const isCustom = cfg.default === false;
                       const lifetime = typeof cfg.vps_lifetime === 'number' ? cfg.vps_lifetime : 0;
                       const max = typeof cfg.max_vps_count === 'number' ? cfg.max_vps_count : 0;
+                      const draft = draftFor(cfg);
 
                       return (
                         <tr
@@ -296,7 +388,9 @@ export function UserEnvironmentConfigsPanel(props: {
                             <div className="text-xs text-faint">#{cfg.id}</div>
                           </td>
                           <td className="px-4 py-2">
-                            {isDefault ? (
+                            {props.editable ? (
+                              <ModeCell cfg={cfg} draft={draft} />
+                            ) : isDefault ? (
                               <Badge variant="neutral">{t('admin.user.env_configs.badge.inherited')}</Badge>
                             ) : isCustom ? (
                               <Badge variant="info">{t('admin.user.env_configs.badge.custom')}</Badge>
@@ -304,34 +398,75 @@ export function UserEnvironmentConfigsPanel(props: {
                               <Badge variant="neutral">—</Badge>
                             )}
                           </td>
-                          <td className="px-4 py-2">{cfg.can_create_vps ? t('common.yes') : t('common.no')}</td>
-                          <td className="px-4 py-2">{cfg.can_destroy_vps ? t('common.yes') : t('common.no')}</td>
                           <td className="px-4 py-2">
-                            {lifetime === 0 ? t('common.unlimited') : formatUptimeSeconds(lifetime)}
+                            {props.editable ? (
+                              <BoolCell cfg={cfg} draft={draft} field="canCreate" />
+                            ) : cfg.can_create_vps ? (
+                              t('common.yes')
+                            ) : (
+                              t('common.no')
+                            )}
                           </td>
-                          <td className="px-4 py-2">{max === 0 ? t('common.unlimited') : String(max)}</td>
+                          <td className="px-4 py-2">
+                            {props.editable ? (
+                              <BoolCell cfg={cfg} draft={draft} field="canDestroy" />
+                            ) : cfg.can_destroy_vps ? (
+                              t('common.yes')
+                            ) : (
+                              t('common.no')
+                            )}
+                          </td>
+                          <td className="px-4 py-2">
+                            {props.editable ? (
+                              <div className="w-28">
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  value={draft.lifetimeDays}
+                                  onChange={(e) => updateDraft(cfg, 'lifetimeDays', e.target.value)}
+                                  disabled={draft.inherit}
+                                  testId={`${prefix}.row.${cfg.id}.vps_lifetime_days`}
+                                />
+                                <div className="mt-1 text-xs text-muted">
+                                  {draftPreview(draft, t('common.unlimited'))}
+                                </div>
+                              </div>
+                            ) : lifetime === 0 ? (
+                              t('common.unlimited')
+                            ) : (
+                              formatUptimeSeconds(lifetime)
+                            )}
+                          </td>
+                          <td className="px-4 py-2">
+                            {props.editable ? (
+                              <div className="w-28">
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  value={draft.maxVps}
+                                  onChange={(e) => updateDraft(cfg, 'maxVps', e.target.value)}
+                                  disabled={draft.inherit}
+                                  testId={`${prefix}.row.${cfg.id}.max_vps`}
+                                />
+                              </div>
+                            ) : max === 0 ? (
+                              t('common.unlimited')
+                            ) : (
+                              String(max)
+                            )}
+                          </td>
                           {props.editable ? (
                             <td className="px-4 py-2 text-right">
-                              <div className="inline-flex items-center gap-2">
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
-                                  onClick={() => openEdit(cfg)}
-                                  testId={`${prefix}.row.${cfg.id}.edit`}
-                                >
-                                  {t('common.edit')}
-                                </Button>
-                                {isCustom ? (
-                                  <Button
-                                    variant="danger"
-                                    size="sm"
-                                    onClick={() => setResetTarget(cfg)}
-                                    testId={`${prefix}.row.${cfg.id}.reset`}
-                                  >
-                                    {t('admin.user.env_configs.reset')}
-                                  </Button>
-                                ) : null}
-                              </div>
+                              <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={() => saveM.mutate({ cfg, draft })}
+                                loading={saveM.isPending}
+                                disabled={saveDisabled(cfg, draft)}
+                                testId={`${prefix}.row.${cfg.id}.save`}
+                              >
+                                {t('common.save')}
+                              </Button>
                             </td>
                           ) : null}
                         </tr>
@@ -344,131 +479,6 @@ export function UserEnvironmentConfigsPanel(props: {
           )}
         </CardBody>
       </Card>
-
-      <Modal
-        open={modalOpen}
-        size="md"
-        title={
-          editing
-            ? t('admin.user.env_configs.modal.title', { environment: envLabel(editing) })
-            : t('admin.user.env_configs.modal.title_fallback')
-        }
-        onClose={() => {
-          if (saveM.isPending) return;
-          closeModal();
-        }}
-        footer={
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                if (saveM.isPending) return;
-                closeModal();
-              }}
-              testId={`${prefix}.modal.cancel`}
-            >
-              {t('common.cancel')}
-            </Button>
-            <Button onClick={() => saveM.mutate()} loading={saveM.isPending} testId={`${prefix}.modal.save`}>
-              {t('common.save')}
-            </Button>
-          </div>
-        }
-        testId={`${prefix}.modal`}
-      >
-        {saveM.isError ? (
-          <Alert variant="danger" title={t('admin.user.env_configs.modal.save_failed')}>
-            {formatErrorMessage(saveM.error)}
-          </Alert>
-        ) : null}
-
-        <div className="space-y-4">
-          <SwitchRow
-            checked={inherit}
-            onChange={setInherit}
-            label={t('admin.user.env_configs.field.inherit')}
-            description={t('admin.user.env_configs.field.inherit.help')}
-            disabled={!props.editable}
-            testId={`${prefix}.modal.inherit`}
-          />
-
-          <div className={inherit ? 'opacity-60' : ''}>
-            <div className="grid gap-3 md:grid-cols-2">
-              <SwitchRow
-                checked={canCreate}
-                onChange={setCanCreate}
-                label={t('admin.user.env_configs.field.can_create')}
-                description={t('admin.user.env_configs.field.can_create.help')}
-                disabled={!props.editable || inherit}
-                testId={`${prefix}.modal.can_create`}
-              />
-
-              <SwitchRow
-                checked={canDestroy}
-                onChange={setCanDestroy}
-                label={t('admin.user.env_configs.field.can_destroy')}
-                description={t('admin.user.env_configs.field.can_destroy.help')}
-                disabled={!props.editable || inherit}
-                testId={`${prefix}.modal.can_destroy`}
-              />
-            </div>
-
-            <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div>
-                <div className="text-sm font-medium">{t('admin.user.env_configs.field.vps_lifetime_days')}</div>
-                <div className="mt-0.5 text-xs text-muted">
-                  {t('admin.user.env_configs.field.vps_lifetime_days.help', { preview: lifetimePreview })}
-                </div>
-                <div className="mt-2">
-                  <Input
-                    type="number"
-                    value={lifetimeDays}
-                    onChange={(e) => setLifetimeDays(e.target.value)}
-                    disabled={!props.editable || inherit}
-                    testId={`${prefix}.modal.vps_lifetime_days`}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="text-sm font-medium">{t('admin.user.env_configs.field.max_vps')}</div>
-                <div className="mt-0.5 text-xs text-muted">{t('admin.user.env_configs.field.max_vps.help')}</div>
-                <div className="mt-2">
-                  <Input
-                    type="number"
-                    value={maxVps}
-                    onChange={(e) => setMaxVps(e.target.value)}
-                    disabled={!props.editable || inherit}
-                    testId={`${prefix}.modal.max_vps`}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Modal>
-
-      <ConfirmDialog
-        open={Boolean(resetTarget)}
-        title={t('admin.user.env_configs.reset_confirm.title')}
-        description={
-          resetTarget
-            ? t('admin.user.env_configs.reset_confirm.body', { environment: envLabel(resetTarget) })
-            : undefined
-        }
-        danger
-        confirmLabel={t('admin.user.env_configs.reset_confirm.confirm')}
-        confirmLoading={resetM.isPending}
-        onCancel={() => {
-          if (resetM.isPending) return;
-          setResetTarget(null);
-        }}
-        onConfirm={() => {
-          if (!resetTarget) return;
-          resetM.mutate(resetTarget);
-        }}
-        testId={`${prefix}.reset_confirm`}
-      />
     </>
   );
 }
