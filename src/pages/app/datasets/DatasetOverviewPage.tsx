@@ -387,7 +387,6 @@ function DatasetManagementCard() {
   const isAdmin = role === 'admin';
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
@@ -457,7 +456,6 @@ function DatasetManagementCard() {
     onMutate: () => chrome.acquireLocalLock(datasetRef),
     onSuccess: (res) => {
       track(res.meta, 'action.dataset.update.label');
-      setEditOpen(false);
     },
     onError: (e: any) => {
       if (e?.code === 'BUSY') chrome.openTasks();
@@ -596,62 +594,67 @@ function DatasetManagementCard() {
 
   return (
     <Card testId="dataset.manage">
-      <CardHeader title={t('dataset.manage.title')} subtitle={t('dataset.manage.subtitle')} />
+      <CardHeader
+        title={t('dataset.manage.title')}
+        subtitle={t('dataset.manage.subtitle')}
+        actions={
+          isAdmin ? (
+            <div className="flex flex-wrap gap-2">
+              <ActionButton
+                variant="secondary"
+                size="sm"
+                testId="dataset.manage.create.open"
+                disabled={!createGate.allowed}
+                disabledReason={!createGate.allowed ? createGate.reason : undefined}
+                onClick={() => {
+                  setFormError(null);
+                  setCreateOpen(true);
+                }}
+              >
+                {t('dataset.manage.create.open')}
+              </ActionButton>
+              <ActionButton
+                variant="danger"
+                size="sm"
+                testId="dataset.manage.delete.open"
+                disabled={!deleteGate.allowed}
+                disabledReason={!deleteGate.allowed ? deleteGate.reason : undefined}
+                onClick={() => {
+                  setDeleteConfirmation('');
+                  setDeleteOpen(true);
+                }}
+              >
+                {t('common.delete')}
+              </ActionButton>
+            </div>
+          ) : null
+        }
+      />
       <CardBody>
-        {!isAdmin ? (
-          <div className="mb-3">
-            <Alert title={t('dataset.manage.user_limited.title')} variant="neutral">
-              {t('dataset.manage.user_limited.body')}
+        <div className="mb-4 text-xs text-muted">
+          {t('dataset.manage.current', { dataset: datasetShortName(dataset), id: dataset.id })}
+        </div>
+
+        {fields}
+
+        {updateM.isError ? (
+          <div className="mt-4">
+            <Alert title={t('dataset.manage.edit.error')} variant="danger">
+              {String((updateM.error as any)?.message ?? updateM.error)}
             </Alert>
           </div>
         ) : null}
 
-        {isAdmin ? (
-          <div className="flex flex-wrap gap-2">
-            <ActionButton
-              variant="primary"
-              size="sm"
-              testId="dataset.manage.create.open"
-              disabled={!createGate.allowed}
-              disabledReason={!createGate.allowed ? createGate.reason : undefined}
-              onClick={() => {
-                setFormError(null);
-                setCreateOpen(true);
-              }}
-            >
-              {t('dataset.manage.create.open')}
-            </ActionButton>
-            <ActionButton
-              variant="secondary"
-              size="sm"
-              testId="dataset.manage.edit.open"
-              disabled={!updateGate.allowed}
-              disabledReason={!updateGate.allowed ? updateGate.reason : undefined}
-              onClick={() => {
-                setFormError(null);
-                setEditOpen(true);
-              }}
-            >
-              {t('common.edit')}
-            </ActionButton>
-            <ActionButton
-              variant="danger"
-              size="sm"
-              testId="dataset.manage.delete.open"
-              disabled={!deleteGate.allowed}
-              disabledReason={!deleteGate.allowed ? deleteGate.reason : undefined}
-              onClick={() => {
-                setDeleteConfirmation('');
-                setDeleteOpen(true);
-              }}
-            >
-              {t('common.delete')}
-            </ActionButton>
-          </div>
-        ) : null}
-
-        <div className="mt-3 text-xs text-muted">
-          {t('dataset.manage.current', { dataset: datasetShortName(dataset), id: dataset.id })}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <ActionButton
+            loading={updateM.isPending}
+            disabled={!updateGate.allowed}
+            disabledReason={!updateGate.allowed ? updateGate.reason : undefined}
+            onClick={submitUpdate}
+            testId="dataset.manage.edit.submit"
+          >
+            {t('common.save')}
+          </ActionButton>
         </div>
       </CardBody>
 
@@ -680,23 +683,6 @@ function DatasetManagementCard() {
             <Button variant="secondary" onClick={() => setCreateOpen(false)}>{t('common.cancel')}</Button>
             <ActionButton loading={createM.isPending} disabled={!childName.trim() || !createGate.allowed} onClick={submitCreate} testId="dataset.manage.create.submit">
               {t('common.create')}
-            </ActionButton>
-          </div>
-        </div>
-      </Modal>
-
-      <Modal open={editOpen} onClose={() => setEditOpen(false)} title={t('dataset.manage.edit.title')}>
-        <div className="space-y-4" data-testid="dataset.manage.edit.modal">
-          {fields}
-          {updateM.isError ? (
-            <Alert title={t('dataset.manage.edit.error')} variant="danger">
-              {String((updateM.error as any)?.message ?? updateM.error)}
-            </Alert>
-          ) : null}
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setEditOpen(false)}>{t('common.cancel')}</Button>
-            <ActionButton loading={updateM.isPending} disabled={!updateGate.allowed} onClick={submitUpdate} testId="dataset.manage.edit.submit">
-              {t('common.save')}
             </ActionButton>
           </div>
         </div>

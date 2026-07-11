@@ -21,6 +21,12 @@ describe('gateDatasetAction', () => {
     expect(r.allowed).toBe(true);
   });
 
+  it('does not block safe actions when the API omits dataset state', () => {
+    const dataset = { id: 10 } as any;
+    expect(gateDatasetAction('snapshot.create', { dataset, role: 'user' }).allowed).toBe(true);
+    expect(gateDatasetAction('download.create', { dataset, role: 'user' }).allowed).toBe(true);
+  });
+
   it('blocks snapshot create when deleted', () => {
     const r = gateDatasetAction('snapshot.create', { dataset: { ...baseDataset, object_state: 'deleted' } });
     expect(r.allowed).toBe(false);
@@ -42,7 +48,6 @@ describe('gateDatasetAction', () => {
   it('blocks destructive dataset and restore actions for regular users', () => {
     const actions = [
       'dataset.create',
-      'dataset.update',
       'dataset.delete',
       'snapshot.rollback',
       'snapshot.delete',
@@ -56,5 +61,9 @@ describe('gateDatasetAction', () => {
         expect(r.reason.titleKey).toBe('gate.admin_only.title');
       }
     }
+  });
+
+  it('allows regular users to request dataset updates', () => {
+    expect(gateDatasetAction('dataset.update', { dataset: baseDataset, role: 'user' }).allowed).toBe(true);
   });
 });

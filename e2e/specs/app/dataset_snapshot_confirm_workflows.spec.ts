@@ -104,6 +104,83 @@ test.describe('@smoke Dataset snapshots', () => {
     await expect(page.getByTestId('dataset.snapshots.row.201')).toBeVisible();
   });
 
+  test('allows creating snapshot download when dataset state is omitted', async ({ page }) => {
+    let downloadCalls = 0;
+
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    await installHaveApiMock(page, {
+      user: { id: 2, login: 'member', level: 1 },
+      handlers: {
+        'GET datasets/10': () => ({
+          id: 10,
+          full_name: 'tank/vps/ds10',
+          name: 'ds10',
+          used: 2048,
+          refquota: 10240,
+          snapshots_count: 1,
+          mount_count: 0,
+          export_count: 0,
+          vps: { id: 300, hostname: 'alpha.example' },
+        }),
+        'GET transaction_chains': () => ({ transaction_chains: [], _meta: { total_count: 0 } }),
+        'GET datasets/10/snapshots': () => ({
+          snapshots: [
+            {
+              id: 200,
+              dataset: 10,
+              name: 'snap-200',
+              label: 'snap-200',
+              created_at: '2026-01-26T00:00:00.000Z',
+            },
+          ],
+        }),
+        'POST snapshot_downloads': () => {
+          downloadCalls += 1;
+          return {
+            snapshot_download: {
+              id: 301,
+              snapshot: { id: 200, name: 'snap-200' },
+              format: 'archive',
+              ready: false,
+              state: 'pending',
+            },
+            _meta: { action_state_id: 702 },
+          };
+        },
+        'GET action_states/702': () => ({
+          action_state: {
+            id: 702,
+            label: 'Create snapshot download',
+            status: true,
+            finished: false,
+            current: 0,
+            total: 1,
+          },
+        }),
+      },
+    });
+
+    await page.goto('/app/datasets/10/snapshots');
+
+    await expect(page.getByTestId('dataset.snapshots.row.200')).toBeVisible();
+    await expect(page.getByTestId('dataset.snapshots.row.200.download')).toBeEnabled();
+
+    const reqPromise = page.waitForRequest(
+      (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/snapshot_downloads')
+    );
+    await page.getByTestId('dataset.snapshots.row.200.download').click();
+    expect((await reqPromise).postDataJSON()).toEqual({
+      snapshot_download: {
+        snapshot: 200,
+        format: 'archive',
+        send_mail: true,
+      },
+    });
+    await expect(page.getByTestId('modal.action_progress')).toBeVisible();
+    expect(downloadCalls).toBe(1);
+  });
+
   test('rollback snapshot uses a confirm dialog', async ({ page }) => {
     let rollbackCalls = 0;
 

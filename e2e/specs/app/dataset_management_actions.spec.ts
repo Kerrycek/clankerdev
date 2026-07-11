@@ -62,11 +62,12 @@ test.describe('Dataset management actions', () => {
     await expect(page.getByTestId('dataset.manage')).toBeVisible();
 
     await page.getByTestId('dataset.manage.create.open').click();
-    await page.getByTestId('dataset.manage.create.name').fill('appdata');
-    await page.getByTestId('dataset.manage.refquota').fill('12');
+    const createModal = page.getByTestId('dataset.manage.create.modal');
+    await createModal.getByTestId('dataset.manage.create.name').fill('appdata');
+    await createModal.getByTestId('dataset.manage.refquota').fill('12');
 
     const createReq = page.waitForRequest((r) => r.method() === 'POST' && r.url().includes('/api/v7.0/datasets'));
-    await page.getByTestId('dataset.manage.create.submit').click();
+    await createModal.getByTestId('dataset.manage.create.submit').click();
     expect((await createReq).postDataJSON()).toEqual({
       dataset: {
         name: 'appdata',
@@ -87,9 +88,9 @@ test.describe('Dataset management actions', () => {
     await expect(page).toHaveURL(/\/admin\/datasets\/11$/);
     await expect(page.getByTestId('dataset.header')).toContainText('tank/vps/ds10/appdata');
 
-    await page.getByTestId('dataset.manage.edit.open').click();
     await page.getByTestId('dataset.manage.quota').fill('20');
     await page.getByTestId('dataset.manage.sync').selectOption('disabled');
+    await page.getByTestId('dataset.manage.admin_override').click();
 
     const editReq = page.waitForRequest((r) => r.method() === 'PUT' && r.url().includes('/api/v7.0/datasets/11'));
     await page.getByTestId('dataset.manage.edit.submit').click();
@@ -98,6 +99,7 @@ test.describe('Dataset management actions', () => {
         quota: 20480,
         refquota: 12288,
         sync: 'disabled',
+        admin_override: true,
       },
     });
 
@@ -115,8 +117,10 @@ test.describe('Dataset management actions', () => {
     await expect(page).toHaveURL(/\/admin\/datasets$/);
   });
 
-  test('hides admin-only dataset mutation actions from normal users', async ({ page }) => {
+  test('lets normal users update size but hides admin-only dataset actions', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    let updatePayload: any = null;
 
     await installHaveApiMock(page, {
       user: { id: 2, login: 'member', level: 1 },
@@ -141,18 +145,34 @@ test.describe('Dataset management actions', () => {
           vps: { id: 300, hostname: 'alpha.example' },
         }),
         'GET transaction_chains': () => ({ transaction_chains: [], _meta: { total_count: 0 } }),
+        'PUT datasets/10': ({ reqJson }) => {
+          updatePayload = reqJson;
+          return { status: true, response: null };
+        },
       },
     });
 
     await page.goto('/app/datasets/10');
     await expect(page.getByTestId('dataset.manage')).toBeVisible();
-    await expect(page.getByTestId('dataset.manage')).toContainText('Admin-managed dataset actions');
 
     await expect(page.getByTestId('dataset.manage.create.open')).toHaveCount(0);
-    await expect(page.getByTestId('dataset.manage.edit.open')).toHaveCount(0);
     await expect(page.getByTestId('dataset.manage.delete.open')).toHaveCount(0);
     await expect(page.getByTestId('dataset.manage.sharenfs')).toHaveCount(0);
     await expect(page.getByTestId('dataset.manage.admin_lock_type')).toHaveCount(0);
     await expect(page.getByTestId('dataset.manage.admin_override')).toHaveCount(0);
+
+    await page.getByTestId('dataset.manage.refquota').fill('12');
+    const editReq = page.waitForRequest((r) => r.method() === 'PUT' && r.url().includes('/api/v7.0/datasets/10'));
+    await page.getByTestId('dataset.manage.edit.submit').click();
+    expect((await editReq).postDataJSON()).toMatchObject({
+      dataset: {
+        refquota: 12288,
+      },
+    });
+    expect(updatePayload).toMatchObject({
+      dataset: {
+        refquota: 12288,
+      },
+    });
   });
 });

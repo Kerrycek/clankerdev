@@ -24,7 +24,7 @@ function lifeState(ds: Dataset): DatasetLife {
   const active = (ds as any).active;
   if (active === true) return 'active';
   if (active === false) return 'inactive';
-  return 'unknown';
+  return 'active';
 }
 
 function blocksWhenInactive(action: DatasetAction): boolean {
@@ -35,7 +35,6 @@ function blocksWhenInactive(action: DatasetAction): boolean {
 function requiresAdmin(action: DatasetAction): boolean {
   switch (action) {
     case 'dataset.create':
-    case 'dataset.update':
     case 'dataset.delete':
     case 'snapshot.rollback':
     case 'snapshot.delete':

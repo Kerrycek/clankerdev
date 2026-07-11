@@ -106,11 +106,11 @@ export const enStorage = {
     "This transaction chain has failures",
   "dataset.manage.title": "Dataset management",
   "dataset.manage.subtitle":
-    "Create subdatasets, update storage properties, or remove this dataset.",
+    "Update dataset size and storage properties directly here.",
   "dataset.manage.current": "Current dataset: {dataset} (#{id})",
   "dataset.manage.user_limited.title": "Admin-managed dataset actions",
   "dataset.manage.user_limited.body":
-    "Creating, editing and deleting datasets is limited to admins here. You can still create snapshots and snapshot downloads from the adjacent tabs.",
+    "You can resize within available resources. Admins also get destructive actions and quota override.",
   "dataset.manage.create.open": "Create subdataset",
   "dataset.manage.create.title": "Create subdataset",
   "dataset.manage.create.scope":
@@ -135,7 +135,7 @@ export const enStorage = {
   "dataset.manage.field.atime": "Access time",
   "dataset.manage.field.relatime": "Relative access time",
   "dataset.manage.field.sharenfs": "NFS share",
-  "dataset.manage.field.admin_override": "Admin override quota checks",
+  "dataset.manage.field.admin_override": "Set regardless of available resources",
   "dataset.manage.field.admin_lock_type": "Admin lock type",
   "dataset.manage.sync.standard": "Standard",
   "dataset.manage.sync.disabled": "Disabled",

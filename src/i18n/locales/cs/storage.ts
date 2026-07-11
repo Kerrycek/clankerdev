@@ -110,12 +110,12 @@ export const csStorage = {
     "Tento transakční řetězec obsahuje chyby",
   "dataset.manage.title": "Správa datasetu",
   "dataset.manage.subtitle":
-    "Vytvářej subdatasety, uprav vlastnosti úložiště nebo dataset odeber.",
+    "Uprav velikost a vlastnosti datasetu přímo tady.",
   "dataset.manage.current": "Aktuální dataset: {dataset} (#{id})",
   "dataset.manage.user_limited.title":
-    "Akce datasetu spravované administrátory",
+    "Běžná správa datasetu",
   "dataset.manage.user_limited.body":
-    "Vytváření, úpravy a mazání datasetů jsou zde omezené na administrátory. Snapshoty a snapshot downloady můžeš dál vytvářet v sousedních tabech.",
+    "Velikost můžeš upravit v rámci dostupných prostředků. Admin má navíc destruktivní akce a možnost přepsat kontrolu kvóty.",
   "dataset.manage.create.open": "Vytvořit subdataset",
   "dataset.manage.create.title": "Vytvořit subdataset",
   "dataset.manage.create.scope":
@@ -141,7 +141,7 @@ export const csStorage = {
   "dataset.manage.field.atime": "Access time",
   "dataset.manage.field.relatime": "Relative access time",
   "dataset.manage.field.sharenfs": "NFS share",
-  "dataset.manage.field.admin_override": "Admin override kontrol kvóty",
+  "dataset.manage.field.admin_override": "Nastavit bez ohledu na volné prostředky",
   "dataset.manage.field.admin_lock_type": "Typ admin locku",
   "dataset.manage.sync.standard": "Standard",
   "dataset.manage.sync.disabled": "Zakázáno",
