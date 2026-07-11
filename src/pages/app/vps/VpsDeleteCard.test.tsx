@@ -68,7 +68,7 @@ function renderDeleteDialog(onConfirm = vi.fn()) {
 }
 
 describe('VpsDeleteCard', () => {
-  it('submits lifecycle delete without typed hostname confirmation', async () => {
+  it('confirms lifecycle delete without typed hostname confirmation', async () => {
     const user = userEvent.setup();
     const { onSubmit } = renderDeleteCard();
     const submit = screen.getByTestId('vps.lifecycle.delete.submit');
@@ -77,6 +77,9 @@ describe('VpsDeleteCard', () => {
     expect(screen.queryByTestId('vps.lifecycle.delete.confirm')).not.toBeInTheDocument();
 
     await user.click(submit);
+    expect(onSubmit).not.toHaveBeenCalled();
+
+    await user.click(screen.getByTestId('vps.lifecycle.delete.submit.confirm_dialog.confirm'));
     expect(onSubmit).toHaveBeenCalledTimes(1);
   });
 
