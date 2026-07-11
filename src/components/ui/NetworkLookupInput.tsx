@@ -34,6 +34,7 @@ export function NetworkLookupInput(props: {
   value: number | null;
   onChange: (networkId: number | null) => void;
   purpose?: NetworkPurpose;
+  locationId?: number;
   placeholder?: string;
   disabled?: boolean;
   ariaLabel?: string;
@@ -59,7 +60,7 @@ export function NetworkLookupInput(props: {
   }, [props.value, open, needleRaw]);
 
   const q = useQuery({
-    queryKey: ['networks', 'lookup', { needle, purpose: props.purpose ?? null }],
+    queryKey: ['networks', 'lookup', { needle, purpose: props.purpose ?? null, locationId: props.locationId ?? null }],
     queryFn: async () => {
       if (parseLookupIdLike(needle) !== null) return [] as Network[];
 
@@ -67,6 +68,7 @@ export function NetworkLookupInput(props: {
         q: needle.trim() || undefined,
         limit: 25,
         purpose: props.purpose,
+        locationId: props.locationId,
       });
 
       return res.data;

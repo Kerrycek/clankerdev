@@ -16,6 +16,7 @@ import { toneSurfaceClass } from '../../../../components/ui/tone';
 
 import {
   ifaceLabel,
+  environmentLabel,
   ipAddressText,
   ipCreatedAt,
   ipDotVariant,
@@ -96,6 +97,9 @@ export function IpAddressesListMobile({ pageData, ipDetailBasePath, basePath, na
                 <div className="mt-3 space-y-1 text-xs text-muted">
                   <div>
                     <span className="text-faint">{t('admin.ip.field.network')}:</span> {networkLabel(ip, na)}
+                  </div>
+                  <div>
+                    <span className="text-faint">{t('admin.ip_addresses.field.environment')}:</span> {environmentLabel(ip, na)}
                   </div>
                   <div>
                     <span className="text-faint">{t('admin.ip.field.vps_id')}:</span> {vpsLabel(ip, na)}

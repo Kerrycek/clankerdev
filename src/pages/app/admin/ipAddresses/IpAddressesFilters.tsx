@@ -17,6 +17,7 @@ import { SmartInputHelp } from '../../../../components/ui/SmartInputHelp';
 import { NetworkLookupInput } from '../../../../components/ui/NetworkLookupInput';
 import { UserLookupInput } from '../../../../components/ui/UserLookupInput';
 import { VpsLookupInput } from '../../../../components/ui/VpsLookupInput';
+import type { Location as InfraLocation } from '../../../../lib/api/infra';
 
 type SetTextParam = (key: string, value: string | undefined) => void;
 type SetIntParam = (key: string, value: number | undefined | null) => void;
@@ -48,6 +49,7 @@ interface IpAddressesFiltersProps {
   networkId: number | undefined;
   ifaceId: number | undefined;
   locationId: number | undefined;
+  environmentLocations: InfraLocation[];
   versionNum: 4 | 6 | undefined;
   assignedToInterface: boolean | undefined;
   order: 'asc' | 'desc' | 'interface';
@@ -82,6 +84,7 @@ export function IpAddressesFilters({
   networkId,
   ifaceId,
   locationId,
+  environmentLocations,
   versionNum,
   assignedToInterface,
   order,
@@ -149,7 +152,21 @@ export function IpAddressesFilters({
       </FilterBar>
 
       <div className="rounded-lg border border-border bg-surface p-3 shadow-sm" data-testid="admin.ip_addresses.quick_filters">
-        <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_16rem_22rem] xl:items-end">
+        <div className="grid gap-3 xl:grid-cols-[15rem_minmax(0,1fr)_12rem_22rem] xl:items-end">
+          <Select
+            label={t('admin.ip_addresses.quick.environment')}
+            value={locationId !== undefined ? String(locationId) : ''}
+            onChange={(e) => setIntParam('location', parsePositiveInt(e.target.value))}
+            options={[
+              { value: '', label: t('admin.ip_addresses.quick.environment.any') },
+              ...environmentLocations.map((location) => {
+                const label = String(location.label ?? `#${location.id}`);
+                const environment = String(location.environment?.label ?? '').trim();
+                return { value: String(location.id), label: environment ? `${label} · ${environment}` : label };
+              }),
+            ]}
+            testId="admin.ip_addresses.quick.environment"
+          />
           <div className="min-w-0 flex-1">
             <label className="block">
               <span className="mb-1 block text-xs font-semibold text-muted">{t('admin.ip_addresses.quick.subnet')}</span>
@@ -157,6 +174,7 @@ export function IpAddressesFilters({
                 value={networkId ?? null}
                 onChange={(id) => setIntParam('network', id ?? undefined)}
                 purpose="vps"
+                locationId={locationId}
                 placeholder={t('admin.ip_addresses.quick.subnet.placeholder')}
                 testId="admin.ip_addresses.quick.subnet"
                 loadingLabel={t('common.loading')}
@@ -380,6 +398,7 @@ export function IpAddressesFilters({
                   value={networkId ?? null}
                   onChange={(id) => setIntParam('network', id ?? undefined)}
                   purpose="vps"
+                  locationId={locationId}
                   placeholder={t('admin.ip_addresses.advanced.network.placeholder')}
                   testId="admin.ip_addresses.advanced.network"
                   loadingLabel={t('common.loading')}

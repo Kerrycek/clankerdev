@@ -11,6 +11,11 @@ export interface Network {
   ip_version?: number;
   role?: string;
   purpose?: string;
+  primary_location?: {
+    id?: number;
+    label?: string;
+    environment?: { id?: number; label?: string } | null;
+  } | null;
   [k: string]: unknown;
 }
 

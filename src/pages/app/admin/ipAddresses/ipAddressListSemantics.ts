@@ -23,7 +23,15 @@ export type IpListOrder = 'asc' | 'desc' | 'interface';
 type IdLike = number | string | ResourceRef | null | undefined;
 type UserLike = User | ResourceRef | string | number | null | undefined;
 type VpsLike = Vps | ResourceRef | string | number | null | undefined;
-type NetworkLike = Network | { id?: number | string | null; address?: string | null; prefix?: number | null } | string | null | undefined;
+type NetworkLike = Network | {
+  id?: number | string | null;
+  address?: string | null;
+  prefix?: number | null;
+  primary_location?: {
+    label?: string | null;
+    environment?: { label?: string | null } | null;
+  } | null;
+} | string | null | undefined;
 type InterfaceLike = NetworkInterface | ResourceRef | { id?: number | string | null; name?: string | null } | string | number | null | undefined;
 
 export type IpAddressListRecord = IpAddress & {
@@ -97,6 +105,20 @@ export function networkLabel(ip: IpAddress, na: string): string {
 
   const id = idFromResourceRef(network as ResourceRef);
   return id ? `#${id}` : na;
+}
+
+export function environmentLabel(ip: IpAddress, na: string): string {
+  const network = ipRow(ip).network;
+  if (!network || typeof network === 'string') return na;
+
+  const location = network.primary_location;
+  const locationLabel = typeof location?.label === 'string' ? location.label.trim() : '';
+  const environmentLabel = typeof location?.environment?.label === 'string'
+    ? location.environment.label.trim()
+    : '';
+
+  if (locationLabel && environmentLabel) return `${locationLabel} · ${environmentLabel}`;
+  return locationLabel || environmentLabel || na;
 }
 
 export function userLabel(ip: IpAddress, na: string): string {

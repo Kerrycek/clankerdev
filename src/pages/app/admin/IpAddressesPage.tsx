@@ -7,6 +7,7 @@ import { useI18n } from '../../../app/i18n';
 import { useToasts } from '../../../app/toasts';
 
 import { fetchIpAddresses, type IpAddress } from '../../../lib/api/ipAddresses';
+import { fetchLocations, type Location as InfraLocation } from '../../../lib/api/infra';
 import { cursorFromDescendingPage } from '../../../lib/lockIndex';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 import { parseBoolParam, parseNonNegativeInt, parsePositiveInt } from '../../../lib/parse';
@@ -66,7 +67,11 @@ export function IpAddressesPage() {
     if (value === '6') return 6;
     return undefined;
   }, [sp]);
-  const assignedToInterface = useMemo(() => parseBoolParam(sp.get('assigned_to_interface')), [sp]);
+  const occupancyExplicitlyAny = sp.get('occupancy') === 'any';
+  const assignedToInterface = useMemo(() => {
+    const selected = parseBoolParam(sp.get('assigned_to_interface'));
+    return selected ?? (occupancyExplicitlyAny ? undefined : false);
+  }, [occupancyExplicitlyAny, sp]);
   const order = useMemo<IpListOrder>(() => {
     const value = String(sp.get('order') ?? '').trim().toLowerCase();
     if (value === 'asc' || value === 'interface' || value === 'desc') return value;
@@ -95,9 +100,16 @@ export function IpAddressesPage() {
   const setBoolParamInUrl = (key: string, value: boolean | undefined) => {
     setSp((prev) => {
       const next = new URLSearchParams(prev);
-      if (value === true) next.set(key, '1');
-      else if (value === false) next.set(key, '0');
-      else next.delete(key);
+      if (value === true) {
+        next.set(key, '1');
+        next.delete('occupancy');
+      } else if (value === false) {
+        next.set(key, '0');
+        next.delete('occupancy');
+      } else {
+        next.delete(key);
+        next.set('occupancy', 'any');
+      }
       return next;
     });
   };
@@ -164,6 +176,7 @@ export function IpAddressesPage() {
       next.delete('location');
       next.delete('version');
       next.delete('assigned_to_interface');
+      next.delete('occupancy');
       next.delete('order');
       return next;
     });
@@ -182,6 +195,7 @@ export function IpAddressesPage() {
       locationId,
       versionNum,
       assignedToInterface,
+      occupancyExplicitlyAny,
       order,
       scope: basePath,
     }),
@@ -190,6 +204,22 @@ export function IpAddressesPage() {
     defaultLimit: 50,
     allowedLimits: [25, 50, 100],
   });
+
+  const locationsQ = useQuery({
+    queryKey: ['locations', 'ip_addresses', 'active'],
+    queryFn: async () => (await fetchLocations({ limit: 200, hasHypervisor: true, includes: 'environment' })).data,
+    staleTime: 60_000,
+  });
+
+  const environmentLocations = useMemo(() => (locationsQ.data ?? []) as InfraLocation[], [locationsQ.data]);
+
+  useEffect(() => {
+    if (locationId !== undefined || locationsQ.isLoading) return;
+    const defaultLocation = environmentLocations[0];
+    if (defaultLocation?.id) setIntParam('location', defaultLocation.id);
+  }, [environmentLocations, locationId, locationsQ.isLoading]);
+
+  const locationReady = locationId !== undefined || !locationsQ.isLoading;
 
   const listQ = useQuery({
     queryKey: [
@@ -208,6 +238,7 @@ export function IpAddressesPage() {
         location: locationId,
         version: versionNum,
         assignedToInterface,
+        occupancyExplicitlyAny,
         order,
       },
     ],
@@ -228,10 +259,11 @@ export function IpAddressesPage() {
           assignedToInterface,
           order: order === 'desc' ? undefined : order,
           purpose: 'vps',
-          includes: 'network,network_interface,vps,user',
+          includes: 'network__primary_location__environment,network_interface,vps,user,charged_environment',
         })
       ).data,
     staleTime: 10_000,
+    enabled: locationReady,
   });
 
   const pageData = listQ.data ?? [];
@@ -500,7 +532,7 @@ export function IpAddressesPage() {
     });
 
     return chips;
-  }, [addr, assignedToInterface, ifaceId, locationId, networkId, prefixNum, qText, setBoolParamInUrl, setIntParam, setTextParam, smartErrors, t, userId, versionNum, vpsId]);
+  }, [addr, assignedToInterface, ifaceId, locationId, networkId, occupancyExplicitlyAny, prefixNum, qText, setBoolParamInUrl, setIntParam, setTextParam, smartErrors, t, userId, versionNum, vpsId]);
 
   const shareUrl = useMemo(() => (typeof window !== 'undefined' ? window.location.href : ''), [sp]);
 
@@ -542,6 +574,7 @@ export function IpAddressesPage() {
           networkId={networkId}
           ifaceId={ifaceId}
           locationId={locationId}
+          environmentLocations={environmentLocations}
           versionNum={versionNum}
           assignedToInterface={assignedToInterface}
           order={order}

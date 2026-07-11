@@ -14,6 +14,7 @@ import { TableRowLink } from '../../../../components/ui/TableRowLink';
 
 import {
   ifaceLabel,
+  environmentLabel,
   ipAddressText,
   ipCreatedAt,
   ipDotVariant,
@@ -82,6 +83,7 @@ export function IpAddressesListTable({ pageData, ipDetailBasePath, basePath, na,
           <th className="w-8 px-4 py-2" aria-label={t('common.state')} />
           <th className="px-4 py-2">{t('admin.ip_addresses.field.ip')}</th>
           <th className="px-4 py-2">{t('admin.ip.field.network')}</th>
+          <th className="px-4 py-2">{t('admin.ip_addresses.field.environment')}</th>
           <th className="px-4 py-2">{t('object_kind.vps')}</th>
           <th className="px-4 py-2">{t('admin.user.heading')}</th>
           <th className="px-4 py-2">{t('admin.ip_addresses.field.interface')}</th>
@@ -121,6 +123,7 @@ export function IpAddressesListTable({ pageData, ipDetailBasePath, basePath, na,
                 <div className="mt-1 text-xs text-faint">#{id}</div>
               </td>
               <td className="px-4 py-2 text-xs text-muted">{networkLabel(ip, na)}</td>
+              <td className="px-4 py-2 text-xs text-muted">{environmentLabel(ip, na)}</td>
               <td className="px-4 py-2 text-xs">
                 {vpsId ? (
                   <Link className="text-accent hover:underline" to={`${basePath}/vps/${vpsId}`}>
