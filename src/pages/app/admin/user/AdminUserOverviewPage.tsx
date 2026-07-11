@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
+import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useMutation, useQuery } from '@tanstack/react-query';
 
 import { useI18n } from '../../../../app/i18n';
 import { useToasts } from '../../../../app/toasts';
@@ -9,16 +9,19 @@ import { Alert } from '../../../../components/ui/Alert';
 import { Badge } from '../../../../components/ui/Badge';
 import { Button } from '../../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../../components/ui/Card';
-import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog';
 import { Drawer } from '../../../../components/ui/Drawer';
 import { Input } from '../../../../components/ui/Input';
 import { Select } from '../../../../components/ui/Select';
 import { SwitchRow } from '../../../../components/ui/SwitchRow';
-import { LifecyclePanel } from '../../../../components/lifetimes/LifecyclePanel';
 
-import { deleteUser, updateUser } from '../../../../lib/api/users';
+import { updateUser } from '../../../../lib/api/users';
+import { fetchUserPayments } from '../../../../lib/api/payments';
+import { adminDateTimeInputToIso, dateToAdminDateTimeInput, isoToAdminDateTimeInput } from '../../../../lib/datetimeLocal';
 import { formatDateTime } from '../../../../lib/format';
+import { getPaidUntilStatus, paidUntilBadgeVariant, paidUntilStatusLabelKey } from '../../../../lib/paymentsBadges';
+import { formatMoneyLike } from '../../../../lib/paymentsFormat';
 import { roleFromLevel } from '../../../../lib/roles';
+import { objectStateBadge } from '../../../../lib/taskStatus';
 
 import { useAdminUserContext } from './AdminUserLayout';
 
@@ -29,6 +32,13 @@ interface EditUserDraft {
   level: string;
   info: string;
   mailerEnabled: boolean;
+}
+
+interface StateDraft {
+  objectState: string;
+  expirationDate: string;
+  remindAfterDate: string;
+  reason: string;
 }
 
 function optionalStringField(record: Record<string, unknown>, key: string): string | undefined {
@@ -49,19 +59,83 @@ function makeEditDraft(u: Record<string, unknown>): EditUserDraft {
   };
 }
 
+function softDeleteExpirationInput(): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 1);
+  d.setSeconds(0, 0);
+  return dateToAdminDateTimeInput(d);
+}
+
+function makeStateDraft(u: Record<string, unknown>): StateDraft {
+  return {
+    objectState: typeof u['object_state'] === 'string' && u['object_state'].trim() ? u['object_state'] : 'active',
+    expirationDate: isoToAdminDateTimeInput(u['expiration_date']),
+    remindAfterDate: isoToAdminDateTimeInput(u['remind_after_date']),
+    reason: '',
+  };
+}
+
 export function AdminUserOverviewPage() {
   const { t } = useI18n();
   const toasts = useToasts();
-  const navigate = useNavigate();
   const { user: u, refetch } = useAdminUserContext();
   const [editOpen, setEditOpen] = useState(false);
   const [editDraft, setEditDraft] = useState<EditUserDraft>(() => makeEditDraft(u));
   const [editError, setEditError] = useState<string | null>(null);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteState, setDeleteState] = useState('deleted');
+  const [stateDraft, setStateDraft] = useState<StateDraft>(() => makeStateDraft(u));
+  const [stateError, setStateError] = useState<string | null>(null);
   const userInfo = optionalStringField(u, 'info');
-  const [deleteError, setDeleteError] = useState<string | null>(null);
   const userRole = roleFromLevel(typeof u.level === 'number' ? u.level : undefined);
+  const paidUntil = typeof u.paid_until === 'string' && u.paid_until.trim() ? u.paid_until : null;
+  const paidUntilStatus = getPaidUntilStatus(paidUntil);
+  const stateBadge = objectStateBadge(u.object_state ?? 'active', t);
+
+  const paymentHistoryQ = useQuery({
+    queryKey: ['user_payments', 'overview', { userId: u.id, limit: 5 }],
+    queryFn: async () => (await fetchUserPayments({ userId: u.id, limit: 5 })).data,
+    staleTime: 30_000,
+  });
+
+  const expirationParsed = useMemo(
+    () => adminDateTimeInputToIso(stateDraft.expirationDate),
+    [stateDraft.expirationDate]
+  );
+  const remindParsed = useMemo(
+    () => adminDateTimeInputToIso(stateDraft.remindAfterDate),
+    [stateDraft.remindAfterDate]
+  );
+
+  const statePayload = useMemo(() => {
+    const payload: Record<string, unknown> = {};
+    const currentState = String(u.object_state ?? 'active').trim() || 'active';
+    const nextState = stateDraft.objectState.trim() || 'active';
+
+    if (nextState !== currentState) payload['object_state'] = nextState;
+    if (expirationParsed.valid && expirationParsed.iso !== (u.expiration_date ?? null)) {
+      payload['expiration_date'] = expirationParsed.iso;
+    }
+    if (remindParsed.valid && remindParsed.iso !== (u.remind_after_date ?? null)) {
+      payload['remind_after_date'] = remindParsed.iso;
+    }
+    if (Object.keys(payload).length > 0 && stateDraft.reason.trim()) {
+      payload['change_reason'] = stateDraft.reason.trim();
+    }
+
+    return payload;
+  }, [
+    expirationParsed.iso,
+    expirationParsed.valid,
+    remindParsed.iso,
+    remindParsed.valid,
+    stateDraft.objectState,
+    stateDraft.reason,
+    u.expiration_date,
+    u.object_state,
+    u.remind_after_date,
+  ]);
+
+  const stateHasChanges = Object.keys(statePayload).length > 0;
+  const stateValid = stateHasChanges && expirationParsed.valid && remindParsed.valid;
 
   const openEdit = () => {
     setEditDraft(makeEditDraft(u));
@@ -72,6 +146,22 @@ export function AdminUserOverviewPage() {
   const setEditField = <K extends keyof EditUserDraft>(key: K, value: EditUserDraft[K]) => {
     setEditDraft((prev) => ({ ...prev, [key]: value }));
     if (editError) setEditError(null);
+  };
+
+  const setStateField = <K extends keyof StateDraft>(key: K, value: StateDraft[K]) => {
+    setStateDraft((prev) => ({ ...prev, [key]: value }));
+    if (stateError) setStateError(null);
+  };
+
+  const setObjectState = (objectState: string) => {
+    setStateDraft((prev) => ({
+      ...prev,
+      objectState,
+      expirationDate: objectState === 'soft_delete' && !prev.expirationDate.trim()
+        ? softDeleteExpirationInput()
+        : prev.expirationDate,
+    }));
+    if (stateError) setStateError(null);
   };
 
   const buildEditPayload = (): Record<string, unknown> | null => {
@@ -109,15 +199,18 @@ export function AdminUserOverviewPage() {
     },
   });
 
-  const deleteM = useMutation({
-    mutationFn: async () => deleteUser(u.id, { object_state: deleteState || undefined }),
-    onMutate: () => setDeleteError(null),
-    onSuccess: () => {
-      setDeleteOpen(false);
-      setDeleteError(null);
-      navigate('/admin/users');
+  const stateM = useMutation({
+    mutationFn: async () => {
+      if (!stateValid) throw new Error(t('admin.user.lifecycle.validation.no_changes'));
+      return updateUser(u.id, statePayload);
     },
-    onError: (err: any) => setDeleteError(String(err?.message ?? err)),
+    onSuccess: async (res) => {
+      setStateError(null);
+      setStateDraft(makeStateDraft(res.data ?? u));
+      toasts.pushToast({ variant: 'ok', title: t('admin.user.lifecycle.toast.saved') });
+      await refetch();
+    },
+    onError: (err: any) => setStateError(String(err?.message ?? err)),
   });
 
   return (
@@ -175,23 +268,148 @@ export function AdminUserOverviewPage() {
         </CardBody>
       </Card>
 
-      <LifecyclePanel
-        kind="user"
-        id={u.id}
-        objectLabel={u.login}
-        objectState={u.object_state}
-        expirationDate={u.expiration_date}
-        remindAfterDate={u.remind_after_date}
-        onUpdated={refetch}
-        testId="admin.user.lifecycle"
-      />
-
-      <Card testId="admin.user.danger.card" className="lg:col-span-2">
-        <CardHeader title={t('admin.user.danger.title')} subtitle={t('admin.user.danger.subtitle')} />
+      <Card testId="admin.user.payments.overview.card">
+        <CardHeader
+          title={t('admin.user.overview.payments.title')}
+          subtitle={t('admin.user.overview.payments.subtitle')}
+          actions={
+            <Link to={`/admin/users/${u.id}/payments`} className="text-sm underline">
+              {t('admin.user.overview.payments.open')}
+            </Link>
+          }
+        />
         <CardBody>
-          <Button variant="danger" onClick={() => setDeleteOpen(true)} testId="admin.user.delete.open">
-            {t('admin.user.delete.open')}
-          </Button>
+          <div className="space-y-4">
+            <div className="rounded-lg border border-border bg-surface-2 p-3" data-testid="admin.user.overview.paid_until">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <div className="text-xs text-muted">{t('payments.my.stat.paid_until')}</div>
+                  <div className="mt-1 text-lg font-semibold text-fg">
+                    {paidUntil ? formatDateTime(paidUntil) : t('payments.my.stat.paid_until.missing')}
+                  </div>
+                </div>
+                <Badge variant={paidUntilBadgeVariant(paidUntilStatus.status)}>
+                  {t(paidUntilStatusLabelKey(paidUntilStatus.status))}
+                </Badge>
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="text-sm font-semibold text-fg">{t('admin.user.overview.payments.recent')}</div>
+                {typeof u.monthly_payment === 'number' ? (
+                  <div className="text-xs text-muted">
+                    {t('admin.user.payments.settings.field.monthly_payment')}: {formatMoneyLike(u.monthly_payment)}
+                  </div>
+                ) : null}
+              </div>
+
+              {paymentHistoryQ.isLoading ? (
+                <div className="text-sm text-muted">{t('common.loading')}</div>
+              ) : paymentHistoryQ.isError ? (
+                <Alert variant="danger" title={t('payments.my.history.load_error.title')} />
+              ) : (paymentHistoryQ.data ?? []).length === 0 ? (
+                <div className="text-sm text-muted">{t('payments.my.history.empty')}</div>
+              ) : (
+                <div className="divide-y divide-border overflow-hidden rounded-md border border-border">
+                  {(paymentHistoryQ.data ?? []).slice(0, 5).map((payment) => (
+                    <div key={payment.id} className="grid gap-2 px-3 py-2 text-sm sm:grid-cols-[auto_1fr]">
+                      <div className="font-semibold text-fg">{formatMoneyLike(payment.amount)}</div>
+                      <div className="min-w-0 text-muted">
+                        <div className="truncate">
+                          {payment.from_date && payment.to_date
+                            ? `${formatDateTime(payment.from_date)} → ${formatDateTime(payment.to_date)}`
+                            : t('common.na')}
+                        </div>
+                        <div className="text-xs text-faint">
+                          {payment.created_at ? formatDateTime(payment.created_at) : t('common.na')}
+                          {payment.incoming_payment?.id ? ` · #${payment.incoming_payment.id}` : ''}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card testId="admin.user.account_actions.card" className="lg:col-span-2">
+        <CardHeader title={t('admin.user.account_actions.title')} subtitle={t('admin.user.account_actions.subtitle')} />
+        <CardBody>
+          <div className="grid gap-4">
+            <form
+              className="space-y-3 rounded-lg border border-border bg-surface-2 p-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                stateM.mutate();
+              }}
+              data-testid="admin.user.lifecycle.form"
+            >
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={stateBadge.variant}>{stateBadge.label}</Badge>
+                <span className="text-sm text-muted">{t('admin.user.lifecycle.current_state')}</span>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <Select
+                  label={t('lifetimes.field.state')}
+                  value={stateDraft.objectState}
+                  onChange={(e) => setObjectState(e.target.value)}
+                  testId="admin.user.lifecycle.state"
+                  options={[
+                    { value: 'active', label: t('state.active') },
+                    { value: 'suspended', label: t('state.suspended') },
+                    { value: 'soft_delete', label: t('state.soft_delete') },
+                    { value: 'hard_delete', label: t('state.hard_delete') },
+                    { value: 'deleted', label: t('state.deleted') },
+                  ]}
+                />
+                <label className="block">
+                  <span className="mb-1 block text-xs font-semibold text-muted">{t('lifetimes.field.expiration')}</span>
+                  <Input
+                    value={stateDraft.expirationDate}
+                    onChange={(e) => {
+                      setStateField('expirationDate', e.target.value);
+                      if (!e.target.value.trim()) setStateField('remindAfterDate', '');
+                    }}
+                    placeholder="YYYY-MM-DD HH:MM:SS"
+                    testId="admin.user.lifecycle.expiration"
+                  />
+                </label>
+              </div>
+
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-muted">{t('lifetimes.field.reason')}</span>
+                <Input
+                  value={stateDraft.reason}
+                  onChange={(e) => setStateField('reason', e.target.value)}
+                  testId="admin.user.lifecycle.reason"
+                />
+              </label>
+
+              {!expirationParsed.valid || !remindParsed.valid ? (
+                <Alert variant="danger" title={t('lifetimes.admin_update.invalid_date')} />
+              ) : stateError ? (
+                <Alert variant="danger" title={t('lifetimes.admin_update.error.title')}>
+                  {stateError}
+                </Alert>
+              ) : null}
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="primary"
+                  type="submit"
+                  loading={stateM.isPending}
+                  disabled={!stateValid}
+                  testId="admin.user.lifecycle.save"
+                >
+                  {t('admin.user.lifecycle.save')}
+                </Button>
+              </div>
+            </form>
+          </div>
         </CardBody>
       </Card>
 
@@ -296,40 +514,6 @@ export function AdminUserOverviewPage() {
         </div>
       </Drawer>
 
-      <ConfirmDialog
-        open={deleteOpen}
-        title={t('admin.user.delete.title')}
-        description={t('admin.user.delete.description', { login: u.login })}
-        danger
-        confirmLabel={t('admin.user.delete.confirm')}
-        confirmLoading={deleteM.isPending}
-        onCancel={() => {
-          setDeleteOpen(false);
-          setDeleteError(null);
-        }}
-        onConfirm={() => deleteM.mutate()}
-        testId="admin.user.delete.confirm"
-      >
-        <div className="space-y-3">
-          <label className="block">
-            <span className="text-sm font-medium">{t('admin.user.delete.field.object_state')}</span>
-            <Select
-              value={deleteState}
-              onChange={(e) => setDeleteState(e.target.value)}
-              options={[
-                { value: 'deleted', label: t('admin.user.delete.object_state.deleted') },
-                { value: 'suspended', label: t('admin.user.delete.object_state.suspended') },
-              ]}
-              testId="admin.user.delete.object_state"
-            />
-          </label>
-          {deleteError ? (
-            <Alert variant="danger" title={t('admin.user.delete.error')}>
-              {deleteError}
-            </Alert>
-          ) : null}
-        </div>
-      </ConfirmDialog>
     </div>
   );
 }

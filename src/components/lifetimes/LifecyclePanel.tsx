@@ -10,7 +10,13 @@ import { updateUser } from '../../lib/api/users';
 import { updateVps } from '../../lib/api/vps';
 import { getMetaActionStateId } from '../../lib/api/haveapi';
 import { fetchUserStateLogs, fetchVpsStateLogs } from '../../lib/api/lifetimes';
-import { isoToLocalInput, localInputToIso } from '../../lib/datetimeLocal';
+import {
+  adminDateTimeInputToIso,
+  dateToAdminDateTimeInput,
+  isoToAdminDateTimeInput,
+  isoToLocalInput,
+  localInputToIso,
+} from '../../lib/datetimeLocal';
 import { formatErrorMessage } from '../../lib/errors';
 import { formatDateTime } from '../../lib/format';
 import { objectRef } from '../../lib/objectRef';
@@ -60,6 +66,13 @@ function normalizeStateLogValue<T>(v: any, ...keys: string[]): T | undefined {
     if (v && Object.prototype.hasOwnProperty.call(v, k)) return v[k] as T;
   }
   return undefined;
+}
+
+function softDeleteExpirationInput(): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() + 1);
+  d.setSeconds(0, 0);
+  return dateToAdminDateTimeInput(d);
 }
 
 export function LifecyclePanel(props: {
@@ -149,14 +162,14 @@ export function LifecyclePanel(props: {
 
   const [adminOpen, setAdminOpen] = useState(false);
   const [adminState, setAdminState] = useState(st === 'unknown' ? 'active' : st);
-  const [adminExpirationLocal, setAdminExpirationLocal] = useState(isoToLocalInput(expIso));
-  const [adminRemindLocal, setAdminRemindLocal] = useState(isoToLocalInput(remindIso));
+  const [adminExpirationLocal, setAdminExpirationLocal] = useState(isoToAdminDateTimeInput(expIso));
+  const [adminRemindLocal, setAdminRemindLocal] = useState(isoToAdminDateTimeInput(remindIso));
   const [adminReason, setAdminReason] = useState('');
 
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
-  const expParsed = useMemo(() => localInputToIso(adminExpirationLocal), [adminExpirationLocal]);
-  const remindParsed = useMemo(() => localInputToIso(adminRemindLocal), [adminRemindLocal]);
+  const expParsed = useMemo(() => adminDateTimeInputToIso(adminExpirationLocal), [adminExpirationLocal]);
+  const remindParsed = useMemo(() => adminDateTimeInputToIso(adminRemindLocal), [adminRemindLocal]);
 
   const adminPayload = useMemo(() => {
     if (!isAdminUi) return null;
@@ -298,10 +311,17 @@ export function LifecyclePanel(props: {
 
   function openAdminEditor() {
     setAdminState(st === 'unknown' ? 'active' : st);
-    setAdminExpirationLocal(isoToLocalInput(expIso));
-    setAdminRemindLocal(isoToLocalInput(remindIso));
+    setAdminExpirationLocal(isoToAdminDateTimeInput(expIso));
+    setAdminRemindLocal(isoToAdminDateTimeInput(remindIso));
     setAdminReason('');
     setAdminOpen(true);
+  }
+
+  function setAdminStateFromSelect(nextState: string) {
+    setAdminState(nextState);
+    if (nextState === 'soft_delete' && !adminExpirationLocal.trim()) {
+      setAdminExpirationLocal(softDeleteExpirationInput());
+    }
   }
 
   // ----------------------
@@ -477,7 +497,7 @@ export function LifecyclePanel(props: {
             <div>
               <div className="text-xs text-faint">{t('lifetimes.field.state')}</div>
               <div className="mt-1">
-                <Select value={adminState} onChange={(e) => setAdminState(e.target.value)} testId="lifetimes.admin.state">
+                <Select value={adminState} onChange={(e) => setAdminStateFromSelect(e.target.value)} testId="lifetimes.admin.state">
                   <option value="active">{t('state.active')}</option>
                   <option value="suspended">{t('state.suspended')}</option>
                   <option value="soft_delete">{t('state.soft_delete')}</option>
@@ -494,13 +514,13 @@ export function LifecyclePanel(props: {
               <div className="text-xs text-faint">{t('lifetimes.field.expiration')}</div>
               <div className="mt-1 flex items-center gap-2">
                 <Input
-                  type="datetime-local"
                   value={adminExpirationLocal}
                   onChange={(e) => {
                     setAdminExpirationLocal(e.target.value);
                     // If expiration is cleared, also clear remind-after in the form.
                     if (!e.target.value.trim()) setAdminRemindLocal('');
                   }}
+                  placeholder="YYYY-MM-DD HH:MM:SS"
                   testId="lifetimes.admin.expiration"
                 />
                 <Button
@@ -519,10 +539,10 @@ export function LifecyclePanel(props: {
               <div className="text-xs text-faint">{t('lifetimes.field.remind_after')}</div>
               <div className="mt-1 flex items-center gap-2">
                 <Input
-                  type="datetime-local"
                   value={adminRemindLocal}
                   onChange={(e) => setAdminRemindLocal(e.target.value)}
                   disabled={!adminExpirationLocal.trim()}
+                  placeholder="YYYY-MM-DD HH:MM:SS"
                   testId="lifetimes.admin.remind_after"
                 />
                 <Button

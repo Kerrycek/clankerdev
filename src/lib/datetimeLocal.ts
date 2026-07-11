@@ -38,3 +38,40 @@ export function localInputToIso(local: unknown): { valid: boolean; iso: string |
 
   return { valid: true, iso: d.toISOString() };
 }
+
+export function isoToAdminDateTimeInput(iso: unknown): string {
+  const local = isoToLocalInput(iso);
+  if (!local) return '';
+  return `${local.replace('T', ' ')}:00`;
+}
+
+export function dateToAdminDateTimeInput(date: Date): string {
+  if (Number.isNaN(date.getTime())) return '';
+
+  const pad = (n: number): string => String(n).padStart(2, '0');
+
+  const yyyy = date.getFullYear();
+  const mm = pad(date.getMonth() + 1);
+  const dd = pad(date.getDate());
+  const hh = pad(date.getHours());
+  const min = pad(date.getMinutes());
+  const sec = pad(date.getSeconds());
+
+  return `${yyyy}-${mm}-${dd} ${hh}:${min}:${sec}`;
+}
+
+export function adminDateTimeInputToIso(value: unknown): { valid: boolean; iso: string | null; error?: string } {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return { valid: true, iso: null };
+
+  const normalized = raw
+    .replace(/^(\d{4}-\d{2}-\d{2})\s+(\d{2})-(\d{2})-(\d{2})$/, '$1T$2:$3:$4')
+    .replace(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})(?::(\d{2}))?$/, (_m, date, hm, sec) => {
+      return `${date}T${hm}:${sec ?? '00'}`;
+    });
+
+  const d = new Date(normalized);
+  if (Number.isNaN(d.getTime())) return { valid: false, iso: null, error: 'Invalid admin datetime value' };
+
+  return { valid: true, iso: d.toISOString() };
+}
