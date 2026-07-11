@@ -254,7 +254,7 @@ export const enStorage = {
   "dataset.tabs.exports": "Exports",
   ...enStorageExports,
   "dataset.tabs.plans": "Plans",
-  "dataset.tabs.expansion": "Expansion",
+  "dataset.tabs.expansion": "Temporary increase",
   "dataset.plans.title": "Dataset plans",
   "dataset.plans.subtitle": "Assign environment dataset plans to this dataset.",
   "dataset.plans.assigned_count": "Assigned plans",
@@ -294,7 +294,7 @@ export const enStorage = {
   "dataset.plans.remove.success": "Dataset plan removed",
   "dataset.plans.remove.error": "Failed to remove dataset plan",
   "dataset.plans.remove.not_allowed": "Removal restricted",
-  "dataset.expansion.title": "Temporary expansion",
+  "dataset.expansion.title": "Temporary quota increase",
   "dataset.expansion.subtitle":
     "Track added quota, safeguards and expansion history for this dataset.",
   "dataset.expansion.load_error.title": "Failed to load dataset expansion",

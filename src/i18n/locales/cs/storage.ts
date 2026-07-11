@@ -260,7 +260,7 @@ export const csStorage = {
   "dataset.tabs.exports": "Exporty",
   ...csStorageExports,
   "dataset.tabs.plans": "Plány",
-  "dataset.tabs.expansion": "Rozšíření",
+  "dataset.tabs.expansion": "Dočasné navýšení",
   "dataset.plans.title": "Plány datasetu",
   "dataset.plans.subtitle":
     "Přiřaď tomuto datasetu environmentální plány datasetů.",
@@ -302,7 +302,7 @@ export const csStorage = {
   "dataset.plans.remove.success": "Plán datasetu byl odebrán",
   "dataset.plans.remove.error": "Plán datasetu se nepodařilo odebrat",
   "dataset.plans.remove.not_allowed": "Odebrání omezeno",
-  "dataset.expansion.title": "Dočasné rozšíření",
+  "dataset.expansion.title": "Dočasné navýšení kvóty",
   "dataset.expansion.subtitle":
     "Sleduj přidanou kvótu, ochranné mechanismy a historii rozšíření tohoto datasetu.",
   "dataset.expansion.load_error.title":

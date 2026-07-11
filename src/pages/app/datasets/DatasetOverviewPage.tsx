@@ -201,43 +201,13 @@ function SpaceCard(props: { dataset: any }) {
   );
 }
 
-function CountsCard(props: { dataset: any }) {
-  const { t } = useI18n();
-  const ds = props.dataset;
-
-  return (
-    <Card testId="dataset.overview.counts">
-      <CardHeader title={t('dataset.overview.counts.title')} />
-      <CardBody>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div>
-            <div className="text-xs text-faint">{t('dataset.field.children')}</div>
-            <div className="font-medium text-fg">{(ds as any).children_count ?? t('common.na')}</div>
-          </div>
-          <div>
-            <div className="text-xs text-faint">{t('dataset.field.snapshots')}</div>
-            <div className="font-medium text-fg">{(ds as any).snapshots_count ?? t('common.na')}</div>
-          </div>
-          <div>
-            <div className="text-xs text-faint">{t('dataset.field.mounts')}</div>
-            <div className="font-medium text-fg">{(ds as any).mount_count ?? t('common.na')}</div>
-          </div>
-          <div>
-            <div className="text-xs text-faint">{t('dataset.field.exports')}</div>
-            <div className="font-medium text-fg">{(ds as any).export_count ?? t('common.na')}</div>
-          </div>
-        </div>
-      </CardBody>
-    </Card>
-  );
-}
-
 function DetailsCard(props: { dataset: any }) {
   const { t } = useI18n();
 
   const ds = props.dataset;
 
-  const stateBadge = objectStateBadge((ds as any).object_state, t);
+  const stateRaw = typeof (ds as any).object_state === 'string' ? String((ds as any).object_state).trim() : '';
+  const stateBadge = stateRaw ? objectStateBadge(stateRaw, t) : null;
   const pool = (ds as any).pool ? String((ds as any).pool) : null;
   const type = (ds as any).type ? String((ds as any).type) : null;
 
@@ -254,55 +224,48 @@ function DetailsCard(props: { dataset: any }) {
             <div className="break-words font-medium text-fg">{datasetLabel(ds)}</div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <div className="text-xs text-faint">{t('common.state')}</div>
-              <div className="mt-0.5">
-                <Badge variant={stateBadge.variant}>{stateBadge.label}</Badge>
-              </div>
-            </div>
-
+          {stateBadge || created ? (
+            <div className="grid grid-cols-2 gap-3">
+              {stateBadge ? (
+                <div>
+                  <div className="text-xs text-faint">{t('common.state')}</div>
+                  <div className="mt-0.5">
+                    <Badge variant={stateBadge.variant}>{stateBadge.label}</Badge>
+                  </div>
+                </div>
+              ) : null}
             {created ? (
               <div>
                 <div className="text-xs text-faint">{t('common.created')}</div>
                 <div className="font-medium text-fg">{created}</div>
               </div>
             ) : null}
-          </div>
+            </div>
+          ) : null}
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <div className="text-xs text-faint">{t('dataset.field.pool')}</div>
-              <div className="font-medium text-fg">{pool ?? t('common.na')}</div>
-            </div>
-            <div>
-              <div className="text-xs text-faint">{t('dataset.field.type')}</div>
-              <div className="font-medium text-fg">{type ?? t('common.na')}</div>
-            </div>
-            {updated ? (
+          {pool || type || updated ? (
+            <div className="grid grid-cols-2 gap-3">
+              {pool ? (
+                <div>
+                  <div className="text-xs text-faint">{t('dataset.field.pool')}</div>
+                  <div className="font-medium text-fg">{pool}</div>
+                </div>
+              ) : null}
+              {type ? (
+                <div>
+                  <div className="text-xs text-faint">{t('dataset.field.type')}</div>
+                  <div className="font-medium text-fg">{type}</div>
+                </div>
+              ) : null}
+              {updated ? (
               <div>
                 <div className="text-xs text-faint">{t('common.updated')}</div>
                 <div className="font-medium text-fg">{updated}</div>
               </div>
-            ) : null}
-          </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
-      </CardBody>
-    </Card>
-  );
-}
-
-function TipsCard() {
-  const { t } = useI18n();
-  return (
-    <Card testId="dataset.overview.tips">
-      <CardHeader title={t('dataset.overview.tips.title')} />
-      <CardBody>
-        <ul className="list-disc space-y-1 pl-5 text-sm text-muted">
-          <li>{t('dataset.overview.tips.item1')}</li>
-          <li>{t('dataset.overview.tips.item2')}</li>
-          <li>{t('dataset.overview.tips.item3')}</li>
-        </ul>
       </CardBody>
     </Card>
   );
@@ -776,12 +739,10 @@ export function DatasetOverviewPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="space-y-6">
           <SpaceCard dataset={dataset as any} />
-          <CountsCard dataset={dataset as any} />
           <DatasetManagementCard />
         </div>
         <div className="space-y-6">
           <DetailsCard dataset={dataset as any} />
-          <TipsCard />
         </div>
       </div>
 
