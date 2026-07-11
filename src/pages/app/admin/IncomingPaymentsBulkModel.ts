@@ -62,7 +62,6 @@ export function buildIncomingPaymentBulkReview(input: {
   rows: IncomingPayment[];
   selectedIds: Iterable<number>;
   action: IncomingPaymentBulkAction;
-  confirmationText?: string;
 }): IncomingPaymentBulkReview {
   const targetState = incomingPaymentBulkActionTargetState(input.action);
   const selectedIds = normalizeSelectedIds(input.selectedIds);

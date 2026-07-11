@@ -88,7 +88,7 @@ export const enMailer = {
   'mailer.mailboxes.delete_error': 'Unable to delete mailbox',
   'mailer.mailboxes.delete_confirm.title': 'Delete mailbox',
   'mailer.mailboxes.delete_confirm.description': 'This will permanently delete the mailbox and its handlers.',
-  'mailer.mailboxes.delete_confirm.hint': 'Type the mailbox label to confirm:',
+  'mailer.mailboxes.delete_confirm.hint': 'Confirm deletion with the button in this dialog.',
   'mailer.mailboxes.fields.label': 'Label',
   'mailer.mailboxes.fields.server': 'Server',
   'mailer.mailboxes.fields.port': 'Port',

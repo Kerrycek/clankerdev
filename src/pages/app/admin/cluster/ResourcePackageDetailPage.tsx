@@ -211,8 +211,6 @@ export function ResourcePackageDetailPage() {
   });
 
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState('');
-  const deleteDisabled = deleteConfirm.trim() !== label;
 
   const deletePkgM = useMutation({
     mutationFn: async () => {
@@ -453,7 +451,6 @@ export function ResourcePackageDetailPage() {
               variant="danger"
               onClick={() => {
                 setDeleteOpen(true);
-                setDeleteConfirm('');
               }}
               disabled={personal}
               disabledReason={personal ? t('admin.cluster.resource_packages.delete_disabled.personal') : undefined}
@@ -683,7 +680,6 @@ export function ResourcePackageDetailPage() {
         open={deleteOpen}
         onCancel={() => {
           setDeleteOpen(false);
-          setDeleteConfirm('');
         }}
         onConfirm={() => deletePkgM.mutate()}
         danger
@@ -691,25 +687,12 @@ export function ResourcePackageDetailPage() {
         description={t('admin.cluster.resource_packages.delete_confirm.description')}
         confirmLabel={t('common.delete')}
         confirmLoading={deletePkgM.isPending}
-        confirmDisabled={deleteDisabled}
+        confirmDisabled={!id}
         testId="admin.cluster.resource_package_detail.delete_confirm"
       >
         <div className="space-y-3">
           <div className="text-sm text-muted">
             {t('admin.cluster.resource_packages.delete_confirm.impact', { count: String(assignmentTotal) })}
-          </div>
-
-          <div>
-            <div className="text-xs font-semibold text-muted">{t('admin.cluster.resource_packages.delete_confirm.hint')}</div>
-            <div className="mt-1">
-              <Input
-                value={deleteConfirm}
-                onChange={(e) => setDeleteConfirm(e.target.value)}
-                placeholder={label}
-                autoComplete="off"
-                testId="admin.cluster.resource_package_detail.delete_confirm.input"
-              />
-            </div>
           </div>
         </div>
       </ConfirmDialog>

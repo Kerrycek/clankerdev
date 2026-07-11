@@ -19,7 +19,7 @@ describe('VPS delete confirmation model', () => {
     expect(vpsDeleteObjectLabel({ id: 123, hostname: null })).toBe('#123');
   });
 
-  it('keeps lazy delete enabled by default while requiring typed confirmation', () => {
-    expect(defaultDeleteForm()).toEqual({ lazy: true, confirmText: '' });
+  it('keeps lazy delete enabled by default', () => {
+    expect(defaultDeleteForm()).toEqual({ lazy: true });
   });
 });

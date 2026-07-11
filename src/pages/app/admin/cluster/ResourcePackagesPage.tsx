@@ -356,11 +356,7 @@ export function ResourcePackagesPage() {
     open: false,
     pkg: null,
   });
-  const [deleteConfirm, setDeleteConfirm] = useState('');
-
   const deletePkg = deleteState.pkg;
-  const deleteToken = deletePkg ? (typeof deletePkg.label === 'string' && deletePkg.label.trim() ? deletePkg.label.trim() : `#${deletePkg.id}`) : '';
-  const deleteDisabled = !deletePkg || deleteConfirm.trim() !== deleteToken;
 
   const deleteImpactQ = useQuery({
     queryKey: ['user_cluster_resource_packages', 'count', { pkgId: deletePkg?.id }],
@@ -380,7 +376,6 @@ export function ResourcePackagesPage() {
     },
     onSuccess: async () => {
       setDeleteState({ open: false, pkg: null });
-      setDeleteConfirm('');
       await qc.invalidateQueries({ queryKey: ['cluster_resource_packages'] });
       pushToast({ variant: 'ok', title: t('admin.cluster.resource_packages.toast.deleted') });
     },
@@ -551,7 +546,6 @@ export function ResourcePackagesPage() {
                         disabledReason={personal ? t('admin.cluster.resource_packages.delete_disabled.personal') : undefined}
                         onClick={() => {
                           setDeleteState({ open: true, pkg: p });
-                          setDeleteConfirm('');
                         }}
                         testId={`admin.cluster.resource_packages.row.${id}.delete`}
                       >
@@ -616,7 +610,6 @@ export function ResourcePackagesPage() {
         open={deleteState.open}
         onCancel={() => {
           setDeleteState({ open: false, pkg: null });
-          setDeleteConfirm('');
         }}
         onConfirm={() => deleteM.mutate()}
         danger
@@ -624,7 +617,7 @@ export function ResourcePackagesPage() {
         description={t('admin.cluster.resource_packages.delete_confirm.description')}
         confirmLabel={t('common.delete')}
         confirmLoading={deleteM.isPending}
-        confirmDisabled={deleteDisabled}
+        confirmDisabled={!deletePkg}
         testId="admin.cluster.resource_packages.delete_confirm"
       >
         {deletePkg ? (
@@ -633,19 +626,6 @@ export function ResourcePackagesPage() {
               {t('admin.cluster.resource_packages.delete_confirm.impact', {
                 count: deleteImpactQ.isLoading || deleteImpactQ.isError ? '—' : String(deleteImpactQ.data ?? 0),
               })}
-            </div>
-
-            <div>
-              <div className="text-xs font-semibold text-muted">{t('admin.cluster.resource_packages.delete_confirm.hint')}</div>
-              <div className="mt-1">
-                <Input
-                  value={deleteConfirm}
-                  onChange={(e) => setDeleteConfirm(e.target.value)}
-                  placeholder={deleteToken}
-                  autoComplete="off"
-                  testId="admin.cluster.resource_packages.delete_confirm.input"
-                />
-              </div>
             </div>
           </div>
         ) : null}

@@ -5,6 +5,7 @@ import { ActionButton } from '../../../components/ui/ActionButton';
 import { Alert } from '../../../components/ui/Alert';
 import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
 import { Checkbox } from '../../../components/ui/Checkbox';
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { Select } from '../../../components/ui/Select';
 import { Textarea } from '../../../components/ui/Textarea';
 import type { IpAddress } from '../../../lib/api/ipAddresses';
@@ -15,15 +16,13 @@ import type { GateDecision } from '../../../lib/gates/types';
 import {
   ActionImpactSummary,
   AsyncActionResult,
-  DangerTypedConfirm,
+  DangerConfirmationNotice,
   Field,
   ImpactItem,
 } from './VpsLifecyclePrimitives';
 import {
-  isVpsReinstallConfirmationSatisfied,
   reinstallUserDataFormats,
   vpsCurrentTemplateLabel,
-  vpsReinstallConfirmationTarget,
   vpsReinstallTemplateLabel,
   type ReinstallForm,
   type ReinstallUserDataFormat,
@@ -99,14 +98,14 @@ export function VpsReinstallCard(props: {
   onSubmit: () => void;
 }) {
   const { t } = useI18n();
-  const target = vpsReinstallConfirmationTarget(props.vps);
-  const confirmSatisfied = isVpsReinstallConfirmationSatisfied(props.form, target);
   const tpl = selectedTemplate(props.form, props.templates);
+  const target = String(props.vps.hostname || `#${props.vps.id}`).trim();
+  const [confirmOpen, setConfirmOpen] = React.useState(false);
   const userDataContent = props.form.userDataContent.trim();
   const userDataMissing = props.form.userDataEnabled && !userDataContent;
   const userDataWillRun = props.form.userDataEnabled && Boolean(userDataContent);
   const selectedTemplateSupportsCloudInit = tpl?.enable_cloud_init === true;
-  const disabled = !props.form.osTemplate || !confirmSatisfied || userDataMissing || !props.gate.allowed;
+  const disabled = !props.form.osTemplate || userDataMissing || !props.gate.allowed;
 
   const setForm = (patch: Partial<ReinstallForm>) => {
     props.onChange((prev) => ({ ...prev, ...patch }));
@@ -160,7 +159,7 @@ export function VpsReinstallCard(props: {
           <Field label={t('vps.lifecycle.field.os_template')} help={t('vps.lifecycle.reinstall.os_template_help')}>
             <Select
               value={props.form.osTemplate}
-              onChange={(e) => setForm({ osTemplate: e.target.value, confirmText: '' })}
+              onChange={(e) => setForm({ osTemplate: e.target.value })}
               disabled={props.pending || props.templatesLoading}
               testId="vps.lifecycle.reinstall.os_template"
             >
@@ -248,19 +247,10 @@ export function VpsReinstallCard(props: {
           </div>
         </details>
 
-        <DangerTypedConfirm
+        <DangerConfirmationNotice
           label={t('vps.lifecycle.reinstall.confirm.label')}
-          help={t('vps.lifecycle.reinstall.confirm.help', { target })}
-          target={target}
-          value={props.form.confirmText}
-          onChange={(confirmText) => setForm({ confirmText })}
-          disabled={props.pending}
-          inputClassName="font-mono"
+          help={t('vps.lifecycle.reinstall.confirm.help')}
           testId="vps.lifecycle.reinstall.confirm"
-          ariaLabel={t('vps.lifecycle.reinstall.confirm.label')}
-          satisfied={confirmSatisfied}
-          mismatchTitle={t('vps.lifecycle.reinstall.confirm.mismatch_title')}
-          mismatchBody={t('vps.lifecycle.reinstall.confirm.mismatch_body')}
         />
 
         <AsyncActionResult
@@ -278,11 +268,25 @@ export function VpsReinstallCard(props: {
             disabled={disabled}
             disabledReason={!props.gate.allowed ? props.gate.reason : undefined}
             loading={props.pending}
-            onClick={props.onSubmit}
+            onClick={() => setConfirmOpen(true)}
           >
             {t('vps.lifecycle.reinstall.submit')}
           </ActionButton>
         </div>
+        <ConfirmDialog
+          open={confirmOpen}
+          title={t('vps.lifecycle.reinstall.submit')}
+          description={t('vps.lifecycle.reinstall.warning_body')}
+          confirmLabel={t('vps.lifecycle.reinstall.submit')}
+          danger
+          confirmLoading={props.pending}
+          onCancel={() => setConfirmOpen(false)}
+          onConfirm={() => {
+            setConfirmOpen(false);
+            props.onSubmit();
+          }}
+          testId="vps.lifecycle.reinstall.submit.confirm_dialog"
+        />
       </CardBody>
     </Card>
   );

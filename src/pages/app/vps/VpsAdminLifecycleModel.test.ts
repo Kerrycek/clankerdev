@@ -1,7 +1,6 @@
 import type { Node } from '../../../lib/api/nodes';
 import type { Vps } from '../../../lib/api/vps';
 import {
-  adminConfirmTarget,
   buildMigrateTargetContext,
   buildVpsBootPayload,
   buildVpsMigratePayload,
@@ -11,7 +10,6 @@ import {
   defaultMigrateForm,
   defaultReplaceForm,
   defaultTemplateForm,
-  isAdminConfirmSatisfied,
   isMigrateReady,
   nextMigrateFormForNodeChange,
 } from './VpsAdminLifecycleModel';
@@ -139,12 +137,4 @@ describe('VPS admin lifecycle model', () => {
     });
   });
 
-  it('uses typed hostname confirmations for admin safety prompts', () => {
-    const target = adminConfirmTarget(sourceVps);
-
-    expect(target).toBe('prod.example');
-    expect(isAdminConfirmSatisfied('prod.example', target)).toBe(true);
-    expect(isAdminConfirmSatisfied(' prod.example ', target)).toBe(true);
-    expect(isAdminConfirmSatisfied('PROD.EXAMPLE', target)).toBe(false);
-  });
 });

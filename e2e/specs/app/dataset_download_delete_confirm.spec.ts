@@ -375,6 +375,14 @@ test.describe("@smoke Dataset downloads", () => {
     await expect(
       page.getByTestId("dataset.downloads.delete_confirm.confirm"),
     ).toBeEnabled();
+    await expect(
+      page.getByTestId("dataset.downloads.delete_confirm").locator("input"),
+    ).toHaveCount(0);
+
+    const proofScreenshot = process.env.E2E_PROOF_SCREENSHOT?.trim();
+    if (proofScreenshot) {
+      await page.screenshot({ path: proofScreenshot, fullPage: true });
+    }
 
     await page.getByTestId("dataset.downloads.delete_confirm.confirm").click();
     await expect(

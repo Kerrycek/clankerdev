@@ -117,7 +117,6 @@ export function UserSessionsPanel(props: {
   const [sessionLabel, setSessionLabel] = useState('');
   const [sessionLabelError, setSessionLabelError] = useState<string | null>(null);
   const [closeSession, setCloseSession] = useState<UserSession | null>(null);
-  const [closeConfirmation, setCloseConfirmation] = useState('');
 
   const renameM = useMutation({
     mutationFn: async () => {
@@ -139,7 +138,6 @@ export function UserSessionsPanel(props: {
     mutationFn: async (id: number) => closeUserSession(id),
     onSuccess: async () => {
       setCloseSession(null);
-      setCloseConfirmation('');
       await qc.invalidateQueries({ queryKey: ['user_sessions'] });
     },
   });
@@ -246,14 +244,11 @@ export function UserSessionsPanel(props: {
 
       <UserSessionCloseDialog
         session={closeSession}
-        confirmationValue={closeConfirmation}
         closing={closeM.isPending}
         testIdPrefix={prefix}
-        onConfirmationValueChange={setCloseConfirmation}
         onCancel={() => {
           if (closeM.isPending) return;
           setCloseSession(null);
-          setCloseConfirmation('');
         }}
         onConfirm={() => {
           if (!closeSession) return;

@@ -11,9 +11,7 @@ import { Input } from '../ui/Input';
 import { Modal } from '../ui/Modal';
 
 import {
-  USER_SESSION_CLOSE_CONFIRMATION,
   isUserSessionAccessToken,
-  userSessionCloseRequiresTypedConfirmation,
   userSessionDisplayLabel,
 } from './UserSessionsModel';
 
@@ -72,16 +70,13 @@ export function UserSessionRenameDialog(props: {
 
 export function UserSessionCloseDialog(props: {
   session: UserSession | null;
-  confirmationValue: string;
   closing: boolean;
   testIdPrefix: string;
-  onConfirmationValueChange: (value: string) => void;
   onCancel: () => void;
   onConfirm: () => void;
 }) {
   const { t } = useI18n();
   const session = props.session;
-  const requiresTypedConfirmation = userSessionCloseRequiresTypedConfirmation(session);
   const isAccessToken = session ? isUserSessionAccessToken(session) : false;
 
   return (
@@ -93,9 +88,6 @@ export function UserSessionCloseDialog(props: {
       confirmLabel={t('profile.sessions.action.close')}
       danger
       confirmLoading={props.closing}
-      confirmationText={requiresTypedConfirmation ? USER_SESSION_CLOSE_CONFIRMATION : undefined}
-      confirmationValue={props.confirmationValue}
-      onConfirmationValueChange={props.onConfirmationValueChange}
       onConfirm={props.onConfirm}
       testId={`${props.testIdPrefix}.close_dialog`}
     >

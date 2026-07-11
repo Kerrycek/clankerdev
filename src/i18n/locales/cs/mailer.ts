@@ -88,7 +88,7 @@ export const csMailer = {
   'mailer.mailboxes.delete_error': 'Nelze smazat schránku',
   'mailer.mailboxes.delete_confirm.title': 'Smazat schránku',
   'mailer.mailboxes.delete_confirm.description': 'Tímto trvale smažeš schránku i její kroky zpracování.',
-  'mailer.mailboxes.delete_confirm.hint': 'Pro potvrzení napiš popisek schránky:',
+  'mailer.mailboxes.delete_confirm.hint': 'Smazání potvrdíš tlačítkem v dialogu.',
   'mailer.mailboxes.fields.label': 'Popisek',
   'mailer.mailboxes.fields.server': 'Server',
   'mailer.mailboxes.fields.port': 'Port',

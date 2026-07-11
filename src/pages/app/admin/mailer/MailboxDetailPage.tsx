@@ -164,8 +164,6 @@ export function MailboxDetailPage() {
 
   // --- Delete mailbox ---
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState('');
-
   const deleteMailboxM = useMutation({
     mutationFn: async () => {
       if (id === null) throw new Error('invalid mailbox id');
@@ -184,8 +182,6 @@ export function MailboxDetailPage() {
       });
     },
   });
-
-  const deleteMailboxDisabled = deleteConfirm.trim() !== label;
 
   // --- Handler editor modal ---
   const [handlerModalOpen, setHandlerModalOpen] = useState(false);
@@ -677,7 +673,6 @@ export function MailboxDetailPage() {
         open={deleteOpen}
         onCancel={() => {
           setDeleteOpen(false);
-          setDeleteConfirm('');
         }}
         onConfirm={() => deleteMailboxM.mutate()}
         danger
@@ -685,22 +680,9 @@ export function MailboxDetailPage() {
         description={t('mailer.mailboxes.delete_confirm.description')}
         confirmLabel={t('common.delete')}
         confirmLoading={deleteMailboxM.isPending}
-        confirmDisabled={deleteMailboxDisabled}
+        confirmDisabled={id === null}
         testId="admin.mailer.mailboxes.delete_confirm"
-      >
-        <div className="mt-2">
-          <div className="text-xs font-semibold text-muted">{t('mailer.mailboxes.delete_confirm.hint')}</div>
-          <div className="mt-1">
-            <Input
-              value={deleteConfirm}
-              onChange={(e) => setDeleteConfirm(e.target.value)}
-              placeholder={label}
-              autoComplete="off"
-              testId="admin.mailer.mailboxes.delete_confirm.input"
-            />
-          </div>
-        </div>
-      </ConfirmDialog>
+      />
 
       <Modal
         open={handlerModalOpen}

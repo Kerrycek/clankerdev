@@ -363,7 +363,7 @@ export function VpsListPage() {
             onStart={onStart}
             onRequestStop={(row) => setConfirm({ vpsId: row.vps.id, kind: 'stop', force: false })}
             onRequestRestart={(row) => setConfirm({ vpsId: row.vps.id, kind: 'restart', force: false })}
-            onRequestDelete={(row) => setConfirm({ vpsId: row.vps.id, kind: 'delete', force: false, lazy: true, confirmText: '' })}
+            onRequestDelete={(row) => setConfirm({ vpsId: row.vps.id, kind: 'delete', force: false, lazy: true })}
           />
 
           <VpsListTable
@@ -378,7 +378,7 @@ export function VpsListPage() {
             onStart={onStart}
             onRequestStop={(row) => setConfirm({ vpsId: row.vps.id, kind: 'stop', force: false })}
             onRequestRestart={(row) => setConfirm({ vpsId: row.vps.id, kind: 'restart', force: false })}
-            onRequestDelete={(row) => setConfirm({ vpsId: row.vps.id, kind: 'delete', force: false, lazy: true, confirmText: '' })}
+            onRequestDelete={(row) => setConfirm({ vpsId: row.vps.id, kind: 'delete', force: false, lazy: true })}
           />
         </>
       )}

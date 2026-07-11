@@ -6,13 +6,11 @@ export type VpsDeleteConfirmationSource = Pick<Vps, 'id'> & {
 
 export type DeleteForm = {
   lazy: boolean;
-  confirmText: string;
 };
 
 export function defaultDeleteForm(): DeleteForm {
   return {
     lazy: true,
-    confirmText: '',
   };
 }
 

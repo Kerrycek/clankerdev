@@ -37,6 +37,10 @@ export function VpsDeleteCard(props: {
           gate={props.gate}
           loading={props.pending}
           onClick={props.onSubmit}
+          confirmation={{
+            title: t('vps.lifecycle.delete.submit'),
+            description: t('vps.lifecycle.delete.warning_body'),
+          }}
         >
           {t('vps.lifecycle.delete.submit')}
         </LifecycleSubmitButton>
@@ -46,9 +50,7 @@ export function VpsDeleteCard(props: {
         vps={props.vps}
         isAdminMode={props.isAdminMode}
         lazy={props.form.lazy}
-        confirmText={props.form.confirmText}
         onLazyChange={(lazy) => setForm({ lazy })}
-        onConfirmTextChange={(confirmText) => setForm({ confirmText })}
         pending={props.pending}
         gate={props.gate}
         onOpenTasks={props.onOpenTasks}

@@ -360,7 +360,6 @@ export function VpsLifecyclePage() {
     onSuccess: (res) => {
       track(res.meta, 'action.vps.template.label');
       void qc.invalidateQueries({ queryKey: ['vps', vpsId] });
-      setTemplateForm((p) => ({ ...p, confirmText: '' }));
     },
     onError: (e: any) => {
       if (e?.code === 'BUSY') chrome.openTasks();
@@ -376,7 +375,6 @@ export function VpsLifecyclePage() {
     onMutate: () => chrome.acquireLocalLock(vpsRef),
     onSuccess: (res) => {
       track(res.meta, 'action.vps.boot.label');
-      setBoot((p) => ({ ...p, confirmText: '' }));
     },
     onError: (e: any) => {
       if (e?.code === 'BUSY') chrome.openTasks();
@@ -392,7 +390,6 @@ export function VpsLifecyclePage() {
     onMutate: () => chrome.acquireLocalLock(vpsRef),
     onSuccess: (res) => {
       track(res.meta, 'action.vps.reinstall.label');
-      setReinstall((p) => ({ ...p, confirmText: '' }));
     },
     onError: (e: any) => {
       if (e?.code === 'BUSY') chrome.openTasks();

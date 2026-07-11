@@ -86,8 +86,6 @@ describe('IncomingPaymentsModel', () => {
       hasChange: false,
       canSubmit: false,
       impactKey: 'payments.incoming.review.state.no_change',
-      requiresConfirmation: false,
-      confirmationMatches: true,
     });
 
     expect(buildIncomingPaymentStateReview({ payment, nextState: 'processed' })).toMatchObject({
@@ -95,22 +93,12 @@ describe('IncomingPaymentsModel', () => {
       canSubmit: true,
       badgeVariant: 'warn',
       warningKey: 'payments.incoming.review.state.warning.processed_without_user',
-      requiresConfirmation: false,
-      confirmationMatches: true,
-    });
-
-    expect(buildIncomingPaymentStateReview({ payment, nextState: 'processed', confirmationText: 'processed' })).toMatchObject({
-      hasChange: true,
-      canSubmit: true,
-      confirmationMatches: true,
     });
 
     expect(buildIncomingPaymentStateReview({ payment, nextState: 'ignored' })).toMatchObject({
       hasChange: true,
       canSubmit: true,
       warningKey: 'payments.incoming.review.state.warning.ignored',
-      requiresConfirmation: false,
-      confirmationMatches: true,
     });
 
     expect(
@@ -121,7 +109,6 @@ describe('IncomingPaymentsModel', () => {
     ).toMatchObject({
       canSubmit: true,
       badgeVariant: 'ok',
-      requiresConfirmation: false,
     });
   });
 

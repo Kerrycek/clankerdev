@@ -19,7 +19,6 @@ import {
 
 export type VpsDeleteDangerForm = {
   lazy: boolean;
-  confirmText: string;
 };
 
 export type VpsListDeleteConfirm = {
@@ -27,7 +26,6 @@ export type VpsListDeleteConfirm = {
   kind: 'delete';
   force: false;
   lazy: boolean;
-  confirmText: string;
 };
 
 function vpsIdFallback(vpsId: number): VpsDeleteConfirmationSource {
@@ -71,9 +69,7 @@ export function VpsDeleteDangerContent(props: {
   vps: VpsDeleteConfirmationSource;
   isAdminMode: boolean;
   lazy: boolean;
-  confirmText: string;
   onLazyChange?: (lazy: boolean) => void;
-  onConfirmTextChange: (confirmText: string) => void;
   pending?: boolean;
   gate?: GateDecision;
   onOpenTasks?: () => void;
@@ -155,9 +151,7 @@ export function VpsDeleteConfirmDialog(props: {
           vps={vps}
           isAdminMode={props.isAdminMode}
           lazy={props.form.lazy}
-          confirmText={props.form.confirmText}
           onLazyChange={(lazy) => setForm({ lazy })}
-          onConfirmTextChange={(confirmText) => setForm({ confirmText })}
           pending={props.loading}
           impactTestId="vps.list.delete_confirm.impact"
           lazyTestId="vps.list.delete_confirm.lazy"

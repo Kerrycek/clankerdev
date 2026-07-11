@@ -26,11 +26,6 @@ export function ConfirmDialog(props: {
   /** Backward-compatible alias. */
   onClose?: () => void;
   children?: React.ReactNode;
-  confirmationText?: string;
-  confirmationValue?: string;
-  confirmationLabel?: string;
-  confirmationPlaceholder?: string;
-  onConfirmationValueChange?: (value: string) => void;
 
   /** Optional test id for E2E / integration tests */
   testId?: string;

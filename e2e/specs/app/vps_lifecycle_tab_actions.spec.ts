@@ -100,13 +100,14 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.getByTestId('vps.lifecycle.boot.os_template').selectOption('7');
     await page.getByTestId('vps.lifecycle.boot.mountpoint').fill('/mnt/rescue-root');
-    await page.getByTestId('vps.lifecycle.boot.confirm').fill('vps123.example');
+    await expect(page.getByTestId('vps.lifecycle.boot.confirm').locator('input')).toHaveCount(0);
 
     const reqPromise = page.waitForRequest(
       (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/vpses/123/boot')
     );
 
     await page.getByTestId('vps.lifecycle.boot.submit').click();
+    await page.getByTestId('vps.lifecycle.boot.submit.confirm_dialog.confirm').click();
 
     const req = await reqPromise;
     expect(req.postDataJSON()).toEqual({
@@ -245,13 +246,14 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.getByTestId('vps.lifecycle.boot.mount_root_dataset').uncheck();
     await expect(page.getByTestId('vps.lifecycle.boot.mountpoint')).toBeDisabled();
-    await page.getByTestId('vps.lifecycle.boot.confirm').fill('vps123.example');
+    await expect(page.getByTestId('vps.lifecycle.boot.confirm').locator('input')).toHaveCount(0);
 
     const reqPromise = page.waitForRequest(
       (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/vpses/123/boot')
     );
 
     await page.getByTestId('vps.lifecycle.boot.submit').click();
+    await page.getByTestId('vps.lifecycle.boot.submit.confirm_dialog.confirm').click();
 
     const req = await reqPromise;
     expect(req.postDataJSON()).toEqual({
@@ -269,13 +271,18 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await expect(page.getByTestId('vps.lifecycle.reinstall.impact')).toBeVisible();
     await page.getByTestId('vps.lifecycle.reinstall.os_template').selectOption('7');
-    await page.getByTestId('vps.lifecycle.reinstall.confirm').fill('vps123.example');
+    await expect(page.getByTestId('vps.lifecycle.reinstall.confirm').locator('input')).toHaveCount(0);
 
     const reqPromise = page.waitForRequest(
       (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/vpses/123/reinstall')
     );
 
     await page.getByTestId('vps.lifecycle.reinstall.submit').click();
+    const proofScreenshot = process.env.E2E_VPS_PROOF_SCREENSHOT?.trim();
+    if (proofScreenshot) {
+      await page.screenshot({ path: proofScreenshot, fullPage: true });
+    }
+    await page.getByTestId('vps.lifecycle.reinstall.submit.confirm_dialog.confirm').click();
 
     const req = await reqPromise;
     expect(req.postDataJSON()).toEqual({
@@ -296,13 +303,13 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await page.getByTestId('vps.lifecycle.reinstall.user_data.enable').check();
     await page.getByTestId('vps.lifecycle.reinstall.user_data.format').selectOption('cloudinit_script');
     await page.getByTestId('vps.lifecycle.reinstall.user_data.content').fill('  #cloud-config\npackages: []\n  ');
-    await page.getByTestId('vps.lifecycle.reinstall.confirm').fill('vps123.example');
 
     const reqPromise = page.waitForRequest(
       (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/vpses/123/reinstall')
     );
 
     await page.getByTestId('vps.lifecycle.reinstall.submit').click();
+    await page.getByTestId('vps.lifecycle.reinstall.submit.confirm_dialog.confirm').click();
 
     const req = await reqPromise;
     expect(req.postDataJSON()).toEqual({
@@ -491,13 +498,14 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.getByTestId('vps.lifecycle.template.os_template').selectOption('7');
     await page.getByTestId('vps.lifecycle.template.auto_update').check();
-    await page.getByTestId('vps.lifecycle.template.confirm').fill('vps123.example');
+    await expect(page.getByTestId('vps.lifecycle.template.confirm').locator('input')).toHaveCount(0);
 
     const reqPromise = page.waitForRequest(
       (r) => r.method() === 'PUT' && r.url().includes('/api/v7.0/vpses/123')
     );
 
     await page.getByTestId('vps.lifecycle.template.submit').click();
+    await page.getByTestId('vps.lifecycle.template.submit.confirm_dialog.confirm').click();
 
     const req = await reqPromise;
     expect(req.postDataJSON()).toEqual({
@@ -520,13 +528,14 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await page.getByTestId('vps.lifecycle.replace.expiration').fill(expirationInput);
     await page.getByTestId('vps.lifecycle.replace.start').check();
     await page.getByTestId('vps.lifecycle.replace.reason').fill('staging replacement');
-    await page.getByTestId('vps.lifecycle.replace.confirm').fill('vps123.example');
+    await expect(page.getByTestId('vps.lifecycle.replace.confirm').locator('input')).toHaveCount(0);
 
     const reqPromise = page.waitForRequest(
       (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/vpses/123/replace')
     );
 
     await page.getByTestId('vps.lifecycle.replace.submit').click();
+    await page.getByTestId('vps.lifecycle.replace.submit.confirm_dialog.confirm').click();
 
     const req = await reqPromise;
     expect(req.postDataJSON()).toEqual({
@@ -640,6 +649,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     );
 
     await page.getByTestId('vps.lifecycle.delete.submit').click();
+    await page.getByTestId('vps.lifecycle.delete.submit.confirm_dialog.confirm').click();
 
     const req = await reqPromise;
     expect(req.postDataJSON()).toEqual({
@@ -687,6 +697,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     );
 
     await page.getByTestId('vps.lifecycle.delete.submit').click();
+    await page.getByTestId('vps.lifecycle.delete.submit.confirm_dialog.confirm').click();
 
     const req = await reqPromise;
     expect(req.postDataJSON()).toEqual({});

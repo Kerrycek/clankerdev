@@ -36,14 +36,14 @@ export function VpsListActionConfirmDialog(props: {
         vps={props.vps}
         vpsId={confirm.vpsId}
         isAdminMode={props.isAdminMode}
-        form={{ lazy: confirm.lazy, confirmText: confirm.confirmText }}
+        form={{ lazy: confirm.lazy }}
         onChange={(updater) => {
           props.onChange((prev) => {
             if (!prev || prev.kind !== 'delete') return prev;
             const nextForm = typeof updater === 'function'
-              ? updater({ lazy: prev.lazy, confirmText: prev.confirmText })
+              ? updater({ lazy: prev.lazy })
               : updater;
-            return { ...prev, lazy: nextForm.lazy, confirmText: nextForm.confirmText };
+            return { ...prev, lazy: nextForm.lazy };
           });
         }}
         loading={props.deleteLoading}

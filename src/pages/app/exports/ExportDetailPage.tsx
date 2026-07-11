@@ -125,11 +125,9 @@ export function ExportDetailPage() {
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deletePhrase, setDeletePhrase] = useState('');
   const [hostEditorOpen, setHostEditorOpen] = useState(false);
   const [editingHost, setEditingHost] = useState<ExportHost | null>(null);
   const [deleteHost, setDeleteHost] = useState<ExportHost | null>(null);
-  const [deleteHostPhrase, setDeleteHostPhrase] = useState('');
   const [editForm, setEditForm] = useState<EditExportFormState>(() => defaultEditForm());
   const [hostForm, setHostForm] = useState<ExportHostFormState>(() => defaultHostForm());
 
@@ -167,23 +165,19 @@ export function ExportDetailPage() {
   };
 
   const openDeleteExport = () => {
-    setDeletePhrase('');
     setDeleteOpen(true);
   };
 
   const closeDeleteExport = () => {
     setDeleteOpen(false);
-    setDeletePhrase('');
   };
 
   const openDeleteHost = (host: ExportHost) => {
-    setDeleteHostPhrase('');
     setDeleteHost(host);
   };
 
   const closeDeleteHost = () => {
     setDeleteHost(null);
-    setDeleteHostPhrase('');
   };
 
   async function invalidateAll() {
@@ -497,14 +491,10 @@ export function ExportDetailPage() {
         exportOpen={deleteOpen}
         exportItem={ex}
         exportPending={deleteExportM.isPending}
-        exportPhrase={deletePhrase}
-        onExportPhraseChange={setDeletePhrase}
         onCancelExport={closeDeleteExport}
         onConfirmExport={() => void deleteExportM.mutateAsync()}
         host={deleteHost}
         hostPending={deleteHostM.isPending}
-        hostPhrase={deleteHostPhrase}
-        onHostPhraseChange={setDeleteHostPhrase}
         onCancelHost={closeDeleteHost}
         onConfirmHost={() => void deleteHostM.mutateAsync()}
       />

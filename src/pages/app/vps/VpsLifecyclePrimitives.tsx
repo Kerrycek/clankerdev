@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { useI18n, type TranslationKey } from '../../../app/i18n';
 import { ActionButton } from '../../../components/ui/ActionButton';
@@ -6,7 +6,7 @@ import { Alert } from '../../../components/ui/Alert';
 import { Button } from '../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
 import { Checkbox } from '../../../components/ui/Checkbox';
-import { Input } from '../../../components/ui/Input';
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import type { ButtonVariant } from '../../../components/ui/buttonStyles';
 import type { GateDecision } from '../../../lib/gates/types';
 
@@ -82,41 +82,15 @@ export function ActionConfirmChecklist(props: { items: ActionChecklistItem[]; cl
   );
 }
 
-export function DangerTypedConfirm(props: {
+export function DangerConfirmationNotice(props: {
   label: ReactNode;
   help: ReactNode;
-  target: string;
-  value: string;
-  onChange: (value: string) => void;
-  disabled?: boolean;
-  placeholder?: string;
   testId?: string;
-  ariaLabel?: string;
-  inputClassName?: string;
-  satisfied: boolean;
-  mismatchTitle: ReactNode;
-  mismatchBody: ReactNode;
 }) {
   return (
-    <>
-      <Field label={props.label} help={props.help}>
-        <Input
-          value={props.value}
-          onChange={(e) => props.onChange(e.target.value)}
-          disabled={props.disabled}
-          placeholder={props.placeholder ?? props.target}
-          className={props.inputClassName}
-          testId={props.testId}
-          ariaLabel={props.ariaLabel}
-        />
-      </Field>
-
-      {props.value && !props.satisfied ? (
-        <Alert variant="warn" title={props.mismatchTitle}>
-          {props.mismatchBody}
-        </Alert>
-      ) : null}
-    </>
+    <Alert variant="warn" title={props.label} testId={props.testId}>
+      {props.help}
+    </Alert>
   );
 }
 
@@ -170,18 +144,46 @@ export function LifecycleSubmitButton(props: {
   loading: boolean;
   onClick: () => void;
   children: ReactNode;
+  confirmation?: {
+    title: string;
+    description: string;
+  };
 }) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const disabled = props.disabled || !props.gate.allowed;
+
   return (
-    <ActionButton
-      variant={props.variant}
-      testId={props.testId}
-      disabled={props.disabled || !props.gate.allowed}
-      disabledReason={!props.gate.allowed ? props.gate.reason : undefined}
-      loading={props.loading}
-      onClick={props.onClick}
-    >
-      {props.children}
-    </ActionButton>
+    <>
+      <ActionButton
+        variant={props.variant}
+        testId={props.testId}
+        disabled={disabled}
+        disabledReason={!props.gate.allowed ? props.gate.reason : undefined}
+        loading={props.loading}
+        onClick={() => {
+          if (props.confirmation) setConfirmOpen(true);
+          else props.onClick();
+        }}
+      >
+        {props.children}
+      </ActionButton>
+      {props.confirmation ? (
+        <ConfirmDialog
+          open={confirmOpen}
+          title={props.confirmation.title}
+          description={props.confirmation.description}
+          confirmLabel={props.children as string}
+          danger={props.variant === 'danger'}
+          confirmLoading={props.loading}
+          onCancel={() => setConfirmOpen(false)}
+          onConfirm={() => {
+            setConfirmOpen(false);
+            props.onClick();
+          }}
+          testId={`${props.testId}.confirm_dialog`}
+        />
+      ) : null}
+    </>
   );
 }
 

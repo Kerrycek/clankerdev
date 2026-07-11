@@ -12,10 +12,8 @@ import type { Vps } from '../../../lib/api/vps';
 import { formatDateTime } from '../../../lib/format';
 import type { GateDecision } from '../../../lib/gates/types';
 import {
-  adminConfirmTarget,
   buildMigrateTargetContext,
   findMigrateTargetNode,
-  isAdminConfirmSatisfied,
   isMigrateReady,
   migrateNodeDisplay,
   nextMigrateFormForNodeChange,
@@ -27,7 +25,7 @@ import {
   ActionGateAlert,
   ActionImpactSummary,
   AsyncActionResult,
-  DangerTypedConfirm,
+  DangerConfirmationNotice,
   Field,
   ImpactItem,
   LifecycleActionShell,
@@ -89,8 +87,6 @@ export function VpsAdminReplaceCard(props: {
   onSubmit: () => void;
 }) {
   const { t } = useI18n();
-  const confirmTarget = adminConfirmTarget(props.vps);
-  const confirmSatisfied = isAdminConfirmSatisfied(props.form.confirmText, confirmTarget);
   const targetNode = props.selectedNodeLabel || props.form.node.trim() || t('vps.lifecycle.replace.review.backend_default');
   const expiration = formatExpirationPreview(props.form.expirationDate, t('vps.lifecycle.replace.review.no_expiration'));
 
@@ -105,10 +101,14 @@ export function VpsAdminReplaceCard(props: {
         <LifecycleSubmitButton
           variant="danger"
           testId="vps.lifecycle.replace.submit"
-          disabled={!confirmSatisfied}
+          disabled={props.pending}
           gate={props.gate}
           loading={props.pending}
           onClick={props.onSubmit}
+          confirmation={{
+            title: t('vps.lifecycle.replace.submit'),
+            description: t('vps.lifecycle.replace.warning_body'),
+          }}
         >
           {t('vps.lifecycle.replace.submit')}
         </LifecycleSubmitButton>
@@ -126,7 +126,7 @@ export function VpsAdminReplaceCard(props: {
             selectedLabel={props.selectedNodeLabel}
             onChange={(node) => {
               props.onSelectedNodeLabelChange('');
-              setForm({ node, confirmText: '' });
+              setForm({ node });
             }}
             onPick={(node) => props.onSelectedNodeLabelChange(pickedNodeLabel(node))}
             placeholder={t('vps.lifecycle.placeholder.node_optional')}
@@ -138,7 +138,7 @@ export function VpsAdminReplaceCard(props: {
           <Input
             type="datetime-local"
             value={props.form.expirationDate}
-            onChange={(e) => setForm({ expirationDate: e.target.value, confirmText: '' })}
+            onChange={(e) => setForm({ expirationDate: e.target.value })}
             testId="vps.lifecycle.replace.expiration"
             disabled={props.pending}
           />
@@ -147,7 +147,7 @@ export function VpsAdminReplaceCard(props: {
 
       <Checkbox
         checked={props.form.start}
-        onChange={(start) => setForm({ start, confirmText: '' })}
+        onChange={(start) => setForm({ start })}
         label={t('vps.lifecycle.replace.start')}
         description={t('vps.lifecycle.replace.start_help')}
         testId="vps.lifecycle.replace.start"
@@ -157,7 +157,7 @@ export function VpsAdminReplaceCard(props: {
         <Textarea
           rows={3}
           value={props.form.reason}
-          onChange={(e) => setForm({ reason: e.target.value, confirmText: '' })}
+          onChange={(e) => setForm({ reason: e.target.value })}
           testId="vps.lifecycle.replace.reason"
           disabled={props.pending}
         />
@@ -178,17 +178,10 @@ export function VpsAdminReplaceCard(props: {
         </ImpactItem>
       </ActionImpactSummary>
 
-      <DangerTypedConfirm
+      <DangerConfirmationNotice
         label={t('vps.lifecycle.admin_confirm.label')}
-        help={t('vps.lifecycle.admin_confirm.help', { target: confirmTarget })}
-        target={confirmTarget}
-        value={props.form.confirmText}
-        onChange={(confirmText) => setForm({ confirmText })}
-        disabled={props.pending}
+        help={t('vps.lifecycle.admin_confirm.help')}
         testId="vps.lifecycle.replace.confirm"
-        satisfied={confirmSatisfied}
-        mismatchTitle={t('vps.lifecycle.admin_confirm.mismatch_title')}
-        mismatchBody={t('vps.lifecycle.admin_confirm.mismatch_body')}
       />
 
       <AsyncActionResult

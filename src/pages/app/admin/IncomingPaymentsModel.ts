@@ -149,43 +149,16 @@ export type IncomingPaymentStateReview = {
   badgeVariant: 'neutral' | 'ok' | 'warn' | 'danger' | 'info';
   impactKey: string;
   warningKey?: string;
-  requiresConfirmation: boolean;
-  confirmationTarget?: string;
-  confirmationMatches: boolean;
 };
-
-function normalizeConfirmation(value: string | undefined | null): string {
-  return String(value ?? '').trim().toUpperCase();
-}
-
-function incomingPaymentStateConfirmationTarget(input: {
-  nextState: KnownIncomingPaymentState | '';
-  hasAssignedUser: boolean;
-}): string | undefined {
-  return undefined;
-}
-
-function confirmationFields(target: string | undefined, confirmationText: string | undefined | null) {
-  const confirmationTarget = target;
-  const requiresConfirmation = Boolean(confirmationTarget);
-  const confirmationMatches = !confirmationTarget || normalizeConfirmation(confirmationText) === confirmationTarget;
-  return { confirmationTarget, requiresConfirmation, confirmationMatches };
-}
 
 export function buildIncomingPaymentStateReview(input: {
   payment: IncomingPayment | null | undefined;
   nextState: IncomingPaymentState | '';
-  confirmationText?: string;
 }): IncomingPaymentStateReview {
   const currentState = normalizeIncomingPaymentState(input.payment?.state);
   const nextState = normalizeIncomingPaymentState(input.nextState) || currentState;
   const hasChange = Boolean(currentState && nextState && currentState !== nextState);
   const hasAssignedUser = Boolean(input.payment?.user);
-  const confirmation = confirmationFields(
-    incomingPaymentStateConfirmationTarget({ nextState, hasAssignedUser }),
-    input.confirmationText
-  );
-
   if (!input.payment) {
     return {
       currentState,
@@ -194,7 +167,6 @@ export function buildIncomingPaymentStateReview(input: {
       canSubmit: false,
       badgeVariant: 'neutral',
       impactKey: 'payments.incoming.review.state.no_payment',
-      ...confirmation,
     };
   }
 
@@ -206,7 +178,6 @@ export function buildIncomingPaymentStateReview(input: {
       canSubmit: false,
       badgeVariant: 'neutral',
       impactKey: 'payments.incoming.review.state.no_change',
-      ...confirmation,
     };
   }
 
@@ -215,13 +186,12 @@ export function buildIncomingPaymentStateReview(input: {
       currentState,
       nextState,
       hasChange,
-      canSubmit: confirmation.confirmationMatches,
+      canSubmit: true,
       badgeVariant: hasAssignedUser ? 'ok' : 'warn',
       impactKey: hasAssignedUser
         ? 'payments.incoming.review.state.impact.processed'
         : 'payments.incoming.review.state.impact.processed_without_user',
       warningKey: hasAssignedUser ? undefined : 'payments.incoming.review.state.warning.processed_without_user',
-      ...confirmation,
     };
   }
 
@@ -230,11 +200,10 @@ export function buildIncomingPaymentStateReview(input: {
       currentState,
       nextState,
       hasChange,
-      canSubmit: confirmation.confirmationMatches,
+      canSubmit: true,
       badgeVariant: 'warn',
       impactKey: 'payments.incoming.review.state.impact.ignored',
       warningKey: 'payments.incoming.review.state.warning.ignored',
-      ...confirmation,
     };
   }
 
@@ -246,7 +215,6 @@ export function buildIncomingPaymentStateReview(input: {
       canSubmit: true,
       badgeVariant: 'danger',
       impactKey: 'payments.incoming.review.state.impact.unmatched',
-      ...confirmation,
     };
   }
 
@@ -258,7 +226,6 @@ export function buildIncomingPaymentStateReview(input: {
       canSubmit: true,
       badgeVariant: 'warn',
       impactKey: 'payments.incoming.review.state.impact.queued',
-      ...confirmation,
     };
   }
 
@@ -269,7 +236,6 @@ export function buildIncomingPaymentStateReview(input: {
     canSubmit: false,
     badgeVariant: 'neutral',
     impactKey: 'payments.incoming.review.state.invalid',
-    ...confirmation,
   };
 }
 
