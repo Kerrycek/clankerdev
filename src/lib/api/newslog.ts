@@ -32,6 +32,7 @@ export async function createNewsLog(payload: { message: string; published_at?: s
   return haveApiCall<NewsLog>({
     method: 'POST',
     path: '/news_logs',
+    namespace: 'news_log',
     params,
   });
 }
@@ -47,6 +48,7 @@ export async function updateNewsLog(id: number, payload: { message: string; publ
   return haveApiCall<NewsLog>({
     method: 'PUT',
     path: `/news_logs/${id}`,
+    namespace: 'news_log',
     params,
   });
 }
