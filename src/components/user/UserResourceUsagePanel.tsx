@@ -36,6 +36,8 @@ export function UserResourceUsagePanel(props: { userId: number; testIdPrefix: st
   const groups = useMemo(() => {
     const byEnvironment = new Map<string, { label: string; rows: NonNullable<typeof resourcesQ.data> }>();
     for (const row of resourcesQ.data ?? []) {
+      if (typeof row.value !== 'number' || row.value <= 0) continue;
+
       const environment = row.environment;
       const key = typeof environment?.id === 'number' ? String(environment.id) : 'none';
       const group = byEnvironment.get(key) ?? {

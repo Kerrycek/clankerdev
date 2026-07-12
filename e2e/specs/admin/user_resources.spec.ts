@@ -17,8 +17,12 @@ test('admin user resource usage and package assignment are separate', async ({ p
       'GET users/53/cluster_resources': () => ({ cluster_resources: [
         { id: 31, environment: { id: 7, label: 'Production' }, cluster_resource: { id: 2, name: 'cpu', label: 'CPU', stepsize: 1 }, value: 4, used: 2, free: 2 },
         { id: 33, environment: { id: 7, label: 'Production' }, cluster_resource: { id: 3, name: 'memory', label: 'Memory', stepsize: 1 }, value: 4096, used: 4096, free: 0 },
+        { id: 34, environment: { id: 7, label: 'Production' }, cluster_resource: { id: 4, name: 'private_ipv4', label: 'Private IPv4 address', stepsize: 1 }, value: 0, used: 0, free: 0 },
       ] }),
-      'GET users/1/cluster_resources': () => ({ cluster_resources: [{ id: 32, environment: { id: 7, label: 'Production' }, cluster_resource: { id: 2, name: 'cpu', label: 'CPU' }, value: 4, used: 1, free: 3 }] }),
+      'GET users/1/cluster_resources': () => ({ cluster_resources: [
+        { id: 32, environment: { id: 7, label: 'Production' }, cluster_resource: { id: 2, name: 'cpu', label: 'CPU' }, value: 4, used: 1, free: 3 },
+        { id: 35, environment: { id: 7, label: 'Production' }, cluster_resource: { id: 4, name: 'private_ipv4', label: 'Private IPv4 address' }, value: 0, used: 0, free: 0 },
+      ] }),
       'GET cluster_resource_packages/11/items': () => ({ items: [{ id: 5, value: 4, cluster_resource: { id: 2, label: 'CPU' } }] }),
       'POST user_cluster_resource_packages': () => ({ user_cluster_resource_package: { id: 21 } }),
     },
@@ -30,6 +34,7 @@ test('admin user resource usage and package assignment are separate', async ({ p
   await expect(page.getByTestId('admin.user.resource_usage.resources.environment.7')).toContainText('2');
   await expect(page.getByTestId('admin.user.resource_usage.resources.environment.7.resource.31.bar').locator('div').nth(1)).toHaveAttribute('style', 'width: 50%;');
   await expect(page.getByTestId('admin.user.resource_usage.resources.environment.7.resource.33.bar').locator('div').nth(1)).toHaveAttribute('style', 'width: 100%;');
+  await expect(page.getByTestId('admin.user.resource_usage.resources.environment.7.resource.34')).toHaveCount(0);
 
   await page.goto('/admin/users/53/resources');
   await expect(page.getByTestId('admin.user.resources.page')).toBeVisible();
@@ -47,5 +52,7 @@ test('admin user resource usage and package assignment are separate', async ({ p
   await page.goto('/app/profile/resources');
   await expect(page.getByTestId('profile.resources.page')).toBeVisible();
   await expect(page.getByTestId('profile.resources.usage.environment.7')).toContainText('CPU');
+  await expect(page.getByTestId('profile.resources.usage.environment.7.resource.32.bar').locator('div').nth(1)).toHaveAttribute('style', 'width: 25%;');
+  await expect(page.getByTestId('profile.resources.usage.environment.7.resource.35')).toHaveCount(0);
   await expect(page.getByTestId('profile.resources.page')).not.toContainText(/přidat balíček|add package/i);
 });
