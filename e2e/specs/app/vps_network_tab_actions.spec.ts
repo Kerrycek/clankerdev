@@ -58,6 +58,14 @@ async function openAdvancedNetworkOptions(page: Page) {
   await page.getByTestId('vps.network.advanced.toggle').click();
 }
 
+function interfaceEditButton(page: Page) {
+  return page.getByTestId(
+    (page.viewportSize()?.width ?? 0) < 768
+      ? 'vps.network.interfaces.card.1.edit'
+      : 'vps.network.interfaces.row.1.edit'
+  );
+}
+
 test.describe('@pr-smoke VPS network tab', () => {
   test('edits interface and sends PUT', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
@@ -78,14 +86,19 @@ test.describe('@pr-smoke VPS network tab', () => {
       },
     });
 
-    await page.goto('/app/vps/123/network');
+    await page.goto('/admin/vps/123/network');
 
     await expect(page.getByTestId('vps.network.page')).toBeVisible();
-    await expect(page.getByTestId('vps.network.interfaces.table')).toBeVisible();
-    await expect(page.getByTestId('vps.network.interfaces.row.1')).toHaveAttribute('data-row-variant', 'warn');
-    await expect(page.getByTestId('vps.network.interfaces.row.1.dot')).toBeVisible();
+    if ((page.viewportSize()?.width ?? 0) < 768) {
+      await expect(page.getByTestId('vps.network.interfaces.card.1')).toBeVisible();
+      await expect(page.getByTestId('vps.network.interfaces.card.1.dot')).toBeVisible();
+    } else {
+      await expect(page.getByTestId('vps.network.interfaces.table')).toBeVisible();
+      await expect(page.getByTestId('vps.network.interfaces.row.1')).toHaveAttribute('data-row-variant', 'warn');
+      await expect(page.getByTestId('vps.network.interfaces.row.1.dot')).toBeVisible();
+    }
 
-    await page.getByTestId('vps.network.interfaces.row.1.edit').click();
+    await interfaceEditButton(page).click();
     await expect(page.getByTestId('vps.network.edit')).toBeVisible();
 
     await page.getByTestId('vps.network.edit.name').fill('eth0-renamed');
@@ -133,7 +146,7 @@ test.describe('@pr-smoke VPS network tab', () => {
       },
     });
 
-    await page.goto('/app/vps/123/network');
+    await page.goto('/admin/vps/123/network');
 
     await openAdvancedNetworkOptions(page);
     await expect(page.getByTestId('vps.network.disable')).toBeVisible();
@@ -439,5 +452,28 @@ test.describe('@pr-smoke VPS network tab', () => {
     await expect(page.getByTestId('vps.network.ip_addresses.item.1.free_route')).toHaveCount(0);
     await expect(page.getByTestId('vps.network.ip_addresses.unassigned.2.assign')).toHaveCount(0);
     await expect(page.getByTestId('vps.network.disable')).toHaveCount(0);
+  });
+
+  test('keeps interface limits out of an admin account user view', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 90 },
+      handlers: {
+        'GET vpses/123': () => ({ vps }),
+        'GET ip_addresses': () => ({ ip_addresses: ips }),
+        'GET host_ip_addresses': () => ({ host_ip_addresses: [] }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'GET network_interfaces': () => ({ network_interfaces: netifs }),
+        'GET network_interface_accountings': () => ({ network_interface_accountings: acct }),
+      },
+    });
+
+    await page.goto('/app/vps/123/network');
+    await interfaceEditButton(page).click();
+
+    await expect(page.getByTestId('vps.network.edit.max_tx')).toHaveCount(0);
+    await expect(page.getByTestId('vps.network.edit.max_rx')).toHaveCount(0);
+    await expect(page.getByTestId('vps.network.edit.enabled')).toHaveCount(0);
   });
 });

@@ -71,7 +71,7 @@ export function VpsNetworkPage() {
   const { vps, refetch, refetchChains, vpsRef, busyTransaction, busyLocalLock } = useVps();
 
   const vpsId = vps.id;
-  const canAdmin = auth.role === 'admin';
+  const canAdmin = mode === 'admin' && auth.role === 'admin';
   const adminBasePath = mode === 'admin' ? basePath : '/admin';
 
   const netEnabled = canonicalBool(vps.enable_network, true);
