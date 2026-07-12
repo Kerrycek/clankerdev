@@ -25,6 +25,7 @@ import {
   ipUserId,
   ipVpsId,
   isAssignedToInterface,
+  isPrivateIp,
   isRoutedIp,
   networkLabel,
   userLabel,
@@ -159,6 +160,7 @@ export function IpAddressesListTable({ pageData, ipDetailBasePath, basePath, na,
                   <Badge variant={assigned ? 'ok' : 'warn'}>
                     {assigned ? t('admin.ip_addresses.chip.assigned_true') : t('admin.ip_addresses.chip.assigned_false')}
                   </Badge>
+                  {isPrivateIp(ip) ? <Badge variant="neutral">{t('admin.ip_addresses.chip.private')}</Badge> : null}
                   {isRoutedIp(ip) ? <Badge variant="black">{t('admin.ip.routed_badge')}</Badge> : null}
                 </div>
               </td>

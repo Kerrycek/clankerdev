@@ -34,6 +34,7 @@ export const csAdmin_ip_addresses = {
   "admin.ip_addresses.advanced.vps.placeholder": "Název hostitele nebo ID…",
   "admin.ip_addresses.chip.assigned_false": "Nepřiřazené",
   "admin.ip_addresses.chip.assigned_true": "Přiřazené",
+  "admin.ip_addresses.chip.private": "Privátní",
   "admin.ip_addresses.empty": "Žádné IP adresy.",
   "admin.ip_addresses.field.flags": "Příznaky",
   "admin.ip_addresses.field.environment": "Prostředí",

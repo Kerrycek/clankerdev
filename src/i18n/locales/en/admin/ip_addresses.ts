@@ -34,6 +34,7 @@ export const enAdmin_ip_addresses = {
   "admin.ip_addresses.advanced.vps.placeholder": "Hostname or ID…",
   "admin.ip_addresses.chip.assigned_false": "Unassigned",
   "admin.ip_addresses.chip.assigned_true": "Assigned",
+  "admin.ip_addresses.chip.private": "Private",
   "admin.ip_addresses.empty": "No IP addresses found.",
   "admin.ip_addresses.field.flags": "Flags",
   "admin.ip_addresses.field.environment": "Environment",

@@ -27,6 +27,8 @@ import { IpAddressesListTable } from './ipAddresses/IpAddressesListTable';
 import {
   canonicalKey,
   IpListOrder,
+  isPrivateIp,
+  isUnallocatedIp,
   ipId,
   isDefaultHiddenLegacyNetwork,
   looksLikeIpish,
@@ -35,8 +37,8 @@ import {
   resolveVersionValue,
 } from './ipAddresses/ipAddressListSemantics';
 
-const SUGGESTED_IPS_PER_LOCATION = 4;
-const SUGGESTED_IP_QUERY_LIMIT = 50;
+const SUGGESTED_IPS_PER_LOCATION = 8;
+const SUGGESTED_IP_QUERY_LIMIT = 100;
 
 function suggestedLocationOrder(a: InfraLocation, b: InfraLocation): number {
   const priority = (location: InfraLocation) => {
@@ -48,6 +50,21 @@ function suggestedLocationOrder(a: InfraLocation, b: InfraLocation): number {
   };
 
   return priority(a) - priority(b) || String(a.label ?? '').localeCompare(String(b.label ?? ''), 'cs');
+}
+
+function sampleSuggestedIps(items: IpAddress[]): IpAddress[] {
+  const available = items
+    .filter((ip) => !isDefaultHiddenLegacyNetwork(ip))
+    .filter(isUnallocatedIp);
+  const privateIps = available.filter(isPrivateIp);
+  const publicIps = available.filter((ip) => !isPrivateIp(ip));
+  const privateCount = Math.ceil(SUGGESTED_IPS_PER_LOCATION / 2);
+  const picked = [...privateIps.slice(0, privateCount), ...publicIps.slice(0, privateCount)];
+
+  if (picked.length >= SUGGESTED_IPS_PER_LOCATION) return picked;
+
+  const pickedIds = new Set(picked.map((ip) => ip.id));
+  return [...picked, ...available.filter((ip) => !pickedIds.has(ip.id))].slice(0, SUGGESTED_IPS_PER_LOCATION);
 }
 
 export function IpAddressesPage() {
@@ -251,8 +268,7 @@ export function IpAddressesPage() {
       );
 
       const seen = new Set<number>();
-      return pages.flatMap((items) => items
-        .filter((ip) => !isDefaultHiddenLegacyNetwork(ip))
+      return pages.flatMap((items) => sampleSuggestedIps(items)
         .filter((ip) => {
           if (seen.has(ip.id)) return false;
           seen.add(ip.id);
