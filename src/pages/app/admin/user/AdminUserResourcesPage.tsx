@@ -11,8 +11,6 @@ import { EmptyState } from '../../../../components/ui/EmptyState';
 import { Input } from '../../../../components/ui/Input';
 import { Modal } from '../../../../components/ui/Modal';
 import { Select } from '../../../../components/ui/Select';
-import { Table } from '../../../../components/ui/Table';
-import { fetchUserClusterResources, type UserClusterResource } from '../../../../lib/api/clusterResources';
 import { fetchClusterResourcePackageItems } from '../../../../lib/api/clusterResourcePackages';
 import {
   createUserClusterResourcePackage,
@@ -73,11 +71,6 @@ export function AdminUserResourcesPage() {
     queryFn: async () => (await fetchClusterResourcePackages({ isPersonal: false, limit: 500 })).data,
     staleTime: 30_000,
   });
-  const resourcesQ = useQuery({
-    queryKey: ['user_cluster_resources', { userId: user.id, limit: 500 }],
-    queryFn: async () => (await fetchUserClusterResources(user.id, { limit: 500 })).data,
-  });
-
   const assignments = assignmentsQ.data ?? [];
   const packageIds = useMemo(
     () => [...new Set(assignments.map((row: any) => Number(row.cluster_resource_package?.id)).filter(Number.isFinite))],
@@ -93,32 +86,20 @@ export function AdminUserResourcesPage() {
   const itemsByPackage = useMemo(() => new Map(packageIds.map((id, index) => [id, itemQueries[index]?.data ?? []])), [itemQueries, packageIds]);
 
   const grouped = useMemo(() => {
-    const groups = new Map<string, {
-      environment: any;
-      rows: UserClusterResourcePackage[];
-      resources: UserClusterResource[];
-    }>();
+    const groups = new Map<string, { environment: any; rows: UserClusterResourcePackage[] }>();
     for (const row of assignments) {
       const environment: any = row.environment ?? row.cluster_resource_package?.environment;
       const key = typeof environment?.id === 'number' ? String(environment.id) : 'none';
-      const group = groups.get(key) ?? { environment, rows: [], resources: [] };
+      const group = groups.get(key) ?? { environment, rows: [] };
       group.rows.push(row);
       groups.set(key, group);
     }
-    for (const resource of resourcesQ.data ?? []) {
-      const environment: any = resource.environment;
-      const key = typeof environment?.id === 'number' ? String(environment.id) : 'none';
-      const group = groups.get(key) ?? { environment, rows: [], resources: [] };
-      group.resources.push(resource);
-      groups.set(key, group);
-    }
     return [...groups.entries()].map(([key, group]) => ({ key, ...group }));
-  }, [assignments, resourcesQ.data]);
+  }, [assignments]);
 
   const invalidate = async () => {
     await qc.invalidateQueries({ queryKey: ['user_cluster_resource_packages', { userId: user.id }] });
     await qc.invalidateQueries({ queryKey: ['user_cluster_resource_packages'] });
-    await qc.invalidateQueries({ queryKey: ['user_cluster_resources', { userId: user.id }] });
   };
   const addM = useMutation({
     mutationFn: async () => {
@@ -149,25 +130,18 @@ export function AdminUserResourcesPage() {
     <div className="space-y-4" data-testid="admin.user.resources.page">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">{t('admin.user.resources.title')}</h1>
-          <p className="mt-1 text-sm text-muted">{t('admin.user.resources.subtitle')}</p>
+          <h1 className="text-xl font-semibold">{t('admin.user.packages.title')}</h1>
+          <p className="mt-1 text-sm text-muted">{t('admin.user.packages.subtitle')}</p>
         </div>
         <Button variant="primary" onClick={() => setAddOpen(true)} testId="admin.user.resources.add">{t('admin.user.resources.add')}</Button>
       </div>
-      {assignmentsQ.isLoading || resourcesQ.isLoading ? <div className="text-sm text-muted">{t('common.loading')}</div> : null}
-      {!assignmentsQ.isLoading && !resourcesQ.isLoading && grouped.length === 0 ? <EmptyState title={t('admin.user.resources.empty.title')} body={t('admin.user.resources.empty.body')} /> : null}
+      {assignmentsQ.isLoading ? <div className="text-sm text-muted">{t('common.loading')}</div> : null}
+      {!assignmentsQ.isLoading && grouped.length === 0 ? <EmptyState title={t('admin.user.resources.empty.title')} body={t('admin.user.resources.empty.body')} /> : null}
       {grouped.map((group) => (
         <Card key={group.key} testId={`admin.user.resources.environment.${group.key}`}>
           <CardHeader title={environmentLabel(group.environment)} />
-          <CardBody className="space-y-3">
-            <div className="overflow-x-auto rounded-md border border-border">
-              <Table minWidth="sm" testId={`admin.user.resources.environment.${group.key}.table`}>
-                <thead><tr><th>{t('admin.user.resources.table.resource')}</th><th>{t('admin.user.resources.table.value')}</th><th>{t('admin.user.resources.table.step')}</th><th>{t('admin.user.resources.table.used')}</th><th>{t('admin.user.resources.table.free')}</th></tr></thead>
-                <tbody>{group.resources.map((resource) => <tr key={resource.id}><td>{label(resource.cluster_resource?.label, label(resource.cluster_resource?.name))}</td><td>{resourceValue(resource.value, resource.cluster_resource)}</td><td>{resourceValue(resource.cluster_resource?.stepsize, resource.cluster_resource)}</td><td>{resourceValue(resource.used, resource.cluster_resource)}</td><td>{resourceValue(resource.free, resource.cluster_resource)}</td></tr>)}</tbody>
-              </Table>
-            </div>
-            <div className="border-t border-border pt-3">
-              <div className="mb-2 text-sm font-medium">{t('admin.user.resources.assignments')}</div>
+          <CardBody>
+            <div>
             {group.rows.map((row: any) => {
               const pkg = row.cluster_resource_package;
               const items = itemsByPackage.get(Number(pkg?.id)) ?? [];

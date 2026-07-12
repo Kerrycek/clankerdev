@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 
-test('admin user resources show assigned package limits and allow assignment', async ({ page }) => {
+test('admin user resource usage and package assignment are separate', async ({ page }) => {
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
   await installHaveApiMock(page, {
     user: { id: 1, login: 'admin', level: 100 },
@@ -17,14 +17,14 @@ test('admin user resources show assigned package limits and allow assignment', a
     },
   });
 
+  await page.goto('/admin/users/53/resources/usage');
+  await expect(page.getByTestId('admin.user.resource_usage.page')).toBeVisible();
+  await expect(page.getByTestId('admin.user.resource_usage.environment.7')).toContainText('CPU');
+  await expect(page.getByTestId('admin.user.resource_usage.environment.7')).toContainText('2');
+
   await page.goto('/admin/users/53/resources');
   await expect(page.getByTestId('admin.user.resources.page')).toBeVisible();
   await expect(page.getByText('Standard Production')).toBeVisible();
-  const resourcesTable = page.getByTestId('admin.user.resources.environment.7.table');
-  await expect(resourcesTable).toContainText(/zdroj|resource/i);
-  await expect(resourcesTable).toContainText('CPU');
-  await expect(resourcesTable).toContainText(/použito|used/i);
-  await expect(resourcesTable).toContainText('2');
 
   await page.getByTestId('admin.user.resources.add').click();
   const modal = page.getByTestId('admin.user.resources.add.modal');
