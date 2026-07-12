@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { useAppMode } from '../../../app/appMode';
 import { useI18n } from '../../../app/i18n';
+import { useObjectScope } from '../../../app/objectScope';
 import { useToasts } from '../../../app/toasts';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { ListShell } from '../../../components/layout/ListShell';
@@ -41,6 +42,7 @@ function parseRecordsize(raw: string): number | undefined {
 
 export function NasDatasetCreatePage() {
   const { basePath } = useAppMode();
+  const scope = useObjectScope();
   const { t } = useI18n();
   const { pushToast } = useToasts();
   const navigate = useNavigate();
@@ -54,9 +56,15 @@ export function NasDatasetCreatePage() {
   const [relatime, setRelatime] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const parentUserId = scope.scope === 'mine' ? scope.mineUserId : undefined;
+  const waitForAdminScope = scope.canSwitchScope && scope.scope === 'mine' && parentUserId === undefined;
+
   const parentsQ = useQuery({
-    queryKey: ['datasets', 'nas', 'create-parents'],
-    queryFn: async () => (await fetchDatasets({ role: 'primary', limit: 100 })).data,
+    queryKey: ['datasets', 'nas', 'create-parents', { user: parentUserId ?? null }],
+    enabled: !waitForAdminScope,
+    queryFn: async () => (
+      await fetchDatasets({ role: 'primary', limit: 100, user: parentUserId })
+    ).data,
   });
   const parents = parentsQ.data ?? [];
   const parentOptions = useMemo(

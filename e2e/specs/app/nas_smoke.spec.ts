@@ -86,21 +86,37 @@ test.describe('NAS datasets alias', () => {
   test('creates a NAS subdataset from the NAS list', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     let payload: Record<string, unknown> | undefined;
+    const parentQueries: Array<string | null> = [];
 
     await installHaveApiMock(page, {
-      user: { id: 1, login: 'alice', level: 1 },
+      user: { id: 1, login: 'alice', level: 99 },
       handlers: {
-        'GET datasets': () => ({
-          datasets: [
-            {
-              id: 901,
-              full_name: 'tank/nas/alice',
-              name: 'alice',
-              used: 1024,
-              refquota: 4096,
-            },
-          ],
-        }),
+        'GET datasets': ({ searchParams }) => {
+          const user = searchParams.get('dataset[user]');
+          parentQueries.push(user);
+
+          return {
+            datasets: user === '1'
+              ? [
+                  {
+                    id: 901,
+                    full_name: 'tank/nas/alice',
+                    name: 'alice',
+                    used: 1024,
+                    refquota: 4096,
+                  },
+                ]
+              : [
+                  {
+                    id: 999,
+                    full_name: 'tank/nas/another-user',
+                    name: 'another-user',
+                    used: 1024,
+                    refquota: 4096,
+                  },
+                ],
+          };
+        },
         'POST datasets': (ctx) => {
           payload = ctx.params;
           return {
@@ -121,6 +137,10 @@ test.describe('NAS datasets alias', () => {
     await page.goto('/app/nas');
     await page.getByTestId('nas.create.open').click();
     await expect(page).toHaveURL('/app/nas/new');
+    await expect(page.getByTestId('nas.create.parent')).toHaveValue('');
+    await expect(page.getByTestId('nas.create.parent').locator('option[value="901"]')).toHaveCount(1);
+    await expect(page.getByTestId('nas.create.parent').locator('option[value="999"]')).toHaveCount(0);
+    expect(parentQueries).toContain('1');
 
     await page.getByTestId('nas.create.parent').selectOption('901');
     await page.getByTestId('nas.create.name').fill('projects');
