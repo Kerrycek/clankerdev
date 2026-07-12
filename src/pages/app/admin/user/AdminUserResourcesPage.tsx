@@ -210,9 +210,18 @@ export function AdminUserResourcesPage() {
       ))}
       <Modal open={addOpen} onClose={() => !addM.isPending && setAddOpen(false)} title={t('admin.user.resources.add.title')} testId="admin.user.resources.add.modal" footer={<><Button variant="secondary" onClick={() => setAddOpen(false)}>{t('common.cancel')}</Button><Button variant="primary" loading={addM.isPending} onClick={() => addM.mutate()}>{t('admin.user.resources.add.save')}</Button></>}>
         <div className="space-y-3">
-          <Select label={t('admin.user.resources.add.environment')} value={environmentId} onChange={(e) => setEnvironmentId(e.target.value)} options={[{ value: '', label: t('common.select') }, ...(environmentsQ.data ?? []).map((env) => ({ value: String(env.id), label: environmentLabel(env) }))]} />
-          <Select label={t('admin.user.resources.add.package')} value={packageId} onChange={(e) => setPackageId(e.target.value)} options={[{ value: '', label: t('common.select') }, ...(packagesQ.data ?? []).map((pkg: any) => ({ value: String(pkg.id), label: packageLabel(pkg) }))]} />
-          <Input label={t('admin.user.resources.add.comment')} value={comment} onChange={(e) => setComment(e.target.value)} />
+          <label className="block text-sm font-medium">
+            <span className="mb-1 block">{t('admin.user.resources.add.environment')}</span>
+            <Select ariaLabel={t('admin.user.resources.add.environment')} value={environmentId} onChange={(e) => setEnvironmentId(e.target.value)} options={[{ value: '', label: t('common.select') }, ...(environmentsQ.data ?? []).map((env) => ({ value: String(env.id), label: environmentLabel(env) }))]} />
+          </label>
+          <label className="block text-sm font-medium">
+            <span className="mb-1 block">{t('admin.user.resources.add.package')}</span>
+            <Select ariaLabel={t('admin.user.resources.add.package')} value={packageId} onChange={(e) => setPackageId(e.target.value)} options={[{ value: '', label: t('common.select') }, ...(packagesQ.data ?? []).map((pkg: any) => ({ value: String(pkg.id), label: packageLabel(pkg) }))]} />
+          </label>
+          <label className="block text-sm font-medium">
+            <span className="mb-1 block">{t('admin.user.resources.add.comment')}</span>
+            <Input ariaLabel={t('admin.user.resources.add.comment')} value={comment} onChange={(e) => setComment(e.target.value)} />
+          </label>
           {validationError ? <div className="text-sm text-danger">{t('admin.user.resources.add.validation')}</div> : null}
         </div>
       </Modal>
