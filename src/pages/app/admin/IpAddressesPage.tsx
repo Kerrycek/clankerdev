@@ -35,6 +35,21 @@ import {
   resolveVersionValue,
 } from './ipAddresses/ipAddressListSemantics';
 
+const SUGGESTED_IPS_PER_LOCATION = 4;
+const SUGGESTED_IP_QUERY_LIMIT = 50;
+
+function suggestedLocationOrder(a: InfraLocation, b: InfraLocation): number {
+  const priority = (location: InfraLocation) => {
+    const label = `${location.label ?? ''} ${location.environment?.label ?? ''}`.toLowerCase();
+    if (label.includes('praha')) return 0;
+    if (label.includes('brno')) return 1;
+    if (label.includes('playground')) return 2;
+    return 3;
+  };
+
+  return priority(a) - priority(b) || String(a.label ?? '').localeCompare(String(b.label ?? ''), 'cs');
+}
+
 export function IpAddressesPage() {
   const { basePath } = useAppMode();
   const { t } = useI18n();
@@ -132,6 +147,7 @@ export function IpAddressesPage() {
     });
   };
 
+  const assignedFilterExplicit = sp.has('assigned_to_interface') || occupancyExplicitlyAny;
   const filtersActive = Boolean(
     qText.trim() ||
       addr.trim() ||
@@ -142,7 +158,7 @@ export function IpAddressesPage() {
       ifaceId !== undefined ||
       locationId !== undefined ||
       versionNum !== undefined ||
-      assignedToInterface !== undefined
+      assignedFilterExplicit
   );
 
   const [smart, setSmart] = useState('');
@@ -213,14 +229,40 @@ export function IpAddressesPage() {
   });
 
   const environmentLocations = useMemo(() => (locationsQ.data ?? []) as InfraLocation[], [locationsQ.data]);
+  const suggestedLocations = useMemo(
+    () => [...environmentLocations].sort(suggestedLocationOrder).slice(0, 8),
+    [environmentLocations]
+  );
+  const showingSuggestedFreeIps = !filtersActive && suggestedLocations.length > 0;
 
-  useEffect(() => {
-    if (locationId !== undefined || locationsQ.isLoading) return;
-    const defaultLocation = environmentLocations[0];
-    if (defaultLocation?.id) setIntParam('location', defaultLocation.id);
-  }, [environmentLocations, locationId, locationsQ.isLoading]);
+  const suggestedQ = useQuery({
+    queryKey: ['ip_addresses', 'suggested_free', suggestedLocations.map((item) => item.id)],
+    queryFn: async () => {
+      const pages = await Promise.all(
+        suggestedLocations.map(async (suggestedLocation) => (
+          await fetchIpAddresses({
+            limit: SUGGESTED_IP_QUERY_LIMIT,
+            location: suggestedLocation.id,
+            assignedToInterface: false,
+            purpose: 'vps',
+            includes: 'network__primary_location__environment,network_interface,vps,user,charged_environment',
+          })
+        ).data)
+      );
 
-  const locationReady = locationId !== undefined || !locationsQ.isLoading;
+      const seen = new Set<number>();
+      return pages.flatMap((items) => items
+        .filter((ip) => !isDefaultHiddenLegacyNetwork(ip))
+        .filter((ip) => {
+          if (seen.has(ip.id)) return false;
+          seen.add(ip.id);
+          return true;
+        })
+        .slice(0, SUGGESTED_IPS_PER_LOCATION));
+    },
+    staleTime: 10_000,
+    enabled: showingSuggestedFreeIps,
+  });
 
   const listQ = useQuery({
     queryKey: [
@@ -264,23 +306,24 @@ export function IpAddressesPage() {
         })
       ).data,
     staleTime: 10_000,
-    enabled: locationReady,
+    enabled: !locationsQ.isLoading && !showingSuggestedFreeIps,
   });
 
-  const rawPageData = listQ.data ?? [];
+  const activeListQ = showingSuggestedFreeIps ? suggestedQ : listQ;
+  const rawPageData = activeListQ.data ?? [];
   const hideLegacyNetworksByDefault = networkId === undefined && !qText.trim() && !addr.trim() && prefixNum === undefined && versionNum === undefined;
   const pageData = useMemo(
     () => (hideLegacyNetworksByDefault ? rawPageData.filter((ip) => !isDefaultHiddenLegacyNetwork(ip)) : rawPageData),
     [hideLegacyNetworksByDefault, rawPageData]
   );
   const locationFallback = useMemo(
-    () => environmentLocations.find((item) => Number(item.id) === locationId) ?? null,
-    [environmentLocations, locationId]
+    () => (showingSuggestedFreeIps ? null : environmentLocations.find((item) => Number(item.id) === locationId) ?? null),
+    [environmentLocations, locationId, showingSuggestedFreeIps]
   );
   const pageCursor = useMemo(() => cursorFromDescendingPage(rawPageData), [rawPageData]);
-  const hasMore = rawPageData.length >= pagination.limit;
+  const hasMore = !showingSuggestedFreeIps && rawPageData.length >= pagination.limit;
   const canNext = pagination.hasForward || (hasMore && pageCursor !== null);
-  const canPaginate = pagination.stack.length > 1 || rawPageData.length > 0;
+  const canPaginate = !showingSuggestedFreeIps && (pagination.stack.length > 1 || rawPageData.length > 0);
 
   const openIp = (ipId: number) => {
     navigate(`${ipDetailBasePath}/${ipId}`);
@@ -518,7 +561,7 @@ export function IpAddressesPage() {
         <FilterChip key="version" label={versionNum === 4 ? 'IPv4' : 'IPv6'} onRemove={() => setTextParam('version', undefined)} testId="admin.ip_addresses.chip.version" />
       );
     }
-    if (assignedToInterface !== undefined) {
+    if (assignedFilterExplicit && assignedToInterface !== undefined) {
       chips.push(
         <FilterChip
           key="assigned"
@@ -542,7 +585,7 @@ export function IpAddressesPage() {
     });
 
     return chips;
-  }, [addr, assignedToInterface, ifaceId, locationId, networkId, occupancyExplicitlyAny, prefixNum, qText, setBoolParamInUrl, setIntParam, setTextParam, smartErrors, t, userId, versionNum, vpsId]);
+  }, [addr, assignedFilterExplicit, assignedToInterface, ifaceId, locationId, networkId, prefixNum, qText, setBoolParamInUrl, setIntParam, setTextParam, smartErrors, t, userId, versionNum, vpsId]);
 
   const shareUrl = useMemo(() => (typeof window !== 'undefined' ? window.location.href : ''), [sp]);
 
@@ -553,7 +596,11 @@ export function IpAddressesPage() {
         <PageHeader
           title={t('admin.ip_addresses.title')}
           description={t('admin.ip_addresses.subtitle')}
-          meta={filtersActive ? <span className="text-xs text-faint">{t('admin.ip_addresses.filter_hint')}</span> : null}
+          meta={
+            showingSuggestedFreeIps
+              ? <span className="text-xs text-faint">{t('admin.ip_addresses.suggested_free')}</span>
+              : filtersActive ? <span className="text-xs text-faint">{t('admin.ip_addresses.filter_hint')}</span> : null
+          }
           testId="admin.ip_addresses.list.header"
         />
       }
@@ -594,17 +641,23 @@ export function IpAddressesPage() {
         />
       }
     >
-      {listQ.isLoading ? (
+      {locationsQ.isLoading || activeListQ.isLoading ? (
         <LoadingState testId="admin.ip_addresses.loading" />
-      ) : listQ.isError ? (
+      ) : locationsQ.isError || activeListQ.isError ? (
         <ErrorState
           testId="admin.ip_addresses.error"
-          error={listQ.error}
-          onRetry={() => listQ.refetch()}
+          error={locationsQ.error ?? activeListQ.error}
+          onRetry={() => {
+            void locationsQ.refetch();
+            void activeListQ.refetch();
+          }}
           actions={{
             primary: {
               label: t('common.retry'),
-              onClick: () => listQ.refetch(),
+              onClick: () => {
+                void locationsQ.refetch();
+                void activeListQ.refetch();
+              },
             },
             secondary: {
               label: t('admin.ip_addresses.open_legacy'),

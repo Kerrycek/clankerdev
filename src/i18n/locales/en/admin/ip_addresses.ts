@@ -53,6 +53,7 @@ export const enAdmin_ip_addresses = {
   "admin.ip_addresses.quick.subnet.placeholder": "Pick an existing subnet…",
   "admin.ip_addresses.quick.unassigned": "Free addresses",
   "admin.ip_addresses.search.placeholder": "Search… (IP, VPS, user, network) — press ? for help",
+  "admin.ip_addresses.suggested_free": "A sample of free IP addresses from available locations.",
   "admin.ip_addresses.smart_help.examples.addr": "Filter by exact address (server-side)",
   "admin.ip_addresses.smart_help.examples.addr_prefix": "Filter by exact address + prefix",
   "admin.ip_addresses.smart_help.examples.assigned": "Show only assigned / unassigned addresses",
