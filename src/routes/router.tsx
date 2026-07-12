@@ -71,6 +71,7 @@ const DnsZoneTransfersPage = lazyRoute(() => import('../pages/app/dns/DnsZoneTra
 const DnsZoneDnssecPage = lazyRoute(() => import('../pages/app/dns/DnsZoneDnssecPage'), 'DnsZoneDnssecPage');
 const DnsZoneServersPage = lazyRoute(() => import('../pages/app/dns/DnsZoneServersPage'), 'DnsZoneServersPage');
 const ProfilePage = lazyRoute(() => import('../pages/app/profile/ProfilePage'), 'ProfilePage');
+const ProfileResourcesPage = lazyRoute(() => import('../pages/app/profile/ProfileResourcesPage'), 'ProfileResourcesPage');
 const ProfileMailPage = lazyRoute(() => import('../pages/app/profile/ProfileMailPage'), 'ProfileMailPage');
 const ProfileKeysPage = lazyRoute(() => import('../pages/app/profile/ProfileKeysPage'), 'ProfileKeysPage');
 const ProfileSessionsPage = lazyRoute(() => import('../pages/app/profile/ProfileSessionsPage'), 'ProfileSessionsPage');
@@ -282,6 +283,7 @@ export const router = createBrowserRouter([
             { path: 'requests', element: <RequestsPage /> },
             { path: 'requests/:type/:requestId', element: <RequestDetailPage /> },
             { path: 'profile', element: <ProfilePage /> },
+            { path: 'profile/resources', element: <ProfileResourcesPage /> },
             { path: 'profile/security', element: <ProfileSecurityPage /> },
             { path: 'profile/mfa', element: <ProfileMfaPage /> },
             { path: 'profile/mail', element: <ProfileMailPage /> },
@@ -489,6 +491,7 @@ export const router = createBrowserRouter([
             { path: 'payments/incoming', element: <IncomingPaymentsPage /> },
             { path: 'payments/incoming/:paymentId', element: <IncomingPaymentDetailPage /> },
             { path: 'profile', element: <ProfilePage /> },
+            { path: 'profile/resources', element: <ProfileResourcesPage /> },
             { path: 'profile/security', element: <ProfileSecurityPage /> },
             { path: 'profile/mfa', element: <ProfileMfaPage /> },
             { path: 'profile/mail', element: <ProfileMailPage /> },

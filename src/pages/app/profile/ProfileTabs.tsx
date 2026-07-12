@@ -14,6 +14,7 @@ export function ProfileTabs(props: { testId?: string; active?: string }) {
       testId={props.testId ?? 'profile.tabs'}
       items={[
         { to: `${basePath}/profile`, label: t('profile.tabs.overview'), end: true },
+        { to: `${basePath}/profile/resources`, label: t('profile.tabs.resources') },
         { to: `${basePath}/profile/security`, label: t('profile.tabs.security') },
         { to: `${basePath}/profile/mfa`, label: t('profile.tabs.mfa') },
         { to: `${basePath}/profile/sessions`, label: t('profile.tabs.sessions') },

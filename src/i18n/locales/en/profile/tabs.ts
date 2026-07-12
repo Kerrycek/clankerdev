@@ -5,6 +5,7 @@ export const enProfile_tabs = {
   "profile.tabs.metrics": "Metrics tokens",
   "profile.tabs.mfa": "MFA",
   "profile.tabs.overview": "Overview",
+  "profile.tabs.resources": "Resources",
   "profile.tabs.security": "Security",
   "profile.tabs.sessions": "Sessions",
   "profile.tabs.user_data": "User data templates",

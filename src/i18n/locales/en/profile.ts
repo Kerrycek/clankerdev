@@ -26,6 +26,7 @@ import { enProfile_page } from './profile/page';
 import { enProfile_panel } from './profile/panel';
 import { enProfile_placeholders } from './profile/placeholders';
 import { enProfile_prefs } from './profile/prefs';
+import { enProfile_resources } from './profile/resources';
 import { enProfile_security } from './profile/security';
 import { enProfile_sessions } from './profile/sessions';
 import { enProfile_smart } from './profile/smart';
@@ -66,6 +67,7 @@ export const enProfile = {
   ...enProfile_panel,
   ...enProfile_placeholders,
   ...enProfile_prefs,
+  ...enProfile_resources,
   ...enProfile_security,
   ...enProfile_sessions,
   ...enProfile_smart,

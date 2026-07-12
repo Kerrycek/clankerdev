@@ -5,6 +5,7 @@ export const csProfile_tabs = {
   "profile.tabs.metrics": "Tokeny metrik",
   "profile.tabs.mfa": "MFA",
   "profile.tabs.overview": "Přehled",
+  "profile.tabs.resources": "Prostředky",
   "profile.tabs.security": "Bezpečnost",
   "profile.tabs.sessions": "Relace",
   "profile.tabs.user_data": "Šablony user‑data",
