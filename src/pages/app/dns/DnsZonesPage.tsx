@@ -650,6 +650,10 @@ export function DnsZonesPage() {
       createDnsZone({
         name: canonicalDnsZoneName(createName),
         email: createEmail.trim() || undefined,
+        // A zone created from this UI is an authoritative user zone. The API
+        // treats internal and external zones differently, so keep this aligned
+        // with the legacy primary-zone form instead of relying on a DB default.
+        source: 'internal_source',
         enabled: createEnabled,
         dnssec_enabled: createDnssec,
         default_ttl: Number(createDefaultTtl),

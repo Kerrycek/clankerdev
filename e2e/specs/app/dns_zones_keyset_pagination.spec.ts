@@ -86,5 +86,9 @@ test.describe('DNS zones keyset pagination', () => {
 
     await expect.poll(() => createPayload?.dns_zone?.name).toBe('example.test.');
     expect(createPayload?.dns_zone?.email).toBe('hostmaster@example.test');
+    expect(createPayload?.dns_zone?.source).toBe('internal_source');
+    expect(createPayload?.dns_zone?.default_ttl).toBe(3600);
+    expect(createPayload?.dns_zone?.enabled).toBe(true);
+    expect(createPayload?.dns_zone?.dnssec_enabled).toBe(false);
   });
 });
