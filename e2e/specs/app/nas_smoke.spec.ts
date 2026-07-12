@@ -83,6 +83,64 @@ test.describe('NAS datasets alias', () => {
     await expect(page.getByRole('columnheader', { name: 'Exports' })).toHaveCount(0);
   });
 
+  test('creates a NAS subdataset from the NAS list', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    let payload: Record<string, unknown> | undefined;
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'alice', level: 1 },
+      handlers: {
+        'GET datasets': () => ({
+          datasets: [
+            {
+              id: 901,
+              full_name: 'tank/nas/alice',
+              name: 'alice',
+              used: 1024,
+              refquota: 4096,
+            },
+          ],
+        }),
+        'POST datasets': (ctx) => {
+          payload = ctx.params;
+          return {
+            dataset: {
+              id: 902,
+              full_name: 'tank/nas/alice/projects',
+              name: 'projects',
+            },
+          };
+        },
+        'GET datasets/902': () => ({
+          dataset: { id: 902, full_name: 'tank/nas/alice/projects', name: 'projects' },
+        }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+      },
+    });
+
+    await page.goto('/app/nas');
+    await page.getByTestId('nas.create.open').click();
+    await expect(page).toHaveURL('/app/nas/new');
+
+    await page.getByTestId('nas.create.parent').selectOption('901');
+    await page.getByTestId('nas.create.name').fill('projects');
+    await page.getByTestId('nas.create.refquota').fill('8');
+    await page.getByTestId('nas.create.submit').click();
+
+    await expect.poll(() => payload?.dataset as Record<string, unknown> | undefined).toEqual({
+      dataset: 901,
+      name: 'projects',
+      automount: true,
+      refquota: 8192,
+      compression: true,
+      recordsize: 131072,
+      atime: false,
+      relatime: false,
+      sync: 'standard',
+    });
+    await expect(page).toHaveURL('/app/nas/902');
+  });
+
   test('keeps NAS dataset details and management navigation under NAS', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
@@ -153,9 +211,10 @@ test.describe('NAS datasets alias', () => {
     await expect(page.getByRole('link', { name: 'Downloads' })).toHaveAttribute('href', '/admin/nas/901/downloads');
 
     await page.getByTestId('dataset.manage.create.open').click();
-    await page.getByTestId('dataset.manage.create.name').fill('projects');
-    await page.getByTestId('dataset.manage.refquota').fill('8');
-    await page.getByTestId('dataset.manage.create.submit').click();
+    const createModal = page.getByTestId('dataset.manage.create.modal');
+    await createModal.getByTestId('dataset.manage.create.name').fill('projects');
+    await createModal.getByTestId('dataset.manage.refquota').fill('8');
+    await createModal.getByTestId('dataset.manage.create.submit').click();
 
     await expect(page).toHaveURL(/\/admin\/nas\/902$/);
   });

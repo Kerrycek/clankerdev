@@ -59,6 +59,7 @@ const DatasetDownloadsPage = lazyRoute(() => import('../pages/app/datasets/Datas
 const DatasetPlansPage = lazyRoute(() => import('../pages/app/datasets/DatasetPlansPage'), 'DatasetPlansPage');
 const DatasetExpansionPage = lazyRoute(() => import('../pages/app/datasets/DatasetExpansionPage'), 'DatasetExpansionPage');
 const NasDatasetsPage = lazyRoute(() => import('../pages/app/datasets/NasDatasetsPage'), 'NasDatasetsPage');
+const NasDatasetCreatePage = lazyRoute(() => import('../pages/app/datasets/NasDatasetCreatePage'), 'NasDatasetCreatePage');
 const DatasetExportsPage = lazyRoute(() => import('../pages/app/exports/DatasetExportsPage'), 'DatasetExportsPage');
 const ExportsListPage = lazyRoute(() => import('../pages/app/exports/ExportsListPage'), 'ExportsListPage');
 const ExportDetailPage = lazyRoute(() => import('../pages/app/exports/ExportDetailPage'), 'ExportDetailPage');
@@ -217,6 +218,7 @@ export const router = createBrowserRouter([
             },
             { path: 'datasets', element: <DatasetsListPage /> },
             { path: 'nas', element: <NasDatasetsPage /> },
+            { path: 'nas/new', element: <NasDatasetCreatePage /> },
             { path: 'exports', element: <ExportsListPage /> },
             { path: 'exports/:exportId', element: <ExportDetailPage /> },
             {
@@ -404,6 +406,7 @@ export const router = createBrowserRouter([
             },
             { path: 'datasets', element: <DatasetsListPage /> },
             { path: 'nas', element: <NasDatasetsPage /> },
+            { path: 'nas/new', element: <NasDatasetCreatePage /> },
             { path: 'exports', element: <ExportsListPage /> },
             { path: 'exports/:exportId', element: <ExportDetailPage /> },
             {

@@ -120,6 +120,7 @@ export interface DatasetsListPageProps {
   emptyBodyKey?: string;
   showVpsFilter?: boolean;
   showOwnerColumn?: boolean;
+  headerActions?: React.ReactNode;
 }
 
 export function DatasetsListPage(props: DatasetsListPageProps = {}) {
@@ -581,9 +582,12 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
           description={t(descriptionKey)}
           meta={filtersActive ? t('list.meta.filters_active') : undefined}
           actions={
-            <Button variant="secondary" size="sm" onClick={() => void datasetsQ.refetch()} testId="datasets.list.refresh">
-              {t('common.refresh')}
-            </Button>
+            <>
+              {props.headerActions}
+              <Button variant="secondary" size="sm" onClick={() => void datasetsQ.refetch()} testId="datasets.list.refresh">
+                {t('common.refresh')}
+              </Button>
+            </>
           }
         />
       }

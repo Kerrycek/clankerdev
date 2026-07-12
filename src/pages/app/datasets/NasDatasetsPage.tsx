@@ -1,8 +1,14 @@
 import React from 'react';
 
+import { useAppMode } from '../../../app/appMode';
+import { useI18n } from '../../../app/i18n';
+import { Button } from '../../../components/ui/Button';
 import { DatasetsListPage } from './DatasetsListPage';
 
 export function NasDatasetsPage() {
+  const { basePath } = useAppMode();
+  const { t } = useI18n();
+
   return (
     <DatasetsListPage
       rolePreset="primary"
@@ -14,6 +20,11 @@ export function NasDatasetsPage() {
       emptyBodyKey="nas.list.empty.body"
       showVpsFilter={false}
       showOwnerColumn
+      headerActions={
+        <Button to={`${basePath}/nas/new`} testId="nas.create.open">
+          {t('nas.create.open')}
+        </Button>
+      }
     />
   );
 }
