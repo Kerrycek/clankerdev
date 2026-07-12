@@ -80,7 +80,7 @@ test('admin incoming payments: reconciliation summary links to all unmatched pay
   const requestedStates: string[] = [];
 
   const payments = [
-    { id: 400, state: 'processed', user: { id: 10, login: 'alice' } },
+    { id: 400, state: 'processed', user: null },
     { id: 399, state: 'unmatched', user: null },
     { id: 398, state: 'processed', user: { id: 11, login: 'bob' } },
   ];
@@ -125,6 +125,9 @@ test('admin incoming payments: reconciliation summary links to all unmatched pay
 
   await expect(page.getByTestId('admin.payments.incoming.reconciliation.metric.needs_review')).toContainText(/Needs review/);
   await expect(page.getByTestId('admin.payments.incoming.reconciliation.metric.needs_review')).toContainText(/4/);
+  await expect(page.getByTestId('admin.payments.incoming.reconciliation.metric.queued')).toContainText(/Queued/);
+  await expect(page.getByTestId('admin.payments.incoming.reconciliation.metric.queued')).toContainText(/0/);
+  await expect(page.getByTestId('admin.payments.incoming.reconciliation.processed_without_user')).toHaveCount(0);
   await expect(page.getByTestId('admin.payments.incoming.reconciliation.summary.open_unmatched')).toContainText(/Unmatched: 4/);
 
   await page.getByTestId('admin.payments.incoming.reconciliation.summary.open_unmatched').click();

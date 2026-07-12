@@ -142,10 +142,10 @@ export function IncomingPaymentsReconciliationSummary(props: {
             testId="admin.payments.incoming.reconciliation.metric.needs_review"
           />
           <MetricTile
-            label={t('payments.incoming.reconcile.summary.unassigned')}
-            value={summary.unassigned}
-            description={t('payments.incoming.reconcile.summary.unassigned.detail')}
-            testId="admin.payments.incoming.reconciliation.metric.unassigned"
+            label={t(incomingPaymentStateLabelKey('queued'))}
+            value={queuedCount}
+            description={t('payments.incoming.reconcile.state.queued.explanation')}
+            testId="admin.payments.incoming.reconciliation.metric.queued"
           />
           <MetricTile
             label={t('payments.incoming.reconcile.summary.processed')}
@@ -185,16 +185,6 @@ export function IncomingPaymentsReconciliationSummary(props: {
           </Button>
         </div>
 
-        {summary.processedWithoutUser > 0 ? (
-          <Alert
-            className="mt-3"
-            variant="warn"
-            title={t('payments.incoming.reconcile.summary.processed_without_user.title')}
-            testId="admin.payments.incoming.reconciliation.processed_without_user"
-          >
-            {t('payments.incoming.reconcile.summary.processed_without_user.body', { count: summary.processedWithoutUser })}
-          </Alert>
-        ) : null}
       </CardBody>
     </Card>
   );
