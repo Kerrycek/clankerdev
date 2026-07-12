@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 
@@ -96,6 +96,16 @@ function rowVariant(row: HostIpAddress): 'warn' | undefined {
 
 function hostAddr(row: HostIpAddress): string {
   return String((row as any).addr ?? (row as any).ip_addr ?? `#${row.id}`);
+}
+
+function isDefaultHiddenLegacyHostIp(row: HostIpAddress): boolean {
+  const address = `${hostAddr(row)} ${ipAddrLabel(row)}`.toLowerCase();
+  return (
+    address.startsWith('83.167.228.') ||
+    address.includes(' 83.167.228.') ||
+    address.startsWith('2a01:430:17:') ||
+    address.includes(' 2a01:430:17:')
+  );
 }
 
 export function HostIpAddressesPage() {
@@ -196,7 +206,12 @@ export function HostIpAddressesPage() {
     },
   });
 
-  const rows = listQ.data ?? [];
+  const filtersActive = Boolean(q || userId || vpsId || assigned !== undefined);
+  const rawRows = listQ.data ?? [];
+  const rows = useMemo(
+    () => (filtersActive ? rawRows : rawRows.filter((row) => !isDefaultHiddenLegacyHostIp(row))),
+    [filtersActive, rawRows]
+  );
   const nextCursor = cursorFromDescendingPage(rows, (r) => Number((r as any).id));
   const canNext = Boolean(nextCursor);
 
@@ -213,8 +228,6 @@ export function HostIpAddressesPage() {
     next.set('limit', String(paging.limit));
     setSp(next);
   };
-
-  const filtersActive = Boolean(q || userId || vpsId || assigned !== undefined);
 
   return (
     <ListShell

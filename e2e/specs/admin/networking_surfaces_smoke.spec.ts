@@ -21,6 +21,8 @@ test.describe('Admin / Networking surfaces (smoke)', () => {
                 network_interface: { id: 99, name: 'eth0', vps: { id: 42, hostname: 'vps-42' } },
               },
             },
+            { id: 502, addr: '83.167.228.5', assigned: false, ip_address: { id: 302, ip_addr: '83.167.228.5' } },
+            { id: 503, addr: '2a01:430:17::10', assigned: false, ip_address: { id: 303, ip_addr: '2a01:430:17::10' } },
           ],
         }),
         'GET ip_address_assignments': () => ({
@@ -44,6 +46,10 @@ test.describe('Admin / Networking surfaces (smoke)', () => {
 
     await page.goto('/admin/networking/host-ip-addresses');
     await expect(page.getByTestId('admin.host_ip_addresses.row.501')).toBeVisible();
+    await expect(page.getByTestId('admin.host_ip_addresses.row.502')).toHaveCount(0);
+    await expect(page.getByTestId('admin.host_ip_addresses.row.503')).toHaveCount(0);
+    await page.goto('/admin/networking/host-ip-addresses?q=83.167.228.5');
+    await expect(page.getByTestId('admin.host_ip_addresses.row.502')).toBeVisible();
     await page.goto('/admin/networking/ip-address-assignments');
     await expect(page.getByTestId('admin.ip_assignments.row.801')).toBeVisible();
   });
