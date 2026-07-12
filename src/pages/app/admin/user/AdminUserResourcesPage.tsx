@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useI18n } from '../../../../app/i18n';
 import { useToasts } from '../../../../app/toasts';
+import { SummaryGrid } from '../../../../components/layout/SummaryGrid';
+import { Badge } from '../../../../components/ui/Badge';
 import { Button } from '../../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../../components/ui/Card';
 import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog';
@@ -11,6 +12,7 @@ import { EmptyState } from '../../../../components/ui/EmptyState';
 import { Input } from '../../../../components/ui/Input';
 import { Modal } from '../../../../components/ui/Modal';
 import { Select } from '../../../../components/ui/Select';
+import { StatCard } from '../../../../components/ui/StatCard';
 import { fetchClusterResourcePackageItems } from '../../../../lib/api/clusterResourcePackages';
 import {
   createUserClusterResourcePackage,
@@ -96,6 +98,26 @@ export function AdminUserResourcesPage() {
     }
     return [...groups.entries()].map(([key, group]) => ({ key, ...group }));
   }, [assignments]);
+  const packageSummary = useMemo(() => {
+    const packages = new Map<string, { label: string; count: number; environments: Set<string> }>();
+
+    for (const row of assignments) {
+      const pkg: any = row.cluster_resource_package;
+      const environment: any = row.environment ?? pkg?.environment;
+      const packageId = Number(pkg?.id);
+      const key = Number.isFinite(packageId) ? `id:${packageId}` : `label:${packageLabel(pkg)}`;
+      const entry = packages.get(key) ?? {
+        label: packageLabel(pkg),
+        count: 0,
+        environments: new Set<string>(),
+      };
+      entry.count += 1;
+      entry.environments.add(environmentLabel(environment));
+      packages.set(key, entry);
+    }
+
+    return [...packages.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'cs'));
+  }, [assignments]);
 
   const invalidate = async () => {
     await qc.invalidateQueries({ queryKey: ['user_cluster_resource_packages', { userId: user.id }] });
@@ -130,27 +152,56 @@ export function AdminUserResourcesPage() {
     <div className="space-y-4" data-testid="admin.user.resources.page">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">{t('admin.user.packages.title')}</h1>
-          <p className="mt-1 text-sm text-muted">{t('admin.user.packages.subtitle')}</p>
+          <h1 className="text-xl font-semibold">{t('admin.user.resources.title')}</h1>
+          <p className="mt-1 text-sm text-muted">{t('admin.user.resources.subtitle')}</p>
         </div>
         <Button variant="primary" onClick={() => setAddOpen(true)} testId="admin.user.resources.add">{t('admin.user.resources.add')}</Button>
       </div>
       {assignmentsQ.isLoading ? <div className="text-sm text-muted">{t('common.loading')}</div> : null}
       {!assignmentsQ.isLoading && grouped.length === 0 ? <EmptyState title={t('admin.user.resources.empty.title')} body={t('admin.user.resources.empty.body')} /> : null}
+      {packageSummary.length ? (
+        <section aria-label={t('admin.user.resources.summary.title')}>
+          <h2 className="mb-3 text-base font-semibold">{t('admin.user.resources.summary.title')}</h2>
+          <SummaryGrid testId="admin.user.resources.summary">
+            {packageSummary.map((entry) => (
+              <StatCard
+                key={entry.label}
+                className="md:col-span-3"
+                variant="compact"
+                title={entry.label}
+                value={t('admin.user.resources.summary.assigned', { count: entry.count })}
+                subtitle={t('admin.user.resources.summary.environments', { count: entry.environments.size })}
+              />
+            ))}
+          </SummaryGrid>
+        </section>
+      ) : null}
       {grouped.map((group) => (
         <Card key={group.key} testId={`admin.user.resources.environment.${group.key}`}>
-          <CardHeader title={environmentLabel(group.environment)} />
+          <CardHeader
+            title={environmentLabel(group.environment)}
+            subtitle={t('admin.user.resources.environment.assignments', { count: group.rows.length })}
+          />
           <CardBody>
-            <div>
+            <div className="divide-y divide-border">
             {group.rows.map((row: any) => {
               const pkg = row.cluster_resource_package;
               const items = itemsByPackage.get(Number(pkg?.id)) ?? [];
-              return <div key={row.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-border py-2 first:border-t-0 first:pt-0">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div><span className="font-medium">{packageLabel(pkg)}</span>{row.comment ? <span className="ml-2 text-xs text-muted">{row.comment}</span> : null}</div>
-                  {items.length ? <span className="text-xs text-muted">{items.map((item: any) => `${label(item.cluster_resource?.label, label(item.cluster_resource?.name))}: ${resourceValue(item.value, item.cluster_resource)}`).join(' · ')}</span> : null}
+              return <div key={row.id} className="flex flex-wrap items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium">{packageLabel(pkg)}</div>
+                  {row.comment ? <div className="mt-1 text-sm text-muted">{row.comment}</div> : null}
+                  {items.length ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5" aria-label={t('admin.user.resources.limits')}>
+                      {items.map((item: any) => (
+                        <Badge key={item.id} variant="neutral">
+                          {label(item.cluster_resource?.label, label(item.cluster_resource?.name))}: {resourceValue(item.value, item.cluster_resource)}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : <div className="mt-1 text-sm text-muted">{t('admin.user.resources.none')}</div>}
                 </div>
-                <div className="flex gap-2"><Link className="text-sm underline" to={`/admin/cluster/resource-packages/${pkg?.id}`}>{t('admin.user.resources.open')}</Link><Button size="sm" variant="danger" onClick={() => setRemoveRecord(row)}>{t('admin.user.resources.remove')}</Button></div>
+                <div className="flex shrink-0 gap-2"><Button size="sm" variant="secondary" to={`/admin/cluster/resource-packages/${pkg?.id}`}>{t('admin.user.resources.open')}</Button><Button size="sm" variant="danger" onClick={() => setRemoveRecord(row)}>{t('admin.user.resources.remove')}</Button></div>
               </div>;
             })}
             </div>
