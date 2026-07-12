@@ -11,6 +11,7 @@ test('admin user resources show assigned package limits and allow assignment', a
       'GET environments': () => ({ environments: [{ id: 7, label: 'Production' }] }),
       'GET cluster_resource_packages': () => ({ cluster_resource_packages: [{ id: 11, label: 'Standard Production' }] }),
       'GET user_cluster_resource_packages': () => ({ user_cluster_resource_packages: [{ id: 20, environment: { id: 7, label: 'Production' }, cluster_resource_package: { id: 11, label: 'Standard Production' } }] }),
+      'GET users/53/cluster_resources': () => ({ cluster_resources: [{ id: 31, environment: { id: 7, label: 'Production' }, cluster_resource: { id: 2, name: 'cpu', label: 'CPU', stepsize: 1 }, value: 4, used: 2, free: 2 }] }),
       'GET cluster_resource_packages/11/items': () => ({ items: [{ id: 5, value: 4, cluster_resource: { id: 2, label: 'CPU' } }] }),
       'POST user_cluster_resource_packages': () => ({ user_cluster_resource_package: { id: 21 } }),
     },
@@ -19,7 +20,11 @@ test('admin user resources show assigned package limits and allow assignment', a
   await page.goto('/admin/users/53/resources');
   await expect(page.getByTestId('admin.user.resources.page')).toBeVisible();
   await expect(page.getByText('Standard Production')).toBeVisible();
-  await expect(page.getByText('CPU: 4')).toBeVisible();
+  const resourcesTable = page.getByTestId('admin.user.resources.environment.7.table');
+  await expect(resourcesTable).toContainText(/zdroj|resource/i);
+  await expect(resourcesTable).toContainText('CPU');
+  await expect(resourcesTable).toContainText(/použito|used/i);
+  await expect(resourcesTable).toContainText('2');
 
   await page.getByTestId('admin.user.resources.add').click();
   const modal = page.getByTestId('admin.user.resources.add.modal');

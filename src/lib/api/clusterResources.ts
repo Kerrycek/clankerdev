@@ -10,6 +10,16 @@ export interface ClusterResource {
   [k: string]: unknown;
 }
 
+export interface UserClusterResource {
+  id: number;
+  environment?: { id: number; label?: string } | null;
+  cluster_resource?: ClusterResource | null;
+  value?: number;
+  used?: number;
+  free?: number;
+  [k: string]: unknown;
+}
+
 export interface DefaultObjectClusterResource {
   id: number;
   class_name?: string;
@@ -32,6 +42,25 @@ export async function fetchClusterResources(opts?: { limit?: number; fromId?: nu
   });
 
   return { ...res, data: expectArray<ClusterResource>(res.data, 'cluster_resources#index') };
+}
+
+export async function fetchUserClusterResources(userId: number, opts?: {
+  limit?: number;
+  environmentId?: number;
+}) {
+  const params: Record<string, unknown> = {};
+  if (opts?.limit !== undefined) params['limit'] = opts.limit;
+  if (opts?.environmentId !== undefined) params['environment'] = opts.environmentId;
+
+  const res = await haveApiCall<UserClusterResource[]>({
+    method: 'GET',
+    path: `/users/${userId}/cluster_resources`,
+    namespace: 'cluster_resource',
+    params,
+    meta: { includes: 'environment,cluster_resource' },
+  });
+
+  return { ...res, data: expectArray<UserClusterResource>(res.data, 'users/:id/cluster_resources#index') };
 }
 
 export async function fetchDefaultObjectClusterResources(opts?: {
