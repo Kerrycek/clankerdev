@@ -14,7 +14,10 @@ test('admin user resource usage and package assignment are separate', async ({ p
         { id: 20, environment: { id: 7, label: 'Production' }, cluster_resource_package: { id: 11, label: 'Standard Production' } },
         { id: 21, environment: { id: 8, label: 'Playground' }, cluster_resource_package: { id: 11, label: 'Standard Production' } },
       ] }),
-      'GET users/53/cluster_resources': () => ({ cluster_resources: [{ id: 31, environment: { id: 7, label: 'Production' }, cluster_resource: { id: 2, name: 'cpu', label: 'CPU', stepsize: 1 }, value: 4, used: 2, free: 2 }] }),
+      'GET users/53/cluster_resources': () => ({ cluster_resources: [
+        { id: 31, environment: { id: 7, label: 'Production' }, cluster_resource: { id: 2, name: 'cpu', label: 'CPU', stepsize: 1 }, value: 4, used: 2, free: 2 },
+        { id: 33, environment: { id: 7, label: 'Production' }, cluster_resource: { id: 3, name: 'memory', label: 'Memory', stepsize: 1 }, value: 4096, used: 4096, free: 0 },
+      ] }),
       'GET users/1/cluster_resources': () => ({ cluster_resources: [{ id: 32, environment: { id: 7, label: 'Production' }, cluster_resource: { id: 2, name: 'cpu', label: 'CPU' }, value: 4, used: 1, free: 3 }] }),
       'GET cluster_resource_packages/11/items': () => ({ items: [{ id: 5, value: 4, cluster_resource: { id: 2, label: 'CPU' } }] }),
       'POST user_cluster_resource_packages': () => ({ user_cluster_resource_package: { id: 21 } }),
@@ -25,6 +28,8 @@ test('admin user resource usage and package assignment are separate', async ({ p
   await expect(page.getByTestId('admin.user.resource_usage.page')).toBeVisible();
   await expect(page.getByTestId('admin.user.resource_usage.resources.environment.7')).toContainText('CPU');
   await expect(page.getByTestId('admin.user.resource_usage.resources.environment.7')).toContainText('2');
+  await expect(page.getByTestId('admin.user.resource_usage.resources.environment.7.resource.31.bar').locator('div').nth(1)).toHaveAttribute('style', 'width: 50%;');
+  await expect(page.getByTestId('admin.user.resource_usage.resources.environment.7.resource.33.bar').locator('div').nth(1)).toHaveAttribute('style', 'width: 100%;');
 
   await page.goto('/admin/users/53/resources');
   await expect(page.getByTestId('admin.user.resources.page')).toBeVisible();

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useI18n } from '../../app/i18n';
 import { Card, CardBody, CardHeader } from '../ui/Card';
 import { EmptyState } from '../ui/EmptyState';
+import { UsageBar } from '../ui/UsageBar';
 import { fetchUserClusterResources, type ClusterResource } from '../../lib/api/clusterResources';
 
 function text(value: unknown, fallback = '—') {
@@ -61,15 +62,24 @@ export function UserResourceUsagePanel(props: { userId: number; testIdPrefix: st
                 const used = typeof row.used === 'number' ? row.used : 0;
                 const total = typeof row.value === 'number' ? row.value : 0;
                 return (
-                  <div key={row.id} className="rounded-md border border-border bg-surface-2 p-3">
+                  <div
+                    key={row.id}
+                    className="rounded-md border border-border bg-surface-2 p-3"
+                    data-testid={`${props.testIdPrefix}.environment.${group.key}.resource.${row.id}`}
+                  >
                     <div className="flex items-baseline justify-between gap-3">
                       <span className="font-medium">{text(resource?.label, text(resource?.name))}</span>
                       <span className="text-right text-sm font-semibold">{format(row.free, resource)}</span>
                     </div>
                     <div className="mt-1 text-xs text-muted">{t('admin.user.resource_usage.free')}</div>
-                    <div className="mt-3 h-2 overflow-hidden rounded bg-border">
-                      <div className="h-full bg-primary" style={{ width: `${percent(used, total)}%` }} />
-                    </div>
+                    <UsageBar
+                      className="mt-3"
+                      used={used}
+                      max={total}
+                      showValues={false}
+                      ariaLabel={`${text(resource?.label, text(resource?.name))}: ${percent(used, total).toFixed(0)}%`}
+                      barTestId={`${props.testIdPrefix}.environment.${group.key}.resource.${row.id}.bar`}
+                    />
                     <div className="mt-2 flex justify-between gap-3 text-xs text-muted">
                       <span>{t('admin.user.resource_usage.used')}: {format(row.used, resource)}</span>
                       <span>{t('admin.user.resource_usage.total')}: {format(row.value, resource)}</span>
