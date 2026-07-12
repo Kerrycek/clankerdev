@@ -47,25 +47,25 @@ type NewFormState = {
   enableNotifications: boolean;
   enableShrink: boolean;
   stopVps: boolean;
-  maxOverHours: string;
+  maxOverDays: string;
 };
 
 type EditFormState = {
   enableNotifications: boolean;
   enableShrink: boolean;
   stopVps: boolean;
-  maxOverHours: string;
+  maxOverDays: string;
 };
 
 function defaultNewForm(mode: CreateMode): NewFormState {
   return {
     mode,
-    addedSpaceGiB: '10',
+    addedSpaceGiB: '20',
     originalRefquotaGiB: '',
     enableNotifications: true,
     enableShrink: true,
     stopVps: true,
-    maxOverHours: '72',
+    maxOverDays: '30',
   };
 }
 
@@ -74,9 +74,9 @@ function editFormFromExpansion(exp: DatasetExpansion): EditFormState {
     enableNotifications: exp.enable_notifications !== false,
     enableShrink: exp.enable_shrink !== false,
     stopVps: exp.stop_vps !== false,
-    maxOverHours:
+    maxOverDays:
       typeof exp.max_over_refquota_seconds === 'number' && Number.isFinite(exp.max_over_refquota_seconds)
-        ? String(Math.round(exp.max_over_refquota_seconds / 3600))
+        ? String(Math.round(exp.max_over_refquota_seconds / 86_400))
         : '',
   };
 }
@@ -87,12 +87,12 @@ function parseGiBToMiB(raw: string): number | null {
   return Math.round(n * 1024);
 }
 
-function parseHoursToSeconds(raw: string): number | undefined | null {
+function parseDaysToSeconds(raw: string): number | undefined | null {
   const s = String(raw).trim();
   if (!s) return undefined;
   const n = Number(s);
   if (!Number.isFinite(n) || n <= 0) return null;
-  return Math.round(n * 3600);
+  return Math.round(n * 86_400);
 }
 
 function expansionStateBadge(exp: DatasetExpansion, t: (k: string) => string) {
@@ -161,9 +161,9 @@ export function DatasetExpansionPage() {
     mutationFn: async (form: NewFormState) => {
       await preflightDatasetNotBusy();
       const added = parseGiBToMiB(form.addedSpaceGiB);
-      const maxSeconds = parseHoursToSeconds(form.maxOverHours);
+      const maxSeconds = parseDaysToSeconds(form.maxOverDays);
       if (added === null) throw new Error(t('dataset.expansion.validation.added_space'));
-      if (maxSeconds === null) throw new Error(t('dataset.expansion.validation.max_hours'));
+      if (maxSeconds === null) throw new Error(t('dataset.expansion.validation.max_days'));
       if (form.mode === 'register') {
         const original = parseGiBToMiB(form.originalRefquotaGiB);
         if (original === null) throw new Error(t('dataset.expansion.validation.original_refquota'));
@@ -215,8 +215,8 @@ export function DatasetExpansionPage() {
     mutationFn: async (form: EditFormState) => {
       await preflightDatasetNotBusy();
       if (expansionId === null) throw new Error(t('dataset.expansion.internal_missing_id'));
-      const maxSeconds = parseHoursToSeconds(form.maxOverHours);
-      if (maxSeconds === null) throw new Error(t('dataset.expansion.validation.max_hours'));
+      const maxSeconds = parseDaysToSeconds(form.maxOverDays);
+      if (maxSeconds === null) throw new Error(t('dataset.expansion.validation.max_days'));
       return updateDatasetExpansion(expansionId, {
         enable_notifications: form.enableNotifications,
         enable_shrink: form.enableShrink,
@@ -257,7 +257,7 @@ export function DatasetExpansionPage() {
         });
       }
       setAddSpaceOpen(false);
-      setAddSpaceGiB('10');
+      setAddSpaceGiB('20');
       await historyQ.refetch();
       await expansionQ.refetch();
       refetch();
@@ -455,23 +455,12 @@ export function DatasetExpansionPage() {
           )}
         </>
       ) : (
-        <EmptyState
-          testId="dataset.expansion.empty"
-          title={t('dataset.expansion.empty.title')}
-          body={mode === 'admin' ? t('dataset.expansion.empty.body_admin') : t('dataset.expansion.empty.body_user')}
-          action={
-            mode === 'admin' ? (
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  testId="dataset.expansion.create.open"
-                  onClick={() => {
-                    setNewForm(defaultNewForm('create'));
-                    setNewOpen('create');
-                  }}
-                  disabled={busy}
-                >
-                  {t('dataset.expansion.create.open')}
-                </Button>
+        mode === 'admin' ? (
+          <Card testId="dataset.expansion.create.form">
+            <CardHeader
+              title={t('dataset.expansion.create.title')}
+              subtitle={t('dataset.expansion.create.inline_subtitle')}
+              actions={
                 <Button
                   testId="dataset.expansion.register.open"
                   variant="secondary"
@@ -483,18 +472,57 @@ export function DatasetExpansionPage() {
                 >
                   {t('dataset.expansion.register.open')}
                 </Button>
+              }
+            />
+            <CardBody>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <Input
+                  testId="dataset.expansion.form.added_space"
+                  label={t('dataset.expansion.form.added_space')}
+                  type="number"
+                  min="1"
+                  value={newForm.addedSpaceGiB}
+                  onChange={(e) => setNewForm((f) => ({ ...f, mode: 'create', addedSpaceGiB: e.target.value }))}
+                  ariaLabel={t('dataset.expansion.form.added_space')}
+                />
+                <Input
+                  testId="dataset.expansion.form.max_over"
+                  label={t('dataset.expansion.form.max_over')}
+                  type="number"
+                  min="1"
+                  value={newForm.maxOverDays}
+                  onChange={(e) => setNewForm((f) => ({ ...f, mode: 'create', maxOverDays: e.target.value }))}
+                  ariaLabel={t('dataset.expansion.form.max_over')}
+                />
               </div>
-            ) : undefined
-          }
-        />
+              <div className="mt-1 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                <Checkbox checked={newForm.enableNotifications} onChange={(checked) => setNewForm((f) => ({ ...f, mode: 'create', enableNotifications: checked }))} label={t('dataset.expansion.form.enable_notifications')} />
+                <Checkbox checked={newForm.enableShrink} onChange={(checked) => setNewForm((f) => ({ ...f, mode: 'create', enableShrink: checked }))} label={t('dataset.expansion.form.enable_shrink')} />
+                <Checkbox checked={newForm.stopVps} onChange={(checked) => setNewForm((f) => ({ ...f, mode: 'create', stopVps: checked }))} label={t('dataset.expansion.form.stop_vps')} />
+              </div>
+              <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-4">
+                <Button testId="dataset.expansion.create.submit" onClick={() => void createM.mutate({ ...newForm, mode: 'create' })} loading={createM.isPending} disabled={busy}>
+                  {t('dataset.expansion.create.submit')}
+                </Button>
+                <span className="text-xs text-muted">{t('dataset.expansion.form.max_over_hint')}</span>
+              </div>
+            </CardBody>
+          </Card>
+        ) : (
+          <EmptyState
+            testId="dataset.expansion.empty"
+            title={t('dataset.expansion.empty.title')}
+            body={t('dataset.expansion.empty.body_user')}
+          />
+        )
       )}
 
       <Modal
-        open={newOpen !== null}
+        open={newOpen === 'register'}
         onClose={() => {
           if (!createM.isPending) setNewOpen(null);
         }}
-        title={t(newOpen === 'register' ? 'dataset.expansion.register.title' : 'dataset.expansion.create.title')}
+        title={t('dataset.expansion.register.title')}
         size="md"
         testId="dataset.expansion.create.modal"
         footer={
@@ -502,46 +530,34 @@ export function DatasetExpansionPage() {
             <Button variant="secondary" onClick={() => setNewOpen(null)} disabled={createM.isPending}>
               {t('common.cancel')}
             </Button>
-            <Button testId="dataset.expansion.create.submit" onClick={() => void createM.mutate(newForm)} loading={createM.isPending} disabled={busy}>
-              {t(newOpen === 'register' ? 'dataset.expansion.register.submit' : 'dataset.expansion.create.submit')}
+            <Button testId="dataset.expansion.register.submit" onClick={() => void createM.mutate(newForm)} loading={createM.isPending} disabled={busy}>
+              {t('dataset.expansion.register.submit')}
             </Button>
           </div>
         }
       >
         <div className="space-y-4">
           <div>
-            <div className="mb-1 text-sm font-medium text-fg">{t('dataset.expansion.form.added_space')}</div>
+            <div className="mb-1 text-sm font-medium text-fg">{t('dataset.expansion.form.original_refquota')}</div>
             <Input
-              testId="dataset.expansion.form.added_space"
+              testId="dataset.expansion.form.original_refquota"
               type="number"
-              value={newForm.addedSpaceGiB}
-              onChange={(e) => setNewForm((f) => ({ ...f, addedSpaceGiB: e.target.value }))}
-              ariaLabel={t('dataset.expansion.form.added_space')}
+              min="1"
+              value={newForm.originalRefquotaGiB}
+              onChange={(e) => setNewForm((f) => ({ ...f, originalRefquotaGiB: e.target.value }))}
+              ariaLabel={t('dataset.expansion.form.original_refquota')}
             />
-            <div className="mt-1 text-xs text-faint">{t('dataset.expansion.form.added_space_hint')}</div>
+            <div className="mt-1 text-xs text-faint">{t('dataset.expansion.form.original_refquota_hint', { current: formatMiB((dataset as any).refquota) })}</div>
           </div>
-
-          {newOpen === 'register' ? (
-            <div>
-              <div className="mb-1 text-sm font-medium text-fg">{t('dataset.expansion.form.original_refquota')}</div>
-              <Input
-                testId="dataset.expansion.form.original_refquota"
-                type="number"
-                value={newForm.originalRefquotaGiB}
-                onChange={(e) => setNewForm((f) => ({ ...f, originalRefquotaGiB: e.target.value }))}
-                ariaLabel={t('dataset.expansion.form.original_refquota')}
-              />
-              <div className="mt-1 text-xs text-faint">{t('dataset.expansion.form.original_refquota_hint', { current: formatMiB((dataset as any).refquota) })}</div>
-            </div>
-          ) : null}
 
           <div>
             <div className="mb-1 text-sm font-medium text-fg">{t('dataset.expansion.form.max_over')}</div>
             <Input
               testId="dataset.expansion.form.max_over"
               type="number"
-              value={newForm.maxOverHours}
-              onChange={(e) => setNewForm((f) => ({ ...f, maxOverHours: e.target.value }))}
+              min="1"
+              value={newForm.maxOverDays}
+              onChange={(e) => setNewForm((f) => ({ ...f, maxOverDays: e.target.value }))}
               ariaLabel={t('dataset.expansion.form.max_over')}
             />
             <div className="mt-1 text-xs text-faint">{t('dataset.expansion.form.max_over_hint')}</div>
@@ -581,8 +597,9 @@ export function DatasetExpansionPage() {
               <Input
                 testId="dataset.expansion.edit.max_over"
                 type="number"
-                value={editForm.maxOverHours}
-                onChange={(e) => setEditForm((f) => (f ? { ...f, maxOverHours: e.target.value } : f))}
+                min="1"
+                value={editForm.maxOverDays}
+                onChange={(e) => setEditForm((f) => (f ? { ...f, maxOverDays: e.target.value } : f))}
                 ariaLabel={t('dataset.expansion.form.max_over')}
               />
             </div>

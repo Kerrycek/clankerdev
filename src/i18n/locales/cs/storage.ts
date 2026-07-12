@@ -332,6 +332,8 @@ export const csStorage = {
   "dataset.expansion.create.open": "Vytvořit rozšíření",
   "dataset.expansion.register.open": "Zaregistrovat již rozšířený dataset",
   "dataset.expansion.create.title": "Vytvořit dočasné rozšíření",
+  "dataset.expansion.create.inline_subtitle":
+    "Přidej prostor na omezenou dobu a nastav, co má systém udělat po jejím uplynutí.",
   "dataset.expansion.register.title": "Zaregistrovat již rozšířený dataset",
   "dataset.expansion.create.submit": "Vytvořit rozšíření",
   "dataset.expansion.register.submit": "Zaregistrovat rozšíření",
@@ -356,9 +358,9 @@ export const csStorage = {
   "dataset.expansion.form.original_refquota": "Původní refquota (GiB)",
   "dataset.expansion.form.original_refquota_hint":
     "Zadej refquotu před rozšířením datasetu. Aktuální refquota: {current}.",
-  "dataset.expansion.form.max_over": "Max. doba nad kvótou (hodiny)",
+  "dataset.expansion.form.max_over": "Maximální počet dní překročení kvóty",
   "dataset.expansion.form.max_over_hint":
-    "Nech prázdné, pokud má backend použít výchozí politiku.",
+    "Po uplynutí této doby může systém dataset zmenšit a podle volby zastavit VPS.",
   "dataset.expansion.form.enable_notifications": "Posílat oznamovací e-maily",
   "dataset.expansion.form.enable_shrink":
     "Povolit automatické zmenšení, pokud je to možné",
@@ -368,8 +370,8 @@ export const csStorage = {
     "Přidané místo musí být kladný počet GiB.",
   "dataset.expansion.validation.original_refquota":
     "Původní refquota musí být kladný počet GiB.",
-  "dataset.expansion.validation.max_hours":
-    "Max. doba nad kvótou musí být kladný počet hodin.",
+  "dataset.expansion.validation.max_days":
+    "Maximální doba nad kvótou musí být kladný počet dní.",
   "dataset.expansion.history.load_error.title":
     "Historii rozšíření se nepodařilo načíst",
   "dataset.expansion.history.empty.title": "Zatím žádná historie rozšíření",
