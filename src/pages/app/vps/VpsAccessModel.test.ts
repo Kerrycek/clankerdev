@@ -11,10 +11,8 @@ import {
 } from './VpsAccessModel';
 
 describe('VpsAccessModel', () => {
-  it('builds a ready SSH/key/fingerprint checklist for a running VPS', () => {
+  it('builds a ready key/fingerprint checklist', () => {
     const items = buildVpsAccessChecklist({
-      isRunning: true,
-      sshCommand: 'ssh root@198.51.100.10',
       publicKeysLoaded: true,
       publicKeyCount: 2,
       duplicatePublicKeyGroupCount: 0,
@@ -24,17 +22,14 @@ describe('VpsAccessModel', () => {
     });
 
     expect(items.map((item) => [item.id, item.state])).toEqual([
-      ['ssh-command', 'ready'],
       ['public-key', 'ready'],
       ['host-key', 'ready'],
       ['root-password', 'fallback'],
     ]);
   });
 
-  it('surfaces stopped/no-key/no-host-key/busy states as attention or blocked', () => {
+  it('surfaces missing keys, host keys, and busy states as attention or blocked', () => {
     const items = buildVpsAccessChecklist({
-      isRunning: false,
-      sshCommand: 'ssh root@198.51.100.10',
       publicKeysLoaded: true,
       publicKeyCount: 0,
       duplicatePublicKeyGroupCount: 0,
@@ -44,7 +39,6 @@ describe('VpsAccessModel', () => {
     });
 
     expect(items.map((item) => [item.id, item.state])).toEqual([
-      ['ssh-command', 'blocked'],
       ['public-key', 'attention'],
       ['host-key', 'attention'],
       ['root-password', 'blocked'],

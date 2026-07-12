@@ -68,7 +68,7 @@ test('@pr-smoke VPS access page generates root password and deploys saved SSH ke
 
   await expect(page.getByTestId('vps.access.page')).toBeVisible();
   await expect(page.getByTestId('vps.access.checklist')).toBeVisible();
-  await expect(page.getByTestId('vps.access.ssh_command.value')).toHaveText('ssh root@198.51.100.10');
+  await expect(page.getByTestId('vps.access.ssh_command')).toHaveCount(0);
   await expect(page.getByTestId('vps.access.host_keys.fingerprints')).toBeVisible();
   await expect(page.getByTestId('vps.access.host_keys.table')).toBeVisible();
   await expect(page.getByTestId('vps.access.host_keys.row.1')).toContainText('SHA256:host-ed25519');
@@ -106,4 +106,30 @@ test('@pr-smoke VPS access page generates root password and deploys saved SSH ke
   const keyReq = await keyReqPromise;
   expect(keyReq.postDataJSON()).toEqual({ vps: { public_key: 8 } });
   await expect(page.getByText(/Public key deployed: workstation/)).toBeVisible();
+});
+
+test('@pr-smoke VPS access reports failed SSH key deployment and opens tasks', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+  await installHaveApiMock(page, {
+    user: { id: 42, login: 'owner', level: 1 },
+    handlers: {
+      'GET vpses/123': () => ({ vps }),
+      'GET transaction_chains': () => ({ transaction_chains: [] }),
+      'GET users/42/public_keys': () => ({ public_keys: publicKeys, _meta: { total_count: 2 } }),
+      'GET vpses/123/ssh_host_keys': () => ({ ssh_host_keys: hostKeys, _meta: { total_count: 2 } }),
+      'POST vpses/123/deploy_public_key': () => ({ _meta: { action_state_id: 702 } }),
+      'GET action_states/702': () => ({
+        action_state: { id: 702, label: 'Deploy public key', finished: true, status: false, current: 1, total: 1 },
+      }),
+    },
+  });
+
+  await page.goto('/app/vps/123/access');
+  await page.getByTestId('vps.access.ssh.deploy').click();
+  await page.getByTestId('vps.access.ssh.confirm.confirm').click();
+
+  await expect(page.getByText('SSH key deployment failed')).toBeVisible();
+  await page.getByTestId('vps.access.ssh.failure.open_tasks').click();
+  await expect(page.getByTestId('tasks.drawer')).toBeVisible();
 });

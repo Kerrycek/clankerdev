@@ -45,7 +45,7 @@ import {
   type PendingPublicKeyDeployment,
 } from './VpsAccessPrimitives';
 import { buildVpsAccessChecklist, findDuplicatePublicKeyGroups } from './VpsAccessModel';
-import { VpsAccessChecklistCard, VpsAccessStatusCard, VpsSshCommandCard } from './VpsAccessSummary';
+import { VpsAccessChecklistCard, VpsAccessStatusCard } from './VpsAccessSummary';
 import { VpsSshHostKeysCard } from './VpsSshHostKeysCard';
 
 export function VpsAccessPage() {
@@ -54,7 +54,7 @@ export function VpsAccessPage() {
   const qc = useQueryClient();
   const fastPollMs = useFastPollIntervalMs();
   const { t } = useI18n();
-  const { vps, refetch, refetchChains, vpsRef, busyTransaction, busyLocalLock, sshCommand } = useVps();
+  const { vps, refetch, refetchChains, vpsRef, busyTransaction, busyLocalLock } = useVps();
   const vpsId = Number(vps.id);
   const vpsData = vps as Record<string, unknown>;
   const objectLabel = String(vpsData['hostname'] ?? '') || `#${vpsId}`;
@@ -272,8 +272,6 @@ export function VpsAccessPage() {
   const checklistItems = useMemo(
     () =>
       buildVpsAccessChecklist({
-        isRunning,
-        sshCommand: sshCommand ?? null,
         publicKeysLoaded,
         publicKeyCount: publicKeys.length,
         duplicatePublicKeyGroupCount: duplicatePublicKeyGroups.length,
@@ -281,7 +279,7 @@ export function VpsAccessPage() {
         hostKeyCount: hostKeys.length,
         mutationAllowed: gate.allowed,
       }),
-    [duplicatePublicKeyGroups.length, gate.allowed, hostKeys.length, hostKeysLoaded, isRunning, publicKeys.length, publicKeysLoaded, sshCommand]
+    [duplicatePublicKeyGroups.length, gate.allowed, hostKeys.length, hostKeysLoaded, publicKeys.length, publicKeysLoaded]
   );
 
   return (
@@ -294,7 +292,6 @@ export function VpsAccessPage() {
         passwordTypeLabel={selectedTypeLabel}
       />
       <VpsAccessChecklistCard items={checklistItems} />
-      <VpsSshCommandCard sshCommand={sshCommand ?? null} isRunning={isRunning} />
 
       {!gate.allowed ? (
         <Alert variant="warn" title={t(gate.reason.titleKey)}>
@@ -327,7 +324,12 @@ export function VpsAccessPage() {
       {keyDeploymentStateQ.error ? <Alert variant="danger">{errorMessage(keyDeploymentStateQ.error)}</Alert> : null}
       {keyDeploymentError ? (
         <Alert variant="danger" title={t('vps.access.ssh.failed_title')}>
-          {t('vps.access.ssh.failed_description', { id: keyDeploymentError.asId, key: keyDeploymentError.keyLabel })}
+          <div className="space-y-3">
+            <p>{t('vps.access.ssh.failed_description', { id: keyDeploymentError.asId, key: keyDeploymentError.keyLabel })}</p>
+            <Button variant="secondary" size="sm" onClick={() => chrome.openTasks()} testId="vps.access.ssh.failure.open_tasks">
+              {t('common.open_tasks')}
+            </Button>
+          </div>
         </Alert>
       ) : null}
       {keyDeployMessage ? <Alert variant="info">{t('vps.access.ssh.deployed', { key: keyDeployMessage })}</Alert> : null}

@@ -1,6 +1,6 @@
 import type { VpsPublicKey, VpsSshHostKey } from '../../../lib/api/vpsAccess';
 
-export type VpsAccessChecklistItemId = 'ssh-command' | 'public-key' | 'host-key' | 'root-password';
+export type VpsAccessChecklistItemId = 'public-key' | 'host-key' | 'root-password';
 export type VpsAccessChecklistState = 'ready' | 'attention' | 'blocked' | 'fallback' | 'pending';
 
 export interface VpsAccessChecklistItem {
@@ -17,8 +17,6 @@ export interface DuplicatePublicKeyGroup {
 }
 
 interface AccessChecklistOptions {
-  isRunning: boolean;
-  sshCommand: string | null;
   publicKeysLoaded: boolean;
   publicKeyCount: number;
   duplicatePublicKeyGroupCount: number;
@@ -76,27 +74,6 @@ export function hostKeyMeta(key: VpsSshHostKey): string {
 }
 
 export function buildVpsAccessChecklist(options: AccessChecklistOptions): VpsAccessChecklistItem[] {
-  const sshItem: VpsAccessChecklistItem = !options.isRunning
-    ? {
-        id: 'ssh-command',
-        state: 'blocked',
-        titleKey: 'vps.access.checklist.ssh.stopped.title',
-        descriptionKey: 'vps.access.checklist.ssh.stopped.description',
-      }
-    : options.sshCommand
-      ? {
-          id: 'ssh-command',
-          state: 'ready',
-          titleKey: 'vps.access.checklist.ssh.ready.title',
-          descriptionKey: 'vps.access.checklist.ssh.ready.description',
-        }
-      : {
-          id: 'ssh-command',
-          state: 'attention',
-          titleKey: 'vps.access.checklist.ssh.no_address.title',
-          descriptionKey: 'vps.access.checklist.ssh.no_address.description',
-        };
-
   const publicKeyItem: VpsAccessChecklistItem = !options.publicKeysLoaded
     ? {
         id: 'public-key',
@@ -163,5 +140,5 @@ export function buildVpsAccessChecklist(options: AccessChecklistOptions): VpsAcc
         descriptionKey: 'vps.access.checklist.root_password.blocked.description',
       };
 
-  return [sshItem, publicKeyItem, hostKeyItem, rootPasswordItem];
+  return [publicKeyItem, hostKeyItem, rootPasswordItem];
 }

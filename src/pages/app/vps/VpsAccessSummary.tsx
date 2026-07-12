@@ -3,7 +3,6 @@ import React from 'react';
 import { useI18n } from '../../../app/i18n';
 import { Alert } from '../../../components/ui/Alert';
 import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
-import { CopyButton } from '../../../components/ui/CopyButton';
 import { clsx } from '../../../components/ui/clsx';
 import type { VpsAccessChecklistItem, VpsAccessChecklistState } from './VpsAccessModel';
 
@@ -75,38 +74,6 @@ export function VpsAccessChecklistCard(props: { items: VpsAccessChecklistItem[] 
             <p className="mt-2 text-sm text-muted">{translate(t, item.descriptionKey, item.values)}</p>
           </div>
         ))}
-      </CardBody>
-    </Card>
-  );
-}
-
-export function VpsSshCommandCard(props: { sshCommand: string | null; isRunning: boolean }) {
-  const { t } = useI18n();
-
-  return (
-    <Card testId="vps.access.ssh_command">
-      <CardHeader
-        title={t('vps.access.ssh_command.title')}
-        subtitle={t('vps.access.ssh_command.subtitle')}
-        actions={
-          props.sshCommand ? <CopyButton text={props.sshCommand} label={t('vps.access.ssh_command.copy')} testId="vps.access.ssh_command.copy" /> : null
-        }
-      />
-      <CardBody className="space-y-3">
-        {props.sshCommand ? (
-          <code className="block overflow-x-auto rounded-lg border border-border bg-surface-2 px-3 py-2 font-mono text-sm text-fg" data-testid="vps.access.ssh_command.value">
-            {props.sshCommand}
-          </code>
-        ) : (
-          <Alert variant="warn" title={t('vps.access.ssh_command.no_address.title')}>
-            {t('vps.access.ssh_command.no_address.description')}
-          </Alert>
-        )}
-        {!props.isRunning ? (
-          <Alert variant="warn" title={t('vps.access.ssh_command.stopped.title')}>
-            {t('vps.access.ssh_command.stopped.description')}
-          </Alert>
-        ) : null}
       </CardBody>
     </Card>
   );
