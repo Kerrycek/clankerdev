@@ -163,12 +163,14 @@ Prefer:
 
 ### Examples
 
-Overlay surfaces must stay fully opaque: use `bg-backdrop` for the backdrop and `bg-overlay-surface` for the panel. Do not use `bg-overlay/40`, `backdrop-blur-*`, gradients, or reduced `opacity` on overlay surfaces.
+Overlay panels must stay fully opaque. Their shared page backdrop is translucent so
+the surrounding application remains visible and keeps the user oriented. Do not
+blur the page or reduce the opacity of the panel itself.
 
 - **Card**: `bg-surface border-border shadow-card`
 - **Input/Select/Textarea**: `bg-surface border-border` + `focus:ring-focus/35`
 - **Modal/Drawer**:
-  - backdrop: `bg-backdrop` *(opaque; no blur, no gradients, no reduced opacity)*
+  - backdrop: `bg-backdrop/45` *(translucent; no blur or gradients)*
   - panel: `bg-overlay-surface ring-1 ring-border shadow-panel`
 
 ## Non-color tokens

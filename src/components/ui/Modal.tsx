@@ -72,7 +72,7 @@ export function Modal(props: {
   return createPortal(
     <div className={clsx('fixed inset-0 z-50 flex items-center justify-center', mobileFullScreen ? 'p-0 sm:p-4' : 'p-4')}>
       <div
-        className="absolute inset-0 bg-backdrop"
+        className="absolute inset-0 bg-backdrop/45"
         data-overlay-backdrop="true"
         onClick={props.onClose}
         aria-hidden="true"

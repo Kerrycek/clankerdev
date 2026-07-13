@@ -11,11 +11,11 @@ function read(relPath) {
 const checks = [
   {
     file: 'src/components/ui/Modal.tsx',
-    mustInclude: ['bg-backdrop', 'data-overlay-backdrop="true"', 'data-overlay="modal"', 'data-overlay-surface="overlay"', 'bg-overlay-surface'],
+    mustInclude: ['bg-backdrop/45', 'data-overlay-backdrop="true"', 'data-overlay="modal"', 'data-overlay-surface="overlay"', 'bg-overlay-surface'],
   },
   {
     file: 'src/components/ui/Drawer.tsx',
-    mustInclude: ['bg-backdrop', 'data-overlay-backdrop="true"', 'data-overlay="drawer"', 'data-overlay-surface="overlay"', 'bg-overlay-surface'],
+    mustInclude: ['bg-backdrop/45', 'data-overlay-backdrop="true"', 'data-overlay="drawer"', 'data-overlay-surface="overlay"', 'bg-overlay-surface'],
   },
   {
     file: 'src/app/toasts.tsx',

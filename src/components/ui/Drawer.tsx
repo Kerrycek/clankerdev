@@ -58,7 +58,7 @@ export function Drawer(props: {
     <div className={clsx('fixed inset-0 z-50', modal ? undefined : 'pointer-events-none')}>
       {modal ? (
         <div
-          className="absolute inset-0 bg-backdrop"
+          className="absolute inset-0 bg-backdrop/45"
           data-overlay-backdrop="true"
           onClick={props.onClose}
           aria-hidden="true"

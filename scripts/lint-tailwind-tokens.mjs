@@ -45,10 +45,9 @@ const forbiddenEverywhere = [
   { needle: 'h-[', msg: 'Forbidden: h-[…] (use h-console or other height tokens)' },
   { needle: 'min-h-[', msg: 'Forbidden: min-h-[…] (use min-h-textarea or other min-height tokens)' },
   { needle: 'text-[', msg: 'Forbidden: text-[…] (use the typography scale: text-xs/sm/base/…)' },
-  { needle: 'bg-overlay/', msg: 'Forbidden: bg-overlay/… (overlays must be opaque; use bg-backdrop and bg-overlay-surface without alpha)' },
-  { needle: 'bg-backdrop/', msg: 'Forbidden: bg-backdrop/… (backdrops must be opaque; use bg-backdrop)' },
+  { needle: 'bg-overlay/', msg: 'Forbidden: bg-overlay/… (use the canonical translucent bg-backdrop/45 for page backdrops)' },
   { needle: 'bg-overlay-surface/', msg: 'Forbidden: bg-overlay-surface/… (overlay surfaces must be opaque; use bg-overlay-surface)' },
-  { needle: 'backdrop-blur', msg: 'Forbidden: backdrop-blur (overlays must be solid/opaque per spec)' },
+  { needle: 'backdrop-blur', msg: 'Forbidden: backdrop-blur (keep the page visible and sharp behind overlays)' },
 
   // Semantic surfaces must not use alpha modifiers. If a different intensity is needed, introduce a token.
   { needle: 'bg-ok-bg/', msg: 'Forbidden: bg-ok-bg/… (use bg-ok-bg or bg-ok-row)' },
@@ -103,6 +102,15 @@ for (const file of allFiles) {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+
+    if (line.includes('bg-backdrop/') && !line.includes('bg-backdrop/45')) {
+      issues.push({
+        file: rel,
+        line: i + 1,
+        msg: 'Forbidden: use the canonical bg-backdrop/45 opacity for page backdrops',
+        preview: line.trim(),
+      });
+    }
 
     for (const rule of forbiddenEverywhere) {
       if (line.includes(rule.needle)) {

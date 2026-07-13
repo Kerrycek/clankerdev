@@ -15,6 +15,13 @@ function parseAlpha(bg: string): number {
     if (parts.length === 4) return Number(parts[3]);
   }
 
+  const slashAlpha = t.match(/\/\s*([\d.]+%?)/);
+  if (slashAlpha?.[1]) {
+    return slashAlpha[1].endsWith('%')
+      ? Number(slashAlpha[1].slice(0, -1)) / 100
+      : Number(slashAlpha[1]);
+  }
+
   if (t.startsWith('rgb(')) return 1;
 
   return NaN;
@@ -37,13 +44,34 @@ async function assertOpaqueSurface(el: Locator) {
   expect(Number(styles.opacity)).toBe(1);
   expect(styles.backgroundImage).toBe('none');
 
-  // Both must be none/empty for “solid overlay” contract.
+  // Panels stay sharp and fully opaque.
   expect(String(styles.backdropFilter ?? 'none')).toBe('none');
   expect(styles.filter).toBe('none');
 }
 
-test.describe('@smoke opaque overlay surfaces', () => {
-  test('modal, drawer, command palette and toast surfaces are fully opaque in light and dark', async ({ page }) => {
+async function assertTranslucentBackdrop(el: Locator) {
+  await expect(el).toBeVisible();
+  const styles = await el.evaluate((node) => {
+    const cs = getComputedStyle(node);
+    return {
+      backgroundColor: cs.backgroundColor,
+      opacity: cs.opacity,
+      backgroundImage: cs.backgroundImage,
+      backdropFilter: (cs as any).backdropFilter,
+      filter: cs.filter,
+    };
+  });
+
+  expect(parseAlpha(styles.backgroundColor)).toBeGreaterThanOrEqual(0.4);
+  expect(parseAlpha(styles.backgroundColor)).toBeLessThanOrEqual(0.5);
+  expect(Number(styles.opacity)).toBe(1);
+  expect(styles.backgroundImage).toBe('none');
+  expect(String(styles.backdropFilter ?? 'none')).toBe('none');
+  expect(styles.filter).toBe('none');
+}
+
+test.describe('@smoke overlay surfaces', () => {
+  test('keeps panels opaque and page backdrops translucent in light and dark', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, {
       sessionToken: 'TEST_SESSION',
       webuiNext: {
@@ -71,7 +99,7 @@ test.describe('@smoke opaque overlay surfaces', () => {
       // Modal
       await page.getByRole('button', { name: 'Open modal' }).click();
       await assertOpaqueSurface(page.getByTestId('design.modal'));
-      await assertOpaqueSurface(page.locator('[data-overlay-backdrop="true"]').first());
+      await assertTranslucentBackdrop(page.locator('[data-overlay-backdrop="true"]').first());
 
       // Toast (triggered from modal Save)
       await page.getByRole('button', { name: 'Save' }).click();
@@ -81,12 +109,14 @@ test.describe('@smoke opaque overlay surfaces', () => {
       // Drawer
       await page.getByRole('button', { name: 'Open drawer (left)' }).click();
       await assertOpaqueSurface(page.getByTestId('design.drawer.left'));
+      await assertTranslucentBackdrop(page.locator('[data-overlay-backdrop="true"]').first());
       await page.getByTestId('design.drawer.left.close').click();
       await expect(page.getByTestId('design.drawer.left')).toBeHidden();
 
       // Command palette
       await page.keyboard.press('Control+K');
       await assertOpaqueSurface(page.getByTestId('palette.modal'));
+      await assertTranslucentBackdrop(page.locator('[data-overlay-backdrop="true"]').first());
       await page.keyboard.press('Escape');
       await expect(page.getByTestId('palette.modal')).toBeHidden();
     }
