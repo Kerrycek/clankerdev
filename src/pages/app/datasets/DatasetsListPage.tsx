@@ -47,30 +47,32 @@ import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 import { VpsLookupInput } from '../../../components/ui/VpsLookupInput';
 import { toneSurfaceClass } from '../../../components/ui/tone';
 
-function DatasetUsage(props: { used?: number; refquota?: number }) {
+import { datasetUsageBreakdown } from './DatasetUsageModel';
+
+function DatasetUsage(props: { used?: number; refquota?: number; avail?: number }) {
   const { t } = useI18n();
   const usedRaw = typeof props.used === 'number' && Number.isFinite(props.used) ? props.used : undefined;
   const quotaRaw =
     typeof props.refquota === 'number' && Number.isFinite(props.refquota) && props.refquota > 0 ? props.refquota : undefined;
 
-  const used = Math.max(0, usedRaw ?? 0);
-  const quota = quotaRaw;
+  const usage = useMemo(
+    () => datasetUsageBreakdown(props),
+    [props.avail, props.refquota, props.used]
+  );
 
   const segs = useMemo(() => {
-    if (quota === undefined) {
-      return used > 0
-        ? [{ value: used, variant: 'accent' as const, title: t('datasets.usage.used_mib', { mib: used.toFixed(0) }) }]
-        : [{ value: 1, variant: 'neutral' as const, title: t('datasets.usage.no_data') }];
-    }
+    if (usage === null) return [{ value: 1, variant: 'neutral' as const, title: t('datasets.usage.no_data') }];
 
-    const max = Math.max(0, quota);
-    const free = Math.max(0, max - used);
-    const v = usageSeverityFromRatio(max > 0 ? used / max : 0);
+    const v = usageSeverityFromRatio(usage.ratio);
     return [
-      { value: used, variant: v, title: t('datasets.usage.used_mib', { mib: used.toFixed(0) }) },
-      { value: free, variant: 'neutral' as const, title: t('datasets.usage.free_mib', { mib: free.toFixed(0) }) },
+      { value: usage.used, variant: v, title: t('datasets.usage.used_mib', { mib: usage.used.toFixed(0) }) },
+      {
+        value: usage.free,
+        variant: 'neutral' as const,
+        title: t('datasets.usage.free_mib', { mib: usage.free.toFixed(0) }),
+      },
     ];
-  }, [quota, t, used]);
+  }, [t, usage]);
 
   return (
     <div className="space-y-1">
@@ -710,7 +712,7 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
                     </div>
 
                     <div className="mt-3">
-                      <DatasetUsage used={ds.used as any} refquota={ds.refquota as any} />
+                      <DatasetUsage used={ds.used} refquota={ds.refquota} avail={ds.avail} />
                     </div>
 
                     <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
@@ -862,7 +864,7 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
                       </td>
                     ) : null}
                     <td className="px-4 py-2">
-                      <DatasetUsage used={ds.used as any} refquota={ds.refquota as any} />
+                      <DatasetUsage used={ds.used} refquota={ds.refquota} avail={ds.avail} />
                     </td>
                     {showSnapshotColumn ? <td className="px-4 py-2">{ds.snapshots_count ?? 0}</td> : null}
                     {showMountColumn ? <td className="px-4 py-2">{ds.mount_count ?? 0}</td> : null}

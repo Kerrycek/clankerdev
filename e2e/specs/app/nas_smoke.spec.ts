@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { bootstrapVpsAdminWindow, installHaveApiMock, jsonFulfill } from '../../fixtures';
 
 test.describe('NAS datasets alias', () => {
-  test('renders NAS alias with primary-role datasets, owner rows, and no VPS advanced filter', async ({ page }) => {
+  test('renders NAS alias with primary-role datasets, owner rows, and unlimited capacity usage', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
     let requestedRole: string | null = null;
@@ -20,12 +20,12 @@ test.describe('NAS datasets alias', () => {
           return {
             datasets: [
               {
-                id: 901,
-                full_name: 'tank/nas/alice',
-                name: 'alice',
+                id: 53,
+                full_name: '53/kerryhobordel',
+                name: 'kerryhobordel',
                 user: { id: 44, login: 'alice' },
-                used: 1024,
-                refquota: 4096,
+                used: 1_900 * 1024,
+                avail: 1_400 * 1024,
                 snapshots_count: 1,
                 mount_count: 0,
                 export_count: 0,
@@ -40,10 +40,28 @@ test.describe('NAS datasets alias', () => {
     await page.goto('/admin/nas');
 
     await expect(page.getByTestId('datasets.list.header')).toContainText('NAS');
-    await expect(page.getByTestId('datasets.row.901')).toBeVisible();
-    await expect(page.getByTestId('datasets.row.901')).toContainText('alice');
+    const row = page.getByTestId('datasets.row.53');
+    await expect(row).toBeVisible();
+    await expect(row).toContainText('kerryhobordel');
+    await expect(row).toContainText('1.9 TiB');
+
+    const segments = row.getByRole('img', { name: 'Dataset space usage' }).locator('[style*="width"]');
+    await expect(segments).toHaveCount(2);
+    await expect(segments.nth(0)).toHaveCSS('width', /.+/);
+
+    const widths = await segments.evaluateAll((elements) =>
+      elements.map((element) => Number.parseFloat((element as HTMLElement).style.width))
+    );
+    expect(widths[0]).toBeCloseTo((1_900 / 3_300) * 100, 3);
+    expect(widths[1]).toBeCloseTo((1_400 / 3_300) * 100, 3);
+
     expect(requestedRole).toBe('primary');
     expect(requestedIncludes).toBe('user');
+
+    const proofScreenshot = process.env.E2E_NAS_USAGE_PROOF_SCREENSHOT?.trim();
+    if (proofScreenshot) {
+      await page.screenshot({ path: proofScreenshot, fullPage: true });
+    }
 
     await page.getByTestId('datasets.filters.advanced.open').click();
     await expect(page.getByTestId('datasets.advanced.vps')).toHaveCount(0);
