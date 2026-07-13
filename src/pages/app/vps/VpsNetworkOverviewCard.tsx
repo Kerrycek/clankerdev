@@ -42,7 +42,6 @@ export function VpsNetworkOverviewCard(props: {
   year: number;
   month: number;
   onRefresh: () => void;
-  onAddIpAddress: () => void;
   onOpenTasks: () => void;
 }) {
   const { t } = useI18n();
@@ -55,16 +54,6 @@ export function VpsNetworkOverviewCard(props: {
         subtitle={t('vps.network.overview.subtitle')}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <ActionButton
-              variant="primary"
-              size="sm"
-              testId="vps.network.ip_addresses.add"
-              disabled={!gate.allowed}
-              disabledReason={!gate.allowed ? gate.reason : undefined}
-              onClick={props.onAddIpAddress}
-            >
-              {t('network.user.action.add')}
-            </ActionButton>
             <Button variant="secondary" size="sm" testId="vps.network.accounting.refresh" onClick={props.onRefresh}>
               {t('common.refresh')}
             </Button>

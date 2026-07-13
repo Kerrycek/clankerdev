@@ -13,12 +13,10 @@ import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { Input } from '../../../components/ui/Input';
 import { Modal } from '../../../components/ui/Modal';
 import { Select } from '../../../components/ui/Select';
-import { Textarea } from '../../../components/ui/Textarea';
 import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 import { fetchEnvironments } from '../../../lib/api/infra';
 import {
   assignIpAddressRoute,
-  assignIpAddressRouteWithHostAddress,
   fetchIpAddressesForVps,
   freeIpAddressRoute,
   updateIpAddress,
@@ -26,7 +24,6 @@ import {
 } from '../../../lib/api/ipAddresses';
 import {
   assignHostIpAddress,
-  createHostIpAddress,
   deleteHostIpAddress,
   fetchHostIpAddresses,
   freeHostIpAddress,
@@ -40,7 +37,7 @@ import { gateVpsMutation } from '../../../lib/gates/vps';
 import { preflightVpsNotBusy } from './vpsPreflight';
 import { useVps } from './VpsContext';
 import { VpsNetworkInterfacesCard } from './VpsNetworkInterfacesCard';
-import { VpsNetworkAdvancedSection } from './VpsNetworkAdvancedSection';
+import { VpsNetworkAddressesSection } from './VpsNetworkAddressesSection';
 import { VpsNetworkOverviewCard } from './VpsNetworkOverviewCard';
 import { AssignIpAddressModal } from '../networking/AssignIpAddressModal';
 import {
@@ -57,7 +54,6 @@ import {
   monthKey,
   parsePositiveId,
   sumAccountingRows,
-  validateHostAddressInput,
   validatePtrValue,
 } from './VpsNetworkModel';
 
@@ -123,8 +119,6 @@ export function VpsNetworkPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const [ptrEditor, setPtrEditor] = useState<HostIpAddress | null>(null);
   const [ptrValue, setPtrValue] = useState('');
-  const [createHostForIp, setCreateHostForIp] = useState<IpAddress | null>(null);
-  const [createHostValue, setCreateHostValue] = useState('');
   const [assignHost, setAssignHost] = useState<HostIpAddress | null>(null);
   const [assignHostInterface, setAssignHostInterface] = useState('');
   const [freeHost, setFreeHost] = useState<HostIpAddress | null>(null);
@@ -132,7 +126,6 @@ export function VpsNetworkPage() {
   const [freeRouteIp, setFreeRouteIp] = useState<IpAddress | null>(null);
   const [assignRouteIp, setAssignRouteIp] = useState<IpAddress | null>(null);
   const [assignRouteInterface, setAssignRouteInterface] = useState('');
-  const [assignRouteWithHost, setAssignRouteWithHost] = useState(false);
   const [ownerIp, setOwnerIp] = useState<IpAddress | null>(null);
   const [ownerUser, setOwnerUser] = useState('');
   const [ownerEnvironment, setOwnerEnvironment] = useState('');
@@ -336,35 +329,6 @@ export function VpsNetworkPage() {
     onSettled: () => chrome.releaseLocalLock(vpsRef),
   });
 
-  const createHostM = useMutation({
-    mutationFn: async () => {
-      if (!createHostForIp) throw new Error(t('vps.network.host_addresses.validation.missing_ip'));
-      await preflightVpsNotBusy({ vpsId, t, knownBusy: busyTransaction || busyLocalLock });
-      const addrs = createHostValue
-        .split(/\r?\n/)
-        .map((v) => v.trim())
-        .filter(Boolean);
-      if (addrs.length === 0) throw new Error(t('vps.network.host_addresses.validation.empty'));
-      const results = [];
-      for (const addr of addrs) {
-        results.push(await createHostIpAddress({ ip_address: createHostForIp.id, addr }));
-      }
-      return results;
-    },
-    onMutate: () => chrome.acquireLocalLock(vpsRef),
-    onSuccess: async (results) => {
-      setCreateHostForIp(null);
-      setCreateHostValue('');
-      for (const res of results) trackNetworkAction(res.meta, 'action.vps.network.host_create.label');
-      await refreshNetworkData();
-      pushToast({ variant: 'ok', title: t('vps.network.host_addresses.toast.created', { count: results.length }) });
-    },
-    onError: (e: any) => {
-      if (e?.code === 'BUSY') chrome.openTasks();
-    },
-    onSettled: () => chrome.releaseLocalLock(vpsRef),
-  });
-
   const freeHostM = useMutation({
     mutationFn: async () => {
       if (!freeHost) throw new Error(t('vps.network.host_addresses.validation.missing'));
@@ -453,16 +417,12 @@ export function VpsNetworkPage() {
         throw new Error(t('vps.network.ip_addresses.assign.validation.interface'));
       }
       await preflightVpsNotBusy({ vpsId, t, knownBusy: busyTransaction || busyLocalLock });
-      if (assignRouteWithHost) {
-        return assignIpAddressRouteWithHostAddress(assignRouteIp.id, { network_interface: networkInterface });
-      }
       return assignIpAddressRoute(assignRouteIp.id, { network_interface: networkInterface });
     },
     onMutate: () => chrome.acquireLocalLock(vpsRef),
     onSuccess: async (res) => {
       setAssignRouteIp(null);
       setAssignRouteInterface('');
-      setAssignRouteWithHost(false);
       trackNetworkAction(res.meta, 'action.vps.network.route_assign.label');
       await refreshNetworkData();
       pushToast({ variant: 'ok', title: t('vps.network.ip_addresses.toast.route_assigned') });
@@ -509,7 +469,6 @@ export function VpsNetworkPage() {
     updateNetifM.isPending ||
     toggleNetM.isPending ||
     updatePtrM.isPending ||
-    createHostM.isPending ||
     assignHostM.isPending ||
     freeHostM.isPending ||
     deleteHostM.isPending ||
@@ -523,11 +482,9 @@ export function VpsNetworkPage() {
   const hostRows = hostAddrsQ.data ?? [];
   const unassignedIps = ipByNetif.get(-1) ?? [];
   const networkSummary = useMemo(() => buildNetworkRouteSummary({ netifs, ips, hostAddresses: hostRows }), [hostRows, ips, netifs]);
-  const createHostValidation = useMemo(() => validateHostAddressInput(createHostValue), [createHostValue]);
   const ptrValidation = useMemo(() => validatePtrValue(ptrValue), [ptrValue]);
   const networkActionError =
     updatePtrM.error ??
-    createHostM.error ??
     assignHostM.error ??
     freeHostM.error ??
     deleteHostM.error ??
@@ -554,7 +511,6 @@ export function VpsNetworkPage() {
           void ipsQ.refetch();
           void hostAddrsQ.refetch();
         }}
-        onAddIpAddress={() => setAddIpOpen(true)}
         onOpenTasks={chrome.openTasks}
       />
 
@@ -568,15 +524,12 @@ export function VpsNetworkPage() {
         onEdit={openEdit}
       />
 
-      <VpsNetworkAdvancedSection
+      <VpsNetworkAddressesSection
         canAdmin={canAdmin}
         adminBasePath={adminBasePath}
         netEnabled={netEnabled}
         gate={gate}
         netToggleError={netToggleError}
-        routeCount={ips.length}
-        detachedCount={unassignedIps.length}
-        hostCount={hostRows.length}
         routesLoading={ipsQ.isLoading}
         routesErrorMessage={ipsQ.isError ? errorMessage(ipsQ.error) : null}
         hostsLoading={hostAddrsQ.isLoading}
@@ -591,6 +544,7 @@ export function VpsNetworkPage() {
         assignHostPending={assignHostM.isPending}
         freeHostPending={freeHostM.isPending}
         deleteHostPending={deleteHostM.isPending}
+        onAddRoute={() => setAddIpOpen(true)}
         onDisableNetwork={() => {
           setNetToggleError(null);
           setConfirmDisableOpen(true);
@@ -601,10 +555,6 @@ export function VpsNetworkPage() {
         }}
         onRefreshRoutes={() => void ipsQ.refetch()}
         onRefreshHosts={() => void hostAddrsQ.refetch()}
-        onCreateHostAddress={(ip) => {
-          setCreateHostForIp(ip);
-          setCreateHostValue('');
-        }}
         onEditOwner={(ip) => {
           setOwnerIp(ip);
           setOwnerUser('');
@@ -614,7 +564,6 @@ export function VpsNetworkPage() {
         onAssignRoute={(ip) => {
           setAssignRouteIp(ip);
           setAssignRouteInterface('');
-          setAssignRouteWithHost(false);
         }}
         onEditPtr={(row) => {
           setPtrEditor(row);
@@ -622,7 +571,8 @@ export function VpsNetworkPage() {
         }}
         onAssignHost={(row) => {
           setAssignHost(row);
-          setAssignHostInterface('');
+          const networkInterfaceId = idFromResourceRef(row.ip_address?.network_interface);
+          setAssignHostInterface(networkInterfaceId ? String(networkInterfaceId) : '');
         }}
         onFreeHost={setFreeHost}
         onDeleteHost={setDeleteHost}
@@ -737,64 +687,6 @@ export function VpsNetworkPage() {
           ) : (
             <div className="text-xs text-muted">{t('vps.network.edit.user_mode_hint')}</div>
           )}
-        </div>
-      </Modal>
-
-      <Modal
-        open={!!createHostForIp}
-        testId="vps.network.host_addresses.create"
-        title={
-          createHostForIp
-            ? t('vps.network.host_addresses.create.title_for_ip', {
-                address: ipAddressLabel(createHostForIp),
-              })
-            : t('vps.network.host_addresses.create.title')
-        }
-        onClose={() => {
-          if (createHostM.isPending) return;
-          setCreateHostForIp(null);
-          setCreateHostValue('');
-        }}
-        footer={
-          <div className="flex items-center justify-end gap-2">
-            <Button
-              variant="secondary"
-              testId="vps.network.host_addresses.create.cancel"
-              onClick={() => {
-                setCreateHostForIp(null);
-                setCreateHostValue('');
-              }}
-              disabled={createHostM.isPending}
-            >
-              {t('common.cancel')}
-            </Button>
-            <ActionButton
-              testId="vps.network.host_addresses.create.submit"
-              loading={createHostM.isPending}
-              disabled={!createHostValue.trim() || !createHostValidation.ok || !gate.allowed}
-              disabledReason={!gate.allowed ? gate.reason : undefined}
-              onClick={() => createHostM.mutate()}
-            >
-              {t('vps.network.host_addresses.create.submit')}
-            </ActionButton>
-          </div>
-        }
-      >
-        <div className="space-y-3">
-          <div className="text-sm text-muted">{t('vps.network.host_addresses.create.help')}</div>
-          {createHostValue.trim() && !createHostValidation.ok ? (
-            <Alert title={t('vps.network.host_addresses.create.validation.title')} variant="warn">
-              {t('vps.network.host_addresses.validation.invalid_address', { value: createHostValidation.invalidValue ?? createHostValue.trim() })}
-            </Alert>
-          ) : null}
-          <Textarea
-            rows={5}
-            testId="vps.network.host_addresses.create.addresses"
-            value={createHostValue}
-            onChange={(e) => setCreateHostValue(e.target.value)}
-            placeholder={t('vps.network.host_addresses.create.placeholder')}
-            disabled={createHostM.isPending}
-          />
         </div>
       </Modal>
 
@@ -1059,7 +951,6 @@ export function VpsNetworkPage() {
           if (assignRouteM.isPending) return;
           setAssignRouteIp(null);
           setAssignRouteInterface('');
-          setAssignRouteWithHost(false);
         }}
         footer={
           <div className="flex items-center justify-end gap-2">
@@ -1069,7 +960,6 @@ export function VpsNetworkPage() {
               onClick={() => {
                 setAssignRouteIp(null);
                 setAssignRouteInterface('');
-                setAssignRouteWithHost(false);
               }}
               disabled={assignRouteM.isPending}
             >
@@ -1102,19 +992,6 @@ export function VpsNetworkPage() {
                 })),
               ]}
             />
-          </label>
-          <label className="flex items-start gap-2 text-sm">
-            <input
-              data-testid="vps.network.ip_addresses.assign_route.with_host"
-              type="checkbox"
-              checked={assignRouteWithHost}
-              onChange={(e) => setAssignRouteWithHost(e.target.checked)}
-              className="mt-1 h-4 w-4 rounded border-border bg-surface text-accent focus:ring-2 focus:ring-focus/35 focus:ring-offset-2 focus:ring-offset-bg"
-            />
-            <span>
-              <span className="font-medium">{t('vps.network.ip_addresses.assign.with_host')}</span>
-              <span className="block text-xs text-muted">{t('vps.network.ip_addresses.assign.with_host_help')}</span>
-            </span>
           </label>
           <div className="text-xs text-muted">{t('vps.network.ip_addresses.assign.help')}</div>
         </div>

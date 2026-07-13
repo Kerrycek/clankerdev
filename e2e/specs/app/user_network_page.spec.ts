@@ -109,6 +109,7 @@ test('@pr-smoke user network page lists only own addresses and assigns all suppo
   await page.getByTestId('network.user.add').click();
   await page.getByTestId('network.user.assign.vps').selectOption('123');
   await page.getByTestId('network.user.assign.kind').selectOption('ipv4_private');
+  await page.getByTestId('network.user.assign.continue').click();
   await expect(page.getByTestId('network.user.assign.address')).toContainText('10.20.30.40/32');
 
   const request = page.waitForRequest(
