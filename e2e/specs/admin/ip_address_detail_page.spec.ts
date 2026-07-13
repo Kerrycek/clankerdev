@@ -20,6 +20,12 @@ test('admin ip address detail: shows header and links to user/vps', async ({ pag
           user: { id: 42 },
         },
       }),
+      'GET host_ip_addresses': () => ({
+        host_ip_addresses: [
+          { id: 601, addr: '203.0.113.11', assigned: true, reverse_record_value: 'host.example.test.' },
+          { id: 602, addr: '203.0.113.12', assigned: false, user_created: true },
+        ],
+      }),
     },
   });
 
@@ -32,4 +38,12 @@ test('admin ip address detail: shows header and links to user/vps', async ({ pag
   await expect(page.getByTestId('admin.ip.action.user')).toHaveAttribute('href', '/admin/users/42');
 
   await expect(page.getByTestId('admin.ip_address.refresh')).toBeVisible();
+  await expect(page.getByTestId('admin.ip.hosts.row.601.ptr')).toHaveAttribute('aria-label', 'PTR');
+  await expect(page.getByTestId('admin.ip.hosts.row.601.free')).toHaveAttribute('aria-label', 'Remove');
+  await expect(page.getByTestId('admin.ip.hosts.row.602.assign')).toHaveAttribute('aria-label', 'Assign');
+  await expect(page.getByTestId('admin.ip.hosts.row.602.delete')).toHaveAttribute('aria-label', 'Delete');
+  await expect(page.getByTestId('admin.ip.hosts.row.602.ptr')).toHaveText('');
+
+  const proofScreenshot = process.env.E2E_IP_DETAIL_ACTIONS_PROOF_SCREENSHOT?.trim();
+  if (proofScreenshot) await page.screenshot({ path: proofScreenshot, fullPage: true });
 });

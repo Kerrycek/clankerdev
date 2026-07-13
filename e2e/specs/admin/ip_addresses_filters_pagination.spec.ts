@@ -94,3 +94,39 @@ test('admin ip addresses: filters + keyset pagination (from_id)', async ({ page 
   await expect(page.getByTestId('admin.ip_addresses.row.75')).toBeVisible();
   await expect(page.getByTestId('admin.ip_addresses.row.75')).toHaveAttribute('data-row-variant', 'warn');
 });
+
+test('admin IP address cards keep compact actions on mobile', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100 },
+    handlers: {
+      'GET locations': () => ({ locations: [] }),
+      'GET ip_addresses': () => ({
+        ip_addresses: [{
+          id: 125,
+          addr: '192.0.2.125',
+          prefix: 32,
+          routed: true,
+          user: { id: 7, login: 'alice' },
+          vps: { id: 42, hostname: 'vps-42' },
+          network: { id: 3000, address: '192.0.2.0', prefix: 24 },
+          network_interface: { id: 4000, name: 'eth0' },
+          created_at: '2025-01-01T00:00:00Z',
+        }],
+      }),
+    },
+  });
+
+  await page.goto('/admin/ip-addresses');
+
+  const card = page.getByTestId('admin.ip_addresses.card.125');
+  await expect(card).toBeVisible();
+  await expect(card.getByTestId('admin.ip_addresses.card.125.action.incidents')).toHaveAttribute('aria-label', 'Incidents');
+  await expect(card.getByTestId('admin.ip_addresses.card.125.action.route')).toHaveAttribute('aria-label', 'Remove route');
+  await expect(card.getByTestId('admin.ip_addresses.card.125.action.owner')).toHaveAttribute('aria-label', 'Ownership');
+  await expect(card.getByTestId('admin.ip_addresses.card.125.action.hosts')).toHaveAttribute('aria-label', 'Host IP addresses');
+
+  const proofScreenshot = process.env.E2E_IP_ACTIONS_MOBILE_PROOF_SCREENSHOT?.trim();
+  if (proofScreenshot) await page.screenshot({ path: proofScreenshot, fullPage: true });
+});
