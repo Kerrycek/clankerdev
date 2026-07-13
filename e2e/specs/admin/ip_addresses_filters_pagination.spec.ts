@@ -12,6 +12,7 @@ test('admin ip addresses: filters + keyset pagination (from_id)', async ({ page 
   await installHaveApiMock(page, {
     user: { id: 1, login: 'admin', level: 100 },
     handlers: {
+      'GET locations': () => ({ locations: [] }),
       'GET ip_addresses': (ctx) => {
         const fromId = ctx.searchParams.get('ip_address[from_id]');
         const limitStr = ctx.searchParams.get('ip_address[limit]');
@@ -59,9 +60,26 @@ test('admin ip addresses: filters + keyset pagination (from_id)', async ({ page 
   expect(seenOrder).toBeNull();
   await expect(page.getByTestId('admin.ip_addresses.row.125')).toHaveAttribute('data-row-variant', 'warn');
   await expect(page.getByTestId('admin.ip_addresses.row.125.dot')).toBeVisible();
-  await expect(page.getByTestId('admin.ip_addresses.row.125')).toContainText('Incidents');
-  await expect(page.getByTestId('admin.ip_addresses.row.125')).toContainText('Assign route');
-  await expect(page.getByTestId('admin.ip_addresses.row.125')).toContainText('Ownership');
+  const incidentsAction = page.getByTestId('admin.ip_addresses.row.125.action.incidents');
+  const assignmentsAction = page.getByTestId('admin.ip_addresses.row.125.action.assignments');
+  const routeAction = page.getByTestId('admin.ip_addresses.row.125.action.route');
+  const ownerAction = page.getByTestId('admin.ip_addresses.row.125.action.owner');
+  const hostsAction = page.getByTestId('admin.ip_addresses.row.125.action.hosts');
+  await expect(incidentsAction).toHaveAttribute('aria-label', 'Incidents');
+  await expect(assignmentsAction).toHaveAttribute('aria-label', 'Assignments');
+  await expect(routeAction).toHaveAttribute('aria-label', 'Assign route');
+  await expect(routeAction).toHaveAttribute('title', 'Assign route');
+  await expect(routeAction).toHaveAttribute('href', '/admin/ip-addresses/125#route');
+  await expect(ownerAction).toHaveAttribute('aria-label', 'Ownership');
+  await expect(hostsAction).toHaveAttribute('aria-label', 'Host IP addresses');
+  await expect(incidentsAction).toHaveText('');
+  await expect(routeAction).toHaveText('');
+  await expect(page.getByTestId('admin.ip_addresses.row.124.action.route')).toHaveAttribute('aria-label', 'Remove route');
+
+  const proofScreenshot = process.env.E2E_IP_ACTIONS_PROOF_SCREENSHOT?.trim();
+  if (proofScreenshot) {
+    await page.screenshot({ path: proofScreenshot });
+  }
 
   // Apply a server-side filter.
   const sfi = page.getByTestId('admin.ip_addresses.smart_filter.input');

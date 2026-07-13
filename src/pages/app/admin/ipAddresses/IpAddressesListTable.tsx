@@ -12,6 +12,7 @@ import { StatusDot } from '../../../../components/ui/StatusDot';
 import { TableCard } from '../../../../components/ui/TableCard';
 import { TableRowLink } from '../../../../components/ui/TableRowLink';
 
+import { IpAddressRowActions } from './IpAddressRowActions';
 import {
   ifaceLabel,
   environmentLabel,
@@ -62,6 +63,7 @@ export function IpAddressesListTable({ pageData, ipDetailBasePath, basePath, na,
     <TableCard
       className="hidden md:block"
       minWidth="lg"
+      tableClassName="table-fixed"
       tableTestId="admin.ip_addresses.table"
       footer={
         canPaginate ? (
@@ -81,6 +83,18 @@ export function IpAddressesListTable({ pageData, ipDetailBasePath, basePath, na,
         ) : null
       }
     >
+      <colgroup>
+        <col style={{ width: '3%' }} />
+        <col style={{ width: '14%' }} />
+        <col style={{ width: '10%' }} />
+        <col style={{ width: '8%' }} />
+        <col style={{ width: '9%' }} />
+        <col style={{ width: '9%' }} />
+        <col style={{ width: '9%' }} />
+        <col style={{ width: '10%' }} />
+        <col style={{ width: '9%' }} />
+        <col style={{ width: '19%' }} />
+      </colgroup>
       <thead>
         <tr className="border-b border-border text-left text-xs text-muted">
           <th className="w-8 px-4 py-2" aria-label={t('common.state')} />
@@ -92,7 +106,7 @@ export function IpAddressesListTable({ pageData, ipDetailBasePath, basePath, na,
           <th className="px-4 py-2">{t('admin.ip_addresses.field.interface')}</th>
           <th className="px-4 py-2">{t('admin.ip_addresses.field.flags')}</th>
           <th className="px-4 py-2">{t('admin.ip.field.created')}</th>
-          <th className="px-4 py-2 text-right">{t('common.actions')}</th>
+          <th className="px-1 py-2 text-right">{t('common.actions')}</th>
         </tr>
       </thead>
       <tbody>
@@ -165,28 +179,14 @@ export function IpAddressesListTable({ pageData, ipDetailBasePath, basePath, na,
                 </div>
               </td>
               <td className="px-4 py-2 text-xs text-muted">{createdAt ? formatDateTime(createdAt) : na}</td>
-              <td className="px-4 py-2 text-right text-xs">
-                <div className="flex flex-wrap justify-end gap-2">
-                  {ipAddr ? (
-                    <Link className="text-accent hover:underline" to={`${basePath}/incidents?ip_addr=${encodeURIComponent(ipAddr)}`}>
-                      {t('admin.ip_addresses.action.incidents')}
-                    </Link>
-                  ) : null}
-                  {ipAddr ? (
-                    <Link className="text-accent hover:underline" to={`${basePath}/networking/ip-address-assignments?q=${encodeURIComponent(ipAddr)}`}>
-                      {t('admin.ip_addresses.action.assignments')}
-                    </Link>
-                  ) : null}
-                  <Link className="text-accent hover:underline" to={`${detailPath}#route`}>
-                    {assigned ? t('admin.ip_addresses.action.unassign_route') : t('admin.ip_addresses.action.assign_route')}
-                  </Link>
-                  <Link className="text-accent hover:underline" to={`${detailPath}#owner`}>
-                    {t('admin.ip.owner.title')}
-                  </Link>
-                  <Link className="text-accent hover:underline" to={`${detailPath}#hosts`}>
-                    {t('admin.ip.hosts.title')}
-                  </Link>
-                </div>
+              <td className="px-1 py-2 text-right">
+                <IpAddressRowActions
+                  ipAddr={ipAddr}
+                  detailPath={detailPath}
+                  basePath={basePath}
+                  assigned={assigned}
+                  testIdPrefix={`admin.ip_addresses.row.${id}`}
+                />
               </td>
             </TableRowLink>
           );
