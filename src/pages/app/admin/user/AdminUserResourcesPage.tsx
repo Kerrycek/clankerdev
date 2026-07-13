@@ -110,28 +110,26 @@ export function AdminUserResourcesPage() {
   const packageSummary = useMemo(() => {
     const packages = new Map<string, {
       key: string;
-      environment: string;
-      package: string;
+      label: string;
       count: number;
+      environments: Set<string>;
     }>();
 
     for (const row of assignments) {
-      if (isPersonalPackageAssignment(row)) continue;
-
       const pkg: any = row.cluster_resource_package;
       const environment: any = row.environment ?? pkg?.environment;
+      const label = packageLabel(pkg);
       const environmentId = Number(environment?.id);
-      const packageId = Number(pkg?.id);
       const environmentKey = Number.isFinite(environmentId) ? `id:${environmentId}` : `label:${environmentLabel(environment)}`;
-      const packageKey = Number.isFinite(packageId) ? `id:${packageId}` : `label:${packageLabel(pkg)}`;
-      const key = `${environmentKey}:${packageKey}`;
+      const key = `label:${label.toLocaleLowerCase('cs')}`;
       const entry = packages.get(key) ?? {
         key,
-        environment: environmentLabel(environment),
-        package: packageLabel(pkg),
+        label,
         count: 0,
+        environments: new Set<string>(),
       };
       entry.count += 1;
+      entry.environments.add(environmentKey);
       packages.set(key, entry);
     }
 
@@ -184,16 +182,16 @@ export function AdminUserResourcesPage() {
           <TableCard testId="admin.user.resources.summary" variant="plain">
             <thead className="bg-surface-2">
               <tr className="border-b border-border text-left text-xs text-muted">
-                <th className="px-4 py-2 font-semibold">{t('admin.user.resources.add.environment')}</th>
                 <th className="px-4 py-2 font-semibold">{t('admin.user.resources.add.package')}</th>
+                <th className="w-28 px-4 py-2 text-right font-semibold">{t('admin.user.resources.add.environment')}</th>
                 <th className="w-24 px-4 py-2 text-right font-semibold">{t('admin.user.resources.summary.count')}</th>
               </tr>
             </thead>
             <tbody>
             {packageSummary.map((entry) => (
               <tr key={entry.key} className="border-b border-border/60 last:border-b-0">
-                <td className="px-4 py-2 text-muted">{entry.environment}</td>
-                <td className="px-4 py-2 font-medium text-fg">{entry.package}</td>
+                <td className="px-4 py-2 font-medium text-fg">{entry.label}</td>
+                <td className="px-4 py-2 text-right text-muted">{entry.environments.size}</td>
                 <td className="px-4 py-2 text-right">
                   <Badge variant="neutral">{entry.count}×</Badge>
                 </td>

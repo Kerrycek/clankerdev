@@ -27,6 +27,7 @@ test('admin user resource usage and package assignment are separate', async ({ p
         { id: 20, is_personal: true, environment: { id: 7, label: 'Production' }, cluster_resource_package: { id: 99, label: 'Personal package', is_personal: true } },
         { id: 21, is_personal: false, environment: { id: 7, label: 'Production' }, cluster_resource_package: { id: 11, label: 'Standard Production', is_personal: false } },
         { id: 22, is_personal: false, environment: { id: 8, label: 'Playground' }, cluster_resource_package: { id: 12, label: 'Standard Playground', is_personal: false } },
+        { id: 23, is_personal: true, environment: { id: 8, label: 'Playground' }, cluster_resource_package: { id: 98, label: 'Personal package', is_personal: true } },
       ] }),
       'GET users/53/cluster_resources': () => ({ cluster_resources: [
         { id: 31, environment: { id: 7, label: 'Production' }, cluster_resource: { id: 2, name: 'cpu', label: 'CPU', stepsize: 1 }, value: 4, used: 2, free: 2 },
@@ -37,6 +38,7 @@ test('admin user resource usage and package assignment are separate', async ({ p
         { id: 32, environment: { id: 7, label: 'Production' }, cluster_resource: { id: 2, name: 'cpu', label: 'CPU' }, value: 4, used: 1, free: 3 },
         { id: 35, environment: { id: 7, label: 'Production' }, cluster_resource: { id: 4, name: 'private_ipv4', label: 'Private IPv4 address' }, value: 0, used: 0, free: 0 },
       ] }),
+      'GET cluster_resource_packages/98/items': () => ({ items: [{ id: 3, value: 0, cluster_resource: { id: 2, label: 'CPU' } }] }),
       'GET cluster_resource_packages/99/items': () => ({ items: [{ id: 4, value: 0, cluster_resource: { id: 2, label: 'CPU' } }] }),
       'GET cluster_resource_packages/11/items': () => ({ items: [{ id: 5, value: 4, cluster_resource: { id: 2, label: 'CPU' } }] }),
       'GET cluster_resource_packages/12/items': () => ({ items: [{ id: 6, value: 2048, cluster_resource: { id: 3, label: 'Memory', name: 'memory' } }] }),
@@ -57,9 +59,10 @@ test('admin user resource usage and package assignment are separate', async ({ p
   await expect(page.getByRole('heading', { name: /přiřazené balíčky|assigned packages/i })).toBeVisible();
   await expect(page.getByTestId('admin.user.resources.summary')).toContainText('Standard Production');
   await expect(page.getByTestId('admin.user.resources.summary')).toContainText('Standard Playground');
-  await expect(page.getByTestId('admin.user.resources.summary')).not.toContainText('Personal package');
-  await expect(page.getByTestId('admin.user.resources.summary').locator('tbody tr')).toHaveCount(2);
-  await expect(page.getByTestId('admin.user.resources.summary').locator('tbody tr').first()).toContainText('Production');
+  const personalSummary = page.getByTestId('admin.user.resources.summary').locator('tbody tr').filter({ hasText: 'Personal package' });
+  await expect(personalSummary).toContainText('2×');
+  await expect(personalSummary.locator('td').nth(1)).toHaveText('2');
+  await expect(page.getByTestId('admin.user.resources.summary').locator('tbody tr')).toHaveCount(3);
   await expect(page.getByTestId('admin.user.resources.environment.7')).toContainText('Standard Production');
   const personalAssignment = page.getByTestId('admin.user.resources.assignment.20');
   await expect(personalAssignment.getByRole('link', { name: /upravit balíček|edit package/i })).toBeVisible();
