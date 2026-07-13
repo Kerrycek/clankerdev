@@ -12,7 +12,7 @@ function registration(id: number, state = 'awaiting') {
     login: 'alice',
     full_name: 'Alice Example',
     email: 'alice@example.test',
-    address: 'Example street',
+    address: 'Stodolní 138/44, 14400 Ostrava, Česko',
     created_at: '2026-03-01T10:00:00Z',
     updated_at: '2026-03-01T11:00:00Z',
     api_ip_addr: '203.0.113.10',
@@ -80,6 +80,14 @@ test('@workflow-matrix @smoke admin requests: detail actions, inline expansion, 
   await expect(page.getByTestId('admin.requests.detail.ops.action_state')).toHaveAttribute('href', '/admin/action-states/177');
   await expect(page.getByTestId('admin.requests.detail.ops.chain')).toHaveAttribute('href', '/admin/transactions/88');
   await expect(page.getByTestId('admin.requests.detail.ops.transaction')).toHaveAttribute('href', '/admin/transactions/items/99');
+  const mapLink = page.getByTestId('admin.requests.detail.registration.address.map');
+  await expect(mapLink).toBeVisible();
+  await expect(mapLink).toHaveAttribute('target', '_blank');
+  await expect(mapLink).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(mapLink).toHaveAttribute(
+    'href',
+    'https://www.google.com/maps/search/?api=1&query=Stodoln%C3%AD+138%2F44%2C+14400+Ostrava%2C+%C4%8Cesko'
+  );
   await expect(page.getByTestId('admin.requests.resolve.action.deny')).toBeVisible();
   await expect(page.getByTestId('admin.requests.resolve.action.ignore')).toBeVisible();
   await expect(page.getByTestId('admin.requests.resolve.action.request_correction')).toBeVisible();
@@ -144,7 +152,7 @@ test('@workflow-matrix @smoke admin requests: correction prefills overrides and 
       login: 'alice',
       full_name: 'Alice Example',
       email: 'alice@example.test',
-      address: 'Example street',
+      address: 'Stodolní 138/44, 14400 Ostrava, Česko',
     },
   });
 

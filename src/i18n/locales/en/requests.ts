@@ -90,6 +90,8 @@ export const enRequests = {
   'requests.detail.admin': 'Admin',
   'requests.detail.api_ip': 'API IP',
   'requests.detail.client_ip': 'Client IP',
+  'requests.detail.address_map.open': 'Open in Google Maps',
+  'requests.detail.address_map.aria': 'Open address in Google Maps: {address}',
   'requests.detail.card.operations': 'Operational links',
   'requests.detail.card.actions': 'Review actions',
   'requests.detail.open_full': 'Open full detail',

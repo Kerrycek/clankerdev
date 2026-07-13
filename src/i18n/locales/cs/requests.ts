@@ -90,6 +90,8 @@ export const csRequests = {
   'requests.detail.admin': 'Administrátor',
   'requests.detail.api_ip': 'API IP',
   'requests.detail.client_ip': 'Klient IP',
+  'requests.detail.address_map.open': 'Otevřít v Google Maps',
+  'requests.detail.address_map.aria': 'Otevřít adresu v Google Maps: {address}',
   'requests.detail.card.operations': 'Provozní odkazy',
   'requests.detail.card.actions': 'Akce revize',
   'requests.detail.open_full': 'Otevřít celý detail',
