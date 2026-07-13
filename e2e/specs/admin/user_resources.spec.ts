@@ -19,13 +19,14 @@ test('admin user resource usage and package assignment are separate', async ({ p
 
         return { cluster_resource_packages: [
           { id: 11, label: 'Standard Production' },
-          { id: 12, label: 'Standard NAS' },
+          { id: 12, label: 'Standard Playground' },
           { id: 13, label: 'Standard Staging' },
         ] };
       },
       'GET user_cluster_resource_packages': () => ({ user_cluster_resource_packages: [
-        { id: 20, environment: { id: 7, label: 'Production' }, cluster_resource_package: { id: 11, label: 'Standard Production' } },
-        { id: 21, environment: { id: 8, label: 'Playground' }, cluster_resource_package: { id: 11, label: 'Standard Production' } },
+        { id: 20, is_personal: true, environment: { id: 7, label: 'Production' }, cluster_resource_package: { id: 99, label: 'Personal package', is_personal: true } },
+        { id: 21, is_personal: false, environment: { id: 7, label: 'Production' }, cluster_resource_package: { id: 11, label: 'Standard Production', is_personal: false } },
+        { id: 22, is_personal: false, environment: { id: 8, label: 'Playground' }, cluster_resource_package: { id: 12, label: 'Standard Playground', is_personal: false } },
       ] }),
       'GET users/53/cluster_resources': () => ({ cluster_resources: [
         { id: 31, environment: { id: 7, label: 'Production' }, cluster_resource: { id: 2, name: 'cpu', label: 'CPU', stepsize: 1 }, value: 4, used: 2, free: 2 },
@@ -36,7 +37,9 @@ test('admin user resource usage and package assignment are separate', async ({ p
         { id: 32, environment: { id: 7, label: 'Production' }, cluster_resource: { id: 2, name: 'cpu', label: 'CPU' }, value: 4, used: 1, free: 3 },
         { id: 35, environment: { id: 7, label: 'Production' }, cluster_resource: { id: 4, name: 'private_ipv4', label: 'Private IPv4 address' }, value: 0, used: 0, free: 0 },
       ] }),
+      'GET cluster_resource_packages/99/items': () => ({ items: [{ id: 4, value: 0, cluster_resource: { id: 2, label: 'CPU' } }] }),
       'GET cluster_resource_packages/11/items': () => ({ items: [{ id: 5, value: 4, cluster_resource: { id: 2, label: 'CPU' } }] }),
+      'GET cluster_resource_packages/12/items': () => ({ items: [{ id: 6, value: 2048, cluster_resource: { id: 3, label: 'Memory', name: 'memory' } }] }),
       'POST user_cluster_resource_packages': () => ({ user_cluster_resource_package: { id: 21 } }),
     },
   });
@@ -53,15 +56,27 @@ test('admin user resource usage and package assignment are separate', async ({ p
   await expect(page.getByTestId('admin.user.resources.page')).toBeVisible();
   await expect(page.getByRole('heading', { name: /přiřazené balíčky|assigned packages/i })).toBeVisible();
   await expect(page.getByTestId('admin.user.resources.summary')).toContainText('Standard Production');
-  await expect(page.getByTestId('admin.user.resources.summary')).toContainText(/2[× ]+(přiděleno|assigned)/i);
+  await expect(page.getByTestId('admin.user.resources.summary')).toContainText('Standard Playground');
+  await expect(page.getByTestId('admin.user.resources.summary')).not.toContainText('Personal package');
+  await expect(page.getByTestId('admin.user.resources.summary').locator('tbody tr')).toHaveCount(2);
+  await expect(page.getByTestId('admin.user.resources.summary').locator('tbody tr').first()).toContainText('Production');
   await expect(page.getByTestId('admin.user.resources.environment.7')).toContainText('Standard Production');
+  const personalAssignment = page.getByTestId('admin.user.resources.assignment.20');
+  await expect(personalAssignment.getByRole('link', { name: /upravit balíček|edit package/i })).toBeVisible();
+  await expect(personalAssignment.getByRole('button', { name: /odebrat|remove/i })).toHaveCount(0);
+  const standardAssignment = page.getByTestId('admin.user.resources.assignment.21');
+  await expect(standardAssignment.getByRole('link', { name: /upravit balíček|edit package/i })).toHaveCount(0);
+  await expect(standardAssignment.getByRole('button', { name: /odebrat|remove/i })).toBeVisible();
   await expect.poll(() => packageUserFilter).toBe('');
+
+  const layoutProofScreenshot = process.env['E2E_USER_RESOURCES_LAYOUT_PROOF_SCREENSHOT'];
+  if (layoutProofScreenshot) await page.screenshot({ path: layoutProofScreenshot, fullPage: true });
 
   await page.getByTestId('admin.user.resources.add').click();
   const modal = page.getByTestId('admin.user.resources.add.modal');
   await modal.getByRole('combobox').nth(0).selectOption('7');
   const packageSelect = modal.getByRole('combobox').nth(1);
-  await expect(packageSelect.locator('option')).toContainText(['Standard Production', 'Standard NAS', 'Standard Staging']);
+  await expect(packageSelect.locator('option')).toContainText(['Standard Production', 'Standard Playground', 'Standard Staging']);
   await packageSelect.selectOption('12');
   const proofScreenshot = process.env['E2E_USER_RESOURCES_PROOF_SCREENSHOT'];
   if (proofScreenshot) await page.screenshot({ path: proofScreenshot, fullPage: true });
