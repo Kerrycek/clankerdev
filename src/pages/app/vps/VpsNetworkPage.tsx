@@ -42,6 +42,7 @@ import { useVps } from './VpsContext';
 import { VpsNetworkInterfacesCard } from './VpsNetworkInterfacesCard';
 import { VpsNetworkAdvancedSection } from './VpsNetworkAdvancedSection';
 import { VpsNetworkOverviewCard } from './VpsNetworkOverviewCard';
+import { AssignIpAddressModal } from '../networking/AssignIpAddressModal';
 import {
   buildNetworkRouteSummary,
   canonicalBool,
@@ -135,6 +136,7 @@ export function VpsNetworkPage() {
   const [ownerIp, setOwnerIp] = useState<IpAddress | null>(null);
   const [ownerUser, setOwnerUser] = useState('');
   const [ownerEnvironment, setOwnerEnvironment] = useState('');
+  const [addIpOpen, setAddIpOpen] = useState(false);
 
   const openEdit = (ni: NetworkInterface) => {
     setEditNetif(ni);
@@ -552,6 +554,7 @@ export function VpsNetworkPage() {
           void ipsQ.refetch();
           void hostAddrsQ.refetch();
         }}
+        onAddIpAddress={() => setAddIpOpen(true)}
         onOpenTasks={chrome.openTasks}
       />
 
@@ -623,6 +626,17 @@ export function VpsNetworkPage() {
         }}
         onFreeHost={setFreeHost}
         onDeleteHost={setDeleteHost}
+      />
+
+      <AssignIpAddressModal
+        open={addIpOpen}
+        fixedVps={vps}
+        gate={gate}
+        testId="vps.network.ip_addresses.add_modal"
+        onClose={() => setAddIpOpen(false)}
+        onAssigned={() => {
+          void refreshNetworkData();
+        }}
       />
 
       <Modal

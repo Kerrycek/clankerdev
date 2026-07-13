@@ -70,6 +70,14 @@ describe('modeSwitch', () => {
         hash: '#draft',
       })
     ).toBe('/app/incidents#draft');
+
+    expect(
+      computeOtherModeUrl({
+        mode: 'admin',
+        pathname: '/admin/networking/ip-addresses',
+        search: '?version=6',
+      })
+    ).toBe('/app/networking?version=6');
   });
 
   it('falls back to the user dashboard for admin-only areas with no user equivalent', () => {

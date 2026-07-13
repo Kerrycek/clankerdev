@@ -47,6 +47,7 @@ const VpsConfigurationPage = lazyRoute(() => import('../pages/app/vps/VpsConfigu
 const VpsAccessPage = lazyRoute(() => import('../pages/app/vps/VpsAccessPage'), 'VpsAccessPage');
 const VpsConsolePage = lazyRoute(() => import('../pages/app/vps/VpsConsolePage'), 'VpsConsolePage');
 const VpsNetworkPage = lazyRoute(() => import('../pages/app/vps/VpsNetworkPage'), 'VpsNetworkPage');
+const UserNetworkPage = lazyRoute(() => import('../pages/app/networking/UserNetworkPage'), 'UserNetworkPage');
 const VpsStoragePage = lazyRoute(() => import('../pages/app/vps/VpsStoragePage'), 'VpsStoragePage');
 const VpsFeaturesPage = lazyRoute(() => import('../pages/app/vps/VpsFeaturesPage'), 'VpsFeaturesPage');
 const VpsMaintenancePage = lazyRoute(() => import('../pages/app/vps/VpsMaintenancePage'), 'VpsMaintenancePage');
@@ -246,6 +247,7 @@ export const router = createBrowserRouter([
               ],
             },
             { path: 'dns', element: <DnsZonesPage /> },
+            { path: 'networking', element: <UserNetworkPage /> },
             {
               path: 'dns/zones/:zoneId',
               element: <DnsZoneLayout />,

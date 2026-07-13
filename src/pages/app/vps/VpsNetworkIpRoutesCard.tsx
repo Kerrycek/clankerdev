@@ -136,19 +136,19 @@ export function VpsNetworkIpRoutesCard(props: {
                                     >
                                       {t('vps.network.ip_addresses.action.owner')}
                                     </ActionButton>
-                                    <ActionButton
-                                      variant="danger"
-                                      size="sm"
-                                      testId={`vps.network.ip_addresses.item.${ip.id}.free_route`}
-                                      disabled={!gate.allowed}
-                                      disabledReason={!gate.allowed ? gate.reason : undefined}
-                                      loading={props.freeRoutePending}
-                                      onClick={() => props.onFreeRoute(ip)}
-                                    >
-                                      {t('vps.network.ip_addresses.action.free_route')}
-                                    </ActionButton>
                                   </>
                                 ) : null}
+                                <ActionButton
+                                  variant="danger"
+                                  size="sm"
+                                  testId={`vps.network.ip_addresses.item.${ip.id}.free_route`}
+                                  disabled={!gate.allowed}
+                                  disabledReason={!gate.allowed ? gate.reason : undefined}
+                                  loading={props.freeRoutePending}
+                                  onClick={() => props.onFreeRoute(ip)}
+                                >
+                                  {t('vps.network.ip_addresses.action.free_route')}
+                                </ActionButton>
                               </div>
                             </div>
 
@@ -177,18 +177,16 @@ export function VpsNetworkIpRoutesCard(props: {
                       <div key={ip.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
                         <span className="font-mono">{ipAddressLabel(ip)}</span>
                         <Badge variant={routeStateBadgeVariant(routeStateForIp(ip, !gate.allowed))}>{t(routeStateLabelKey(routeStateForIp(ip, !gate.allowed)))}</Badge>
-                        {props.canAdmin ? (
-                          <ActionButton
-                            variant="primary"
-                            size="sm"
-                            testId={`vps.network.ip_addresses.unassigned.${ip.id}.assign`}
-                            disabled={!gate.allowed}
-                            disabledReason={!gate.allowed ? gate.reason : undefined}
-                            onClick={() => props.onAssignRoute(ip)}
-                          >
-                            {t('vps.network.ip_addresses.action.assign_route')}
-                          </ActionButton>
-                        ) : null}
+                        <ActionButton
+                          variant="primary"
+                          size="sm"
+                          testId={`vps.network.ip_addresses.unassigned.${ip.id}.assign`}
+                          disabled={!gate.allowed}
+                          disabledReason={!gate.allowed ? gate.reason : undefined}
+                          onClick={() => props.onAssignRoute(ip)}
+                        >
+                          {t('vps.network.ip_addresses.action.assign_route')}
+                        </ActionButton>
                       </div>
                     ))}
                   </div>

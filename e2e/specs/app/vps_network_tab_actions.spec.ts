@@ -17,7 +17,7 @@ const vps = {
   used_diskspace: 5120,
   uptime: 12345,
   loadavg1: 0.12,
-  node: { id: 1, domain_name: 'node1.example' },
+  node: { id: 1, domain_name: 'node1.example', location: { id: 10, label: 'Prague' } },
   os_template: { label: 'debian' },
   dns_resolver: 'inherit',
 };
@@ -416,7 +416,7 @@ test.describe('@pr-smoke VPS network tab', () => {
     await expect(page.getByTestId('vps.network.host_addresses.row.51.delete')).toHaveAttribute('aria-disabled', 'true');
   });
 
-  test('keeps admin-only networking actions hidden for normal users', async ({ page }) => {
+  test('keeps ownership and VPS toggles admin-only while exposing user route management', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
     await installHaveApiMock(page, {
@@ -448,10 +448,58 @@ test.describe('@pr-smoke VPS network tab', () => {
     await expect(page.getByTestId('vps.network.host_addresses')).toBeVisible();
     await expect(page.getByTestId('vps.network.host_addresses.row.50.ptr')).toBeVisible();
     await expect(page.getByTestId('vps.network.ip_addresses.item.1.host_create')).toBeVisible();
+    await expect(page.getByTestId('vps.network.ip_addresses.add')).toBeVisible();
     await expect(page.getByTestId('vps.network.ip_addresses.item.1.owner')).toHaveCount(0);
-    await expect(page.getByTestId('vps.network.ip_addresses.item.1.free_route')).toHaveCount(0);
-    await expect(page.getByTestId('vps.network.ip_addresses.unassigned.2.assign')).toHaveCount(0);
+    await expect(page.getByTestId('vps.network.ip_addresses.item.1.free_route')).toBeVisible();
+    await expect(page.getByTestId('vps.network.ip_addresses.unassigned.2.assign')).toBeVisible();
     await expect(page.getByTestId('vps.network.disable')).toHaveCount(0);
+  });
+
+  test('adds a private IPv4 address from the normal user VPS detail', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    const freePrivate = {
+      id: 77,
+      addr: '10.20.30.40',
+      prefix: 32,
+      network_interface: null,
+      user: null,
+      network: { id: 9, role: 'private_access', purpose: 'vps', ip_version: 4 },
+    };
+
+    await installHaveApiMock(page, {
+      user: { id: 2, login: 'user', level: 1 },
+      handlers: {
+        'GET vpses/123': () => ({ vps: { ...vps, user: { id: 2, login: 'user' } } }),
+        'GET ip_addresses': (ctx) => {
+          if (ctx.searchParams.get('ip_address[role]') === 'private_access') {
+            return { ip_addresses: [freePrivate] };
+          }
+          return { ip_addresses: ips };
+        },
+        'GET host_ip_addresses': () => ({ host_ip_addresses: [] }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'GET network_interfaces': () => ({ network_interfaces: netifs }),
+        'GET network_interface_accountings': () => ({ network_interface_accountings: acct }),
+        'POST ip_addresses/77/assign': () => ({
+          ip_address: { ...freePrivate, network_interface: { id: 1 } },
+        }),
+      },
+    });
+
+    await page.goto('/app/vps/123/network');
+    await page.getByTestId('vps.network.ip_addresses.add').click();
+    await expect(page.getByTestId('vps.network.ip_addresses.add_modal')).toBeVisible();
+    await page.getByTestId('network.user.assign.kind').selectOption('ipv4_private');
+    await expect(page.getByTestId('network.user.assign.address')).toContainText('10.20.30.40/32');
+
+    const request = page.waitForRequest(
+      (req) => req.method() === 'POST' && req.url().includes('/api/v7.0/ip_addresses/77/assign')
+    );
+    await page.getByTestId('network.user.assign.submit').click();
+    expect((await request).postDataJSON()).toEqual({
+      ip_address: { network_interface: 1 },
+    });
   });
 
   test('keeps interface limits out of an admin account user view', async ({ page }) => {
