@@ -17,7 +17,7 @@ import { Select } from '../../../components/ui/Select';
 import { StatusDot } from '../../../components/ui/StatusDot';
 import { TableCard } from '../../../components/ui/TableCard';
 import type { ResourceRef } from '../../../lib/api/appTypes';
-import { fetchIpAddresses, type IpAddress } from '../../../lib/api/ipAddresses';
+import { fetchIpAddresses, fetchIpAddressesForVps, type IpAddress } from '../../../lib/api/ipAddresses';
 import type { NetworkInterface } from '../../../lib/api/networkInterfaces';
 import { fetchVpsList, type Vps } from '../../../lib/api/vps';
 import { AssignIpAddressModal } from './AssignIpAddressModal';
@@ -26,13 +26,17 @@ import {
   ipAddressLabel,
   isAssignedIp,
   isOwnedByUser,
-  isVisibleUserIp,
   resourceId,
   type AssignableIpKind,
   uniqueIpAddresses,
 } from './IpAddressAssignmentModel';
 
 type KindFilter = 'all' | AssignableIpKind;
+
+interface ScopedIpAddress {
+  ip: IpAddress;
+  vpsId: number | null;
+}
 
 function interfaceId(ip: IpAddress): number | null {
   return resourceId(ip.network_interface as ResourceRef | number | string | null | undefined);
@@ -70,7 +74,7 @@ export function UserNetworkPage() {
   const auth = useAuth();
   const { basePath } = useAppMode();
   const { t } = useI18n();
-  const userId = typeof auth.user?.id === 'number' ? auth.user.id : null;
+  const userId = resourceId(auth.user?.id as number | string | undefined);
   const [kindFilter, setKindFilter] = useState<KindFilter>('all');
   const [assignOpen, setAssignOpen] = useState(false);
   const [initialIp, setInitialIp] = useState<IpAddress | null>(null);
@@ -87,17 +91,42 @@ export function UserNetworkPage() {
     staleTime: 10_000,
   });
 
+  const vpsIds = useMemo(() => (vpsesQ.data ?? []).map((vps) => vps.id), [vpsesQ.data]);
+
   const assignedQ = useQuery({
-    queryKey: ['ip_address', 'user-network', 'assigned', { userId }],
-    queryFn: async () => (
-      await fetchIpAddresses({
-        limit: 250,
-        assignedToInterface: true,
-        purpose: 'vps',
-        order: 'interface',
-        includes: 'network__primary_location__environment,network_interface__vps,user,vps',
-      })
-    ).data,
+    queryKey: ['ip_address', 'user-network', 'assigned', { userId, role: auth.role, vpsIds }],
+    queryFn: async (): Promise<ScopedIpAddress[]> => {
+      if (auth.role !== 'admin') {
+        const response = await fetchIpAddresses({
+          limit: 250,
+          assignedToInterface: true,
+          order: 'interface',
+          includes: 'network__primary_location__environment,network_interface__vps,user',
+        });
+        return response.data.map((ip) => ({ ip, vpsId: ipVpsId(ip) }));
+      }
+
+      const responses = await Promise.all(
+        vpsIds.map(async (vpsId) => ({
+          vpsId,
+          ips: (
+            await fetchIpAddressesForVps(vpsId, {
+              limit: 250,
+              includes: 'network__primary_location__environment,network_interface__vps,user',
+            })
+          ).data,
+        }))
+      );
+      const seen = new Set<number>();
+      return responses.flatMap(({ vpsId, ips }) =>
+        ips.flatMap((ip) => {
+          if (seen.has(ip.id)) return [];
+          seen.add(ip.id);
+          return [{ ip, vpsId }];
+        })
+      );
+    },
+    enabled: auth.role !== 'admin' || vpsesQ.isSuccess,
     staleTime: 5_000,
   });
 
@@ -107,31 +136,35 @@ export function UserNetworkPage() {
       await fetchIpAddresses({
         limit: 250,
         assignedToInterface: false,
-        purpose: 'vps',
-        order: 'interface',
-        includes: 'network__primary_location__environment,network_interface__vps,user,vps',
+        user: auth.role === 'admin' ? userId ?? undefined : undefined,
+        includes: 'network__primary_location__environment,network_interface__vps,user',
       })
     ).data,
+    enabled: userId !== null,
     staleTime: 5_000,
   });
 
   const vpsById = useMemo(() => new Map((vpsesQ.data ?? []).map((vps) => [vps.id, vps])), [vpsesQ.data]);
-  const ownVpsIds = useMemo(() => new Set(vpsById.keys()), [vpsById]);
+  const assignedVpsByIpId = useMemo(
+    () => new Map((assignedQ.data ?? []).map(({ ip, vpsId }) => [ip.id, vpsId])),
+    [assignedQ.data]
+  );
+  const assignedIpIds = useMemo(
+    () => new Set((assignedQ.data ?? []).map(({ ip }) => ip.id)),
+    [assignedQ.data]
+  );
 
   const rows = useMemo(() => {
-    const assigned = (assignedQ.data ?? []).filter((ip) => {
-      // The user-scoped API already restricts assigned addresses to the
-      // current user's VPSes. When the response includes the target VPS, still
-      // reject an obvious mismatch as a defense-in-depth measure.
-      const vpsId = ipVpsId(ip);
-      if (auth.role !== 'admin' && vpsId === null) return true;
-      return (vpsId !== null && ownVpsIds.has(vpsId)) || isOwnedByUser(ip, userId);
-    });
+    // Results fetched through a user's VPS are authoritative even when the
+    // API omits the nested network_interface.vps relation from the response.
+    const assigned = (assignedQ.data ?? [])
+      .filter(({ vpsId }) => vpsId === null || vpsById.has(vpsId))
+      .map(({ ip }) => ip);
     const detached = (detachedQ.data ?? []).filter((ip) => isOwnedByUser(ip, userId));
-    const visible = uniqueIpAddresses([...assigned, ...detached]).filter((ip) => isVisibleUserIp(ip, userId));
+    const visible = uniqueIpAddresses([...assigned, ...detached]);
     if (kindFilter === 'all') return visible;
     return visible.filter((ip) => assignableIpKind(ip) === kindFilter);
-  }, [assignedQ.data, auth.role, detachedQ.data, kindFilter, ownVpsIds, userId]);
+  }, [assignedQ.data, detachedQ.data, kindFilter, userId, vpsById]);
 
   const loading = vpsesQ.isLoading || assignedQ.isLoading || detachedQ.isLoading;
   const error = vpsesQ.error ?? assignedQ.error ?? detachedQ.error;
@@ -148,8 +181,8 @@ export function UserNetworkPage() {
   };
 
   const rowActions = (ip: IpAddress) => {
-    const vpsId = ipVpsId(ip);
-    if (isAssignedIp(ip) && vpsId) {
+    const vpsId = assignedVpsByIpId.get(ip.id) ?? ipVpsId(ip);
+    if ((assignedIpIds.has(ip.id) || isAssignedIp(ip)) && vpsId) {
       return (
         <Button to={`${basePath}/vps/${vpsId}/network`} variant="secondary" size="sm">
           {t('network.user.action.open_vps')}
@@ -222,14 +255,15 @@ export function UserNetworkPage() {
         <>
           <div className="space-y-3 md:hidden">
             {rows.map((ip) => {
-              const vpsId = ipVpsId(ip);
+              const vpsId = assignedVpsByIpId.get(ip.id) ?? ipVpsId(ip);
               const vps = vpsId ? vpsById.get(vpsId) : undefined;
+              const assigned = assignedIpIds.has(ip.id) || isAssignedIp(ip);
               return (
                 <Card key={ip.id} testId={`network.user.ip.card.${ip.id}`}>
                   <div className="space-y-3 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-2">
-                        <StatusDot variant={isAssignedIp(ip) ? 'ok' : 'warn'} />
+                        <StatusDot variant={assigned ? 'ok' : 'warn'} />
                         <span className="break-all font-mono font-semibold">{ipAddressLabel(ip)}</span>
                       </div>
                       <Badge variant={assignableIpKind(ip) === 'ipv4_private' ? 'neutral' : 'info'}>
@@ -262,11 +296,12 @@ export function UserNetworkPage() {
             </thead>
             <tbody>
               {rows.map((ip) => {
-                const vpsId = ipVpsId(ip);
+                const vpsId = assignedVpsByIpId.get(ip.id) ?? ipVpsId(ip);
                 const vps = vpsId ? vpsById.get(vpsId) : undefined;
+                const assigned = assignedIpIds.has(ip.id) || isAssignedIp(ip);
                 return (
                   <tr key={ip.id} data-testid={`network.user.ip.row.${ip.id}`} className="border-b border-border/60 last:border-0">
-                    <td className="px-4 py-3"><StatusDot variant={isAssignedIp(ip) ? 'ok' : 'warn'} /></td>
+                    <td className="px-4 py-3"><StatusDot variant={assigned ? 'ok' : 'warn'} /></td>
                     <td className="px-4 py-3 font-mono text-sm font-medium">{ipAddressLabel(ip)}</td>
                     <td className="px-4 py-3">
                       <Badge variant={assignableIpKind(ip) === 'ipv4_private' ? 'neutral' : 'info'}>
