@@ -42,7 +42,7 @@ export async function fetchClusterResourcePackages(opts?: {
   q?: string;
   isPersonal?: boolean;
   environmentId?: number;
-  userId?: number;
+  userId?: number | null;
 }) {
   const params: Record<string, unknown> = {};
   if (opts?.limit !== undefined) params['limit'] = opts.limit;

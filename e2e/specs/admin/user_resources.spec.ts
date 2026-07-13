@@ -3,13 +3,26 @@ import { expect, test } from '@playwright/test';
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 
 test('admin user resource usage and package assignment are separate', async ({ page }) => {
+  let packageUserFilter: string | null = null;
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
   await installHaveApiMock(page, {
     user: { id: 1, login: 'admin', level: 100 },
     handlers: {
       'GET users/53': () => ({ user: { id: 53, login: 'kavman', level: 1 } }),
       'GET environments': () => ({ environments: [{ id: 7, label: 'Production' }, { id: 8, label: 'Playground' }] }),
-      'GET cluster_resource_packages': () => ({ cluster_resource_packages: [{ id: 11, label: 'Standard Production' }] }),
+      'GET cluster_resource_packages': ({ searchParams }) => {
+        packageUserFilter = searchParams.get('cluster_resource_package[user]');
+
+        if (packageUserFilter !== '') {
+          return { cluster_resource_packages: [{ id: 99, label: 'Personal package', is_personal: true }] };
+        }
+
+        return { cluster_resource_packages: [
+          { id: 11, label: 'Standard Production' },
+          { id: 12, label: 'Standard NAS' },
+          { id: 13, label: 'Standard Staging' },
+        ] };
+      },
       'GET user_cluster_resource_packages': () => ({ user_cluster_resource_packages: [
         { id: 20, environment: { id: 7, label: 'Production' }, cluster_resource_package: { id: 11, label: 'Standard Production' } },
         { id: 21, environment: { id: 8, label: 'Playground' }, cluster_resource_package: { id: 11, label: 'Standard Production' } },
@@ -42,11 +55,16 @@ test('admin user resource usage and package assignment are separate', async ({ p
   await expect(page.getByTestId('admin.user.resources.summary')).toContainText('Standard Production');
   await expect(page.getByTestId('admin.user.resources.summary')).toContainText(/2[× ]+(přiděleno|assigned)/i);
   await expect(page.getByTestId('admin.user.resources.environment.7')).toContainText('Standard Production');
+  await expect.poll(() => packageUserFilter).toBe('');
 
   await page.getByTestId('admin.user.resources.add').click();
   const modal = page.getByTestId('admin.user.resources.add.modal');
   await modal.getByRole('combobox').nth(0).selectOption('7');
-  await modal.getByRole('combobox').nth(1).selectOption('11');
+  const packageSelect = modal.getByRole('combobox').nth(1);
+  await expect(packageSelect.locator('option')).toContainText(['Standard Production', 'Standard NAS', 'Standard Staging']);
+  await packageSelect.selectOption('12');
+  const proofScreenshot = process.env['E2E_USER_RESOURCES_PROOF_SCREENSHOT'];
+  if (proofScreenshot) await page.screenshot({ path: proofScreenshot, fullPage: true });
   await page.getByRole('button', { name: /přidat balíček|add package/i }).last().click();
 
   await page.goto('/app/profile/resources');
