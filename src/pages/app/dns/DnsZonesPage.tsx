@@ -1152,7 +1152,7 @@ export function DnsZonesPage() {
               onChange={(e) => setCreateEmail(e.target.value)}
               placeholder={t('dns.zones.create.email.placeholder')}
               testId="dns.zones.create.email"
-              className={createEmailValue && !isValidDnsZoneEmail(createEmailValue) ? 'border-danger/60' : undefined}
+              className={createEmailValue && !isValidDnsZoneEmail(createEmailValue) ? 'border-danger-border' : undefined}
             />
             <div className="mt-1 text-xs text-muted">{t('dns.zones.create.email.help')}</div>
           </div>
