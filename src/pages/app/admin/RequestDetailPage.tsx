@@ -36,6 +36,7 @@ import {
   RequestReviewActions,
   requestOperationalLinks,
 } from './RequestReviewActions';
+import { RequestAddressMapLink } from './RequestAddressMapLink';
 
 function safeNumber(value: string | undefined): number | undefined {
   const t = String(value ?? '').trim();
@@ -235,7 +236,10 @@ export function RequestDetailPage() {
                   </div>
                   <div className="md:col-span-2">
                     <div className="text-xs text-muted">{t('requests.field.address')}</div>
-                    <div className="text-sm whitespace-pre-line">{String((request as any).address ?? '—')}</div>
+                    <RequestAddressMapLink
+                      address={(request as any).address}
+                      testId="admin.requests.detail.registration.address.map"
+                    />
                   </div>
                   <div>
                     <div className="text-xs text-muted">{t('requests.field.how')}</div>
