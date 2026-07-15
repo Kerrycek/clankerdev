@@ -72,7 +72,7 @@ export function Modal(props: {
   return createPortal(
     <div className={clsx('fixed inset-0 z-50 flex items-center justify-center', mobileFullScreen ? 'p-0 sm:p-4' : 'p-4')}>
       <div
-        className="absolute inset-0 bg-backdrop"
+        className="absolute inset-0 bg-backdrop/45"
         data-overlay-backdrop="true"
         onClick={props.onClose}
         aria-hidden="true"
@@ -88,7 +88,7 @@ export function Modal(props: {
         tabIndex={-1}
         ref={setContainerEl}
         className={clsx(
-          'relative flex w-full flex-col overflow-hidden bg-overlay-surface shadow-panel ring-1 ring-border',
+          'relative z-10 flex w-full flex-col overflow-hidden bg-overlay-surface shadow-panel ring-1 ring-border',
           mobileFullScreen
             ? 'h-full max-h-full rounded-none sm:h-auto sm:max-h-modal sm:rounded-lg'
             : 'max-h-modal rounded-lg',

@@ -8,14 +8,45 @@ function read(relPath) {
   return fs.readFileSync(path.join(root, relPath), 'utf8');
 }
 
+function listSourceFiles(dir) {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    const absolutePath = path.join(dir, entry.name);
+
+    if (entry.isDirectory()) return listSourceFiles(absolutePath);
+    if (
+      !entry.isFile() ||
+      !entry.name.endsWith('.tsx') ||
+      entry.name.endsWith('.test.tsx')
+    ) {
+      return [];
+    }
+
+    return [path.relative(root, absolutePath)];
+  });
+}
+
 const checks = [
   {
     file: 'src/components/ui/Modal.tsx',
-    mustInclude: ['bg-backdrop', 'data-overlay-backdrop="true"', 'data-overlay="modal"', 'data-overlay-surface="overlay"', 'bg-overlay-surface'],
+    mustInclude: [
+      'bg-backdrop/45',
+      'data-overlay-backdrop="true"',
+      'data-overlay="modal"',
+      'data-overlay-surface="overlay"',
+      'bg-overlay-surface',
+      'z-10',
+    ],
   },
   {
     file: 'src/components/ui/Drawer.tsx',
-    mustInclude: ['bg-backdrop', 'data-overlay-backdrop="true"', 'data-overlay="drawer"', 'data-overlay-surface="overlay"', 'bg-overlay-surface'],
+    mustInclude: [
+      'bg-backdrop/45',
+      'data-overlay-backdrop="true"',
+      'data-overlay="drawer"',
+      'data-overlay-surface="overlay"',
+      'bg-overlay-surface',
+      'z-10',
+    ],
   },
   {
     file: 'src/app/toasts.tsx',
@@ -72,6 +103,30 @@ for (const check of checks) {
     const count = text.split(token).length - 1;
     if (count < min) {
       problems.push(`${check.file}: expected at least ${min} occurrences of ${JSON.stringify(token)}, found ${count}`);
+    }
+  }
+}
+
+const modalPrimitiveFiles = new Set([
+  'src/components/ui/Drawer.tsx',
+  'src/components/ui/Modal.tsx',
+]);
+const forbiddenModalPrimitives = [
+  { label: 'full-screen fixed overlay', pattern: /\bfixed\s+inset-0\b/ },
+  { label: 'overlay backdrop marker', pattern: /data-overlay-backdrop=/ },
+  { label: 'modal dialog role', pattern: /role=["']dialog["']/ },
+  { label: 'aria-modal attribute', pattern: /aria-modal=/ },
+];
+
+for (const file of listSourceFiles(path.join(root, 'src'))) {
+  if (modalPrimitiveFiles.has(file)) continue;
+
+  const text = read(file);
+  for (const forbidden of forbiddenModalPrimitives) {
+    if (forbidden.pattern.test(text)) {
+      problems.push(
+        `${file}: ${forbidden.label} must use the shared Modal or Drawer primitive`,
+      );
     }
   }
 }

@@ -58,7 +58,7 @@ export function Drawer(props: {
     <div className={clsx('fixed inset-0 z-50', modal ? undefined : 'pointer-events-none')}>
       {modal ? (
         <div
-          className="absolute inset-0 bg-backdrop"
+          className="absolute inset-0 bg-backdrop/45"
           data-overlay-backdrop="true"
           onClick={props.onClose}
           aria-hidden="true"
@@ -75,7 +75,7 @@ export function Drawer(props: {
         tabIndex={-1}
         ref={setContainerEl}
         className={clsx(
-          'absolute top-0 h-full bg-overlay-surface shadow-panel ring-1 ring-border flex flex-col pointer-events-auto',
+          'absolute top-0 z-10 h-full bg-overlay-surface shadow-panel ring-1 ring-border flex flex-col pointer-events-auto',
           widthClass,
           side === 'left' ? 'left-0' : 'right-0'
         )}

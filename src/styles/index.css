@@ -14,8 +14,8 @@
         - §4.6.8 Chart style system (locked)
 
     Overlay rule:
-    - Overlay surfaces (modals/drawers/popovers/tooltips) MUST be opaque.
-      Do NOT use alpha backgrounds on overlay containers.
+    - Modal and drawer panels stay opaque for readability.
+    - Their page backdrop is translucent so the surrounding UI remains visible.
   */
 
   :root {
@@ -54,7 +54,7 @@
     --c-surface: 243 246 251; /* surface.card */
     --c-surface-2: 232 238 247; /* surface.tableHeader */
     --c-overlay-surface: 255 255 255; /* surface.overlay */
-    --c-backdrop: 232 238 247; /* surface.backdrop (opaque separation) */
+    --c-backdrop: 232 238 247; /* surface.backdrop (used with shared alpha) */
     --c-code: 241 245 251; /* surface.code */
 
     /* Borders */

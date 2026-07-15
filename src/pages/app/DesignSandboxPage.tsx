@@ -297,7 +297,7 @@ export function DesignSandboxPage() {
             </div>
 
             <div className="mt-4 grid gap-3 md:grid-cols-3">
-              <div className="rounded-md border border-border bg-surface p-3">
+              <div className="min-w-0 rounded-md border border-border bg-surface p-3">
                 <div className="text-sm font-medium text-fg">Text levels</div>
                 <div className="mt-2 space-y-1 text-sm">
                   <div className="text-fg">Primary text (text-fg)</div>
@@ -306,7 +306,7 @@ export function DesignSandboxPage() {
                 </div>
               </div>
 
-              <div className="rounded-md border border-border bg-surface p-3">
+              <div className="min-w-0 rounded-md border border-border bg-surface p-3">
                 <div className="text-sm font-medium text-fg">Status colors</div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <Badge variant="ok">OK</Badge>
@@ -316,7 +316,7 @@ export function DesignSandboxPage() {
                 </div>
               </div>
 
-              <div className="rounded-md border border-border bg-surface p-3">
+              <div className="min-w-0 rounded-md border border-border bg-surface p-3">
                 <div className="text-sm font-medium text-fg">Focus ring</div>
                 <div className="mt-2">
                   <div className="inline-flex items-center gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 ring-2 ring-focus/35">
@@ -327,7 +327,7 @@ export function DesignSandboxPage() {
             </div>
 
             <div className="mt-4 grid gap-3 lg:grid-cols-3">
-              <div className="rounded-md border border-border bg-surface p-3">
+              <div className="min-w-0 rounded-md border border-border bg-surface p-3">
                 <div className="text-sm font-medium text-fg">Drawer widths</div>
                 <div className="mt-2 overflow-x-auto">
                   <div className="min-w-max space-y-2">
@@ -338,7 +338,7 @@ export function DesignSandboxPage() {
                 </div>
               </div>
 
-              <div className="rounded-md border border-border bg-surface p-3">
+              <div className="min-w-0 rounded-md border border-border bg-surface p-3">
                 <div className="text-sm font-medium text-fg">Table min widths</div>
                 <div className="mt-2 space-y-2 overflow-x-auto">
                   <div className="min-w-table-sm rounded bg-surface-2 px-2 py-1 text-xs text-muted">min-w-table-sm</div>
@@ -347,7 +347,7 @@ export function DesignSandboxPage() {
                 </div>
               </div>
 
-              <div className="rounded-md border border-border bg-surface p-3">
+              <div className="min-w-0 rounded-md border border-border bg-surface p-3">
                 <div className="text-sm font-medium text-fg">Console height</div>
                 <div className="mt-2">
                   <div className="flex h-console items-center justify-center rounded-md bg-surface-2 text-xs text-muted">
