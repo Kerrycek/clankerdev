@@ -307,15 +307,15 @@ export function DatasetExpansionPage() {
               title={t('dataset.expansion.title')}
               subtitle={t('dataset.expansion.subtitle')}
               actions={
-                mode === 'admin' ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      testId="dataset.expansion.add_space.open"
-                      onClick={() => setAddSpaceOpen(true)}
-                      disabled={busy || String(currentExpansion.state ?? '') !== 'active'}
-                    >
-                      {t('dataset.expansion.add_space.open')}
-                    </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    testId="dataset.expansion.add_space.open"
+                    onClick={() => setAddSpaceOpen(true)}
+                    disabled={busy || String(currentExpansion.state ?? '') !== 'active'}
+                  >
+                    {t('dataset.expansion.add_space.open')}
+                  </Button>
+                  {mode === 'admin' ? (
                     <Button
                       testId="dataset.expansion.edit.open"
                       variant="secondary"
@@ -327,8 +327,8 @@ export function DatasetExpansionPage() {
                     >
                       {t('common.edit')}
                     </Button>
-                  </div>
-                ) : null
+                  ) : null}
+                </div>
               }
             />
             <CardBody>
@@ -455,12 +455,12 @@ export function DatasetExpansionPage() {
           )}
         </>
       ) : (
-        mode === 'admin' ? (
-          <Card testId="dataset.expansion.create.form">
-            <CardHeader
-              title={t('dataset.expansion.create.title')}
-              subtitle={t('dataset.expansion.create.inline_subtitle')}
-              actions={
+        <Card testId="dataset.expansion.create.form">
+          <CardHeader
+            title={t('dataset.expansion.create.title')}
+            subtitle={t('dataset.expansion.create.inline_subtitle')}
+            actions={
+              mode === 'admin' ? (
                 <Button
                   testId="dataset.expansion.register.open"
                   variant="secondary"
@@ -472,49 +472,43 @@ export function DatasetExpansionPage() {
                 >
                   {t('dataset.expansion.register.open')}
                 </Button>
-              }
-            />
-            <CardBody>
-              <div className="grid gap-4 lg:grid-cols-2">
-                <Input
-                  testId="dataset.expansion.form.added_space"
-                  label={t('dataset.expansion.form.added_space')}
-                  type="number"
-                  min="1"
-                  value={newForm.addedSpaceGiB}
-                  onChange={(e) => setNewForm((f) => ({ ...f, mode: 'create', addedSpaceGiB: e.target.value }))}
-                  ariaLabel={t('dataset.expansion.form.added_space')}
-                />
-                <Input
-                  testId="dataset.expansion.form.max_over"
-                  label={t('dataset.expansion.form.max_over')}
-                  type="number"
-                  min="1"
-                  value={newForm.maxOverDays}
-                  onChange={(e) => setNewForm((f) => ({ ...f, mode: 'create', maxOverDays: e.target.value }))}
-                  ariaLabel={t('dataset.expansion.form.max_over')}
-                />
-              </div>
-              <div className="mt-1 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                <Checkbox checked={newForm.enableNotifications} onChange={(checked) => setNewForm((f) => ({ ...f, mode: 'create', enableNotifications: checked }))} label={t('dataset.expansion.form.enable_notifications')} />
-                <Checkbox checked={newForm.enableShrink} onChange={(checked) => setNewForm((f) => ({ ...f, mode: 'create', enableShrink: checked }))} label={t('dataset.expansion.form.enable_shrink')} />
-                <Checkbox checked={newForm.stopVps} onChange={(checked) => setNewForm((f) => ({ ...f, mode: 'create', stopVps: checked }))} label={t('dataset.expansion.form.stop_vps')} />
-              </div>
-              <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-4">
-                <Button testId="dataset.expansion.create.submit" onClick={() => void createM.mutate({ ...newForm, mode: 'create' })} loading={createM.isPending} disabled={busy}>
-                  {t('dataset.expansion.create.submit')}
-                </Button>
-                <span className="text-xs text-muted">{t('dataset.expansion.form.max_over_hint')}</span>
-              </div>
-            </CardBody>
-          </Card>
-        ) : (
-          <EmptyState
-            testId="dataset.expansion.empty"
-            title={t('dataset.expansion.empty.title')}
-            body={t('dataset.expansion.empty.body_user')}
+              ) : null
+            }
           />
-        )
+          <CardBody>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Input
+                testId="dataset.expansion.form.added_space"
+                label={t('dataset.expansion.form.added_space')}
+                type="number"
+                min="1"
+                value={newForm.addedSpaceGiB}
+                onChange={(e) => setNewForm((f) => ({ ...f, mode: 'create', addedSpaceGiB: e.target.value }))}
+                ariaLabel={t('dataset.expansion.form.added_space')}
+              />
+              <Input
+                testId="dataset.expansion.form.max_over"
+                label={t('dataset.expansion.form.max_over')}
+                type="number"
+                min="1"
+                value={newForm.maxOverDays}
+                onChange={(e) => setNewForm((f) => ({ ...f, mode: 'create', maxOverDays: e.target.value }))}
+                ariaLabel={t('dataset.expansion.form.max_over')}
+              />
+            </div>
+            <div className="mt-1 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              <Checkbox checked={newForm.enableNotifications} onChange={(checked) => setNewForm((f) => ({ ...f, mode: 'create', enableNotifications: checked }))} label={t('dataset.expansion.form.enable_notifications')} />
+              <Checkbox checked={newForm.enableShrink} onChange={(checked) => setNewForm((f) => ({ ...f, mode: 'create', enableShrink: checked }))} label={t('dataset.expansion.form.enable_shrink')} />
+              <Checkbox checked={newForm.stopVps} onChange={(checked) => setNewForm((f) => ({ ...f, mode: 'create', stopVps: checked }))} label={t('dataset.expansion.form.stop_vps')} />
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-4">
+              <Button testId="dataset.expansion.create.submit" onClick={() => void createM.mutate({ ...newForm, mode: 'create' })} loading={createM.isPending} disabled={busy}>
+                {t('dataset.expansion.create.submit')}
+              </Button>
+              <span className="text-xs text-muted">{t('dataset.expansion.form.max_over_hint')}</span>
+            </div>
+          </CardBody>
+        </Card>
       )}
 
       <Modal

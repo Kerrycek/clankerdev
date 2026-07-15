@@ -97,6 +97,38 @@ test.describe('@smoke dataset plans and expansion', () => {
     await expect(page.getByTestId('dataset.expansion.history.row.1')).toBeVisible();
   });
 
+  test('shows temporary expansion entry point instead of redundant details', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installHaveApiMock(page, {
+      user: { id: 10, login: 'alice', level: 1 },
+      handlers: {
+        'GET datasets/42': () => ({
+          dataset: {
+            id: 42,
+            full_name: 'tank/users/alice/10802',
+            name: '10802',
+            environment: { id: 7, label: 'Production' },
+            object_state: 'active',
+            used: 33 * 1024,
+            avail: 210 * 1024,
+            refquota: 240 * 1024,
+            vps: { id: 300, hostname: 'mail.example.test' },
+          },
+        }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+      },
+    });
+
+    await page.goto('/app/datasets/42');
+    await expect(page.getByTestId('dataset.overview.space')).toBeVisible();
+    await expect(page.getByTestId('dataset.overview.details')).toHaveCount(0);
+    await expect(page.getByTestId('dataset.overview.expansion')).toBeVisible();
+    await expect(page.getByTestId('dataset.overview.expansion.open')).toHaveAttribute(
+      'href',
+      '/app/datasets/42/expansion'
+    );
+  });
+
   test('creates a temporary expansion from the admin page', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     let payload: Record<string, unknown> | undefined;
@@ -126,6 +158,46 @@ test.describe('@smoke dataset plans and expansion', () => {
     await expect(page.getByTestId('dataset.expansion.create.form')).toBeVisible();
     await expect(page.getByTestId('dataset.expansion.form.added_space')).toHaveValue('20');
     await expect(page.getByTestId('dataset.expansion.form.max_over')).toHaveValue('30');
+
+    await page.getByTestId('dataset.expansion.create.submit').click();
+    await expect.poll(() => (payload?.dataset_expansion as Record<string, unknown> | undefined)).toEqual({
+      dataset: 42,
+      added_space: 20480,
+      enable_notifications: true,
+      enable_shrink: true,
+      stop_vps: true,
+      max_over_refquota_seconds: 2592000,
+    });
+  });
+
+  test('creates a temporary expansion from the user view', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    let payload: Record<string, unknown> | undefined;
+
+    await installHaveApiMock(page, {
+      user: { id: 10, login: 'alice', level: 1 },
+      handlers: {
+        'GET datasets/42': () => ({
+          dataset: {
+            id: 42,
+            full_name: 'tank/users/alice/10802',
+            name: '10802',
+            environment: { id: 7, label: 'Production' },
+            object_state: 'active',
+            refquota: 20480,
+          },
+        }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'POST dataset_expansions': (ctx) => {
+          payload = ctx.params;
+          return { dataset_expansion: { id: 9 } };
+        },
+      },
+    });
+
+    await page.goto('/app/datasets/42/expansion');
+    await expect(page.getByTestId('dataset.expansion.create.form')).toBeVisible();
+    await expect(page.getByTestId('dataset.expansion.register.open')).toHaveCount(0);
 
     await page.getByTestId('dataset.expansion.create.submit').click();
     await expect.poll(() => (payload?.dataset_expansion as Record<string, unknown> | undefined)).toEqual({

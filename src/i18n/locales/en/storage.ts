@@ -71,6 +71,17 @@ export const enStorage = {
   "dataset.overview.space.note": "Reported in MiB by the API.",
   "dataset.overview.counts.title": "Counts",
   "dataset.overview.details.title": "Details",
+  "dataset.overview.expansion.title": "Temporary increase",
+  "dataset.overview.expansion.subtitle":
+    "Add dataset space for a limited time.",
+  "dataset.overview.expansion.subtitle_active":
+    "This dataset already has an active temporary increase.",
+  "dataset.overview.expansion.body":
+    "Use a temporary increase when the dataset briefly needs more space without changing the package permanently.",
+  "dataset.overview.expansion.create": "Temporarily increase",
+  "dataset.overview.expansion.open": "Open increase",
+  "dataset.overview.expansion.active": "Active increase",
+  "dataset.overview.expansion.none": "No increase",
   "dataset.overview.actions.title": "Quick actions",
   "dataset.overview.actions.snapshots": "Manage snapshots",
   "dataset.overview.actions.downloads": "Snapshot downloads",
@@ -371,7 +382,7 @@ export const enStorage = {
   "dataset.expansion.form.original_refquota": "Original refquota (GiB)",
   "dataset.expansion.form.original_refquota_hint":
     "Enter the refquota before the dataset was expanded. Current refquota: {current}.",
-  "dataset.expansion.form.max_over": "Max over-quota time (hours)",
+  "dataset.expansion.form.max_over": "Max over-quota time (days)",
   "dataset.expansion.form.max_over_hint":
     "Leave empty to let the backend use its default policy.",
   "dataset.expansion.form.enable_notifications": "Send notification emails",

@@ -34,7 +34,6 @@ import { type TransactionChain } from '../../../lib/api/transactions';
 import { formatDateTime, formatMiB } from '../../../lib/format';
 import { gateDatasetAction } from '../../../lib/gates/dataset';
 import { usageSeverityFromRatio } from '../../../lib/usage';
-import { objectStateBadge } from '../../../lib/taskStatus';
 
 import { useDatasetContext } from './DatasetContext';
 
@@ -201,70 +200,41 @@ function SpaceCard(props: { dataset: any }) {
   );
 }
 
-function DetailsCard(props: { dataset: any }) {
+function TemporaryExpansionCard(props: { dataset: any }) {
   const { t } = useI18n();
+  const { basePath } = useAppMode();
 
   const ds = props.dataset;
-
-  const stateRaw = typeof (ds as any).object_state === 'string' ? String((ds as any).object_state).trim() : '';
-  const stateBadge = stateRaw ? objectStateBadge(stateRaw, t) : null;
-  const pool = (ds as any).pool ? String((ds as any).pool) : null;
-  const type = (ds as any).type ? String((ds as any).type) : null;
-
-  const created = (ds as any).created_at ? formatDateTime((ds as any).created_at) : null;
-  const updated = (ds as any).updated_at ? formatDateTime((ds as any).updated_at) : null;
+  const expansionId =
+    typeof (ds as any).dataset_expansion?.id === 'number' ? Number((ds as any).dataset_expansion.id) : null;
+  const to = `${basePath}/datasets/${ds.id}/expansion`;
 
   return (
-    <Card testId="dataset.overview.details">
-      <CardHeader title={t('common.details')} />
+    <Card testId="dataset.overview.expansion">
+      <CardHeader
+        title={t('dataset.overview.expansion.title')}
+        subtitle={
+          expansionId
+            ? t('dataset.overview.expansion.subtitle_active')
+            : t('dataset.overview.expansion.subtitle')
+        }
+        actions={
+          <Button to={to} size="sm" testId="dataset.overview.expansion.open">
+            {expansionId ? t('dataset.overview.expansion.open') : t('dataset.overview.expansion.create')}
+          </Button>
+        }
+      />
       <CardBody>
-        <div className="space-y-3 text-sm">
-          <div>
-            <div className="text-xs text-faint">{t('dataset.field.full_name')}</div>
-            <div className="break-words font-medium text-fg">{datasetLabel(ds)}</div>
+        <div className="space-y-3 text-sm text-muted">
+          <p>{t('dataset.overview.expansion.body')}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={expansionId ? 'warn' : 'neutral'}>
+              {expansionId
+                ? t('dataset.overview.expansion.active')
+                : t('dataset.overview.expansion.none')}
+            </Badge>
+            {expansionId ? <span className="text-xs text-faint">#{expansionId}</span> : null}
           </div>
-
-          {stateBadge || created ? (
-            <div className="grid grid-cols-2 gap-3">
-              {stateBadge ? (
-                <div>
-                  <div className="text-xs text-faint">{t('common.state')}</div>
-                  <div className="mt-0.5">
-                    <Badge variant={stateBadge.variant}>{stateBadge.label}</Badge>
-                  </div>
-                </div>
-              ) : null}
-            {created ? (
-              <div>
-                <div className="text-xs text-faint">{t('common.created')}</div>
-                <div className="font-medium text-fg">{created}</div>
-              </div>
-            ) : null}
-            </div>
-          ) : null}
-
-          {pool || type || updated ? (
-            <div className="grid grid-cols-2 gap-3">
-              {pool ? (
-                <div>
-                  <div className="text-xs text-faint">{t('dataset.field.pool')}</div>
-                  <div className="font-medium text-fg">{pool}</div>
-                </div>
-              ) : null}
-              {type ? (
-                <div>
-                  <div className="text-xs text-faint">{t('dataset.field.type')}</div>
-                  <div className="font-medium text-fg">{type}</div>
-                </div>
-              ) : null}
-              {updated ? (
-              <div>
-                <div className="text-xs text-faint">{t('common.updated')}</div>
-                <div className="font-medium text-fg">{updated}</div>
-              </div>
-              ) : null}
-            </div>
-          ) : null}
         </div>
       </CardBody>
     </Card>
@@ -735,7 +705,7 @@ export function DatasetOverviewPage() {
           <DatasetManagementCard />
         </div>
         <div className="space-y-6">
-          <DetailsCard dataset={dataset as any} />
+          <TemporaryExpansionCard dataset={dataset as any} />
         </div>
       </div>
 

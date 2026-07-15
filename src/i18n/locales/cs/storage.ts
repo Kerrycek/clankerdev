@@ -75,6 +75,17 @@ export const csStorage = {
   "dataset.overview.space.note": "API reportuje hodnoty v MiB.",
   "dataset.overview.counts.title": "Počty",
   "dataset.overview.details.title": "Podrobnosti",
+  "dataset.overview.expansion.title": "Dočasné navýšení",
+  "dataset.overview.expansion.subtitle":
+    "Přidej datasetu místo na omezenou dobu.",
+  "dataset.overview.expansion.subtitle_active":
+    "Dataset už má aktivní dočasné navýšení.",
+  "dataset.overview.expansion.body":
+    "Použij dočasné navýšení, když dataset krátkodobě potřebuje víc místa bez trvalé změny balíčku.",
+  "dataset.overview.expansion.create": "Dočasně navýšit",
+  "dataset.overview.expansion.open": "Otevřít navýšení",
+  "dataset.overview.expansion.active": "Aktivní navýšení",
+  "dataset.overview.expansion.none": "Bez navýšení",
   "dataset.overview.actions.title": "Rychlé akce",
   "dataset.overview.actions.snapshots": "Spravovat snapshoty",
   "dataset.overview.actions.downloads": "Snapshot downloady",
