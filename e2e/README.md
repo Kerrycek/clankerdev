@@ -49,8 +49,10 @@ Checklist:
 | Dashboard/home load | user | Authenticated dashboard and VPS KPI navigation | `e2e/specs/app/authenticated_home_smoke.spec.ts` |
 | Admin landing | admin | Admin diagnostics and shortcut page | `e2e/specs/admin/admin_info_page.spec.ts` |
 | VPS list | user/admin | List load, row navigation, and list action containment | `e2e/specs/app/authenticated_home_smoke.spec.ts`, `e2e/specs/app/vps_list_row_click.spec.ts` |
-| VPS detail tabs | user | Overview to storage/lifecycle/console tab navigation | `e2e/specs/app/vps_detail_tabs_matrix.spec.ts` |
-| Tasks drawer | user | Drawer open, non-modal behavior, action-state inspection | `e2e/specs/app/tasks_drawer_focus_trap.spec.ts` |
+| VPS detail tabs | user/admin | Overview to storage/lifecycle/console tab navigation and direct reload | `e2e/specs/app/vps_detail_tabs_matrix.spec.ts` |
+| VPS power actions | user/admin | Start, stop, and restart payloads plus action-state tracking in Tasks | `e2e/specs/app/vps_lifecycle_tab_actions.spec.ts`, `e2e/specs/app/vps_power_stop_confirm.spec.ts` |
+| VPS access actions | user | Root-password result and SSH-key deployment with non-modal task tracking | `e2e/specs/app/vps_access_page.spec.ts` |
+| Tasks drawer | user/admin | Drawer open, non-modal behavior, action-state inspection | `e2e/specs/app/tasks_drawer_focus_trap.spec.ts` |
 | Action state detail | user/admin | Header, cancel dialog, related transactions, payload expansion | `e2e/specs/app/action_state_detail_page.spec.ts` |
 | Transaction/action-state detail | user/admin | Transaction detail payloads and admin-only operational links | `e2e/specs/app/transaction_detail_page.spec.ts`, `e2e/specs/app/action_state_detail_page.spec.ts` |
 | Create VPS form smoke | user/admin | User-scope and admin-scope create payloads without live mutation | `e2e/specs/app/vps_create_admin_flow.spec.ts` |
