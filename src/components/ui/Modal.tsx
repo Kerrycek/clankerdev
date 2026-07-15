@@ -88,7 +88,7 @@ export function Modal(props: {
         tabIndex={-1}
         ref={setContainerEl}
         className={clsx(
-          'relative flex w-full flex-col overflow-hidden bg-overlay-surface shadow-panel ring-1 ring-border',
+          'relative z-10 flex w-full flex-col overflow-hidden bg-overlay-surface shadow-panel ring-1 ring-border',
           mobileFullScreen
             ? 'h-full max-h-full rounded-none sm:h-auto sm:max-h-modal sm:rounded-lg'
             : 'max-h-modal rounded-lg',

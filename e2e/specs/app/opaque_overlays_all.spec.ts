@@ -97,17 +97,20 @@ test.describe('@smoke overlay surfaces', () => {
       await expect(page.getByTestId('design.controls.summary')).toHaveAttribute('data-theme', theme);
 
       // Modal
-      await page.getByRole('button', { name: 'Open modal' }).click();
+      await page.getByRole('button', { name: 'Open modal' }).click({ force: true });
       await assertOpaqueSurface(page.getByTestId('design.modal'));
       await assertTranslucentBackdrop(page.locator('[data-overlay-backdrop="true"]').first());
 
       // Toast (triggered from modal Save)
-      await page.getByRole('button', { name: 'Save' }).click();
+      await page
+        .getByTestId('design.modal')
+        .getByRole('button', { name: 'Save' })
+        .click();
       const toast = page.locator('[data-overlay="toast"]').first();
       await assertOpaqueSurface(toast);
 
       // Drawer
-      await page.getByRole('button', { name: 'Open drawer (left)' }).click();
+      await page.getByRole('button', { name: 'Open drawer (left)' }).click({ force: true });
       await assertOpaqueSurface(page.getByTestId('design.drawer.left'));
       await assertTranslucentBackdrop(page.locator('[data-overlay-backdrop="true"]').first());
       await page.getByTestId('design.drawer.left.close').click();

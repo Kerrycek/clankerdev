@@ -19,7 +19,10 @@ describe('Drawer', () => {
     );
 
     expect(screen.getByTestId('drawer')).toHaveAttribute('aria-modal', 'true');
-    expect(document.querySelector('[data-overlay-backdrop="true"]')).toBeInTheDocument();
+    expect(screen.getByTestId('drawer')).toHaveClass('z-10');
+    expect(document.querySelector('[data-overlay-backdrop="true"]')).toHaveClass(
+      'bg-backdrop/45'
+    );
   });
 
   it('renders non-modal drawers without hiding or blocking the page', () => {
