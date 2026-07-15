@@ -518,7 +518,11 @@ export function ResourcePackagesPage() {
               return (
                 <tr key={id} data-testid={`admin.cluster.resource_packages.row.${id}`}>
                   <td className="px-3 py-2 text-fg">
-                    <Link className="font-medium hover:underline" to={`/admin/cluster/resource-packages/${id}`}>
+                    <Link
+                      className="font-medium hover:underline"
+                      to={`/admin/cluster/resource-packages/${id}`}
+                      data-testid={`admin.cluster.resource_packages.row.${id}.open`}
+                    >
                       {label}
                     </Link>
                   </td>

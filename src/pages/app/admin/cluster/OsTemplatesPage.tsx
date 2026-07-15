@@ -824,7 +824,13 @@ export function OsTemplatesPage() {
             <Button variant="secondary" onClick={closeEditor} disabled={saveM.isPending}>
               {t('common.cancel')}
             </Button>
-            <Button variant="primary" onClick={() => saveM.mutate()} loading={saveM.isPending} disabled={!canSave}>
+            <Button
+              variant="primary"
+              onClick={() => saveM.mutate()}
+              loading={saveM.isPending}
+              disabled={!canSave}
+              testId="admin.cluster.os_templates.editor.save"
+            >
               {t('common.save')}
             </Button>
           </div>
@@ -844,6 +850,7 @@ export function OsTemplatesPage() {
                   <label className="text-sm font-medium">{t('admin.cluster.os_templates.form.label')}</label>
                   <div className="mt-1">
                     <Input
+                      testId="admin.cluster.os_templates.editor.label"
                       value={form.label}
                       onChange={(e) => setForm((p) => ({ ...p, label: e.target.value }))}
                       placeholder={t('admin.cluster.os_templates.form.label_placeholder')}
