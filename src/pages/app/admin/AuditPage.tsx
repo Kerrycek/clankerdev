@@ -168,8 +168,8 @@ export function AuditPage() {
     filterKey: JSON.stringify({ q: qTrim, user: userId ?? null, userSession: userSessionId ?? null, object: objectTrim, objectId: objectIdNum ?? null, eventType: eventTypeTrim }),
     searchParams,
     setSearchParams,
-    defaultLimit: 50,
-    allowedLimits: [25, 50, 100, 200],
+    defaultLimit: 25,
+    allowedLimits: [10, 25, 50, 100],
   });
 
   const eventsQ = useQuery({
@@ -204,6 +204,7 @@ export function AuditPage() {
 
   const pageCursor = useMemo(() => cursorFromDescendingPage(eventsQ.data as any), [eventsQ.data]);
   const hasMore = (eventsQ.data ?? []).length >= pagination.limit;
+  const canNextPage = pagination.hasForward || (hasMore && pageCursor !== null);
 
   const openAudit = (historyId: number) => {
     navigate(`${basePath}/audit/${historyId}`);
@@ -752,69 +753,88 @@ export function AuditPage() {
           onAction={clearFilters}
         />
       ) : (
-        <TableCard
-          testId="admin.audit.table"
-          minWidth="lg"
-          footer={
+        <>
+          <div className="mb-3 rounded-lg border border-border bg-surface shadow-sm">
             <KeysetPagination
               page={pagination.page}
               pageCount={pagination.stack.length}
               canPrev={pagination.canPrev}
-              canNext={pagination.hasForward || (hasMore && pageCursor !== null)}
+              canNext={canNextPage}
               onPrev={pagination.goPrev}
               onNext={() => pagination.goNext(pageCursor)}
               onGoToPage={pagination.goToPage}
               limit={pagination.limit}
               allowedLimits={pagination.allowedLimits}
               onLimitChange={pagination.setLimit}
-              testId="admin.audit.pagination"
+              className="border-t-0"
+              testId="admin.audit.pagination.top"
             />
-          }
-        >
-          <thead>
-            <tr className="border-b border-border text-left text-xs text-muted">
-              <th className="w-8 px-4 py-2" aria-label={t('common.state')} />
-              <th className="px-4 py-2">{t('audit.table.time')}</th>
-              <th className="px-4 py-2">{t('audit.table.user')}</th>
-              <th className="px-4 py-2">{t('audit.table.session')}</th>
-              <th className="px-4 py-2">{t('audit.table.object')}</th>
-              <th className="px-4 py-2">{t('audit.table.event')}</th>
-              <th className="px-4 py-2">{t('audit.table.data')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(eventsQ.data ?? []).map((ev) => {
-              const label = ev.event_type ? String(ev.event_type) : na;
-              const variant = eventVariant(ev.event_type);
-              const badgeVariant = eventBadgeVariant(ev.event_type);
-              const dotVariant = dotVariantFromBadgeVariant(badgeVariant);
-              const summary = eventDataSummary(ev);
+          </div>
 
-              return (
-                <TableRowLink
-                  key={ev.id}
-                  to={`${basePath}/audit/${ev.id}`}
-                  variant={variant}
-                  testId={`admin.audit.row.${ev.id}`}
-                >
-                  <td className="px-4 py-2">
-                    <StatusDot variant={dotVariant} testId={`admin.audit.row.${ev.id}.dot`} ariaLabel={label} />
-                  </td>
-                  <td className="px-4 py-2 text-xs text-muted tabular-nums">
-                    {ev.created_at ? formatDateTime(ev.created_at) : na}
-                  </td>
-                  <td className="px-4 py-2 text-sm text-fg">{userLabel(ev, na)}</td>
-                  <td className="px-4 py-2 text-xs text-muted">{sessionLabel(ev, na)}</td>
-                  <td className="px-4 py-2 text-xs text-muted">{trackedObjectLabel(ev, na)}</td>
-                  <td className="px-4 py-2">
-                    <Badge variant={eventBadgeVariant(ev.event_type)}>{label}</Badge>
-                  </td>
-                  <td className="px-4 py-2 text-xs text-faint">{summary || na}</td>
-                </TableRowLink>
-              );
-            })}
-          </tbody>
-        </TableCard>
+          <TableCard
+            testId="admin.audit.table"
+            minWidth="lg"
+            footer={
+              <KeysetPagination
+                page={pagination.page}
+                pageCount={pagination.stack.length}
+                canPrev={pagination.canPrev}
+                canNext={canNextPage}
+                onPrev={pagination.goPrev}
+                onNext={() => pagination.goNext(pageCursor)}
+                onGoToPage={pagination.goToPage}
+                limit={pagination.limit}
+                allowedLimits={pagination.allowedLimits}
+                onLimitChange={pagination.setLimit}
+                testId="admin.audit.pagination"
+              />
+            }
+          >
+            <thead>
+              <tr className="border-b border-border text-left text-xs text-muted">
+                <th className="w-8 px-4 py-2" aria-label={t('common.state')} />
+                <th className="px-4 py-2">{t('audit.table.time')}</th>
+                <th className="px-4 py-2">{t('audit.table.user')}</th>
+                <th className="px-4 py-2">{t('audit.table.session')}</th>
+                <th className="px-4 py-2">{t('audit.table.object')}</th>
+                <th className="px-4 py-2">{t('audit.table.event')}</th>
+                <th className="px-4 py-2">{t('audit.table.data')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(eventsQ.data ?? []).map((ev) => {
+                const label = ev.event_type ? String(ev.event_type) : na;
+                const variant = eventVariant(ev.event_type);
+                const badgeVariant = eventBadgeVariant(ev.event_type);
+                const dotVariant = dotVariantFromBadgeVariant(badgeVariant);
+                const summary = eventDataSummary(ev);
+
+                return (
+                  <TableRowLink
+                    key={ev.id}
+                    to={`${basePath}/audit/${ev.id}`}
+                    variant={variant}
+                    testId={`admin.audit.row.${ev.id}`}
+                  >
+                    <td className="px-4 py-2">
+                      <StatusDot variant={dotVariant} testId={`admin.audit.row.${ev.id}.dot`} ariaLabel={label} />
+                    </td>
+                    <td className="px-4 py-2 text-xs text-muted tabular-nums">
+                      {ev.created_at ? formatDateTime(ev.created_at) : na}
+                    </td>
+                    <td className="px-4 py-2 text-sm text-fg">{userLabel(ev, na)}</td>
+                    <td className="px-4 py-2 text-xs text-muted">{sessionLabel(ev, na)}</td>
+                    <td className="px-4 py-2 text-xs text-muted">{trackedObjectLabel(ev, na)}</td>
+                    <td className="px-4 py-2">
+                      <Badge variant={eventBadgeVariant(ev.event_type)}>{label}</Badge>
+                    </td>
+                    <td className="px-4 py-2 text-xs text-faint">{summary || na}</td>
+                  </TableRowLink>
+                );
+              })}
+            </tbody>
+          </TableCard>
+        </>
       )}
     </ListShell>
   );
