@@ -27,8 +27,6 @@ import { IpAddressesListTable } from './ipAddresses/IpAddressesListTable';
 import {
   canonicalKey,
   IpListOrder,
-  isPrivateIp,
-  isUnallocatedIp,
   ipId,
   isDefaultHiddenLegacyNetwork,
   looksLikeIpish,
@@ -36,36 +34,11 @@ import {
   resolveOrderValue,
   resolveVersionValue,
 } from './ipAddresses/ipAddressListSemantics';
-
-const SUGGESTED_IPS_PER_LOCATION = 8;
-const SUGGESTED_IP_QUERY_LIMIT = 100;
-
-function suggestedLocationOrder(a: InfraLocation, b: InfraLocation): number {
-  const priority = (location: InfraLocation) => {
-    const label = `${location.label ?? ''} ${location.environment?.label ?? ''}`.toLowerCase();
-    if (label.includes('praha')) return 0;
-    if (label.includes('brno')) return 1;
-    if (label.includes('playground')) return 2;
-    return 3;
-  };
-
-  return priority(a) - priority(b) || String(a.label ?? '').localeCompare(String(b.label ?? ''), 'cs');
-}
-
-function sampleSuggestedIps(items: IpAddress[]): IpAddress[] {
-  const available = items
-    .filter((ip) => !isDefaultHiddenLegacyNetwork(ip))
-    .filter(isUnallocatedIp);
-  const privateIps = available.filter(isPrivateIp);
-  const publicIps = available.filter((ip) => !isPrivateIp(ip));
-  const privateCount = Math.ceil(SUGGESTED_IPS_PER_LOCATION / 2);
-  const picked = [...privateIps.slice(0, privateCount), ...publicIps.slice(0, privateCount)];
-
-  if (picked.length >= SUGGESTED_IPS_PER_LOCATION) return picked;
-
-  const pickedIds = new Set(picked.map((ip) => ip.id));
-  return [...picked, ...available.filter((ip) => !pickedIds.has(ip.id))].slice(0, SUGGESTED_IPS_PER_LOCATION);
-}
+import {
+  sampleSuggestedIps,
+  selectSuggestedIpLocations,
+  SUGGESTED_IP_QUERY_LIMIT,
+} from './ipAddresses/suggestedFreeIps';
 
 export function IpAddressesPage() {
   const { basePath } = useAppMode();
@@ -241,13 +214,13 @@ export function IpAddressesPage() {
 
   const locationsQ = useQuery({
     queryKey: ['locations', 'ip_addresses', 'active'],
-    queryFn: async () => (await fetchLocations({ limit: 200, hasHypervisor: true, includes: 'environment' })).data,
+    queryFn: async () => (await fetchLocations({ limit: 200, includes: 'environment' })).data,
     staleTime: 60_000,
   });
 
   const environmentLocations = useMemo(() => (locationsQ.data ?? []) as InfraLocation[], [locationsQ.data]);
   const suggestedLocations = useMemo(
-    () => [...environmentLocations].sort(suggestedLocationOrder).slice(0, 8),
+    () => selectSuggestedIpLocations(environmentLocations),
     [environmentLocations]
   );
   const showingSuggestedFreeIps = !filtersActive && suggestedLocations.length > 0;
@@ -256,25 +229,34 @@ export function IpAddressesPage() {
     queryKey: ['ip_addresses', 'suggested_free', suggestedLocations.map((item) => item.id)],
     queryFn: async () => {
       const pages = await Promise.all(
-        suggestedLocations.map(async (suggestedLocation) => (
-          await fetchIpAddresses({
-            limit: SUGGESTED_IP_QUERY_LIMIT,
-            location: suggestedLocation.id,
-            assignedToInterface: false,
-            purpose: 'vps',
-            includes: 'network__primary_location__environment,network_interface,vps,user,charged_environment',
-          })
-        ).data)
+        suggestedLocations.flatMap((suggestedLocation) => ([4, 6] as const).map(async (version) => ({
+          locationId: suggestedLocation.id,
+          data: (
+            await fetchIpAddresses({
+              limit: SUGGESTED_IP_QUERY_LIMIT,
+              location: suggestedLocation.id,
+              version,
+              assignedToInterface: false,
+              purpose: 'vps',
+              includes: 'network__primary_location__environment,network_interface,vps,user,charged_environment',
+            })
+          ).data,
+        })))
       );
 
+      const byLocation = new Map<number, IpAddress[]>();
+      pages.forEach((page) => {
+        byLocation.set(page.locationId, [...(byLocation.get(page.locationId) ?? []), ...page.data]);
+      });
+
       const seen = new Set<number>();
-      return pages.flatMap((items) => sampleSuggestedIps(items)
+      return suggestedLocations.flatMap((suggestedLocation) => sampleSuggestedIps(byLocation.get(suggestedLocation.id) ?? [])
         .filter((ip) => {
           if (seen.has(ip.id)) return false;
           seen.add(ip.id);
           return true;
         })
-        .slice(0, SUGGESTED_IPS_PER_LOCATION));
+      );
     },
     staleTime: 10_000,
     enabled: showingSuggestedFreeIps,
