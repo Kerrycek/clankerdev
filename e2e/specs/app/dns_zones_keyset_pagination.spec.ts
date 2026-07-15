@@ -87,8 +87,64 @@ test.describe('DNS zones keyset pagination', () => {
     await expect.poll(() => createPayload?.dns_zone?.name).toBe('example.test.');
     expect(createPayload?.dns_zone?.email).toBe('hostmaster@example.test');
     expect(createPayload?.dns_zone?.source).toBe('internal_source');
-    expect(createPayload?.dns_zone?.default_ttl).toBe(3600);
+    expect(createPayload?.dns_zone?.default_ttl).toBeUndefined();
     expect(createPayload?.dns_zone?.enabled).toBe(true);
     expect(createPayload?.dns_zone?.dnssec_enabled).toBe(false);
+  });
+
+  test('requires SOA email before creating a DNS zone', async ({ page }) => {
+    let createCalls = 0;
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'test', level: 1 },
+      handlers: {
+        'GET dns_zones': () => ({ dns_zones: [], _meta: { total_count: 0 } }),
+        'POST dns_zones': () => {
+          createCalls += 1;
+          return { dns_zone: { id: 402, name: 'missing-email.test.' } };
+        },
+      },
+    });
+
+    await page.goto('/app/dns');
+    await page.getByTestId('dns.zones.create.open').click();
+    await page.getByTestId('dns.zones.create.name').fill('missing-email.test');
+
+    await expect(page.getByText('Enter an SOA email.')).toBeVisible();
+    await expect(page.getByTestId('dns.zones.create.submit')).toBeDisabled();
+    expect(createCalls).toBe(0);
+  });
+
+  test('keeps default TTL in admin DNS zone create payload', async ({ page }) => {
+    let createPayload: any;
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
+      handlers: {
+        'GET dns_zones': () => ({ dns_zones: [], _meta: { total_count: 0 } }),
+        'POST dns_zones': async ({ request }) => {
+          createPayload = await request.postDataJSON();
+          return {
+            dns_zone: {
+              id: 403,
+              name: createPayload?.dns_zone?.name,
+              enabled: true,
+              default_ttl: createPayload?.dns_zone?.default_ttl,
+            },
+          };
+        },
+      },
+    });
+
+    await page.goto('/admin/dns');
+    await page.getByTestId('dns.zones.create.open').click();
+    await page.getByTestId('dns.zones.create.name').fill('admin-zone.test');
+    await page.getByTestId('dns.zones.create.email').fill('hostmaster@admin-zone.test');
+    await page.getByTestId('dns.zones.create.ttl').selectOption('600');
+    await page.getByTestId('dns.zones.create.submit').click();
+
+    await expect.poll(() => createPayload?.dns_zone?.name).toBe('admin-zone.test.');
+    expect(createPayload?.dns_zone?.email).toBe('hostmaster@admin-zone.test');
+    expect(createPayload?.dns_zone?.default_ttl).toBe(600);
   });
 });

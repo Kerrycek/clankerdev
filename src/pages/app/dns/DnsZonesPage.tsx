@@ -60,6 +60,10 @@ function canonicalDnsZoneName(value: string): string {
   return name.endsWith('.') ? name : `${name}.`;
 }
 
+function isValidDnsZoneEmail(value: string): boolean {
+  return /^[^@\s]+@[^\s]+$/.test(value.trim());
+}
+
 function normalizeRole(value: string): 'forward_role' | 'reverse_role' | undefined {
   const v = value.trim().toLowerCase();
   if (!v) return undefined;
@@ -644,20 +648,39 @@ export function DnsZonesPage() {
   const [createEnabled, setCreateEnabled] = useState(true);
   const [createDnssec, setCreateDnssec] = useState(false);
   const [createDefaultTtl, setCreateDefaultTtl] = useState('3600');
+  const createEmailValue = createEmail.trim();
+  const createDefaultTtlValue = Number(createDefaultTtl);
+  const createValidationError = (() => {
+    if (!createName.trim()) return t('dns.zones.create.validation.name_required');
+    if (!createEmailValue) return t('dns.zones.create.validation.email_required');
+    if (!isValidDnsZoneEmail(createEmailValue)) return t('dns.zones.create.validation.email_invalid');
+    if (mode === 'admin' && (!Number.isFinite(createDefaultTtlValue) || createDefaultTtlValue < 60)) {
+      return t('dns.zones.create.validation.ttl_invalid');
+    }
+    return '';
+  })();
 
   const createZ = useMutation({
-    mutationFn: async () =>
-      createDnsZone({
+    mutationFn: async () => {
+      if (createValidationError) throw new Error(createValidationError);
+
+      const payload: Parameters<typeof createDnsZone>[0] = {
         name: canonicalDnsZoneName(createName),
-        email: createEmail.trim() || undefined,
+        email: createEmailValue,
         // A zone created from this UI is an authoritative user zone. The API
         // treats internal and external zones differently, so keep this aligned
         // with the legacy primary-zone form instead of relying on a DB default.
         source: 'internal_source',
         enabled: createEnabled,
         dnssec_enabled: createDnssec,
-        default_ttl: Number(createDefaultTtl),
-      }),
+      };
+
+      // The API only whitelists default_ttl for admins during zone creation.
+      // User-created zones receive the backend default just like the legacy UI.
+      if (mode === 'admin') payload.default_ttl = createDefaultTtlValue;
+
+      return createDnsZone(payload);
+    },
     onSuccess: () => {
       setCreateOpen(false);
       setCreateName('');
@@ -1102,7 +1125,7 @@ export function DnsZonesPage() {
             </Button>
             <Button
               onClick={() => createZ.mutate()}
-              disabled={createZ.isPending || !createName.trim()}
+              disabled={createZ.isPending || Boolean(createValidationError)}
               testId="dns.zones.create.submit"
             >
               {createZ.isPending ? t('dns.zones.create.submit_creating') : t('dns.zones.create.submit')}
@@ -1129,24 +1152,28 @@ export function DnsZonesPage() {
               onChange={(e) => setCreateEmail(e.target.value)}
               placeholder={t('dns.zones.create.email.placeholder')}
               testId="dns.zones.create.email"
+              className={createEmailValue && !isValidDnsZoneEmail(createEmailValue) ? 'border-danger/60' : undefined}
             />
+            <div className="mt-1 text-xs text-muted">{t('dns.zones.create.email.help')}</div>
           </div>
 
-          <div>
-            <div className="mb-1 text-xs font-medium text-muted">{t('dns.zones.create.ttl.label')}</div>
-            <Select
-              value={createDefaultTtl}
-              onChange={(e) => setCreateDefaultTtl(e.target.value)}
-              testId="dns.zones.create.ttl"
-              options={[
-                { value: '300', label: '300' },
-                { value: '600', label: '600' },
-                { value: '3600', label: '3600' },
-                { value: '14400', label: '14400' },
-                { value: '86400', label: '86400' },
-              ]}
-            />
-          </div>
+          {mode === 'admin' ? (
+            <div>
+              <div className="mb-1 text-xs font-medium text-muted">{t('dns.zones.create.ttl.label')}</div>
+              <Select
+                value={createDefaultTtl}
+                onChange={(e) => setCreateDefaultTtl(e.target.value)}
+                testId="dns.zones.create.ttl"
+                options={[
+                  { value: '300', label: '300' },
+                  { value: '600', label: '600' },
+                  { value: '3600', label: '3600' },
+                  { value: '14400', label: '14400' },
+                  { value: '86400', label: '86400' },
+                ]}
+              />
+            </div>
+          ) : null}
 
           <Checkbox checked={createEnabled} onChange={setCreateEnabled} testId="dns.zones.create.enabled" label={t('common.enabled')} />
 
@@ -1156,6 +1183,12 @@ export function DnsZonesPage() {
             testId="dns.zones.create.dnssec"
             label={t('dns.zones.create.dnssec.label')}
           />
+
+          {createValidationError && (createName.trim() || createEmail.trim()) ? (
+            <Alert title={t('dns.zones.create.validation.title')} variant="warn">
+              {createValidationError}
+            </Alert>
+          ) : null}
 
           {createZ.isError ? (
             <Alert title={t('dns.zones.create.failed')} variant="danger">
