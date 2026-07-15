@@ -14,6 +14,7 @@ import { StatusDot } from '../../../../components/ui/StatusDot';
 import { clsx } from '../../../../components/ui/clsx';
 import { toneSurfaceClass } from '../../../../components/ui/tone';
 
+import { IpAddressRowActions } from './IpAddressRowActions';
 import {
   ifaceLabel,
   environmentLabel,
@@ -124,16 +125,6 @@ export function IpAddressesListMobile({ pageData, ipDetailBasePath, basePath, na
 
                 <div className="mt-4 flex flex-wrap items-center gap-2">
                   {ipAddr ? <CopyButton text={ipAddr} label={t('common.copy')} /> : null}
-                  {ipAddr ? (
-                    <Link className="text-xs text-accent hover:underline" to={`${basePath}/incidents?ip_addr=${encodeURIComponent(ipAddr)}`}>
-                      {t('admin.ip_addresses.action.incidents')}
-                    </Link>
-                  ) : null}
-                  {ipAddr ? (
-                    <Link className="text-xs text-accent hover:underline" to={`${basePath}/networking/ip-address-assignments?q=${encodeURIComponent(ipAddr)}`}>
-                      {t('admin.ip_addresses.action.assignments')}
-                    </Link>
-                  ) : null}
                   {vpsId ? (
                     <Link className="text-xs text-accent hover:underline" to={`${basePath}/vps/${vpsId}`}>
                       {t('object_kind.vps')} #{vpsId}
@@ -144,15 +135,14 @@ export function IpAddressesListMobile({ pageData, ipDetailBasePath, basePath, na
                       {t('admin.user.heading')} #{userId}
                     </Link>
                   ) : null}
-                  <Link className="text-xs text-accent hover:underline" to={`${detailPath}#route`}>
-                    {assigned ? t('admin.ip_addresses.action.unassign_route') : t('admin.ip_addresses.action.assign_route')}
-                  </Link>
-                  <Link className="text-xs text-accent hover:underline" to={`${detailPath}#owner`}>
-                    {t('admin.ip.owner.title')}
-                  </Link>
-                  <Link className="text-xs text-accent hover:underline" to={`${detailPath}#hosts`}>
-                    {t('admin.ip.hosts.title')}
-                  </Link>
+                  <IpAddressRowActions
+                    ipAddr={ipAddr}
+                    detailPath={detailPath}
+                    basePath={basePath}
+                    assigned={assigned}
+                    testIdPrefix={`admin.ip_addresses.card.${id}`}
+                    className="ml-auto"
+                  />
                 </div>
               </div>
             </Card>

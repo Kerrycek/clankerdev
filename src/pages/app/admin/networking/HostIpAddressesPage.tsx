@@ -36,6 +36,7 @@ import { clsx } from '../../../../components/ui/clsx';
 import { UserLookupInput } from '../../../../components/ui/UserLookupInput';
 import { VpsLookupInput } from '../../../../components/ui/VpsLookupInput';
 import { toneSurfaceClass } from '../../../../components/ui/tone';
+import { HostIpAddressRowActions } from '../ipAddresses/HostIpAddressRowActions';
 
 function idOf(v: any): number | null {
   if (!v) return null;
@@ -285,7 +286,7 @@ export function HostIpAddressesPage() {
               <th>{t('admin.host_ip_addresses.field.user')}</th>
               <th>{t('admin.host_ip_addresses.field.ptr')}</th>
               <th>{t('admin.host_ip_addresses.field.flags')}</th>
-              <th />
+              <th><span className="sr-only">{t('common.actions')}</span></th>
             </tr>
           </thead>
           <tbody>
@@ -308,53 +309,24 @@ export function HostIpAddressesPage() {
                     </div>
                   </td>
                   <td className="text-right">
-                    <div className="flex flex-wrap justify-end gap-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        testId={`admin.host_ip_addresses.row.${id}.ptr`}
-                        onClick={() => {
-                          setPtrEditor(row);
-                          setPtrValue(String((row as any).reverse_record_value ?? ''));
-                        }}
-                      >
-                        {t('admin.host_ip_addresses.action.ptr')}
-                      </Button>
-                      {row.assigned === false ? (
-                        <ActionButton
-                          size="sm"
-                          testId={`admin.host_ip_addresses.row.${id}.assign`}
-                          loading={assignM.isPending}
-                          onClick={() => {
-                            setAssignHost(row);
-                            setAssignVps(null);
-                            setAssignInterface('');
-                          }}
-                        >
-                          {t('admin.host_ip_addresses.action.assign')}
-                        </ActionButton>
-                      ) : (
-                        <ActionButton
-                          size="sm"
-                          variant="danger"
-                          testId={`admin.host_ip_addresses.row.${id}.free`}
-                          loading={freeM.isPending}
-                          onClick={() => freeM.mutate(id)}
-                        >
-                          {t('admin.host_ip_addresses.action.free')}
-                        </ActionButton>
-                      )}
-                      {(row as any).user_created && row.assigned === false ? (
-                        <Button
-                          size="sm"
-                          variant="danger"
-                          testId={`admin.host_ip_addresses.row.${id}.delete`}
-                          onClick={() => setDeleteHost(row)}
-                        >
-                          {t('common.delete')}
-                        </Button>
-                      ) : null}
-                    </div>
+                    <HostIpAddressRowActions
+                      assigned={row.assigned !== false}
+                      userCreated={Boolean((row as any).user_created)}
+                      testIdPrefix={`admin.host_ip_addresses.row.${id}`}
+                      assignLoading={assignM.isPending}
+                      freeLoading={freeM.isPending}
+                      onEditPtr={() => {
+                        setPtrEditor(row);
+                        setPtrValue(String((row as any).reverse_record_value ?? ''));
+                      }}
+                      onAssign={() => {
+                        setAssignHost(row);
+                        setAssignVps(null);
+                        setAssignInterface('');
+                      }}
+                      onFree={() => freeM.mutate(id)}
+                      onDelete={() => setDeleteHost(row)}
+                    />
                   </td>
                 </tr>
               );

@@ -44,6 +44,7 @@ import { Table } from '../../../components/ui/Table';
 import { Textarea } from '../../../components/ui/Textarea';
 import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 import { VpsLookupInput } from '../../../components/ui/VpsLookupInput';
+import { HostIpAddressRowActions } from './ipAddresses/HostIpAddressRowActions';
 
 function parseIdParam(v: string | undefined): number | null {
   if (!v) return null;
@@ -540,7 +541,7 @@ export function IpAddressDetailPage() {
                             <th>{t('admin.ip.hosts.field.ptr')}</th>
                             <th>{t('admin.ip.hosts.field.assigned')}</th>
                             <th>{t('admin.ip.hosts.field.flags')}</th>
-                            <th />
+                            <th><span className="sr-only">{t('common.actions')}</span></th>
                           </tr>
                         </thead>
                         <tbody>
@@ -556,41 +557,24 @@ export function IpAddressDetailPage() {
                                 </div>
                               </td>
                               <td className="text-right">
-                                <div className="flex flex-wrap justify-end gap-2">
-                                  <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    testId={`admin.ip.hosts.row.${host.id}.ptr`}
-                                    onClick={() => {
-                                      setPtrEditor(host);
-                                      setPtrValue(String((host as any).reverse_record_value ?? ''));
-                                    }}
-                                  >
-                                    {t('admin.ip.hosts.ptr')}
-                                  </Button>
-                                  {host.assigned === false ? (
-                                    <ActionButton
-                                      size="sm"
-                                      loading={hostAssignM.isPending}
-                                      onClick={() => {
-                                        setAssignHost(host);
-                                        setAssignHostVps(null);
-                                        setAssignHostInterface('');
-                                      }}
-                                    >
-                                      {t('admin.ip.hosts.assign')}
-                                    </ActionButton>
-                                  ) : (
-                                    <ActionButton size="sm" variant="danger" loading={hostFreeM.isPending} onClick={() => hostFreeM.mutate(host.id)}>
-                                      {t('admin.ip.hosts.free')}
-                                    </ActionButton>
-                                  )}
-                                  {(host as any).user_created && host.assigned === false ? (
-                                    <Button size="sm" variant="danger" onClick={() => setDeleteHost(host)}>
-                                      {t('common.delete')}
-                                    </Button>
-                                  ) : null}
-                                </div>
+                                <HostIpAddressRowActions
+                                  assigned={host.assigned !== false}
+                                  userCreated={Boolean((host as any).user_created)}
+                                  testIdPrefix={`admin.ip.hosts.row.${host.id}`}
+                                  assignLoading={hostAssignM.isPending}
+                                  freeLoading={hostFreeM.isPending}
+                                  onEditPtr={() => {
+                                    setPtrEditor(host);
+                                    setPtrValue(String((host as any).reverse_record_value ?? ''));
+                                  }}
+                                  onAssign={() => {
+                                    setAssignHost(host);
+                                    setAssignHostVps(null);
+                                    setAssignHostInterface('');
+                                  }}
+                                  onFree={() => hostFreeM.mutate(host.id)}
+                                  onDelete={() => setDeleteHost(host)}
+                                />
                               </td>
                             </tr>
                           ))}
