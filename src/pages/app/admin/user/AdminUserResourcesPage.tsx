@@ -3,7 +3,6 @@ import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/rea
 
 import { useI18n } from '../../../../app/i18n';
 import { useToasts } from '../../../../app/toasts';
-import { SummaryGrid } from '../../../../components/layout/SummaryGrid';
 import { Badge } from '../../../../components/ui/Badge';
 import { Button } from '../../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../../components/ui/Card';
@@ -12,7 +11,7 @@ import { EmptyState } from '../../../../components/ui/EmptyState';
 import { Input } from '../../../../components/ui/Input';
 import { Modal } from '../../../../components/ui/Modal';
 import { Select } from '../../../../components/ui/Select';
-import { StatCard } from '../../../../components/ui/StatCard';
+import { TableCard } from '../../../../components/ui/TableCard';
 import { fetchClusterResourcePackageItems } from '../../../../lib/api/clusterResourcePackages';
 import {
   createUserClusterResourcePackage,
@@ -34,6 +33,14 @@ function environmentLabel(value: any) {
 
 function packageLabel(value: any) {
   return label(value?.label, typeof value?.id === 'number' ? `#${value.id}` : '—');
+}
+
+function isPersonalPackageAssignment(row: UserClusterResourcePackage) {
+  if (typeof row.is_personal === 'boolean') return row.is_personal;
+  if (typeof row.cluster_resource_package?.is_personal === 'boolean') {
+    return row.cluster_resource_package.is_personal;
+  }
+  return Boolean(row.cluster_resource_package?.user);
 }
 
 function resourceValue(value: unknown, resource: any) {
@@ -68,9 +75,11 @@ export function AdminUserResourcesPage() {
     queryFn: async () => (await fetchEnvironments({ limit: 500 })).data,
     staleTime: 60_000,
   });
+  // Shared packages are represented by a null owner. `is_personal` is derived
+  // and is not a reliable index filter on older vpsAdmin API versions.
   const packagesQ = useQuery({
-    queryKey: ['cluster_resource_packages', { isPersonal: false, limit: 500 }],
-    queryFn: async () => (await fetchClusterResourcePackages({ isPersonal: false, limit: 500 })).data,
+    queryKey: ['cluster_resource_packages', { isPersonal: false, userId: null, limit: 500 }],
+    queryFn: async () => (await fetchClusterResourcePackages({ isPersonal: false, userId: null, limit: 500 })).data,
     staleTime: 30_000,
   });
   const assignments = assignmentsQ.data ?? [];
@@ -99,24 +108,32 @@ export function AdminUserResourcesPage() {
     return [...groups.entries()].map(([key, group]) => ({ key, ...group }));
   }, [assignments]);
   const packageSummary = useMemo(() => {
-    const packages = new Map<string, { label: string; count: number; environments: Set<string> }>();
+    const packages = new Map<string, {
+      key: string;
+      label: string;
+      count: number;
+      environments: Set<string>;
+    }>();
 
     for (const row of assignments) {
       const pkg: any = row.cluster_resource_package;
       const environment: any = row.environment ?? pkg?.environment;
-      const packageId = Number(pkg?.id);
-      const key = Number.isFinite(packageId) ? `id:${packageId}` : `label:${packageLabel(pkg)}`;
+      const label = packageLabel(pkg);
+      const environmentId = Number(environment?.id);
+      const environmentKey = Number.isFinite(environmentId) ? `id:${environmentId}` : `label:${environmentLabel(environment)}`;
+      const key = `label:${label.toLocaleLowerCase('cs')}`;
       const entry = packages.get(key) ?? {
-        label: packageLabel(pkg),
+        key,
+        label,
         count: 0,
         environments: new Set<string>(),
       };
       entry.count += 1;
-      entry.environments.add(environmentLabel(environment));
+      entry.environments.add(environmentKey);
       packages.set(key, entry);
     }
 
-    return [...packages.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, 'cs'));
+    return [...packages.values()];
   }, [assignments]);
 
   const invalidate = async () => {
@@ -161,19 +178,27 @@ export function AdminUserResourcesPage() {
       {!assignmentsQ.isLoading && grouped.length === 0 ? <EmptyState title={t('admin.user.resources.empty.title')} body={t('admin.user.resources.empty.body')} /> : null}
       {packageSummary.length ? (
         <section aria-label={t('admin.user.resources.summary.title')}>
-          <h2 className="mb-3 text-base font-semibold">{t('admin.user.resources.summary.title')}</h2>
-          <SummaryGrid testId="admin.user.resources.summary">
+          <h2 className="mb-2 text-base font-semibold">{t('admin.user.resources.summary.title')}</h2>
+          <TableCard testId="admin.user.resources.summary" variant="plain">
+            <thead className="bg-surface-2">
+              <tr className="border-b border-border text-left text-xs text-muted">
+                <th className="px-4 py-2 font-semibold">{t('admin.user.resources.add.package')}</th>
+                <th className="w-28 px-4 py-2 text-right font-semibold">{t('admin.user.resources.add.environment')}</th>
+                <th className="w-24 px-4 py-2 text-right font-semibold">{t('admin.user.resources.summary.count')}</th>
+              </tr>
+            </thead>
+            <tbody>
             {packageSummary.map((entry) => (
-              <StatCard
-                key={entry.label}
-                className="md:col-span-3"
-                variant="compact"
-                title={entry.label}
-                value={t('admin.user.resources.summary.assigned', { count: entry.count })}
-                subtitle={t('admin.user.resources.summary.environments', { count: entry.environments.size })}
-              />
+              <tr key={entry.key} className="border-b border-border/60 last:border-b-0">
+                <td className="px-4 py-2 font-medium text-fg">{entry.label}</td>
+                <td className="px-4 py-2 text-right text-muted">{entry.environments.size}</td>
+                <td className="px-4 py-2 text-right">
+                  <Badge variant="neutral">{entry.count}×</Badge>
+                </td>
+              </tr>
             ))}
-          </SummaryGrid>
+            </tbody>
+          </TableCard>
         </section>
       ) : null}
       {grouped.map((group) => (
@@ -187,7 +212,8 @@ export function AdminUserResourcesPage() {
             {group.rows.map((row: any) => {
               const pkg = row.cluster_resource_package;
               const items = itemsByPackage.get(Number(pkg?.id)) ?? [];
-              return <div key={row.id} className="flex flex-wrap items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
+              const personal = isPersonalPackageAssignment(row);
+              return <div key={row.id} data-testid={`admin.user.resources.assignment.${row.id}`} className="flex flex-wrap items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
                 <div className="min-w-0 flex-1">
                   <div className="font-medium">{packageLabel(pkg)}</div>
                   {row.comment ? <div className="mt-1 text-sm text-muted">{row.comment}</div> : null}
@@ -201,7 +227,13 @@ export function AdminUserResourcesPage() {
                     </div>
                   ) : <div className="mt-1 text-sm text-muted">{t('admin.user.resources.none')}</div>}
                 </div>
-                <div className="flex shrink-0 gap-2"><Button size="sm" variant="secondary" to={`/admin/cluster/resource-packages/${pkg?.id}`}>{t('admin.user.resources.open')}</Button><Button size="sm" variant="danger" onClick={() => setRemoveRecord(row)}>{t('admin.user.resources.remove')}</Button></div>
+                <div className="flex shrink-0 gap-2">
+                  {personal ? (
+                    <Button size="sm" variant="secondary" to={`/admin/cluster/resource-packages/${pkg?.id}`}>{t('admin.user.resources.open')}</Button>
+                  ) : (
+                    <Button size="sm" variant="danger" onClick={() => setRemoveRecord(row)}>{t('admin.user.resources.remove')}</Button>
+                  )}
+                </div>
               </div>;
             })}
             </div>

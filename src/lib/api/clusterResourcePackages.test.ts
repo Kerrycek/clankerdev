@@ -36,4 +36,19 @@ describe('cluster resource packages API wrappers', () => {
     expect(u.searchParams.get('cluster_resource_package[from_id]')).toBe('40');
     expect(u.searchParams.get('_meta[includes]')).toBe('environment,user');
   });
+
+  test('fetchClusterResourcePackages serializes a null user filter for shared packages', async () => {
+    globalThis.fetch = mockFetchOk({
+      cluster_resource_packages: [{ id: 11, label: 'Standard Production' }],
+      _meta: { total_count: 1 },
+    }) as any;
+
+    await fetchClusterResourcePackages({ userId: null, limit: 500 });
+
+    const [url] = (globalThis.fetch as any).mock.calls.find(([u]: [string]) => new URL(u).pathname.endsWith('/cluster_resource_packages'));
+    const u = new URL(url);
+
+    expect(u.searchParams.has('cluster_resource_package[user]')).toBe(true);
+    expect(u.searchParams.get('cluster_resource_package[user]')).toBe('');
+  });
 });
