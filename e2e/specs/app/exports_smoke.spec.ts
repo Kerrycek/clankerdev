@@ -55,4 +55,22 @@ test.describe('@smoke exports', () => {
     await expect(page.getByTestId('exports.detail.instructions.command')).toContainText('198.51.100.10:/tank/user/data');
     await expect(page.getByTestId('exports.detail.hosts.row.11')).toBeVisible();
   });
+
+  test('opens create export form as a centered modal', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'demo', level: 1 },
+      handlers: {
+        'GET exports': () => ({ exports: [], _meta: { total_count: 0 } }),
+      },
+    });
+
+    await page.goto('/app/exports');
+    await page.getByTestId('exports.create.open').click();
+
+    await expect(page.getByTestId('exports.create')).toBeVisible();
+    await expect(page.getByTestId('exports.create')).toHaveAttribute('data-overlay', 'modal');
+    await expect(page.locator('[data-overlay="drawer"][data-testid="exports.create"]')).toHaveCount(0);
+  });
 });

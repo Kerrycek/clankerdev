@@ -6,9 +6,9 @@ import { Button } from '../../../components/ui/Button';
 import { Card, CardBody } from '../../../components/ui/Card';
 import { Checkbox } from '../../../components/ui/Checkbox';
 import { DatasetLookupInput } from '../../../components/ui/DatasetLookupInput';
-import { Drawer } from '../../../components/ui/Drawer';
 import { HostIpLookupInput } from '../../../components/ui/HostIpLookupInput';
 import { Input } from '../../../components/ui/Input';
+import { Modal } from '../../../components/ui/Modal';
 import { Select } from '../../../components/ui/Select';
 import type { Dataset, Snapshot } from '../../../lib/api/datasets';
 import {
@@ -135,7 +135,27 @@ export function ExportCreateDrawer(props: {
   }
 
   return (
-    <Drawer open={props.open} onClose={props.onClose} title={t('exports.create.title')} width="lg" testId={props.embedded ? 'dataset.exports.create' : 'exports.create'}>
+    <Modal
+      open={props.open}
+      onClose={props.onClose}
+      title={t('exports.create.title')}
+      size="lg"
+      testId={props.embedded ? 'dataset.exports.create' : 'exports.create'}
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={props.onClose}>{t('common.cancel')}</Button>
+          <Button
+            variant="primary"
+            disabled={!validation.ok || props.pending}
+            loading={props.pending}
+            onClick={props.onSubmit}
+            testId="exports.create.submit"
+          >
+            {props.pending ? t('common.working') : t('exports.create.submit')}
+          </Button>
+        </div>
+      }
+    >
       <div className="space-y-4">
         {props.fixedDatasetId === undefined ? (
           <div>
@@ -220,19 +240,7 @@ export function ExportCreateDrawer(props: {
           isAdmin={props.isAdmin}
         />
 
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={props.onClose}>{t('common.cancel')}</Button>
-          <Button
-            variant="primary"
-            disabled={!validation.ok || props.pending}
-            loading={props.pending}
-            onClick={props.onSubmit}
-            testId="exports.create.submit"
-          >
-            {props.pending ? t('common.working') : t('exports.create.submit')}
-          </Button>
-        </div>
       </div>
-    </Drawer>
+    </Modal>
   );
 }
