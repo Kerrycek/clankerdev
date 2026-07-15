@@ -5,6 +5,7 @@ import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 test.describe('@smoke DNS records CRUD', () => {
   test('can create, edit, and delete a record', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    let createPayload: any;
 
     let records = [
       {
@@ -30,20 +31,22 @@ test.describe('@smoke DNS records CRUD', () => {
           name: 'example.com',
           enabled: true,
           dnssec_enabled: false,
+          default_ttl: 600,
           object_state: 'active',
         }),
         'GET dns_records': () => ({ dns_records: records }),
         // Zone layout calls this for "recent tx" best-effort.
         'GET dns_record_logs': () => ({ dns_record_logs: [] }),
 
-        'POST dns_records': () => {
+        'POST dns_records': async ({ request }) => {
+          createPayload = await request.postDataJSON();
           const created = {
             id: 101,
             dns_zone: 10,
             name: 'api',
             type: 'A',
             content: '5.6.7.8',
-            ttl: 3600,
+            ttl: createPayload?.dns_record?.ttl,
             priority: null,
             enabled: true,
             dynamic_update_enabled: false,
@@ -73,10 +76,12 @@ test.describe('@smoke DNS records CRUD', () => {
     // Create
     await page.getByTestId('dns.records.create.open').click();
     await expect(page.getByTestId('dns.records.create.modal')).toBeVisible();
+    await expect(page.getByTestId('dns.records.create.ttl')).toHaveValue('600');
     await page.getByTestId('dns.records.create.name').fill('api');
     await page.getByTestId('dns.records.create.content').fill('5.6.7.8');
     await page.getByTestId('dns.records.create.submit').click();
 
+    await expect.poll(() => createPayload?.dns_record?.ttl).toBe(600);
     await expect(page.getByTestId('dns.records.create.modal')).toHaveCount(0);
     await expect(page.getByTestId('dns.record.row.101')).toBeVisible();
     await expect(page.getByTestId('dns.record.row.101')).toContainText('5.6.7.8');

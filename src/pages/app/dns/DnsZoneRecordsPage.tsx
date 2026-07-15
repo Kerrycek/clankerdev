@@ -73,6 +73,7 @@ export function DnsZoneRecordsPage() {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [qstr, setQstr] = useState(() => searchParams.get('q') ?? '');
+  const zoneDefaultTtl = typeof zone.default_ttl === 'number' ? zone.default_ttl : undefined;
 
   useEffect(() => {
     const next = new URLSearchParams(searchParams);
@@ -92,7 +93,7 @@ export function DnsZoneRecordsPage() {
   });
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [createDraft, setCreateDraft] = useState<DnsRecordDraft>(() => defaultDnsRecordDraft());
+  const [createDraft, setCreateDraft] = useState<DnsRecordDraft>(() => defaultDnsRecordDraft(zoneDefaultTtl));
   const [edit, setEdit] = useState<DnsRecord | null>(null);
   const [editDraft, setEditDraft] = useState<DnsRecordDraft>(() => defaultDnsRecordDraft());
   const [confirmDelete, setConfirmDelete] = useState<DnsRecord | null>(null);
@@ -155,7 +156,7 @@ export function DnsZoneRecordsPage() {
         });
       }
       setCreateOpen(false);
-      setCreateDraft(defaultDnsRecordDraft());
+      setCreateDraft(defaultDnsRecordDraft(zoneDefaultTtl));
       pagination.goToPage(1);
       recordsQ.refetch();
       refetchZone();
@@ -243,7 +244,7 @@ export function DnsZoneRecordsPage() {
 
   const openCreate = () => {
     createM.reset();
-    setCreateDraft(defaultDnsRecordDraft());
+    setCreateDraft(defaultDnsRecordDraft(zoneDefaultTtl));
     setCreateOpen(true);
   };
 

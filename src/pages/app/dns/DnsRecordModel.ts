@@ -76,15 +76,22 @@ const PRIORITY_RECORD_TYPES = new Set<string>(['MX', 'SRV']);
 const HOST_TARGET_TYPES = new Set<string>(['CNAME', 'MX', 'NS', 'PTR']);
 const OPTIONAL_INT_MAX = 2_147_483_647;
 const PRIORITY_MAX = 65_535;
+const FALLBACK_DNS_RECORD_TTL = 3600;
 
 
 
-export function defaultDnsRecordDraft(): DnsRecordDraft {
+function normalizeDefaultTtl(value?: number | null): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return String(FALLBACK_DNS_RECORD_TTL);
+  if (!Number.isInteger(value) || value < 60 || value > OPTIONAL_INT_MAX) return String(FALLBACK_DNS_RECORD_TTL);
+  return String(value);
+}
+
+export function defaultDnsRecordDraft(defaultTtl?: number | null): DnsRecordDraft {
   return {
     name: '',
     type: 'A',
     content: '',
-    ttl: '',
+    ttl: normalizeDefaultTtl(defaultTtl),
     priority: '',
     comment: '',
     enabled: true,
