@@ -24,6 +24,7 @@ import { objectRef } from '../../../lib/objectRef';
 import {
   assignableIpKind,
   assignableIpKindQuery,
+  ipLocationId,
   ipAddressLabel,
   isAssignedIp,
   isOwnedByUser,
@@ -41,6 +42,7 @@ export function AssignIpAddressModal(props: {
   fixedVps?: Vps;
   availableVpses?: Vps[];
   initialIp?: IpAddress | null;
+  ownedDetachedIps?: IpAddress[];
   gate?: GateDecision;
   testId?: string;
 }) {
@@ -111,11 +113,20 @@ export function AssignIpAddressModal(props: {
   });
 
   const availableIps = useMemo(() => {
+    const ownedDetached = props.ownedDetachedIps ?? [];
     const rows = props.initialIp
-      ? uniqueIpAddresses([props.initialIp, ...(availableQ.data ?? [])])
-      : (availableQ.data ?? []);
-    return rows.filter((ip) => !isAssignedIp(ip) && matchesAssignableIpKind(ip, kind));
-  }, [availableQ.data, kind, props.initialIp]);
+      ? uniqueIpAddresses([props.initialIp, ...ownedDetached, ...(availableQ.data ?? [])])
+      : uniqueIpAddresses([...ownedDetached, ...(availableQ.data ?? [])]);
+    return rows.filter((ip) => {
+      if (isAssignedIp(ip) || !matchesAssignableIpKind(ip, kind)) return false;
+
+      const ipLocation = ipLocationId(ip);
+      // Free-address API results are already location-scoped. For user-owned
+      // detached addresses brought in from the network overview, keep only
+      // addresses whose location matches the selected VPS when we know it.
+      return !locationId || !ipLocation || ipLocation === locationId;
+    });
+  }, [availableQ.data, kind, locationId, props.initialIp, props.ownedDetachedIps]);
 
   useEffect(() => {
     if (!props.open || ipId || availableIps.length === 0) return;

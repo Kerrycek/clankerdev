@@ -20,6 +20,10 @@ export function vpsLocationId(vps: Vps | null | undefined): number | null {
   return resourceId(vps?.node?.location?.id);
 }
 
+export function ipLocationId(ip: IpAddress | null | undefined): number | null {
+  return resourceId(ip?.network?.primary_location?.id);
+}
+
 export function assignableIpKindQuery(kind: AssignableIpKind): {
   version: 4 | 6;
   role?: 'public_access' | 'private_access';

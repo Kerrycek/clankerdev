@@ -68,11 +68,12 @@ test('@pr-smoke user network page lists only own addresses and assigns all suppo
       'GET network_interfaces': () => ({ network_interfaces: [{ id: 501, name: 'eth0', vps: { id: 123 } }] }),
       'GET ip_addresses': (ctx) => {
         listRequests.push(new URL(ctx.url.href));
+        const vpsId = ctx.searchParams.get('ip_address[vps]');
         const assignedFilter = ctx.searchParams.get('ip_address[assigned_to_interface]');
         const role = ctx.searchParams.get('ip_address[role]');
         const version = ctx.searchParams.get('ip_address[version]');
 
-        if (assignedFilter === 'true') {
+        if (vpsId === '123') {
           return {
             ip_addresses: [
               assigned,
@@ -97,6 +98,9 @@ test('@pr-smoke user network page lists only own addresses and assigns all suppo
       'POST ip_addresses/103/assign': () => ({
         ip_address: { ...freePrivate, network_interface: { id: 501, name: 'eth0', vps: { id: 123 } } },
       }),
+      'POST ip_addresses/102/assign': () => ({
+        ip_address: { ...ownedDetached, network_interface: { id: 501, name: 'eth0', vps: { id: 123 } } },
+      }),
     },
   });
 
@@ -109,15 +113,21 @@ test('@pr-smoke user network page lists only own addresses and assigns all suppo
   await expect(page.getByText('203.0.113.99/32')).toHaveCount(0);
   await expect(page.getByText('10.20.30.40/32')).toHaveCount(0);
 
-  const assignedRequest = listRequests.find(
-    (url) => url.searchParams.get('ip_address[assigned_to_interface]') === 'true'
-  );
+  const assignedRequest = listRequests.find((url) => url.searchParams.get('ip_address[vps]') === '123');
   const detachedRequest = listRequests.find(
     (url) => url.searchParams.get('ip_address[assigned_to_interface]') === 'false'
   );
+  expect(assignedRequest).toBeTruthy();
   expect(assignedRequest?.searchParams.get('ip_address[purpose]')).toBeNull();
   expect(detachedRequest?.searchParams.get('ip_address[purpose]')).toBeNull();
   expect(detachedRequest?.searchParams.get('ip_address[order]')).toBeNull();
+  expect(
+    listRequests.some(
+      (url) =>
+        url.searchParams.get('ip_address[assigned_to_interface]') === 'true' &&
+        url.searchParams.get('ip_address[vps]') === null
+    )
+  ).toBe(false);
 
   await page.getByTestId('network.user.add').click();
   await page.getByTestId('network.user.assign.vps').selectOption('123');
@@ -131,6 +141,21 @@ test('@pr-smoke user network page lists only own addresses and assigns all suppo
   await page.getByTestId('network.user.assign.submit').click();
 
   expect((await request).postDataJSON()).toEqual({
+    ip_address: { network_interface: 501 },
+  });
+  await expect(page.getByTestId('network.user.assign')).toBeHidden();
+
+  await page.getByTestId('network.user.ip.row.102').getByTestId('network.user.ip.102.assign').click();
+  await page.getByTestId('network.user.assign.vps').selectOption('123');
+  await page.getByTestId('network.user.assign.continue').click();
+  await expect(page.getByTestId('network.user.assign.address')).toContainText('2001:db8::10/128');
+
+  const ownedRequest = page.waitForRequest(
+    (req) => req.method() === 'POST' && req.url().includes('/api/v7.0/ip_addresses/102/assign')
+  );
+  await page.getByTestId('network.user.assign.submit').click();
+
+  expect((await ownedRequest).postDataJSON()).toEqual({
     ip_address: { network_interface: 501 },
   });
   await expect(page.getByTestId('network.user.assign')).toBeHidden();

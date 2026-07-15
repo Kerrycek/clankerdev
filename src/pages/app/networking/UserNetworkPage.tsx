@@ -96,15 +96,7 @@ export function UserNetworkPage() {
   const assignedQ = useQuery({
     queryKey: ['ip_address', 'user-network', 'assigned', { userId, role: auth.role, vpsIds }],
     queryFn: async (): Promise<ScopedIpAddress[]> => {
-      if (auth.role !== 'admin') {
-        const response = await fetchIpAddresses({
-          limit: 250,
-          assignedToInterface: true,
-          order: 'interface',
-          includes: 'network__primary_location__environment,network_interface__vps,user',
-        });
-        return response.data.map((ip) => ({ ip, vpsId: ipVpsId(ip) }));
-      }
+      if (vpsIds.length === 0) return [];
 
       const responses = await Promise.all(
         vpsIds.map(async (vpsId) => ({
@@ -122,11 +114,11 @@ export function UserNetworkPage() {
         ips.flatMap((ip) => {
           if (seen.has(ip.id)) return [];
           seen.add(ip.id);
-          return [{ ip, vpsId }];
+          return [{ ip, vpsId: ipVpsId(ip) ?? vpsId }];
         })
       );
     },
-    enabled: auth.role !== 'admin' || vpsesQ.isSuccess,
+    enabled: vpsesQ.isSuccess,
     staleTime: 5_000,
   });
 
@@ -166,8 +158,13 @@ export function UserNetworkPage() {
     return visible.filter((ip) => assignableIpKind(ip) === kindFilter);
   }, [assignedQ.data, detachedQ.data, kindFilter, userId, vpsById]);
 
-  const loading = vpsesQ.isLoading || assignedQ.isLoading || detachedQ.isLoading;
-  const error = vpsesQ.error ?? assignedQ.error ?? detachedQ.error;
+  const ownedDetachedIps = useMemo(
+    () => (detachedQ.data ?? []).filter((ip) => isOwnedByUser(ip, userId)),
+    [detachedQ.data, userId]
+  );
+
+  const loading = vpsesQ.isLoading || assignedQ.isLoading || (detachedQ.isLoading && rows.length === 0);
+  const error = vpsesQ.error ?? assignedQ.error ?? (rows.length === 0 ? detachedQ.error : null);
 
   const openAssignment = (ip?: IpAddress) => {
     setInitialIp(ip ?? null);
@@ -330,6 +327,7 @@ export function UserNetworkPage() {
         open={assignOpen}
         availableVpses={vpsesQ.data ?? []}
         initialIp={initialIp}
+        ownedDetachedIps={ownedDetachedIps}
         onClose={() => {
           setAssignOpen(false);
           setInitialIp(null);
