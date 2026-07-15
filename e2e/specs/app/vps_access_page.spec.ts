@@ -40,7 +40,7 @@ const hostKeys = [
   { id: 2, key_type: 'ssh-rsa', fingerprint: 'SHA256:host-rsa', public_key: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ' },
 ];
 
-test('@pr-smoke VPS access page generates root password and deploys saved SSH key', async ({ page }) => {
+test('@workflow-matrix @pr-smoke VPS access page generates root password and deploys saved SSH key', async ({ page }) => {
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
   await installHaveApiMock(page, {
@@ -93,6 +93,12 @@ test('@pr-smoke VPS access page generates root password and deploys saved SSH ke
   await page.getByTestId('vps.access.generated_password.clear').click();
   await expect(page.getByTestId('vps.access.generated_password')).toHaveCount(0);
 
+  await page.getByTestId('tasks.open-button').click();
+  await expect(page.getByTestId('tasks.drawer')).toHaveAttribute('aria-modal', 'false');
+  await expect(page.getByTestId('tasks.row.700')).toContainText('Passwd');
+  await expect(page.getByTestId('vps.access.page')).toBeVisible();
+  await page.getByTestId('tasks.close-button').click();
+
   await expect(page.getByTestId('vps.access.ssh.key')).toHaveValue('8');
   await expect(page.getByTestId('vps.access.ssh.selected.fingerprint')).toContainText('SHA256:abc');
   await page.getByTestId('vps.access.ssh.deploy').click();
@@ -106,9 +112,13 @@ test('@pr-smoke VPS access page generates root password and deploys saved SSH ke
   const keyReq = await keyReqPromise;
   expect(keyReq.postDataJSON()).toEqual({ vps: { public_key: 8 } });
   await expect(page.getByText(/Public key deployed: workstation/)).toBeVisible();
+
+  await page.getByTestId('tasks.open-button').click();
+  await expect(page.getByTestId('tasks.row.701')).toContainText('Deploy public key');
+  await expect(page.getByTestId('vps.access.page')).toBeVisible();
 });
 
-test('@pr-smoke VPS access reports failed SSH key deployment and opens tasks', async ({ page }) => {
+test('@workflow-matrix @pr-smoke VPS access reports failed SSH key deployment and opens tasks', async ({ page }) => {
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
   await installHaveApiMock(page, {
@@ -131,5 +141,7 @@ test('@pr-smoke VPS access reports failed SSH key deployment and opens tasks', a
 
   await expect(page.getByText('SSH key deployment failed')).toBeVisible();
   await page.getByTestId('vps.access.ssh.failure.open_tasks').click();
-  await expect(page.getByTestId('tasks.drawer')).toBeVisible();
+  await expect(page.getByTestId('tasks.drawer')).toHaveAttribute('aria-modal', 'false');
+  await expect(page.getByTestId('tasks.row.702')).toContainText('Deploy public key');
+  await expect(page.getByTestId('vps.access.page')).toBeVisible();
 });

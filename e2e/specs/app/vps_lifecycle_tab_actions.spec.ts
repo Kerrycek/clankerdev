@@ -31,6 +31,21 @@ const osTemplates = [
   { id: 7, label: 'AlmaLinux 9', enabled: true, hypervisor_type: 'vpsadminos' },
 ];
 
+function runningActionState(id: number, label: string) {
+  return {
+    action_state: {
+      id,
+      label,
+      status: true,
+      finished: false,
+      current: 1,
+      total: 2,
+      created_at: '2026-07-15T12:00:00Z',
+      updated_at: '2026-07-15T12:00:01Z',
+    },
+  };
+}
+
 async function installLifecycleMock(page: Page) {
   await installHaveApiMock(page, {
     user: { id: 1, login: 'admin', level: 99 },
@@ -77,6 +92,9 @@ async function installLifecycleMock(page: Page) {
       'POST vpses/123/start': () => ({ _meta: { action_state_id: 503 } }),
       'POST vpses/123/stop': () => ({ _meta: { action_state_id: 504 } }),
       'POST vpses/123/restart': () => ({ _meta: { action_state_id: 505 } }),
+      'GET action_states/503': () => runningActionState(503, 'Start VPS'),
+      'GET action_states/504': () => runningActionState(504, 'Stop VPS'),
+      'GET action_states/505': () => runningActionState(505, 'Restart VPS'),
       'POST vpses/123/clone': () => ({ vps: { id: 456, hostname: 'admin-clone' }, _meta: { action_state_id: 507 } }),
       'POST vpses/123/swap_with': () => ({ _meta: { action_state_id: 508 } }),
       'POST vpses/123/replace': () => ({ vps: { id: 789, hostname: 'replacement' }, _meta: { action_state_id: 509 } }),
@@ -118,7 +136,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     });
   });
 
-  test('admin sees lifecycle controls reserved for admin mode', async ({ page }) => {
+  test('@workflow-matrix admin sees lifecycle controls reserved for admin mode', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installLifecycleMock(page);
 
@@ -141,7 +159,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await expect(page.getByTestId('vps.lifecycle.migrate')).toBeVisible();
   });
 
-  test('focused lifecycle start action posts start endpoint', async ({ page }) => {
+  test('@workflow-matrix focused lifecycle start action posts start endpoint', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installLifecycleMock(page);
 
@@ -159,9 +177,15 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     const req = await reqPromise;
     expect(req.postDataJSON()).toEqual({});
+
+    await expect(page.getByTestId('modal.action_progress')).toBeVisible();
+    await page.getByTestId('modal.action_progress.open_tasks').click();
+    await expect(page.getByTestId('tasks.drawer')).toHaveAttribute('aria-modal', 'false');
+    await expect(page.getByTestId('tasks.row.503')).toContainText('Start VPS');
+    await expect(page.getByTestId('vps.lifecycle.page')).toBeVisible();
   });
 
-  test('focused lifecycle stop action can send force flag', async ({ page }) => {
+  test('@workflow-matrix focused lifecycle stop action can send force flag', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installHaveApiMock(page, {
       user: { id: 1, login: 'admin', level: 99 },
@@ -171,6 +195,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
         'GET transaction_chains': () => ({ transaction_chains: [] }),
         'POST vpses/123/stop': () => ({ _meta: { action_state_id: 514 } }),
         'POST vpses/123/restart': () => ({ _meta: { action_state_id: 515 } }),
+        'GET action_states/514': () => runningActionState(514, 'Stop VPS'),
       },
     });
 
@@ -186,9 +211,15 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await page.getByTestId('vps.lifecycle.stop.submit').click();
     const stopReq = await stopReqPromise;
     expect(stopReq.postDataJSON()).toEqual({ vps: { force: true } });
+
+    await expect(page.getByTestId('modal.action_progress')).toBeVisible();
+    await page.getByTestId('modal.action_progress.open_tasks').click();
+    await expect(page.getByTestId('tasks.drawer')).toHaveAttribute('aria-modal', 'false');
+    await expect(page.getByTestId('tasks.row.514')).toContainText('Stop VPS');
+    await expect(page.getByTestId('vps.lifecycle.page')).toBeVisible();
   });
 
-  test('focused lifecycle restart action can send force flag', async ({ page }) => {
+  test('@workflow-matrix focused lifecycle restart action can send force flag', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installHaveApiMock(page, {
       user: { id: 1, login: 'admin', level: 99 },
@@ -197,6 +228,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
         'GET ip_addresses': () => ({ ip_addresses: [] }),
         'GET transaction_chains': () => ({ transaction_chains: [] }),
         'POST vpses/123/restart': () => ({ _meta: { action_state_id: 515 } }),
+        'GET action_states/515': () => runningActionState(515, 'Restart VPS'),
       },
     });
 
@@ -212,6 +244,12 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await page.getByTestId('vps.lifecycle.restart.submit').click();
     const restartReq = await restartReqPromise;
     expect(restartReq.postDataJSON()).toEqual({ vps: { force: true } });
+
+    await expect(page.getByTestId('modal.action_progress')).toBeVisible();
+    await page.getByTestId('modal.action_progress.open_tasks').click();
+    await expect(page.getByTestId('tasks.drawer')).toHaveAttribute('aria-modal', 'false');
+    await expect(page.getByTestId('tasks.row.515')).toContainText('Restart VPS');
+    await expect(page.getByTestId('vps.lifecycle.page')).toBeVisible();
   });
 
   test('overview management panel keeps user actions and marks admin-only lifecycle actions', async ({ page }) => {
