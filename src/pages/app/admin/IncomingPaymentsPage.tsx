@@ -107,15 +107,14 @@ export function IncomingPaymentsPage() {
       { limit: pagination.limit, fromId: pagination.fromId, state: state || undefined, q: qText.trim() || undefined, user: userIdNum },
     ],
     queryFn: async () =>
-      (
-        await fetchIncomingPayments({
-          limit: pagination.limit,
-          fromId: pagination.fromId,
-          state: state || undefined,
-          q: qText.trim() || undefined,
-          userId: userIdNum,
-        })
-      ).data,
+      fetchIncomingPayments({
+        limit: pagination.limit,
+        fromId: pagination.fromId,
+        state: state || undefined,
+        q: qText.trim() || undefined,
+        userId: userIdNum,
+        count: true,
+      }),
     refetchInterval: tierSlowMs,
   });
 
@@ -138,7 +137,9 @@ export function IncomingPaymentsPage() {
     refetchInterval: tierSlowMs,
   });
 
-  const rows = paymentsQ.data ?? [];
+  const rows = paymentsQ.data?.data ?? [];
+  const totalCount = getMetaTotalCount(paymentsQ.data?.meta);
+  const totalPageCount = totalCount !== undefined ? Math.max(1, Math.ceil(totalCount / pagination.limit)) : pagination.pageCount;
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
   const [bulkAction, setBulkAction] = useState<IncomingPaymentBulkAction>('mark_unmatched');
   const [bulkApplying, setBulkApplying] = useState(false);
@@ -223,7 +224,38 @@ export function IncomingPaymentsPage() {
   }, [paymentsQ, qc, t, toasts]);
 
   const pageCursor = useMemo(() => cursorFromDescendingPage(rows, (row) => row.id), [rows]);
-  const canNext = rows.length === pagination.limit;
+  const canNext = totalCount !== undefined ? pagination.page < totalPageCount : rows.length === pagination.limit;
+
+  const goToPaymentsPage = useCallback(async (pageNumber: number) => {
+    const target = totalCount !== undefined
+      ? Math.max(1, Math.min(totalPageCount, Math.floor(pageNumber)))
+      : Math.max(1, Math.floor(pageNumber));
+
+    if (!Number.isFinite(target) || target === pagination.page) return;
+    if (target <= pagination.stack.length) {
+      pagination.goToPage(target);
+      return;
+    }
+
+    const stack = [...pagination.stack];
+    let fromId = stack[stack.length - 1] ?? undefined;
+
+    while (stack.length < target) {
+      const page = await fetchIncomingPayments({
+        limit: pagination.limit,
+        fromId: fromId ?? undefined,
+        state: state || undefined,
+        q: qText.trim() || undefined,
+        userId: userIdNum,
+      });
+      const nextCursor = cursorFromDescendingPage(page.data, (row) => row.id);
+      if (typeof nextCursor !== 'number' || page.data.length < pagination.limit) break;
+      stack.push(nextCursor);
+      fromId = nextCursor;
+    }
+
+    if (stack.length >= target) pagination.goToPageWithStack(target, stack);
+  }, [pagination, qText, state, totalCount, totalPageCount, userIdNum]);
 
   const shareUrl = useMemo(() => (typeof window !== 'undefined' ? window.location.href : ''), [sp]);
 
@@ -277,6 +309,9 @@ export function IncomingPaymentsPage() {
             rows={rows}
             basePath={basePath}
             pagination={pagination}
+            pageCount={totalPageCount}
+            totalPagesKnown={totalCount !== undefined}
+            onGoToPage={goToPaymentsPage}
             pageCursor={pageCursor}
             canNext={canNext}
             selectedIds={selectedIds}

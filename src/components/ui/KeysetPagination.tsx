@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 
 import { useI18n } from '../../app/i18n';
 
@@ -37,11 +37,12 @@ function pageItems(current: number, total: number): PageItem[] {
 export function KeysetPagination(props: {
   page?: number;
   pageCount?: number;
+  totalPagesKnown?: boolean;
   canPrev: boolean;
   canNext: boolean;
   onPrev: () => void;
   onNext: () => void;
-  onGoToPage?: (pageNumber: number) => void;
+  onGoToPage?: (pageNumber: number) => void | Promise<void>;
   limit?: number;
   allowedLimits?: readonly number[];
   onLimitChange?: (limit: number) => void;
@@ -57,6 +58,17 @@ export function KeysetPagination(props: {
   const limit = props.limit ?? allowedLimits[0] ?? 25;
   const items = useMemo(() => pageItems(page, pageCount), [page, pageCount]);
   const prefix = props.testId ?? 'pagination';
+  const [jumpPage, setJumpPage] = useState('');
+  const totalPagesKnown = Boolean(props.totalPagesKnown && pageCount >= page);
+
+  const submitJump = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const raw = Number(jumpPage);
+    if (!Number.isFinite(raw)) return;
+    const target = Math.max(1, Math.min(pageCount, Math.floor(raw)));
+    setJumpPage('');
+    void props.onGoToPage?.(target);
+  };
 
   return (
     <div
@@ -117,22 +129,55 @@ export function KeysetPagination(props: {
           {t('pagination.next')}
         </Button>
 
-        <span className="ml-1 text-xs text-muted">{t('pagination.page', { page })}</span>
+        <span className="ml-1 text-xs text-muted">
+          {totalPagesKnown ? t('pagination.page_of', { page, total: pageCount }) : t('pagination.page', { page })}
+        </span>
       </div>
 
-      {props.onLimitChange ? (
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted">{t('pagination.rows')}</span>
-          <div className="w-24">
-            <Select
-              testId={`${prefix}.limit`}
-              value={String(limit)}
-              onChange={(e) => props.onLimitChange?.(Number(e.target.value))}
-              options={allowedLimits.map((l) => ({ value: String(l), label: String(l) }))}
+      <div className="flex flex-wrap items-center gap-3">
+        {props.onGoToPage && pageCount > 1 ? (
+          <form className="flex items-center gap-2" onSubmit={submitJump}>
+            <label htmlFor={`${prefix}.jump`} className="text-xs text-muted">
+              {t('pagination.jump_label')}
+            </label>
+            <input
+              id={`${prefix}.jump`}
+              data-testid={`${prefix}.jump`}
+              className="h-9 w-20 rounded-lg border border-border bg-surface px-2 text-sm text-foreground outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/20"
+              type="number"
+              min={1}
+              max={pageCount}
+              inputMode="numeric"
+              value={jumpPage}
+              placeholder={totalPagesKnown ? String(pageCount) : undefined}
+              onChange={(event) => setJumpPage(event.target.value)}
             />
+            <Button
+              type="submit"
+              variant="secondary"
+              size="sm"
+              disabled={!jumpPage.trim()}
+              testId={`${prefix}.jump.submit`}
+            >
+              {t('pagination.jump_action')}
+            </Button>
+          </form>
+        ) : null}
+
+        {props.onLimitChange ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted">{t('pagination.rows')}</span>
+            <div className="w-24">
+              <Select
+                testId={`${prefix}.limit`}
+                value={String(limit)}
+                onChange={(e) => props.onLimitChange?.(Number(e.target.value))}
+                options={allowedLimits.map((l) => ({ value: String(l), label: String(l) }))}
+              />
+            </div>
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </div>
   );
 }

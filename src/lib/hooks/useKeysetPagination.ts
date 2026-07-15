@@ -289,6 +289,16 @@ export function useKeysetPagination(opts: {
     syncUrl(viewStack, idx, 'push');
   };
 
+  const goToPageWithStack = (pageNumber: number, nextStackRaw: KeysetCursorStack) => {
+    const idx = pageNumber - 1;
+    const nextStack = normalizeStack(nextStackRaw);
+    if (!Number.isFinite(idx) || idx < 0 || idx >= nextStack.length) return;
+
+    setState((prev) => ({ ...prev, sig, index: idx, stack: nextStack }));
+    writeStack(storageKey, nextStack, { integer: cursorInteger });
+    syncUrl(nextStack, idx, 'push');
+  };
+
   const goPrev = () => {
     if (viewIndex <= 0) return;
     const nextIndex = viewIndex - 1;
@@ -339,6 +349,7 @@ export function useKeysetPagination(opts: {
     goPrev,
     goNext,
     goToPage,
+    goToPageWithStack,
     setLimit,
     allowedLimits,
   };

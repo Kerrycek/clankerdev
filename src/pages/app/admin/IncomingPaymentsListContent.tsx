@@ -33,6 +33,9 @@ export function IncomingPaymentsListContent(props: {
   rows: IncomingPayment[];
   basePath: string;
   pagination: PaginationController;
+  pageCount?: number;
+  totalPagesKnown?: boolean;
+  onGoToPage?: (pageNumber: number) => void | Promise<void>;
   pageCursor: number | null;
   canNext: boolean;
   selectedIds?: ReadonlySet<number>;
@@ -113,12 +116,13 @@ export function IncomingPaymentsListContent(props: {
         <Card>
           <KeysetPagination
             page={props.pagination.page}
-            pageCount={props.pagination.stack.length}
+            pageCount={props.pageCount ?? props.pagination.stack.length}
+            totalPagesKnown={props.totalPagesKnown}
             canPrev={props.pagination.canPrev}
             canNext={props.canNext}
             onPrev={props.pagination.goPrev}
             onNext={() => props.pagination.goNext(props.pageCursor)}
-            onGoToPage={props.pagination.goToPage}
+            onGoToPage={props.onGoToPage ?? props.pagination.goToPage}
             limit={props.pagination.limit}
             allowedLimits={props.pagination.allowedLimits}
             onLimitChange={props.pagination.setLimit}
@@ -134,12 +138,13 @@ export function IncomingPaymentsListContent(props: {
         footer={
           <KeysetPagination
             page={props.pagination.page}
-            pageCount={props.pagination.stack.length}
+            pageCount={props.pageCount ?? props.pagination.stack.length}
+            totalPagesKnown={props.totalPagesKnown}
             canPrev={props.pagination.canPrev}
             canNext={props.canNext}
             onPrev={props.pagination.goPrev}
             onNext={() => props.pagination.goNext(props.pageCursor)}
-            onGoToPage={props.pagination.goToPage}
+            onGoToPage={props.onGoToPage ?? props.pagination.goToPage}
             limit={props.pagination.limit}
             allowedLimits={props.pagination.allowedLimits}
             onLimitChange={props.pagination.setLimit}
