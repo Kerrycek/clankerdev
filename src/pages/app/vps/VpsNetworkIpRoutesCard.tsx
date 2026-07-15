@@ -12,10 +12,7 @@ import type { NetworkInterface } from '../../../lib/api/networkInterfaces';
 import type { GateDecision } from '../../../lib/gates/types';
 import {
   ipAddressLabel,
-  ipFamilyLabel,
   ipLocationLabel,
-  ipNetworkLabel,
-  ipPurposeLabel,
   labelFromResourceRef,
   routeStateForIp,
   type NetworkRouteState,
@@ -24,7 +21,6 @@ import {
 function routeStateBadgeVariant(state: NetworkRouteState): 'neutral' | 'ok' | 'warn' | 'info' {
   if (state === 'routed') return 'ok';
   if (state === 'active') return 'info';
-  if (state === 'busy') return 'warn';
   return 'warn';
 }
 
@@ -33,6 +29,17 @@ function routeStateLabelKey(state: NetworkRouteState): string {
   if (state === 'active') return 'vps.network.state.active';
   if (state === 'busy') return 'vps.network.state.busy';
   return 'vps.network.state.detached';
+}
+
+function routeAddressLabel(ip: IpAddress): string {
+  const address = ipAddressLabel(ip);
+  return typeof ip.prefix === 'number' ? `${address}/${ip.prefix}` : address;
+}
+
+function routeTypeKey(ip: IpAddress) {
+  if (Number(ip.network?.ip_version) === 6) return 'network.user.kind.ipv6' as const;
+  if (String(ip.network?.role ?? '') === 'private_access') return 'network.user.kind.ipv4_private' as const;
+  return 'network.user.kind.ipv4_public' as const;
 }
 
 export function VpsNetworkIpRoutesCard(props: {
@@ -45,28 +52,52 @@ export function VpsNetworkIpRoutesCard(props: {
   ipByNetif: Map<number, IpAddress[]>;
   unassignedIps: IpAddress[];
   freeRoutePending: boolean;
+  onAddRoute: () => void;
   onRefresh: () => void;
-  onCreateHostAddress: (ip: IpAddress) => void;
   onEditOwner: (ip: IpAddress) => void;
   onFreeRoute: (ip: IpAddress) => void;
   onAssignRoute: (ip: IpAddress) => void;
 }) {
   const { t } = useI18n();
   const gate = props.gate;
-  const hasAssignedIps = props.netifs.some((ni) => (props.ipByNetif.get(ni.id) ?? []).length > 0);
+  const assignedRoutes = props.netifs.flatMap((networkInterface) =>
+    (props.ipByNetif.get(networkInterface.id) ?? []).map((ip) => ({ ip, networkInterface }))
+  );
 
   return (
     <Card testId="vps.network.ip_addresses">
       <CardHeader
-        title={t('vps.network.routing.title')}
+        title={
+          <div className="flex items-center gap-2">
+            <span className="grid h-7 w-7 place-items-center rounded-full bg-accent text-sm font-semibold text-accent-fg">1</span>
+            <span>{t('vps.network.routing.title')}</span>
+          </div>
+        }
         subtitle={t('vps.network.routing.subtitle')}
         actions={
-          <Button variant="secondary" size="sm" onClick={props.onRefresh}>
-            {t('common.refresh')}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" size="sm" onClick={props.onRefresh}>
+              {t('common.refresh')}
+            </Button>
+            <ActionButton
+              variant="primary"
+              size="sm"
+              testId="vps.network.ip_addresses.add"
+              disabled={!gate.allowed}
+              disabledReason={!gate.allowed ? gate.reason : undefined}
+              onClick={props.onAddRoute}
+            >
+              {t('vps.network.routing.add')}
+            </ActionButton>
+          </div>
         }
       />
-      <CardBody>
+
+      <CardBody className="space-y-4">
+        <div className="rounded-lg border border-info-border bg-info-bg p-3 text-sm text-muted">
+          {t('vps.network.routing.explanation')}
+        </div>
+
         {props.isLoading ? (
           <div className="py-2">
             <Spinner label={t('common.loading')} />
@@ -75,125 +106,101 @@ export function VpsNetworkIpRoutesCard(props: {
           <Alert title={t('vps.network.ip_addresses.load_error')} variant="danger">
             {props.errorMessage}
           </Alert>
-        ) : !hasAssignedIps && props.unassignedIps.length === 0 ? (
-          <div className="py-2 text-sm text-muted">{t('vps.network.ip_addresses.empty')}</div>
+        ) : assignedRoutes.length === 0 && props.unassignedIps.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border p-4 text-sm text-muted">
+            {t('vps.network.routing.empty')}
+          </div>
         ) : (
           <div className="space-y-3">
-            {props.netifs.map((ni) => {
-              const ips = props.ipByNetif.get(ni.id) ?? [];
-              if (ips.length === 0) return null;
+            {assignedRoutes.map(({ ip, networkInterface }) => {
+              const state = routeStateForIp(ip, !gate.allowed);
+              const location = ipLocationLabel(ip);
 
               return (
-                <Card key={ni.id} testId={`vps.network.ip_addresses.card.${ni.id}`}>
-                  <CardBody>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="font-semibold">
-                          {ni.name ?? t('vps.network.interfaces.unnamed')}
-                          <span className="text-faint"> · </span>
-                          <span className="text-sm text-muted">{String(ni.type ?? '—')}</span>
-                        </div>
-                        <div className="mt-0.5 text-xs text-muted">{t('vps.network.ip_addresses.count', { n: ips.length })}</div>
+                <div
+                  key={ip.id}
+                  data-testid={`vps.network.ip_addresses.item.${ip.id}`}
+                  className="rounded-lg border border-border bg-surface-2 p-3"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-sm font-semibold">{routeAddressLabel(ip)}</span>
+                        <Badge variant="info">{t(routeTypeKey(ip))}</Badge>
+                        <Badge variant={routeStateBadgeVariant(state)}>{t(routeStateLabelKey(state))}</Badge>
                       </div>
-                      <Badge variant="neutral">{t('vps.network.ip_addresses.assigned')}</Badge>
+                      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+                        <span>{t('vps.network.routing.interface', { interface: networkInterface.name ?? `#${networkInterface.id}` })}</span>
+                        {location !== '—' ? <span>{t('vps.network.routing.location', { location })}</span> : null}
+                        {props.canAdmin ? <span>{t('vps.network.ip_addresses.field.owner', { owner: labelFromResourceRef(ip.user) })}</span> : null}
+                      </div>
                     </div>
 
-                    <div className="mt-3 space-y-2">
-                      {ips.map((ip) => {
-                        const state = routeStateForIp(ip, !gate.allowed);
-                        const owner = labelFromResourceRef(ip.user);
-
-                        return (
-                          <div key={ip.id} data-testid={`vps.network.ip_addresses.item.${ip.id}`} className="rounded-md border border-border bg-surface-2 p-2">
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <span className="font-mono text-sm">{ipAddressLabel(ip)}</span>
-                                <Badge variant={routeStateBadgeVariant(state)}>{t(routeStateLabelKey(state))}</Badge>
-                              </div>
-                              <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
-                                <ActionButton
-                                  variant="primary"
-                                  size="sm"
-                                  testId={`vps.network.ip_addresses.item.${ip.id}.host_create`}
-                                  disabled={!gate.allowed}
-                                  disabledReason={!gate.allowed ? gate.reason : undefined}
-                                  onClick={() => props.onCreateHostAddress(ip)}
-                                >
-                                  {t('vps.network.ip_addresses.action.host_create')}
-                                </ActionButton>
-                                {props.canAdmin ? (
-                                  <>
-                                    <Button to={`${props.adminBasePath}/networking/ip-addresses/${ip.id}`} variant="secondary" size="sm" testId={`vps.network.ip_addresses.item.${ip.id}.detail`}>
-                                      {t('vps.network.ip_addresses.action.detail')}
-                                    </Button>
-                                    <ActionButton
-                                      variant="secondary"
-                                      size="sm"
-                                      testId={`vps.network.ip_addresses.item.${ip.id}.owner`}
-                                      disabled={!gate.allowed}
-                                      disabledReason={!gate.allowed ? gate.reason : undefined}
-                                      onClick={() => props.onEditOwner(ip)}
-                                    >
-                                      {t('vps.network.ip_addresses.action.owner')}
-                                    </ActionButton>
-                                    <ActionButton
-                                      variant="danger"
-                                      size="sm"
-                                      testId={`vps.network.ip_addresses.item.${ip.id}.free_route`}
-                                      disabled={!gate.allowed}
-                                      disabledReason={!gate.allowed ? gate.reason : undefined}
-                                      loading={props.freeRoutePending}
-                                      onClick={() => props.onFreeRoute(ip)}
-                                    >
-                                      {t('vps.network.ip_addresses.action.free_route')}
-                                    </ActionButton>
-                                  </>
-                                ) : null}
-                              </div>
-                            </div>
-
-                            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
-                              <span>{t('vps.network.ip_addresses.field.network', { network: ipNetworkLabel(ip) })}</span>
-                              <span>{t('vps.network.ip_addresses.field.purpose', { purpose: ipPurposeLabel(ip) })}</span>
-                              <span>{t('vps.network.ip_addresses.field.owner', { owner })}</span>
-                              <span>{t('vps.network.ip_addresses.field.family', { family: ipFamilyLabel(ip) })}</span>
-                              <span>{t('vps.network.ip_addresses.field.location', { location: ipLocationLabel(ip) })}</span>
-                            </div>
-                          </div>
-                        );
-                      })}
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      {props.canAdmin ? (
+                        <>
+                          <Button
+                            to={`${props.adminBasePath}/networking/ip-addresses/${ip.id}`}
+                            variant="secondary"
+                            size="sm"
+                            testId={`vps.network.ip_addresses.item.${ip.id}.detail`}
+                          >
+                            {t('vps.network.ip_addresses.action.detail')}
+                          </Button>
+                          <ActionButton
+                            variant="secondary"
+                            size="sm"
+                            testId={`vps.network.ip_addresses.item.${ip.id}.owner`}
+                            disabled={!gate.allowed}
+                            disabledReason={!gate.allowed ? gate.reason : undefined}
+                            onClick={() => props.onEditOwner(ip)}
+                          >
+                            {t('vps.network.ip_addresses.action.owner')}
+                          </ActionButton>
+                        </>
+                      ) : null}
+                      <ActionButton
+                        variant="danger"
+                        size="sm"
+                        testId={`vps.network.ip_addresses.item.${ip.id}.free_route`}
+                        disabled={!gate.allowed}
+                        disabledReason={!gate.allowed ? gate.reason : undefined}
+                        loading={props.freeRoutePending}
+                        onClick={() => props.onFreeRoute(ip)}
+                      >
+                        {t('vps.network.ip_addresses.action.free_route')}
+                      </ActionButton>
                     </div>
-                  </CardBody>
-                </Card>
+                  </div>
+                </div>
               );
             })}
 
             {props.unassignedIps.length > 0 ? (
-              <Alert title={t('vps.network.ip_addresses.unassigned.title')} variant="warn">
-                <div className="space-y-2">
-                  <div>{t('vps.network.ip_addresses.unassigned.body')}</div>
-                  <div className="space-y-1">
-                    {props.unassignedIps.map((ip) => (
-                      <div key={ip.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                        <span className="font-mono">{ipAddressLabel(ip)}</span>
-                        <Badge variant={routeStateBadgeVariant(routeStateForIp(ip, !gate.allowed))}>{t(routeStateLabelKey(routeStateForIp(ip, !gate.allowed)))}</Badge>
-                        {props.canAdmin ? (
-                          <ActionButton
-                            variant="primary"
-                            size="sm"
-                            testId={`vps.network.ip_addresses.unassigned.${ip.id}.assign`}
-                            disabled={!gate.allowed}
-                            disabledReason={!gate.allowed ? gate.reason : undefined}
-                            onClick={() => props.onAssignRoute(ip)}
-                          >
-                            {t('vps.network.ip_addresses.action.assign_route')}
-                          </ActionButton>
-                        ) : null}
+              <div className="rounded-lg border border-warn-border bg-warn-bg p-3">
+                <div className="font-medium">{t('vps.network.ip_addresses.unassigned.title')}</div>
+                <div className="mt-0.5 text-sm text-muted">{t('vps.network.ip_addresses.unassigned.body')}</div>
+                <div className="mt-3 space-y-2">
+                  {props.unassignedIps.map((ip) => (
+                    <div key={ip.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-surface p-2 text-sm">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono">{routeAddressLabel(ip)}</span>
+                        <Badge variant="info">{t(routeTypeKey(ip))}</Badge>
                       </div>
-                    ))}
-                  </div>
+                      <ActionButton
+                        variant="primary"
+                        size="sm"
+                        testId={`vps.network.ip_addresses.unassigned.${ip.id}.assign`}
+                        disabled={!gate.allowed}
+                        disabledReason={!gate.allowed ? gate.reason : undefined}
+                        onClick={() => props.onAssignRoute(ip)}
+                      >
+                        {t('vps.network.ip_addresses.action.assign_route')}
+                      </ActionButton>
+                    </div>
+                  ))}
                 </div>
-              </Alert>
+              </div>
             ) : null}
           </div>
         )}

@@ -50,6 +50,9 @@ export function buildSidebarNavItems(opts: {
     { id: 'nas', to: `${basePath}/nas`, label: t('nav.nas'), icon: <Server size={18} /> },
     { id: 'exports', to: `${basePath}/exports`, label: t('nav.exports'), icon: <Share2 size={18} /> },
     { id: 'dns', to: `${basePath}/dns`, label: t('nav.dns'), icon: <Globe size={18} /> },
+    ...(appMode === 'user'
+      ? [{ id: 'networking', to: `${basePath}/networking`, label: t('nav.networking'), icon: <Wifi size={18} /> }]
+      : []),
     { id: 'transactions', to: `${basePath}/transactions`, label: t('nav.transactions'), icon: <Activity size={18} /> },
     { id: 'action-states', to: `${basePath}/action-states`, label: t('nav.action_states'), icon: <Clock size={18} /> },
     { id: 'monitoring', to: `${basePath}/monitoring`, label: t('nav.monitoring'), icon: <Activity size={18} /> },

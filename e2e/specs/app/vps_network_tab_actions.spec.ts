@@ -17,7 +17,7 @@ const vps = {
   used_diskspace: 5120,
   uptime: 12345,
   loadavg1: 0.12,
-  node: { id: 1, domain_name: 'node1.example' },
+  node: { id: 1, domain_name: 'node1.example', location: { id: 10, label: 'Prague' } },
   os_template: { label: 'debian' },
   dns_resolver: 'inherit',
 };
@@ -54,8 +54,8 @@ const ips = [
 const acct = [{ id: 1, bytes_in: 1024, bytes_out: 2048 }];
 
 
-async function openAdvancedNetworkOptions(page: Page) {
-  await page.getByTestId('vps.network.advanced.toggle').click();
+async function openAdminNetworkSettings(page: Page) {
+  await page.getByTestId('vps.network.admin_settings.toggle').click();
 }
 
 function interfaceEditButton(page: Page) {
@@ -148,7 +148,7 @@ test.describe('@pr-smoke VPS network tab', () => {
 
     await page.goto('/admin/vps/123/network');
 
-    await openAdvancedNetworkOptions(page);
+    await openAdminNetworkSettings(page);
     await expect(page.getByTestId('vps.network.disable')).toBeVisible();
     await page.getByTestId('vps.network.disable').click();
 
@@ -173,7 +173,7 @@ test.describe('@pr-smoke VPS network tab', () => {
     await expect(page.getByTestId('vps.network.disable_confirm')).toBeHidden();
   });
 
-  test('assigns unassigned route with host address and manages host PTR/create payloads', async ({ page }) => {
+  test('assigns routes and manages interface addresses and PTR', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
     let currentIps = [...ips];
@@ -184,14 +184,14 @@ test.describe('@pr-smoke VPS network tab', () => {
         assigned: true,
         reverse_record_value: 'old.example.test.',
         user_created: true,
-        ip_address: { id: 1, addr: '198.51.100.10' },
+        ip_address: { id: 1, addr: '198.51.100.10', network_interface: { id: 1 } },
       },
       {
         id: 51,
         addr: '198.51.100.11',
         assigned: false,
         user_created: true,
-        ip_address: { id: 1, addr: '198.51.100.10' },
+        ip_address: { id: 1, addr: '198.51.100.10', network_interface: { id: 1 } },
       },
     ];
 
@@ -205,7 +205,7 @@ test.describe('@pr-smoke VPS network tab', () => {
         'GET network_interface_accountings': () => ({ network_interface_accountings: acct }),
         'GET host_ip_addresses': () => ({ host_ip_addresses: hostAddresses }),
         'GET environments': () => ({ environments: [{ id: 3, label: 'env-test' }] }),
-        'POST ip_addresses/2/assign_with_host_address': () => {
+        'POST ip_addresses/2/assign': () => {
           currentIps = currentIps.map((ip) => (ip.id === 2 ? { ...ip, network_interface: { id: 1 }, routed: true } : ip));
           return { ip_address: currentIps.find((ip) => ip.id === 2) };
         },
@@ -216,19 +216,6 @@ test.describe('@pr-smoke VPS network tab', () => {
         'PUT ip_addresses/1': () => {
           currentIps = currentIps.map((ip) => (ip.id === 1 ? { ...ip, user: { id: 77, login: 'new-owner' } } : ip));
           return { ip_address: currentIps.find((ip) => ip.id === 1) };
-        },
-        'POST host_ip_addresses': () => {
-          hostAddresses = [
-            ...hostAddresses,
-            {
-              id: 52,
-              addr: '198.51.100.12',
-              assigned: false,
-              user_created: true,
-              ip_address: { id: 1, addr: '198.51.100.10' },
-            },
-          ];
-          return { host_ip_address: hostAddresses[hostAddresses.length - 1] };
         },
         'POST host_ip_addresses/51/assign': () => {
           hostAddresses = hostAddresses.map((h) => (h.id === 51 ? { ...h, assigned: true } : h));
@@ -249,15 +236,12 @@ test.describe('@pr-smoke VPS network tab', () => {
 
     await page.goto('/admin/vps/123/network');
     await expect(page.getByTestId('vps.network.page')).toBeVisible();
-    await openAdvancedNetworkOptions(page);
-
     await page.getByTestId('vps.network.ip_addresses.unassigned.2.assign').click();
     await expect(page.getByTestId('vps.network.ip_addresses.assign_route')).toBeVisible();
     await page.getByTestId('vps.network.ip_addresses.assign_route.interface').selectOption('1');
-    await page.getByTestId('vps.network.ip_addresses.assign_route.with_host').check();
 
     const assignReq = page.waitForRequest(
-      (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/ip_addresses/2/assign_with_host_address')
+      (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/ip_addresses/2/assign')
     );
     await page.getByTestId('vps.network.ip_addresses.assign_route.submit').click();
     expect((await assignReq).postDataJSON()).toEqual({
@@ -267,22 +251,8 @@ test.describe('@pr-smoke VPS network tab', () => {
     });
     await expect(page.getByTestId('vps.network.ip_addresses.assign_route')).toBeHidden();
 
-    await page.getByTestId('vps.network.ip_addresses.item.1.host_create').click();
-    await page.getByTestId('vps.network.host_addresses.create.addresses').fill('198.51.100.12');
-
-    const createHostReq = page.waitForRequest(
-      (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/host_ip_addresses')
-    );
-    await page.getByTestId('vps.network.host_addresses.create.submit').click();
-    expect((await createHostReq).postDataJSON()).toEqual({
-      host_ip_address: {
-        ip_address: 1,
-        addr: '198.51.100.12',
-      },
-    });
-
     await page.getByTestId('vps.network.host_addresses.row.51.assign').click();
-    await page.getByTestId('vps.network.host_addresses.assign.interface').selectOption('1');
+    await expect(page.getByTestId('vps.network.host_addresses.assign.interface')).toHaveValue('1');
 
     const assignHostReq = page.waitForRequest(
       (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/host_ip_addresses/51/assign')
@@ -400,13 +370,12 @@ test.describe('@pr-smoke VPS network tab', () => {
 
     await page.goto('/admin/vps/123/network');
     await expect(page.getByTestId('vps.network.page')).toBeVisible();
-    await openAdvancedNetworkOptions(page);
+    await openAdminNetworkSettings(page);
 
     const disable = page.getByTestId('vps.network.disable');
     await expect(disable).toHaveAttribute('aria-disabled', 'true');
     await expect(disable).toHaveAttribute('title', 'Operation in progress');
 
-    await expect(page.getByTestId('vps.network.ip_addresses.item.1.host_create')).toHaveAttribute('aria-disabled', 'true');
     await expect(page.getByTestId('vps.network.ip_addresses.item.1.owner')).toHaveAttribute('aria-disabled', 'true');
     await expect(page.getByTestId('vps.network.ip_addresses.item.1.free_route')).toHaveAttribute('aria-disabled', 'true');
     await expect(page.getByTestId('vps.network.ip_addresses.unassigned.2.assign')).toHaveAttribute('aria-disabled', 'true');
@@ -416,7 +385,7 @@ test.describe('@pr-smoke VPS network tab', () => {
     await expect(page.getByTestId('vps.network.host_addresses.row.51.delete')).toHaveAttribute('aria-disabled', 'true');
   });
 
-  test('keeps admin-only networking actions hidden for normal users', async ({ page }) => {
+  test('keeps ownership and VPS toggles admin-only while exposing user route management', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
     await installHaveApiMock(page, {
@@ -444,14 +413,62 @@ test.describe('@pr-smoke VPS network tab', () => {
 
     await page.goto('/app/vps/123/network');
     await expect(page.getByTestId('vps.network.page')).toBeVisible();
-    await openAdvancedNetworkOptions(page);
     await expect(page.getByTestId('vps.network.host_addresses')).toBeVisible();
     await expect(page.getByTestId('vps.network.host_addresses.row.50.ptr')).toBeVisible();
-    await expect(page.getByTestId('vps.network.ip_addresses.item.1.host_create')).toBeVisible();
+    await expect(page.getByTestId('vps.network.ip_addresses.add')).toBeVisible();
     await expect(page.getByTestId('vps.network.ip_addresses.item.1.owner')).toHaveCount(0);
-    await expect(page.getByTestId('vps.network.ip_addresses.item.1.free_route')).toHaveCount(0);
-    await expect(page.getByTestId('vps.network.ip_addresses.unassigned.2.assign')).toHaveCount(0);
+    await expect(page.getByTestId('vps.network.ip_addresses.item.1.free_route')).toBeVisible();
+    await expect(page.getByTestId('vps.network.ip_addresses.unassigned.2.assign')).toBeVisible();
+    await expect(page.getByTestId('vps.network.admin_settings')).toHaveCount(0);
     await expect(page.getByTestId('vps.network.disable')).toHaveCount(0);
+  });
+
+  test('adds a private IPv4 address from the normal user VPS detail', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    const freePrivate = {
+      id: 77,
+      addr: '10.20.30.40',
+      prefix: 32,
+      network_interface: null,
+      user: null,
+      network: { id: 9, role: 'private_access', purpose: 'vps', ip_version: 4 },
+    };
+
+    await installHaveApiMock(page, {
+      user: { id: 2, login: 'user', level: 1 },
+      handlers: {
+        'GET vpses/123': () => ({ vps: { ...vps, user: { id: 2, login: 'user' } } }),
+        'GET ip_addresses': (ctx) => {
+          if (ctx.searchParams.get('ip_address[role]') === 'private_access') {
+            return { ip_addresses: [freePrivate] };
+          }
+          return { ip_addresses: ips };
+        },
+        'GET host_ip_addresses': () => ({ host_ip_addresses: [] }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'GET network_interfaces': () => ({ network_interfaces: netifs }),
+        'GET network_interface_accountings': () => ({ network_interface_accountings: acct }),
+        'POST ip_addresses/77/assign': () => ({
+          ip_address: { ...freePrivate, network_interface: { id: 1 } },
+        }),
+      },
+    });
+
+    await page.goto('/app/vps/123/network');
+    await page.getByTestId('vps.network.ip_addresses.add').click();
+    await expect(page.getByTestId('vps.network.ip_addresses.add_modal')).toBeVisible();
+    await page.getByTestId('network.user.assign.kind').selectOption('ipv4_private');
+    await page.getByTestId('network.user.assign.continue').click();
+    await expect(page.getByTestId('network.user.assign.address')).toContainText('10.20.30.40/32');
+
+    const request = page.waitForRequest(
+      (req) => req.method() === 'POST' && req.url().includes('/api/v7.0/ip_addresses/77/assign')
+    );
+    await page.getByTestId('network.user.assign.submit').click();
+    expect((await request).postDataJSON()).toEqual({
+      ip_address: { network_interface: 1 },
+    });
   });
 
   test('keeps interface limits out of an admin account user view', async ({ page }) => {

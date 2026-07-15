@@ -4,6 +4,7 @@ import {
   assignIpAddressRoute,
   assignIpAddressRouteWithHostAddress,
   fetchIpAddresses,
+  fetchIpAddressesForVps,
   freeIpAddressRoute,
   updateIpAddress,
 } from './ipAddresses';
@@ -55,6 +56,24 @@ describe('network address API wrappers', () => {
 
     expect(parsed.searchParams.get('ip_address[network]')).toBe('12');
     expect(parsed.searchParams.get('ip_address[assigned_to_interface]')).toBe('false');
+  });
+
+  test('fetchIpAddressesForVps forwards the VPS scope and custom includes', async () => {
+    globalThis.fetch = mockFetchOk({ ip_addresses: [] }) as any;
+
+    await fetchIpAddressesForVps(123, {
+      limit: 250,
+      includes: 'network__primary_location__environment,network_interface__vps,user',
+    });
+
+    const [url] = lastFetchCall();
+    const parsed = new URL(url);
+
+    expect(parsed.searchParams.get('ip_address[vps]')).toBe('123');
+    expect(parsed.searchParams.get('ip_address[limit]')).toBe('250');
+    expect(parsed.searchParams.get('_meta[includes]')).toBe(
+      'network__primary_location__environment,network_interface__vps,user'
+    );
   });
 
   test('assignIpAddressRoute posts the legacy route assign payload', async () => {

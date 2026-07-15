@@ -30,6 +30,10 @@ function rewriteAdminPathForUserScope(rest: string): string {
   const userNamespacesPath = rewritePrefixedPath(rest, '/user-namespaces', '/profile/user-namespaces');
   if (userNamespacesPath) return userNamespacesPath;
 
+  if (matchesPathPrefix(rest, '/networking') || matchesPathPrefix(rest, '/ip-addresses')) {
+    return '/networking';
+  }
+
   if (rest === '/incidents/new') return '/incidents';
 
   if (matchesPathPrefix(rest, '/payments/incoming')) return '/payments';
@@ -40,8 +44,6 @@ function rewriteAdminPathForUserScope(rest: string): string {
     '/admin-info',
     '/cluster',
     '/users',
-    '/networking',
-    '/ip-addresses',
     '/mailer',
     '/content',
     '/audit',

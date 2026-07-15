@@ -146,7 +146,7 @@ export async function freeIpAddressRoute(ipAddressId: number) {
   });
 }
 
-export async function fetchIpAddressesForVps(vpsId: number, opts?: { limit?: number }) {
+export async function fetchIpAddressesForVps(vpsId: number, opts?: { limit?: number; includes?: string }) {
   const res = await haveApiCall<IpAddress[]>({
     method: 'GET',
     path: '/ip_addresses',
@@ -156,7 +156,7 @@ export async function fetchIpAddressesForVps(vpsId: number, opts?: { limit?: num
       order: 'interface',
       limit: opts?.limit ?? 250,
     },
-    meta: { includes: 'network,user,network_interface' },
+    meta: { includes: opts?.includes ?? 'network,user,network_interface' },
   });
   return { ...res, data: expectArray<IpAddress>(res.data, 'ip_addresses') };
 }
