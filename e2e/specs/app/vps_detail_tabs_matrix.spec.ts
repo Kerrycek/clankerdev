@@ -59,6 +59,8 @@ test('@workflow-matrix @smoke VPS detail tabs expose storage, access, lifecycle,
     handlers: {
       'GET vpses': () => ({ vpses: [vps], _meta: { total_count: 1 } }),
       'GET vpses/123': () => ({ vps }),
+      'GET dns_resolvers': () => ({ dns_resolvers: [] }),
+      'GET user_namespace_maps': () => ({ user_namespace_maps: [] }),
       'GET datasets/10': () => ({ dataset }),
       'GET ip_addresses': () => ({ ip_addresses: [] }),
       'GET vpses/123/statuses': () => ({ statuses: [] }),
@@ -116,6 +118,12 @@ test('@workflow-matrix @smoke VPS detail tabs expose storage, access, lifecycle,
   await expect(moreActions.locator('option[value="/app/vps/123/storage"]')).toHaveCount(1);
   await expect(moreActions.locator('option[value="/app/vps/123/access"]')).toHaveCount(1);
   await expect(moreActions.locator('option[value="/app/vps/123/console"]')).toHaveCount(0);
+
+  await page.getByRole('link', { name: /^Config$/ }).click();
+  await expect(page).toHaveURL(/\/app\/vps\/123\/config$/);
+  await expect(page.getByText('Boot preferences')).toBeVisible();
+  await expect(page.getByText('Cgroup preferences and admin modification consent.')).toBeVisible();
+  await expect(page.getByText('Start menu timeout')).toHaveCount(0);
 
   await page.getByRole('link', { name: /^Storage$/ }).click();
   await expect(page).toHaveURL(/\/app\/vps\/123\/storage$/);
@@ -175,6 +183,8 @@ test('@workflow-matrix VPS detail shows admin operational metadata in admin mode
       }),
       'GET vpses/123/statuses': () => ({ statuses: [] }),
       'GET vpses/123/state_logs': () => ({ state_logs: [] }),
+      'GET dns_resolvers': () => ({ dns_resolvers: [] }),
+      'GET user_namespace_maps': () => ({ user_namespace_maps: [] }),
     },
   });
 
@@ -195,4 +205,8 @@ test('@workflow-matrix VPS detail shows admin operational metadata in admin mode
 
   const moreActions = page.getByTestId('vps.actions.menu');
   await expect(moreActions.locator('option[value="/admin/vps/123/lifecycle/migrate"]')).toHaveCount(1);
+
+  await page.getByRole('link', { name: /^Config$/ }).click();
+  await expect(page).toHaveURL(/\/admin\/vps\/123\/config$/);
+  await expect(page.getByText('Start menu timeout')).toBeVisible();
 });

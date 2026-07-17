@@ -353,21 +353,23 @@ export function VpsConfigurationPage() {
 
       <VpsConfigSectionCard
         title={t('vps.config.section.boot')}
-        subtitle={t('vps.config.section.boot_help')}
+        subtitle={t(isAdminMode ? 'vps.config.section.boot_help' : 'vps.config.section.boot_help_user')}
         risks={['boot', 'requires_restart']}
-        bodyClassName="grid gap-4 md:grid-cols-3"
+        bodyClassName={isAdminMode ? 'grid gap-4 md:grid-cols-3' : 'grid gap-4 md:grid-cols-2'}
       >
-        <Field label={t('vps.config.field.start_menu_timeout')} help={t('vps.config.help.start_menu_timeout')} errors={fieldMessages('start_menu_timeout')}>
-          <Input
-            value={effective.startMenuTimeout}
-            type="number"
-            min={0}
-            max={START_MENU_TIMEOUT_MAX}
-            step={1}
-            onChange={(e) => patchDraft({ startMenuTimeout: e.target.value })}
-            disabled={saveM.isPending}
-          />
-        </Field>
+        {isAdminMode ? (
+          <Field label={t('vps.config.field.start_menu_timeout')} help={t('vps.config.help.start_menu_timeout')} errors={fieldMessages('start_menu_timeout')}>
+            <Input
+              value={effective.startMenuTimeout}
+              type="number"
+              min={0}
+              max={START_MENU_TIMEOUT_MAX}
+              step={1}
+              onChange={(e) => patchDraft({ startMenuTimeout: e.target.value })}
+              disabled={saveM.isPending}
+            />
+          </Field>
+        ) : null}
         <Field label={t('vps.config.field.cgroup_version')} errors={fieldMessages('cgroup_version')}>
           <Select
             value={effective.cgroupVersion}

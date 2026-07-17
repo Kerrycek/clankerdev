@@ -14,6 +14,7 @@ export const enVps_config = {
   'vps.config.section.resolvers_help': 'DNS resolver preference and UID/GID namespace map.',
   'vps.config.section.boot': 'Boot preferences',
   'vps.config.section.boot_help': 'Autostart, start menu and cgroup preferences.',
+  'vps.config.section.boot_help_user': 'Cgroup preferences and admin modification consent.',
   'vps.config.section.admin': 'Admin-only controls',
   'vps.config.section.admin_help': 'Owner, limits and admin request modifiers. These controls are shown only in admin mode.',
   'vps.config.section_group.identity': 'Identity',

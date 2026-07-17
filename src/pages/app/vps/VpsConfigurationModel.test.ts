@@ -92,6 +92,26 @@ describe('VpsConfigurationModel', () => {
     expect(result.validationError).toContain('vps.config.validation.min');
   });
 
+  it('does not let user mode change start menu timeout', () => {
+    const baseline = normalizeDraft(baseVps);
+    const draft = { ...baseline, startMenuTimeout: '30' };
+
+    const result = buildPayload({ baseline, draft, isAdminMode: false, t });
+
+    expect(result.changedKeys).toEqual([]);
+    expect(result.payload).toEqual({});
+  });
+
+  it('keeps start menu timeout configurable in admin mode', () => {
+    const baseline = normalizeDraft(baseVps);
+    const draft = { ...baseline, startMenuTimeout: '30' };
+
+    const result = buildPayload({ baseline, draft, isAdminMode: true, t });
+
+    expect(result.changedKeys).toEqual(['start_menu_timeout']);
+    expect(result.payload).toEqual({ start_menu_timeout: 30 });
+  });
+
   it('keeps owner changes separate from resource changes', () => {
     const baseline = normalizeDraft(baseVps);
     const draft = { ...baseline, user: '9', memory: '4096' };

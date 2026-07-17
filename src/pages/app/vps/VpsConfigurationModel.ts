@@ -425,17 +425,19 @@ export function buildPayload(args: {
       min: 0,
     });
   }
-  setChangedInt({
-    payload,
-    changedKeys,
-    key: 'start_menu_timeout',
-    draftValue: draft.startMenuTimeout,
-    baselineValue: baseline.startMenuTimeout,
-    label: t('vps.config.field.start_menu_timeout'),
-    t,
-    min: 0,
-    max: START_MENU_TIMEOUT_MAX,
-  });
+  if (isAdminMode) {
+    setChangedInt({
+      payload,
+      changedKeys,
+      key: 'start_menu_timeout',
+      draftValue: draft.startMenuTimeout,
+      baselineValue: baseline.startMenuTimeout,
+      label: t('vps.config.field.start_menu_timeout'),
+      t,
+      min: 0,
+      max: START_MENU_TIMEOUT_MAX,
+    });
+  }
 
   if (draft.cgroupVersion !== baseline.cgroupVersion) {
     if (!CGROUP_VERSIONS.includes(draft.cgroupVersion)) {

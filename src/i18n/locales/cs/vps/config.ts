@@ -14,6 +14,7 @@ export const csVps_config = {
   'vps.config.section.resolvers_help': 'Preference DNS resolveru a UID/GID namespace mapa.',
   'vps.config.section.boot': 'Preference bootu',
   'vps.config.section.boot_help': 'Autostart, start menu a preference cgroup.',
+  'vps.config.section.boot_help_user': 'Preference cgroup a souhlas s admin úpravami.',
   'vps.config.section.admin': 'Admin-only ovládání',
   'vps.config.section.admin_help': 'Vlastník, limity a admin parametry požadavku. Tyto prvky se zobrazují jen v admin režimu.',
   'vps.config.section_group.identity': 'Identita',
