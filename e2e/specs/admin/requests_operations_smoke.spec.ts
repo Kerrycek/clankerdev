@@ -80,13 +80,14 @@ test('@workflow-matrix @smoke admin requests: detail actions, inline expansion, 
   await expect(page.getByTestId('admin.requests.detail.ops.action_state')).toHaveAttribute('href', '/admin/action-states/177');
   await expect(page.getByTestId('admin.requests.detail.ops.chain')).toHaveAttribute('href', '/admin/transactions/88');
   await expect(page.getByTestId('admin.requests.detail.ops.transaction')).toHaveAttribute('href', '/admin/transactions/items/99');
-  const mapLink = page.getByTestId('admin.requests.detail.registration.address.map');
-  await expect(mapLink).toBeVisible();
+  const mapCard = page.getByTestId('admin.requests.detail.registration.address.map');
+  await expect(mapCard).toBeVisible();
+  const mapLink = page.getByTestId('admin.requests.detail.registration.address.map.link');
   await expect(mapLink).toHaveAttribute('target', '_blank');
   await expect(mapLink).toHaveAttribute('rel', 'noopener noreferrer');
   await expect(mapLink).toHaveAttribute(
     'href',
-    'https://www.google.com/maps/search/?api=1&query=Stodoln%C3%AD+138%2F44%2C+14400+Ostrava%2C+%C4%8Cesko'
+    'https://www.openstreetmap.org/search?query=Stodoln%C3%AD+138%2F44%2C+14400+Ostrava%2C+%C4%8Cesko'
   );
   await expect(page.getByTestId('admin.requests.resolve.action.deny')).toBeVisible();
   await expect(page.getByTestId('admin.requests.resolve.action.ignore')).toBeVisible();
