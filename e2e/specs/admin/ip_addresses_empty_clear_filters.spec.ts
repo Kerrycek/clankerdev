@@ -8,6 +8,7 @@ test('admin ip addresses: empty state clears server-side filters', async ({ page
   await installHaveApiMock(page, {
     user: { id: 1, login: 'admin', level: 100 },
     handlers: {
+      'GET locations': () => ({ locations: [] }),
       'GET ip_addresses': (ctx) => {
         const addr = ctx.searchParams.get('ip_address[addr]');
         const limitStr = ctx.searchParams.get('ip_address[limit]');

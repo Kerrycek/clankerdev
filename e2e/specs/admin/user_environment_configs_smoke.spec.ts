@@ -58,16 +58,13 @@ test('admin user: environment configs tab loads and can save', async ({ page }) 
   const table = page.getByTestId('admin.user.env_configs.table');
   await expect(table.getByTestId('admin.user.env_configs.row.1')).toBeVisible();
 
-  await table.getByTestId('admin.user.env_configs.row.1.edit').click();
-  await expect(page.getByTestId('admin.user.env_configs.modal')).toBeVisible();
-
   // Switch from inherited -> custom
-  await page.getByTestId('admin.user.env_configs.modal.inherit').click();
+  await table.getByTestId('admin.user.env_configs.row.1.mode').selectOption('custom');
 
-  await page.getByTestId('admin.user.env_configs.modal.vps_lifetime_days').fill('10');
-  await page.getByTestId('admin.user.env_configs.modal.max_vps').fill('5');
+  await table.getByTestId('admin.user.env_configs.row.1.vps_lifetime_days').fill('10');
+  await table.getByTestId('admin.user.env_configs.row.1.max_vps').fill('5');
 
-  await page.getByTestId('admin.user.env_configs.modal.save').click();
+  await table.getByTestId('admin.user.env_configs.row.1.save').click();
 
-  await expect(page.getByTestId('admin.user.env_configs.modal')).toBeHidden();
+  await expect(table.getByTestId('admin.user.env_configs.row.1.save')).toBeDisabled();
 });

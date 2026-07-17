@@ -107,49 +107,47 @@ test('admin user detail: edit drawer saves safe account fields', async ({ page }
   ]);
 });
 
-test('admin user detail: delete member requires confirmation and sends object state', async ({ page }) => {
+test('admin user detail: lifecycle state update sends object state', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
 
-  const deletes: any[] = [];
+  const updates: any[] = [];
+  let user = {
+    id: 42,
+    login: 'alice',
+    level: 1,
+    full_name: 'Alice Example',
+    email: 'alice@example.test',
+    object_state: 'active',
+  };
 
   await installHaveApiMock(page, {
     user: { id: 1, login: 'admin', level: 100 },
     handlers: {
-      'GET users/42': () => ({
-        user: {
-          id: 42,
-          login: 'alice',
-          level: 1,
-          full_name: 'Alice Example',
-          email: 'alice@example.test',
-          object_state: 'active',
-        },
-      }),
-      'DELETE users/42': () => ({}),
+      'GET users/42': () => ({ user }),
+      'PUT users/42': ({ reqJson }) => {
+        const payload = (reqJson as any).user ?? {};
+        user = { ...user, ...payload };
+        return { user };
+      },
       'GET users': () => ({ users: [] }),
     },
   });
 
   page.on('request', (req) => {
     const url = new URL(req.url());
-    if (req.method() === 'DELETE' && url.pathname === '/api/v7.0/users/42') {
-      deletes.push(req.postDataJSON());
+    if (req.method() === 'PUT' && url.pathname === '/api/v7.0/users/42') {
+      updates.push(req.postDataJSON());
     }
   });
 
   await page.goto('/admin/users/42');
   await expect(page.getByTestId('admin.user.page')).toBeVisible();
 
-  await page.getByTestId('admin.user.delete.open').click();
-  await expect(page.getByTestId('admin.user.delete.confirm')).toBeVisible();
-  await page.getByTestId('admin.user.delete.object_state').selectOption('suspended');
-  await page.getByTestId('admin.user.delete.confirm.cancel').click();
-  expect(deletes).toEqual([]);
+  await expect(page.getByTestId('admin.user.lifecycle.save')).toBeDisabled();
+  await page.getByTestId('admin.user.lifecycle.state').selectOption('suspended');
+  await expect(page.getByTestId('admin.user.lifecycle.save')).toBeEnabled();
+  await page.getByTestId('admin.user.lifecycle.save').click();
 
-  await page.getByTestId('admin.user.delete.open').click();
-  await page.getByTestId('admin.user.delete.object_state').selectOption('suspended');
-  await page.getByTestId('admin.user.delete.confirm.confirm').click();
-
-  await expect(page).toHaveURL(/\/admin\/users$/);
-  expect(deletes).toEqual([{ user: { object_state: 'suspended' } }]);
+  await expect.poll(() => updates.length).toBe(1);
+  expect(updates).toEqual([{ user: { object_state: 'suspended' } }]);
 });

@@ -144,7 +144,7 @@ test.describe("Dashboard", () => {
 
     await expect(page.getByTestId("app.dashboard.kpi.vps")).toContainText("3");
     expect(vpsRequests).toHaveLength(1);
-    expect(new URLSearchParams(vpsRequests[0]).get("vps[limit]")).toBe("1");
+    expect(new URLSearchParams(vpsRequests[0]).get("vps[limit]")).toBe("200");
     await expect(page.getByTestId("app.dashboard.kpi.datasets")).toContainText(
       "7",
     );

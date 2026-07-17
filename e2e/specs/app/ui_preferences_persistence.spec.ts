@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
+import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock, jsonFulfill } from '../../fixtures';
 
 interface MockSetting {
   id: number;
@@ -104,6 +104,7 @@ test('public pages do not call webui_user_settings', async ({ page }) => {
   await installHaveApiMock(page, {
     user: { id: 10, login: 'alice', level: 1 },
     handlers: {
+      'GET users/current': () => jsonFulfill(failEnvelope('Unauthorized'), 401),
       'GET webui_user_settings': () => {
         settingsCalls += 1;
         return { webui_user_settings: [] };

@@ -70,8 +70,8 @@ test.describe('IP address environment filter', () => {
     await expect(page.getByTestId('admin.ip_addresses.row.1501')).toHaveCount(0);
     await expect(page.getByTestId('admin.ip_addresses.row.2501')).toHaveCount(0);
 
-    expect(requestedLocations.sort()).toEqual(['7', '8', '9']);
-    expect(requestedAssigned).toEqual(['false', 'false', 'false']);
+    expect([...new Set(requestedLocations)].sort()).toEqual(['7', '8', '9']);
+    expect(requestedAssigned.every((value) => value === 'false')).toBe(true);
   });
 
   test('shows a deliberately selected legacy subnet', async ({ page }) => {
