@@ -161,6 +161,68 @@ test('@pr-smoke user network page lists only own addresses and assigns all suppo
   await expect(page.getByTestId('network.user.assign')).toBeHidden();
 });
 
+test('user network assignment offers only VPS compatible with the selected detached IP location', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+  const pragueVps = {
+    id: 123,
+    hostname: 'praha-vps.example',
+    object_state: 'active',
+    user: { id: 7, login: 'member' },
+    node: {
+      id: 3,
+      location: { id: 10, label: 'Praha', environment: { id: 1, label: 'Production' } },
+    },
+  };
+  const brnoVps = {
+    id: 124,
+    hostname: 'brno-vps.example',
+    object_state: 'active',
+    user: { id: 7, login: 'member' },
+    node: {
+      id: 4,
+      location: { id: 20, label: 'Brno', environment: { id: 1, label: 'Production' } },
+    },
+  };
+  const brnoDetachedIp = {
+    id: 301,
+    addr: '2001:db8:20::10',
+    prefix: 128,
+    network: {
+      id: 31,
+      ip_version: 6,
+      role: 'public_access',
+      primary_location: { id: 20, label: 'Brno', environment: { id: 1, label: 'Production' } },
+    },
+    network_interface: null,
+    user: { id: 7, login: 'member' },
+  };
+
+  await installHaveApiMock(page, {
+    user: { id: 7, login: 'member', level: 1 },
+    handlers: {
+      'GET vpses': () => ({ vpses: [pragueVps, brnoVps] }),
+      'GET ip_addresses': (ctx) => {
+        if (ctx.searchParams.get('ip_address[vps]')) return { ip_addresses: [] };
+        if (ctx.searchParams.get('ip_address[assigned_to_interface]') === 'false') {
+          return { ip_addresses: [brnoDetachedIp] };
+        }
+        return { ip_addresses: [] };
+      },
+      'GET network_interfaces': () => ({ network_interfaces: [{ id: 601, name: 'venet0', vps: { id: 124 } }] }),
+    },
+  });
+
+  await page.goto('/app/networking');
+
+  await expect(page.getByTestId('network.user.ip.row.301')).toBeVisible();
+  await page.getByTestId('network.user.ip.row.301').getByTestId('network.user.ip.301.assign').click();
+
+  const vpsSelect = page.getByTestId('network.user.assign.vps');
+  await expect(vpsSelect.locator('option')).toContainText(['Select VPS…', 'brno-vps.example (#124)']);
+  await expect.poll(async () => (await vpsSelect.locator('option').allTextContents()).join('\n')).not.toContain('praha-vps.example');
+});
+
 test('admin user view fetches addresses through own VPS scope instead of the global cluster list', async ({ page }) => {
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 

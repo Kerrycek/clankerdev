@@ -24,6 +24,28 @@ export function ipLocationId(ip: IpAddress | null | undefined): number | null {
   return resourceId(ip?.network?.primary_location?.id);
 }
 
+export function vpsEnvironmentId(vps: Vps | null | undefined): number | null {
+  return resourceId((vps?.node?.location as { environment?: ResourceRef | number | string | null } | null | undefined)?.environment);
+}
+
+export function ipEnvironmentId(ip: IpAddress | null | undefined): number | null {
+  return resourceId(ip?.network?.primary_location?.environment as ResourceRef | number | string | null | undefined);
+}
+
+export function canAssignIpToVps(ip: IpAddress | null | undefined, vps: Vps | null | undefined): boolean {
+  if (!ip || !vps) return false;
+
+  const ipLocation = ipLocationId(ip);
+  const vpsLocation = vpsLocationId(vps);
+  if (ipLocation && vpsLocation && ipLocation !== vpsLocation) return false;
+
+  const ipEnvironment = ipEnvironmentId(ip);
+  const vpsEnvironment = vpsEnvironmentId(vps);
+  if (ipEnvironment && vpsEnvironment && ipEnvironment !== vpsEnvironment) return false;
+
+  return true;
+}
+
 export function assignableIpKindQuery(kind: AssignableIpKind): {
   version: 4 | 6;
   role?: 'public_access' | 'private_access';

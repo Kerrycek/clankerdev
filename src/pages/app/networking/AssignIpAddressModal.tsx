@@ -24,6 +24,7 @@ import { objectRef } from '../../../lib/objectRef';
 import {
   assignableIpKind,
   assignableIpKindQuery,
+  canAssignIpToVps,
   ipLocationId,
   ipAddressLabel,
   isAssignedIp,
@@ -75,7 +76,11 @@ export function AssignIpAddressModal(props: {
     staleTime: 30_000,
   });
 
-  const vpsOptions = props.availableVpses ?? vpsesQ.data ?? [];
+  const vpsOptions = useMemo(() => {
+    const listed = props.availableVpses ?? vpsesQ.data ?? [];
+    if (!props.initialIp) return listed;
+    return listed.filter((vps) => canAssignIpToVps(props.initialIp, vps));
+  }, [props.availableVpses, props.initialIp, vpsesQ.data]);
   const selectedVps = useMemo(
     () => props.fixedVps ?? vpsOptions.find((vps) => String(vps.id) === vpsId),
     [props.fixedVps, vpsId, vpsOptions]

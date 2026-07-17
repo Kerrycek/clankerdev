@@ -4,6 +4,7 @@ import type { IpAddress } from '../../../lib/api/ipAddresses';
 import {
   assignableIpKind,
   assignableIpKindQuery,
+  canAssignIpToVps,
   isVisibleUserIp,
   matchesAssignableIpKind,
   uniqueIpAddresses,
@@ -55,5 +56,41 @@ describe('IP address assignment model', () => {
   test('reads the VPS location and removes duplicate addresses', () => {
     expect(vpsLocationId({ id: 9, hostname: 'test', node: { id: 2, location: { id: 4 } } })).toBe(4);
     expect(uniqueIpAddresses([publicIpv4, privateIpv4, publicIpv4]).map((ip) => ip.id)).toEqual([1, 2]);
+  });
+
+  test('allows assigning detached addresses only to VPS in the same location and environment', () => {
+    const brnoProductionIp: IpAddress = {
+      ...ipv6,
+      network: {
+        id: 13,
+        ip_version: 6,
+        role: 'public_access',
+        primary_location: { id: 20, label: 'Brno', environment: { id: 1, label: 'Production' } },
+      },
+    };
+
+    expect(
+      canAssignIpToVps(brnoProductionIp, {
+        id: 10,
+        hostname: 'brno-prod',
+        node: { id: 1, location: { id: 20, label: 'Brno', environment: { id: 1, label: 'Production' } } },
+      })
+    ).toBe(true);
+
+    expect(
+      canAssignIpToVps(brnoProductionIp, {
+        id: 11,
+        hostname: 'praha-prod',
+        node: { id: 2, location: { id: 10, label: 'Praha', environment: { id: 1, label: 'Production' } } },
+      })
+    ).toBe(false);
+
+    expect(
+      canAssignIpToVps(brnoProductionIp, {
+        id: 12,
+        hostname: 'brno-staging',
+        node: { id: 3, location: { id: 20, label: 'Brno', environment: { id: 2, label: 'Staging' } } },
+      })
+    ).toBe(false);
   });
 });
