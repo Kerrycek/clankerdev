@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { useAuth } from '../../../app/auth';
 import { useAppMode } from '../../../app/appMode';
 import { useI18n } from '../../../app/i18n';
 import { useChrome } from '../../../components/layout/ChromeContext';
@@ -69,8 +70,10 @@ function mergeFieldErrorMessages(args: {
 }
 
 export function VpsConfigurationPage() {
+  const auth = useAuth();
   const { mode } = useAppMode();
   const isAdminMode = mode === 'admin';
+  const canEditAdminConfig = isAdminMode && auth.canUseAdminUi;
   const chrome = useChrome();
   const qc = useQueryClient();
   const { t } = useI18n();
@@ -98,11 +101,11 @@ export function VpsConfigurationPage() {
 
   const result = useMemo(() => {
     try {
-      return buildPayload({ baseline, draft: effective, isAdminMode, t });
+      return buildPayload({ baseline, draft: effective, isAdminMode: canEditAdminConfig, t });
     } catch (error) {
       return createBuildErrorResult(error);
     }
-  }, [baseline, effective, isAdminMode, t]);
+  }, [baseline, canEditAdminConfig, effective, t]);
 
   const saveM = useMutation({
     mutationFn: async (payload: Record<string, unknown>) => {
@@ -228,7 +231,7 @@ export function VpsConfigurationPage() {
       <Card>
         <CardHeader
           title={t('vps.config.title')}
-          subtitle={t(isAdminMode ? 'vps.config.subtitle_admin' : 'vps.config.subtitle_user')}
+          subtitle={t(canEditAdminConfig ? 'vps.config.subtitle_admin' : 'vps.config.subtitle_user')}
           actions={
             <div className="flex flex-wrap gap-2">
               <Button
@@ -277,8 +280,8 @@ export function VpsConfigurationPage() {
       />
 
       <VpsConfigSectionCard
-        title={t('vps.config.section.identity')}
-        subtitle={t('vps.config.section.identity_help')}
+        title={t(canEditAdminConfig ? 'vps.config.section.identity_admin' : 'vps.config.section.identity')}
+        subtitle={t(canEditAdminConfig ? 'vps.config.section.identity_help_admin' : 'vps.config.section.identity_help')}
         risks={['safe']}
         bodyClassName="grid gap-4 md:grid-cols-2"
       >
@@ -305,7 +308,7 @@ export function VpsConfigurationPage() {
 
       <VpsConfigSectionCard
         title={t('vps.config.section.resources')}
-        subtitle={t('vps.config.section.resources_help')}
+        subtitle={t(canEditAdminConfig ? 'vps.config.section.resources_help_admin' : 'vps.config.section.resources_help')}
         risks={['requires_restart']}
         bodyClassName="grid gap-4 md:grid-cols-3"
       >
@@ -353,11 +356,11 @@ export function VpsConfigurationPage() {
 
       <VpsConfigSectionCard
         title={t('vps.config.section.boot')}
-        subtitle={t(isAdminMode ? 'vps.config.section.boot_help' : 'vps.config.section.boot_help_user')}
+        subtitle={t(canEditAdminConfig ? 'vps.config.section.boot_help' : 'vps.config.section.boot_help_user')}
         risks={['boot', 'requires_restart']}
-        bodyClassName={isAdminMode ? 'grid gap-4 md:grid-cols-3' : 'grid gap-4 md:grid-cols-2'}
+        bodyClassName={canEditAdminConfig ? 'grid gap-4 md:grid-cols-3' : 'grid gap-4 md:grid-cols-2'}
       >
-        {isAdminMode ? (
+        {canEditAdminConfig ? (
           <Field label={t('vps.config.field.start_menu_timeout')} help={t('vps.config.help.start_menu_timeout')} errors={fieldMessages('start_menu_timeout')}>
             <Input
               value={effective.startMenuTimeout}
@@ -393,7 +396,7 @@ export function VpsConfigurationPage() {
         </div>
       </VpsConfigSectionCard>
 
-      {isAdminMode ? (
+      {canEditAdminConfig ? (
         <VpsConfigSectionCard
           title={t('vps.config.section.admin')}
           subtitle={t('vps.config.section.admin_help')}

@@ -122,8 +122,14 @@ test('@workflow-matrix @smoke VPS detail tabs expose storage, access, lifecycle,
   await page.getByRole('link', { name: /^Config$/ }).click();
   await expect(page).toHaveURL(/\/app\/vps\/123\/config$/);
   await expect(page.getByText('Boot preferences')).toBeVisible();
-  await expect(page.getByText('Cgroup preferences and admin modification consent.')).toBeVisible();
-  await expect(page.getByText('Start menu timeout')).toHaveCount(0);
+  await expect(page.getByText('Basic runtime preferences available to a member.')).toBeVisible();
+  await expect(page.getByText('Start menu timeout', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Owner', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('CPU limit', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Autostart priority', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Change reason', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Admin lock type', { exact: true })).toHaveCount(0);
+  await expect(page.getByText('Admin override', { exact: true })).toHaveCount(0);
 
   await page.getByRole('link', { name: /^Storage$/ }).click();
   await expect(page).toHaveURL(/\/app\/vps\/123\/storage$/);
@@ -208,5 +214,11 @@ test('@workflow-matrix VPS detail shows admin operational metadata in admin mode
 
   await page.getByRole('link', { name: /^Config$/ }).click();
   await expect(page).toHaveURL(/\/admin\/vps\/123\/config$/);
-  await expect(page.getByText('Start menu timeout')).toBeVisible();
+  await expect(page.getByText('Start menu timeout', { exact: true })).toBeVisible();
+  await expect(page.getByText('Owner', { exact: true })).toBeVisible();
+  await expect(page.getByText('CPU limit', { exact: true })).toBeVisible();
+  await expect(page.getByText('Autostart priority', { exact: true })).toBeVisible();
+  await expect(page.getByText('Change reason', { exact: true })).toBeVisible();
+  await expect(page.getByText('Admin lock type', { exact: true })).toBeVisible();
+  await expect(page.getByText('Admin override', { exact: true })).toBeVisible();
 });

@@ -102,6 +102,25 @@ describe('VpsConfigurationModel', () => {
     expect(result.payload).toEqual({});
   });
 
+  it('drops admin-only fields from user mode payloads', () => {
+    const baseline = normalizeDraft(baseVps);
+    const draft = {
+      ...baseline,
+      user: '9',
+      cpuLimit: '75',
+      autostartPriority: '20',
+      startMenuTimeout: '30',
+      changeReason: 'admin-only reason',
+      adminOverride: true,
+      adminLockType: 'absolute',
+    };
+
+    const result = buildPayload({ baseline, draft, isAdminMode: false, t });
+
+    expect(result.changedKeys).toEqual([]);
+    expect(result.payload).toEqual({});
+  });
+
   it('keeps start menu timeout configurable in admin mode', () => {
     const baseline = normalizeDraft(baseVps);
     const draft = { ...baseline, startMenuTimeout: '30' };

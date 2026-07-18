@@ -120,7 +120,7 @@ export const CONFIG_FIELD_META: Record<VpsConfigReviewKey, VpsConfigFieldMeta> =
   start_menu_timeout: {
     labelKey: 'vps.config.field.start_menu_timeout',
     section: 'boot',
-    risks: ['boot'],
+    risks: ['boot', 'admin_only'],
   },
   cgroup_version: {
     labelKey: 'vps.config.field.cgroup_version',
@@ -130,7 +130,7 @@ export const CONFIG_FIELD_META: Record<VpsConfigReviewKey, VpsConfigFieldMeta> =
   allow_admin_modifications: {
     labelKey: 'vps.config.field.allow_admin_modifications',
     section: 'boot',
-    risks: ['admin_only'],
+    risks: ['boot'],
   },
   change_reason: {
     labelKey: 'vps.config.field.change_reason',
