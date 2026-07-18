@@ -7,6 +7,7 @@ import { getRuntimeConfig } from '../../../app/config';
 import { useI18n } from '../../../app/i18n';
 
 import { useChrome } from '../../../components/layout/ChromeContext';
+import { useObjectScope } from '../../../app/objectScope';
 
 import { Alert } from '../../../components/ui/Alert';
 import { Badge } from '../../../components/ui/Badge';
@@ -76,7 +77,8 @@ export function DatasetSnapshotsPage() {
   const chrome = useChrome();
   const { t } = useI18n();
   const { role } = useAuth();
-  const isAdmin = role === 'admin';
+  const scope = useObjectScope();
+  const isAdmin = role === 'admin' && scope.scope === 'all';
 
   const datasetLabelForToast = String((dataset as any).label ?? (dataset as any).name ?? `Dataset #${dataset.id}`);
 

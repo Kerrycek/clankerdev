@@ -49,14 +49,14 @@ function firstValidationError(issues: MountValidationIssue[], t: (key: string) =
 }
 
 export function VpsStoragePage() {
-  const { basePath } = useAppMode();
+  const { basePath, mode } = useAppMode();
   const auth = useAuth();
   const chrome = useChrome();
   const qc = useQueryClient();
   const { t } = useI18n();
   const { vps, refetchChains, vpsRef, busyTransaction, busyLocalLock } = useVps();
 
-  const canAdmin = auth.role === 'admin';
+  const canAdmin = mode === 'admin' && auth.role === 'admin';
   const vpsId = vps.id;
   const objectLabel = vps.hostname || `#${vpsId}`;
 

@@ -148,6 +148,46 @@ test('@workflow-matrix @smoke VPS detail tabs expose storage, access, lifecycle,
   await expect(page.getByTestId('vps.console.iframe')).toBeVisible();
 });
 
+test('@workflow-matrix admin account in user VPS view keeps storage admin controls hidden', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_ADMIN_SESSION' });
+
+  await installHaveApiMock(page, {
+    user: { id: 10, login: 'alice-admin', level: 99 },
+    handlers: {
+      'GET vpses/123': () => ({ vps }),
+      'GET datasets/10': () => ({ dataset }),
+      'GET transaction_chains': () => ({ transaction_chains: [] }),
+      'GET vpses/123/statuses': () => ({ statuses: [] }),
+      'GET vpses/123/mounts': () => ({
+        mounts: [
+          {
+            id: 1,
+            mountpoint: '/mnt/data',
+            type: 'nfs',
+            mode: 'rw',
+            enabled: true,
+            master_enabled: false,
+            on_start_fail: 'ignore',
+            use_default_map: true,
+            dataset: { id: 10, name: 'tank/data' },
+          },
+        ],
+      }),
+    },
+  });
+
+  await page.goto('/app/vps/123/storage');
+
+  await expect(page.getByTestId('vps.storage.page')).toBeVisible();
+  await expect(page.getByTestId('vps.storage.root_dataset.system_context')).toHaveCount(0);
+  await expect(page.getByTestId('vps.storage.mounts.table').locator('th', { hasText: /^Master$/ })).toHaveCount(0);
+  await expect(page.getByTestId('vps.storage.mounts.table')).not.toContainText('Master:');
+
+  await page.getByTestId('vps.storage.mounts.row.1.edit').click();
+  await expect(page.getByTestId('vps.storage.mounts.edit')).toBeVisible();
+  await expect(page.getByTestId('vps.storage.mounts.edit.master_enabled')).toHaveCount(0);
+});
+
 
 test('@workflow-matrix VPS detail shows admin operational metadata in admin mode', async ({ page }) => {
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_ADMIN_SESSION' });

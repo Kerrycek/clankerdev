@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../../app/auth';
 import { useAppMode } from '../../../app/appMode';
 import { useI18n } from '../../../app/i18n';
+import { useObjectScope } from '../../../app/objectScope';
 import { ListShell } from '../../../components/layout/ListShell';
 import { PageHeader } from '../../../components/layout/PageHeader';
 import { Badge } from '../../../components/ui/Badge';
@@ -75,7 +76,9 @@ export function UserNetworkPage() {
   const auth = useAuth();
   const { basePath } = useAppMode();
   const { t } = useI18n();
+  const scope = useObjectScope();
   const userId = resourceId(auth.user?.id as number | string | undefined);
+  const scopedUserId = scope.mineUserId;
   const [kindFilter, setKindFilter] = useState<KindFilter>('all');
   const [assignOpen, setAssignOpen] = useState(false);
   const [initialIp, setInitialIp] = useState<IpAddress | null>(null);
@@ -85,7 +88,7 @@ export function UserNetworkPage() {
     queryFn: async () => (
       await fetchVpsList({
         limit: 250,
-        user: auth.role === 'admin' && userId ? userId : undefined,
+        user: scopedUserId,
         includes: 'node__location__environment,user',
       })
     ).data,
@@ -95,7 +98,7 @@ export function UserNetworkPage() {
   const vpsIds = useMemo(() => (vpsesQ.data ?? []).map((vps) => vps.id), [vpsesQ.data]);
 
   const assignedQ = useQuery({
-    queryKey: ['ip_address', 'user-network', 'assigned', { userId, role: auth.role, vpsIds }],
+    queryKey: ['ip_address', 'user-network', 'assigned', { userId, scopedUserId, vpsIds }],
     queryFn: async (): Promise<ScopedIpAddress[]> => {
       if (vpsIds.length === 0) return [];
 
@@ -129,7 +132,7 @@ export function UserNetworkPage() {
       await fetchIpAddresses({
         limit: 250,
         assignedToInterface: false,
-        user: auth.role === 'admin' ? userId ?? undefined : undefined,
+        user: scopedUserId,
         includes: 'network__primary_location__environment,network_interface__vps,user',
       })
     ).data,
@@ -237,7 +240,7 @@ export function UserNetworkPage() {
         </Card>
       }
     >
-      <UserNetworkTrafficCard userId={userId} isAdmin={auth.role === 'admin'} />
+      <UserNetworkTrafficCard userId={userId} isAdmin={scopedUserId !== undefined} />
 
       {loading ? (
         <LoadingState testId="network.user.loading" />

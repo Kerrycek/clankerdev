@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { useAuth } from "../../../app/auth";
 import { useI18n } from "../../../app/i18n";
+import { useObjectScope } from "../../../app/objectScope";
 import { useChrome } from "../../../components/layout/ChromeContext";
 import { Alert } from "../../../components/ui/Alert";
 import { ActionButton } from "../../../components/ui/ActionButton";
@@ -57,7 +58,8 @@ export function DatasetDownloadsPage() {
   const chrome = useChrome();
   const { t } = useI18n();
   const { role } = useAuth();
-  const isAdmin = role === "admin";
+  const scope = useObjectScope();
+  const isAdmin = role === "admin" && scope.scope === "all";
   const datasetLabelForToast =
     dataset.label ??
     dataset.full_name ??
