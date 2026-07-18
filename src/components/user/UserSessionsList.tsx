@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { useAppMode } from '../../app/appMode';
 import { useI18n } from '../../app/i18n';
 import type { UserSession } from '../../lib/api/userDossier';
 import { formatDateTime } from '../../lib/time';
@@ -13,6 +14,7 @@ import { formatUserSessionPrimaryIp, isOpenUserSession, userSessionDisplayLabel 
 export function UserSessionsList(props: {
   sessions: readonly UserSession[];
   testIdPrefix: string;
+  detailedOutput?: boolean;
   onRename: (session: UserSession) => void;
   onClose: (session: UserSession) => void;
 }) {
@@ -37,6 +39,7 @@ export function UserSessionsList(props: {
             </div>
 
             <SessionMetaBlock session={session} />
+            {props.detailedOutput ? <SessionDetails session={session} /> : null}
 
             <SessionRowActions
               session={session}
@@ -62,43 +65,51 @@ export function UserSessionsList(props: {
           </thead>
           <tbody>
             {props.sessions.map((session) => (
-              <tr
-                key={session.id}
-                className="border-b border-border/60 last:border-b-0"
-                data-testid={`${prefix}.row.${session.id}`}
-              >
-                <td className="px-4 py-2">
-                  <div className="font-medium text-fg">{userSessionDisplayLabel(session)}</div>
-                  <div className="text-xs text-faint">#{session.id}</div>
-                  {session.user_agent ? (
-                    <div className="mt-1 text-xs text-muted">
-                      <span className="break-all">{session.user_agent}</span>
-                    </div>
-                  ) : null}
-                  <SessionAuthInline session={session} />
-                </td>
-                <td className="px-4 py-2">
-                  <SessionStateBadges session={session} />
-                </td>
-                <td className="px-4 py-2 text-xs text-muted">
-                  <span className="break-all tabular-nums">{formatUserSessionPrimaryIp(session)}</span>
-                </td>
-                <td className="px-4 py-2 text-xs text-muted tabular-nums">
-                  {session.last_request_at ? formatDateTime(session.last_request_at) : '—'}
-                </td>
-                <td className="px-4 py-2 text-xs text-muted tabular-nums">
-                  {session.created_at ? formatDateTime(session.created_at) : '—'}
-                </td>
-                <td className="px-4 py-2 text-right">
-                  <SessionRowActions
-                    session={session}
-                    testIdPrefix={prefix}
-                    align="right"
-                    onRename={props.onRename}
-                    onClose={props.onClose}
-                  />
-                </td>
-              </tr>
+              <React.Fragment key={session.id}>
+                <tr
+                  className="border-b border-border/60"
+                  data-testid={`${prefix}.row.${session.id}`}
+                >
+                  <td className="px-4 py-2">
+                    <div className="font-medium text-fg">{userSessionDisplayLabel(session)}</div>
+                    <div className="text-xs text-faint">#{session.id}</div>
+                    {session.user_agent ? (
+                      <div className="mt-1 text-xs text-muted">
+                        <span className="break-all">{session.user_agent}</span>
+                      </div>
+                    ) : null}
+                    <SessionAuthInline session={session} />
+                  </td>
+                  <td className="px-4 py-2">
+                    <SessionStateBadges session={session} />
+                  </td>
+                  <td className="px-4 py-2 text-xs text-muted">
+                    <span className="break-all tabular-nums">{formatUserSessionPrimaryIp(session)}</span>
+                  </td>
+                  <td className="px-4 py-2 text-xs text-muted tabular-nums">
+                    {session.last_request_at ? formatDateTime(session.last_request_at) : '—'}
+                  </td>
+                  <td className="px-4 py-2 text-xs text-muted tabular-nums">
+                    {session.created_at ? formatDateTime(session.created_at) : '—'}
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    <SessionRowActions
+                      session={session}
+                      testIdPrefix={prefix}
+                      align="right"
+                      onRename={props.onRename}
+                      onClose={props.onClose}
+                    />
+                  </td>
+                </tr>
+                {props.detailedOutput ? (
+                  <tr className="border-b border-border/60 last:border-b-0">
+                    <td colSpan={6} className="bg-surface-2/60 px-4 py-3">
+                      <SessionDetails session={session} />
+                    </td>
+                  </tr>
+                ) : null}
+              </React.Fragment>
             ))}
           </tbody>
         </Table>
@@ -160,10 +171,20 @@ function SessionRowActions(props: {
   onClose: (session: UserSession) => void;
 }) {
   const { t } = useI18n();
+  const { basePath } = useAppMode();
   const className = props.align === 'right' ? 'flex justify-end gap-2' : 'mt-3 flex flex-wrap items-center gap-2';
 
   return (
     <div className={className}>
+      <Button
+        to={`${basePath}/transactions?user_session=${props.session.id}`}
+        variant="secondary"
+        size="sm"
+        testId={`${props.testIdPrefix}.row.${props.session.id}.transactions`}
+      >
+        {t('profile.sessions.action.transactions')}
+      </Button>
+
       <Button
         variant="secondary"
         size="sm"
@@ -184,5 +205,46 @@ function SessionRowActions(props: {
         </Button>
       ) : null}
     </div>
+  );
+}
+
+function SessionDetails(props: { session: UserSession }) {
+  const { t } = useI18n();
+  const s = props.session;
+
+  const items = [
+    { key: 'request_count', label: t('profile.sessions.detail.request_count'), value: s.request_count },
+    {
+      key: 'last_request_at',
+      label: t('profile.sessions.detail.last_request'),
+      value: s.last_request_at ? formatDateTime(s.last_request_at) : undefined,
+    },
+    { key: 'api_ip_addr', label: t('profile.sessions.detail.api_ip_addr'), value: s.api_ip_addr },
+    { key: 'api_ip_ptr', label: t('profile.sessions.detail.api_ip_ptr'), value: s.api_ip_ptr },
+    { key: 'client_ip_addr', label: t('profile.sessions.detail.client_ip_addr'), value: s.client_ip_addr },
+    { key: 'client_ip_ptr', label: t('profile.sessions.detail.client_ip_ptr'), value: s.client_ip_ptr },
+    { key: 'user_agent', label: t('profile.sessions.detail.user_agent'), value: s.user_agent },
+    { key: 'client_version', label: t('profile.sessions.detail.client_version'), value: s.client_version },
+    { key: 'token_fragment', label: t('profile.sessions.detail.token'), value: s.token_fragment },
+    { key: 'token_lifetime', label: t('profile.sessions.detail.token_lifetime'), value: s.token_lifetime },
+    { key: 'token_interval', label: t('profile.sessions.detail.token_interval'), value: s.token_interval },
+    { key: 'scope', label: t('profile.sessions.detail.scope'), value: s.scope },
+    { key: 'admin', label: t('profile.sessions.detail.admin'), value: s.admin?.login ?? s.admin?.id },
+    {
+      key: 'closed_at',
+      label: t('profile.sessions.detail.closed_at'),
+      value: s.closed_at ? formatDateTime(s.closed_at) : undefined,
+    },
+  ];
+
+  return (
+    <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-xs sm:grid-cols-2 lg:grid-cols-3">
+      {items.map((item) => (
+        <div key={item.key} className="min-w-0">
+          <dt className="font-semibold text-muted">{item.label}</dt>
+          <dd className="break-all text-fg tabular-nums">{item.value === undefined || item.value === null || item.value === '' ? '—' : String(item.value)}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }

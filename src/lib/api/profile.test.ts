@@ -7,6 +7,7 @@ import {
   deleteMetricsAccessToken,
   fetchMetricsAccessTokens,
   fetchUserPublicKeys,
+  fetchUserSession,
   fetchUserSessions,
   updateUserSessionLabel,
 } from './profile';
@@ -92,6 +93,20 @@ describe('profile API wrappers', () => {
     expect(String(url)).toContain('/v7.0/user_sessions?');
     expect(String(url)).toContain('user_session%5Blimit%5D=25');
     expect(String(url)).toContain('user_session%5Bstate%5D=open');
+  });
+
+  it('fetchUserSession uses /user_sessions/:id show action', async () => {
+    setMockRuntime();
+    const fetchMock = installOkFetch({
+      _meta: { elapsed: 1 },
+      user_session: { id: 9, label: 'phone' },
+    });
+
+    await fetchUserSession(9);
+
+    const [url, init] = getFetchCall(fetchMock);
+    expect(String(url)).toContain('/v7.0/user_sessions/9');
+    expect(init?.method).toBe('GET');
   });
 
   it('updateUserSessionLabel sends namespaced PUT payload', async () => {

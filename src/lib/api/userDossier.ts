@@ -152,6 +152,13 @@ export async function fetchUserSessions(opts?: {
   return { ...res, data: expectArray<UserSession>(res.data, 'user_sessions#index') };
 }
 
+export async function fetchUserSession(sessionId: number) {
+  return haveApiCall<UserSession>({
+    method: 'GET',
+    path: `/user_sessions/${sessionId}`,
+  });
+}
+
 export async function updateUserSessionLabel(sessionId: number, label: string) {
   return haveApiCall<UserSession>({
     method: 'PUT',

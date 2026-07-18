@@ -21,13 +21,38 @@ test('@smoke profile: ssh keys + sessions flows', async ({ page }) => {
     {
       id: 1,
       label: 'Firefox',
+      auth_type: 'oauth2',
       created_at: '2026-02-01T12:00:00Z',
       last_request_at: '2026-02-02T08:00:00Z',
       closed_at: null,
       api_ip_addr: '203.0.113.10',
+      api_ip_ptr: 'user.example.test',
       client_ip_addr: '203.0.113.10',
+      client_ip_ptr: 'client.example.test',
       user_agent: 'Mozilla/5.0 (X11; Linux x86_64)',
+      client_version: 'vpsadmin-webui 9a5fccf4',
       token_fragment: 'abc…',
+      token_lifetime: 'renewable_auto',
+      token_interval: 900,
+      request_count: 111,
+      scope: 'all',
+    },
+    {
+      id: 2,
+      label: 'Old token',
+      auth_type: 'token',
+      created_at: '2026-01-01T12:00:00Z',
+      last_request_at: '2026-01-02T08:00:00Z',
+      closed_at: '2026-01-02T08:30:00Z',
+      api_ip_addr: '198.51.100.20',
+      client_ip_addr: '198.51.100.21',
+      user_agent: 'curl/8',
+      client_version: 'vpsfreectl 1.0',
+      token_fragment: 'deadbeef',
+      token_lifetime: 'fixed',
+      token_interval: 3600,
+      request_count: 8,
+      scope: 'dns',
     },
   ];
 
@@ -55,7 +80,12 @@ test('@smoke profile: ssh keys + sessions flows', async ({ page }) => {
         return { ok: true };
       },
 
-      'GET user_sessions': () => ({ user_sessions: sessions }),
+      'GET user_sessions': (ctx) => {
+        const authType = ctx.searchParams.get('user_session[auth_type]');
+        const rows = authType ? sessions.filter((s) => s.auth_type === authType) : sessions;
+        return { user_sessions: rows };
+      },
+      'GET user_sessions/2': () => ({ user_session: sessions.find((s) => s.id === 2) }),
       'PUT user_sessions/1': () => {
         sessions = sessions.map((s) => (s.id === 1 ? { ...s, label: 'Firefox (renamed)' } : s));
         return { user_session: sessions.find((s) => s.id === 1) };
@@ -118,6 +148,28 @@ test('@smoke profile: ssh keys + sessions flows', async ({ page }) => {
 
   // Session rename
   await expect(sessionsTable.getByTestId('profile.sessions.row.1')).toBeVisible();
+  await expect(sessionsTable.getByText('Request count').first()).toBeVisible();
+  await expect(sessionsTable.getByText('111').first()).toBeVisible();
+  await expect(sessionsTable.getByText('vpsadmin-webui 9a5fccf4')).toBeVisible();
+  await expect(sessionsTable.getByTestId('profile.sessions.row.1.transactions')).toBeVisible();
+
+  const authFilterReqP = page.waitForRequest(
+    (r) => r.method() === 'GET' && r.url().includes('/user_sessions?') && r.url().includes('user_session%5Bauth_type%5D=token')
+  );
+  await page.getByTestId('profile.sessions.auth_type').selectOption('token');
+  await authFilterReqP;
+  await expect(sessionsTable.getByTestId('profile.sessions.row.2')).toBeVisible();
+  await expect(sessionsTable.getByTestId('profile.sessions.row.1')).toBeHidden();
+
+  const exactIdReqP = page.waitForRequest((r) => r.method() === 'GET' && r.url().includes('/user_sessions/2'));
+  await page.getByTestId('profile.sessions.exact_id').fill('2');
+  await exactIdReqP;
+  await expect(sessionsTable.getByTestId('profile.sessions.row.2')).toBeVisible();
+
+  await page.getByTestId('profile.sessions.exact_id').fill('');
+  await page.getByTestId('profile.sessions.auth_type').selectOption('all');
+  await expect(sessionsTable.getByTestId('profile.sessions.row.1')).toBeVisible();
+
   await sessionsTable.getByTestId('profile.sessions.row.1.rename').click();
   await expect(page.getByTestId('profile.sessions.rename_modal')).toBeVisible();
   await page.getByTestId('profile.sessions.rename_modal.label').fill('Firefox (renamed)');
