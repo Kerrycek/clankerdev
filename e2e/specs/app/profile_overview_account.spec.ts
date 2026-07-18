@@ -64,9 +64,12 @@ test('@smoke profile: overview exposes account actions and profile updates', asy
   await page.getByTestId('profile.personal.time_zone').selectOption('America/New_York');
   await page.getByTestId('profile.personal.time_zone.save').click();
   await expect.poll(() => timeZonePayload?.time_zone).toBe('America/New_York');
+  await expect(page.getByTestId('profile.personal.time_zone.save')).toBeDisabled();
+  await expect(page.getByTestId('profile.user.card')).toContainText('America/New_York');
 
   await page.getByTestId('profile.personal.address').fill('New street 2, Brno');
   await page.getByTestId('profile.personal.change_reason').fill('Moving to a new address');
+  await expect(page.getByTestId('profile.personal.change.submit')).toBeEnabled();
   await page.getByTestId('profile.personal.change.submit').click();
 
   await expect.poll(() => changePayload?.address).toBe('New street 2, Brno');
