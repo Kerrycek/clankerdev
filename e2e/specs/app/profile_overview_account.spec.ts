@@ -56,10 +56,10 @@ test('@smoke profile: overview exposes account actions and profile updates', asy
 
   await page.goto('/app/profile');
 
-  await expect(page.getByTestId('profile.shortcuts.card')).toBeVisible();
-  await expect(page.getByTestId('profile.shortcuts.mfa')).toContainText('TOTP and MFA');
-  await expect(page.getByTestId('profile.shortcuts.incidents')).toContainText('Incidents');
+  await expect(page.getByTestId('profile.user.card')).toBeVisible();
   await expect(page.getByTestId('profile.personal.card')).toBeVisible();
+  await expect(page.getByTestId('profile.time_zone.card')).toBeVisible();
+  await expect(page.getByTestId('profile.prefs.card')).toBeVisible();
 
   await page.getByTestId('profile.personal.time_zone').selectOption('America/New_York');
   await page.getByTestId('profile.personal.time_zone.save').click();

@@ -11,7 +11,6 @@ import { useToasts } from '../../../app/toasts';
 
 import { DetailShell } from '../../../components/layout/DetailShell';
 import { PageHeader } from '../../../components/layout/PageHeader';
-import { SummaryGrid } from '../../../components/layout/SummaryGrid';
 
 import { ProfileTabs } from './ProfileTabs';
 
@@ -299,40 +298,114 @@ export function ProfilePage() {
 
       <ProfileTabs />
 
-      <SummaryGrid testId="profile.summary" className="items-start">
-        <Card testId="profile.user.card" className="md:col-span-5 lg:col-span-4">
-          <CardHeader title={t('profile.user.title')} subtitle={t('profile.user.subtitle')} />
-          <CardBody>
-            {auth.user ? (
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted">{t('profile.user.login')}</span>
-                  <span className="font-medium text-fg">{auth.user.login}</span>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted">{t('profile.user.id')}</span>
-                  <span className="font-medium text-fg tabular-nums">{auth.user.id}</span>
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-muted">{t('profile.user.role')}</span>
-                  <span className="font-medium text-fg">{String(auth.role || '—')}</span>
-                </div>
-                {profileUser?.time_zone ? (
+      <div
+        data-testid="profile.summary"
+        className="grid gap-4 lg:grid-cols-[minmax(18rem,0.78fr)_minmax(0,1.22fr)] lg:items-start"
+      >
+        <div className="space-y-4">
+          <Card testId="profile.user.card">
+            <CardHeader title={t('profile.user.title')} subtitle={t('profile.user.subtitle')} />
+            <CardBody>
+              {auth.user ? (
+                <div className="space-y-2 text-sm">
                   <div className="flex items-center justify-between gap-4">
-                    <span className="text-muted">{t('profile.personal.time_zone.label')}</span>
-                    <span className="font-medium text-fg">{profileUser.time_zone}</span>
+                    <span className="text-muted">{t('profile.user.login')}</span>
+                    <span className="font-medium text-fg">{auth.user.login}</span>
                   </div>
-                ) : null}
-              </div>
-            ) : (
-              <div className="py-6 text-sm text-muted">{t('profile.user.loading')}</div>
-            )}
-          </CardBody>
-        </Card>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-muted">{t('profile.user.id')}</span>
+                    <span className="font-medium text-fg tabular-nums">{auth.user.id}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-muted">{t('profile.user.role')}</span>
+                    <span className="font-medium text-fg">{String(auth.role || '—')}</span>
+                  </div>
+                  {profileUser?.time_zone ? (
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-muted">{t('profile.personal.time_zone.label')}</span>
+                      <span className="font-medium text-fg">{profileUser.time_zone}</span>
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="py-6 text-sm text-muted">{t('profile.user.loading')}</div>
+              )}
+            </CardBody>
+          </Card>
 
-        <Card testId="profile.personal.card" className="md:col-span-12 lg:col-span-7">
-          <CardHeader title={t('profile.personal.title')} subtitle={t('profile.personal.subtitle')} />
-          <CardBody>
+          <Card testId="profile.time_zone.card">
+            <CardHeader title={t('profile.personal.time_zone.title')} subtitle={t('profile.personal.time_zone.subtitle')} />
+            <CardBody>
+              <div className="space-y-3">
+                <PreferenceRow
+                  label={t('profile.personal.time_zone.label')}
+                  description={t('profile.personal.time_zone.description')}
+                >
+                  <Select
+                    value={timeZone}
+                    onChange={(e) => setTimeZone(e.target.value)}
+                    options={[
+                      { value: '', label: t('profile.personal.time_zone.server_default') },
+                      ...timeZoneOptions(profileUser?.time_zone, serverTimeZone, detectedBrowserTimeZone),
+                    ]}
+                    disabled={!profileUser || saveTimeZoneM.isPending}
+                    testId="profile.personal.time_zone"
+                  />
+                </PreferenceRow>
+
+                <div className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted">
+                  {t('profile.personal.time_zone.current')}: {' '}
+                  <span className="font-medium text-fg">{profileUser?.time_zone || t('profile.personal.time_zone.server_default')}</span>
+                  {detectedBrowserTimeZone ? (
+                    <>
+                      {' · '}
+                      {t('profile.personal.time_zone.browser')}: {' '}
+                      <span className="font-medium text-fg">{detectedBrowserTimeZone}</span>
+                    </>
+                  ) : null}
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  {detectedBrowserTimeZone ? (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => setTimeZone(detectedBrowserTimeZone)}
+                      disabled={saveTimeZoneM.isPending}
+                      testId="profile.personal.time_zone.use_browser"
+                    >
+                      {t('profile.personal.time_zone.use_browser')}
+                    </Button>
+                  ) : null}
+                  <Button
+                    size="sm"
+                    onClick={() => saveTimeZoneM.mutate()}
+                    disabled={!timeZoneDirty || saveTimeZoneM.isPending}
+                    loading={saveTimeZoneM.isPending}
+                    testId="profile.personal.time_zone.save"
+                  >
+                    {t('common.save')}
+                  </Button>
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+
+          <Card testId="profile.tips.card">
+            <CardHeader title={t('profile.tips.title')} subtitle={t('profile.tips.subtitle')} />
+            <CardBody>
+              <ul className="list-disc space-y-1 pl-4 text-sm text-muted">
+                <li>{t('profile.tips.item.0')}</li>
+                <li>{t('profile.tips.item.2')}</li>
+              </ul>
+            </CardBody>
+          </Card>
+        </div>
+
+        <div className="space-y-4">
+          <Card testId="profile.personal.card">
+            <CardHeader title={t('profile.personal.title')} subtitle={t('profile.personal.subtitle')} />
+            <CardBody>
             {profileUserQ.isError ? (
               <Alert variant="danger" title={t('profile.personal.load_failed.title')}>
                 {formatErrorMessage(profileUserQ.error)}
@@ -413,65 +486,7 @@ export function ProfilePage() {
           </CardBody>
         </Card>
 
-        <Card testId="profile.time_zone.card" className="md:col-span-6 lg:col-span-5">
-          <CardHeader title={t('profile.personal.time_zone.title')} subtitle={t('profile.personal.time_zone.subtitle')} />
-          <CardBody>
-            <div className="space-y-3">
-              <PreferenceRow
-                label={t('profile.personal.time_zone.label')}
-                description={t('profile.personal.time_zone.description')}
-              >
-                <Select
-                  value={timeZone}
-                  onChange={(e) => setTimeZone(e.target.value)}
-                  options={[
-                    { value: '', label: t('profile.personal.time_zone.server_default') },
-                    ...timeZoneOptions(profileUser?.time_zone, serverTimeZone, detectedBrowserTimeZone),
-                  ]}
-                  disabled={!profileUser || saveTimeZoneM.isPending}
-                  testId="profile.personal.time_zone"
-                />
-              </PreferenceRow>
-
-              <div className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted">
-                {t('profile.personal.time_zone.current')}: {' '}
-                <span className="font-medium text-fg">{profileUser?.time_zone || t('profile.personal.time_zone.server_default')}</span>
-                {detectedBrowserTimeZone ? (
-                  <>
-                    {' · '}
-                    {t('profile.personal.time_zone.browser')}: {' '}
-                    <span className="font-medium text-fg">{detectedBrowserTimeZone}</span>
-                  </>
-                ) : null}
-              </div>
-
-              <div className="flex justify-end gap-2">
-                {detectedBrowserTimeZone ? (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setTimeZone(detectedBrowserTimeZone)}
-                    disabled={saveTimeZoneM.isPending}
-                    testId="profile.personal.time_zone.use_browser"
-                  >
-                    {t('profile.personal.time_zone.use_browser')}
-                  </Button>
-                ) : null}
-                <Button
-                  size="sm"
-                  onClick={() => saveTimeZoneM.mutate()}
-                  disabled={!timeZoneDirty || saveTimeZoneM.isPending}
-                  loading={saveTimeZoneM.isPending}
-                  testId="profile.personal.time_zone.save"
-                >
-                  {t('common.save')}
-                </Button>
-              </div>
-            </div>
-          </CardBody>
-        </Card>
-
-        <Card testId="profile.prefs.card" className="md:col-span-12 lg:col-span-7">
+        <Card testId="profile.prefs.card">
           <CardHeader title={t('profile.prefs.title')} subtitle={t('profile.prefs.subtitle')} />
           <CardBody>
             <div className="space-y-3">
@@ -644,16 +659,8 @@ export function ProfilePage() {
           </CardBody>
         </Card>
 
-        <Card testId="profile.tips.card" className="md:col-span-6 lg:col-span-5">
-          <CardHeader title={t('profile.tips.title')} subtitle={t('profile.tips.subtitle')} />
-          <CardBody>
-            <ul className="list-disc space-y-1 pl-4 text-sm text-muted">
-              <li>{t('profile.tips.item.0')}</li>
-              <li>{t('profile.tips.item.2')}</li>
-            </ul>
-          </CardBody>
-        </Card>
-      </SummaryGrid>
+        </div>
+      </div>
     </DetailShell>
   );
 }
