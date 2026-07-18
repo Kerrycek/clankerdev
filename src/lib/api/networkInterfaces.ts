@@ -29,6 +29,20 @@ export interface NetworkInterfaceAccounting {
   [k: string]: unknown;
 }
 
+export interface NetworkInterfaceAccountingListOpts {
+  vps?: number;
+  user?: number;
+  environment?: number;
+  location?: number;
+  node?: number;
+  year?: number;
+  month?: number;
+  limit?: number;
+  fromBytes?: number;
+  order?: 'created_at' | 'updated_at' | 'descending' | 'ascending';
+  includes?: string;
+}
+
 export async function fetchNetworkInterfaces(vpsId: number, opts?: { limit?: number }) {
   const res = await haveApiCall<NetworkInterface[]>({
     method: 'GET',
@@ -51,20 +65,37 @@ export async function updateNetworkInterface(netifId: number, params: Record<str
   });
 }
 
-export async function fetchNetworkInterfaceAccountingForVps(vpsId: number, year: number, month: number) {
+export async function fetchNetworkInterfaceAccountings(opts?: NetworkInterfaceAccountingListOpts) {
+  const params: Record<string, unknown> = {};
+  if (opts?.vps !== undefined) params['vps'] = opts.vps;
+  if (opts?.user !== undefined) params['user'] = opts.user;
+  if (opts?.environment !== undefined) params['environment'] = opts.environment;
+  if (opts?.location !== undefined) params['location'] = opts.location;
+  if (opts?.node !== undefined) params['node'] = opts.node;
+  if (opts?.year !== undefined) params['year'] = opts.year;
+  if (opts?.month !== undefined) params['month'] = opts.month;
+  if (opts?.limit !== undefined) params['limit'] = opts.limit;
+  if (opts?.fromBytes !== undefined) params['from_bytes'] = opts.fromBytes;
+  if (opts?.order) params['order'] = opts.order;
+
   const res = await haveApiCall<NetworkInterfaceAccounting[]>({
     method: 'GET',
     path: '/network_interface_accountings',
     namespace: 'network_interface_accounting',
-    params: {
-      vps: vpsId,
-      year,
-      month,
-      limit: 250,
-    },
+    params,
+    meta: opts?.includes ? { includes: opts.includes } : undefined,
   });
   return {
     ...res,
     data: expectArray<NetworkInterfaceAccounting>(res.data, 'network_interface_accountings'),
   };
+}
+
+export async function fetchNetworkInterfaceAccountingForVps(vpsId: number, year: number, month: number) {
+  return fetchNetworkInterfaceAccountings({
+    vps: vpsId,
+    year,
+    month,
+    limit: 250,
+  });
 }

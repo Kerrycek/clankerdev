@@ -60,12 +60,36 @@ test('@pr-smoke user network page lists only own addresses and assigns all suppo
     user: null,
   };
   const listRequests: URL[] = [];
+  const accountingRequests: URL[] = [];
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
 
   await installHaveApiMock(page, {
     user: { id: 7, login: 'member', level: 1 },
     handlers: {
       'GET vpses': () => ({ vpses: [vps] }),
       'GET network_interfaces': () => ({ network_interfaces: [{ id: 501, name: 'eth0', vps: { id: 123 } }] }),
+      'GET network_interface_accountings': (ctx) => {
+        accountingRequests.push(new URL(ctx.url.href));
+        const year = Number(ctx.searchParams.get('network_interface_accounting[year]'));
+        const month = Number(ctx.searchParams.get('network_interface_accounting[month]'));
+        if (year === currentYear && month === currentMonth) {
+          return {
+            network_interface_accountings: [
+              {
+                id: 701,
+                year,
+                month,
+                bytes_in: 1024 ** 3,
+                bytes_out: 2 * 1024 ** 3,
+                network_interface: { id: 501, name: 'eth0', vps },
+              },
+            ],
+          };
+        }
+        return { network_interface_accountings: [] };
+      },
       'GET ip_addresses': (ctx) => {
         listRequests.push(new URL(ctx.url.href));
         const vpsId = ctx.searchParams.get('ip_address[vps]');
@@ -110,6 +134,11 @@ test('@pr-smoke user network page lists only own addresses and assigns all suppo
   await expect(page.getByTestId('nav.sidebar.networking')).toBeVisible();
   await expect(page.getByTestId('network.user.ip.row.101')).toBeVisible();
   await expect(page.getByTestId('network.user.ip.row.102')).toBeVisible();
+  await expect(page.getByTestId('network.user.traffic')).toBeVisible();
+  await expect(page.getByTestId('network.user.traffic.stat.total')).toContainText('3.00 GiB');
+  await expect(page.getByTestId('network.user.traffic.chart')).toBeVisible();
+  await expect(page.getByTestId('network.user.traffic.table')).toContainText('my-vps.example');
+  await expect(page.getByTestId('network.user.traffic.table')).toContainText('eth0');
   await expect(page.getByText('203.0.113.99/32')).toHaveCount(0);
   await expect(page.getByText('10.20.30.40/32')).toHaveCount(0);
 
@@ -128,6 +157,8 @@ test('@pr-smoke user network page lists only own addresses and assigns all suppo
         url.searchParams.get('ip_address[vps]') === null
     )
   ).toBe(false);
+  expect(accountingRequests.length).toBeGreaterThan(0);
+  expect(accountingRequests.some((url) => url.searchParams.has('network_interface_accounting[user]'))).toBe(false);
 
   await page.getByTestId('network.user.add').click();
   await page.getByTestId('network.user.assign.vps').selectOption('123');
@@ -202,6 +233,7 @@ test('user network assignment offers only VPS compatible with the selected detac
     user: { id: 7, login: 'member', level: 1 },
     handlers: {
       'GET vpses': () => ({ vpses: [pragueVps, brnoVps] }),
+      'GET network_interface_accountings': () => ({ network_interface_accountings: [] }),
       'GET ip_addresses': (ctx) => {
         if (ctx.searchParams.get('ip_address[vps]')) return { ip_addresses: [] };
         if (ctx.searchParams.get('ip_address[assigned_to_interface]') === 'false') {
@@ -265,6 +297,7 @@ test('admin user view fetches addresses through own VPS scope instead of the glo
     user: { id: 7, login: 'admin-member' },
   };
   const requests: URL[] = [];
+  const accountingRequests: URL[] = [];
 
   await installHaveApiMock(page, {
     user: { id: 7, login: 'admin-member', level: 99 },
@@ -272,6 +305,10 @@ test('admin user view fetches addresses through own VPS scope instead of the glo
       'GET vpses': (ctx) => {
         expect(ctx.searchParams.get('vps[user]')).toBe('7');
         return { vpses: [vps] };
+      },
+      'GET network_interface_accountings': (ctx) => {
+        accountingRequests.push(new URL(ctx.url.href));
+        return { network_interface_accountings: [] };
       },
       'GET ip_addresses': (ctx) => {
         requests.push(new URL(ctx.url.href));
@@ -305,4 +342,8 @@ test('admin user view fetches addresses through own VPS scope instead of the glo
         url.searchParams.get('ip_address[vps]') === null
     )
   ).toBe(false);
+  expect(accountingRequests.length).toBeGreaterThan(0);
+  expect(
+    accountingRequests.every((url) => url.searchParams.get('network_interface_accounting[user]') === '7')
+  ).toBe(true);
 });

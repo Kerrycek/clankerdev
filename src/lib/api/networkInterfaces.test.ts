@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from 'vitest';
 
 import {
+  fetchNetworkInterfaceAccountings,
   fetchNetworkInterfaceAccountingForVps,
   fetchNetworkInterfaces,
   updateNetworkInterface,
@@ -67,5 +68,30 @@ describe('network interface API wrappers', () => {
     expect(u.searchParams.get('network_interface_accounting[year]')).toBe('2026');
     expect(u.searchParams.get('network_interface_accounting[month]')).toBe('6');
     expect(u.searchParams.get('network_interface_accounting[limit]')).toBe('250');
+  });
+
+  test('fetchNetworkInterfaceAccountings supports monthly user traffic filters', async () => {
+    globalThis.fetch = mockFetchOk({ network_interface_accountings: [{ id: 10, bytes_in: 4096, bytes_out: 8192 }] }) as any;
+
+    const res = await fetchNetworkInterfaceAccountings({
+      user: 7,
+      year: 2026,
+      month: 7,
+      limit: 50,
+      order: 'descending',
+      includes: 'network_interface,network_interface.vps',
+    });
+
+    expect(res.data).toEqual([{ id: 10, bytes_in: 4096, bytes_out: 8192 }]);
+    const [url, init] = lastFetchCall();
+    const u = new URL(url);
+    expect(u.pathname).toBe('/v7.0/network_interface_accountings');
+    expect(init?.method).toBe('GET');
+    expect(u.searchParams.get('network_interface_accounting[user]')).toBe('7');
+    expect(u.searchParams.get('network_interface_accounting[year]')).toBe('2026');
+    expect(u.searchParams.get('network_interface_accounting[month]')).toBe('7');
+    expect(u.searchParams.get('network_interface_accounting[limit]')).toBe('50');
+    expect(u.searchParams.get('network_interface_accounting[order]')).toBe('descending');
+    expect(u.searchParams.get('_meta[includes]')).toBe('network_interface,network_interface.vps');
   });
 });

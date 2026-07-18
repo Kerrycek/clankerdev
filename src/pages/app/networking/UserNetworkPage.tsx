@@ -30,6 +30,7 @@ import {
   type AssignableIpKind,
   uniqueIpAddresses,
 } from './IpAddressAssignmentModel';
+import { UserNetworkTrafficCard } from './UserNetworkTrafficCard';
 
 type KindFilter = 'all' | AssignableIpKind;
 
@@ -236,6 +237,8 @@ export function UserNetworkPage() {
         </Card>
       }
     >
+      <UserNetworkTrafficCard userId={userId} isAdmin={auth.role === 'admin'} />
+
       {loading ? (
         <LoadingState testId="network.user.loading" />
       ) : error ? (
