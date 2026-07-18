@@ -104,27 +104,6 @@ function userString(user: User | null | undefined, key: keyof User): string {
   return typeof value === 'string' ? value : '';
 }
 
-function AccountShortcut(props: {
-  to: string;
-  title: React.ReactNode;
-  body: React.ReactNode;
-  testId: string;
-}) {
-  return (
-    <Button
-      to={props.to}
-      variant="secondary"
-      className="h-auto w-full justify-start rounded-lg border-border bg-surface-2 p-3 text-left shadow-none hover:bg-surface"
-      testId={props.testId}
-    >
-      <span className="block">
-        <span className="block text-sm font-semibold text-fg">{props.title}</span>
-        <span className="mt-1 block text-xs leading-5 text-muted">{props.body}</span>
-      </span>
-    </Button>
-  );
-}
-
 export function ProfilePage() {
   const auth = useAuth();
   const appMode = useAppMode();
@@ -348,68 +327,6 @@ export function ProfilePage() {
             ) : (
               <div className="py-6 text-sm text-muted">{t('profile.user.loading')}</div>
             )}
-          </CardBody>
-        </Card>
-
-        <Card testId="profile.shortcuts.card" className="md:col-span-7 lg:col-span-8">
-          <CardHeader title={t('profile.shortcuts.title')} subtitle={t('profile.shortcuts.subtitle')} />
-          <CardBody>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              <AccountShortcut
-                to={`${appMode.basePath}/profile/security`}
-                testId="profile.shortcuts.security"
-                title={t('profile.shortcuts.security.title')}
-                body={t('profile.shortcuts.security.body')}
-              />
-              <AccountShortcut
-                to={`${appMode.basePath}/profile/mfa`}
-                testId="profile.shortcuts.mfa"
-                title={t('profile.shortcuts.mfa.title')}
-                body={t('profile.shortcuts.mfa.body')}
-              />
-              <AccountShortcut
-                to={`${appMode.basePath}/profile/sessions`}
-                testId="profile.shortcuts.sessions"
-                title={t('profile.shortcuts.sessions.title')}
-                body={t('profile.shortcuts.sessions.body')}
-              />
-              <AccountShortcut
-                to={`${appMode.basePath}/profile/keys`}
-                testId="profile.shortcuts.keys"
-                title={t('profile.shortcuts.keys.title')}
-                body={t('profile.shortcuts.keys.body')}
-              />
-              <AccountShortcut
-                to={`${appMode.basePath}/profile/mail`}
-                testId="profile.shortcuts.mail"
-                title={t('profile.shortcuts.mail.title')}
-                body={t('profile.shortcuts.mail.body')}
-              />
-              <AccountShortcut
-                to={`${appMode.basePath}/incidents`}
-                testId="profile.shortcuts.incidents"
-                title={t('profile.shortcuts.incidents.title')}
-                body={t('profile.shortcuts.incidents.body')}
-              />
-              <AccountShortcut
-                to={`${appMode.basePath}/profile/user-data`}
-                testId="profile.shortcuts.user_data"
-                title={t('profile.shortcuts.user_data.title')}
-                body={t('profile.shortcuts.user_data.body')}
-              />
-              <AccountShortcut
-                to={`${appMode.basePath}/profile/resources`}
-                testId="profile.shortcuts.resources"
-                title={t('profile.shortcuts.resources.title')}
-                body={t('profile.shortcuts.resources.body')}
-              />
-              <AccountShortcut
-                to={`${appMode.basePath}/payments`}
-                testId="profile.shortcuts.payments"
-                title={t('profile.shortcuts.payments.title')}
-                body={t('profile.shortcuts.payments.body')}
-              />
-            </div>
           </CardBody>
         </Card>
 
