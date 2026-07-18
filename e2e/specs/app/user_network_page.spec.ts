@@ -136,7 +136,10 @@ test('@pr-smoke user network page lists only own addresses and assigns all suppo
   await expect(page.getByTestId('network.user.ip.row.102')).toBeVisible();
   await expect(page.getByTestId('network.user.traffic')).toBeVisible();
   await expect(page.getByTestId('network.user.traffic.stat.total')).toContainText('3.00 GiB');
+  await expect(page.getByTestId('network.user.traffic.panel.overview')).toBeVisible();
   await expect(page.getByTestId('network.user.traffic.chart')).toBeVisible();
+  await page.getByTestId('network.user.traffic.tab.breakdown').click();
+  await expect(page.getByTestId('network.user.traffic.panel.breakdown')).toBeVisible();
   await expect(page.getByTestId('network.user.traffic.table')).toContainText('my-vps.example');
   await expect(page.getByTestId('network.user.traffic.table')).toContainText('eth0');
   await expect(page.getByText('203.0.113.99/32')).toHaveCount(0);
