@@ -26,6 +26,7 @@ export interface User {
   // Mailer / localization
   mailer_enabled?: boolean;
   language?: { id: number; code?: string; label?: string } | null;
+  time_zone?: string | null;
 
   [k: string]: unknown;
 }

@@ -100,6 +100,20 @@ export interface ChangeRequest extends UserRequestCommon {
   address?: string;
 }
 
+export async function createChangeRequest(params: {
+  change_reason: string;
+  full_name?: string;
+  email?: string;
+  address?: string;
+}) {
+  return haveApiCall<ChangeRequest>({
+    method: 'POST',
+    path: '/user_request/changes',
+    namespace: 'change',
+    params,
+  });
+}
+
 export type ResolveUserRequestAction = 'approve' | 'deny' | 'ignore' | 'request_correction';
 
 export async function fetchRegistrationRequests(opts?: {
