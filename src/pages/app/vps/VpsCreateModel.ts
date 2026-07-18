@@ -158,7 +158,7 @@ export function validateForm(
 
   const numeric: Array<[keyof FormState, number, number, string]> = [
     ['cpu', 1, 32, 'vps.create.validation.cpu'],
-    ['memory', 512, 131072, 'vps.create.validation.memory'],
+    ['memory', 1024, 131072, 'vps.create.validation.memory'],
     ['diskspace', 1024, 10485760, 'vps.create.validation.diskspace'],
     ['swap', 0, 12288, 'vps.create.validation.swap'],
     ['ipv4', 0, 64, 'vps.create.validation.ipv4'],

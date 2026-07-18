@@ -290,7 +290,7 @@ export function CreateResourcesCard(props: { form: FormState; onApplyPreset: (pr
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <NumberField label={t('vps.create.field.cpu')} value={props.form.cpu} min="1" max="32" testId="vps.create.cpu" onChange={(v) => props.onUpdate('cpu', v)} />
-          <NumberField label={t('vps.create.field.memory')} value={props.form.memory} min="512" max="131072" testId="vps.create.memory" onChange={(v) => props.onUpdate('memory', v)} />
+          <NumberField label={t('vps.create.field.memory')} value={props.form.memory} min="1024" max="131072" testId="vps.create.memory" onChange={(v) => props.onUpdate('memory', v)} />
           <NumberField label={t('vps.create.field.diskspace')} value={props.form.diskspace} min="1024" max="10485760" testId="vps.create.diskspace" onChange={(v) => props.onUpdate('diskspace', v)} />
           <NumberField label={t('vps.create.field.swap')} value={props.form.swap} min="0" max="12288" testId="vps.create.swap" onChange={(v) => props.onUpdate('swap', v)} />
         </div>

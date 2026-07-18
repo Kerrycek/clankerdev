@@ -42,7 +42,7 @@ export const enVps_create = {
   'vps.create.validation.user_required': 'Choose the target user.',
   'vps.create.validation.user_invalid': 'Owner must be a valid user ID.',
   'vps.create.validation.cpu': 'CPU must be between 1 and 32.',
-  'vps.create.validation.memory': 'Memory must be between 512 and 131072 MiB.',
+  'vps.create.validation.memory': 'Memory must be between 1024 and 131072 MiB.',
   'vps.create.validation.diskspace': 'Disk must be between 1024 and 10485760 MiB.',
   'vps.create.validation.swap': 'Swap must be between 0 and 12288 MiB.',
   'vps.create.validation.ipv4': 'IPv4 address count must be between 0 and 64.',

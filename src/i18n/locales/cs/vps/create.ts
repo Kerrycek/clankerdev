@@ -42,7 +42,7 @@ export const csVps_create = {
   'vps.create.validation.user_required': 'Vyber cílového uživatele.',
   'vps.create.validation.user_invalid': 'Vlastník musí být platné ID uživatele.',
   'vps.create.validation.cpu': 'CPU musí být mezi 1 a 32.',
-  'vps.create.validation.memory': 'Paměť musí být mezi 512 a 131072 MiB.',
+  'vps.create.validation.memory': 'Paměť musí být mezi 1024 a 131072 MiB.',
   'vps.create.validation.diskspace': 'Disk musí být mezi 1024 a 10485760 MiB.',
   'vps.create.validation.swap': 'Swap musí být mezi 0 a 12288 MiB.',
   'vps.create.validation.ipv4': 'Počet IPv4 adres musí být mezi 0 a 64.',

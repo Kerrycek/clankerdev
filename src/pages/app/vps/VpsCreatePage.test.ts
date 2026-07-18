@@ -102,4 +102,13 @@ describe('VpsCreatePage payload guardrails', () => {
       'vps.create.validation.user_required'
     );
   });
+
+  it('matches the API minimum memory requirement', () => {
+    expect(validateForm(validForm({ memory: '512' }), false)).toContain(
+      'vps.create.validation.memory'
+    );
+    expect(validateForm(validForm({ memory: '1024' }), false)).not.toContain(
+      'vps.create.validation.memory'
+    );
+  });
 });
