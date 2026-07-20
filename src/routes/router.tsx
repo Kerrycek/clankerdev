@@ -436,6 +436,7 @@ export const router = createBrowserRouter([
               ],
             },
             { path: 'dns', element: <DnsZonesPage /> },
+            { path: 'dns/tsig-keys', element: <DnsTsigKeysPage /> },
             {
               path: 'dns/zones/:zoneId',
               element: <DnsZoneLayout />,

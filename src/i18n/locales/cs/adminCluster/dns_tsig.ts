@@ -8,5 +8,6 @@ export const csAdminCluster_dns_tsig = {
   "admin.cluster.dns_tsig.empty_body": "Žádné TSIG klíče neodpovídají aktuálním filtrům.",
   "admin.cluster.dns_tsig.load_failed": "Nepodařilo se načíst TSIG klíče",
   "admin.cluster.dns_tsig.loading": "Načítám TSIG klíče…",
+  "admin.cluster.dns_tsig.page.description": "Správa TSIG klíčů používaných pro DNS transfery.",
   "admin.cluster.dns_tsig.search.placeholder": "Hledat jméno, algoritmus, uživatele nebo #id",
 } as const;

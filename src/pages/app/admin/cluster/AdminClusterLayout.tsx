@@ -56,16 +56,10 @@ export function AdminClusterLayout() {
             label: t('admin.cluster.tab.dns_resolvers'),
             testId: 'admin.cluster.tab.dns_resolvers',
           },
-
           {
             to: '/admin/cluster/dns-servers',
             label: t('admin.cluster.tab.dns_servers'),
             testId: 'admin.cluster.tab.dns_servers',
-          },
-          {
-            to: '/admin/cluster/dns-tsig-keys',
-            label: t('admin.cluster.tab.dns_tsig_keys'),
-            testId: 'admin.cluster.tab.dns_tsig_keys',
           },
         ]}
       />

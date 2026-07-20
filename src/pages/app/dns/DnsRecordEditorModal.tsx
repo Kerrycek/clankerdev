@@ -4,9 +4,7 @@ import { useI18n } from '../../../app/i18n';
 
 import { ActionButton, type DisabledReason } from '../../../components/ui/ActionButton';
 import { Alert } from '../../../components/ui/Alert';
-import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
-import { Card } from '../../../components/ui/Card';
 import { Checkbox } from '../../../components/ui/Checkbox';
 import { Input } from '../../../components/ui/Input';
 import { Modal } from '../../../components/ui/Modal';
@@ -23,17 +21,6 @@ import {
   type DnsRecordValidationResult,
 } from './DnsRecordModel';
 import type { DnsRecordApiFieldError } from './DnsRecordErrors';
-
-const PREVIEW_FIELD_LABEL_KEYS: Record<Exclude<DnsRecordFormField, 'conflict' | 'record'>, string> = {
-  name: 'dns.zone.records.modal.create.name.label',
-  type: 'dns.zone.records.modal.create.type.label',
-  content: 'dns.zone.records.modal.create.content.label',
-  ttl: 'dns.zone.records.modal.create.ttl.label',
-  priority: 'dns.zone.records.modal.create.priority.label',
-  comment: 'dns.zone.records.modal.create.comment.label',
-  enabled: 'dns.zone.records.table.enabled',
-  dynamic_update_enabled: 'dns.zone.records.table.dynamic',
-};
 
 type DnsRecordDraftPatch = Partial<DnsRecordDraft>;
 
@@ -70,61 +57,6 @@ function FieldFeedback(props: {
         </div>
       ))}
     </div>
-  );
-}
-
-function PreviewValue(props: { field: DnsRecordPreviewItem['field']; value: DnsRecordPreviewItem['after'] }) {
-  const { t } = useI18n();
-  const value = props.value;
-
-  if (value === undefined || value === null || value === '') return <span className="text-faint">{t('common.none')}</span>;
-  if (typeof value === 'boolean') {
-    if (props.field === 'enabled') return <span>{value ? t('common.enabled') : t('common.disabled')}</span>;
-    return <span>{value ? t('common.yes') : t('common.no')}</span>;
-  }
-  return <span>{String(value)}</span>;
-}
-
-function RecordPreview(props: { mode: 'create' | 'edit'; items: readonly DnsRecordPreviewItem[]; testId: string }) {
-  const { t } = useI18n();
-
-  return (
-    <Card testId={props.testId} className="bg-surface-2">
-      <div className="p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="text-sm font-semibold text-fg">{t('dns.zone.records.preview.title')}</div>
-          <Badge variant={props.items.length > 0 ? 'info' : 'neutral'}>
-            {props.mode === 'create' ? t('dns.zone.records.preview.new_record') : t('dns.zone.records.preview.changed_fields', { count: props.items.length })}
-          </Badge>
-        </div>
-        <p className="mt-1 text-xs text-muted">
-          {props.mode === 'create' ? t('dns.zone.records.preview.create_description') : t('dns.zone.records.preview.edit_description')}
-        </p>
-
-        {props.items.length === 0 ? (
-          <div className="mt-3 text-sm text-muted" data-testid={`${props.testId}.empty`}>
-            {t('dns.zone.records.preview.no_changes')}
-          </div>
-        ) : (
-          <dl className="mt-3 grid grid-cols-1 gap-2 text-sm">
-            {props.items.map((item) => (
-              <div key={item.field} className="rounded-md border border-border bg-surface px-3 py-2" data-testid={`${props.testId}.${item.field}`}>
-                <dt className="text-xs font-medium text-faint">{t(PREVIEW_FIELD_LABEL_KEYS[item.field])}</dt>
-                <dd className="mt-1 break-all text-fg">
-                  {props.mode === 'edit' ? (
-                    <>
-                      <PreviewValue field={item.field} value={item.before} />
-                      <span className="mx-2 text-faint">→</span>
-                    </>
-                  ) : null}
-                  <PreviewValue field={item.field} value={item.after} />
-                </dd>
-              </div>
-            ))}
-          </dl>
-        )}
-      </div>
-    </Card>
   );
 }
 
@@ -239,7 +171,7 @@ export function DnsRecordEditorModal(props: {
             <Input
               value={props.draft.ttl}
               onChange={(e) => props.onDraftChange({ ttl: e.target.value })}
-              placeholder="3600"
+              placeholder={props.mode === 'create' ? t('common.default') : '3600'}
               inputMode="numeric"
               testId={`${testPrefix}.ttl`}
             />
@@ -300,8 +232,6 @@ export function DnsRecordEditorModal(props: {
             testId={`${testPrefix}.dynamic`}
           />
         </div>
-
-        <RecordPreview mode={props.mode} items={props.preview} testId={`${testPrefix}.preview`} />
 
         {props.mutationError ? (
           <Alert title={t(props.mutationErrorTitleKey)} variant="danger" testId={`${testPrefix}.error`}>

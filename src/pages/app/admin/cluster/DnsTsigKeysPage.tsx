@@ -5,6 +5,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useI18n } from '../../../../app/i18n';
 import { useToasts } from '../../../../app/toasts';
 import { FilterBar } from '../../../../components/layout/FilterBar';
+import { PageHeader } from '../../../../components/layout/PageHeader';
 import { Alert } from '../../../../components/ui/Alert';
 import { ActionButton } from '../../../../components/ui/ActionButton';
 import { Badge } from '../../../../components/ui/Badge';
@@ -69,6 +70,12 @@ export function DnsTsigKeysPage() {
 
   return (
     <div className="space-y-6" data-testid="admin.cluster.dns_tsig.page">
+      <PageHeader
+        title={t('dns.zones.action.tsig_keys')}
+        description={t('admin.cluster.dns_tsig.page.description')}
+        testId="admin.cluster.dns_tsig.header"
+      />
+
       <FilterBar
         left={<Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('admin.cluster.dns_tsig.search.placeholder')} testId="admin.cluster.dns_tsig.search.input" />}
         right={<div className="flex flex-wrap items-end gap-2"><div><div className="mb-1 text-xs font-medium text-muted">{t('common.algorithm')}</div><Select value={algorithm} onChange={(e) => setAlgorithm(e.target.value)} options={[{ value: '', label: t('common.all') }, { value: 'hmac-sha256', label: 'hmac-sha256' }, { value: 'hmac-sha512', label: 'hmac-sha512' }]} testId="admin.cluster.dns_tsig.filter.algorithm" /></div><div className="w-56"><div className="mb-1 text-xs font-medium text-muted">{t('common.user')}</div><UserLookupInput value={userId} onChange={(value) => setUserId(value ? Number(value) : null)} testId="admin.cluster.dns_tsig.filter.user" /></div><Button variant="secondary" onClick={() => listQ.refetch()}>{t('common.refresh')}</Button><Button onClick={() => setCreateOpen(true)}>{t('common.create')}</Button></div>}

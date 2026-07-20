@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 
+import { useAppMode } from '../../../app/appMode';
 import { useI18n } from '../../../app/i18n';
 import { useChrome } from '../../../components/layout/ChromeContext';
 
@@ -25,6 +26,7 @@ import { Card } from '../../../components/ui/Card';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { ErrorState } from '../../../components/ui/ErrorState';
 import { Input } from '../../../components/ui/Input';
+import { LinkButton } from '../../../components/ui/LinkButton';
 import { LoadingState } from '../../../components/ui/LoadingState';
 
 import { useDnsZoneContext } from './DnsZoneContext';
@@ -44,6 +46,7 @@ import {
   type DnsRecordDraft,
 } from './DnsRecordModel';
 import { DnsRecordsList } from './DnsRecordsList';
+import { isSecondaryDnsZone } from './DnsZoneModel';
 import { preflightDnsZoneNotBusy } from './dnsPreflight';
 
 function hasErrorCode(error: unknown, code: string): boolean {
@@ -64,6 +67,35 @@ function deleteMapValue<K, V>(map: ReadonlyMap<K, V>, key: K): Map<K, V> {
 }
 
 export function DnsZoneRecordsPage() {
+  const { zone } = useDnsZoneContext();
+  if (isSecondaryDnsZone(zone)) return <SecondaryDnsZoneRecordsPage />;
+  return <PrimaryDnsZoneRecordsPage />;
+}
+
+function SecondaryDnsZoneRecordsPage() {
+  const { t } = useI18n();
+  const { basePath } = useAppMode();
+  const { zone } = useDnsZoneContext();
+
+  return (
+    <Card testId="dns.records.secondary_notice">
+      <div className="p-5">
+        <h2 className="text-xl font-semibold text-fg">{t('dns.zone.records.secondary.title')}</h2>
+        <p className="mt-2 max-w-2xl text-sm text-muted">{t('dns.zone.records.secondary.description')}</p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <LinkButton to={`${basePath}/dns/zones/${zone.id}/servers`} variant="primary">
+            {t('dns.zone.records.secondary.action.servers')}
+          </LinkButton>
+          <LinkButton to={`${basePath}/dns/zones/${zone.id}/transfers`} variant="secondary">
+            {t('dns.zone.records.secondary.action.transfers')}
+          </LinkButton>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function PrimaryDnsZoneRecordsPage() {
   const { t } = useI18n();
   const chrome = useChrome();
   const { zone, refetch: refetchZone, refetchChains, zoneRef, busyLocalLock, busyTransaction, concernClasses } =
@@ -73,7 +105,6 @@ export function DnsZoneRecordsPage() {
 
   const [searchParams, setSearchParams] = useSearchParams();
   const [qstr, setQstr] = useState(() => searchParams.get('q') ?? '');
-  const zoneDefaultTtl = typeof zone.default_ttl === 'number' ? zone.default_ttl : undefined;
 
   useEffect(() => {
     const next = new URLSearchParams(searchParams);
@@ -93,7 +124,7 @@ export function DnsZoneRecordsPage() {
   });
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [createDraft, setCreateDraft] = useState<DnsRecordDraft>(() => defaultDnsRecordDraft(zoneDefaultTtl));
+  const [createDraft, setCreateDraft] = useState<DnsRecordDraft>(() => defaultDnsRecordDraft());
   const [edit, setEdit] = useState<DnsRecord | null>(null);
   const [editDraft, setEditDraft] = useState<DnsRecordDraft>(() => defaultDnsRecordDraft());
   const [confirmDelete, setConfirmDelete] = useState<DnsRecord | null>(null);
@@ -156,7 +187,7 @@ export function DnsZoneRecordsPage() {
         });
       }
       setCreateOpen(false);
-      setCreateDraft(defaultDnsRecordDraft(zoneDefaultTtl));
+      setCreateDraft(defaultDnsRecordDraft());
       pagination.goToPage(1);
       recordsQ.refetch();
       refetchZone();
@@ -244,7 +275,7 @@ export function DnsZoneRecordsPage() {
 
   const openCreate = () => {
     createM.reset();
-    setCreateDraft(defaultDnsRecordDraft(zoneDefaultTtl));
+    setCreateDraft(defaultDnsRecordDraft());
     setCreateOpen(true);
   };
 
@@ -279,7 +310,7 @@ export function DnsZoneRecordsPage() {
           {filtersActive ? <p className="mt-1 text-xs text-faint">{t('list.meta.filters_active')}</p> : null}
         </div>
 
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-end">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <div className="w-full sm:w-72">
             <Input
               value={qstr}
@@ -288,9 +319,9 @@ export function DnsZoneRecordsPage() {
               autoComplete="off"
               testId="dns.records.search.input"
             />
-            <div className="mt-1 text-xs text-faint">
-              {t('common.showing_n_of_m', { shown: rows.length, total: totalCount })}
-            </div>
+          </div>
+          <div className="whitespace-nowrap text-xs text-faint">
+            {t('common.showing_n_of_m', { shown: rows.length, total: totalCount })}
           </div>
 
           <div className="flex flex-wrap justify-end gap-2">

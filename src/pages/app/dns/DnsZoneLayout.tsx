@@ -23,6 +23,7 @@ import { DnsZoneContextProvider } from './DnsZoneContext';
 import { DnsZoneRecentTransactionsCard } from './DnsZoneRecentTransactionsCard';
 import { ScopeMismatchCard } from '../../../components/layout/ScopeMismatchCard';
 import { useDnsZoneTransactionChains } from './useDnsZoneTransactionChains';
+import { isSecondaryDnsZone } from './DnsZoneModel';
 
 function zoneTitle(z: any): string {
   return String(z?.name ?? z?.label ?? `Zone #${z?.id}`);
@@ -107,17 +108,22 @@ export function DnsZoneLayout() {
     );
   }
 
-  const tabs = [
-    { label: t('dns.zone.tabs.records'), to: `${basePath}/dns/zones/${zone.id}`, end: true },
-    { label: t('dns.zone.tabs.transfers'), to: `${basePath}/dns/zones/${zone.id}/transfers` },
-    { label: t('dns.zone.tabs.dnssec'), to: `${basePath}/dns/zones/${zone.id}/dnssec` },
-    { label: t('dns.zone.tabs.servers'), to: `${basePath}/dns/zones/${zone.id}/servers` },
-    { label: t('dns.zone.tabs.settings'), to: `${basePath}/dns/zones/${zone.id}/settings` },
-    {
-      label: t('dns.zone.tabs.logs'),
-      to: `${basePath}/dns/zones/${zone.id}/logs`,
-    },
-  ];
+  const secondaryZone = isSecondaryDnsZone(zone);
+  const tabs = secondaryZone
+    ? [
+        { label: t('dns.zone.tabs.servers'), to: `${basePath}/dns/zones/${zone.id}/servers` },
+        { label: t('dns.zone.tabs.transfers'), to: `${basePath}/dns/zones/${zone.id}/transfers` },
+        { label: t('dns.zone.tabs.settings'), to: `${basePath}/dns/zones/${zone.id}/settings` },
+        { label: t('dns.zone.tabs.logs'), to: `${basePath}/dns/zones/${zone.id}/logs` },
+      ]
+    : [
+        { label: t('dns.zone.tabs.records'), to: `${basePath}/dns/zones/${zone.id}`, end: true },
+        { label: t('dns.zone.tabs.transfers'), to: `${basePath}/dns/zones/${zone.id}/transfers` },
+        { label: t('dns.zone.tabs.dnssec'), to: `${basePath}/dns/zones/${zone.id}/dnssec` },
+        { label: t('dns.zone.tabs.servers'), to: `${basePath}/dns/zones/${zone.id}/servers` },
+        { label: t('dns.zone.tabs.settings'), to: `${basePath}/dns/zones/${zone.id}/settings` },
+        { label: t('dns.zone.tabs.logs'), to: `${basePath}/dns/zones/${zone.id}/logs` },
+      ];
 
   return (
     <DnsZoneContextProvider
@@ -172,6 +178,7 @@ export function DnsZoneLayout() {
               ) : (
                 <Badge variant="neutral">{t('dns.zones.badge.no_dnssec')}</Badge>
               )}
+              {secondaryZone ? <Badge variant="info">{t('dns.zones.source.external')}</Badge> : null}
               {zone.role ? <Badge variant="neutral">{zoneRoleLabel(t, zone.role)}</Badge> : null}
             </>
           }
@@ -188,9 +195,11 @@ export function DnsZoneLayout() {
           <LockStateStaleAlert chainIds={tx.activeChainIds} error={tx.chainsError} onRetry={tx.refetch} />
         ) : null}
 
-        <DnsZoneRecentTransactionsCard />
-
         <Outlet />
+
+        <div className="mt-6">
+          <DnsZoneRecentTransactionsCard />
+        </div>
       </DetailShell>
     </DnsZoneContextProvider>
   );

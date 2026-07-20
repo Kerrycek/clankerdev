@@ -710,6 +710,12 @@ export function DnsZonesPage() {
           meta={filtersActive ? t('list.meta.filters_active') : undefined}
           actions={
             <div className="flex items-center gap-2">
+              {mode === 'admin' ? (
+                <LinkButton to={`${basePath}/dns/tsig-keys`} variant="secondary" size="sm" testId="dns.zones.tsig_keys">
+                  {t('dns.zones.action.tsig_keys')}
+                </LinkButton>
+              ) : null}
+
               <Button
                 variant="secondary"
                 size="sm"

@@ -22,10 +22,19 @@ import { formatDateTime } from '../../../lib/format';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 import { cursorFromDescendingPage } from '../../../lib/lockIndex';
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
-import { fetchDnsTsigKeys, fetchDnsZoneTransfers, createDnsZoneTransfer, deleteDnsZoneTransfer, type DnsZoneTransfer } from '../../../lib/api/dns';
+import {
+  fetchDnsServerZones,
+  fetchDnsTsigKeys,
+  fetchDnsZoneTransfers,
+  createDnsZoneTransfer,
+  deleteDnsZoneTransfer,
+  type DnsServerZone,
+  type DnsZoneTransfer,
+} from '../../../lib/api/dns';
 import { formatErrorMessage } from '../../../lib/errors';
 
 import { useDnsZoneContext } from './DnsZoneContext';
+import { isSecondaryDnsZone } from './DnsZoneModel';
 import { preflightDnsZoneNotBusy } from './dnsPreflight';
 
 function peerLabel(transfer: DnsZoneTransfer): string {
@@ -39,6 +48,11 @@ function peerTypeLabel(v: unknown): string {
   if (s === 'primary_type') return 'primary';
   if (s === 'secondary_type') return 'secondary';
   return s;
+}
+
+function serverName(row: DnsServerZone): string {
+  const server: any = row.dns_server ?? {};
+  return String(server.name ?? (typeof server.id === 'number' ? `#${server.id}` : '—'));
 }
 
 function transferSnippet(transfer: DnsZoneTransfer): string {
@@ -56,6 +70,7 @@ export function DnsZoneTransfersPage() {
   const { t } = useI18n();
   const chrome = useChrome();
   const { zone, zoneRef, busyLocalLock, busyTransaction, concernClasses, refetchChains } = useDnsZoneContext();
+  const secondaryZone = isSecondaryDnsZone(zone);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const pagination = useKeysetPagination({
@@ -77,6 +92,12 @@ export function DnsZoneTransfersPage() {
     queryKey: ['dns_tsig_keys', 'lookup', zone.id],
     queryFn: async () => (await fetchDnsTsigKeys({ limit: 200 })).data,
     staleTime: 30_000,
+  });
+
+  const serverZonesQ = useQuery({
+    queryKey: ['dns_server_zones', 'transfer_status', zone.id],
+    queryFn: async () => (await fetchDnsServerZones({ dns_zone: zone.id, limit: 100 })).data,
+    enabled: secondaryZone,
   });
 
   const transfers = listQ.data?.data ?? [];
@@ -161,8 +182,12 @@ export function DnsZoneTransfersPage() {
     <div className="space-y-6" data-testid="dns.transfers.page">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-fg">{t('dns.zone.transfers.title')}</h2>
-          <p className="mt-1 text-sm text-muted">{t('dns.zone.transfers.description')}</p>
+          <h2 className="text-xl font-semibold text-fg">
+            {secondaryZone ? t('dns.zone.transfers.secondary.title') : t('dns.zone.transfers.title')}
+          </h2>
+          <p className="mt-1 text-sm text-muted">
+            {secondaryZone ? t('dns.zone.transfers.secondary.description') : t('dns.zone.transfers.description')}
+          </p>
         </div>
         <Button onClick={() => setCreateOpen(true)} testId="dns.transfers.create.open">{t('common.create')}</Button>
       </div>
@@ -211,6 +236,55 @@ export function DnsZoneTransfersPage() {
           <KeysetPagination page={pagination.page} pageCount={pagination.stack.length} canPrev={pagination.canPrev} canNext={hasMore} onPrev={pagination.goPrev} onNext={() => pagination.goNext(cursor)} />
         </Card>
       )}
+
+      {secondaryZone ? (
+        <Card testId="dns.transfers.status">
+          <div className="border-b border-border px-4 py-3">
+            <h3 className="text-base font-semibold text-fg">{t('dns.zone.transfers.status.title')}</h3>
+            <p className="mt-1 text-sm text-muted">{t('dns.zone.transfers.status.description')}</p>
+          </div>
+          {serverZonesQ.isLoading ? (
+            <LoadingState testId="dns.transfers.status.loading" />
+          ) : serverZonesQ.isError ? (
+            <ErrorState
+              testId="dns.transfers.status.error"
+              title={t('dns.zone.servers.load_failed')}
+              error={serverZonesQ.error}
+              onRetry={() => void serverZonesQ.refetch()}
+              showBack={false}
+            />
+          ) : (serverZonesQ.data ?? []).length === 0 ? (
+            <div className="px-4 py-5 text-sm text-muted">{t('dns.zone.transfers.status.empty')}</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm table-list">
+                <thead>
+                  <tr className="text-left text-xs uppercase tracking-wide text-faint">
+                    <th className="py-2 pl-4 pr-3">{t('dns.zone.servers.table.server')}</th>
+                    <th className="py-2 pr-3">{t('dns.zone.servers.table.serial')}</th>
+                    <th className="py-2 pr-3">{t('dns.zone.servers.table.loaded')}</th>
+                    <th className="py-2 pr-3">{t('dns.zone.servers.table.refresh')}</th>
+                    <th className="py-2 pr-3">{t('dns.zone.servers.table.expires')}</th>
+                    <th className="py-2 pr-4">{t('dns.zone.servers.table.last_check')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(serverZonesQ.data ?? []).map((row) => (
+                    <tr key={row.id} className="border-t border-border" data-testid={`dns.transfers.status.row.${row.id}`}>
+                      <td className="py-2 pl-4 pr-3 font-medium text-fg">{serverName(row)}</td>
+                      <td className="py-2 pr-3">{typeof (row as any).serial === 'number' ? Number((row as any).serial) : t('common.na')}</td>
+                      <td className="py-2 pr-3">{(row as any).loaded_at ? formatDateTime(String((row as any).loaded_at)) : t('common.na')}</td>
+                      <td className="py-2 pr-3">{(row as any).refresh_at ? formatDateTime(String((row as any).refresh_at)) : t('common.na')}</td>
+                      <td className="py-2 pr-3">{(row as any).expires_at ? formatDateTime(String((row as any).expires_at)) : t('common.na')}</td>
+                      <td className="py-2 pr-4">{(row as any).last_check_at ? formatDateTime(String((row as any).last_check_at)) : t('common.na')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      ) : null}
 
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title={t('dns.zone.transfers.create.title')}>
         <div className="space-y-4">
