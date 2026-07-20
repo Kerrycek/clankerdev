@@ -402,6 +402,98 @@ function DatasetManagementCard() {
     }
   };
 
+  const advancedFields = (
+    <details className="rounded-lg border border-border bg-surface-2" data-testid="dataset.manage.advanced_properties">
+      <summary
+        className="flex cursor-pointer select-none items-start justify-between gap-3 px-3 py-3"
+        data-testid="dataset.manage.advanced_properties.summary"
+      >
+        <span>
+          <span className="block text-sm font-medium text-fg">{t('filters.advanced.label')} ZFS</span>
+          <span className="mt-1 block text-xs text-muted">
+            {t('dataset.manage.field.recordsize')} · {t('dataset.manage.field.sync')} ·{' '}
+            {t('dataset.manage.field.atime')} · {t('dataset.manage.field.relatime')}
+          </span>
+        </span>
+        <Badge variant="neutral">{t('filters.advanced.label')}</Badge>
+      </summary>
+      <div className="space-y-4 border-t border-border px-3 py-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block">
+            <div className="text-xs font-medium text-muted">{t('dataset.manage.field.recordsize')}</div>
+            <Input
+              value={edit.recordsizeKiB}
+              onChange={(e) => setEdit((p) => ({ ...p, recordsizeKiB: e.target.value }))}
+              placeholder="128"
+              testId="dataset.manage.recordsize"
+            />
+          </label>
+          <label className="block">
+            <div className="text-xs font-medium text-muted">{t('dataset.manage.field.sync')}</div>
+            <Select
+              value={edit.sync}
+              onChange={(e) => setEdit((p) => ({ ...p, sync: e.target.value as any }))}
+              testId="dataset.manage.sync"
+              options={[
+                { value: 'standard', label: t('dataset.manage.sync.standard') },
+                { value: 'disabled', label: t('dataset.manage.sync.disabled') },
+              ]}
+            />
+          </label>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-2">
+          <Checkbox
+            checked={edit.atime}
+            onChange={(v) => setEdit((p) => ({ ...p, atime: v }))}
+            label={t('dataset.manage.field.atime')}
+            testId="dataset.manage.atime"
+          />
+          <Checkbox
+            checked={edit.relatime}
+            onChange={(v) => setEdit((p) => ({ ...p, relatime: v }))}
+            label={t('dataset.manage.field.relatime')}
+            testId="dataset.manage.relatime"
+          />
+        </div>
+
+        {showAdminControls ? (
+          <div className="grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
+            <label className="block">
+              <div className="text-xs font-medium text-muted">{t('dataset.manage.field.sharenfs')}</div>
+              <Input
+                value={edit.sharenfs}
+                onChange={(e) => setEdit((p) => ({ ...p, sharenfs: e.target.value }))}
+                placeholder="off"
+                testId="dataset.manage.sharenfs"
+              />
+            </label>
+            <label className="block">
+              <div className="text-xs font-medium text-muted">{t('dataset.manage.field.admin_lock_type')}</div>
+              <Select
+                value={edit.adminLockType}
+                onChange={(e) => setEdit((p) => ({ ...p, adminLockType: e.target.value as any }))}
+                testId="dataset.manage.admin_lock_type"
+                options={[
+                  { value: 'no_lock', label: t('dataset.manage.admin_lock.no_lock') },
+                  { value: 'absolute', label: t('dataset.manage.admin_lock.absolute') },
+                  { value: 'not_less', label: t('dataset.manage.admin_lock.not_less') },
+                  { value: 'not_more', label: t('dataset.manage.admin_lock.not_more') },
+                ]}
+              />
+            </label>
+            <Checkbox
+              checked={edit.adminOverride}
+              onChange={(v) => setEdit((p) => ({ ...p, adminOverride: v }))}
+              label={t('dataset.manage.field.admin_override')}
+              testId="dataset.manage.admin_override"
+            />
+          </div>
+        ) : null}
+      </div>
+    </details>
+  );
+
   const fields = (
     <div className="space-y-4">
       {formError ? (
@@ -431,64 +523,11 @@ function DatasetManagementCard() {
         </label>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block">
-          <div className="text-xs font-medium text-muted">{t('dataset.manage.field.recordsize')}</div>
-          <Input
-            value={edit.recordsizeKiB}
-            onChange={(e) => setEdit((p) => ({ ...p, recordsizeKiB: e.target.value }))}
-            placeholder="128"
-            testId="dataset.manage.recordsize"
-          />
-        </label>
-        <label className="block">
-          <div className="text-xs font-medium text-muted">{t('dataset.manage.field.sync')}</div>
-          <Select
-            value={edit.sync}
-            onChange={(e) => setEdit((p) => ({ ...p, sync: e.target.value as any }))}
-            testId="dataset.manage.sync"
-            options={[
-              { value: 'standard', label: t('dataset.manage.sync.standard') },
-              { value: 'disabled', label: t('dataset.manage.sync.disabled') },
-            ]}
-          />
-        </label>
-      </div>
-
-      <div className="grid gap-2 sm:grid-cols-3">
+      <div className="grid gap-2 sm:grid-cols-2">
         <Checkbox checked={edit.compression} onChange={(v) => setEdit((p) => ({ ...p, compression: v }))} label={t('dataset.manage.field.compression')} testId="dataset.manage.compression" />
-        <Checkbox checked={edit.atime} onChange={(v) => setEdit((p) => ({ ...p, atime: v }))} label={t('dataset.manage.field.atime')} testId="dataset.manage.atime" />
-        <Checkbox checked={edit.relatime} onChange={(v) => setEdit((p) => ({ ...p, relatime: v }))} label={t('dataset.manage.field.relatime')} testId="dataset.manage.relatime" />
       </div>
 
-      {showAdminControls ? (
-        <div className="grid gap-3 border-t border-border pt-4 sm:grid-cols-2">
-          <label className="block">
-            <div className="text-xs font-medium text-muted">{t('dataset.manage.field.sharenfs')}</div>
-            <Input
-              value={edit.sharenfs}
-              onChange={(e) => setEdit((p) => ({ ...p, sharenfs: e.target.value }))}
-              placeholder="off"
-              testId="dataset.manage.sharenfs"
-            />
-          </label>
-          <label className="block">
-            <div className="text-xs font-medium text-muted">{t('dataset.manage.field.admin_lock_type')}</div>
-            <Select
-              value={edit.adminLockType}
-              onChange={(e) => setEdit((p) => ({ ...p, adminLockType: e.target.value as any }))}
-              testId="dataset.manage.admin_lock_type"
-              options={[
-                { value: 'no_lock', label: t('dataset.manage.admin_lock.no_lock') },
-                { value: 'absolute', label: t('dataset.manage.admin_lock.absolute') },
-                { value: 'not_less', label: t('dataset.manage.admin_lock.not_less') },
-                { value: 'not_more', label: t('dataset.manage.admin_lock.not_more') },
-              ]}
-            />
-          </label>
-          <Checkbox checked={edit.adminOverride} onChange={(v) => setEdit((p) => ({ ...p, adminOverride: v }))} label={t('dataset.manage.field.admin_override')} testId="dataset.manage.admin_override" />
-        </div>
-      ) : null}
+      {advancedFields}
     </div>
   );
 
