@@ -31,7 +31,7 @@ export const csAdminCluster_environments = {
   "admin.cluster.environments.smart.help.example_hypervisor": "Zobrazí jen prostředí s hypervizory.",
   "admin.cluster.environments.smart.help.example_id": "Najde prostředí podle id.",
   "admin.cluster.environments.smart.help.example_search": "Hledá prostředí podle textu.",
-  "admin.cluster.environments.smart.help.example_storage": "Zobrazí jen prostředí bez storage uzlů.",
+  "admin.cluster.environments.smart.help.example_storage": "Zobrazí jen prostředí bez storage nodů.",
   "admin.cluster.environments.smart.help.inference.keyvalue": "Pro přesný filtr použij klíč:hodnota.",
   "admin.cluster.environments.smart.help.inference.number": "Samotné číslo hledá podle id prostředí.",
   "admin.cluster.environments.smart.help.inference.text": "Volný text hledá na serveru.",

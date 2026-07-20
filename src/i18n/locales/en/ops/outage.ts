@@ -9,4 +9,6 @@ export const enOps_outage = {
   "outage.impact.unavailability": "Unavailable",
   "outage.type.outage": "Outage",
   "outage.type.maintenance": "Maintenance",
+  "outage.type.planned_outage": "Planned outage",
+  "outage.type.unplanned_outage": "Unplanned outage",
 } as const;

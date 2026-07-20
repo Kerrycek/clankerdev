@@ -28,6 +28,13 @@ function zoneTitle(z: any): string {
   return String(z?.name ?? z?.label ?? `Zone #${z?.id}`);
 }
 
+function zoneRoleLabel(t: (key: string) => string, role: unknown): string {
+  const value = String(role ?? '');
+  if (value === 'forward_role') return t('dns.zones.role.forward');
+  if (value === 'reverse_role') return t('dns.zones.role.reverse');
+  return value.replace(/[_-]+/g, ' ');
+}
+
 export function DnsZoneLayout() {
   const { basePath } = useAppMode();
   const scope = useObjectScope();
@@ -165,7 +172,7 @@ export function DnsZoneLayout() {
               ) : (
                 <Badge variant="neutral">{t('dns.zones.badge.no_dnssec')}</Badge>
               )}
-              {zone.role ? <Badge variant="neutral">{String(zone.role)}</Badge> : null}
+              {zone.role ? <Badge variant="neutral">{zoneRoleLabel(t, zone.role)}</Badge> : null}
             </>
           }
           right={

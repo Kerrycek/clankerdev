@@ -7,7 +7,7 @@ export const csSystem = {
   'common.resource_ref': '{resource} #{id}',
   'common.vps_ref': 'VPS #{id}',
   'object_kind.user': 'Uživatel',
-  'object_kind.node': 'Uzel',
+  'object_kind.node': 'Node',
   'object_kind.ip_address': 'IP adresa',
   'object_kind.transaction': 'Transakce',
   'object_kind.transaction_chain': 'Transakční řetězec',

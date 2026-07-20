@@ -80,10 +80,10 @@ function normalizeSource(value: string): 'internal_source' | 'external_source' |
   return undefined;
 }
 
-function roleLabel(role: string): string {
-  if (role === 'forward_role') return 'forward';
-  if (role === 'reverse_role') return 'reverse';
-  return role;
+function roleLabel(t: (key: string) => string, role: string): string {
+  if (role === 'forward_role') return t('dns.zones.role.forward');
+  if (role === 'reverse_role') return t('dns.zones.role.reverse');
+  return role.replace(/[_-]+/g, ' ');
 }
 
 function sourceLabel(source: string): string {
@@ -618,7 +618,7 @@ export function DnsZonesPage() {
       chips.push(
         <FilterChip
           key="role"
-          label={`role:${roleLabel(roleVal)}`}
+          label={`role:${roleLabel(t, roleVal)}`}
           tone="neutral"
           onRemove={() => setTextParam('role', undefined)}
           testId="dns.zones.chip.role"
@@ -842,7 +842,7 @@ export function DnsZonesPage() {
 
                     <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
                       <span>
-                        {t('dns.zones.field.role')}: {z.role ? roleLabel(z.role) : '—'}
+                        {t('dns.zones.field.role')}: {z.role ? roleLabel(t, z.role) : '—'}
                       </span>
                       <span>
                         {t('dns.zones.field.serial')}: {typeof z.serial === 'number' ? z.serial : '—'}
@@ -932,7 +932,7 @@ export function DnsZonesPage() {
                     </Link>
                     <div className="mt-0.5 text-xs text-faint">#{z.id}</div>
                   </td>
-                  <td className="px-4 py-2">{z.role ? roleLabel(z.role) : '—'}</td>
+                  <td className="px-4 py-2">{z.role ? roleLabel(t, z.role) : '—'}</td>
                   <td className="px-4 py-2">{enabledBadge(z.enabled)}</td>
                   <td className="px-4 py-2">{dnssecBadge(z.dnssec_enabled)}</td>
                   <td className="px-4 py-2">{typeof z.serial === 'number' ? z.serial : '—'}</td>

@@ -8,6 +8,7 @@ import { NewsMessage } from '../../components/ui/NewsMessage';
 import { Spinner } from '../../components/ui/Spinner';
 import { formatDateTime } from '../../lib/time';
 import { useI18n } from '../../app/i18n';
+import { pickLocalizedFieldFrom } from '../../lib/translations';
 
 export function NewsPage() {
   const i18n = useI18n();
@@ -37,7 +38,7 @@ export function NewsPage() {
             <Card key={n.id}>
               <CardHeader title={formatDateTime(n.published_at)} subtitle={`#${n.id}`} />
               <CardBody>
-                <NewsMessage html={n.message} />
+                <NewsMessage html={pickLocalizedFieldFrom(n as any, ['message', 'body', 'text'], i18n.preferredLanguageCodes) ?? n.message} />
               </CardBody>
             </Card>
           ))}

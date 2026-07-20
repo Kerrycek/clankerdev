@@ -77,7 +77,7 @@ export const csOps_monitoring = {
   "monitoring.smart_help.keys.object_id": "ID objektu (číslo).",
   "monitoring.smart_help.keys.order": "Řazení (latest/oldest/longest/shortest).",
   "monitoring.smart_help.keys.state": "Stav události (např. confirmed, acknowledged, closed).",
-  "monitoring.smart_help.keys.user": "Filtr uživatele (id nebo přihlašovací jméno, pouze admin).",
+  "monitoring.smart_help.keys.user": "Filtr uživatele (id nebo přezdívka, pouze admin).",
   "monitoring.smart.error.event_id_numeric_only": "ID události musí být číslo (zadáno: {value})",
   "monitoring.smart.error.invalid_order": "Neznámé řazení: {value}",
   "monitoring.smart.error.invalid_state": "Neznámý stav: {value}",

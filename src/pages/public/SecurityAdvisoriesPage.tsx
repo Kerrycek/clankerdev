@@ -13,6 +13,7 @@ import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { Spinner } from '../../components/ui/Spinner';
 import { formatDateTime } from '../../lib/time';
 import { pickTranslation } from '../../lib/translations';
+import { securityAdvisoryStateLabel } from '../../lib/apiValues';
 
 const PUBLIC_SECURITY_ADVISORIES_LIMIT = 100;
 
@@ -27,13 +28,14 @@ function SecurityAdvisoryRow(props: { advisory: SecurityAdvisory }) {
   const summary = pickTranslation(advisory, 'summary', i18n.preferredLanguageCodes);
   const description = pickTranslation(advisory, 'description', i18n.preferredLanguageCodes);
   const title = advisory.name || i18n.t('public.security_advisories.fallback_title', { id: advisory.id });
+  const state = String(advisory.state ?? '').trim();
 
   return (
     <Card>
       <CardHeader
         title={title}
         subtitle={`${i18n.t('public.security_advisories.published')}: ${formatDateTime(advisory.published_at)}`}
-        actions={<Badge variant={advisory.state === 'published' ? 'ok' : 'neutral'}>{advisory.state ?? '—'}</Badge>}
+        actions={<Badge variant={state === 'published' ? 'ok' : 'neutral'}>{state ? securityAdvisoryStateLabel(i18n.t, state) : '—'}</Badge>}
       />
       <CardBody>
         <div className="space-y-3">

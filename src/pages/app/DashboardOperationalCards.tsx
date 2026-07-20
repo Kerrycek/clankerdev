@@ -16,8 +16,9 @@ import { advisoryCveLabels, type SecurityAdvisory } from "../../lib/api/security
 import { outageBadges } from "../../lib/outageBadges";
 import { type BadgeVariant } from "../../lib/taskStatus";
 import { formatDateTime } from "../../lib/time";
-import { pickTranslation } from "../../lib/translations";
+import { pickLocalizedFieldFrom, pickTranslation } from "../../lib/translations";
 import { dotVariantFromBadgeVariant } from "../../lib/variantMap";
+import { securityAdvisoryStateLabel } from "../../lib/apiValues";
 type NodeHealth = "up" | "maintenance" | "down" | "unknown";
 interface NodeLocationGroup { ok: number; maintenance: number; down: number; unknown: number; total: number; vps: number; nodes: PublicNodeStatus[]; }
 export function DashboardOutageSummary(props: { outage: Outage; to: string }) {
@@ -45,13 +46,15 @@ export function DashboardOutageSummary(props: { outage: Outage; to: string }) {
   );
 }
 export function DashboardNewsItem(props: { news: NewsLog }) {
+  const i18n = useI18n();
+  const html = pickLocalizedFieldFrom(props.news as any, ["message", "body", "text"], i18n.preferredLanguageCodes) ?? props.news.message;
   return (
     <div
       className="grid gap-1 bg-surface-2 px-3 py-2.5 text-sm sm:grid-cols-[9.5rem_minmax(0,1fr)] sm:gap-3"
       data-testid="app.dashboard.news.item"
     >
       <div className="text-xs text-muted sm:pt-0.5">{formatDateTime(props.news.published_at ?? props.news.created_at)}</div>
-      <NewsMessage html={props.news.message} />
+      <NewsMessage html={html} />
     </div>
   );
 }
@@ -214,10 +217,10 @@ function advisoryStateBadge(
   t: (key: string, vars?: Record<string, unknown>) => string,
 ): { variant: BadgeVariant; label: string } {
   const s = String(state ?? "").trim();
-  if (s === "published") return { variant: "ok", label: t("dashboard.section.security.state.published") };
-  if (s === "retracted") return { variant: "warn", label: t("dashboard.section.security.state.retracted") };
-  if (s === "draft") return { variant: "neutral", label: t("dashboard.section.security.state.draft") };
-  return { variant: "neutral", label: s || t("state.unknown") };
+  if (s === "published") return { variant: "ok", label: securityAdvisoryStateLabel(t, s) };
+  if (s === "retracted") return { variant: "warn", label: securityAdvisoryStateLabel(t, s) };
+  if (s === "draft") return { variant: "neutral", label: securityAdvisoryStateLabel(t, s) };
+  return { variant: "neutral", label: s ? securityAdvisoryStateLabel(t, s) : t("state.unknown") };
 }
 function SecurityAdvisoryItem(props: { advisory: SecurityAdvisory; legacyHref?: string }) {
   const i18n = useI18n();

@@ -28,6 +28,7 @@ import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 import { parsePositiveInt } from '../../../lib/parse';
 import { formatDurationMinutes } from '../../../lib/time';
 import { fetchEnvironments, fetchLocations } from '../../../lib/api/infra';
+import { outageImpactLabel, outageTypeLabel } from '../../../lib/apiValues';
 import { outageBadges, outageUpdateBadges } from '../../../lib/outageBadges';
 import { fetchOutage, fetchOutageEntities, fetchOutageHandlers, fetchOutageUpdates } from '../../../lib/api/public';
 import type { Outage, OutageEntity, OutageHandler } from '../../../lib/api/public';
@@ -253,14 +254,14 @@ function OutageForm(props: {
         </div>
         <div>
           <FieldLabel label={t('admin.outages.field.impact')}>
-            <Select testId="admin.outages.form.impact" value={form.impact} onChange={(e) => setForm((p) => ({ ...p, impact: e.target.value }))} options={IMPACTS.map((v) => ({ value: v, label: t(`outage.impact.${v}` as any) }))} />
+            <Select testId="admin.outages.form.impact" value={form.impact} onChange={(e) => setForm((p) => ({ ...p, impact: e.target.value }))} options={IMPACTS.map((v) => ({ value: v, label: outageImpactLabel(t, v) }))} />
           </FieldLabel>
           <ErrorText message={errors.impact} />
         </div>
         {!props.updateMode ? (
           <div>
             <FieldLabel label={t('admin.outages.field.type')}>
-              <Select testId="admin.outages.form.type" value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))} options={OUTAGE_TYPES.map((v) => ({ value: v, label: t(`outage.type.${v}` as any) }))} />
+              <Select testId="admin.outages.form.type" value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))} options={OUTAGE_TYPES.map((v) => ({ value: v, label: outageTypeLabel(t, v) }))} />
             </FieldLabel>
             <ErrorText message={errors.type} />
           </div>
@@ -473,7 +474,7 @@ function AdminOutageListPage() {
               <Select value={state} onChange={(e) => setState(e.target.value)} options={[{ value: '', label: t('common.all') }, ...STATES.map((v) => ({ value: v, label: t(`admin.outages.state.${v}`) }))]} />
             </FieldLabel>
             <FieldLabel label={t('admin.outages.field.type')}>
-              <Select value={type} onChange={(e) => setType(e.target.value)} options={[{ value: '', label: t('common.all') }, ...OUTAGE_TYPES.map((v) => ({ value: v, label: t(`outage.type.${v}` as any) }))]} />
+              <Select value={type} onChange={(e) => setType(e.target.value)} options={[{ value: '', label: t('common.all') }, ...OUTAGE_TYPES.map((v) => ({ value: v, label: outageTypeLabel(t, v) }))]} />
             </FieldLabel>
             <div className="flex items-end">
               <Button variant="secondary" onClick={() => outagesQ.refetch()}>{t('common.refresh')}</Button>

@@ -26,7 +26,7 @@ export const csAdmin_host_ip_addresses = {
   "admin.host_ip_addresses.filter.assigned.false": "Jen nepřiřazené",
   "admin.host_ip_addresses.filter.assigned.true": "Jen přiřazené",
   "admin.host_ip_addresses.filter.q.placeholder": "Hledej podle adresy, VPS nebo uživatele…",
-  "admin.host_ip_addresses.filter.user.placeholder": "Přihlašovací jméno nebo ID uživatele…",
+  "admin.host_ip_addresses.filter.user.placeholder": "Přezdívka nebo ID uživatele…",
   "admin.host_ip_addresses.filter.vps.placeholder": "Název hostitele nebo ID VPS…",
   "admin.host_ip_addresses.load_error": "Host IP adresy se nepodařilo načíst",
   "admin.host_ip_addresses.ptr.help": "Prázdná hodnota PTR záznam smaže. Tečku na konci případně doplní API.",

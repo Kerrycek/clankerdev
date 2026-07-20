@@ -5,6 +5,7 @@ import { Menu, X } from 'lucide-react';
 import { getRuntimeConfig } from '../../app/config';
 import { useAuth } from '../../app/auth';
 import { useI18n } from '../../app/i18n';
+import { useUiSettings, type UiLanguagePreference } from '../../app/uiSettings';
 import { clsx } from '../ui/clsx';
 import { withRouterBasename, withSameOriginNextParam } from '../../lib/routerPaths';
 
@@ -67,12 +68,62 @@ function NavItem(props: { to: string; children: React.ReactNode }) {
   );
 }
 
+function languageButtonClass(active: boolean): string {
+  return clsx(
+    'rounded-md px-2 py-1 text-xs font-semibold transition-colors',
+    active ? 'bg-primary text-primary-contrast' : 'text-muted hover:bg-surface-2 hover:text-fg'
+  );
+}
+
+function PublicLanguageSwitcher(props: {
+  language: UiLanguagePreference;
+  onSetLanguage: (language: UiLanguagePreference) => void;
+  t: (key: string) => string;
+}) {
+  return (
+    <div
+      className="hidden items-center gap-1 rounded-lg border border-border bg-overlay-surface p-1 shadow-card sm:flex"
+      aria-label={props.t('settings.language.label')}
+      data-testid="public.language.switcher"
+    >
+      <button
+        type="button"
+        className={languageButtonClass(props.language === 'system')}
+        onClick={() => props.onSetLanguage('system')}
+        title={props.t('settings.language.system')}
+        data-testid="public.language.system"
+      >
+        Auto
+      </button>
+      <button
+        type="button"
+        className={languageButtonClass(props.language === 'en')}
+        onClick={() => props.onSetLanguage('en')}
+        title={props.t('settings.language.en')}
+        data-testid="public.language.en"
+      >
+        EN
+      </button>
+      <button
+        type="button"
+        className={languageButtonClass(props.language === 'cs')}
+        onClick={() => props.onSetLanguage('cs')}
+        title={props.t('settings.language.cs')}
+        data-testid="public.language.cs"
+      >
+        CS
+      </button>
+    </div>
+  );
+}
+
 function PublicLayoutInner() {
   const cfg = useMemo(() => getRuntimeConfig(), []);
   const location = useLocation();
   const navigate = useNavigate();
   const auth = useAuth();
   const i18n = useI18n();
+  const ui = useUiSettings();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
@@ -115,6 +166,8 @@ function PublicLayoutInner() {
 
             <div className="flex-1" />
 
+            <PublicLanguageSwitcher language={ui.settings.language} onSetLanguage={ui.setLanguage} t={i18n.t} />
+
             <a
               href={primaryHref}
               className="hidden md:inline-flex items-center rounded-md border border-border bg-overlay-surface px-3 py-2 text-sm font-medium shadow-card hover:bg-surface-2"
@@ -138,6 +191,32 @@ function PublicLayoutInner() {
                 <NavItem to="/">{i18n.t('public.nav.overview')}</NavItem>
                 <NavItem to="/outages">{i18n.t('public.nav.outages')}</NavItem>
                 <NavItem to="/security-advisories">{i18n.t('public.nav.security_advisories')}</NavItem>
+                <div className="mt-2 flex items-center gap-1 rounded-lg border border-border bg-overlay-surface p-1 shadow-card">
+                  <button
+                    type="button"
+                    className={languageButtonClass(ui.settings.language === 'system')}
+                    onClick={() => ui.setLanguage('system')}
+                    title={i18n.t('settings.language.system')}
+                  >
+                    Auto
+                  </button>
+                  <button
+                    type="button"
+                    className={languageButtonClass(ui.settings.language === 'en')}
+                    onClick={() => ui.setLanguage('en')}
+                    title={i18n.t('settings.language.en')}
+                  >
+                    EN
+                  </button>
+                  <button
+                    type="button"
+                    className={languageButtonClass(ui.settings.language === 'cs')}
+                    onClick={() => ui.setLanguage('cs')}
+                    title={i18n.t('settings.language.cs')}
+                  >
+                    CS
+                  </button>
+                </div>
                 <a
                   href={primaryHref}
                   className="mt-2 inline-flex items-center justify-center rounded-md border border-border bg-overlay-surface px-3 py-2 text-sm font-medium shadow-card hover:bg-surface-2"

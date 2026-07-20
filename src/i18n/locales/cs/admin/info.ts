@@ -24,7 +24,7 @@ export const csAdmin_info = {
   "admin.info.runtime.title": "Konfigurace běhu",
   "admin.info.session.field.can_use_admin_ui": "Může používat administrační rozhraní",
   "admin.info.session.field.level": "Úroveň",
-  "admin.info.session.field.login": "Přihlašovací jméno",
+  "admin.info.session.field.login": "Přezdívka",
   "admin.info.session.field.mode_base_path": "Základní cesta režimu",
   "admin.info.session.field.role": "Role",
   "admin.info.session.field.sidebar_collapsed": "Sbaleno menu",

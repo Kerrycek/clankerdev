@@ -1,10 +1,15 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const authState = vi.hoisted(() => ({
   status: 'anonymous',
+}));
+
+const uiSettingsState = vi.hoisted(() => ({
+  language: 'system' as 'system' | 'en' | 'cs',
+  setLanguage: vi.fn(),
 }));
 
 vi.mock('../../app/config', () => ({
@@ -23,6 +28,13 @@ vi.mock('../../app/auth', () => ({
 vi.mock('../../app/i18n', () => ({
   useI18n: () => ({
     t: (key: string) => key,
+  }),
+}));
+
+vi.mock('../../app/uiSettings', () => ({
+  useUiSettings: () => ({
+    settings: { language: uiSettingsState.language },
+    setLanguage: uiSettingsState.setLanguage,
   }),
 }));
 
@@ -59,6 +71,8 @@ function renderAt(path: string) {
 describe('PublicLayout', () => {
   beforeEach(() => {
     authState.status = 'anonymous';
+    uiSettingsState.language = 'system';
+    uiSettingsState.setLanguage.mockClear();
   });
 
   it('keeps the public index visible for anonymous visitors', () => {
@@ -90,6 +104,14 @@ describe('PublicLayout', () => {
 
     expect(screen.getAllByText('public.nav.security_advisories')).toHaveLength(1);
     expect(screen.queryByText('public.nav.news')).not.toBeInTheDocument();
+  });
+
+  it('allows anonymous visitors to change UI language', () => {
+    renderAt('/');
+
+    fireEvent.click(screen.getByTestId('public.language.cs'));
+
+    expect(uiSettingsState.setLanguage).toHaveBeenCalledWith('cs');
   });
 
   it('does not redirect the expired-session public notice URL', () => {

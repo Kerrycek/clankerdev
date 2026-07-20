@@ -8,5 +8,7 @@ export const csOps_outage = {
   "outage.impact.tbd": "Upřesníme",
   "outage.impact.unavailability": "Nedostupnost",
   "outage.type.outage": "Výpadek",
-  "outage.type.maintenance": "Údržba",
+  "outage.type.maintenance": "Odstávka",
+  "outage.type.planned_outage": "Odstávka",
+  "outage.type.unplanned_outage": "Výpadek",
 } as const;

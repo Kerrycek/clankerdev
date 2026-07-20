@@ -1,5 +1,6 @@
 import type { Outage, OutageUpdate } from './api/public';
 import type { BadgeSpec, BadgeVariant } from './taskStatus';
+import { outageImpactLabel, outageTypeLabel } from './apiValues';
 
 export interface OutageBadgeSet {
   /** Primary visual variant for the outage row/card (RowTone Full in the design spec). */
@@ -38,25 +39,27 @@ export function outageImpactBadge(impact: unknown, t: (k: any) => string): Badge
   const k = norm(impact);
   if (!k) return null;
 
-  if (k === 'unavailability') return { variant: 'danger', label: t('outage.impact.unavailability') };
-  if (k === 'network') return { variant: 'danger', label: t('outage.impact.network') };
-  if (k === 'system_reset') return { variant: 'danger', label: t('outage.impact.system_reset') };
-  if (k === 'system_restart') return { variant: 'warn', label: t('outage.impact.system_restart') };
-  if (k === 'performance') return { variant: 'warn', label: t('outage.impact.performance') };
-  if (k === 'export') return { variant: 'warn', label: t('outage.impact.export') };
-  if (k === 'tbd') return { variant: 'info', label: t('outage.impact.tbd') };
+  if (k === 'unavailability') return { variant: 'danger', label: outageImpactLabel(t, k) };
+  if (k === 'network') return { variant: 'danger', label: outageImpactLabel(t, k) };
+  if (k === 'system_reset') return { variant: 'danger', label: outageImpactLabel(t, k) };
+  if (k === 'system_restart') return { variant: 'warn', label: outageImpactLabel(t, k) };
+  if (k === 'performance') return { variant: 'warn', label: outageImpactLabel(t, k) };
+  if (k === 'export') return { variant: 'warn', label: outageImpactLabel(t, k) };
+  if (k === 'tbd') return { variant: 'info', label: outageImpactLabel(t, k) };
 
-  return { variant: 'neutral', label: k };
+  return { variant: 'neutral', label: outageImpactLabel(t, k) };
 }
 
 export function outageTypeBadge(outageType: unknown, t: (k: any) => string): BadgeSpec | null {
   const k = norm(outageType);
   if (!k) return null;
 
-  if (k === 'maintenance') return { variant: 'info', label: t('state.maintenance') };
-  if (k === 'outage') return { variant: 'neutral', label: t('outage.type.outage') };
+  if (k === 'maintenance') return { variant: 'info', label: outageTypeLabel(t, k) };
+  if (k === 'outage') return { variant: 'neutral', label: outageTypeLabel(t, k) };
+  if (k === 'planned_outage') return { variant: 'info', label: outageTypeLabel(t, k) };
+  if (k === 'unplanned_outage') return { variant: 'danger', label: outageTypeLabel(t, k) };
 
-  return { variant: 'neutral', label: k };
+  return { variant: 'neutral', label: outageTypeLabel(t, k) };
 }
 
 /**

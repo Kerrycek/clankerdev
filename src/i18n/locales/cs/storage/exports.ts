@@ -69,7 +69,7 @@ export const csStorageExports = {
   'exports.smart.help.example_enabled': 'Filtr podle povoleného/zakázaného stavu.',
   'exports.smart.help.example_dataset': 'Filtr podle ID datasetu.',
   'exports.smart.help.example_open': 'Otevře detail exportu podle id.',
-  'exports.smart.help.key.q': 'Plnotext přes dataset, cestu, adresu hosta a přihlašovací jméno uživatele.',
+  'exports.smart.help.key.q': 'Plnotext přes dataset, cestu, adresu hosta a přezdívka uživatele.',
   'exports.smart.help.key.enabled': 'Filtr podle stavu povoleno/zakázáno.',
   'exports.smart.help.key.dataset': 'Filtr podle ID datasetu.',
   'exports.smart.help.key.user': 'Filtr podle ID vlastníka (jen v administraci).',
