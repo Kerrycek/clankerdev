@@ -2,6 +2,7 @@ import React from 'react';
 
 import { formatDateTime } from '../../../lib/format';
 import type { KeysetPaginationState } from '../../../lib/hooks/useKeysetPagination';
+import { isMaintenanceLocked } from '../../../lib/nodeMaintenance';
 
 import { Alert } from '../../../components/ui/Alert';
 import { Badge } from '../../../components/ui/Badge';
@@ -156,7 +157,7 @@ function NodesMobileList(props: { rows: NodeRow[]; basePath: string; t: NodesPag
       {rows.map((row, idx) => {
         const rowVariant = nodeRowVariant(row);
         const reason = maintenanceReason(row);
-        const showMaintenance = Boolean(row.maintenance_lock);
+        const showMaintenance = isMaintenanceLocked(row.maintenance_lock);
 
         return (
           <Card
@@ -262,7 +263,7 @@ function NodesTable(props: {
       <tbody>
         {rows.map((row, idx) => {
           const reason = maintenanceReason(row);
-          const showMaintenance = Boolean(row.maintenance_lock);
+          const showMaintenance = isMaintenanceLocked(row.maintenance_lock);
           const badge = nodeStatusBadge(row.status);
 
           return (

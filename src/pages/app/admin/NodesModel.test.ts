@@ -62,8 +62,7 @@ describe('NodesModel', () => {
         name: 'node124.example.test',
         fqdn: 'node124.example.test',
         status: true,
-        maintenance_lock: 'locked',
-        maintenance_lock_reason: 'HW upgrade',
+        maintenance_lock: 'no',
       },
     ];
 
@@ -85,9 +84,9 @@ describe('NodesModel', () => {
     expect(rows[1]).toMatchObject({
       id: 124,
       status: true,
-      maintenance_lock: 'locked',
-      maintenance_lock_reason: 'HW upgrade',
+      maintenance_lock: 'no',
     });
+    expect(nodeRowVariant(rows[1]!)).toBeUndefined();
   });
 
   test('falls back to public status rows and filters them client-side', () => {
@@ -122,6 +121,7 @@ describe('NodesModel', () => {
   test('derives row presentation helpers without renderer state', () => {
     expect(locationLabel({ id: 7 })).toBe('#7');
     expect(nodeRowVariant({ name: 'down', status: false })).toBe('danger');
+    expect(nodeRowVariant({ name: 'not-maint', status: true, maintenance_lock: 'no' })).toBeUndefined();
     expect(nodeRowVariant({ name: 'maint', status: true, maintenance_lock: 'lock' })).toBe('warn');
     expect(nodeDotVariant({ name: 'up', status: true })).toBe('ok');
     expect(nodeDotVariant({ name: 'unknown' })).toBe('neutral');

@@ -1,6 +1,7 @@
 import type { Node } from '../../../lib/api/nodes';
 import type { PublicNodeStatus } from '../../../lib/api/public';
 import type { StatusDotVariant } from '../../../components/ui/StatusDot';
+import { isMaintenanceLocked } from '../../../lib/nodeMaintenance';
 
 export interface NodeRow {
   id?: number;
@@ -203,13 +204,13 @@ export function buildNodeRows(opts: {
 
 export function nodeRowVariant(r: NodeRow): NodeRowVariant {
   if (r.status === false) return 'danger';
-  if (Boolean(r.maintenance_lock)) return 'warn';
+  if (isMaintenanceLocked(r.maintenance_lock)) return 'warn';
   return undefined;
 }
 
 export function nodeDotVariant(r: NodeRow): StatusDotVariant {
   if (r.status === false) return 'danger';
-  if (Boolean(r.maintenance_lock)) return 'warn';
+  if (isMaintenanceLocked(r.maintenance_lock)) return 'warn';
   if (r.status === true) return 'ok';
   return 'neutral';
 }
@@ -275,6 +276,6 @@ export function filterNodeRows(rows: NodeRow[], opts: { issuesOnly: boolean; qTe
 export function nodeStats(rows: NodeRow[]): NodeStats {
   const total = rows.length;
   const down = rows.filter((r) => r.status === false).length;
-  const locked = rows.filter((r) => Boolean(r.maintenance_lock)).length;
+  const locked = rows.filter((r) => isMaintenanceLocked(r.maintenance_lock)).length;
   return { total, down, locked };
 }

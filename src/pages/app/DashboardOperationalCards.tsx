@@ -19,6 +19,7 @@ import { formatDateTime } from "../../lib/time";
 import { pickLocalizedFieldFrom, pickTranslation } from "../../lib/translations";
 import { dotVariantFromBadgeVariant } from "../../lib/variantMap";
 import { securityAdvisoryStateLabel } from "../../lib/apiValues";
+import { isMaintenanceLocked } from "../../lib/nodeMaintenance";
 type NodeHealth = "up" | "maintenance" | "down" | "unknown";
 interface NodeLocationGroup { ok: number; maintenance: number; down: number; unknown: number; total: number; vps: number; nodes: PublicNodeStatus[]; }
 export function DashboardOutageSummary(props: { outage: Outage; to: string }) {
@@ -67,10 +68,7 @@ function legacyWebuiUrl(baseUrl: string | undefined, query: string): string | un
   return `${baseUrl}/?${query}`;
 }
 function isNodeInMaintenance(n: PublicNodeStatus): boolean {
-  const raw: unknown = n.maintenance_lock;
-  if (raw === undefined || raw === null || raw === false) return false;
-  const s = String(raw).trim().toLowerCase();
-  return s !== "" && s !== "no" && s !== "false" && s !== "0";
+  return isMaintenanceLocked(n.maintenance_lock);
 }
 function nodeHealth(n: PublicNodeStatus): NodeHealth {
   if (isNodeInMaintenance(n)) return "maintenance";

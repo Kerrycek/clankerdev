@@ -1,6 +1,7 @@
 import type { Node, NodeStatus } from '../../../../lib/api/nodes';
 import type { PublicNodeStatus } from '../../../../lib/api/public';
 import type { Transaction } from '../../../../lib/api/transactions';
+import { isMaintenanceLocked as isNodeMaintenanceLocked } from '../../../../lib/nodeMaintenance';
 import { transactionBadge } from '../../../../lib/taskStatus';
 
 export type MetricsWindow = '6h' | '24h' | '7d';
@@ -39,13 +40,7 @@ export function buildStatusIndex(list: PublicNodeStatus[]): Map<string, PublicNo
 }
 
 export function isMaintenanceLocked(lock: unknown): boolean {
-  if (!lock) return false;
-  if (typeof lock === 'boolean') return lock;
-  if (typeof lock === 'string') {
-    const v = lock.trim().toLowerCase();
-    return !(v === 'no' || v === 'false' || v === '0' || v === 'none' || v === '');
-  }
-  return true;
+  return isNodeMaintenanceLocked(lock);
 }
 
 export function statusBadge(
