@@ -3,7 +3,6 @@ import { NavLink } from 'react-router-dom';
 import {
   Activity,
   ClipboardList,
-  Clock,
   CreditCard,
   Cpu,
   FileText,
@@ -54,7 +53,6 @@ export function buildSidebarNavItems(opts: {
       ? [{ id: 'networking', to: `${basePath}/networking`, label: t('nav.networking'), icon: <Wifi size={18} /> }]
       : []),
     { id: 'transactions', to: `${basePath}/transactions`, label: t('nav.transactions'), icon: <Activity size={18} /> },
-    { id: 'action-states', to: `${basePath}/action-states`, label: t('nav.action_states'), icon: <Clock size={18} /> },
     { id: 'monitoring', to: `${basePath}/monitoring`, label: t('nav.monitoring'), icon: <Activity size={18} /> },
     { id: 'incidents', to: `${basePath}/incidents`, label: t('nav.incidents'), icon: <Inbox size={18} /> },
     { id: 'oom-reports', to: `${basePath}/oom-reports`, label: t('nav.oom_reports'), icon: <Cpu size={18} /> },

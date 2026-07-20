@@ -22,7 +22,7 @@ export const enCommon_navigation = {
   'nav.storage': 'Storage',
   'nav.dns': 'DNS',
   'nav.transactions': 'Transactions',
-  'nav.action_states': 'Action states',
+  'nav.action_states': 'Action progress',
   'nav.monitoring': 'Monitoring',
   'nav.audit': 'Audit',
   'nav.users': 'Users',

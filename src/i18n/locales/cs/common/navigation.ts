@@ -22,7 +22,7 @@ export const csCommon_navigation = {
   'nav.storage': 'Úložiště',
   'nav.dns': 'DNS',
   'nav.transactions': 'Transakce',
-  'nav.action_states': 'Stavy akcí',
+  'nav.action_states': 'Průběh akcí',
   'nav.monitoring': 'Dohled',
   'nav.audit': 'Audit',
   'nav.users': 'Uživatelé',

@@ -50,7 +50,6 @@ type QualifierKey =
   | 'zone'
   | 'chain'
   | 'tx'
-  | 'action'
   | 'outage'
   | 'payment'
   | 'request'
@@ -93,7 +92,6 @@ function parseQualifier(raw: string): { key: QualifierKey | null; value: string 
     zone: 'zone',
     chain: 'chain',
     tx: 'tx',
-    action: 'action',
     outage: 'outage',
     payment: 'payment',
     request: 'request',
@@ -117,7 +115,6 @@ function resourceAllowlistForQualifier(key: QualifierKey | null): string[] | nul
   if (key === 'dns' || key === 'zone') return ['DnsZone'];
   if (key === 'chain') return ['TransactionChain'];
   if (key === 'tx') return ['Transaction'];
-  if (key === 'action') return ['ActionState'];
   if (key === 'dataset') return ['Dataset'];
   if (key === 'migration') return ['MigrationPlan'];
   if (key === 'network') return ['Network'];
@@ -140,15 +137,14 @@ function pickDirectOpenCandidate(idToken: number, rows: PaletteResult[]): Palett
     Vps: 1,
     TransactionChain: 2,
     Transaction: 3,
-    ActionState: 4,
-    Outage: 5,
-    User: 6,
-    IpAddress: 7,
-    Dataset: 8,
-    DnsZone: 9,
-    MigrationPlan: 10,
-    Node: 11,
-    Network: 12,
+    Outage: 4,
+    User: 5,
+    IpAddress: 6,
+    Dataset: 7,
+    DnsZone: 8,
+    MigrationPlan: 9,
+    Node: 10,
+    Network: 11,
   };
 
   const sorted = [...idMatches].sort((a, b) => {
@@ -209,6 +205,7 @@ function resultsFromClusterSearch(
     const resource = normalizeClusterResource((h as any)?.resource);
     const id = parseClusterId((h as any)?.id);
     if (!resource || id === null) continue;
+    if (resource === 'ActionState') continue;
 
     const href = clusterResourceHref(basePath, resource, id);
     if (!href) continue;
@@ -547,7 +544,6 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
     if (!canUseClusterSearch) return [];
     return [
       { key: 'tx', description: t('palette.help.keys.tx'), example: 'tx:123' },
-      { key: 'action', description: t('palette.help.keys.action'), example: 'action:123' },
       { key: 'dataset', description: t('palette.help.keys.dataset'), example: 'dataset:123' },
       { key: 'migration', description: t('palette.help.keys.migration'), example: 'migration:123' },
       { key: 'network', description: t('palette.help.keys.network'), example: 'network:123' },

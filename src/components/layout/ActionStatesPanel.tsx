@@ -683,12 +683,7 @@ export function ActionStatesPanel(props: {
   if (merged.length === 0) {
     return (
       <div>
-        <div className="flex items-center justify-between">
-          <div className="text-xs text-muted">{i18n.t('nav.action_states')}</div>
-          <Link className="text-xs font-medium underline" to={`${basePath}/action-states`}>
-            {i18n.t('tasks.action.view_all')}
-          </Link>
-</div>
+        <div className="text-xs text-muted">{i18n.t('tasks.basic.actions_title')}</div>
         <div className="mt-2 text-sm text-muted">{i18n.t('tasks.empty.no_action_states')}</div>
       </div>
     );
@@ -697,12 +692,7 @@ export function ActionStatesPanel(props: {
   if (filtered.length === 0) {
     return (
       <div>
-        <div className="flex items-center justify-between">
-          <div className="text-xs text-muted">{i18n.t('nav.action_states')}</div>
-          <Link className="text-xs font-medium underline" to={`${basePath}/action-states`}>
-            {i18n.t('tasks.action.view_all')}
-          </Link>
-</div>
+        <div className="text-xs text-muted">{i18n.t('tasks.basic.actions_title')}</div>
         <div className="mt-2 text-sm text-muted">{i18n.t('tasks.empty.no_action_states_filtered')}</div>
       </div>
     );
@@ -712,13 +702,10 @@ export function ActionStatesPanel(props: {
     <div>
       <div className="flex items-center justify-between">
         <div className="text-xs text-muted">
-          {i18n.t('nav.action_states')}
+          {i18n.t('tasks.basic.actions_title')}
           {needle ? <span className="text-faint"> · {i18n.t('tasks.meta.filtered')}</span> : null}
         </div>
-          <Link className="text-xs font-medium underline" to={`${basePath}/action-states`}>
-            {i18n.t('tasks.action.view_all')}
-          </Link>
-</div>
+      </div>
 
       <div className="mt-3 space-y-4">
         {pinned.length > 0 ? (
