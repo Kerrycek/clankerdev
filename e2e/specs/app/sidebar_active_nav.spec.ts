@@ -14,6 +14,8 @@ test.describe('@smoke app sidebar active navigation', () => {
 
     await page.goto('/app');
     await expect(page.getByTestId('nav.sidebar.dashboard')).toHaveAttribute('aria-current', 'page');
+    await expect(page.getByTestId('nav.sidebar.action-states')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'Stavy akcí', exact: true })).toHaveCount(0);
 
     await page.goto('/app/vps');
     await expect(page.getByTestId('nav.sidebar.vps')).toHaveAttribute('aria-current', 'page');

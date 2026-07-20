@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { csCommon_navigation } from '../../i18n/locales/cs/common/navigation';
-import { buildSidebarNavItems } from './AppSidebar';
+import { buildSidebarNavItems, primarySidebarNavItems, type NavItem } from './AppSidebar';
 
 function fakeT(key: string) {
   return key;
@@ -25,5 +25,15 @@ describe('buildSidebarNavItems', () => {
 
       expect(items.map((item) => item.label)).not.toContain('Stavy akcí');
     }
+  });
+
+  it('defensively removes action states from externally supplied navigation', () => {
+    const items = [
+      { id: 'dashboard', to: '/app', label: 'Přehled', icon: null },
+      { id: 'action-states', to: '/app/action-states', label: 'Stavy akcí', icon: null },
+      { id: 'legacy-action-states', to: '/app/action_states', label: 'Stavy akcí', icon: null },
+    ] satisfies NavItem[];
+
+    expect(primarySidebarNavItems(items).map((item) => item.id)).toEqual(['dashboard']);
   });
 });

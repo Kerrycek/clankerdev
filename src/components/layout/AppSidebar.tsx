@@ -35,6 +35,10 @@ export interface NavItem {
   icon: React.ReactNode;
 }
 
+export function primarySidebarNavItems(items: NavItem[]): NavItem[] {
+  return items.filter((item) => item.id !== 'action-states' && !item.to.match(/\/action[_-]states(?:\/|$)/));
+}
+
 export function buildSidebarNavItems(opts: {
   basePath: string;
   appMode: 'user' | 'admin';
@@ -130,7 +134,8 @@ export function AppSidebar(props: {
   sidebarTips?: React.ReactNode;
 }) {
   const { mobileNavOpen, onCloseMobileNav, navItems, sidebarCollapsed, onToggleSidebar, t, sidebarTips } = props;
-  const compactDesktopNav = !sidebarCollapsed && navItems.length > 18;
+  const primaryNavItems = primarySidebarNavItems(navItems);
+  const compactDesktopNav = !sidebarCollapsed && primaryNavItems.length > 18;
 
   return (
     <>
@@ -146,7 +151,7 @@ export function AppSidebar(props: {
           <AppLogo subtitle={t('app.logo.subtitle')} />
 
           <nav className="space-y-1" data-document-title-nav="section">
-            {navItems.map((it) => (
+            {primaryNavItems.map((it) => (
               <NavLink
                 key={it.to}
                 to={it.to}
@@ -184,7 +189,7 @@ export function AppSidebar(props: {
             className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain px-2 pb-2"
             data-document-title-nav="section"
           >
-            {navItems.map((it) => (
+            {primaryNavItems.map((it) => (
               <NavLink
                 key={it.to}
                 to={it.to}

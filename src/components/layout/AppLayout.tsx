@@ -45,6 +45,7 @@ import { ContextualHelpPanel } from './ContextualHelpPanel';
 import { AppHeader } from './AppHeader';
 import { AppSidebar, buildSidebarNavItems } from './AppSidebar';
 import { SidebarTips } from './SidebarTips';
+import { FrontendFreshnessGuard } from './FrontendFreshnessGuard';
 
 function useOutsideClick(ref: React.RefObject<HTMLElement | null>, onOutside: () => void, enabled: boolean) {
   useEffect(() => {
@@ -623,6 +624,7 @@ export function AppLayout(props: { children: React.ReactNode }) {
 
   return (
     <ChromeContextProvider value={chrome}>
+      <FrontendFreshnessGuard />
       <div className="flex min-h-screen bg-bg">
         {/*
           Keep the desktop sidebar and the main shell in the same flex row.
