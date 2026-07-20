@@ -70,7 +70,7 @@ test.describe('@smoke VPS console page', () => {
     await expect(page.getByTestId('vps.console.connection_state')).toContainText(/Connecting|Connected/);
     await expect(page.getByTestId('vps.console.new_session')).toBeVisible();
     await expect(page.getByTestId('vps.console.reconnect')).toBeVisible();
-    await expect(page.getByTestId('vps.console.copy_url')).toBeVisible();
+    await expect(page.getByTestId('vps.console.copy_url')).toHaveCount(0);
     await expect(page.getByTestId('vps.console.copy_ssh')).toBeVisible();
     await expect(page.getByTestId('vps.console.open_new_tab')).toHaveAttribute(
       'href',
@@ -85,8 +85,6 @@ test.describe('@smoke VPS console page', () => {
     const src1 = await iframe.getAttribute('src');
     expect(src1).toContain('/_console/console/123?session=T1');
 
-    await page.getByTestId('vps.console.copy_url').click();
-    await expect(page.getByTestId('vps.console.copy_url')).toContainText(/Copied|Copy failed/);
     await page.getByTestId('vps.console.copy_ssh').click();
     await expect(page.getByTestId('vps.console.copy_ssh')).toContainText(/Copied|Copy failed/);
 

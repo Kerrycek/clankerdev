@@ -363,7 +363,7 @@ test.describe("@smoke Dataset downloads", () => {
       },
     });
 
-    await page.goto("/app/datasets/10/downloads");
+    await page.goto("/admin/datasets/10/downloads");
 
     await expect(page.getByTestId("dataset.downloads.list")).toBeVisible();
     await expect(page.getByTestId("dataset.downloads.row.501")).toBeVisible();

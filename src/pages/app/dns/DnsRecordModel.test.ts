@@ -18,6 +18,11 @@ function draft(overrides: Partial<ReturnType<typeof defaultDnsRecordDraft>> = {}
 }
 
 describe('DnsRecordModel', () => {
+  it('leaves TTL empty for new records so the zone default is inherited', () => {
+    expect(defaultDnsRecordDraft(600).ttl).toBe('');
+    expect(buildDnsRecordCreatePayload(10, defaultDnsRecordDraft(600)).ttl).toBeUndefined();
+  });
+
   it('builds create and update payloads without changing backend field names', () => {
     const d = draft({
       name: ' www ',

@@ -76,12 +76,12 @@ test.describe('@smoke DNS records CRUD', () => {
     // Create
     await page.getByTestId('dns.records.create.open').click();
     await expect(page.getByTestId('dns.records.create.modal')).toBeVisible();
-    await expect(page.getByTestId('dns.records.create.ttl')).toHaveValue('600');
+    await expect(page.getByTestId('dns.records.create.ttl')).toHaveValue('');
     await page.getByTestId('dns.records.create.name').fill('api');
     await page.getByTestId('dns.records.create.content').fill('5.6.7.8');
     await page.getByTestId('dns.records.create.submit').click();
 
-    await expect.poll(() => createPayload?.dns_record?.ttl).toBe(600);
+    await expect.poll(() => createPayload?.dns_record?.ttl).toBeUndefined();
     await expect(page.getByTestId('dns.records.create.modal')).toHaveCount(0);
     await expect(page.getByTestId('dns.record.row.101')).toBeVisible();
     await expect(page.getByTestId('dns.record.row.101')).toContainText('5.6.7.8');

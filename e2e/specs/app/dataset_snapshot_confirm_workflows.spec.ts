@@ -274,7 +274,7 @@ test.describe('@smoke Dataset snapshots', () => {
       },
     });
 
-    await page.goto('/app/datasets/10/snapshots');
+    await page.goto('/admin/datasets/10/snapshots');
 
     await expect(page.getByTestId('dataset.snapshots.list')).toBeVisible();
     await expect(page.getByTestId('dataset.snapshots.row.200')).toBeVisible();
@@ -335,7 +335,7 @@ test.describe('@smoke Dataset snapshots', () => {
       },
     });
 
-    await page.goto('/app/datasets/10/snapshots');
+    await page.goto('/admin/datasets/10/snapshots');
 
     await expect(page.getByTestId('dataset.snapshots.list')).toBeVisible();
     await expect(page.getByTestId('dataset.snapshots.row.200')).toBeVisible();
