@@ -436,9 +436,9 @@ export function ClusterHealthCard(props: { isLoading: boolean; isError: boolean;
 
                       return (
                         <tbody key={location}>
-                          <tr className="border-t border-border bg-info-bg/80">
+                          <tr className="border-t border-border bg-info-row">
                             <th
-                              className="border-l-4 border-info px-3 py-2.5 text-left font-semibold shadow-[inset_0_-1px_0_rgb(var(--c-info-border)/0.55)]"
+                              className="border-l-4 border-info px-3 py-2.5 text-left font-semibold"
                               colSpan={7}
                             >
                               <div className="flex flex-wrap items-center justify-between gap-2">
