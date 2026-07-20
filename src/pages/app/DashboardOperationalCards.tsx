@@ -436,17 +436,36 @@ export function ClusterHealthCard(props: { isLoading: boolean; isError: boolean;
 
                       return (
                         <tbody key={location}>
-                          <tr className="border-t border-border bg-surface-2/70">
-                            <th className="px-3 py-2 text-left font-semibold" colSpan={7}>
+                          <tr className="border-t border-border bg-info-bg/80">
+                            <th
+                              className="border-l-4 border-info px-3 py-2.5 text-left font-semibold shadow-[inset_0_-1px_0_rgb(var(--c-info-border)/0.55)]"
+                              colSpan={7}
+                            >
                               <div className="flex flex-wrap items-center justify-between gap-2">
-                                <span>{location}</span>
-                                <span className="text-xs font-normal text-muted">
-                                  {t("dashboard.section.cluster.location_summary", {
-                                    up: group.ok,
-                                    maintenance: group.maintenance,
-                                    down: group.down,
-                                    total: group.total,
-                                  })}
+                                <span className="text-fg">{location}</span>
+                                <span className="flex flex-wrap items-center justify-end gap-1.5 text-xs font-normal">
+                                  <Badge variant="ok">{t("dashboard.section.cluster.status_summary.up", { count: group.ok })}</Badge>
+                                  {group.maintenance > 0 ? (
+                                    <Badge variant="warn">
+                                      {t("dashboard.section.cluster.status_summary.maintenance", { count: group.maintenance })}
+                                    </Badge>
+                                  ) : null}
+                                  {group.down > 0 ? (
+                                    <Badge variant="danger">{t("dashboard.section.cluster.status_summary.down", { count: group.down })}</Badge>
+                                  ) : null}
+                                  {group.unknown > 0 ? (
+                                    <Badge variant="neutral">
+                                      {t("dashboard.section.cluster.status_summary.unknown", { count: group.unknown })}
+                                    </Badge>
+                                  ) : null}
+                                  <Badge variant="info">
+                                    {t("dashboard.section.cluster.location_summary", {
+                                      up: group.ok,
+                                      maintenance: group.maintenance,
+                                      down: group.down,
+                                      total: group.total,
+                                    })}
+                                  </Badge>
                                 </span>
                               </div>
                             </th>

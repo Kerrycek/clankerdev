@@ -41,7 +41,7 @@ export const csCommon_palette = {
   'palette.help.keys.dns': 'DNS zóny (ID/název)',
   'palette.help.keys.chain': 'Transakční řetězce (ID/štítek)',
   'palette.help.keys.tx': 'Transakce (ID/zpráva)',
-  'palette.help.keys.action': 'Stavy akcí (ID/štítek)',
+  'palette.help.keys.action': 'Průběh akcí (ID/štítek)',
   'palette.help.keys.dataset': 'Datasety (ID/název)',
   'palette.help.keys.migration': 'Migrační plány (ID/název)',
   'palette.help.keys.network': 'Sítě (ID/adresa)',
