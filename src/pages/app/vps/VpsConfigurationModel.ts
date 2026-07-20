@@ -44,7 +44,7 @@ export type VpsConfigFieldKey =
 export type VpsConfigRequestOptionKey = 'change_reason' | 'admin_override' | 'admin_lock_type';
 export type VpsConfigReviewKey = VpsConfigFieldKey | VpsConfigRequestOptionKey;
 
-export type VpsConfigSection = 'identity' | 'resources' | 'network' | 'boot' | 'admin';
+export type VpsConfigSection = 'identity' | 'resources' | 'network' | 'namespace' | 'boot' | 'admin';
 export type VpsConfigRisk = 'safe' | 'requires_restart' | 'admin_only' | 'boot' | 'network';
 
 export type VpsConfigFieldMeta = {
@@ -109,8 +109,8 @@ export const CONFIG_FIELD_META: Record<VpsConfigReviewKey, VpsConfigFieldMeta> =
   },
   user_namespace_map: {
     labelKey: 'vps.config.field.user_namespace_map',
-    section: 'network',
-    risks: ['requires_restart', 'network'],
+    section: 'namespace',
+    risks: ['requires_restart'],
   },
   autostart_priority: {
     labelKey: 'vps.config.field.autostart_priority',
@@ -129,8 +129,8 @@ export const CONFIG_FIELD_META: Record<VpsConfigReviewKey, VpsConfigFieldMeta> =
   },
   allow_admin_modifications: {
     labelKey: 'vps.config.field.allow_admin_modifications',
-    section: 'boot',
-    risks: ['boot'],
+    section: 'admin',
+    risks: ['safe'],
   },
   change_reason: {
     labelKey: 'vps.config.field.change_reason',

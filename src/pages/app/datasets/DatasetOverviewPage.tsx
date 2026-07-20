@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 
 import { useAppMode } from '../../../app/appMode';
@@ -284,6 +284,7 @@ function DatasetManagementCard() {
   const scope = useObjectScope();
   const chrome = useChrome();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { dataset, refetch, refetchChains, datasetRef, busyLocalLock, busyTransaction, listPath } = useDatasetContext();
   const showAdminControls = role === 'admin' && scope.scope === 'all';
 
@@ -307,6 +308,19 @@ function DatasetManagementCard() {
   }));
 
   const objectLabel = datasetLabel(dataset);
+
+  useEffect(() => {
+    if (searchParams.get('create') !== 'subdataset') return;
+
+    if (showAdminControls) {
+      setFormError(null);
+      setCreateOpen(true);
+    }
+
+    const next = new URLSearchParams(searchParams);
+    next.delete('create');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, showAdminControls]);
 
   const track = (meta: unknown, labelKey: string) => {
     const asId = getMetaActionStateId(meta);

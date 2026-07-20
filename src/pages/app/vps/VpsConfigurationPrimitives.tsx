@@ -14,7 +14,7 @@ import type {
 import type { VpsConfigFieldError } from './VpsConfigurationErrors';
 import type { VpsConfigChangeSummary } from './VpsConfigurationReviewModel';
 
-const SECTION_ORDER: readonly VpsConfigSection[] = ['identity', 'resources', 'network', 'boot', 'admin'];
+const SECTION_ORDER: readonly VpsConfigSection[] = ['identity', 'resources', 'network', 'namespace', 'boot', 'admin'];
 
 function riskVariant(risk: VpsConfigRisk): React.ComponentProps<typeof Badge>['variant'] {
   switch (risk) {

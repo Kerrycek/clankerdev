@@ -76,6 +76,11 @@ export function VpsStorageRootDatasetCard(props: {
           <ChipLink to={`${props.basePath}/datasets/${root.id}`} data-testid="vps.storage.root_dataset.open">
             {t('vps.storage.root_dataset.open')}
           </ChipLink>
+          {props.canAdmin ? (
+            <ChipLink to={`${props.basePath}/datasets/${root.id}?create=subdataset`} data-testid="vps.storage.root_dataset.create_subdataset">
+              {t('vps.storage.root_dataset.create_subdataset')}
+            </ChipLink>
+          ) : null}
           <ChipLink to={`${props.basePath}/datasets/${root.id}/snapshots`} data-testid="vps.storage.root_dataset.snapshots">
             {t('vps.storage.root_dataset.snapshots')}
           </ChipLink>
@@ -85,6 +90,7 @@ export function VpsStorageRootDatasetCard(props: {
         </div>
 
         <div className="mt-3 text-xs text-muted">{t('vps.storage.root_dataset.no_backup_note')}</div>
+        {!props.canAdmin ? <div className="mt-1 text-xs text-muted">{t('vps.storage.root_dataset.create_subdataset_user_note')}</div> : null}
 
         {props.canAdmin ? (
           <details className="mt-4 rounded-md border border-border bg-surface-2 p-3 text-xs text-muted" data-testid="vps.storage.root_dataset.system_context">

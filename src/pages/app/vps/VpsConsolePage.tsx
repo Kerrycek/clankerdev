@@ -277,13 +277,6 @@ export function VpsConsolePage() {
                 )}
                 {focused ? t('vps.console.exit_focus.label') : t('vps.console.focus.label')}
               </Button>
-              <CopyButton
-                text={consoleUrl!}
-                variant="secondary"
-                size="sm"
-                label={t('vps.console.copy_url')}
-                testId="vps.console.copy_url"
-              />
               {sshCommand ? (
                 <CopyButton
                   text={sshCommand}
@@ -317,12 +310,6 @@ export function VpsConsolePage() {
             {t('vps.console.server_missing.body')}
           </Alert>
         </div>
-      ) : null}
-
-      {hasConsoleUrl ? (
-        <Alert variant="neutral" testId="vps.console.token_hint">
-          {t('vps.console.basic_hint')}
-        </Alert>
       ) : null}
 
       {sessionSuspended ? (

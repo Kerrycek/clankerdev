@@ -1,8 +1,8 @@
 // VPS console copy
 export const csVps_console = {
   'vps.console.title': 'Konzole',
-  'vps.console.subtitle': 'Webová vzdálená konzole přes console_router.',
-  'vps.console.basic_hint': 'Odkaz obsahuje dočasný token sezení.',
+  'vps.console.subtitle': 'Webová vzdálená konzole VPS.',
+  'vps.console.basic_hint': 'Sezení konzole je dočasné.',
   'vps.console.expires_at': 'Sezení vyprší {time}',
   'vps.console.new_session.label': 'Nové sezení',
   'vps.console.new_session.title_hint': 'Vytvořit nové sezení konzole',
@@ -24,7 +24,7 @@ export const csVps_console = {
   'vps.console.focus.title_hint': 'Zvětšit konzoli uvnitř této stránky',
   'vps.console.exit_focus.label': 'Ukončit zaměření',
   'vps.console.exit_focus.title_hint': 'Vrátit běžné rozložení konzole',
-  'vps.console.copy_url': 'Kopírovat URL',
+  'vps.console.copy_url': 'Kopírovat odkaz konzole',
   'vps.console.copy_ssh': 'Kopírovat SSH',
   'vps.console.open_new_tab': 'Otevřít v novém panelu',
   'vps.console.open_new_tab.title_hint': 'Otevřít toto sezení konzole v samostatném panelu prohlížeče',

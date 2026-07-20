@@ -337,9 +337,11 @@ export function VpsAccessPage() {
       <Card>
         <CardHeader title={t('vps.access.reset.title')} subtitle={t('vps.access.reset.subtitle')} />
         <CardBody className="space-y-4">
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-            <label className="space-y-2">
+          <div className="space-y-2">
+            <label className="block">
               <span className="text-sm font-medium text-fg">{t('vps.access.form.type.label')}</span>
+            </label>
+            <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
               <select
                 value={passwordType}
                 onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setPasswordType(event.target.value as VpsPasswordType)}
@@ -350,12 +352,11 @@ export function VpsAccessPage() {
                 <option value="secure">{t('vps.access.password_type.secure')}</option>
                 <option value="simple">{t('vps.access.password_type.simple')}</option>
               </select>
-              <span className="block text-xs text-muted">{t('vps.access.form.type.description')}</span>
-            </label>
-
-            <ActionButton loading={passwdM.isPending} disabled={!canGenerate} onClick={() => setPendingPasswordType(passwordType)} testId="vps.access.password.generate">
-              {t('vps.access.reset.button')}
-            </ActionButton>
+              <ActionButton loading={passwdM.isPending} disabled={!canGenerate} onClick={() => setPendingPasswordType(passwordType)} testId="vps.access.password.generate">
+                {t('vps.access.reset.button')}
+              </ActionButton>
+            </div>
+            <span className="block text-xs text-muted">{t('vps.access.form.type.description')}</span>
           </div>
 
           <Alert variant="info" title={t('vps.access.safety.title')}>
@@ -387,9 +388,11 @@ export function VpsAccessPage() {
           {currentUserQ.error ? <Alert variant="danger">{errorMessage(currentUserQ.error)}</Alert> : null}
           {publicKeysQ.error ? <Alert variant="danger">{errorMessage(publicKeysQ.error)}</Alert> : null}
 
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-end">
-            <label className="space-y-2">
+          <div className="space-y-2">
+            <label className="block">
               <span className="text-sm font-medium text-fg">{t('vps.access.ssh.key.label')}</span>
+            </label>
+            <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center">
               <select
                 value={selectedPublicKeyId ?? ''}
                 onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setSelectedPublicKeyId(event.target.value ? Number(event.target.value) : null)}
@@ -404,25 +407,25 @@ export function VpsAccessPage() {
                   </option>
                 ))}
               </select>
-              <span className="block text-xs text-muted">
-                {publicKeyUserId !== null
-                  ? t('vps.access.ssh.key.description', { owner: ownerLabel || `#${publicKeyUserId}` })
-                  : t('vps.access.ssh.key.description_unknown_owner')}
-              </span>
-            </label>
 
-            <Button variant="secondary" onClick={() => void publicKeysQ.refetch()} disabled={publicKeyUserId === null || publicKeysQ.isPending} testId="vps.access.ssh.refresh">
-              {publicKeysQ.isPending ? t('vps.access.ssh.loading') : t('vps.access.ssh.refresh')}
-            </Button>
+              <Button variant="secondary" onClick={() => void publicKeysQ.refetch()} disabled={publicKeyUserId === null || publicKeysQ.isPending} testId="vps.access.ssh.refresh">
+                {publicKeysQ.isPending ? t('vps.access.ssh.loading') : t('vps.access.ssh.refresh')}
+              </Button>
 
-            <ActionButton
-              loading={deployKeyM.isPending}
-              disabled={!canDeployKey}
-              onClick={() => (selectedPublicKeyId !== null ? setPendingPublicKeyId(selectedPublicKeyId) : undefined)}
-              testId="vps.access.ssh.deploy"
-            >
-              {t('vps.access.ssh.deploy.button')}
-            </ActionButton>
+              <ActionButton
+                loading={deployKeyM.isPending}
+                disabled={!canDeployKey}
+                onClick={() => (selectedPublicKeyId !== null ? setPendingPublicKeyId(selectedPublicKeyId) : undefined)}
+                testId="vps.access.ssh.deploy"
+              >
+                {t('vps.access.ssh.deploy.button')}
+              </ActionButton>
+            </div>
+            <span className="block text-xs text-muted">
+              {publicKeyUserId !== null
+                ? t('vps.access.ssh.key.description', { owner: ownerLabel || `#${publicKeyUserId}` })
+                : t('vps.access.ssh.key.description_unknown_owner')}
+            </span>
           </div>
 
           {publicKeysQ.isPending ? <Alert variant="info">{t('vps.access.ssh.loading_keys')}</Alert> : null}

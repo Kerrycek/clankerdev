@@ -338,6 +338,14 @@ export function VpsConfigurationPage() {
             <Select value={effective.dnsResolver} onChange={(e) => patchDraft({ dnsResolver: e.target.value })} disabled={saveM.isPending} options={dnsOptions} />
           )}
         </Field>
+      </VpsConfigSectionCard>
+
+      <VpsConfigSectionCard
+        title={t('vps.config.section.namespace')}
+        subtitle={t('vps.config.section.namespace_help')}
+        risks={['requires_restart']}
+        bodyClassName="grid gap-4 md:grid-cols-2"
+      >
         <Field label={t('vps.config.field.user_namespace_map')} help={t('vps.config.help.user_namespace_map')} errors={fieldMessages('user_namespace_map')}>
           {userNamespaceMapsQ.isLoading ? (
             <Spinner />
@@ -358,7 +366,7 @@ export function VpsConfigurationPage() {
         title={t('vps.config.section.boot')}
         subtitle={t(canEditAdminConfig ? 'vps.config.section.boot_help' : 'vps.config.section.boot_help_user')}
         risks={['boot', 'requires_restart']}
-        bodyClassName={canEditAdminConfig ? 'grid gap-4 md:grid-cols-3' : 'grid gap-4 md:grid-cols-2'}
+        bodyClassName={canEditAdminConfig ? 'grid gap-4 md:grid-cols-2' : 'grid gap-4 md:grid-cols-1'}
       >
         {canEditAdminConfig ? (
           <Field label={t('vps.config.field.start_menu_timeout')} help={t('vps.config.help.start_menu_timeout')} errors={fieldMessages('start_menu_timeout')}>
@@ -385,6 +393,14 @@ export function VpsConfigurationPage() {
             ]}
           />
         </Field>
+      </VpsConfigSectionCard>
+
+      <VpsConfigSectionCard
+        title={t('vps.config.section.admin_access')}
+        subtitle={t('vps.config.section.admin_access_help')}
+        risks={['safe']}
+        bodyClassName="grid gap-4 md:grid-cols-2"
+      >
         <div className="flex items-end">
           <Checkbox
             checked={effective.allowAdminModifications}

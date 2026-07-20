@@ -1,8 +1,8 @@
 // VPS console copy
 export const enVps_console = {
   'vps.console.title': 'Console',
-  'vps.console.subtitle': 'Web-based remote console via console_router.',
-  'vps.console.basic_hint': 'The link contains a temporary session token.',
+  'vps.console.subtitle': 'Web-based remote VPS console.',
+  'vps.console.basic_hint': 'The console session is temporary.',
   'vps.console.expires_at': 'Session expires {time}',
   'vps.console.new_session.label': 'New session',
   'vps.console.new_session.title_hint': 'Create a new console session',
@@ -24,7 +24,7 @@ export const enVps_console = {
   'vps.console.focus.title_hint': 'Expand the console inside this page',
   'vps.console.exit_focus.label': 'Exit focus',
   'vps.console.exit_focus.title_hint': 'Return to the normal console layout',
-  'vps.console.copy_url': 'Copy URL',
+  'vps.console.copy_url': 'Copy console link',
   'vps.console.copy_ssh': 'Copy SSH',
   'vps.console.open_new_tab': 'Open in new tab',
   'vps.console.open_new_tab.title_hint': 'Open this console session in a separate browser tab',
