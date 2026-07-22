@@ -89,6 +89,7 @@ test.describe('Dataset management actions', () => {
     await expect(page.getByTestId('dataset.header')).toContainText('tank/vps/ds10/appdata');
 
     await page.getByTestId('dataset.manage.quota').fill('20');
+    await page.getByTestId('dataset.manage.advanced_properties.summary').click();
     await page.getByTestId('dataset.manage.sync').selectOption('disabled');
     await page.getByTestId('dataset.manage.admin_override').click();
 
