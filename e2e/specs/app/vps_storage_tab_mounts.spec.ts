@@ -27,6 +27,7 @@ const dataset = {
   id: 10,
   name: 'tank/data',
   full_name: 'tank/data',
+  user: { id: 1, login: 'user' },
   used: 5120,
   avail: 15360,
   referenced: 4096,
@@ -105,6 +106,10 @@ test.describe('@smoke VPS storage tab mounts', () => {
     await expect(page.getByTestId('vps.storage.root_dataset.metadata')).toContainText('20 GiB');
     await expect(page.getByTestId('vps.storage.no_backup_cta_note')).toContainText('does not offer a normal Create backup button');
     await expect(page.getByTestId('vps.storage.root_dataset.open')).toHaveAttribute('href', '/app/datasets/10');
+    await expect(page.getByTestId('vps.storage.root_dataset.create_subdataset')).toHaveAttribute(
+      'href',
+      '/app/datasets/10?create=subdataset'
+    );
     await expect(page.getByTestId('vps.storage.root_dataset.snapshots')).toHaveAttribute('href', '/app/datasets/10/snapshots');
     await expect(page.getByTestId('vps.storage.root_dataset.downloads')).toHaveAttribute('href', '/app/datasets/10/downloads');
     await expect(page.getByTestId('vps.storage.root_dataset.create_snapshot')).toHaveCount(0);
