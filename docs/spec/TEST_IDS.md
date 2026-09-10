@@ -323,6 +323,10 @@ Top-level sections:
 - `profile.prefs.card`
 - `profile.tips.card`
 
+Password:
+- `profile.security.password.generate`
+- `profile.security.password.copy` (rendered when a new password is present)
+
 SSH keys:
 - `profile.keys.card`
 - `profile.keys.add`
@@ -989,6 +993,8 @@ See also:
 - `admin.user.header`
 - `admin.user.refresh`
 - `admin.user.details.card`
+- `admin.user.security.password.generate`
+- `admin.user.security.password.copy` (rendered when a new password is present)
 - `admin.user.action.vps`
 - `admin.user.action.datasets`
 - `admin.user.action.dns`
