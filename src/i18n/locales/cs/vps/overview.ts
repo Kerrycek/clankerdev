@@ -113,7 +113,7 @@ export const csVps_overview = {
   'vps.overview.admin_actions.oom_rules_title': 'Nastavit OOM report pravidla pro tuto VPS',
   'vps.overview.admin_actions.incidents': 'Incident reports',
   'vps.overview.admin_actions.incidents_title': 'Zobrazit incident reports pro tuto VPS',
-  'vps.overview.admin_actions.report_incident': 'Report incident',
+  'vps.overview.admin_actions.report_incident': 'Nahlásit incident',
   'vps.overview.admin_actions.report_incident_title': 'Nahlásit incident pro tuto VPS',
   'vps.overview.admin_actions.outages': 'Outages',
   'vps.overview.admin_actions.outages_title': 'Otevřít přehled výpadků',

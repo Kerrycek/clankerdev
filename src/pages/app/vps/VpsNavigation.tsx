@@ -75,6 +75,9 @@ export function VpsActionsMenu(props: {
       ) : null}
       {props.showAdminActions ? (
         <optgroup label={t('vps.actions.more.group.admin')}>
+          <option value={`${props.basePath}/incidents/new?vps=${props.vpsId}`}>
+            {t('vps.overview.admin_actions.report_incident')}
+          </option>
           <option value={`${vpsPath}/lifecycle/lifetime`}>{t('action.vps.lifecycle.label')}</option>
           <option value={`${vpsPath}/lifecycle/template`}>{t('action.vps.template.label')}</option>
           <option value={`${vpsPath}/lifecycle/boot`}>{t('action.vps.boot.label')}</option>
