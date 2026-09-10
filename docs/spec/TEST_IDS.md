@@ -987,6 +987,8 @@ See also:
 - `admin.user.invalid_id` (ErrorState)
 - `admin.user.error` (ErrorState)
 - `admin.user.header`
+- `admin.user.status.lockout` (always-visible account lockout status in the detail header)
+- `admin.user.status.password_reset` (always-visible forced password-change status in the detail header)
 - `admin.user.refresh`
 - `admin.user.details.card`
 - `admin.user.action.vps`

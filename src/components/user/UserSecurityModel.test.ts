@@ -4,6 +4,7 @@ import type { UserSession } from '../../lib/api/userDossier';
 import type { User } from '../../lib/api/users';
 
 import {
+  buildAdminUserSecurityStatuses,
   buildPasswordChangeReview,
   buildPasswordPayload,
   buildSecuritySettingsPayload,
@@ -198,6 +199,39 @@ describe('UserSecurityModel', () => {
     expect(posture.items.map((item) => item.key)).toContain('lockout');
     expect(posture.items.map((item) => item.key)).toContain('password_reset');
   });
+
+  test.each([
+    { lockout: false, passwordReset: false, lockoutState: 'unlocked', passwordResetState: 'not-required' },
+    { lockout: true, passwordReset: false, lockoutState: 'locked', passwordResetState: 'not-required' },
+    { lockout: false, passwordReset: true, lockoutState: 'unlocked', passwordResetState: 'required' },
+    { lockout: true, passwordReset: true, lockoutState: 'locked', passwordResetState: 'required' },
+    { lockout: 1, passwordReset: 0, lockoutState: 'locked', passwordResetState: 'not-required' },
+    { lockout: 0, passwordReset: 1, lockoutState: 'unlocked', passwordResetState: 'required' },
+  ])(
+    'builds admin header statuses for lockout=$lockout and password_reset=$passwordReset',
+    ({ lockout, passwordReset, lockoutState, passwordResetState }) => {
+      const statuses = buildAdminUserSecurityStatuses({
+        id: 4,
+        login: 'dave',
+        level: 3,
+        lockout,
+        password_reset: passwordReset,
+      });
+
+      expect(statuses).toEqual([
+        expect.objectContaining({
+          key: 'lockout',
+          state: lockoutState,
+          tone: lockoutState === 'locked' ? 'danger' : 'ok',
+        }),
+        expect.objectContaining({
+          key: 'password_reset',
+          state: passwordResetState,
+          tone: passwordResetState === 'required' ? 'warn' : 'ok',
+        }),
+      ]);
+    }
+  );
 
   test('parses impersonation session token response and truncates labels', () => {
     const session: UserSession = { id: 42, token_full: 'TOKEN' };
