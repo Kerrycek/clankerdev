@@ -10,6 +10,8 @@ import { DetailShell } from '../../../../components/layout/DetailShell';
 import { fetchUser, type User } from '../../../../lib/api/users';
 import { roleFromLevel } from '../../../../lib/roles';
 
+import { buildAdminUserSecurityStatuses } from '../../../../components/user/UserSecurityModel';
+
 import { Badge } from '../../../../components/ui/Badge';
 import { Button } from '../../../../components/ui/Button';
 import { CopyButton } from '../../../../components/ui/CopyButton';
@@ -65,6 +67,8 @@ export function AdminUserLayout() {
           const role = roleFromLevel(u.level);
           const roleVariant = role === 'admin' ? 'black' : role === 'support' ? 'warn' : 'neutral';
           const title = String(u.login ?? `#${u.id}`);
+          const securityStatuses = buildAdminUserSecurityStatuses(u);
+          const securityPath = `${basePath}/users/${u.id}/security`;
 
           return (
             <ObjectHeader
@@ -74,6 +78,30 @@ export function AdminUserLayout() {
                 <>
                   <Badge variant="neutral">#{u.id}</Badge>
                   <Badge variant={roleVariant}>{role}</Badge>
+                </>
+              }
+              badges={
+                <>
+                  {securityStatuses.map((status) => {
+                    const label = t(status.labelKey);
+                    const value = t(status.valueKey);
+                    const description = t(status.descriptionKey);
+
+                    return (
+                      <Link
+                        key={status.key}
+                        to={securityPath}
+                        data-testid={`admin.user.status.${status.key}`}
+                        data-state={status.state}
+                        aria-label={`${label}: ${value}. ${description}`}
+                        className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus/35"
+                      >
+                        <Badge variant={status.tone} title={description}>
+                          {label}: {value}
+                        </Badge>
+                      </Link>
+                    );
+                  })}
                 </>
               }
               kicker={

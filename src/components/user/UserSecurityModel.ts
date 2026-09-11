@@ -239,8 +239,41 @@ export interface UserSecurityPosture {
   items: SecurityPostureItem[];
 }
 
+export type AdminUserSecurityStatusState = 'locked' | 'unlocked' | 'required' | 'not-required';
+
+export interface AdminUserSecurityStatus extends SecurityPostureItem {
+  key: 'lockout' | 'password_reset';
+  state: AdminUserSecurityStatusState;
+}
+
 function makePostureItem(input: SecurityPostureItem): SecurityPostureItem {
   return input;
+}
+
+export function buildAdminUserSecurityStatuses(user: User | undefined): AdminUserSecurityStatus[] {
+  const lockoutActive = userBooleanField(user, 'lockout', false);
+  const passwordResetRequired = userBooleanField(user, 'password_reset', false);
+
+  return [
+    {
+      key: 'lockout',
+      state: lockoutActive ? 'locked' : 'unlocked',
+      labelKey: 'security.posture.item.lockout.label',
+      valueKey: lockoutActive ? 'security.posture.value.locked' : 'security.posture.value.unlocked',
+      descriptionKey: lockoutActive ? 'security.posture.item.lockout.warning' : 'security.posture.item.lockout.ready',
+      tone: lockoutActive ? 'danger' : 'ok',
+    },
+    {
+      key: 'password_reset',
+      state: passwordResetRequired ? 'required' : 'not-required',
+      labelKey: 'security.posture.item.password_reset.label',
+      valueKey: passwordResetRequired ? 'security.posture.value.required' : 'security.posture.value.not_required',
+      descriptionKey: passwordResetRequired
+        ? 'security.posture.item.password_reset.warning'
+        : 'security.posture.item.password_reset.ready',
+      tone: passwordResetRequired ? 'warn' : 'ok',
+    },
+  ];
 }
 
 export function buildUserSecurityPosture(user: User | undefined, variant: UserSecurityVariant): UserSecurityPosture {
@@ -249,8 +282,8 @@ export function buildUserSecurityPosture(user: User | undefined, variant: UserSe
   const mfaEnabled = userBooleanField(user, 'enable_multi_factor_auth', false);
   const newLoginNotificationEnabled = stored.notif;
   const sessionParse = parseSessionMinutes(stored.sessMin);
-  const lockoutActive = userBooleanField(user, 'lockout', false);
-  const passwordResetRequired = userBooleanField(user, 'password_reset', false);
+  const adminStatuses = variant === 'admin' ? buildAdminUserSecurityStatuses(user) : [];
+  const lockoutActive = adminStatuses.some((status) => status.key === 'lockout' && status.state === 'locked');
 
   const items: SecurityPostureItem[] = [
     makePostureItem({
@@ -293,24 +326,7 @@ export function buildUserSecurityPosture(user: User | undefined, variant: UserSe
   ];
 
   if (variant === 'admin') {
-    items.push(
-      makePostureItem({
-        key: 'lockout',
-        labelKey: 'security.posture.item.lockout.label',
-        valueKey: lockoutActive ? 'security.posture.value.locked' : 'security.posture.value.unlocked',
-        descriptionKey: lockoutActive ? 'security.posture.item.lockout.warning' : 'security.posture.item.lockout.ready',
-        tone: lockoutActive ? 'danger' : 'ok',
-      }),
-      makePostureItem({
-        key: 'password_reset',
-        labelKey: 'security.posture.item.password_reset.label',
-        valueKey: passwordResetRequired ? 'security.posture.value.required' : 'security.posture.value.not_required',
-        descriptionKey: passwordResetRequired
-          ? 'security.posture.item.password_reset.warning'
-          : 'security.posture.item.password_reset.ready',
-        tone: passwordResetRequired ? 'warn' : 'ok',
-      })
-    );
+    items.push(...adminStatuses);
   }
 
   const warningCount = items.filter((item) => item.tone === 'warn').length;
