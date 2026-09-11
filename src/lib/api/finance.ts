@@ -1,11 +1,12 @@
 import { fetchUsers, type User } from './users';
 
 /**
- * Keep compatibility scans responsive with a conservative request size. A
- * caller can request a smaller batch (mostly useful for tests), but never a
- * larger one.
+ * User#index documents 1,000 rows as its maximum page size. Using that limit
+ * keeps the global snapshot bounded while avoiding four network round trips
+ * for data that the API can return in one response. A caller can still request
+ * a smaller batch (mostly useful for tests), but never a larger one.
  */
-export const FINANCE_SCAN_BATCH_SIZE = 250;
+export const FINANCE_SCAN_BATCH_SIZE = 1_000;
 export const FINANCE_SCAN_MAX_ROWS = 10_000;
 
 export type FinanceScanIncompleteReason = 'scan_limit' | 'cursor_stalled';
