@@ -4,11 +4,14 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useI18n } from '../../app/i18n';
 import { useToasts } from '../../app/toasts';
 import { updateUser } from '../../lib/api/users';
+import { copyTextToClipboard } from '../../lib/clipboard';
 import { formatErrorMessage } from '../../lib/errors';
+import { generateSecurePassword } from '../../lib/passwordGeneration';
 
 import { Button } from '../ui/Button';
 import { Card, CardBody, CardHeader } from '../ui/Card';
 import { Checkbox } from '../ui/Checkbox';
+import { CopyButton } from '../ui/CopyButton';
 import { Input } from '../ui/Input';
 
 import { buildPasswordChangeReview, buildPasswordPayload, type UserSecurityVariant } from './UserSecurityModel';
@@ -26,6 +29,7 @@ export function UserSecurityPasswordCard(props: {
   const [newPassword, setNewPassword] = useState('');
   const [newPassword2, setNewPassword2] = useState('');
   const [logoutSessions, setLogoutSessions] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const draft = useMemo(
     () => ({ currentPassword, newPassword, newPassword2, logoutSessions }),
@@ -61,6 +65,39 @@ export function UserSecurityPasswordCard(props: {
   });
 
   const prefix = props.testIdPrefix;
+
+  const generateAndCopy = async () => {
+    setIsGenerating(true);
+
+    try {
+      const generatedPassword = generateSecurePassword();
+      setNewPassword(generatedPassword);
+      setNewPassword2(generatedPassword);
+
+      const copied = await copyTextToClipboard(generatedPassword);
+      toasts.pushToast({
+        variant: copied ? 'ok' : 'warn',
+        title: t(
+          copied
+            ? 'security.password.generated.copied.title'
+            : 'security.password.generated.copy_failed.title'
+        ),
+        body: t(
+          copied
+            ? 'security.password.generated.copied.body'
+            : 'security.password.generated.copy_failed.body'
+        ),
+      });
+    } catch {
+      toasts.pushToast({
+        variant: 'danger',
+        title: t('security.password.generated.failed.title'),
+        body: t('security.password.generated.failed.body'),
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   return (
     <Card testId={`${prefix}.password.card`}>
@@ -111,6 +148,30 @@ export function UserSecurityPasswordCard(props: {
             </div>
           </div>
 
+          <div className="md:col-span-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-xs text-faint">{t('security.password.generate.hint')}</div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => void generateAndCopy()}
+                loading={isGenerating}
+                disabled={passwordM.isPending || isGenerating}
+                testId={`${prefix}.password.generate`}
+              >
+                {t('security.password.generate')}
+              </Button>
+
+              {newPassword ? (
+                <CopyButton
+                  text={newPassword}
+                  label={t('security.password.copy')}
+                  testId={`${prefix}.password.copy`}
+                />
+              ) : null}
+            </div>
+          </div>
+
           <div className="md:col-span-2">
             <label className="flex items-center gap-2 text-sm" data-testid={`${prefix}.password.logout_sessions`}>
               <Checkbox checked={logoutSessions} onCheckedChange={(v) => setLogoutSessions(Boolean(v))} />
@@ -123,7 +184,7 @@ export function UserSecurityPasswordCard(props: {
             <Button
               onClick={() => passwordM.mutate()}
               loading={passwordM.isPending}
-              disabled={!review.canSubmit || passwordM.isPending}
+              disabled={!review.canSubmit || passwordM.isPending || isGenerating}
               testId={`${prefix}.password.save`}
             >
               {t('common.save')}
@@ -132,7 +193,7 @@ export function UserSecurityPasswordCard(props: {
             <Button
               variant="secondary"
               onClick={reset}
-              disabled={passwordM.isPending}
+              disabled={passwordM.isPending || isGenerating}
               testId={`${prefix}.password.reset`}
             >
               {t('common.reset')}
