@@ -209,7 +209,7 @@ export function RequestReviewActions(props: {
       });
 
       setResolveOpen(false);
-      await qc.invalidateQueries({ queryKey: ['user_request'] });
+      void qc.invalidateQueries({ queryKey: ['user_request'] });
       await props.onResolved?.();
     } catch (e: unknown) {
       const message = e instanceof Error ? e.message : String(e);

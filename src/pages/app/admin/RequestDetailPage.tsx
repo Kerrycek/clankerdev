@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Link, Navigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
 import { useAppMode } from '../../../app/appMode';
@@ -60,6 +60,7 @@ export function RequestDetailPage() {
   const { basePath, mode } = useAppMode();
   const isAdmin = mode === 'admin';
   const { t } = useI18n();
+  const navigate = useNavigate();
 
   const boolLabel = (v: any): string => {
     if (v === true) return t('common.yes');
@@ -311,9 +312,7 @@ export function RequestDetailPage() {
                   isAdmin={isAdmin}
                   basePath={basePath}
                   testIdPrefix="admin.requests.resolve"
-                  onResolved={async () => {
-                    await q.refetch();
-                  }}
+                  onResolved={() => navigate(`${basePath}/requests`, { replace: true })}
                 />
               </CardBody>
             </Card>

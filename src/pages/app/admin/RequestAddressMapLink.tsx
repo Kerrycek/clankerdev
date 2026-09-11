@@ -1,5 +1,6 @@
 import React from 'react';
 import { ExternalLink, Loader2, MapPin } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 
 import { useI18n } from '../../../app/i18n';
 
@@ -57,49 +58,37 @@ function parseNominatimPoint(places: unknown): OsmPoint | null {
   return { lat, lon };
 }
 
-function useOsmPoint(address: string, enabled: boolean) {
-  const [point, setPoint] = React.useState<OsmPoint | null>(null);
-  const [loading, setLoading] = React.useState(false);
-
-  React.useEffect(() => {
-    if (!address || !enabled) {
-      setPoint(null);
-      setLoading(false);
-      return;
-    }
-
-    const controller = new AbortController();
-    setPoint(null);
-    setLoading(true);
-
-    fetch(nominatimSearchUrl(address), {
-      signal: controller.signal,
-      headers: { Accept: 'application/json' },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error(`Nominatim returned ${res.status}`);
-        return res.json();
-      })
-      .then((json) => setPoint(parseNominatimPoint(json)))
-      .catch((err) => {
-        if ((err as { name?: string }).name !== 'AbortError') setPoint(null);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setLoading(false);
+function useOsmPoint(address: string) {
+  const query = useQuery({
+    queryKey: ['openstreetmap', 'geocode', address],
+    enabled: Boolean(address),
+    staleTime: 30 * 60 * 1000,
+    retry: false,
+    queryFn: async (): Promise<OsmPoint | null> => {
+      const res = await fetch(nominatimSearchUrl(address), {
+        headers: { Accept: 'application/json' },
       });
+      if (!res.ok) throw new Error(`Nominatim returned ${res.status}`);
+      return parseNominatimPoint(await res.json());
+    },
+  });
 
-    return () => controller.abort();
-  }, [address, enabled]);
-
-  return { point, loading };
+  return {
+    point: query.data ?? null,
+    loading: query.isFetching,
+    failed: Boolean(address) && !query.isFetching && query.isError,
+    notFound: Boolean(address) && !query.isFetching && query.isSuccess && query.data === null,
+    retry: () => {
+      void query.refetch();
+    },
+  };
 }
 
 export function RequestAddressMapLink(props: { address: unknown; testId?: string }) {
   const { t } = useI18n();
   const address = String(props.address ?? '').trim();
   const href = openStreetMapAddressUrl(address);
-  const [previewRequested, setPreviewRequested] = React.useState(false);
-  const { point, loading } = useOsmPoint(address, previewRequested);
+  const { point, loading, failed, notFound, retry } = useOsmPoint(address);
   const embedHref = React.useMemo(() => openStreetMapEmbedUrl(point), [point]);
 
   if (!href) return <div className="text-sm">—</div>;
@@ -113,13 +102,17 @@ export function RequestAddressMapLink(props: { address: unknown; testId?: string
         <iframe
           title={t('requests.detail.address_map.preview_title')}
           src={embedHref}
-          loading="lazy"
+          loading="eager"
           referrerPolicy="no-referrer"
           data-testid={`${props.testId ?? 'requests.detail.address_map'}.preview`}
           className="h-44 w-full border-0 bg-surface-1"
         />
       ) : (
-        <div className="flex min-h-24 flex-col items-center justify-center gap-2 bg-surface-1 px-4 py-3 text-center text-xs text-muted">
+        <div
+          className="flex min-h-24 flex-col items-center justify-center gap-2 bg-surface-1 px-4 py-3 text-center text-xs text-muted"
+          aria-busy={loading}
+          aria-live="polite"
+        >
           {loading ? (
             <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
           ) : (
@@ -128,18 +121,18 @@ export function RequestAddressMapLink(props: { address: unknown; testId?: string
           <span>
             {loading
               ? t('requests.detail.address_map.loading')
-              : previewRequested
-                ? t('requests.detail.address_map.preview_unavailable')
-                : t('requests.detail.address_map.preview_prompt')}
+              : t(notFound
+                ? 'requests.detail.address_map.not_found'
+                : 'requests.detail.address_map.preview_unavailable')}
           </span>
-          {!previewRequested ? (
+          {failed ? (
             <button
               type="button"
-              onClick={() => setPreviewRequested(true)}
-              data-testid={`${props.testId ?? 'requests.detail.address_map'}.load_preview`}
+              onClick={retry}
+              data-testid={`${props.testId ?? 'requests.detail.address_map'}.retry`}
               className="rounded-md border border-border bg-surface-2 px-3 py-1.5 font-medium text-fg transition hover:bg-accent-soft focus:outline-none focus:ring-2 focus:ring-focus/35"
             >
-              {t('requests.detail.address_map.load_preview')}
+              {t('requests.detail.address_map.retry')}
             </button>
           ) : null}
         </div>

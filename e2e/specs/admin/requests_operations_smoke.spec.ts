@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock } from '../../fixtures';
 
@@ -24,8 +24,33 @@ function registration(id: number, state = 'awaiting') {
   };
 }
 
+async function installOsmMapMock(page: Page, options: { empty?: boolean; failFirst?: boolean } = {}) {
+  let requests = 0;
+
+  await page.route(/^https:\/\/nominatim\.openstreetmap\.org\/search(?:\?|$)/, async (route) => {
+    requests += 1;
+    if (options.failFirst && requests === 1) {
+      await route.fulfill({ status: 503, contentType: 'application/json', body: '[]' });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(options.empty ? [] : [{ lat: '49.8356441', lon: '18.2843426' }]),
+    });
+  });
+
+  await page.route(/^https:\/\/www\.openstreetmap\.org\/export\/embed\.html(?:\?|$)/, async (route) => {
+    await route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>Map</title>' });
+  });
+
+  return { requestCount: () => requests };
+}
+
 test('@workflow-matrix @smoke admin requests: detail actions, inline expansion, and operational links', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
+  const osm = await installOsmMapMock(page);
 
   const states: Array<string | null> = [];
   const resolveBodies: unknown[] = [];
@@ -88,6 +113,15 @@ test('@workflow-matrix @smoke admin requests: detail actions, inline expansion, 
   await expect(page.getByTestId('admin.requests.detail.ops.transaction')).toHaveAttribute('href', '/admin/transactions/items/99');
   const mapCard = page.getByTestId('admin.requests.detail.registration.address.map');
   await expect(mapCard).toBeVisible();
+  const mapPreview = mapCard.getByTestId('admin.requests.detail.registration.address.map.preview');
+  await expect(mapPreview).toBeVisible();
+  await expect.poll(osm.requestCount).toBe(1);
+  await expect(mapCard.getByTestId('admin.requests.detail.registration.address.map.retry')).toHaveCount(0);
+  await expect(mapPreview).toHaveAttribute('loading', 'eager');
+  await expect(mapPreview).toHaveAttribute(
+    'src',
+    /https:\/\/www\.openstreetmap\.org\/export\/embed\.html\?.*marker=49\.835644%2C18\.284343/
+  );
   const mapLink = page.getByTestId('admin.requests.detail.registration.address.map.link');
   await expect(mapLink).toHaveAttribute('target', '_blank');
   await expect(mapLink).toHaveAttribute('rel', 'noopener noreferrer');
@@ -100,8 +134,101 @@ test('@workflow-matrix @smoke admin requests: detail actions, inline expansion, 
   await expect(page.getByTestId('admin.requests.resolve.action.request_correction')).toBeVisible();
 });
 
+test('@workflow-matrix @pr-smoke @pr-smoke-mobile @smoke admin requests: successful detail review returns to the overview', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+  const osm = await installOsmMapMock(page);
+
+  let current = registration(125);
+  let resolveCalls = 0;
+  let finishResolve!: () => void;
+  const resolveGate = new Promise<void>((resolve) => {
+    finishResolve = resolve;
+  });
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100 },
+    handlers: {
+      'GET user_request/registrations': () => ({ registrations: [current] }),
+      'GET user_request/changes': () => ({ changes: [] }),
+      'GET user_request/registrations/125': () => ({ registration: current }),
+      'GET nodes': () => ({ nodes: [] }),
+      'POST user_request/registrations/125/resolve': async ({ reqJson }) => {
+        resolveCalls += 1;
+        expect(reqJson).toEqual({
+          registration: {
+            action: 'approve',
+            create_vps: true,
+            activate: true,
+          },
+        });
+        await resolveGate;
+        current = { ...current, state: 'approved' };
+        return { registration: current };
+      },
+    },
+  });
+
+  await page.goto('/admin/requests/registration/125');
+  await expect(page.getByTestId('admin.requests.detail.registration.address.map.preview')).toBeVisible();
+  await expect.poll(osm.requestCount).toBe(1);
+  await page.getByTestId('admin.requests.resolve.action.approve').click();
+  await page.getByTestId('admin.requests.resolve.submit').click();
+
+  await expect.poll(() => resolveCalls).toBe(1);
+  await expect(page).toHaveURL('/admin/requests/registration/125');
+
+  finishResolve();
+
+  await expect(page).toHaveURL('/admin/requests');
+  await expect(page.getByTestId('admin.requests.quick.awaiting')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByText('No requests', { exact: true })).toBeVisible();
+});
+
+test('@workflow-matrix @pr-smoke @pr-smoke-mobile @smoke admin requests: automatic address map can retry a failed lookup', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+  const osm = await installOsmMapMock(page, { failFirst: true });
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100 },
+    handlers: {
+      'GET user_request/registrations/126': () => ({ registration: registration(126) }),
+    },
+  });
+
+  await page.goto('/admin/requests/registration/126');
+  const mapCard = page.getByTestId('admin.requests.detail.registration.address.map');
+  const retry = mapCard.getByTestId('admin.requests.detail.registration.address.map.retry');
+
+  await expect(retry).toBeVisible();
+  await expect.poll(osm.requestCount).toBe(1);
+  await retry.click();
+  await expect(mapCard.getByTestId('admin.requests.detail.registration.address.map.preview')).toBeVisible();
+  await expect.poll(osm.requestCount).toBe(2);
+});
+
+test('@workflow-matrix @pr-smoke @smoke admin requests: automatic address map distinguishes an unknown address', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+  const osm = await installOsmMapMock(page, { empty: true });
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100 },
+    handlers: {
+      'GET user_request/registrations/127': () => ({ registration: registration(127) }),
+    },
+  });
+
+  await page.goto('/admin/requests/registration/127');
+  const mapCard = page.getByTestId('admin.requests.detail.registration.address.map');
+
+  await expect(mapCard.getByText('The address was not found in OpenStreetMap.')).toBeVisible();
+  await expect(mapCard.getByTestId('admin.requests.detail.registration.address.map.retry')).toHaveCount(0);
+  await expect(mapCard.getByTestId('admin.requests.detail.registration.address.map.preview')).toHaveCount(0);
+  await expect.poll(osm.requestCount).toBe(1);
+});
+
 test('@workflow-matrix @smoke admin requests: rejected action error is visible', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
+  await installOsmMapMock(page);
 
   await installHaveApiMock(page, {
     user: { id: 1, login: 'admin', level: 100 },
@@ -119,6 +246,7 @@ test('@workflow-matrix @smoke admin requests: rejected action error is visible',
   await expect(page.getByTestId('admin.requests.resolve.modal')).toBeVisible();
   await page.getByTestId('admin.requests.resolve.submit').click();
   await expect(page.getByRole('alert')).toContainText('Cannot approve this request');
+  await expect(page).toHaveURL('/admin/requests/registration/124');
 });
 
 test('@workflow-matrix @smoke admin requests: correction prefills overrides and bulk approve resolves rows', async ({ page }) => {
