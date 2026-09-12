@@ -11,5 +11,13 @@ export type RequestResolveOverrides = {
   orgId: string;
   email: string;
   address: string;
+  yearOfBirth: string;
+  how: string;
+  note: string;
+  osTemplate: string;
+  location: string;
+  currency: string;
+  language: string;
+  timeZone: string;
   changeReason: string;
 };

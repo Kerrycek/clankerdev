@@ -19,6 +19,8 @@ export function Select(props: {
   className?: string;
   ariaLabel?: string;
   'aria-label'?: string;
+  ariaInvalid?: boolean;
+  ariaDescribedBy?: string;
   label?: React.ReactNode;
   options?: SelectOption[];
   children?: React.ReactNode;
@@ -41,6 +43,8 @@ export function Select(props: {
       disabled={props.disabled}
       onChange={props.onChange}
       aria-label={ariaLabel}
+      aria-invalid={props.ariaInvalid}
+      aria-describedby={props.ariaDescribedBy}
       className={clsx(
         'h-9 w-full rounded-md border border-border bg-surface px-3 text-sm outline-none transition',
         'focus:border-accent/70 focus:ring-2 focus:ring-focus/35 focus:ring-offset-2 focus:ring-offset-bg',

@@ -1,26 +1,33 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { useChrome } from '../../../components/layout/ChromeContext';
 import { useI18n } from '../../../app/i18n';
 import { useToasts } from '../../../app/toasts';
 
-import { fetchNodes, type Node } from '../../../lib/api/nodes';
-import { getMetaActionStateId } from '../../../lib/api/haveapi';
-import {
-  resolveChangeRequest,
-  resolveRegistrationRequest,
-  type ResolveUserRequestAction,
-} from '../../../lib/api/requests';
+import { getMetaActionStateId, isAmbiguousMutationError } from '../../../lib/api/haveapi';
+import { isLocalLockPersistenceError, type LocalMutationGeneration } from '../../../lib/localLocks';
+import { objectRef, objectRefKey } from '../../../lib/objectRef';
+import type { ResolveUserRequestAction } from '../../../lib/api/requests';
 
 import { Button } from '../../../components/ui/Button';
-import { Input } from '../../../components/ui/Input';
+import { Alert } from '../../../components/ui/Alert';
 import { LinkButton } from '../../../components/ui/LinkButton';
 import { Modal } from '../../../components/ui/Modal';
-import { Select } from '../../../components/ui/Select';
 import { Textarea } from '../../../components/ui/Textarea';
+import { RequestApproveOptions } from './RequestApproveOptions';
 import { RequestResolveReview } from './RequestResolveReview';
+import { RequestResolveOverridesForm } from './RequestResolveOverridesForm';
+import { RequestMutationUncertainty } from './RequestMutationUncertainty';
+import {
+  fetchAwaitingReviewTarget,
+  invalidNumericResolveOverrideKeys,
+  RequestReviewPreconditionError,
+  resolveReviewedRequest,
+  type TouchedRequestOverrides,
+} from './RequestResolveMutation';
+import { useRequestResolveResources } from './RequestResolveResources';
 import type { RequestResolveOverrides, RequestReviewType, ReviewableRequest } from './RequestReviewTypes';
 import {
   emptyRequestOverrides,
@@ -29,6 +36,7 @@ import {
   requestOperationalLinks,
   requestOverrides,
   requestReviewActions,
+  resourceId,
   safePositiveInteger,
 } from './RequestReviewModel';
 
@@ -101,54 +109,70 @@ export function RequestReviewActions(props: {
   const toasts = useToasts();
   const chrome = useChrome();
   const qc = useQueryClient();
+  const requestRef = useMemo(() => objectRef('UserRequest', props.reqId), [props.reqId]);
+  const requestLock = chrome.localLocks.find((lock) => lock.key === objectRefKey(requestRef));
 
   const actions = useMemo(
     () => requestReviewActions(props.reqType, props.request, props.isAdmin),
     [props.isAdmin, props.reqType, props.request],
   );
   const [resolveOpen, setResolveOpen] = useState(false);
+  const [overridesOpen, setOverridesOpen] = useState(false);
   const [resolveAction, setResolveAction] = useState<ResolveUserRequestAction>('approve');
   const [resolveReason, setResolveReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const [oLogin, setOLogin] = useState('');
-  const [oFullName, setOFullName] = useState('');
-  const [oOrgName, setOOrgName] = useState('');
-  const [oOrgId, setOOrgId] = useState('');
-  const [oEmail, setOEmail] = useState('');
-  const [oAddress, setOAddress] = useState('');
-  const [oChangeReason, setOChangeReason] = useState('');
+  const [overrides, setOverrides] = useState<RequestResolveOverrides>(() => emptyRequestOverrides());
+  const [touchedOverrides, setTouchedOverrides] = useState<TouchedRequestOverrides>(() => new Set());
 
   const [approveCreateVps, setApproveCreateVps] = useState(true);
   const [approveActivate, setApproveActivate] = useState(true);
   const [approveNode, setApproveNode] = useState('');
+  const requestLocationId = resourceId(props.request.location) ?? undefined;
+  const showOverrides = resolveAction === 'approve' || resolveAction === 'request_correction';
+  const overrideLocationId = safePositiveInteger(overrides.location);
+  const effectiveLocationId = overrideLocationId ?? requestLocationId;
+  const overrideTemplateId = safePositiveInteger(overrides.osTemplate);
+  const requestTemplateId = resourceId(props.request.os_template) ?? undefined;
+  const effectiveTemplateId = overrideTemplateId ?? requestTemplateId;
 
-  const nodesQ = useQuery({
-    queryKey: ['nodes', 'index', { limit: 200 }],
-    enabled: resolveOpen && props.reqType === 'registration' && resolveAction === 'approve',
-    queryFn: async () => (await fetchNodes({ limit: 200 })).data,
+  const resources = useRequestResolveResources({
+    resolveOpen,
+    overridesOpen,
+    reqType: props.reqType,
+    resolveAction,
+    approveCreateVps,
+    effectiveLocationId,
+    effectiveTemplateId,
+    request: props.request,
   });
-
-  const nodes = nodesQ.data ?? [];
   const requiresReason = requestActionNeedsReason(resolveAction);
   const reasonMissing = requiresReason && !resolveReason.trim();
-  const canSubmit = !submitting && !reasonMissing;
+  const invalidNumericOverrides = invalidNumericResolveOverrideKeys(resolveAction, overrides, touchedOverrides);
+  const invalidNumericOverride = invalidNumericOverrides.size > 0;
+  const actionStillAllowed = props.isAdmin && actions.includes(resolveAction);
+  const canSubmit = !submitting && !requestLock && actionStillAllowed && !reasonMissing && !invalidNumericOverride;
 
-  function setOverrideState(overrides: RequestResolveOverrides) {
-    setOLogin(overrides.login);
-    setOFullName(overrides.fullName);
-    setOOrgName(overrides.orgName);
-    setOOrgId(overrides.orgId);
-    setOEmail(overrides.email);
-    setOAddress(overrides.address);
-    setOChangeReason(overrides.changeReason);
-  }
+  useEffect(() => {
+    if (!resolveOpen || submitting || actionStillAllowed) return;
+    setResolveOpen(false);
+  }, [actionStillAllowed, resolveOpen, submitting]);
+
+  useEffect(() => {
+    if (!approveNode || resources.nodes.some((node) => String(node.id) === approveNode)) return;
+    setApproveNode('');
+  }, [approveNode, resources.nodes]);
 
   function openAction(action: ResolveUserRequestAction) {
     setResolveAction(action);
     setResolveReason('');
-    setOverrideState(
-      action === 'request_correction'
+    setOverridesOpen(false);
+    setApproveCreateVps(true);
+    setApproveActivate(true);
+    setApproveNode('');
+    setTouchedOverrides(new Set());
+    setOverrides(
+      action === 'approve' || action === 'request_correction'
         ? requestOverrides(props.reqType, props.request)
         : emptyRequestOverrides(),
     );
@@ -161,46 +185,28 @@ export function RequestReviewActions(props: {
     options: {
       reason: string | undefined;
       overrides: RequestResolveOverrides;
+      touchedOverrides: TouchedRequestOverrides;
       approveCreateVps: boolean;
       approveActivate: boolean;
       approveNode: string;
     }
   ) {
     setSubmitting(true);
+    let mutationGeneration: LocalMutationGeneration | undefined;
+    let mutationStarted = false;
+    let settleError: unknown;
 
     try {
-      if (props.reqType === 'registration') {
-        const p: Parameters<typeof resolveRegistrationRequest>[1] = { action, reason: options.reason };
-
-        if (options.overrides.login.trim()) p.login = options.overrides.login.trim();
-        if (options.overrides.fullName.trim()) p.full_name = options.overrides.fullName.trim();
-        if (options.overrides.orgName.trim()) p.org_name = options.overrides.orgName.trim();
-        if (options.overrides.orgId.trim()) p.org_id = options.overrides.orgId.trim();
-        if (options.overrides.email.trim()) p.email = options.overrides.email.trim();
-        if (options.overrides.address.trim()) p.address = options.overrides.address.trim();
-
-        if (action === 'approve') {
-          p.create_vps = options.approveCreateVps;
-          p.activate = options.approveActivate;
-          const nodeId = safePositiveInteger(options.approveNode);
-          if (nodeId) p.node = nodeId;
-        }
-
-        const res = await resolveRegistrationRequest(props.reqId, p);
-        const asId = getMetaActionStateId(res.meta);
-        if (asId) chrome.trackActionState(asId);
-      } else {
-        const p: Parameters<typeof resolveChangeRequest>[1] = { action, reason: options.reason };
-
-        if (options.overrides.fullName.trim()) p.full_name = options.overrides.fullName.trim();
-        if (options.overrides.email.trim()) p.email = options.overrides.email.trim();
-        if (options.overrides.address.trim()) p.address = options.overrides.address.trim();
-        if (options.overrides.changeReason.trim()) p.change_reason = options.overrides.changeReason.trim();
-
-        const res = await resolveChangeRequest(props.reqId, p);
-        const asId = getMetaActionStateId(res.meta);
-        if (asId) chrome.trackActionState(asId);
-      }
+      await fetchAwaitingReviewTarget(props.reqType, props.reqId);
+      mutationGeneration = await chrome.acquireLocalLock(requestRef, { durable: true });
+      mutationStarted = true;
+      const res = await resolveReviewedRequest(props.reqType, props.reqId, action, options);
+      const asId = getMetaActionStateId(res.meta);
+      if (asId) chrome.trackActionState(asId, {
+        object: requestRef,
+        mutationGeneration,
+        objectLabel: `#${props.reqId}`,
+      });
 
       toasts.pushToast({
         variant: 'ok',
@@ -212,14 +218,44 @@ export function RequestReviewActions(props: {
       void qc.invalidateQueries({ queryKey: ['user_request'] });
       await props.onResolved?.();
     } catch (e: unknown) {
+      settleError = e;
       const message = e instanceof Error ? e.message : String(e);
-      toasts.pushToast({
-        variant: 'danger',
-        title: t('requests.resolve.toast.error.title'),
-        body: message,
-        autoDismissMs: false,
-      });
+      if (e instanceof RequestReviewPreconditionError) {
+        setResolveOpen(false);
+        void qc.invalidateQueries({ queryKey: ['user_request'] });
+        toasts.pushToast({
+          variant: 'warn',
+          title: t('requests.resolve.toast.stale.title'),
+          body: t('requests.resolve.toast.stale.body'),
+          autoDismissMs: false,
+        });
+      } else if (mutationStarted && isAmbiguousMutationError(e)) {
+        setResolveOpen(false);
+        void qc.invalidateQueries({ queryKey: ['user_request'] });
+        toasts.pushToast({
+          variant: 'warn',
+          title: t('requests.resolve.toast.uncertain.title'),
+          body: t('requests.resolve.toast.uncertain.body'),
+          autoDismissMs: false,
+        });
+      } else if (isLocalLockPersistenceError(e)) {
+        setResolveOpen(false);
+        toasts.pushToast({
+          variant: 'warn',
+          title: t('requests.resolve.toast.blocked.title'),
+          body: message,
+          autoDismissMs: false,
+        });
+      } else {
+        toasts.pushToast({
+          variant: 'danger',
+          title: t('requests.resolve.toast.error.title'),
+          body: message,
+          autoDismissMs: false,
+        });
+      }
     } finally {
+      if (mutationGeneration) chrome.settleLocalLock(requestRef, settleError, mutationGeneration);
       setSubmitting(false);
     }
   }
@@ -229,19 +265,36 @@ export function RequestReviewActions(props: {
 
     await submitResolveAction(resolveAction, {
       reason: resolveReason.trim() || undefined,
-      overrides: {
-        login: oLogin,
-        fullName: oFullName,
-        orgName: oOrgName,
-        orgId: oOrgId,
-        email: oEmail,
-        address: oAddress,
-        changeReason: oChangeReason,
-      },
+      overrides,
+      touchedOverrides,
       approveCreateVps,
       approveActivate,
       approveNode,
     });
+  }
+
+  if (requestLock?.uncertain && !submitting) {
+    return (
+      <RequestMutationUncertainty
+        requestRef={requestRef}
+        lock={requestLock}
+        reqType={props.reqType}
+        reqId={props.reqId}
+        onResolved={props.onResolved}
+        testIdPrefix={props.testIdPrefix}
+      />
+    );
+  }
+
+  if (requestLock && !submitting) {
+    return (
+      <Alert variant="info" title={t('requests.resolve.in_progress.title')} testId={`${props.testIdPrefix}.in_progress`}>
+        <div>{t('requests.resolve.in_progress.body')}</div>
+        <Button className="mt-3" size="sm" variant="secondary" onClick={() => chrome.openTasks()}>
+          {t('common.open_tasks')}
+        </Button>
+      </Alert>
+    );
   }
 
   if (!actions.length) {
@@ -277,195 +330,114 @@ export function RequestReviewActions(props: {
       <Modal
         open={resolveOpen}
         onClose={() => setResolveOpen(false)}
-        title={t('requests.resolve.modal.title')}
+        title={t(`requests.resolve.modal.title.${resolveAction}`)}
         size="lg"
+        mobileFullScreen
         testId={`${props.testIdPrefix}.modal`}
         footer={
-          <div className="flex items-center justify-end gap-2">
-            <Button variant="secondary" onClick={() => setResolveOpen(false)}>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+            <Button className="w-full sm:w-auto" variant="secondary" onClick={() => setResolveOpen(false)}>
               {t('common.cancel')}
             </Button>
             <Button
+              className="w-full sm:w-auto"
               variant={requestActionVariant(resolveAction)}
               onClick={submitResolve}
               loading={submitting}
               disabled={!canSubmit}
               testId={`${props.testIdPrefix}.submit`}
             >
-              {t('requests.resolve.modal.submit')}
+              {t(`requests.resolve.modal.submit.${resolveAction}`)}
             </Button>
           </div>
         }
       >
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <div className="text-sm font-medium">{t('requests.resolve.action')}</div>
-            <Select
-              value={resolveAction}
-              onChange={(e) => {
-                const next = e.target.value as ResolveUserRequestAction;
-                setResolveAction(next);
-                setOverrideState(
-                  next === 'request_correction'
-                    ? requestOverrides(props.reqType, props.request)
-                    : emptyRequestOverrides(),
-                );
-              }}
-              testId={`${props.testIdPrefix}.action_select`}
-            >
-              {actions.map((action) => (
-                <option key={action} value={action}>
-                  {t(`requests.resolve.action.${action}`)}
-                </option>
-              ))}
-            </Select>
-          </div>
-
-          <div>
-            <div className="text-sm font-medium">{t('requests.resolve.reason')}</div>
-            <Textarea
-              value={resolveReason}
-              onChange={(e) => setResolveReason(e.target.value)}
-              rows={3}
-              testId={`${props.testIdPrefix}.reason`}
-            />
-            {reasonMissing ? <div className="mt-1 text-xs text-danger">{t('requests.resolve.reason_required')}</div> : null}
-          </div>
+        <div className="rounded-lg border border-border bg-surface-2 p-3 text-sm">
+          {t(`requests.resolve.modal.description.${resolveAction}`)}
         </div>
+
+        <div className="mt-4">
+          <Textarea
+            value={resolveReason}
+            onChange={(e) => setResolveReason(e.target.value)}
+            rows={3}
+            maxLength={500}
+            label={requiresReason ? t('requests.resolve.reason.required') : t('requests.resolve.reason.optional')}
+            ariaInvalid={reasonMissing}
+            ariaDescribedBy={reasonMissing ? `${props.testIdPrefix}.reason.error` : undefined}
+            testId={`${props.testIdPrefix}.reason`}
+          />
+          {reasonMissing ? (
+            <div id={`${props.testIdPrefix}.reason.error`} className="mt-1 text-xs text-danger">
+              {t('requests.resolve.reason_required')}
+            </div>
+          ) : null}
+        </div>
+
+        {props.reqType === 'registration' && resolveAction === 'approve' ? (
+          <RequestApproveOptions
+            createVps={approveCreateVps}
+            activate={approveActivate}
+            node={approveNode}
+            nodes={resources.nodes}
+            nodesLoading={resources.nodeResourcesLoading}
+            nodesError={resources.nodeResourcesError}
+            onCreateVpsChange={(value) => {
+              setApproveCreateVps(value);
+              if (!value) setApproveNode('');
+            }}
+            onActivateChange={setApproveActivate}
+            onNodeChange={setApproveNode}
+            onRetryNodes={resources.retryNodeResources}
+            testIdPrefix={props.testIdPrefix}
+          />
+        ) : null}
+
+        {showOverrides ? (
+          <RequestResolveOverridesForm
+            open={overridesOpen}
+            onToggle={setOverridesOpen}
+            reqType={props.reqType}
+            values={overrides}
+            onChange={(key, value) => {
+              setOverrides((current) => ({ ...current, [key]: value }));
+              setTouchedOverrides((current) => new Set(current).add(key));
+              if (key === 'location' || key === 'osTemplate') setApproveNode('');
+            }}
+            locations={resources.locations}
+            templates={resources.templates}
+            languages={resources.languages}
+            invalidNumericKeys={invalidNumericOverrides}
+            resourcesLoading={resources.overrideResourcesLoading}
+            resourcesError={resources.overrideResourcesError}
+            onRetryResources={resources.retryOverrideResources}
+            testIdPrefix={props.testIdPrefix}
+          />
+        ) : null}
+        {invalidNumericOverride ? (
+          <div
+            id={`${props.testIdPrefix}.override.numeric.error`}
+            className="mt-2 text-sm text-danger"
+            data-testid={`${props.testIdPrefix}.override.numeric.error`}
+          >
+            {t('requests.resolve.override.invalid_id')}
+          </div>
+        ) : null}
 
         <RequestResolveReview
           request={props.request}
           reqType={props.reqType}
           reqId={props.reqId}
           action={resolveAction}
+          reason={resolveReason}
           requiresReason={requiresReason}
           approveCreateVps={approveCreateVps}
           approveActivate={approveActivate}
           approveNode={approveNode}
-          overrides={{
-            login: oLogin,
-            fullName: oFullName,
-            orgName: oOrgName,
-            orgId: oOrgId,
-            email: oEmail,
-            address: oAddress,
-            changeReason: oChangeReason,
-          }}
+          overrides={overrides}
+          touchedOverrides={touchedOverrides}
           testIdPrefix={props.testIdPrefix}
         />
-
-        {props.reqType === 'registration' && resolveAction === 'approve' ? (
-          <div className="mt-4 rounded-lg border border-border bg-surface-2 p-3">
-            <div className="text-sm font-medium">{t('requests.resolve.approve.options')}</div>
-            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={approveCreateVps}
-                  onChange={(e) => setApproveCreateVps(e.target.checked)}
-                  data-testid={`${props.testIdPrefix}.create_vps`}
-                />
-                {t('requests.resolve.approve.create_vps')}
-              </label>
-
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={approveActivate}
-                  onChange={(e) => setApproveActivate(e.target.checked)}
-                  data-testid={`${props.testIdPrefix}.activate`}
-                />
-                {t('requests.resolve.approve.activate')}
-              </label>
-
-              <div className="md:col-span-2">
-                <div className="text-xs text-muted">{t('requests.resolve.approve.node')}</div>
-                <Select value={approveNode} onChange={(e) => setApproveNode(e.target.value)}>
-                  <option value="">{t('common.auto')}</option>
-                  {nodes.map((n: Node) => (
-                    <option key={n.id} value={String(n.id)}>
-                      #{n.id} {n.domain_name ?? n.name ?? ''}
-                    </option>
-                  ))}
-                </Select>
-                {nodesQ.isError ? <div className="mt-1 text-xs text-danger">{t('requests.resolve.nodes_load_error')}</div> : null}
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        <details className="mt-4">
-          <summary className="cursor-pointer text-sm text-accent">{t('requests.resolve.overrides')}</summary>
-          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-            {props.reqType === 'registration' ? (
-              <>
-                <Input
-                  value={oLogin}
-                  onChange={(e) => setOLogin(e.target.value)}
-                  placeholder={t('requests.override.login')}
-                  testId={`${props.testIdPrefix}.override.login`}
-                />
-                <Input
-                  value={oFullName}
-                  onChange={(e) => setOFullName(e.target.value)}
-                  placeholder={t('requests.override.full_name')}
-                  testId={`${props.testIdPrefix}.override.full_name`}
-                />
-                <Input
-                  value={oOrgName}
-                  onChange={(e) => setOOrgName(e.target.value)}
-                  placeholder={t('requests.override.org_name')}
-                  testId={`${props.testIdPrefix}.override.org_name`}
-                />
-                <Input
-                  value={oOrgId}
-                  onChange={(e) => setOOrgId(e.target.value)}
-                  placeholder={t('requests.override.org_id')}
-                  testId={`${props.testIdPrefix}.override.org_id`}
-                />
-                <Input
-                  value={oEmail}
-                  onChange={(e) => setOEmail(e.target.value)}
-                  placeholder={t('requests.override.email')}
-                  testId={`${props.testIdPrefix}.override.email`}
-                />
-                <Input
-                  value={oAddress}
-                  onChange={(e) => setOAddress(e.target.value)}
-                  placeholder={t('requests.override.address')}
-                  testId={`${props.testIdPrefix}.override.address`}
-                />
-              </>
-            ) : (
-              <>
-                <Input
-                  value={oFullName}
-                  onChange={(e) => setOFullName(e.target.value)}
-                  placeholder={t('requests.override.full_name')}
-                  testId={`${props.testIdPrefix}.override.full_name`}
-                />
-                <Input
-                  value={oEmail}
-                  onChange={(e) => setOEmail(e.target.value)}
-                  placeholder={t('requests.override.email')}
-                  testId={`${props.testIdPrefix}.override.email`}
-                />
-                <Input
-                  value={oAddress}
-                  onChange={(e) => setOAddress(e.target.value)}
-                  placeholder={t('requests.override.address')}
-                  testId={`${props.testIdPrefix}.override.address`}
-                />
-                <Input
-                  value={oChangeReason}
-                  onChange={(e) => setOChangeReason(e.target.value)}
-                  placeholder={t('requests.override.change_reason')}
-                  testId={`${props.testIdPrefix}.override.change_reason`}
-                />
-              </>
-            )}
-          </div>
-        </details>
       </Modal>
     </>
   );

@@ -132,6 +132,14 @@ export function queryKeyMatchesObject(ref: ObjectRef, queryKey: readonly unknown
     return false;
   }
 
+  // --------------------------
+  // User request (admin/module)
+  // --------------------------
+  if (ref.kind === 'UserRequest') {
+    // Resolving one request affects its canonical detail and the combined lists.
+    return k0 === 'user_request';
+  }
+
   // -----------------
   // User (admin/module)
   // -----------------

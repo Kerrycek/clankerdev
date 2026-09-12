@@ -1,17 +1,18 @@
 import React, { useMemo } from 'react';
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { ChevronRight } from 'lucide-react';
 
 import { useAppMode } from '../../../app/appMode';
+import { useAuth } from '../../../app/auth';
 import { useI18n } from '../../../app/i18n';
-
 import {
   fetchChangeRequest,
   fetchRegistrationRequest,
   type ChangeRequest,
   type RegistrationRequest,
 } from '../../../lib/api/requests';
-
+import { fetchUser, type User } from '../../../lib/api/users';
 import { formatDateTime } from '../../../lib/format';
 import {
   fraudRiskBadge,
@@ -20,104 +21,246 @@ import {
   requestTypeLabelKey,
 } from '../../../lib/requestsBadges';
 import { dotVariantFromBadgeVariant } from '../../../lib/variantMap';
-
 import { ListShell } from '../../../components/layout/ListShell';
 import { PageHeader } from '../../../components/layout/PageHeader';
-
+import { Alert } from '../../../components/ui/Alert';
 import { Badge } from '../../../components/ui/Badge';
 import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
 import { ErrorState } from '../../../components/ui/ErrorState';
-import { LinkButton } from '../../../components/ui/LinkButton';
 import { LoadingState } from '../../../components/ui/LoadingState';
-import { StatCard } from '../../../components/ui/StatCard';
 import { StatusDot } from '../../../components/ui/StatusDot';
+import { RequestAddressMapLink } from './RequestAddressMapLink';
+import { requestMatchesReviewTarget, requestResourceLabel, safeRequestsReturnTo } from './RequestDetailModel';
+import { RequestFraudChecks } from './RequestFraudChecks';
 import {
   RequestOperationalLinks,
   RequestReviewActions,
   requestOperationalLinks,
 } from './RequestReviewActions';
-import { RequestAddressMapLink } from './RequestAddressMapLink';
+import { resourceId, safePositiveInteger } from './RequestReviewModel';
 
-function safeNumber(value: string | undefined): number | undefined {
-  const t = String(value ?? '').trim();
-  if (!t) return undefined;
-  const n = Number(t);
-  if (!Number.isFinite(n)) return undefined;
-  const i = Math.floor(n);
-  if (i <= 0) return undefined;
-  return i;
+class RequestTypeMismatchError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'RequestTypeMismatchError';
+  }
 }
 
-function userLabel(u: any): string {
-  if (!u) return '—';
-  if (typeof u.login === 'string') return u.login;
-  if (typeof u.label === 'string') return u.label;
-  if (typeof u.id === 'number') return `#${u.id}`;
-  return String(u);
+function userLabel(value: unknown): string {
+  if (!value) return '—';
+  if (typeof value === 'object') {
+    const user = value as Record<string, unknown>;
+    if (typeof user['login'] === 'string' && user['login']) return user['login'];
+    if (typeof user['label'] === 'string' && user['label']) return user['label'];
+    if (typeof user['id'] === 'number' || typeof user['id'] === 'string') return `#${user['id']}`;
+  }
+  return String(value);
+}
+
+function stringValue(value: unknown): string {
+  if (value == null || value === '') return '—';
+  return String(value);
+}
+
+function DetailField(props: { label: React.ReactNode; value: unknown; wide?: boolean; testId?: string }) {
+  return (
+    <div className={props.wide ? 'md:col-span-2' : undefined} data-testid={props.testId}>
+      <dt className="text-xs text-muted">{props.label}</dt>
+      <dd className="mt-0.5 whitespace-pre-wrap break-words text-sm">{stringValue(props.value)}</dd>
+    </div>
+  );
+}
+
+function RegistrationDetails(props: { request: RegistrationRequest }) {
+  const { t } = useI18n();
+  const request = props.request;
+
+  return (
+    <dl className="grid grid-cols-1 gap-4 md:grid-cols-2" data-testid="admin.requests.detail.registration.fields">
+      <DetailField label={t('requests.field.login')} value={request.login} />
+      <DetailField label={t('requests.field.full_name')} value={request.full_name} />
+      <DetailField label={t('requests.field.org')} value={request.org_name} />
+      <DetailField label={t('requests.detail.org_id')} value={request.org_id} />
+      <DetailField label={t('requests.field.email')} value={request.email} />
+      <DetailField label={t('requests.field.year_of_birth')} value={request.year_of_birth} />
+      <div className="md:col-span-2">
+        <dt className="text-xs text-muted">{t('requests.field.address')}</dt>
+        <dd className="mt-1">
+          <RequestAddressMapLink
+            address={request.address}
+            testId="admin.requests.detail.registration.address.map"
+          />
+        </dd>
+      </div>
+      <DetailField label={t('requests.field.how')} value={request.how} />
+      <DetailField label={t('requests.field.note')} value={request.note} />
+      <DetailField label={t('requests.field.os_template')} value={requestResourceLabel(request.os_template)} />
+      <DetailField label={t('requests.field.location')} value={requestResourceLabel(request.location)} />
+      <DetailField label={t('requests.field.currency')} value={request.currency?.toUpperCase()} />
+      <DetailField label={t('requests.field.language')} value={requestResourceLabel(request.language)} />
+      <DetailField label={t('requests.field.time_zone')} value={request.time_zone} wide />
+    </dl>
+  );
+}
+
+function embeddedUser(request: ChangeRequest): Partial<User> | undefined {
+  if (!request.user || typeof request.user !== 'object') return undefined;
+  return request.user as Partial<User>;
+}
+
+function ChangeDetails(props: {
+  request: ChangeRequest;
+  currentUser?: User;
+  currentLoading: boolean;
+  currentUnavailable: boolean;
+}) {
+  const { t } = useI18n();
+  const current = props.currentUser ?? embeddedUser(props.request);
+  const rows = [
+    { key: 'full_name', label: t('requests.field.full_name'), current: current?.full_name, requested: props.request.full_name },
+    { key: 'email', label: t('requests.field.email'), current: current?.email, requested: props.request.email },
+    { key: 'address', label: t('requests.field.address'), current: current?.address, requested: props.request.address },
+  ];
+
+  const currentValue = (value: unknown) => {
+    if (props.currentLoading) return t('common.loading');
+    if (value == null && props.currentUnavailable) return t('requests.detail.change.current_unavailable');
+    if (value == null || value === '') return t('requests.detail.change.empty_value');
+    return String(value);
+  };
+
+  const requestedValue = (key: string, value: unknown) => {
+    if (!Object.prototype.hasOwnProperty.call(props.request, key) || value == null) {
+      return { text: t('requests.detail.change.no_change'), className: 'text-muted' };
+    }
+    if (value === '') {
+      return { text: t('requests.detail.change.clear_value'), className: 'text-danger' };
+    }
+    return { text: String(value), className: 'font-medium' };
+  };
+
+  return (
+    <div className="space-y-4" data-testid="admin.requests.detail.change.comparison">
+      {props.currentUnavailable ? (
+        <Alert variant="warn" testId="admin.requests.detail.change.current_fallback">
+          {t('requests.detail.change.fallback')}
+        </Alert>
+      ) : null}
+
+      <div className="overflow-x-auto rounded-lg border border-border">
+        <table className="min-w-full text-sm">
+          <thead className="bg-surface-2 text-left text-xs text-muted">
+            <tr>
+              <th className="px-3 py-2 font-medium">{t('requests.detail.change.field')}</th>
+              <th className="px-3 py-2 font-medium">{t('requests.detail.change.current')}</th>
+              <th className="px-3 py-2 font-medium">{t('requests.detail.change.requested')}</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {rows.map((row) => (
+              (() => {
+                const requested = requestedValue(row.key, row.requested);
+                return (
+                  <tr key={row.key} data-testid={`admin.requests.detail.change.${row.key}`}>
+                    <th className="px-3 py-3 text-left align-top font-medium">{row.label}</th>
+                    <td
+                      className="max-w-xs whitespace-pre-wrap break-words px-3 py-3 align-top text-muted"
+                      data-testid={`admin.requests.detail.change.${row.key}.current`}
+                    >
+                      {currentValue(row.current)}
+                    </td>
+                    <td
+                      className={`max-w-xs whitespace-pre-wrap break-words px-3 py-3 align-top ${requested.className}`}
+                      data-testid={`admin.requests.detail.change.${row.key}.requested`}
+                    >
+                      {requested.text}
+                    </td>
+                  </tr>
+                );
+              })()
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <dl>
+        <DetailField label={t('requests.field.change_reason')} value={props.request.change_reason} wide />
+      </dl>
+    </div>
+  );
 }
 
 export function RequestDetailPage() {
   const { basePath, mode } = useAppMode();
-  const isAdmin = mode === 'admin';
+  const auth = useAuth();
+  const isAdmin = mode === 'admin' && auth.role === 'admin';
+  const canResolve = isAdmin;
   const { t } = useI18n();
   const navigate = useNavigate();
-
-  const boolLabel = (v: any): string => {
-    if (v === true) return t('common.yes');
-    if (v === false) return t('common.no');
-    return '—';
-  };
+  const location = useLocation();
   const params = useParams();
   const typeParam = String(params['type'] ?? '').trim();
   const reqType = typeParam === 'registration' || typeParam === 'change' ? typeParam : null;
-  const reqId = safeNumber(params['requestId']);
+  const reqId = safePositiveInteger(params['requestId']);
+  const locationState = location.state && typeof location.state === 'object'
+    ? location.state as Record<string, unknown>
+    : undefined;
+  const queryReturnTo = new URLSearchParams(location.search).get('returnTo');
+  const returnTo = safeRequestsReturnTo(locationState?.['returnTo'] ?? queryReturnTo, basePath);
 
-  const q = useQuery({
+  const requestQ = useQuery({
     queryKey: ['user_request', reqType, 'show', reqId],
     enabled: Boolean(isAdmin && reqType && reqId),
     queryFn: async () => {
       if (!reqType || !reqId) throw new Error('invalid request');
-      if (reqType === 'registration') return (await fetchRegistrationRequest(reqId)).data;
-      return (await fetchChangeRequest(reqId)).data;
+      const loaded = reqType === 'registration'
+        ? (await fetchRegistrationRequest(reqId)).data
+        : (await fetchChangeRequest(reqId)).data;
+      if (!requestMatchesReviewTarget(loaded, reqType, reqId)) {
+        throw new RequestTypeMismatchError(t('requests.detail.type_mismatch'));
+      }
+      return loaded;
     },
   });
 
-  const request = q.data as RegistrationRequest | ChangeRequest | undefined;
+  const request = requestQ.data as RegistrationRequest | ChangeRequest | undefined;
+  const changeUserId = reqType === 'change' ? resourceId(request?.user) : null;
+  const currentUserQ = useQuery({
+    queryKey: ['users', 'show', changeUserId, 'request-comparison'],
+    enabled: Boolean(isAdmin && reqType === 'change' && request && changeUserId),
+    queryFn: async () => (await fetchUser(changeUserId as number)).data,
+    retry: false,
+  });
 
   const state = String(request?.state ?? '').trim();
-  const stateVar = requestStateBadgeVariant(state);
-  const dotVar = dotVariantFromBadgeVariant(stateVar);
-
+  const stateVariant = requestStateBadgeVariant(state);
+  const dotVariant = dotVariantFromBadgeVariant(stateVariant);
   const risk = useMemo(() => {
     if (!request || reqType !== 'registration') return null;
-    return fraudRiskBadge(request as any);
+    return fraudRiskBadge(request as RegistrationRequest);
   }, [reqType, request]);
-
   const { actionStateId, transactionChainId, transactionId } = requestOperationalLinks(request);
   const hasOperationalLinks = Boolean(actionStateId || transactionChainId || transactionId);
 
   if (!reqType || !reqId) {
     return (
       <ListShell>
-        <ErrorState title={t('requests.detail.invalid')} error={{ message: t('requests.detail.invalid.body') } as any} />
+        <ErrorState title={t('requests.detail.invalid')} error={{ message: t('requests.detail.invalid.body') }} />
       </ListShell>
     );
   }
 
   if (!isAdmin) return <Navigate to="/app" replace />;
+  if (requestQ.isLoading) return <ListShell><LoadingState /></ListShell>;
 
-  if (q.isLoading) {
+  if (requestQ.isError) {
+    const mismatch = requestQ.error instanceof RequestTypeMismatchError;
     return (
       <ListShell>
-        <LoadingState />
-      </ListShell>
-    );
-  }
-
-  if (q.isError) {
-    return (
-      <ListShell>
-        <ErrorState title={t('requests.detail.load_error.title')} error={q.error as any} />
+        <ErrorState
+          title={mismatch ? t('requests.detail.type_mismatch') : t('requests.detail.load_error.title')}
+          error={requestQ.error}
+        />
       </ListShell>
     );
   }
@@ -125,7 +268,7 @@ export function RequestDetailPage() {
   if (!request) {
     return (
       <ListShell>
-        <ErrorState title={t('requests.detail.load_error.title')} error={{ message: t('requests.detail.not_found') } as any} />
+        <ErrorState title={t('requests.detail.load_error.title')} error={{ message: t('requests.detail.not_found') }} />
       </ListShell>
     );
   }
@@ -134,236 +277,127 @@ export function RequestDetailPage() {
     <ListShell>
       <PageHeader
         title={`${t(requestTypeLabelKey(reqType))} #${reqId}`}
-        description={
-          <span className="inline-flex items-center gap-2">
-            <StatusDot variant={dotVar} testId={`admin.requests.detail.${reqType}.${reqId}.dot`} />
-            <Badge variant={stateVar}>{t(requestStateLabelKey(state))}</Badge>
-            {isAdmin && risk ? (
+        description={(
+          <span className="inline-flex flex-wrap items-center gap-2">
+            <StatusDot variant={dotVariant} testId={`admin.requests.detail.${reqType}.${reqId}.dot`} />
+            <Badge variant={stateVariant}>{t(requestStateLabelKey(state))}</Badge>
+            {risk ? (
               <Badge variant={risk.variant} title={t('requests.risk.tooltip', { score: risk.score })}>
                 {t(risk.labelKey)} {risk.score}
               </Badge>
             ) : null}
           </span>
-        }
-        actions={
-          <div className="flex items-center gap-2">
-            <Link className="text-sm text-accent hover:underline" to={`${basePath}/requests`}>
-              {t('common.back')}
-            </Link>
-            {isAdmin && actionStateId ? (
-              <LinkButton to={`${basePath}/action-states/${actionStateId}`} variant="secondary" testId="admin.requests.detail.open_action_state">
-                {t('common.action_state')} #{actionStateId}
-              </LinkButton>
-            ) : null}
-            {isAdmin && transactionChainId ? (
-              <LinkButton to={`${basePath}/transactions/${transactionChainId}`} variant="secondary" testId="admin.requests.detail.open_chain">
-                {t('common.chain')} #{transactionChainId}
-              </LinkButton>
-            ) : null}
-          </div>
-        }
+        )}
+        actions={(
+          <Link className="text-sm text-accent hover:underline" to={returnTo} data-testid="admin.requests.detail.back">
+            {t('common.back')}
+          </Link>
+        )}
       />
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader title={t('requests.detail.card.request')} />
-          <CardBody>
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <div>
-                <div className="text-xs text-muted">{t('common.user')}</div>
-                <div className="text-sm">
-                  {request.user ? (
-                    isAdmin ? (
-                      <Link className="text-accent hover:underline" to={`${basePath}/users/${(request.user as any).id}`}>
-                        {userLabel(request.user)}
-                      </Link>
-                    ) : (
-                      userLabel(request.user)
-                    )
-                  ) : (
-                    '—'
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <div className="text-xs text-muted">{t('requests.detail.admin')}</div>
-                <div className="text-sm">{userLabel((request as any).admin)}</div>
-              </div>
-
-              <div>
-                <div className="text-xs text-muted">{t('common.created')}</div>
-                <div className="text-sm">{formatDateTime((request as any).created_at)}</div>
-              </div>
-
-              <div>
-                <div className="text-xs text-muted">{t('common.updated')}</div>
-                <div className="text-sm">{formatDateTime((request as any).updated_at)}</div>
-              </div>
-
-              <div>
-                <div className="text-xs text-muted">{t('requests.detail.api_ip')}</div>
-                <div className="text-sm">{String((request as any).api_ip_addr ?? '—')}</div>
-                <div className="text-xs text-muted">{String((request as any).api_ip_ptr ?? '')}</div>
-              </div>
-
-              <div>
-                <div className="text-xs text-muted">{t('requests.detail.client_ip')}</div>
-                <div className="text-sm">{String((request as any).client_ip_addr ?? '—')}</div>
-                <div className="text-xs text-muted">{String((request as any).client_ip_ptr ?? '')}</div>
-              </div>
-            </div>
-
-            <div className="mt-4 border-t border-border pt-4">
-              {isAdmin && reqType === 'registration' ? (
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  <div>
-                    <div className="text-xs text-muted">{t('requests.field.login')}</div>
-                    <div className="text-sm">{String((request as any).login ?? '—')}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted">{t('requests.field.full_name')}</div>
-                    <div className="text-sm">{String((request as any).full_name ?? '—')}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted">{t('requests.field.org')}</div>
-                    <div className="text-sm">
-                      {String((request as any).org_name ?? '—')} {String((request as any).org_id ?? '')}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted">{t('requests.field.email')}</div>
-                    <div className="text-sm">{String((request as any).email ?? '—')}</div>
-                  </div>
-                  <div className="md:col-span-2">
-                    <div className="text-xs text-muted">{t('requests.field.address')}</div>
-                    <RequestAddressMapLink
-                      address={(request as any).address}
-                      testId="admin.requests.detail.registration.address.map"
-                    />
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted">{t('requests.field.how')}</div>
-                    <div className="text-sm">{String((request as any).how ?? '—')}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted">{t('requests.field.note')}</div>
-                    <div className="text-sm">{String((request as any).note ?? '—')}</div>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  <div>
-                    <div className="text-xs text-muted">{t('requests.field.full_name')}</div>
-                    <div className="text-sm">{String((request as any).full_name ?? '—')}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted">{t('requests.field.email')}</div>
-                    <div className="text-sm">{String((request as any).email ?? '—')}</div>
-                  </div>
-                  <div className="md:col-span-2">
-                    <div className="text-xs text-muted">{t('requests.field.address')}</div>
-                    <div className="text-sm whitespace-pre-line">{String((request as any).address ?? '—')}</div>
-                  </div>
-                  <div className="md:col-span-2">
-                    <div className="text-xs text-muted">{t('requests.field.change_reason')}</div>
-                    <div className="text-sm whitespace-pre-line">{String((request as any).change_reason ?? '—')}</div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </CardBody>
-        </Card>
-
-        <div className="space-y-3">
-          <Card>
-            <CardHeader title={t('requests.detail.card.state')} />
-            <CardBody>
+        <aside className="lg:col-start-3 lg:row-start-1">
+          <Card testId="admin.requests.detail.decision">
+            <CardHeader title={t('requests.detail.decision.title')} subtitle={t('requests.detail.decision.subtitle')} />
+            <CardBody className="space-y-4">
               <div className="flex items-center gap-2">
-                <StatusDot variant={dotVar} testId={`admin.requests.detail.${reqType}.${reqId}.dot`} />
-                <Badge variant={stateVar}>{t(requestStateLabelKey(state))}</Badge>
+                <StatusDot variant={dotVariant} />
+                <Badge variant={stateVariant}>{t(requestStateLabelKey(state))}</Badge>
               </div>
-              {(request as any).admin_response ? (
-                <div className="mt-3">
+              {request.admin_response ? (
+                <div>
                   <div className="text-xs text-muted">{t('requests.detail.admin_response')}</div>
-                  <div className="mt-1 whitespace-pre-line text-sm">{String((request as any).admin_response)}</div>
+                  <div className="mt-1 whitespace-pre-line text-sm">{request.admin_response}</div>
                 </div>
               ) : null}
+              <RequestReviewActions
+                request={request}
+                reqType={reqType}
+                reqId={reqId}
+                isAdmin={canResolve}
+                basePath={basePath}
+                testIdPrefix="admin.requests.resolve"
+                onResolved={() => navigate(returnTo, { replace: true })}
+              />
+            </CardBody>
+          </Card>
+        </aside>
+
+        <section className="space-y-3 lg:col-span-2 lg:col-start-1 lg:row-start-1">
+          <Card>
+            <CardHeader
+              title={reqType === 'registration' ? t('requests.detail.registration.title') : t('requests.detail.change.title')}
+              subtitle={reqType === 'registration' ? t('requests.detail.registration.subtitle') : t('requests.detail.change.subtitle')}
+            />
+            <CardBody>
+              {reqType === 'registration' ? (
+                <RegistrationDetails request={request as RegistrationRequest} />
+              ) : (
+                <ChangeDetails
+                  request={request as ChangeRequest}
+                  currentUser={currentUserQ.data}
+                  currentLoading={currentUserQ.isLoading}
+                  currentUnavailable={!changeUserId || currentUserQ.isError}
+                />
+              )}
             </CardBody>
           </Card>
 
-          {isAdmin && hasOperationalLinks ? (
-            <Card testId="admin.requests.detail.ops">
-              <CardHeader title={t('requests.detail.card.operations')} />
-              <CardBody>
-                <RequestOperationalLinks request={request} basePath={basePath} compact testIdPrefix="admin.requests.detail" />
+          {reqType === 'registration' ? <RequestFraudChecks request={request as RegistrationRequest} /> : null}
+
+          <Card testId="admin.requests.detail.metadata">
+            <details className="group">
+              <summary
+                className="flex cursor-pointer list-none items-center gap-2 p-4 font-semibold"
+                data-testid="admin.requests.detail.metadata.toggle"
+              >
+                <ChevronRight
+                  className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90"
+                  aria-hidden
+                  data-testid="admin.requests.detail.metadata.chevron"
+                />
+                <span>
+                  {t('requests.detail.metadata.title')}
+                  <span className="ml-2 text-sm font-normal text-muted">{t('requests.detail.metadata.subtitle')}</span>
+                </span>
+              </summary>
+              <CardBody className="border-t border-border">
+                <dl className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <dt className="text-xs text-muted">{t('common.user')}</dt>
+                    <dd className="mt-0.5 text-sm">
+                      {resourceId(request.user) ? (
+                        <Link className="text-accent hover:underline" to={`${basePath}/users/${resourceId(request.user)}`}>
+                          {userLabel(request.user)}
+                        </Link>
+                      ) : userLabel(request.user)}
+                    </dd>
+                  </div>
+                  <DetailField label={t('requests.detail.admin')} value={userLabel(request.admin)} />
+                  <DetailField label={t('common.created')} value={formatDateTime(request.created_at)} />
+                  <DetailField label={t('common.updated')} value={formatDateTime(request.updated_at)} />
+                  <div>
+                    <dt className="text-xs text-muted">{t('requests.detail.api_ip')}</dt>
+                    <dd className="mt-0.5 text-sm">{stringValue(request.api_ip_addr)}</dd>
+                    {request.api_ip_ptr ? <dd className="text-xs text-muted">{request.api_ip_ptr}</dd> : null}
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted">{t('requests.detail.client_ip')}</dt>
+                    <dd className="mt-0.5 text-sm">{stringValue(request.client_ip_addr)}</dd>
+                    {request.client_ip_ptr ? <dd className="text-xs text-muted">{request.client_ip_ptr}</dd> : null}
+                  </div>
+                </dl>
+                {hasOperationalLinks ? (
+                  <div className="mt-4 border-t border-border pt-4">
+                    <div className="mb-2 text-xs text-muted">{t('requests.detail.card.operations')}</div>
+                    <RequestOperationalLinks request={request} basePath={basePath} compact testIdPrefix="admin.requests.detail" />
+                  </div>
+                ) : null}
               </CardBody>
-            </Card>
-          ) : null}
-
-          {isAdmin ? (
-            <Card>
-              <CardHeader title={t('requests.detail.card.actions')} />
-              <CardBody>
-                <RequestReviewActions
-                  request={request}
-                  reqType={reqType}
-                  reqId={reqId}
-                  isAdmin={isAdmin}
-                  basePath={basePath}
-                  testIdPrefix="admin.requests.resolve"
-                  onResolved={() => navigate(`${basePath}/requests`, { replace: true })}
-                />
-              </CardBody>
-            </Card>
-          ) : null}
-
-          {reqType === 'registration' ? (
-            <>
-              <div className="grid grid-cols-1 gap-3">
-                <StatCard
-                  title={t('requests.detail.risk.ip_fraud')}
-                  value={
-                    typeof (request as any).ip_fraud_score === 'number'
-                      ? String((request as any).ip_fraud_score)
-                      : '—'
-                  }
-                  description={t('requests.detail.risk.ip_flags')}
-                  footer={
-                    <div className="space-y-1">
-                      <div>
-                        {t('requests.detail.risk.ip_proxy')}: {boolLabel((request as any).ip_proxy)} / {t('requests.detail.risk.ip_vpn')}: {boolLabel((request as any).ip_vpn)} / {t('requests.detail.risk.ip_tor')}:
-                        {' '}{boolLabel((request as any).ip_tor)}
-                      </div>
-                      <div>{t('requests.detail.risk.ip_recent_abuse')}: {boolLabel((request as any).ip_recent_abuse)}</div>
-                    </div>
-                  }
-                  variant="compact"
-                />
-
-                <StatCard
-                  title={t('requests.detail.risk.mail_fraud')}
-                  value={
-                    typeof (request as any).mail_fraud_score === 'number'
-                      ? String((request as any).mail_fraud_score)
-                      : '—'
-                  }
-                  description={t('requests.detail.risk.mail_flags')}
-                  footer={
-                    <div className="space-y-1">
-                      <div>{t('requests.detail.risk.mail_valid')}: {boolLabel((request as any).mail_valid)} / {t('requests.detail.risk.mail_disposable')}: {boolLabel((request as any).mail_disposable)}</div>
-                      <div>{t('requests.detail.risk.mail_deliverability')}: {String((request as any).mail_deliverability ?? '—')}</div>
-                      <div>{t('requests.detail.risk.mail_leaked')}: {boolLabel((request as any).mail_leaked)} / {t('requests.detail.risk.mail_suspect')}: {boolLabel((request as any).mail_suspect)}</div>
-                    </div>
-                  }
-                  variant="compact"
-                />
-              </div>
-            </>
-          ) : null}
-        </div>
+            </details>
+          </Card>
+        </section>
       </div>
-
     </ListShell>
   );
 }

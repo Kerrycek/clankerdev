@@ -127,14 +127,13 @@ describe('requests API wrappers', () => {
     );
   });
 
-  test('fetchRegistrationRequests forwards q and structured filters', async () => {
+  test('fetchRegistrationRequests forwards only supported structured filters', async () => {
     globalThis.fetch = mockFetchOk({ registrations: [], _meta: { total_count: 0 } });
 
     await fetchRegistrationRequests({
       limit: 25,
       fromId: 77,
       state: 'awaiting',
-      q: 'alice',
       userId: 7,
       adminId: 2,
       apiIpAddr: '192.0.2.10',
@@ -150,7 +149,7 @@ describe('requests API wrappers', () => {
     expect(u.searchParams.get('registration[limit]')).toBe('25');
     expect(u.searchParams.get('registration[from_id]')).toBe('77');
     expect(u.searchParams.get('registration[state]')).toBe('awaiting');
-    expect(u.searchParams.get('registration[q]')).toBe('alice');
+    expect(u.searchParams.has('registration[q]')).toBe(false);
     expect(u.searchParams.get('registration[user]')).toBe('7');
     expect(u.searchParams.get('registration[admin]')).toBe('2');
     expect(u.searchParams.get('registration[api_ip_addr]')).toBe('192.0.2.10');
@@ -159,14 +158,13 @@ describe('requests API wrappers', () => {
     expect(u.searchParams.get('_meta[count]')).toBe('true');
   });
 
-  test('fetchChangeRequests forwards q and structured filters', async () => {
+  test('fetchChangeRequests forwards only supported structured filters', async () => {
     globalThis.fetch = mockFetchOk({ changes: [], _meta: { total_count: 0 } });
 
     await fetchChangeRequests({
       limit: 15,
       fromId: 88,
       state: 'approved',
-      q: 'rename',
       userId: 9,
       adminId: 3,
       apiIpAddr: '192.0.2.20',
@@ -182,7 +180,7 @@ describe('requests API wrappers', () => {
     expect(u.searchParams.get('change[limit]')).toBe('15');
     expect(u.searchParams.get('change[from_id]')).toBe('88');
     expect(u.searchParams.get('change[state]')).toBe('approved');
-    expect(u.searchParams.get('change[q]')).toBe('rename');
+    expect(u.searchParams.has('change[q]')).toBe(false);
     expect(u.searchParams.get('change[user]')).toBe('9');
     expect(u.searchParams.get('change[admin]')).toBe('3');
     expect(u.searchParams.get('change[api_ip_addr]')).toBe('192.0.2.20');

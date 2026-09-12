@@ -6,6 +6,7 @@ describe('objectRef', () => {
   it('parses kind:id keys', () => {
     expect(parseObjectRefKey('Vps:123')).toEqual({ kind: 'Vps', id: 123 });
     expect(parseObjectRefKey('Dataset:1')).toEqual({ kind: 'Dataset', id: 1 });
+    expect(parseObjectRefKey('UserRequest:77')).toEqual({ kind: 'UserRequest', id: 77 });
   });
 
   it('rejects invalid keys', () => {

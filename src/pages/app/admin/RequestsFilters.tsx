@@ -1,23 +1,18 @@
 import React, { useMemo } from 'react';
-import { CircleHelp, SlidersHorizontal } from 'lucide-react';
+import { CheckSquare, SlidersHorizontal, X } from 'lucide-react';
 
 import { useI18n } from '../../../app/i18n';
-import { useToasts } from '../../../app/toasts';
-import {
-  requestStateBadgeVariant,
-  requestStateLabelKey,
-  requestTypeLabelKey,
-} from '../../../lib/requestsBadges';
+import { requestStateBadgeVariant, requestStateLabelKey } from '../../../lib/requestsBadges';
 import { tableVariantFromBadgeVariant } from '../../../lib/variantMap';
 
 import { FilterBar } from '../../../components/layout/FilterBar';
 import { Button } from '../../../components/ui/Button';
 import { CopyButton } from '../../../components/ui/CopyButton';
+import { Drawer } from '../../../components/ui/Drawer';
 import { FilterChip } from '../../../components/ui/FilterChip';
 import { Input } from '../../../components/ui/Input';
 import { Select } from '../../../components/ui/Select';
 import { SmartFilterInput, type SmartFilterSuggestion } from '../../../components/ui/SmartFilterInput';
-import { SmartInputHelp } from '../../../components/ui/SmartInputHelp';
 import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 import type { ToneVariant } from '../../../components/ui/tone';
 
@@ -30,103 +25,75 @@ import {
 } from './RequestsModel';
 
 export function RequestsFilters(props: {
-  isAdmin: boolean;
   type: RequestTypeFilter;
   state: string;
-  qText: string;
   userId: string;
   adminId: string;
   apiIp: string;
   clientIp: string;
   clientPtr: string;
   smart: string;
-  smartNeedle: string;
-  smartErrors: string[];
   smartSuggestions: SmartFilterSuggestion[];
-  helpOpen: boolean;
+  smartBusy: boolean;
   advancedOpen: boolean;
   filtersActive: boolean;
   shareUrl: string;
-  rowsLength: number;
-  allVisibleExpanded: boolean;
+  selectionMode: boolean;
+  canSelect: boolean;
   smartInputRef: React.RefObject<HTMLInputElement | null>;
   setType: (value: RequestTypeFilter) => void;
   setState: (value: string) => void;
-  setQText: (value: string) => void;
   setUserId: (value: string) => void;
   setAdminId: (value: string) => void;
   setApiIp: (value: string) => void;
   setClientIp: (value: string) => void;
   setClientPtr: (value: string) => void;
   setSmart: (value: string) => void;
-  setSmartErrors: (value: string[]) => void;
-  setHelpOpen: (value: boolean) => void;
   setAdvancedOpen: (value: boolean) => void;
+  setSelectionMode: (value: boolean) => void;
   applySmartText: (value: string) => void | Promise<void>;
   clearFilters: () => void;
-  expandAllVisible: () => void;
-  collapseAllVisible: () => void;
 }) {
   const { t } = useI18n();
-  const toasts = useToasts();
-
-  const stateTrim = props.state.trim() || undefined;
-  const qTrim = props.qText.trim() || undefined;
+  const stateTrim = props.state.trim() || DEFAULT_ADMIN_REQUEST_STATE;
   const userIdNum = safeNumber(props.userId);
   const adminIdNum = safeNumber(props.adminId);
 
   const activeFilterChips = useMemo(() => {
     const chips: React.ReactNode[] = [];
 
-    if (props.type && props.type !== 'all') {
-      chips.push(
-        <FilterChip
-          key="type"
-          label={`type:${t(requestTypeLabelKey(props.type))}`}
-          onRemove={() => props.setType('all')}
-          testId="admin.requests.chip.type"
-        />
-      );
-    }
-
-    if (stateTrim && stateTrim !== DEFAULT_ADMIN_REQUEST_STATE) {
-      const tone = stateTrim === ALL_ADMIN_REQUEST_STATES
-        ? 'neutral'
-        : (tableVariantFromBadgeVariant(requestStateBadgeVariant(stateTrim)) ?? 'neutral') as ToneVariant;
+    if (![DEFAULT_ADMIN_REQUEST_STATE, 'pending_correction', ALL_ADMIN_REQUEST_STATES].includes(stateTrim)) {
+      const tone = (tableVariantFromBadgeVariant(requestStateBadgeVariant(stateTrim)) ?? 'neutral') as ToneVariant;
       chips.push(
         <FilterChip
           key="state"
-          label={`state:${stateTrim === ALL_ADMIN_REQUEST_STATES ? t('requests.list.filter.state.all') : t(requestStateLabelKey(stateTrim))}`}
+          label={t(requestStateLabelKey(stateTrim))}
           tone={tone}
           onRemove={() => props.setState(DEFAULT_ADMIN_REQUEST_STATE)}
           testId="admin.requests.chip.state"
-        />
+        />,
       );
     }
 
-    if (qTrim) {
-      chips.push(<FilterChip key="q" label={`q:${qTrim}`} onRemove={() => props.setQText('')} testId="admin.requests.chip.q" />);
-    }
-
-    if (props.isAdmin && userIdNum !== undefined) {
+    if (userIdNum !== undefined) {
       chips.push(
         <FilterChip
           key="user"
-          label={`user:#${userIdNum}`}
+          label={`${t('requests.list.filter.user.label')}: #${userIdNum}`}
           onRemove={() => props.setUserId('')}
           testId="admin.requests.chip.user"
-        />
+        />,
       );
     }
 
-    if (props.isAdmin && adminIdNum !== undefined) {
+    if (adminIdNum !== undefined) {
       chips.push(
         <FilterChip
           key="admin"
-          label={`admin:#${adminIdNum}`}
+          label={`${t('requests.list.filter.admin.label')}: #${adminIdNum}`}
           onRemove={() => props.setAdminId('')}
           testId="admin.requests.chip.admin"
-        />
+        />,
       );
     }
 
@@ -134,10 +101,10 @@ export function RequestsFilters(props: {
       chips.push(
         <FilterChip
           key="api_ip"
-          label={`api_ip:${props.apiIp.trim()}`}
+          label={`${t('requests.list.filter.api_ip.label')}: ${props.apiIp.trim()}`}
           onRemove={() => props.setApiIp('')}
           testId="admin.requests.chip.api_ip"
-        />
+        />,
       );
     }
 
@@ -145,10 +112,10 @@ export function RequestsFilters(props: {
       chips.push(
         <FilterChip
           key="client_ip"
-          label={`client_ip:${props.clientIp.trim()}`}
+          label={`${t('requests.list.filter.client_ip.label')}: ${props.clientIp.trim()}`}
           onRemove={() => props.setClientIp('')}
           testId="admin.requests.chip.client_ip"
-        />
+        />,
       );
     }
 
@@ -156,344 +123,215 @@ export function RequestsFilters(props: {
       chips.push(
         <FilterChip
           key="client_ptr"
-          label={`client_ptr:${props.clientPtr.trim()}`}
+          label={`${t('requests.list.filter.client_ptr.label')}: ${props.clientPtr.trim()}`}
           onRemove={() => props.setClientPtr('')}
           testId="admin.requests.chip.client_ptr"
-        />
+        />,
       );
     }
 
-    props.smartErrors.forEach((error, index) => {
-      chips.push(
-        <FilterChip
-          key={`err.${index}`}
-          label={error}
-          tone="danger"
-          onRemove={() => props.setSmartErrors([])}
-          testId={`admin.requests.chip.error.${index}`}
-        />
-      );
-    });
-
     return chips;
-  }, [
-    adminIdNum,
-    props,
-    qTrim,
-    stateTrim,
-    t,
-    userIdNum,
-  ]);
+  }, [adminIdNum, props, stateTrim, t, userIdNum]);
 
-  const helpExamples = props.isAdmin
-    ? [
-        { example: '?', description: t('requests.list.smart_help.examples.help') },
-        { example: '123', description: t('requests.list.smart_help.examples.open_id') },
-        { example: 'alice', description: t('requests.list.smart_help.examples.search') },
-        { example: 'state:awaiting', description: t('requests.list.smart_help.examples.state') },
-        { example: 'type:registration', description: t('requests.list.smart_help.examples.type') },
-        { example: 'user:alice', description: t('requests.list.smart_help.examples.user') },
-      ]
-    : [
-        { example: '?', description: t('requests.list.smart_help.examples.help') },
-        { example: '123', description: t('requests.list.smart_help.examples.open_id') },
-        { example: 'address change', description: t('requests.list.smart_help.examples.search') },
-        { example: 'state:awaiting', description: t('requests.list.smart_help.examples.state') },
-        { example: 'type:change', description: t('requests.list.smart_help.examples.type') },
-      ];
-
-  const helpTopKeys = props.isAdmin
-    ? [
-        { key: 'q', description: t('requests.list.smart_help.keys.q'), example: 'q:alice' },
-        { key: 'state', description: t('requests.list.smart_help.keys.state'), example: 'state:awaiting' },
-        { key: 'type', description: t('requests.list.smart_help.keys.type'), example: 'type:change' },
-        { key: 'user', description: t('requests.list.smart_help.keys.user'), example: 'user:alice' },
-        { key: 'admin', description: t('requests.list.smart_help.keys.admin'), example: 'admin:root' },
-      ]
-    : [
-        { key: 'q', description: t('requests.list.smart_help.keys.q'), example: 'q:address change' },
-        { key: 'state', description: t('requests.list.smart_help.keys.state'), example: 'state:awaiting' },
-        { key: 'type', description: t('requests.list.smart_help.keys.type'), example: 'type:change' },
-      ];
-
-  const helpMoreKeys = [
-    { key: 'api_ip', description: t('requests.list.smart_help.keys.api_ip'), example: 'api_ip:203.0.113.10' },
-    { key: 'client_ip', description: t('requests.list.smart_help.keys.client_ip'), example: 'client_ip:198.51.100.20' },
-    { key: 'client_ptr', description: t('requests.list.smart_help.keys.client_ptr'), example: 'client_ptr:example.net' },
-    { key: 'id', description: t('requests.list.smart_help.keys.id'), example: 'id:123' },
+  const stateSegments = [
+    { value: DEFAULT_ADMIN_REQUEST_STATE, label: t('requests.list.segment.review'), testId: 'admin.requests.quick.awaiting' },
+    { value: 'pending_correction', label: t('requests.list.segment.correction'), testId: 'admin.requests.quick.pending_correction' },
+    { value: ALL_ADMIN_REQUEST_STATES, label: t('requests.list.segment.all'), testId: 'admin.requests.quick.all' },
+  ];
+  const typeSegments: Array<{ value: RequestTypeFilter; label: string; testId: string }> = [
+    { value: 'all', label: t('requests.list.type.all'), testId: 'admin.requests.type.all' },
+    { value: 'registration', label: t('requests.list.type.registration'), testId: 'admin.requests.type.registration' },
+    { value: 'change', label: t('requests.list.type.change'), testId: 'admin.requests.type.change' },
   ];
 
   return (
-    <>
-      <div className="relative">
-        <FilterBar testId="admin.requests.filters">
-          <div className="w-full sm:max-w-xl">
-            <SmartFilterInput
-              ref={props.smartInputRef}
-              value={props.smart}
-              onChange={(value) => {
-                props.setSmart(value);
-                if (props.smartErrors.length) props.setSmartErrors([]);
-              }}
-              placeholder={t('requests.list.search.placeholder')}
-              ariaLabel={t('requests.list.search.placeholder')}
-              testId="admin.requests.smart_filter.input"
-              suggestions={props.smartSuggestions}
-              onSubmit={() => void props.applySmartText(props.smart)}
-              suffix={
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 px-0"
-                  onClick={() => props.setHelpOpen(true)}
-                  aria-label={t('filters.help.open')}
-                  title={t('filters.help.open')}
-                >
-                  <CircleHelp className="h-4 w-4" aria-hidden />
-                </Button>
-              }
-            />
-
-            {activeFilterChips.length > 0 ? (
-              <div className="mt-2 flex flex-wrap gap-1" data-testid="admin.requests.active_filters">
-                {activeFilterChips}
-              </div>
-            ) : null}
-          </div>
-
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => props.setAdvancedOpen(true)}
-            aria-label={t('filters.advanced.open')}
-            title={t('filters.advanced.open')}
-          >
-            <SlidersHorizontal className="h-4 w-4" aria-hidden />
-            <span className="ml-2 hidden sm:inline">{t('filters.advanced.label')}</span>
-          </Button>
-
-          <Button
-            variant={props.state === 'awaiting' ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => props.setState(DEFAULT_ADMIN_REQUEST_STATE)}
-            aria-pressed={props.state === DEFAULT_ADMIN_REQUEST_STATE}
-            testId="admin.requests.quick.awaiting"
-          >
-            {t(requestStateLabelKey('awaiting'))}
-          </Button>
-
-          <Button
-            variant={props.state === 'pending_correction' ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => props.setState(props.state === 'pending_correction' ? DEFAULT_ADMIN_REQUEST_STATE : 'pending_correction')}
-            aria-pressed={props.state === 'pending_correction'}
-            testId="admin.requests.quick.pending_correction"
-          >
-            {t(requestStateLabelKey('pending_correction'))}
-          </Button>
-
-          <CopyButton
-            size="sm"
-            variant="secondary"
-            label={t('common.copy_link')}
-            text={props.shareUrl}
-            testId="admin.requests.copy_link"
+    <div className="relative space-y-3">
+      <FilterBar testId="admin.requests.filters">
+        <div className="w-full sm:max-w-xl">
+          <SmartFilterInput
+            ref={props.smartInputRef}
+            value={props.smart}
+            onChange={props.setSmart}
+            placeholder={t('requests.list.search.placeholder')}
+            ariaLabel={t('requests.list.search.aria')}
+            testId="admin.requests.smart_filter.input"
+            suggestions={props.smartSuggestions}
+            disabled={props.smartBusy}
+            suffix={props.smartBusy ? (
+              <span className="px-2 text-xs text-muted" aria-live="polite">{t('common.loading')}</span>
+            ) : undefined}
+            onSubmit={() => void props.applySmartText(props.smart)}
           />
+        </div>
 
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => props.setAdvancedOpen(!props.advancedOpen)}
+          aria-label={t('filters.advanced.open')}
+          aria-expanded={props.advancedOpen}
+          title={t('filters.advanced.open')}
+          testId="admin.requests.advanced.toggle"
+        >
+          <SlidersHorizontal className="h-4 w-4" aria-hidden />
+          <span className="ml-2">{t('filters.advanced.label')}</span>
+        </Button>
+
+        {props.canSelect ? (
           <Button
-            variant="secondary"
+            variant={props.selectionMode ? 'primary' : 'secondary'}
             size="sm"
-            onClick={props.allVisibleExpanded ? props.collapseAllVisible : props.expandAllVisible}
-            disabled={props.rowsLength === 0}
-            testId={props.allVisibleExpanded ? 'admin.requests.collapse_all' : 'admin.requests.expand_all'}
+            onClick={() => props.setSelectionMode(!props.selectionMode)}
+            aria-pressed={props.selectionMode}
+            testId="admin.requests.bulk.selection_mode"
           >
-            {props.allVisibleExpanded ? t('requests.list.collapse_all') : t('requests.list.expand_all')}
+            {props.selectionMode ? <X className="h-4 w-4" aria-hidden /> : <CheckSquare className="h-4 w-4" aria-hidden />}
+            <span className="ml-2">
+              {props.selectionMode ? t('requests.bulk.selection_done') : t('requests.bulk.selection_start')}
+            </span>
           </Button>
+        ) : null}
+      </FilterBar>
 
-          {props.filtersActive ? (
-            <Button variant="secondary" size="sm" onClick={props.clearFilters}>
-              {t('common.clear_filters')}
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+        <div
+          className="inline-flex w-full overflow-x-auto rounded-lg border border-border bg-surface-2 p-1 sm:w-fit"
+          role="group"
+          aria-label={t('requests.list.filter.state.aria')}
+          data-testid="admin.requests.state_segments"
+        >
+          {stateSegments.map((segment) => (
+            <Button
+              key={segment.value}
+              variant={stateTrim === segment.value ? 'primary' : 'ghost'}
+              size="sm"
+              className="whitespace-nowrap"
+              onClick={() => props.setState(segment.value)}
+              aria-pressed={stateTrim === segment.value}
+              testId={segment.testId}
+            >
+              {segment.label}
             </Button>
-          ) : null}
-        </FilterBar>
+          ))}
+        </div>
 
-        {props.advancedOpen ? (
-          <div
-            className="absolute left-0 top-full z-40 mt-2 w-drawer-xl rounded-lg border border-border bg-surface p-4 shadow-xl"
-            data-testid="admin.requests.advanced_filters"
-          >
-            <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
-              <div className="text-sm font-semibold">{t('filters.advanced.title')}</div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 px-0"
-                onClick={() => props.setAdvancedOpen(false)}
-                aria-label={t('common.close')}
-              >
-                ×
-              </Button>
-            </div>
+        <div
+          className="inline-flex w-full overflow-x-auto rounded-lg border border-border bg-surface-2 p-1 sm:w-fit"
+          role="group"
+          aria-label={t('requests.list.filter.type.aria')}
+          data-testid="admin.requests.type_segments"
+        >
+          {typeSegments.map((segment) => (
+            <Button
+              key={segment.value}
+              variant={props.type === segment.value ? 'primary' : 'ghost'}
+              size="sm"
+              className="whitespace-nowrap"
+              onClick={() => props.setType(segment.value)}
+              aria-pressed={props.type === segment.value}
+              testId={segment.testId}
+            >
+              {segment.label}
+            </Button>
+          ))}
+        </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <div className="text-sm font-medium">{t('requests.list.filter.type.label')}</div>
-                <div className="mt-1">
-                  <Select
-                    value={props.type}
-                    onChange={(event) => props.setType((event.target.value as RequestTypeFilter) || 'all')}
-                    aria-label={t('requests.list.filter.type.aria')}
-                  >
-                    <option value="all">{t('requests.list.filter.type.all')}</option>
-                    <option value="registration">{t('requests.type.registration')}</option>
-                    <option value="change">{t('requests.type.change')}</option>
-                  </Select>
-                </div>
-              </div>
-
-              <div>
-                <div className="text-sm font-medium">{t('requests.list.filter.state.label')}</div>
-                <div className="mt-1">
-                  <Select value={props.state} onChange={(event) => props.setState(event.target.value)} aria-label={t('requests.list.filter.state.aria')}>
-                    {defaultStateOptions()
-                      .filter((value) => value)
-                      .map((value) => (
-                        <option key={value} value={value}>
-                          {value === DEFAULT_ADMIN_REQUEST_STATE
-                            ? t('requests.list.filter.state.open')
-                            : t(requestStateLabelKey(value))}
-                        </option>
-                      ))}
-                    <option value={ALL_ADMIN_REQUEST_STATES}>{t('requests.list.filter.state.all')}</option>
-                  </Select>
-                </div>
-              </div>
-
-              <div>
-                <div className="text-sm font-medium">{t('requests.list.filter.user.label')}</div>
-                <div className="mt-1">
-                  <UserLookupInput
-                    value={props.userId}
-                    onChange={props.setUserId}
-                    placeholder={t('requests.list.filter.user.placeholder')}
-                    testId="admin.requests.filter.user.lookup"
-                    loadingLabel={t('common.loading')}
-                    noResultsLabel={t('palette.empty.no_results')}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="text-sm font-medium">{t('requests.list.filter.admin.label')}</div>
-                <div className="mt-1">
-                  <UserLookupInput
-                    value={props.adminId}
-                    onChange={props.setAdminId}
-                    placeholder={t('requests.list.filter.admin.placeholder')}
-                    testId="admin.requests.filter.admin.lookup"
-                    loadingLabel={t('common.loading')}
-                    noResultsLabel={t('palette.empty.no_results')}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="text-sm font-medium">{t('requests.list.filter.api_ip.label')}</div>
-                <div className="mt-1">
-                  <Input
-                    value={props.apiIp}
-                    onChange={(event) => props.setApiIp(event.target.value)}
-                    placeholder={t('requests.list.filter.api_ip.placeholder')}
-                    testId="admin.requests.filter.api_ip"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="text-sm font-medium">{t('requests.list.filter.client_ip.label')}</div>
-                <div className="mt-1">
-                  <Input
-                    value={props.clientIp}
-                    onChange={(event) => props.setClientIp(event.target.value)}
-                    placeholder={t('requests.list.filter.client_ip.placeholder')}
-                    testId="admin.requests.filter.client_ip"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="text-sm font-medium">{t('requests.list.filter.client_ptr.label')}</div>
-                <div className="mt-1">
-                  <Input
-                    value={props.clientPtr}
-                    onChange={(event) => props.setClientPtr(event.target.value)}
-                    placeholder={t('requests.list.filter.client_ptr.placeholder')}
-                    testId="admin.requests.filter.client_ptr"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 flex items-center justify-end gap-2 border-t border-border pt-3">
-              {props.filtersActive ? (
-                <Button variant="secondary" size="sm" onClick={props.clearFilters}>
-                  {t('common.clear_filters')}
-                </Button>
-              ) : null}
-              <Button variant="primary" size="sm" onClick={() => props.setAdvancedOpen(false)}>
-                {t('common.done')}
-              </Button>
-            </div>
-          </div>
+        {props.filtersActive ? (
+          <Button variant="ghost" size="sm" onClick={props.clearFilters}>
+            {t('common.clear_filters')}
+          </Button>
         ) : null}
       </div>
 
-      <SmartInputHelp
-        open={props.helpOpen}
-        onClose={() => {
-          props.setHelpOpen(false);
-          if (props.smartNeedle === '?') props.setSmart('');
-        }}
-        title={t('filters.help.title')}
-        intro={t('requests.list.smart_help.intro')}
-        examples={helpExamples}
-        topKeys={helpTopKeys}
-        moreKeys={helpMoreKeys}
-        inference={[
-          t('requests.list.smart_help.inference.enter_applies'),
-          t('requests.list.smart_help.inference.number_opens'),
-          t('requests.list.smart_help.inference.key_value'),
-        ]}
-        onInsertKey={(key) => {
-          props.setHelpOpen(false);
-          props.setSmart(`${key}:`);
-          window.requestAnimationFrame(() => props.smartInputRef.current?.focus());
-        }}
-        actions={[
-          {
-            label: t('filters.help.open_advanced'),
-            onClick: () => {
-              props.setHelpOpen(false);
-              props.setAdvancedOpen(true);
-            },
-          },
-          {
-            label: t('common.copy_link'),
-            onClick: async () => {
-              const url = typeof window !== 'undefined' ? window.location.href : '';
-              if (!url) return;
-              try {
-                await navigator.clipboard.writeText(url);
-                toasts.pushToast({ variant: 'ok', title: t('toast.copied.title') });
-              } catch {
-                toasts.pushToast({ variant: 'warn', title: t('toast.copied_failed.title') });
-              }
-            },
-          },
-        ]}
-        testId="admin.requests.smart_filter.help"
-        keyRowTestIdPrefix="admin.requests.smart_filter.help.key"
-      />
-    </>
+      {activeFilterChips.length > 0 ? (
+        <div className="flex flex-wrap gap-1" data-testid="admin.requests.active_filters">
+          {activeFilterChips}
+        </div>
+      ) : null}
+
+      <Drawer
+        open={props.advancedOpen}
+        onClose={() => props.setAdvancedOpen(false)}
+        title={t('filters.advanced.title')}
+        width="lg"
+        testId="admin.requests.advanced_filters"
+        closeTestId="admin.requests.advanced.close"
+        footer={(
+          <div className="flex flex-wrap justify-between gap-2">
+            <CopyButton
+              size="sm"
+              variant="secondary"
+              label={t('common.copy_link')}
+              text={props.shareUrl}
+              testId="admin.requests.copy_link"
+            />
+            <Button variant="secondary" size="sm" onClick={props.clearFilters}>
+              {t('common.clear_filters')}
+            </Button>
+          </div>
+        )}
+      >
+        <div className="space-y-4">
+          <div className="text-sm text-muted">{t('requests.list.advanced.description')}</div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <Select
+              value={props.state}
+              onChange={(event) => props.setState(event.target.value)}
+              label={t('requests.list.filter.state.label')}
+            >
+              {defaultStateOptions().filter(Boolean).map((value) => (
+                <option key={value} value={value}>{t(requestStateLabelKey(value))}</option>
+              ))}
+              <option value={ALL_ADMIN_REQUEST_STATES}>{t('requests.list.filter.state.all')}</option>
+            </Select>
+
+            <UserLookupInput
+              value={props.userId}
+              onChange={props.setUserId}
+              placeholder={t('requests.list.filter.user.placeholder')}
+              label={t('requests.list.filter.user.label')}
+              testId="admin.requests.filter.user.lookup"
+              loadingLabel={t('common.loading')}
+              noResultsLabel={t('palette.empty.no_results')}
+            />
+
+            <UserLookupInput
+              value={props.adminId}
+              onChange={props.setAdminId}
+              placeholder={t('requests.list.filter.admin.placeholder')}
+              label={t('requests.list.filter.admin.label')}
+              testId="admin.requests.filter.admin.lookup"
+              loadingLabel={t('common.loading')}
+              noResultsLabel={t('palette.empty.no_results')}
+            />
+
+            <Input
+              value={props.apiIp}
+              onChange={(event) => props.setApiIp(event.target.value)}
+              placeholder={t('requests.list.filter.api_ip.placeholder')}
+              label={t('requests.list.filter.api_ip.label')}
+              testId="admin.requests.filter.api_ip"
+            />
+
+            <Input
+              value={props.clientIp}
+              onChange={(event) => props.setClientIp(event.target.value)}
+              placeholder={t('requests.list.filter.client_ip.placeholder')}
+              label={t('requests.list.filter.client_ip.label')}
+              testId="admin.requests.filter.client_ip"
+            />
+
+            <Input
+              value={props.clientPtr}
+              onChange={(event) => props.setClientPtr(event.target.value)}
+              placeholder={t('requests.list.filter.client_ptr.placeholder')}
+              label={t('requests.list.filter.client_ptr.label')}
+              testId="admin.requests.filter.client_ptr"
+            />
+          </div>
+        </div>
+      </Drawer>
+    </div>
   );
 }

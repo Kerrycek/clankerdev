@@ -10,10 +10,13 @@ export function Textarea(props: {
   placeholder?: string;
   name?: string;
   rows?: number;
+  maxLength?: number;
   onChange?: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   disabled?: boolean;
   className?: string;
   label?: React.ReactNode;
+  ariaInvalid?: boolean;
+  ariaDescribedBy?: string;
 }) {
   const textarea = (
     <textarea
@@ -24,7 +27,10 @@ export function Textarea(props: {
       defaultValue={props.defaultValue}
       placeholder={props.placeholder}
       rows={props.rows ?? 5}
+      maxLength={props.maxLength}
       disabled={props.disabled}
+      aria-invalid={props.ariaInvalid}
+      aria-describedby={props.ariaDescribedBy}
       onChange={props.onChange}
       className={clsx(
         'w-full rounded-md border border-border bg-surface px-3 py-2 text-sm outline-none transition',
