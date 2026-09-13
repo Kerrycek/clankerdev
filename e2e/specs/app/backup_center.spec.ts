@@ -252,6 +252,147 @@ test.describe('Backup center', () => {
     await expect(page.getByTestId('dataset.plans.assign.modal')).toBeHidden();
   });
 
+  test('@pr-smoke @pr-smoke-mobile explains dataset backup plans on direct entry and preserves exact API contracts', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    const assignedIncludes: Array<string | null> = [];
+    const availableIncludes: Array<string | null> = [];
+    const mutationPayloads: unknown[] = [];
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'backup-user', level: 1 },
+      handlers: {
+        'GET datasets': () => ({
+          datasets: [
+            {
+              id: 10,
+              name: 'root',
+              full_name: 'mail.example/root',
+              object_state: 'active',
+              vps: { id: 20, hostname: 'mail.example' },
+              environment: { id: 7, label: 'Production' },
+              user: { id: 1, login: 'backup-user' },
+            },
+          ],
+          _meta: { total_count: 1 },
+        }),
+        'GET transaction_chains': () => ({
+          transaction_chains: [],
+          _meta: { total_count: 0 },
+        }),
+        'GET datasets/10/plans': ({ searchParams }) => {
+          assignedIncludes.push(searchParams.get('_meta[includes]'));
+          return {
+            plans: [
+              {
+                id: 21,
+                environment_dataset_plan: {
+                  id: 12,
+                  label: 'Daily backup',
+                  dataset_plan: {
+                    id: 101,
+                    label: 'daily_backup',
+                    description: 'Takes a snapshot every night and keeps seven restore points.',
+                  },
+                  user_add: true,
+                  user_remove: true,
+                },
+              },
+              {
+                id: 22,
+                environment_dataset_plan: {
+                  id: 15,
+                  label: 'Operator-managed archive',
+                  user_add: true,
+                  user_remove: false,
+                },
+              },
+            ],
+            _meta: { total_count: 2 },
+          };
+        },
+        'GET environments/7/dataset_plans': ({ searchParams }) => {
+          availableIncludes.push(searchParams.get('_meta[includes]'));
+          return {
+            dataset_plans: [
+              {
+                id: 12,
+                label: 'Daily backup',
+                dataset_plan: {
+                  id: 101,
+                  label: 'daily_backup',
+                  description: 'Takes a snapshot every night and keeps seven restore points.',
+                },
+                user_add: true,
+                user_remove: true,
+              },
+              {
+                id: 13,
+                label: 'Remote copy',
+                dataset_plan: {
+                  id: 103,
+                  label: 'remote_copy',
+                  description: 'Copies the dataset to backup storage every six hours.',
+                },
+                user_add: true,
+                user_remove: true,
+              },
+            ],
+            _meta: { total_count: 2 },
+          };
+        },
+        'POST datasets/10/plans': ({ reqJson }) => {
+          mutationPayloads.push(reqJson);
+          return {
+            plan: {
+              id: 23,
+              environment_dataset_plan: {
+                id: 13,
+                label: 'Remote copy',
+                user_add: true,
+                user_remove: true,
+              },
+            },
+          };
+        },
+      },
+    });
+
+    await page.goto('/app/backups?tab=plans&dataset=10');
+
+    await expect(page).toHaveURL(/(?=.*[?&]tab=plans)(?=.*[?&]dataset=10)/);
+    await expect(page.getByTestId('backups.plans')).toContainText(
+      'Plans are administrator-defined automatic rules'
+    );
+    await expect(page.getByTestId('dataset.plans.row.21.description')).toHaveText(
+      'Takes a snapshot every night and keeps seven restore points.'
+    );
+    await expect(page.getByTestId('dataset.plans.row.21.source')).toContainText('daily_backup');
+    await expect(page.getByTestId('dataset.plans.row.22.description')).toHaveText(
+      'No description is available for this plan.'
+    );
+    await expect.poll(() => assignedIncludes).toEqual([
+      'environment_dataset_plan__dataset_plan',
+    ]);
+    await expect.poll(() => availableIncludes).toEqual(['dataset_plan']);
+    await expectNoDocumentHorizontalOverflow(page);
+
+    await page.getByTestId('dataset.plans.assign.open').click();
+    await page.getByTestId('dataset.plans.assign.select').selectOption('13');
+    await expect(page.getByTestId('dataset.plans.assign.preview.description')).toHaveText(
+      'Copies the dataset to backup storage every six hours.'
+    );
+    await expect(page.getByTestId('dataset.plans.assign.preview.source')).toContainText(
+      'remote_copy'
+    );
+    await expectNoDocumentHorizontalOverflow(page);
+
+    await page.getByTestId('dataset.plans.assign.submit').click();
+    await expect.poll(() => mutationPayloads).toEqual([
+      { plan: { environment_dataset_plan: 13 } },
+    ]);
+    await expect(page.getByTestId('dataset.plans.assign.modal')).toBeHidden();
+  });
+
   test('@pr-smoke @pr-smoke-mobile guides an owner through a guarded restore workflow', async ({ page }, testInfo) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     let rollbackCalls = 0;

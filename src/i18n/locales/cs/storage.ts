@@ -311,7 +311,7 @@ export const csStorage = {
   "dataset.tabs.expansion": "Dočasné navýšení",
   "dataset.plans.title": "Plány datasetu",
   "dataset.plans.subtitle":
-    "Přiřaď tomuto datasetu environmentální plány datasetů.",
+    "Plány definované administrátory aplikují na tento dataset automatická pravidla, typicky pravidelné snapshoty nebo záložní kopie. Před změnou si zkontroluj popis.",
   "dataset.plans.assigned_count": "Přiřazené plány",
   "dataset.plans.available_count": "Dostupné k přiřazení",
   "dataset.plans.environment": "Prostředí",
@@ -332,7 +332,9 @@ export const csStorage = {
   "dataset.plans.available_load_error.body":
     "Přiřazené plány jsou zobrazeny, ale seznam dostupných environmentálních plánů se nepodařilo načíst.",
   "dataset.plans.column.label": "Štítek plánu",
+  "dataset.plans.column.description": "Co plán dělá",
   "dataset.plans.column.source": "Zdrojový plán",
+  "dataset.plans.description.fallback": "Pro tento plán není k dispozici popis.",
   "dataset.plans.column.permissions": "Oprávnění uživatele",
   "dataset.plans.permission.user_add": "Uživatel může přidat",
   "dataset.plans.permission.user_add_off": "Uživatel nemůže přidat",

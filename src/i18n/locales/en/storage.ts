@@ -304,7 +304,8 @@ export const enStorage = {
   "dataset.tabs.plans": "Plans",
   "dataset.tabs.expansion": "Temporary increase",
   "dataset.plans.title": "Dataset plans",
-  "dataset.plans.subtitle": "Assign environment dataset plans to this dataset.",
+  "dataset.plans.subtitle":
+    "Administrator-defined plans apply automatic rules to this dataset, typically recurring snapshots or backup copies. Review the description before making a change.",
   "dataset.plans.assigned_count": "Assigned plans",
   "dataset.plans.available_count": "Available to assign",
   "dataset.plans.environment": "Environment",
@@ -324,7 +325,9 @@ export const enStorage = {
   "dataset.plans.available_load_error.body":
     "Assigned plans are shown, but the list of available environment plans could not be loaded.",
   "dataset.plans.column.label": "Plan label",
+  "dataset.plans.column.description": "What the plan does",
   "dataset.plans.column.source": "Source plan",
+  "dataset.plans.description.fallback": "No description is available for this plan.",
   "dataset.plans.column.permissions": "User permissions",
   "dataset.plans.permission.user_add": "User can add",
   "dataset.plans.permission.user_add_off": "User cannot add",

@@ -47,10 +47,16 @@ export interface Dataset {
 }
 
 
+export interface DatasetPlan extends ResourceRef {
+  label?: string;
+  name?: string;
+  description?: string | null;
+}
+
 export interface EnvironmentDatasetPlan {
   id: number;
   label?: string;
-  dataset_plan?: ResourceRef;
+  dataset_plan?: DatasetPlan;
   user_add?: boolean;
   user_remove?: boolean;
   [k: string]: unknown;
