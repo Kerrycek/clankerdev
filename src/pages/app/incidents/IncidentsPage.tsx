@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { CircleHelp, SlidersHorizontal } from 'lucide-react';
 
 import { useAppMode } from '../../../app/appMode';
+import { useAuth } from '../../../app/auth';
 import { useI18n } from '../../../app/i18n';
 import { useObjectScope } from '../../../app/objectScope';
 import { useToasts } from '../../../app/toasts';
@@ -49,12 +50,34 @@ import {
   mailboxLabel,
   resolveMailboxId,
   safeNumber,
+  UNSUPPORTED_INCIDENT_SEARCH_KEY,
   vpsActionLabelKey,
   vpsActionVariant,
 } from './incidentListSemantics';
 
+function normalizeIncidentSearchParams(searchParams: URLSearchParams, isAdmin: boolean) {
+  const next = new URLSearchParams(searchParams);
+
+  next.delete('q');
+  if (!isAdmin) {
+    next.delete('user');
+    next.delete('filed_by');
+    next.delete('mailbox');
+  }
+
+  const changed = next.toString() !== searchParams.toString();
+  if (changed) {
+    next.delete('from_id');
+    next.set('page', '1');
+  }
+
+  return { changed, searchParams: next };
+}
+
 export function IncidentsPage() {
   const { basePath, mode } = useAppMode();
+  const auth = useAuth();
+  const isAdmin = mode === 'admin' && auth.role === 'admin';
   const scope = useObjectScope();
   const { t } = useI18n();
   const navigate = useNavigate();
@@ -62,27 +85,39 @@ export function IncidentsPage() {
 
   const [sp, setSp] = useSearchParams();
   const searchParamsKey = sp.toString();
+  const normalizedSearch = useMemo(
+    () => normalizeIncidentSearchParams(new URLSearchParams(searchParamsKey), isAdmin),
+    [isAdmin, searchParamsKey]
+  );
+  const activeSearchParams = normalizedSearch.searchParams;
+  const activeSearchParamsKey = activeSearchParams.toString();
 
-  const [q, setQ] = useState(() => sp.get('q') ?? '');
-  const [vps, setVps] = useState(() => sp.get('vps') ?? '');
-  const [user, setUser] = useState(() => sp.get('user') ?? '');
-  const [filedBy, setFiledBy] = useState(() => sp.get('filed_by') ?? '');
-  const [ip, setIp] = useState(() => sp.get('ip_addr') ?? '');
-  const [assignment, setAssignment] = useState(() => sp.get('ip_address_assignment') ?? '');
-  const [codename, setCodename] = useState(() => sp.get('codename') ?? '');
-  const [mailbox, setMailbox] = useState(() => sp.get('mailbox') ?? '');
+  const [vps, setVps] = useState(() => activeSearchParams.get('vps') ?? '');
+  const [user, setUser] = useState(() => activeSearchParams.get('user') ?? '');
+  const [filedBy, setFiledBy] = useState(() => activeSearchParams.get('filed_by') ?? '');
+  const [ip, setIp] = useState(() => activeSearchParams.get('ip_addr') ?? '');
+  const [assignment, setAssignment] = useState(() => activeSearchParams.get('ip_address_assignment') ?? '');
+  const [codename, setCodename] = useState(() => activeSearchParams.get('codename') ?? '');
+  const [mailbox, setMailbox] = useState(() => activeSearchParams.get('mailbox') ?? '');
 
   const [smart, setSmart] = useState('');
   const [smartErrors, setSmartErrors] = useState<string[]>([]);
   const smartNeedle = smart.trim();
   const smartInputRef = useRef<HTMLInputElement | null>(null);
+  const hydratingFiltersFromUrlRef = useRef(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
+  // Remove obsolete or unauthorized filters before the list query can run.
+  useLayoutEffect(() => {
+    if (!normalizedSearch.changed) return;
+    setSp(activeSearchParams, { replace: true });
+  }, [activeSearchParams, normalizedSearch.changed, setSp]);
+
   // Sync from URL on navigation.
-  useEffect(() => {
-    const current = new URLSearchParams(searchParamsKey);
-    setQ(current.get('q') ?? '');
+  useLayoutEffect(() => {
+    hydratingFiltersFromUrlRef.current = true;
+    const current = new URLSearchParams(activeSearchParamsKey);
     setVps(current.get('vps') ?? '');
     setUser(current.get('user') ?? '');
     setFiledBy(current.get('filed_by') ?? '');
@@ -90,31 +125,33 @@ export function IncidentsPage() {
     setAssignment(current.get('ip_address_assignment') ?? '');
     setCodename(current.get('codename') ?? '');
     setMailbox(current.get('mailbox') ?? '');
-  }, [searchParamsKey]);
+  }, [activeSearchParamsKey]);
 
   useEffect(() => {
     if (smartNeedle === '?') setHelpOpen(true);
   }, [smartNeedle]);
 
   const vpsId = useMemo(() => safeNumber(vps), [vps]);
-  const userId = useMemo(() => (mode === 'admin' ? safeNumber(user) : undefined), [mode, user]);
-  const effectiveUserId = mode === 'admin' ? userId : scope.mineUserId;
-  const filedById = useMemo(() => (mode === 'admin' ? safeNumber(filedBy) : undefined), [filedBy, mode]);
+  const userId = useMemo(() => (isAdmin ? safeNumber(user) : undefined), [isAdmin, user]);
+  const effectiveUserId = isAdmin ? userId : scope.mineUserId;
+  const filedById = useMemo(() => (isAdmin ? safeNumber(filedBy) : undefined), [filedBy, isAdmin]);
   const assignmentId = useMemo(() => safeNumber(assignment), [assignment]);
-  const mailboxId = useMemo(() => (mode === 'admin' ? safeNumber(mailbox) : undefined), [mode, mailbox]);
-  const qTrim = q.trim();
+  const mailboxId = useMemo(() => (isAdmin ? safeNumber(mailbox) : undefined), [isAdmin, mailbox]);
 
   // Keep filters in the URL.
   useEffect(() => {
-    const next = new URLSearchParams(sp);
+    if (hydratingFiltersFromUrlRef.current) {
+      hydratingFiltersFromUrlRef.current = false;
+      return;
+    }
 
-    if (qTrim) next.set('q', qTrim);
-    else next.delete('q');
+    const next = new URLSearchParams(activeSearchParams);
+    next.delete('q');
 
     if (vpsId) next.set('vps', String(vpsId));
     else if (!vps.trim()) next.delete('vps');
 
-    if (mode === 'admin') {
+    if (isAdmin) {
       if (userId) next.set('user', String(userId));
       else if (!user.trim()) next.delete('user');
 
@@ -136,33 +173,31 @@ export function IncidentsPage() {
     if (codeTrim) next.set('codename', codeTrim);
     else next.delete('codename');
 
-    if (mode === 'admin') {
+    if (isAdmin) {
       if (mailboxId) next.set('mailbox', String(mailboxId));
       else if (!mailbox.trim()) next.delete('mailbox');
     } else {
       next.delete('mailbox');
     }
 
-    if (next.toString() !== sp.toString()) setSp(next, { replace: true });
-  }, [assignment, assignmentId, codename, filedBy, filedById, ip, mailbox, mailboxId, mode, qTrim, setSp, sp, user, userId, vps, vpsId]);
+    if (next.toString() !== searchParamsKey) setSp(next, { replace: true });
+  }, [activeSearchParams, assignment, assignmentId, codename, filedBy, filedById, ip, isAdmin, mailbox, mailboxId, searchParamsKey, setSp, user, userId, vps, vpsId]);
 
   const filtersActive = Boolean(
-    qTrim ||
-      vpsId ||
-      (mode === 'admin' && userId) ||
-      (mode === 'admin' && filedById) ||
+    vpsId ||
+      (isAdmin && userId) ||
+      (isAdmin && filedById) ||
       ip.trim() ||
       assignmentId ||
       codename.trim() ||
-      (mode === 'admin' && mailboxId) ||
-      smartErrors.length > 0
+      (isAdmin && mailboxId)
   );
+  const hasFilterState = filtersActive || smartErrors.length > 0;
 
   const pagination = useKeysetPagination({
     id: 'incidents.list',
     filterKey: JSON.stringify({
       scope: basePath,
-      q: qTrim,
       vps: vpsId,
       user: effectiveUserId,
       filedBy: filedById,
@@ -171,7 +206,7 @@ export function IncidentsPage() {
       codename: codename.trim(),
       mailbox: mailboxId,
     }),
-    searchParams: sp,
+    searchParams: activeSearchParams,
     setSearchParams: setSp,
     defaultLimit: 50,
     allowedLimits: [25, 50, 100],
@@ -184,7 +219,6 @@ export function IncidentsPage() {
       {
         limit: pagination.limit,
         from: pagination.cursor,
-        q: qTrim,
         vps: vpsId,
         user: effectiveUserId,
         filedBy: filedById,
@@ -200,7 +234,6 @@ export function IncidentsPage() {
         await fetchIncidentReports({
           limit: pagination.limit,
           fromId: pagination.cursor as number | undefined,
-          q: qTrim || undefined,
           vpsId,
           userId: effectiveUserId,
           filedById,
@@ -209,28 +242,29 @@ export function IncidentsPage() {
           codename: codename.trim() || undefined,
           mailboxId,
           includes:
-            mode === 'admin' ? 'user,vps,ip_address_assignment,filed_by,mailbox' : 'vps,ip_address_assignment,filed_by',
+            isAdmin ? 'user,vps,ip_address_assignment,filed_by,mailbox' : 'vps,ip_address_assignment,filed_by',
         })
       ).data,
+    enabled: !normalizedSearch.changed,
   });
 
   const mailboxesQ = useQuery({
     queryKey: ['mailboxes', 'index', { scope: basePath }],
     queryFn: async () => (await fetchMailboxes({ limit: 200 })).data,
-    enabled: mode === 'admin',
+    enabled: isAdmin,
   });
 
   const rows = listQ.data ?? [];
 
   const mailboxOptions = useMemo(() => {
-    if (mode !== 'admin') return [];
+    if (!isAdmin) return [];
     const list = mailboxesQ.data ?? [];
     const opts = [{ value: '', label: t('common.all') }];
     for (const m of list) {
       opts.push({ value: String(m.id), label: mailboxLabel(m) });
     }
     return opts;
-  }, [mailboxesQ.data, mode, t]);
+  }, [isAdmin, mailboxesQ.data, t]);
 
   const shareUrl = useMemo(() => {
     if (typeof window === 'undefined') return '';
@@ -238,7 +272,6 @@ export function IncidentsPage() {
   }, [searchParamsKey]);
 
   const clearFilters = () => {
-    setQ('');
     setVps('');
     setUser('');
     setFiledBy('');
@@ -275,7 +308,6 @@ export function IncidentsPage() {
       }
     }
 
-    let nextQ = q;
     let nextVps = vps;
     let nextUser = user;
     let nextFiledBy = filedBy;
@@ -284,20 +316,19 @@ export function IncidentsPage() {
     let nextCodename = codename;
     let nextMailbox = mailbox;
 
-    const free: string[] = [];
+    let hasUnsupportedText = false;
     const errs: string[] = [];
 
     for (const token of tokens) {
       const kv = splitKeyValueToken(token);
       if (!kv) {
-        free.push(unquoteSmartValue(token));
+        hasUnsupportedText = true;
         continue;
       }
 
       const key = canonicalKey(kv.rawKey);
       if (!key) {
-        // Treat unknown keys as free text to avoid punishing typos.
-        free.push(unquoteSmartValue(token));
+        errs.push(t('filters.smart.error.unknown_key', { key: kv.rawKey }));
         continue;
       }
 
@@ -307,8 +338,8 @@ export function IncidentsPage() {
         continue;
       }
 
-      if (key === 'q') {
-        nextQ = value;
+      if (key === UNSUPPORTED_INCIDENT_SEARCH_KEY) {
+        hasUnsupportedText = true;
         continue;
       }
 
@@ -355,7 +386,7 @@ export function IncidentsPage() {
       }
 
       if (key === 'user') {
-        if (mode !== 'admin') {
+        if (!isAdmin) {
           errs.push(t('filters.smart.error.user_admin_only'));
           continue;
         }
@@ -382,7 +413,7 @@ export function IncidentsPage() {
       }
 
       if (key === 'filed_by') {
-        if (mode !== 'admin') {
+        if (!isAdmin) {
           errs.push(t('filters.smart.error.admin_only', { key: 'filed_by' }));
           continue;
         }
@@ -409,7 +440,7 @@ export function IncidentsPage() {
       }
 
       if (key === 'mailbox') {
-        if (mode !== 'admin') {
+        if (!isAdmin) {
           errs.push(t('filters.smart.error.admin_only', { key: 'mailbox' }));
           continue;
         }
@@ -432,7 +463,7 @@ export function IncidentsPage() {
       }
     }
 
-    if (free.length > 0) nextQ = free.join(' ');
+    if (hasUnsupportedText) errs.push(t('incidents.smart.error.unsupported_text'));
 
     if (errs.length > 0) {
       setSmartErrors(errs);
@@ -440,7 +471,6 @@ export function IncidentsPage() {
       return;
     }
 
-    setQ(nextQ);
     setVps(nextVps);
     setUser(nextUser);
     setFiledBy(nextFiledBy);
@@ -509,7 +539,7 @@ export function IncidentsPage() {
         testId: 'incidents.smart.suggest.vps',
       });
 
-      if (mode === 'admin') {
+      if (isAdmin) {
         out.push({
           id: 'user',
           primary: t('incidents.smart.suggest.user', { id: n }),
@@ -550,29 +580,11 @@ export function IncidentsPage() {
       });
     }
 
-    out.push({
-      id: 'search',
-      primary: t('incidents.smart.suggest.search', { q: needle }),
-      secondary: t('incidents.smart.suggest.search.secondary'),
-      onPick: () => {
-        setQ(needle);
-        setSmart('');
-        setSmartErrors([]);
-      },
-      testId: 'incidents.smart.suggest.search',
-    });
-
     return out;
-  }, [mode, openIncident, smartNeedle, t]);
+  }, [isAdmin, openIncident, smartNeedle, t]);
 
   const activeChips = useMemo(() => {
     const chips: React.ReactNode[] = [];
-
-    if (qTrim) {
-      chips.push(
-        <FilterChip key="q" label={`q:${qTrim}`} onRemove={() => setQ('')} testId="incidents.chip.q" />
-      );
-    }
 
     if (vpsId) {
       chips.push(
@@ -580,13 +592,13 @@ export function IncidentsPage() {
       );
     }
 
-    if (mode === 'admin' && userId) {
+    if (isAdmin && userId) {
       chips.push(
         <FilterChip key="user" label={`user:${userId}`} onRemove={() => setUser('')} testId="incidents.chip.user" />
       );
     }
 
-    if (mode === 'admin' && filedById) {
+    if (isAdmin && filedById) {
       chips.push(
         <FilterChip
           key="filed_by"
@@ -625,7 +637,7 @@ export function IncidentsPage() {
       );
     }
 
-    if (mode === 'admin' && mailboxId) {
+    if (isAdmin && mailboxId) {
       chips.push(
         <FilterChip
           key="mailbox"
@@ -649,7 +661,7 @@ export function IncidentsPage() {
     }
 
     return chips;
-  }, [assignmentId, codename, filedById, ip, mailboxId, mode, qTrim, smartErrors, userId, vpsId]);
+  }, [assignmentId, codename, filedById, ip, isAdmin, mailboxId, smartErrors, userId, vpsId]);
 
   const header = (
     <PageHeader
@@ -657,7 +669,7 @@ export function IncidentsPage() {
       description={t('incidents.list.description')}
       meta={filtersActive ? <span className="text-xs text-faint">{t('list.meta.filters_active')}</span> : null}
       actions={
-        mode === 'admin' ? (
+        isAdmin ? (
           <Button variant="secondary" size="sm" to={`${basePath}/incidents/new`} testId="incidents.list.new">
             {t('incidents.list.new')}
           </Button>
@@ -715,7 +727,7 @@ export function IncidentsPage() {
               testId="incidents.filters.copy_link"
             />
 
-            {filtersActive ? (
+            {hasFilterState ? (
               <Button variant="secondary" size="sm" onClick={clearFilters} testId="incidents.filters.clear">
                 {t('common.clear_filters')}
               </Button>
@@ -741,11 +753,6 @@ export function IncidentsPage() {
                 description: t('incidents.smart_help.examples.open.description'),
               },
               {
-                label: t('incidents.smart_help.examples.search.label'),
-                value: 'network outage',
-                description: t('incidents.smart_help.examples.search.description'),
-              },
-              {
                 label: t('incidents.smart_help.examples.vps.label'),
                 value: 'vps:123',
                 description: t('incidents.smart_help.examples.vps.description'),
@@ -762,9 +769,8 @@ export function IncidentsPage() {
               },
             ]}
             keys={[
-              { key: 'q', description: t('incidents.smart_help.keys.q') },
               { key: 'vps', description: t('incidents.smart_help.keys.vps') },
-              ...(mode === 'admin'
+              ...(isAdmin
                 ? [
                     { key: 'user', description: t('incidents.smart_help.keys.user') },
                     { key: 'filed_by', description: t('incidents.smart_help.keys.filed_by') },
@@ -776,7 +782,7 @@ export function IncidentsPage() {
               { key: 'codename', description: t('incidents.smart_help.keys.codename') },
             ]}
             inferences={[
-              t('incidents.smart_help.inferences.plain_search'),
+              t('incidents.smart_help.inferences.exact_only'),
               t('incidents.smart_help.inferences.numeric_open'),
               t('incidents.smart_help.inferences.key_value'),
             ]}
@@ -797,19 +803,6 @@ export function IncidentsPage() {
           >
             <div className="space-y-4">
               <div>
-                <div className="text-sm font-medium">{t('incidents.filter.q')}</div>
-                <div className="mt-1">
-                  <Input
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                    placeholder={t('incidents.search.placeholder')}
-                    autoComplete="off"
-                    testId="incidents.advanced.q"
-                  />
-                </div>
-              </div>
-
-              <div>
                 <div className="text-sm font-medium">{t('incidents.filter.vps')}</div>
                 <div className="mt-1">
                   <VpsLookupInput
@@ -821,7 +814,7 @@ export function IncidentsPage() {
                 </div>
               </div>
 
-              {mode === 'admin' ? (
+              {isAdmin ? (
                 <div>
                   <div className="text-sm font-medium">{t('incidents.filter.user')}</div>
                   <div className="mt-1">
@@ -837,7 +830,7 @@ export function IncidentsPage() {
                 </div>
               ) : null}
 
-              {mode === 'admin' ? (
+              {isAdmin ? (
                 <div>
                   <div className="text-sm font-medium">{t('incidents.filter.filed_by')}</div>
                   <div className="mt-1">
@@ -892,7 +885,7 @@ export function IncidentsPage() {
                 </div>
               </div>
 
-              {mode === 'admin' ? (
+              {isAdmin ? (
                 <div>
                   <div className="text-sm font-medium">{t('incidents.filter.mailbox')}</div>
                   <div className="mt-1">
@@ -908,7 +901,7 @@ export function IncidentsPage() {
             </div>
 
             <div className="mt-6 flex items-center justify-end gap-2">
-              {filtersActive ? (
+              {hasFilterState ? (
                 <Button variant="secondary" size="sm" onClick={clearFilters} testId="incidents.advanced.clear">
                   {t('common.clear_filters')}
                 </Button>
@@ -953,24 +946,24 @@ export function IncidentsPage() {
                   <col className="w-8" />
                   <col className="w-24" />
                   <col className="w-40" />
-                  {mode === 'admin' ? <col className="w-32" /> : null}
+                  {isAdmin ? <col className="w-32" /> : null}
                   <col className="w-36" />
                   <col className="w-40" />
                   <col />
                   <col className="w-32" />
-                  {mode === 'admin' ? <col className="w-32" /> : null}
+                  {isAdmin ? <col className="w-32" /> : null}
                 </colgroup>
                 <thead>
                   <tr className="border-b border-border text-left text-xs text-muted">
                     <th className="w-8 px-2 py-2" aria-label={t('common.state')} />
                     <th className="px-3 py-2">{t('common.id')}</th>
                     <th className="px-3 py-2">{t('incidents.field.detected_at')}</th>
-                    {mode === 'admin' ? <th className="px-3 py-2">{t('common.user')}</th> : null}
+                    {isAdmin ? <th className="px-3 py-2">{t('common.user')}</th> : null}
                     <th className="px-3 py-2">{t('common.vps')}</th>
                     <th className="px-3 py-2">{t('incidents.field.ip')}</th>
                     <th className="px-3 py-2">{t('incidents.field.subject')}</th>
                     <th className="px-3 py-2">{t('incidents.field.codename')}</th>
-                    {mode === 'admin' ? <th className="px-3 py-2">{t('incidents.field.filed_by')}</th> : null}
+                    {isAdmin ? <th className="px-3 py-2">{t('incidents.field.filed_by')}</th> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -1024,7 +1017,7 @@ export function IncidentsPage() {
                           </div>
                         </td>
 
-                        {mode === 'admin' ? (
+                        {isAdmin ? (
                           <td className="px-3 py-2">
                             {userIdRow ? (
                               <ChipLink data-row-no-nav to={`${basePath}/users/${userIdRow}`} className="max-w-full">
@@ -1062,7 +1055,7 @@ export function IncidentsPage() {
                           </span>
                         </td>
 
-                        {mode === 'admin' ? (
+                        {isAdmin ? (
                           <td className="px-3 py-2">
                             {filedId ? (
                               <ChipLink data-row-no-nav to={`${basePath}/users/${filedId}`} className="max-w-full">
@@ -1136,10 +1129,12 @@ export function IncidentsPage() {
                         </div>
 
                         <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2 text-sm text-muted">
-                          {mode === 'admin' && userIdRow ? (
-                            <ChipLink to={`${basePath}/users/${userIdRow}`}>{userLogin || `#${userIdRow}`}</ChipLink>
-                          ) : userLogin ? (
-                            <span>{userLogin}</span>
+                          {isAdmin ? (
+                            userIdRow ? (
+                              <ChipLink to={`${basePath}/users/${userIdRow}`}>{userLogin || `#${userIdRow}`}</ChipLink>
+                            ) : userLogin ? (
+                              <span>{userLogin}</span>
+                            ) : null
                           ) : null}
                           {vpsIdRow ? (
                             <ChipLink to={`${basePath}/vps/${vpsIdRow}`}>{vpsHost || `#${vpsIdRow}`}</ChipLink>
