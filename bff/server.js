@@ -12,6 +12,11 @@ const express = require('express');
 const session = require('express-session');
 const FileStoreFactory = require('session-file-store');
 const {
+  preferredLanguage,
+  renderOAuthErrorPage,
+  setOAuthRecoverySecurityHeaders,
+} = require('./oauth-error-page');
+const {
   consumeOAuthState,
   createFixedWindowRateLimiter,
   createOAuthState,
@@ -296,6 +301,28 @@ app.get('/session.json', async (req, res) => {
   }));
 });
 
+function clearPendingOAuthAttempt(req) {
+  if (!req.session) return;
+
+  req.session.next = undefined;
+  req.session.oauth_state = undefined;
+  req.session.oauth_state_issued_at = undefined;
+}
+
+function redirectOAuthFailure(req, res) {
+  clearPendingOAuthAttempt(req);
+  setOAuthRecoverySecurityHeaders(res);
+  return res.redirect(303, '/oauth/error');
+}
+
+app.get('/oauth/error', (req, res) => {
+  const language = preferredLanguage(req.get('accept-language'));
+  setOAuthRecoverySecurityHeaders(res);
+  res.setHeader('content-language', language);
+  res.vary('Accept-Language');
+  return res.status(400).type('html').send(renderOAuthErrorPage(language));
+});
+
 // start login
 const loginRateLimit = createFixedWindowRateLimiter({
   windowMs: LOGIN_RATE_LIMIT_WINDOW_MS,
@@ -327,27 +354,21 @@ app.get('/oauth/callback', async (req, res) => {
   const q = req.query;
 
   if (typeof q.error === 'string') {
-    const desc = typeof q.error_description === 'string' ? q.error_description : '';
-    return res
-      .status(400)
-      .type('text/html')
-      .send(
-        `<h1>OAuth error</h1><p>${escapeHtml(q.error)}</p><p>${escapeHtml(desc)}</p>`
-      );
+    return redirectOAuthFailure(req, res);
   }
 
   const code = typeof q.code === 'string' ? q.code : '';
   const state = typeof q.state === 'string' ? q.state : '';
 
   if (!code) {
-    return res.status(400).type('text/html').send('<h1>Missing code</h1>');
+    return redirectOAuthFailure(req, res);
   }
 
   const nextPath = sanitizeNext(req.session.next);
   req.session.next = undefined;
 
   if (!consumeOAuthState(req.session, state, { maxAgeMs: OAUTH_STATE_MAX_AGE_MS })) {
-    return res.status(400).type('text/html').send('<h1>Invalid state</h1>');
+    return redirectOAuthFailure(req, res);
   }
 
   try {
@@ -380,7 +401,7 @@ app.get('/oauth/callback', async (req, res) => {
   } catch (e) {
     const status = e && Number.isInteger(e.status) ? e.status : undefined;
     console.error('[webui-next-bff] OAuth callback failed', { status });
-    res.status(500).type('text/html').send('<h1>OAuth token exchange failed</h1><p>Please try signing in again.</p>');
+    return redirectOAuthFailure(req, res);
   }
 });
 
@@ -419,19 +440,10 @@ app.get('/oauth/logout', async (req, res) => {
   return res.redirect(nextPath || '/');
 });
 
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (c) => {
-    switch (c) {
-      case '&': return '&amp;';
-      case '<': return '&lt;';
-      case '>': return '&gt;';
-      case '"': return '&quot;';
-      case "'": return '&#39;';
-      default: return c;
-    }
+if (require.main === module) {
+  app.listen(PORT, '127.0.0.1', () => {
+    console.log(`[webui-next-bff] listening on http://127.0.0.1:${PORT}`);
   });
 }
 
-app.listen(PORT, '127.0.0.1', () => {
-  console.log(`[webui-next-bff] listening on http://127.0.0.1:${PORT}`);
-});
+module.exports = { app };

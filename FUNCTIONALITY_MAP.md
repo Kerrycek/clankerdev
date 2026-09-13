@@ -492,6 +492,72 @@ state, and clean up the fixture; do not test this by mutating a real applicant.
 
 ---
 
+## OAuth authorization start and callback recovery
+
+**Status:** `mapped / implemented`
+
+### Purpose and routes
+
+The OAuth BFF keeps the client secret and access/refresh tokens out of the
+static frontend while giving browser users a safe way to start or recover from
+sign-in:
+
+- `/oauth/login` stores a sanitized same-origin `next` path, creates a
+  short-lived single-use state value, and redirects to the configured identity
+  provider;
+- `/oauth/callback` validates and consumes state before exchanging the
+  authorization code, rotates the session ID after authentication, and returns
+  a successful login to the validated `next` path (default `/app`);
+- `/oauth/error` is the clean, BFF-owned recovery destination for callback
+  failures.
+
+Provider denial, a missing code, invalid/expired state, and token-exchange
+failure all clear the pending state and `next` value and respond with a `303`
+to the exact path `/oauth/error`. The callback never copies `code`, `state`,
+`error`, or `error_description` into that redirect or its HTML. The error page
+uses Czech or English according to `Accept-Language`, fits narrow viewports,
+and offers two real navigation targets: retry at
+`/oauth/login?next=%2Fapp` and return to the public status at `/`.
+
+The BFF marks both the failure redirect and error document `no-store` and
+`no-referrer`, with a restrictive CSP and framing/content-type protections.
+Deployment nginx configs select `no-referrer` for the complete `/oauth/`
+namespace and hide any upstream `Referrer-Policy`, so the public proxy emits
+one unambiguous policy rather than combining it with the site's normal
+`strict-origin-when-cross-origin` policy.
+
+Implementation and automated evidence:
+
+- `bff/server.js`
+- `bff/oauth-error-page.js`
+- `bff/server.test.js` — real BFF routes and sessions against a local fake token
+  endpoint, including all failure classes, state cleanup, successful callback,
+  and safe bilingual output;
+- `bff/security.test.js` — redirect-target sanitization and OAuth state
+  invariants;
+- `scripts/oauth-nginx-policy.test.mjs` — checked-in dev/kra configs and both
+  generated clankerdev nginx variants.
+
+These tests exercise the real local BFF boundary with a fake identity provider;
+they do not claim a live provider login was performed.
+
+### Password-recovery hand-off
+
+An OAuth server that finishes password recovery by starting a fresh WebUI
+authorization should use the BFF login route, not a client-rendered SPA route.
+Configure `oauth2_clients.authorization_start_uri` per host as:
+
+- `https://clankerdev.vpsfree.cz/oauth/login?next=%2Fapp`
+- `https://dev.crucio.cz/oauth/login?next=%2Fapp`
+
+Set `authorization_start_requires_user_action=false` for the seamless restart.
+The audited backend password-recovery work at revision `791ab3a` is not merged
+into upstream master and its feature flag defaults to disabled. This mapping
+therefore documents the correct new-UI hand-off but does not claim that
+end-to-end password recovery is currently enabled or deployed.
+
+---
+
 ## Remaining product inventory
 
 The areas below are confirmed by current routes/source. Their status is
@@ -508,7 +574,8 @@ current UX, and end-to-end evidence.
 | Outages | `/outages`, `/outages/:outageId` | `inventory only` |
 | News | `/news` | `inventory only` |
 | Security advisories | `/security-advisories`, `/security-advisories/:advisoryId` | `inventory only` |
-| OAuth session flow | `/oauth/login`, `/oauth/callback`, `/oauth/logout` | `inventory only` |
+| OAuth authorization and callback recovery | `/oauth/login`, `/oauth/callback`, `/oauth/error` | `mapped / implemented` |
+| OAuth logout and broader session recovery | `/oauth/logout`, SPA session-expiry handling | `inventory only` |
 
 ### Authenticated user surfaces
 
