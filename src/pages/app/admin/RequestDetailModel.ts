@@ -1,3 +1,5 @@
+import { HaveApiError } from '../../../lib/api/haveapi';
+
 export type FraudCheckStatus = 'pending' | 'failed' | 'success';
 export type InferredRequestType = 'registration' | 'change';
 
@@ -54,6 +56,22 @@ export function requestMatchesReviewTarget(
 
 export function isResolvedRequestReviewState(value: unknown): boolean {
   return RESOLVED_REQUEST_STATES.has(String(value ?? '').trim());
+}
+
+/**
+ * HaveAPI installations do not always preserve a 404 transport status and can
+ * return `status: false` in an HTTP 200 envelope instead. Treat only an exact
+ * HTTP 404, or the legacy not-found message when no HTTP status exists, as a
+ * definitive missing request. Other failures must stay retryable.
+ */
+export function isDefinitiveRequestNotFound(error: unknown): boolean {
+  if (!(error instanceof HaveApiError)) return false;
+  if (error.httpStatus === 404) return true;
+  if (error.httpStatus !== undefined) return false;
+  const message = error.message.trim();
+  return message.toLowerCase() === 'not found'
+    || /\b(?:object|request|registration|change)\b[^\n]*\bnot found\b/i.test(message)
+    || /(?:objekt|žádost|registrace|změna)[^\n]*(?:nenalezen|nebyl[ao]?\s+nalezen)/i.test(message);
 }
 
 export function fraudCheckStatus(checked: unknown, success: unknown): FraudCheckStatus {

@@ -274,6 +274,13 @@ path:
   Detail/back and successful resolution preserve filters and pagination; the
   validator accepts only the admin request overview and fails closed for an
   external URL or another route;
+- the detail Show query makes one initial attempt. A transport/server failure
+  exposes an in-place Retry that refetches only the same GET while Back always
+  uses the sanitized `returnTo`; neither recovery action can submit a mutation.
+  An invalid typed URL, an exact HTTP 404, a legacy HTTP-200 HaveAPI not-found
+  envelope without a transport status, or a response whose exact ID/subtype
+  does not match the URL is definitive: the page shows only an explicit safe
+  return to the request overview and never renders resolution controls;
 - registration addresses are geocoded automatically for an embedded
   OpenStreetMap preview, with retry and not-found states;
 - resulting action-state and transaction links are exposed when the API
@@ -331,7 +338,7 @@ states, permissions, score thresholds, or approval side effects.
 Current local evidence at the time this map was updated:
 
 - TypeScript `tsc --noEmit`: **PASS**.
-- Full Vitest run: **207 files, 1037 tests passed**, including target identity,
+- Full Vitest run: **208 files, 1048 tests passed**, including target identity,
   preflight, payload/clear semantics, resource labels, query invalidation,
   durable-lock references, fail-closed `returnTo`, and risk-state models.
 - `e2e/specs/admin/requests_operations_smoke.spec.ts`, Chromium: **30/30
@@ -341,6 +348,13 @@ Current local evidence at the time this map was updated:
   switching, intentional clears, minimal template metadata, compatible nodes,
   no-change/clear/empty-value comparison, API outage versus not-found, fraud
   states/signals, automatic map states, and safe return context.
+- Focused request-detail recovery tests: **26/26 Vitest assertions passed** in
+  `RequestDetailModel.test.ts` and `RequestDetailPage.test.tsx`; the dedicated
+  Playwright spec passed **3/3 Chromium** scenarios plus **1/1 mobile** recovery
+  scenario. They cover an in-document 503 → Retry → success sequence with
+  exactly two GETs and zero POSTs, filtered/default/malicious `returnTo`, exact
+  HTTP 404 and legacy HaveAPI not-found envelopes, invalid URLs, and wrong
+  ID/subtype responses without resolution controls.
 - Targeted mobile/responsive run: **5/5 passed**, including 320 px containment,
   whole-card navigation, mixed selection, decision-first detail layout, and the
   full-viewport responsive confirmation.

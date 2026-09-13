@@ -30,7 +30,12 @@ import { ErrorState } from '../../../components/ui/ErrorState';
 import { LoadingState } from '../../../components/ui/LoadingState';
 import { StatusDot } from '../../../components/ui/StatusDot';
 import { RequestAddressMapLink } from './RequestAddressMapLink';
-import { requestMatchesReviewTarget, requestResourceLabel, safeRequestsReturnTo } from './RequestDetailModel';
+import {
+  isDefinitiveRequestNotFound,
+  requestMatchesReviewTarget,
+  requestResourceLabel,
+  safeRequestsReturnTo,
+} from './RequestDetailModel';
 import { RequestFraudChecks } from './RequestFraudChecks';
 import {
   RequestOperationalLinks,
@@ -211,6 +216,7 @@ export function RequestDetailPage() {
   const requestQ = useQuery({
     queryKey: ['user_request', reqType, 'show', reqId],
     enabled: Boolean(isAdmin && reqType && reqId),
+    retry: false,
     queryFn: async () => {
       if (!reqType || !reqId) throw new Error('invalid request');
       const loaded = reqType === 'registration'
@@ -245,22 +251,49 @@ export function RequestDetailPage() {
   if (!reqType || !reqId) {
     return (
       <ListShell>
-        <ErrorState title={t('requests.detail.invalid')} error={{ message: t('requests.detail.invalid.body') }} />
+        <ErrorState
+          testId="admin.requests.detail.invalid"
+          title={t('requests.detail.invalid')}
+          body={t('requests.detail.invalid.body')}
+          showDetails={false}
+          actions={{
+            primary: { label: t('common.back'), to: returnTo },
+          }}
+        />
       </ListShell>
     );
   }
 
   if (!isAdmin) return <Navigate to="/app" replace />;
-  if (requestQ.isLoading) return <ListShell><LoadingState /></ListShell>;
+  if (requestQ.isLoading || (requestQ.isFetching && !requestQ.data)) {
+    return <ListShell><LoadingState /></ListShell>;
+  }
 
   if (requestQ.isError) {
     const mismatch = requestQ.error instanceof RequestTypeMismatchError;
+    const notFound = isDefinitiveRequestNotFound(requestQ.error);
     return (
       <ListShell>
-        <ErrorState
-          title={mismatch ? t('requests.detail.type_mismatch') : t('requests.detail.load_error.title')}
-          error={requestQ.error}
-        />
+        {mismatch || notFound ? (
+          <ErrorState
+            testId={mismatch ? 'admin.requests.detail.mismatch' : 'admin.requests.detail.not_found'}
+            kindOverride="not_found"
+            title={mismatch ? t('requests.detail.type_mismatch') : t('requests.detail.load_error.title')}
+            body={mismatch ? undefined : t('requests.detail.not_found')}
+            error={requestQ.error}
+            actions={{
+              primary: { label: t('common.back'), to: returnTo },
+            }}
+          />
+        ) : (
+          <ErrorState
+            testId="admin.requests.detail.error"
+            title={t('requests.detail.load_error.title')}
+            error={requestQ.error}
+            onRetry={() => void requestQ.refetch()}
+            backTo={returnTo}
+          />
+        )}
       </ListShell>
     );
   }
@@ -268,7 +301,16 @@ export function RequestDetailPage() {
   if (!request) {
     return (
       <ListShell>
-        <ErrorState title={t('requests.detail.load_error.title')} error={{ message: t('requests.detail.not_found') }} />
+        <ErrorState
+          testId="admin.requests.detail.not_found"
+          kindOverride="not_found"
+          title={t('requests.detail.load_error.title')}
+          body={t('requests.detail.not_found')}
+          showDetails={false}
+          actions={{
+            primary: { label: t('common.back'), to: returnTo },
+          }}
+        />
       </ListShell>
     );
   }
