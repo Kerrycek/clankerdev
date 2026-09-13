@@ -6,6 +6,7 @@ export type ObjectKind =
   | 'Node'
   | 'Network'
   | 'MigrationPlan'
+  | 'UserRequest'
   | 'User'
   | 'IpAddress';
 
@@ -23,6 +24,7 @@ export function isObjectKind(v: unknown): v is ObjectKind {
     v === 'Node' ||
     v === 'Network' ||
     v === 'MigrationPlan' ||
+    v === 'UserRequest' ||
     v === 'User' ||
     v === 'IpAddress'
   );

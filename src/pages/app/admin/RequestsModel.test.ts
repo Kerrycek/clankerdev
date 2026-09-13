@@ -22,6 +22,9 @@ describe('RequestsModel', () => {
   it('normalizes numeric and enum-like filter inputs', () => {
     expect(safeNumber('42')).toBe(42);
     expect(safeNumber('0')).toBeUndefined();
+    expect(safeNumber('2.9')).toBeUndefined();
+    expect(safeNumber('1e3')).toBeUndefined();
+    expect(safeNumber('9007199254740992')).toBeUndefined();
     expect(requestTypeFilterFromUrl('registration')).toBe('registration');
     expect(requestTypeFilterFromUrl('bad')).toBe('all');
     expect(parseTypeValue('reg')).toBe('registration');

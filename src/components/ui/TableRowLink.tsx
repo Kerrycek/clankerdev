@@ -38,10 +38,13 @@ export function TableRowLink(props: {
   variant?: TableRowVariant;
   className?: string;
   testId?: string;
+  /** Keep mouse row navigation while a nested real link owns keyboard focus. */
+  keyboardNavigation?: boolean;
   children: React.ReactNode;
 }) {
   const navigate = useNavigate();
   const clickable = Boolean(props.to) && !props.disabled;
+  const keyboardNavigable = clickable && props.keyboardNavigation !== false;
 
   const onClick = useCallback(
     (e: React.MouseEvent<HTMLTableRowElement>) => {
@@ -67,7 +70,7 @@ export function TableRowLink(props: {
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTableRowElement>) => {
-      if (!clickable) return;
+      if (!keyboardNavigable) return;
       if (!props.to) return;
 
       if (isInteractiveElement(e.target)) return;
@@ -77,7 +80,7 @@ export function TableRowLink(props: {
         navigate(props.to);
       }
     },
-    [clickable, navigate, props.to]
+    [keyboardNavigable, navigate, props.to]
   );
 
   return (
@@ -86,7 +89,7 @@ export function TableRowLink(props: {
       className={clsx(props.className)}
       data-row-clickable={clickable ? 'true' : undefined}
       data-row-variant={props.variant}
-      tabIndex={clickable ? 0 : undefined}
+      tabIndex={keyboardNavigable ? 0 : undefined}
       onClick={onClick}
       onKeyDown={onKeyDown}
     >

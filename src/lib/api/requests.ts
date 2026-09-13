@@ -175,7 +175,6 @@ export async function fetchRegistrationRequests(opts?: {
   limit?: number;
   fromId?: number;
   state?: string;
-  q?: string;
   userId?: number;
   adminId?: number;
   apiIpAddr?: string;
@@ -187,7 +186,6 @@ export async function fetchRegistrationRequests(opts?: {
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
   if (opts?.state) params['state'] = opts.state;
-  if (opts?.q) params['q'] = opts.q;
   if (opts?.userId !== undefined) params['user'] = opts.userId;
   if (opts?.adminId !== undefined) params['admin'] = opts.adminId;
   if (opts?.apiIpAddr) params['api_ip_addr'] = opts.apiIpAddr;
@@ -252,6 +250,14 @@ export async function resolveRegistrationRequest(
     org_id?: string;
     email?: string;
     address?: string;
+    year_of_birth?: number;
+    how?: string;
+    note?: string;
+    os_template?: number;
+    location?: number;
+    currency?: string;
+    language?: number;
+    time_zone?: string;
 
     // approve options
     activate?: boolean;
@@ -306,7 +312,6 @@ export async function fetchChangeRequests(opts?: {
   limit?: number;
   fromId?: number;
   state?: string;
-  q?: string;
   userId?: number;
   adminId?: number;
   apiIpAddr?: string;
@@ -318,7 +323,6 @@ export async function fetchChangeRequests(opts?: {
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
   if (opts?.state) params['state'] = opts.state;
-  if (opts?.q) params['q'] = opts.q;
   if (opts?.userId !== undefined) params['user'] = opts.userId;
   if (opts?.adminId !== undefined) params['admin'] = opts.adminId;
   if (opts?.apiIpAddr) params['api_ip_addr'] = opts.apiIpAddr;

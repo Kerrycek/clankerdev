@@ -8,11 +8,10 @@ import type {
 
 export function safePositiveInteger(value: string | undefined): number | undefined {
   const text = String(value ?? '').trim();
-  if (!text) return undefined;
+  if (!/^\d+$/.test(text)) return undefined;
   const number = Number(text);
-  if (!Number.isFinite(number)) return undefined;
-  const integer = Math.floor(number);
-  return integer > 0 ? integer : undefined;
+  if (!Number.isSafeInteger(number) || number <= 0) return undefined;
+  return number;
 }
 
 export function resourceId(value: unknown): number | null {
@@ -27,6 +26,27 @@ export function resourceId(value: unknown): number | null {
     return resourceId(record['id'] ?? record['value']);
   }
   return null;
+}
+
+function cgroupVersion(value: unknown): string | null {
+  const normalized = String(value ?? '').trim().toLowerCase();
+  if (normalized === '1' || normalized === 'v1') return 'cgroup_v1';
+  if (normalized === '2' || normalized === 'v2') return 'cgroup_v2';
+  if (normalized === 'any') return 'cgroup_any';
+  if (normalized === 'cgroup_v1' || normalized === 'cgroup_v2' || normalized === 'cgroup_any') return normalized;
+  return null;
+}
+
+/** Explicit placement is offered only when client-visible metadata proves compatibility. */
+export function requestNodeSupportsTemplate(node: unknown, template: unknown): boolean {
+  if (!node || typeof node !== 'object' || !template || typeof template !== 'object') return false;
+  const templateRecord = template as Record<string, unknown>;
+  if (templateRecord['enabled'] === false || templateRecord['supported'] === false) return false;
+  const nodeVersion = cgroupVersion((node as Record<string, unknown>)['cgroup_version']);
+  const templateVersion = cgroupVersion(templateRecord['cgroup_version']);
+  if (!templateVersion) return false;
+  if (templateVersion === 'cgroup_any') return nodeVersion === 'cgroup_v1' || nodeVersion === 'cgroup_v2';
+  return nodeVersion === templateVersion;
 }
 
 export function firstResourceId(
@@ -71,14 +91,10 @@ export function requestReviewActions(
 ): ResolveUserRequestAction[] {
   if (!isAdmin || !request) return [];
   const state = String(request.state ?? '').trim();
-  const canRequestCorrection = reqType === 'registration';
-
-  if (state === 'approved') return canRequestCorrection ? ['deny', 'ignore', 'request_correction'] : ['deny', 'ignore'];
-  if (state === 'denied') return canRequestCorrection ? ['approve', 'ignore', 'request_correction'] : ['approve', 'ignore'];
-  if (state === 'ignored') return canRequestCorrection ? ['approve', 'deny', 'request_correction'] : ['approve', 'deny'];
+  if (state !== 'awaiting') return [];
 
   const actions: ResolveUserRequestAction[] = ['approve', 'deny', 'ignore'];
-  if (canRequestCorrection && state === 'awaiting') {
+  if (reqType === 'registration') {
     actions.push('request_correction');
   }
   return actions;
@@ -109,6 +125,14 @@ export function emptyRequestOverrides(): RequestResolveOverrides {
     orgId: '',
     email: '',
     address: '',
+    yearOfBirth: '',
+    how: '',
+    note: '',
+    osTemplate: '',
+    location: '',
+    currency: '',
+    language: '',
+    timeZone: '',
     changeReason: '',
   };
 }
@@ -125,6 +149,14 @@ export function requestOverrides(
       orgId: stringField(request, 'org_id'),
       email: stringField(request, 'email'),
       address: stringField(request, 'address'),
+      yearOfBirth: request.year_of_birth != null ? String(request.year_of_birth) : '',
+      how: stringField(request, 'how'),
+      note: stringField(request, 'note'),
+      osTemplate: resourceId(request.os_template) != null ? String(resourceId(request.os_template)) : '',
+      location: resourceId(request.location) != null ? String(resourceId(request.location)) : '',
+      currency: stringField(request, 'currency'),
+      language: resourceId(request.language) != null ? String(resourceId(request.language)) : '',
+      timeZone: stringField(request, 'time_zone'),
       changeReason: '',
     };
   }
@@ -136,6 +168,14 @@ export function requestOverrides(
     orgId: '',
     email: stringField(request, 'email'),
     address: stringField(request, 'address'),
+    yearOfBirth: '',
+    how: '',
+    note: '',
+    osTemplate: '',
+    location: '',
+    currency: '',
+    language: '',
+    timeZone: '',
     changeReason: stringField(request, 'change_reason'),
   };
 }

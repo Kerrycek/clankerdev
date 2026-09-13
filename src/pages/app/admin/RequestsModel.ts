@@ -30,13 +30,10 @@ export function resetAdminRequestPaginationOnFilterChange(next: URLSearchParams,
 }
 
 export function safeNumber(value: string | undefined | null): number | undefined {
-  const t = String(value ?? '').trim();
-  if (!t) return undefined;
-  const n = Number(t);
-  if (!Number.isFinite(n)) return undefined;
-  const i = Math.floor(n);
-  if (i <= 0) return undefined;
-  return i;
+  const text = String(value ?? '').trim();
+  if (!/^\d+$/.test(text)) return undefined;
+  const number = Number(text);
+  return Number.isSafeInteger(number) && number > 0 ? number : undefined;
 }
 
 export function requestTypeFilterFromUrl(value: string | null | undefined): RequestTypeFilter {

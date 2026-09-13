@@ -3,52 +3,107 @@ import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
 import { useAppMode } from '../../../app/appMode';
+import { useAuth } from '../../../app/auth';
 import { useI18n } from '../../../app/i18n';
 import { useToasts } from '../../../app/toasts';
 import { useChrome } from '../../../components/layout/ChromeContext';
-import { getMetaActionStateId } from '../../../lib/api/haveapi';
-import { searchUsers } from '../../../lib/api/users';
+import { ListShell } from '../../../components/layout/ListShell';
+import { PageHeader } from '../../../components/layout/PageHeader';
+import type { SmartFilterSuggestion } from '../../../components/ui/SmartFilterInput';
+import { getMetaActionStateId, HaveApiError, isAmbiguousMutationError } from '../../../lib/api/haveapi';
 import {
-  fetchChangeRequest, fetchChangeRequests, fetchRegistrationRequest,
-  fetchRegistrationRequests, resolveChangeRequest, resolveRegistrationRequest,
+  fetchChangeRequest,
+  fetchChangeRequests,
+  fetchRegistrationRequest,
+  fetchRegistrationRequests,
+  resolveChangeRequest,
+  resolveRegistrationRequest,
   type ResolveUserRequestAction,
 } from '../../../lib/api/requests';
+import { searchUsers } from '../../../lib/api/users';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 import { useDebouncedValue } from '../../../lib/hooks/useDebouncedValue';
 import { cursorFromDescendingPage } from '../../../lib/lockIndex';
 import { useTierSlowIntervalMs } from '../../../lib/refreshTiers';
-import { parseNumericToken, splitKeyValueToken, tokenizeSmartInput, unquoteSmartValue } from '../../../lib/smartFilter';
-import { requestStateLabelKey, requestTypeLabelKey } from '../../../lib/requestsBadges';
-import { ListShell } from '../../../components/layout/ListShell';
-import { PageHeader } from '../../../components/layout/PageHeader';
-import type { SmartFilterSuggestion } from '../../../components/ui/SmartFilterInput';
+import { parseNumericToken } from '../../../lib/smartFilter';
+import { isLocalLockPersistenceError, type LocalMutationGeneration } from '../../../lib/localLocks';
+import { objectRef } from '../../../lib/objectRef';
 import { RequestsBulkActions } from './RequestsBulkActions';
-import { RequestsExpandedContent } from './RequestsExpandedContent';
 import { RequestsFilters } from './RequestsFilters';
 import { RequestsListContent } from './RequestsListContent';
 import { RequestsListStatus } from './RequestsListStatus';
+import { requestMatchesReviewTarget } from './RequestDetailModel';
+import { fetchAwaitingReviewTarget, RequestReviewPreconditionError } from './RequestResolveMutation';
+import { requestActionNeedsReason, requestReviewActions } from './RequestReviewModel';
 import {
-  ALL_ADMIN_REQUEST_STATES, DEFAULT_ADMIN_REQUEST_STATE, adminRequestApiState, adminRequestStateFilterFromUrl,
-  canonicalKey,
+  ALL_ADMIN_REQUEST_STATES,
+  DEFAULT_ADMIN_REQUEST_STATE,
+  adminRequestApiState,
+  adminRequestStateFilterFromUrl,
   changeRows,
   defaultStateOptions,
   mergeByIdDesc,
-  parseTypeValue,
-  registrationRows, resetAdminRequestPaginationOnFilterChange,
+  registrationRows,
+  resetAdminRequestPaginationOnFilterChange,
   requestId,
   requestKey,
   requestType,
   requestTypeFilterFromUrl,
-  resolveStateValue,
   safeNumber,
+  type RequestRowType,
   type RequestTypeFilter,
   type UnifiedRequestRow,
   visibleRequestRows,
 } from './RequestsModel';
 
+const KNOWN_REQUEST_STATES = new Set([
+  'awaiting',
+  'pending_correction',
+  'approved',
+  'denied',
+  'ignored',
+]);
+
+function actionsForBulkRow(row: UnifiedRequestRow, canResolve: boolean): ResolveUserRequestAction[] {
+  if (!canResolve) return [];
+  const state = String(row.state ?? '').trim();
+  if (!KNOWN_REQUEST_STATES.has(state)) return [];
+
+  return requestReviewActions(requestType(row), row, true).filter(
+    (action) => !(requestType(row) === 'registration' && action === 'approve'),
+  );
+}
+
+function commonBulkActions(rows: UnifiedRequestRow[], canResolve: boolean): ResolveUserRequestAction[] {
+  if (rows.length === 0) return [];
+  const [first, ...rest] = rows;
+  if (!first) return [];
+  const firstActions = actionsForBulkRow(first, canResolve);
+  return firstActions.filter((action) => rest.every((row) => actionsForBulkRow(row, canResolve).includes(action)));
+}
+
+function isRequestNotFoundError(error: unknown): boolean {
+  if (!(error instanceof HaveApiError)) return false;
+  if (error.httpStatus === 404) return true;
+  return /not found|nenalezen/i.test(error.message);
+}
+
+function requestApplicantSearchValues(row: UnifiedRequestRow): string[] {
+  const values: unknown[] = [row.login, row.full_name, row.email];
+  if (row.user && typeof row.user === 'object') {
+    const user = row.user as Record<string, unknown>;
+    values.push(user['login'], user['label']);
+  }
+  return values
+    .filter((value): value is string => typeof value === 'string' && Boolean(value.trim()))
+    .map((value) => value.trim());
+}
+
 export function RequestsPage() {
   const { basePath, mode } = useAppMode();
-  const isAdmin = mode === 'admin';
+  const auth = useAuth();
+  const isAdmin = mode === 'admin' && auth.role === 'admin';
+  const canResolve = isAdmin;
   const { t } = useI18n();
   const toasts = useToasts();
   const chrome = useChrome();
@@ -58,28 +113,24 @@ export function RequestsPage() {
 
   const [type, setType] = useState<RequestTypeFilter>(() => requestTypeFilterFromUrl(sp.get('type')));
   const [state, setState] = useState(() => adminRequestStateFilterFromUrl(sp.get('state')));
-  const [qText, setQText] = useState(() => sp.get('q') ?? '');
   const [userId, setUserId] = useState(() => sp.get('user') ?? '');
   const [adminId, setAdminId] = useState(() => sp.get('admin') ?? '');
   const [apiIp, setApiIp] = useState(() => sp.get('api_ip') ?? '');
   const [clientIp, setClientIp] = useState(() => sp.get('client_ip') ?? '');
   const [clientPtr, setClientPtr] = useState(() => sp.get('client_ptr') ?? '');
-
   const [smart, setSmart] = useState('');
-  const [smartErrors, setSmartErrors] = useState<string[]>([]);
-  const [helpOpen, setHelpOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
+  const [selectionMode, setSelectionMode] = useState(false);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
-  const [bulkAction, setBulkAction] = useState<ResolveUserRequestAction>('approve');
+  const [bulkAction, setBulkAction] = useState<ResolveUserRequestAction>('ignore');
   const [bulkReason, setBulkReason] = useState('');
   const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [openingRequestId, setOpeningRequestId] = useState<number | null>(null);
   const smartInputRef = useRef<HTMLInputElement>(null);
-  // Sync from URL on navigation.
+
   useEffect(() => {
     setType(requestTypeFilterFromUrl(sp.get('type')));
     setState(adminRequestStateFilterFromUrl(sp.get('state')));
-    setQText(sp.get('q') ?? '');
     setUserId(isAdmin ? sp.get('user') ?? '' : '');
     setAdminId(isAdmin ? sp.get('admin') ?? '' : '');
     setApiIp(sp.get('api_ip') ?? '');
@@ -87,68 +138,71 @@ export function RequestsPage() {
     setClientPtr(sp.get('client_ptr') ?? '');
   }, [isAdmin, sp]);
 
-  // Keep filters in the URL.
   useEffect(() => {
     const next = new URLSearchParams(sp);
 
-    if (type && type !== 'all') next.set('type', type);
+    if (type !== 'all') next.set('type', type);
     else next.delete('type');
 
-    const st = adminRequestStateFilterFromUrl(state);
-    if (st !== DEFAULT_ADMIN_REQUEST_STATE && (st === ALL_ADMIN_REQUEST_STATES || defaultStateOptions().includes(st))) next.set('state', st);
-    else next.delete('state');
+    const normalizedState = adminRequestStateFilterFromUrl(state);
+    if (
+      normalizedState !== DEFAULT_ADMIN_REQUEST_STATE &&
+      (normalizedState === ALL_ADMIN_REQUEST_STATES || defaultStateOptions().includes(normalizedState))
+    ) {
+      next.set('state', normalizedState);
+    } else {
+      next.delete('state');
+    }
 
-    const q = qText.trim();
-    if (q) next.set('q', q);
-    else next.delete('q');
+    // `q` was previously advertised but is not part of the deployed requests API.
+    next.delete('q');
 
     if (isAdmin && userId.trim()) next.set('user', userId.trim());
     else next.delete('user');
-
     if (isAdmin && adminId.trim()) next.set('admin', adminId.trim());
     else next.delete('admin');
-
     if (apiIp.trim()) next.set('api_ip', apiIp.trim());
     else next.delete('api_ip');
-
     if (clientIp.trim()) next.set('client_ip', clientIp.trim());
     else next.delete('client_ip');
-
     if (clientPtr.trim()) next.set('client_ptr', clientPtr.trim());
     else next.delete('client_ptr');
 
     resetAdminRequestPaginationOnFilterChange(next, sp);
     if (next.toString() !== sp.toString()) setSp(next, { replace: true });
-  }, [adminId, apiIp, clientIp, clientPtr, isAdmin, qText, setSp, sp, state, type, userId]);
+  }, [adminId, apiIp, clientIp, clientPtr, isAdmin, setSp, sp, state, type, userId]);
 
   const stateFilter = adminRequestStateFilterFromUrl(state);
   const apiState = adminRequestApiState(stateFilter);
-  const qTrim = qText.trim() || undefined;
   const userIdNum = safeNumber(userId);
   const adminIdNum = safeNumber(adminId);
-
   const filtersActive = Boolean(
-    qTrim ||
-      (type && type !== 'all') ||
+    type !== 'all' ||
       stateFilter !== DEFAULT_ADMIN_REQUEST_STATE ||
-      (isAdmin && userIdNum !== undefined) ||
-      (isAdmin && adminIdNum !== undefined) ||
+      userIdNum !== undefined ||
+      adminIdNum !== undefined ||
       apiIp.trim() ||
       clientIp.trim() ||
-      clientPtr.trim()
+      clientPtr.trim(),
   );
 
   function clearFilters() {
     setType('all');
     setState(DEFAULT_ADMIN_REQUEST_STATE);
-    setQText('');
     setUserId('');
     setAdminId('');
     setApiIp('');
     setClientIp('');
     setClientPtr('');
     setSmart('');
-    setSmartErrors([]);
+  }
+
+  function changeSelectionMode(enabled: boolean) {
+    setSelectionMode(enabled);
+    if (!enabled) {
+      setSelectedKeys(new Set());
+      setBulkReason('');
+    }
   }
 
   const pagination = useKeysetPagination({
@@ -157,7 +211,6 @@ export function RequestsPage() {
       scope: basePath,
       type,
       state: stateFilter,
-      q: qTrim,
       user: isAdmin ? userIdNum : undefined,
       admin: isAdmin ? adminIdNum : undefined,
       api_ip: apiIp.trim() || undefined,
@@ -183,9 +236,8 @@ export function RequestsPage() {
         limit: pagination.limit,
         fromId: pagination.fromId,
         state: apiState,
-        q: qTrim,
-        userId: isAdmin ? userIdNum : undefined,
-        adminId: isAdmin ? adminIdNum : undefined,
+        userId: userIdNum,
+        adminId: adminIdNum,
         apiIp: apiIp.trim(),
         clientIp: clientIp.trim(),
         clientPtr: clientPtr.trim(),
@@ -197,14 +249,13 @@ export function RequestsPage() {
         limit: pagination.limit,
         fromId: pagination.fromId,
         state: apiState,
-        q: qTrim,
-        userId: isAdmin ? userIdNum : undefined,
-        adminId: isAdmin ? adminIdNum : undefined,
+        userId: userIdNum,
+        adminId: adminIdNum,
         apiIpAddr: apiIp.trim() || undefined,
         clientIpAddr: clientIp.trim() || undefined,
         clientIpPtr: clientPtr.trim() || undefined,
       }),
-    staleTime: 15000,
+    staleTime: 15_000,
     refetchInterval: tierSlowRefetchMs,
   });
 
@@ -218,9 +269,8 @@ export function RequestsPage() {
         limit: pagination.limit,
         fromId: pagination.fromId,
         state: apiState,
-        q: qTrim,
-        userId: isAdmin ? userIdNum : undefined,
-        adminId: isAdmin ? adminIdNum : undefined,
+        userId: userIdNum,
+        adminId: adminIdNum,
         apiIp: apiIp.trim(),
         clientIp: clientIp.trim(),
         clientPtr: clientPtr.trim(),
@@ -232,20 +282,18 @@ export function RequestsPage() {
         limit: pagination.limit,
         fromId: pagination.fromId,
         state: apiState,
-        q: qTrim,
-        userId: isAdmin ? userIdNum : undefined,
-        adminId: isAdmin ? adminIdNum : undefined,
+        userId: userIdNum,
+        adminId: adminIdNum,
         apiIpAddr: apiIp.trim() || undefined,
         clientIpAddr: clientIp.trim() || undefined,
         clientIpPtr: clientPtr.trim() || undefined,
       }),
-    staleTime: 15000,
+    staleTime: 15_000,
     refetchInterval: tierSlowRefetchMs,
   });
 
   const reg = regQ.data?.data ?? [];
   const ch = changeQ.data?.data ?? [];
-
   const rows = useMemo(() => {
     const raw =
       type === 'registration'
@@ -253,36 +301,69 @@ export function RequestsPage() {
         : type === 'change'
           ? changeRows(ch)
           : mergeByIdDesc(reg, ch, pagination.limit);
-
     return visibleRequestRows(raw, stateFilter);
   }, [ch, pagination.limit, reg, stateFilter, type]);
 
-  const visibleKeys = useMemo(() => new Set(rows.map((r) => requestKey(r))), [rows]);
-  const allVisibleExpanded = rows.length > 0 && rows.every((r) => expandedKeys.has(requestKey(r)));
-
+  const visibleKeys = useMemo(() => new Set(rows.map(requestKey)), [rows]);
+  const lockedRequestIds = useMemo(
+    () => new Set(chrome.localLocks.filter((lock) => lock.kind === 'UserRequest').map((lock) => lock.id)),
+    [chrome.localLocks],
+  );
   useEffect(() => {
-    setExpandedKeys((prev) => {
-      let changed = false;
-      const next = new Set<string>();
-      for (const key of prev) {
-        if (visibleKeys.has(key)) next.add(key);
-        else changed = true;
-      }
-      return changed ? next : prev;
+    setSelectedKeys((previous) => {
+      const next = new Set([...previous].filter((key) => visibleKeys.has(key)));
+      return next.size === previous.size ? previous : next;
     });
   }, [visibleKeys]);
 
-  useEffect(() => {
-    setSelectedKeys((prev) => {
-      let changed = false;
-      const next = new Set<string>();
-      for (const key of prev) {
-        if (visibleKeys.has(key)) next.add(key);
-        else changed = true;
-      }
-      return changed ? next : prev;
+  function toggleSelected(key: string, selected: boolean) {
+    const target = rows.find((row) => requestKey(row) === key);
+    if (selected && target && lockedRequestIds.has(requestId(target))) return;
+    setSelectedKeys((previous) => {
+      const next = new Set(previous);
+      if (selected) next.add(key);
+      else next.delete(key);
+      return next;
     });
-  }, [visibleKeys]);
+  }
+
+  function toggleAllVisible(selected: boolean) {
+    setSelectedKeys((previous) => {
+      const next = new Set(previous);
+      for (const row of rows) {
+        const key = requestKey(row);
+        if (selected && !lockedRequestIds.has(requestId(row))) next.add(key);
+        else next.delete(key);
+      }
+      return next;
+    });
+  }
+
+  const selectedRows = useMemo(
+    () => rows.filter((row) => selectedKeys.has(requestKey(row))),
+    [rows, selectedKeys],
+  );
+  const allowedBulkActions = useMemo(
+    () => commonBulkActions(
+      selectedRows.filter((row) => !lockedRequestIds.has(requestId(row))),
+      canResolve,
+    ),
+    [canResolve, lockedRequestIds, selectedRows],
+  );
+  const containsSelectedRegistration = selectedRows.some((row) => requestType(row) === 'registration');
+  const bulkNeedsReason = bulkAction === 'deny' || bulkAction === 'request_correction';
+
+  function changeBulkAction(action: ResolveUserRequestAction) {
+    if (action !== bulkAction) setBulkReason('');
+    setBulkAction(action);
+  }
+
+  useEffect(() => {
+    if (allowedBulkActions.length === 0 || allowedBulkActions.includes(bulkAction)) return;
+    const next = allowedBulkActions.includes('ignore') ? 'ignore' : allowedBulkActions[0] ?? 'ignore';
+    if (next !== bulkAction) setBulkReason('');
+    setBulkAction(next);
+  }, [allowedBulkActions, bulkAction]);
 
   const refreshRequests = useCallback(async () => {
     const tasks: Promise<unknown>[] = [];
@@ -291,50 +372,8 @@ export function RequestsPage() {
     await Promise.all(tasks);
   }, [changeQ, needChanges, needRegs, regQ]);
 
-  function toggleExpanded(key: string) {
-    setExpandedKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  }
-
-  function expandAllVisible() {
-    setExpandedKeys(new Set(rows.map((r) => requestKey(r))));
-  }
-
-  function collapseAllVisible() {
-    setExpandedKeys(new Set());
-  }
-
-  function toggleSelected(key: string, selected: boolean) {
-    setSelectedKeys((prev) => {
-      const next = new Set(prev);
-      if (selected) next.add(key);
-      else next.delete(key);
-      return next;
-    });
-  }
-
-  function toggleAllVisible(selected: boolean) {
-    setSelectedKeys((prev) => {
-      const next = new Set(prev);
-      for (const row of rows) {
-        const key = requestKey(row);
-        if (selected) next.add(key);
-        else next.delete(key);
-      }
-      return next;
-    });
-  }
-
-  const selectedRows = useMemo(() => rows.filter((row) => selectedKeys.has(requestKey(row))), [rows, selectedKeys]);
-  const bulkCorrectionAllowed = selectedRows.length > 0 && selectedRows.every((row) => requestType(row) === 'registration' && row.state !== 'pending_correction');
-  const bulkNeedsReason = bulkAction === 'deny' || bulkAction === 'request_correction';
-
   async function applyBulkAction() {
-    if (selectedRows.length === 0 || bulkSubmitting || (bulkAction === 'request_correction' && !bulkCorrectionAllowed)) return;
+    if (!canResolve || selectedRows.length === 0 || bulkSubmitting || !allowedBulkActions.includes(bulkAction)) return;
     const reason = bulkReason.trim();
     if (bulkNeedsReason && !reason) {
       toasts.pushToast({ variant: 'danger', title: t('requests.bulk.reason_required') });
@@ -342,75 +381,175 @@ export function RequestsPage() {
     }
 
     setBulkSubmitting(true);
-    let ok = 0;
+    let succeeded = 0;
     const failures: string[] = [];
+    const failedKeys = new Set<string>();
+    const uncertainIds: number[] = [];
+    let preconditionChanged = false;
 
-    for (const row of selectedRows) {
+    for (const [rowIndex, row] of selectedRows.entries()) {
       const id = requestId(row);
+      const key = requestKey(row);
+      const requestRef = objectRef('UserRequest', id);
+      let mutationGeneration: LocalMutationGeneration | undefined;
+      let mutationStarted = false;
+      let settleError: unknown;
       try {
-        const payload = { action: bulkAction, reason: reason || undefined };
-        const res =
-          requestType(row) === 'registration'
-            ? await resolveRegistrationRequest(id, {
-                ...payload,
-                ...(bulkAction === 'approve' ? { create_vps: true, activate: true } : {}),
-              })
-            : await resolveChangeRequest(id, payload);
-        const asId = getMetaActionStateId(res.meta);
-        if (asId) chrome.trackActionState(asId);
-        ok += 1;
-      } catch (e: unknown) {
-        const message = e instanceof Error ? e.message : String(e);
-        failures.push(`#${id}: ${message}`);
+        if (requestType(row) === 'registration' && bulkAction === 'approve') {
+          throw new Error(t('requests.bulk.registration_approve_blocked'));
+        }
+        await fetchAwaitingReviewTarget(requestType(row), id);
+        mutationGeneration = await chrome.acquireLocalLock(requestRef, { durable: true });
+        const payload = { action: bulkAction, reason: bulkNeedsReason ? reason : undefined };
+        mutationStarted = true;
+        const response = requestType(row) === 'registration'
+          ? await resolveRegistrationRequest(id, payload)
+          : await resolveChangeRequest(id, payload);
+        const actionStateId = getMetaActionStateId(response.meta);
+        if (actionStateId) chrome.trackActionState(actionStateId, {
+          object: requestRef,
+          mutationGeneration,
+          objectLabel: `#${id}`,
+        });
+        succeeded += 1;
+      } catch (error: unknown) {
+        settleError = error;
+        if (error instanceof RequestReviewPreconditionError) {
+          preconditionChanged = true;
+          failedKeys.add(key);
+          failures.push(`#${id}: ${t('requests.bulk.precondition_changed')}`);
+        } else if (mutationStarted && isAmbiguousMutationError(error)) {
+          uncertainIds.push(id);
+          for (const untouched of selectedRows.slice(rowIndex + 1)) failedKeys.add(requestKey(untouched));
+          break;
+        } else {
+          failedKeys.add(key);
+          const message = isLocalLockPersistenceError(error)
+            ? t('requests.resolve.toast.blocked.title')
+            : error instanceof Error ? error.message : String(error);
+          failures.push(`#${id}: ${message}`);
+        }
+      } finally {
+        if (mutationGeneration) chrome.settleLocalLock(requestRef, settleError, mutationGeneration);
       }
     }
 
     setBulkSubmitting(false);
-    if (ok > 0) {
+    setSelectedKeys(failedKeys);
+    if (failedKeys.size === 0) {
+      setBulkReason('');
+      setSelectionMode(false);
+    }
+
+    if (succeeded > 0) {
       toasts.pushToast({
         variant: 'ok',
-        title: t('requests.bulk.toast.title', { count: String(ok) }),
+        title: t('requests.bulk.toast.title', { count: String(succeeded) }),
         body: failures.length ? t('requests.bulk.toast.partial', { count: String(failures.length) }) : undefined,
       });
-      setSelectedKeys(new Set());
-      setBulkReason('');
-      await refreshRequests();
+    }
+
+    if (succeeded > 0 || uncertainIds.length > 0 || preconditionChanged) await refreshRequests();
+
+    if (uncertainIds.length > 0) {
+      toasts.pushToast({
+        variant: 'warn',
+        title: t('requests.bulk.toast.uncertain.title'),
+        body: t('requests.bulk.toast.uncertain.body', { count: String(uncertainIds.length) }),
+        autoDismissMs: false,
+      });
     }
 
     if (failures.length > 0) {
       toasts.pushToast({
         variant: 'danger',
         title: t('requests.bulk.toast.error.title'),
-        body: failures.slice(0, 3).join('\n'),
+        body: `${failures.slice(0, 3).join('\n')}\n${t('requests.bulk.toast.failed_stay_selected')}`,
         autoDismissMs: false,
       });
     }
   }
 
   const pageCursor = useMemo(() => cursorFromDescendingPage(rows, requestId) ?? undefined, [rows]);
-
   const fetchedCount = reg.length + ch.length;
   const canNext = useMemo(() => {
     if (type === 'registration') return reg.length === pagination.limit;
     if (type === 'change') return ch.length === pagination.limit;
-
-    // Unified: if we fetched more than we display, we definitely have a next page.
     if (fetchedCount > rows.length) return true;
-    // Otherwise, if any source hit its limit, there might be more beyond.
-    if (reg.length === pagination.limit) return true;
-    if (ch.length === pagination.limit) return true;
-    return false;
+    return reg.length === pagination.limit || ch.length === pagination.limit;
   }, [ch.length, fetchedCount, pagination.limit, reg.length, rows.length, type]);
 
   const isLoading = (needRegs && regQ.isLoading) || (needChanges && changeQ.isLoading);
   const error = (needRegs && regQ.isError ? regQ.error : null) || (needChanges && changeQ.isError ? changeQ.error : null);
+  const listReturnTo = useMemo(() => {
+    const query = sp.toString();
+    return `${basePath}/requests${query ? `?${query}` : ''}`;
+  }, [basePath, sp]);
 
-  const smartNeedle = useMemo(() => smart.trim(), [smart]);
+  const requestDetailHref = useCallback(
+    (requestTypeValue: RequestRowType, id: number) => {
+      const detailParams = new URLSearchParams({ returnTo: listReturnTo });
+      return `${basePath}/requests/${requestTypeValue}/${id}?${detailParams.toString()}`;
+    },
+    [basePath, listReturnTo],
+  );
+
+  const openRequestById = useCallback(async (id: number) => {
+    if (openingRequestId !== null) return;
+    const onPage = rows.find((request) => requestId(request) === id);
+    if (onPage) {
+      navigate(requestDetailHref(requestType(onPage), id));
+      return;
+    }
+
+    setOpeningRequestId(id);
+    try {
+      const results = await Promise.allSettled([
+        fetchRegistrationRequest(id),
+        fetchChangeRequest(id),
+      ]);
+      const fulfilled: Array<{ endpoint: RequestRowType; data: unknown }> = [];
+      const [registrationResult, changeResult] = results;
+      if (registrationResult?.status === 'fulfilled') {
+        fulfilled.push({ endpoint: 'registration', data: registrationResult.value.data });
+      }
+      if (changeResult?.status === 'fulfilled') {
+        fulfilled.push({ endpoint: 'change', data: changeResult.value.data });
+      }
+
+      const matches = [...new Set(
+        fulfilled
+          .filter((candidate) => requestMatchesReviewTarget(candidate.data, candidate.endpoint, id))
+          .map((candidate) => candidate.endpoint),
+      )];
+      if (matches.length === 1 && matches[0]) {
+        navigate(requestDetailHref(matches[0], id));
+        return;
+      }
+
+      const rejected = results
+        .filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+        .map((result) => result.reason);
+      const definitelyMissing = fulfilled.length === 0
+        && rejected.length === results.length
+        && rejected.every(isRequestNotFoundError);
+      toasts.pushToast({
+        variant: 'danger',
+        title: definitelyMissing
+          ? t('requests.smart.error.not_found', { id: String(id) })
+          : t('requests.smart.error.lookup_failed', { id: String(id) }),
+      });
+    } finally {
+      setOpeningRequestId(null);
+    }
+  }, [navigate, openingRequestId, requestDetailHref, rows, t, toasts]);
+
+  const smartNeedle = smart.trim();
   const debouncedNeedle = useDebouncedValue(smartNeedle, 200);
-
   const userSuggestEnabled =
-    isAdmin && smartNeedle.length >= 2 && debouncedNeedle === smartNeedle && !smartNeedle.includes(':') && parseNumericToken(smartNeedle) === null;
-
+    smartNeedle.length >= 2 &&
+    debouncedNeedle === smartNeedle &&
+    parseNumericToken(smartNeedle) === null;
   const userSuggestQuery = useQuery({
     queryKey: ['users', 'search', { q: debouncedNeedle, limit: 8 }],
     enabled: userSuggestEnabled,
@@ -418,436 +557,140 @@ export function RequestsPage() {
     staleTime: 10_000,
   });
 
-  const openRequestById = useCallback(
-    async (id: number) => {
-      // If the id is already on the page, we know the type and can open directly.
-      const onPage = rows.find((request) => requestId(request) === id);
-      if (onPage) {
-        navigate(`${basePath}/requests/${requestType(onPage)}/${id}`);
-        return;
-      }
-
-      try {
-        await fetchRegistrationRequest(id);
-        navigate(`${basePath}/requests/registration/${id}`);
-        return;
-      } catch {
-        // ignore and try change
-      }
-
-      try {
-        await fetchChangeRequest(id);
-        navigate(`${basePath}/requests/change/${id}`);
-        return;
-      } catch {
-        // ignore
-      }
-
-      toasts.pushToast({ variant: 'danger', title: t('requests.smart.error.not_found', { id: String(id) }) });
-    },
-    [basePath, navigate, rows, t, toasts]
-  );
-
-  async function applySmartText(raw: string) {
-    const input = raw.trim();
-    if (!input) return;
-
-    if (input === '?') {
-      setHelpOpen(true);
-      return;
-    }
-
-    const tokens = tokenizeSmartInput(input).map((x) => x.trim()).filter(Boolean);
-
-    // Pure numeric → open request by id.
-    const firstToken = tokens[0];
-    const numericOnly = tokens.length === 1 && firstToken ? parseNumericToken(firstToken) : null;
-    if (numericOnly !== null) {
+  async function selectApplicant(raw: string) {
+    const needle = raw.trim();
+    if (!needle) return;
+    const numeric = parseNumericToken(needle);
+    if (numeric !== null) {
       setSmart('');
-      setSmartErrors([]);
-      void openRequestById(numericOnly);
+      await openRequestById(numeric);
       return;
     }
 
-    let nextType = type;
-    let nextState = state;
-    let nextQ = qText;
-    let nextUser = userId;
-    let nextAdmin = adminId;
-    let nextApiIp = apiIp;
-    let nextClientIp = clientIp;
-    let nextClientPtr = clientPtr;
-
-    const free: string[] = [];
-    const errors: string[] = [];
-
-    for (const token of tokens) {
-      const kv = splitKeyValueToken(token);
-      if (kv) {
-        const key = canonicalKey(kv.rawKey);
-        const value = unquoteSmartValue(kv.rawValue);
-
-        if (!key) {
-          errors.push(t('filters.smart.error.unknown_key', { key: kv.rawKey }));
-          continue;
-        }
-
-        if (!value.trim()) {
-          errors.push(t('filters.smart.error.missing_value', { key: kv.rawKey }));
-          continue;
-        }
-
-        if (key === 'q') {
-          nextQ = value;
-          continue;
-        }
-
-        if (key === 'type') {
-          const tv = parseTypeValue(value);
-          if (!tv) {
-            errors.push(t('requests.smart.error.type_unresolved', { value }));
-            continue;
-          }
-          nextType = tv;
-          continue;
-        }
-
-        if (key === 'state') {
-          const sv = resolveStateValue(value);
-          if (!sv) {
-            errors.push(t('requests.smart.error.state_unresolved', { value }));
-            continue;
-          }
-          nextState = sv;
-          continue;
-        }
-
-        if (key === 'user') {
-          if (!isAdmin) {
-            errors.push(t('filters.smart.error.admin_only', { key: kv.rawKey }));
-            continue;
-          }
-          const n = parseNumericToken(value);
-          if (n !== null) {
-            nextUser = String(n);
-            continue;
-          }
-
-          const users = (await searchUsers({ q: value, limit: 10 })).data;
-          const exact = users.filter((u) => u.login.toLowerCase() === value.toLowerCase());
-          const [resolvedUser] = exact;
-          if (resolvedUser) {
-            nextUser = String(resolvedUser.id);
-            continue;
-          }
-
-          errors.push(t('filters.smart.error.user_unresolved', { value }));
-          continue;
-        }
-
-        if (key === 'admin') {
-          if (!isAdmin) {
-            errors.push(t('filters.smart.error.admin_only', { key: kv.rawKey }));
-            continue;
-          }
-          const n = parseNumericToken(value);
-          if (n !== null) {
-            nextAdmin = String(n);
-            continue;
-          }
-
-          const users = (await searchUsers({ q: value, limit: 10 })).data;
-          const exact = users.filter((u) => u.login.toLowerCase() === value.toLowerCase());
-          const [resolvedAdmin] = exact;
-          if (resolvedAdmin) {
-            nextAdmin = String(resolvedAdmin.id);
-            continue;
-          }
-
-          errors.push(t('requests.smart.error.admin_unresolved', { value }));
-          continue;
-        }
-
-        if (key === 'api_ip') {
-          nextApiIp = value;
-          continue;
-        }
-
-        if (key === 'client_ip') {
-          nextClientIp = value;
-          continue;
-        }
-
-        if (key === 'client_ptr') {
-          nextClientPtr = value;
-          continue;
-        }
-
-        if (key === 'id') {
-          const n = parseNumericToken(value);
-          if (n !== null) {
-            setSmart('');
-            setSmartErrors([]);
-            void openRequestById(n);
-            return;
-          }
-
-          errors.push(t('requests.smart.error.id_numeric_only', { value }));
-          continue;
-        }
-
-        errors.push(t('filters.smart.error.unknown_key', { key: kv.rawKey }));
-      } else {
-        free.push(unquoteSmartValue(token));
+    try {
+      const users = (await searchUsers({ q: needle, limit: 10 })).data;
+      const exact = users.find((user) => user.login.toLowerCase() === needle.toLowerCase());
+      const selected = exact ?? (users.length === 1 ? users[0] : undefined);
+      if (!selected) {
+        toasts.pushToast({ variant: 'danger', title: t('requests.smart.error.choose_applicant') });
+        return;
       }
+      setUserId(String(selected.id));
+      setSmart('');
+    } catch (searchError: unknown) {
+      toasts.pushToast({
+        variant: 'danger',
+        title: t('requests.smart.error.applicant_lookup'),
+        body: searchError instanceof Error ? searchError.message : String(searchError),
+      });
     }
-
-    if (free.length > 0) {
-      nextQ = free.join(' ');
-    }
-
-    if (errors.length > 0) {
-      setSmartErrors(errors);
-      toasts.pushToast({ variant: 'danger', title: errors[0] ?? t('common.unknown_error') });
-      return;
-    }
-
-    setType(nextType);
-    setState(nextState);
-    setQText(nextQ);
-    setUserId(nextUser);
-    setAdminId(nextAdmin);
-    setApiIp(nextApiIp);
-    setClientIp(nextClientIp);
-    setClientPtr(nextClientPtr);
-    setSmart('');
-    setSmartErrors([]);
   }
 
   const smartSuggestions = useMemo((): SmartFilterSuggestion[] => {
-    const needle = smartNeedle;
-    if (!needle) return [];
-
-    if (needle === '?') {
-      return [
-        {
-          id: 'help',
-          primary: t('filters.help.title'),
-          secondary: t('filters.help.suggestion.secondary'),
-          onPick: () => setHelpOpen(true),
-          testId: 'admin.requests.smart.suggest.help',
-        },
-      ];
-    }
-
-    const suggestions: SmartFilterSuggestion[] = [];
-
-    const numeric = parseNumericToken(needle);
+    if (!smartNeedle) return [];
+    const numeric = parseNumericToken(smartNeedle);
     if (numeric !== null) {
-      const id = String(numeric);
-
-      suggestions.push({
+      return [{
         id: 'open',
-        primary: t('requests.smart.suggest.open', { id }),
+        primary: t('requests.smart.suggest.open', { id: String(numeric) }),
         secondary: t('requests.smart.suggest.open.secondary'),
         onPick: () => {
           setSmart('');
-          setSmartErrors([]);
           void openRequestById(numeric);
         },
         testId: 'admin.requests.smart.suggest.open',
-      });
-
-      suggestions.push({
-        id: 'q',
-        primary: t('requests.smart.suggest.q', { value: id }),
-        secondary: t('requests.smart.suggest.q.secondary'),
-        onPick: () => {
-          setQText(id);
-          setSmart('');
-          setSmartErrors([]);
-        },
-        testId: 'admin.requests.smart.suggest.q',
-      });
-
-      if (isAdmin) suggestions.push({
-        id: 'user',
-        primary: t('requests.smart.suggest.user_id', { id }),
-        secondary: t('requests.smart.suggest.user_id.secondary'),
-        onPick: () => {
-          setUserId(id);
-          setSmart('');
-          setSmartErrors([]);
-        },
-        testId: 'admin.requests.smart.suggest.user',
-      });
-
-      if (isAdmin) suggestions.push({
-        id: 'admin',
-        primary: t('requests.smart.suggest.admin_id', { id }),
-        secondary: t('requests.smart.suggest.admin_id.secondary'),
-        onPick: () => {
-          setAdminId(id);
-          setSmart('');
-          setSmartErrors([]);
-        },
-        testId: 'admin.requests.smart.suggest.admin',
-      });
-
-      return suggestions;
+      }];
     }
 
-    if (needle.includes(':')) {
-      suggestions.push({
-        id: 'apply',
-        primary: t('filters.smart.suggest.apply.primary'),
-        secondary: t('filters.smart.suggest.apply.secondary'),
-        onPick: () => void applySmartText(needle),
-        testId: 'admin.requests.smart.suggest.apply',
-      });
-      return suggestions;
-    }
-
-    // Default free text: server-side search.
-    suggestions.push({
-      id: 'q',
-      primary: t('requests.smart.suggest.q', { value: needle }),
-      secondary: t('requests.smart.suggest.q.secondary'),
-      onPick: () => {
-        setQText(needle);
-        setSmart('');
-        setSmartErrors([]);
-      },
-      testId: 'admin.requests.smart.suggest.q',
-    });
-
-    // State quick pick.
-    const st = resolveStateValue(needle);
-    if (st) {
-      suggestions.push({
-        id: `state.${st}`,
-        primary: t('requests.smart.suggest.state', { state: st === ALL_ADMIN_REQUEST_STATES ? t('requests.list.filter.state.all') : t(requestStateLabelKey(st)) }),
-        secondary: `state:${st}`,
-        onPick: () => {
-          setState(st);
-          setSmart('');
-          setSmartErrors([]);
-        },
-        testId: `admin.requests.smart.suggest.state.${st}`,
-      });
-    }
-
-    // Type quick pick.
-    const tv = parseTypeValue(needle);
-    if (tv && tv !== 'all') {
-      suggestions.push({
-        id: `type.${tv}`,
-        primary: t('requests.smart.suggest.type', { type: t(requestTypeLabelKey(tv)) }),
-        secondary: `type:${tv}`,
-        onPick: () => {
-          setType(tv);
-          setSmart('');
-          setSmartErrors([]);
-        },
-        testId: `admin.requests.smart.suggest.type.${tv}`,
-      });
-    }
-
-    // User login suggestions (admin only).
-    if (isAdmin) {
-      const users = userSuggestQuery.data ?? [];
-      for (const u of users.slice(0, 5)) {
-        suggestions.push({
-          id: `user.${u.id}`,
-          primary: t('requests.smart.suggest.user_login', { login: u.login }),
-          secondary: `#${u.id}`,
+    const needle = smartNeedle.toLowerCase();
+    const visibleRequestSuggestions = rows
+      .filter((row) => requestApplicantSearchValues(row).some((value) => value.toLowerCase().includes(needle)))
+      .slice(0, 4)
+      .map((row) => {
+        const id = requestId(row);
+        const rowType = requestType(row);
+        const applicant = requestApplicantSearchValues(row)[0] ?? `#${id}`;
+        return {
+          id: `request.${rowType}.${id}`,
+          primary: t('requests.smart.suggest.request', { applicant, id: String(id) }),
+          secondary: t(`requests.type.${rowType}`),
           onPick: () => {
-            setUserId(String(u.id));
             setSmart('');
-            setSmartErrors([]);
+            navigate(requestDetailHref(rowType, id));
           },
-          testId: `admin.requests.smart.suggest.user.${u.id}`,
-        });
-      }
-    }
+          testId: `admin.requests.smart.suggest.request.${rowType}.${id}`,
+        } satisfies SmartFilterSuggestion;
+      });
 
-    return suggestions;
-  }, [applySmartText, isAdmin, openRequestById, smartNeedle, t, userSuggestQuery.data]);
+    const userSuggestions = (userSuggestQuery.data ?? []).slice(0, 8).map((user) => ({
+      id: `user.${user.id}`,
+      primary: t('requests.smart.suggest.user_login', { login: user.login }),
+      secondary: user.full_name ? `${user.full_name} · #${user.id}` : `#${user.id}`,
+      onPick: () => {
+        setUserId(String(user.id));
+        setSmart('');
+      },
+      testId: `admin.requests.smart.suggest.user.${user.id}`,
+    }));
+    return [...visibleRequestSuggestions, ...userSuggestions].slice(0, 8);
+  }, [navigate, openRequestById, requestDetailHref, rows, smartNeedle, t, userSuggestQuery.data]);
 
   const shareUrl = useMemo(() => (typeof window !== 'undefined' ? window.location.href : ''), [sp]);
-
   if (!isAdmin) return <Navigate to="/app" replace />;
 
-  function renderExpandedContent(request: UnifiedRequestRow, compact = false) {
-    return (
-      <RequestsExpandedContent
-        request={request}
-        isAdmin={isAdmin}
-        basePath={basePath}
-        compact={compact}
-        onResolved={refreshRequests}
-      />
-    );
-  }
   return (
     <ListShell
       testId="admin.requests.list"
-      header={<PageHeader title={isAdmin ? t('requests.list.title') : t('requests.my.title')} description={isAdmin ? t('requests.list.description') : t('requests.my.description')} />}
+      header={<PageHeader title={t('requests.list.title')} description={t('requests.list.description')} />}
       filters={
         <RequestsFilters
-          isAdmin={isAdmin}
           type={type}
           state={state}
-          qText={qText}
           userId={userId}
           adminId={adminId}
           apiIp={apiIp}
           clientIp={clientIp}
           clientPtr={clientPtr}
           smart={smart}
-          smartNeedle={smartNeedle}
-          smartErrors={smartErrors}
           smartSuggestions={smartSuggestions}
-          helpOpen={helpOpen}
+          smartBusy={openingRequestId !== null}
           advancedOpen={advancedOpen}
           filtersActive={filtersActive}
           shareUrl={shareUrl}
-          rowsLength={rows.length}
-          allVisibleExpanded={allVisibleExpanded}
+          selectionMode={selectionMode}
+          canSelect={canResolve}
           smartInputRef={smartInputRef}
           setType={setType}
           setState={setState}
-          setQText={setQText}
           setUserId={setUserId}
           setAdminId={setAdminId}
           setApiIp={setApiIp}
           setClientIp={setClientIp}
           setClientPtr={setClientPtr}
           setSmart={setSmart}
-          setSmartErrors={setSmartErrors}
-          setHelpOpen={setHelpOpen}
           setAdvancedOpen={setAdvancedOpen}
-          applySmartText={applySmartText}
+          setSelectionMode={changeSelectionMode}
+          applySmartText={selectApplicant}
           clearFilters={clearFilters}
-          expandAllVisible={expandAllVisible}
-          collapseAllVisible={collapseAllVisible}
         />
       }
     >
-      {isAdmin && rows.length > 0 ? (
+      {canResolve && selectionMode && selectedRows.length > 0 ? (
         <RequestsBulkActions
           rowsLength={rows.length}
           selectedRowsLength={selectedRows.length}
           action={bulkAction}
+          allowedActions={allowedBulkActions}
+          containsRegistration={containsSelectedRegistration}
           reason={bulkReason}
           needsReason={bulkNeedsReason}
-          correctionAllowed={bulkCorrectionAllowed}
           submitting={bulkSubmitting}
-          onActionChange={setBulkAction}
+          targets={selectedRows.map((row) => ({ id: requestId(row), type: requestType(row) }))}
+          onActionChange={changeBulkAction}
           onReasonChange={setBulkReason}
           onSelectAll={() => toggleAllVisible(true)}
           onDeselectAll={() => toggleAllVisible(false)}
-          onClear={() => setSelectedKeys(new Set())}
+          onClear={() => changeSelectionMode(false)}
           onApply={applyBulkAction}
         />
       ) : null}
@@ -868,15 +711,15 @@ export function RequestsPage() {
           rows={rows}
           isAdmin={isAdmin}
           basePath={basePath}
-          expandedKeys={expandedKeys}
+          returnTo={listReturnTo}
+          selectionMode={selectionMode}
+          selectedKeys={selectedKeys}
+          lockedRequestIds={lockedRequestIds}
           canNext={canNext}
           pageCursor={pageCursor}
           pagination={pagination}
-          onToggleExpanded={toggleExpanded}
-          selectedKeys={selectedKeys}
           onToggleSelected={toggleSelected}
           onToggleAllVisible={toggleAllVisible}
-          renderExpandedContent={renderExpandedContent}
         />
       </RequestsListStatus>
     </ListShell>

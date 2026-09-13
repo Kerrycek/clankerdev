@@ -109,6 +109,14 @@ describe('queryKeyMatchesObject', () => {
     expect(queryKeyMatchesObject(ref, ['users', 'index', { limit: 50 }])).toBe(true);
   });
 
+  it('matches request detail and list queries', () => {
+    const ref = objectRef('UserRequest', 77);
+
+    expect(queryKeyMatchesObject(ref, ['user_request', 'registration', 'show', 77])).toBe(true);
+    expect(queryKeyMatchesObject(ref, ['user_request', 'changes', 'index', { state: 'awaiting' }])).toBe(true);
+    expect(queryKeyMatchesObject(ref, ['users', 'show', 77])).toBe(false);
+  });
+
   it('matches IP address queries', () => {
     const ref = objectRef('IpAddress', 777);
 
