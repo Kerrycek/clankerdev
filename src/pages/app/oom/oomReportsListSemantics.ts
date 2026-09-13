@@ -11,9 +11,26 @@ export function safeNumber(value: string): number | undefined {
   return i;
 }
 
+export const UNSUPPORTED_OOM_SEARCH_KEY = 'q' as const;
+
+export function normalizeOomListSearchParams(searchParams: URLSearchParams, allowUserFilter: boolean) {
+  const next = new URLSearchParams(searchParams);
+
+  next.delete('q');
+  if (!allowUserFilter) next.delete('user');
+
+  const changed = next.toString() !== searchParams.toString();
+  if (changed) {
+    next.delete('from_id');
+    next.set('page', '1');
+  }
+
+  return { changed, searchParams: next };
+}
+
 type SmartKey =
   | 'id'
-  | 'q'
+  | typeof UNSUPPORTED_OOM_SEARCH_KEY
   | 'vps'
   | 'user'
   | 'node'
@@ -31,7 +48,7 @@ export function canonicalKey(raw: string): SmartKey | null {
   if (!k) return null;
 
   if (['id', '#', 'oom', 'report'].includes(k)) return 'id';
-  if (['q', 'query', 'search', 'text'].includes(k)) return 'q';
+  if (['q', 'query', 'search', 'text'].includes(k)) return UNSUPPORTED_OOM_SEARCH_KEY;
   if (['vps', 'vm', 'host'].includes(k)) return 'vps';
   if (['user', 'owner', 'login'].includes(k)) return 'user';
   if (['node', 'server'].includes(k)) return 'node';
