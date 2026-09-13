@@ -1,3 +1,15 @@
+const FALLBACK_TIME_ZONES = [
+  'Europe/Prague',
+  'Europe/Bratislava',
+  'Europe/Berlin',
+  'Europe/London',
+  'UTC',
+  'America/New_York',
+  'America/Los_Angeles',
+  'Asia/Tokyo',
+];
+let cachedSupportedTimeZones: string[] | null = null;
+
 export function browserTimeZone(): string | null {
   if (typeof Intl === 'undefined') return null;
 
@@ -7,6 +19,47 @@ export function browserTimeZone(): string | null {
   } catch {
     return null;
   }
+}
+
+function supportedTimeZones(): string[] {
+  if (typeof Intl === 'undefined') return FALLBACK_TIME_ZONES;
+  if (cachedSupportedTimeZones) return cachedSupportedTimeZones;
+
+  const intl = Intl as typeof Intl & {
+    supportedValuesOf?: (key: 'timeZone') => string[];
+  };
+
+  try {
+    const zones = typeof intl.supportedValuesOf === 'function'
+      ? intl.supportedValuesOf('timeZone')
+      : FALLBACK_TIME_ZONES;
+    cachedSupportedTimeZones = zones.filter(isValidTimeZone);
+    return cachedSupportedTimeZones;
+  } catch {
+    return FALLBACK_TIME_ZONES;
+  }
+}
+
+/**
+ * Build shared time-zone picker choices. Contextual values stay at
+ * the top while every emitted value is a valid IANA identifier.
+ */
+export function timeZoneOptions(
+  current?: string | null,
+  server?: string | null,
+  browser?: string | null
+): Array<{ value: string; label: string }> {
+  const pinned = ['Europe/Prague', server, browser, current, 'UTC']
+    .filter((zone): zone is string => isValidTimeZone(zone));
+  const seen = new Set<string>();
+
+  return [...pinned, ...supportedTimeZones()]
+    .filter((zone) => {
+      if (seen.has(zone)) return false;
+      seen.add(zone);
+      return true;
+    })
+    .map((zone) => ({ value: zone, label: zone }));
 }
 
 export function isValidTimeZone(zone: unknown): zone is string {

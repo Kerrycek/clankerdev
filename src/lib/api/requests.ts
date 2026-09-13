@@ -298,6 +298,7 @@ export async function updateRegistrationRequestByToken(
     location: number;
     currency: string;
     language: number;
+    time_zone: string | null;
   }
 ) {
   return haveApiCall<RegistrationRequest>({

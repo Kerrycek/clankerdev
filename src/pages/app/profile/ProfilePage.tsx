@@ -11,7 +11,7 @@ import { PageHeader } from '../../../components/layout/PageHeader';
 
 import { ProfileTabs } from './ProfileTabs';
 import { ProfilePreferencesCard } from './ProfilePreferencesCard';
-import { browserTimeZone, ProfileSidebarCards } from './ProfileSidebarCards';
+import { ProfileSidebarCards } from './ProfileSidebarCards';
 import { Alert } from '../../../components/ui/Alert';
 import { Button } from '../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
@@ -22,6 +22,7 @@ import { Textarea } from '../../../components/ui/Textarea';
 import { fetchUser, updateUser } from '../../../lib/api/users';
 import { createChangeRequest } from '../../../lib/api/requests';
 import { formatErrorMessage } from '../../../lib/errors';
+import { browserTimeZone } from '../../../lib/timeZones';
 import { userString } from './ProfilePageHelpers';
 
 export function ProfilePage() {
