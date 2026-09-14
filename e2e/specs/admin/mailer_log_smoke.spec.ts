@@ -55,7 +55,18 @@ test.describe('@smoke @pr-smoke @pr-smoke-mobile Admin mailer log contract', () 
   });
 
   test('lists mails and opens detail', async ({ page }) => {
-    await page.goto('/admin/mailer/log');
+    const listRequestPromise = page.waitForRequest((request) => {
+      if (request.method() !== 'GET') return false;
+      return new URL(request.url()).pathname.endsWith('/mail_logs');
+    });
+    await page.goto('/admin/mailer/log?limit=100');
+    const listUrl = new URL((await listRequestPromise).url());
+
+    // HaveAPI permits up to 1,000 rows, so the largest visible page can safely
+    // request one additional row to determine whether Next should be enabled.
+    expect(Array.from(listUrl.searchParams.entries())).toEqual([
+      ['mail_log[limit]', '101'],
+    ]);
 
     await expect(page.getByTestId('admin.mailer.log.page')).toBeVisible();
     await expect(visibleMailLogEntry(page, 101)).toBeVisible();
