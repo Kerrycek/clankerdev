@@ -36,6 +36,7 @@ export const enRequestReviewSafety = {
   'requests.bulk.deselect_all': 'Deselect this page',
   'requests.bulk.cancel_selection': 'Cancel selection',
   'requests.bulk.select_one': 'Select request #{id}',
+  'requests.bulk.not_reviewable': 'Only requests awaiting review can be selected.',
   'requests.bulk.review': 'Review action',
   'requests.bulk.registration_approve_blocked': 'Registrations cannot be approved in bulk. Open each registration and review its identity, risk signals, and VPS options.',
   'requests.bulk.no_common_action': 'The selected requests have no safe action in common. Adjust the selection.',

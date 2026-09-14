@@ -101,6 +101,26 @@ export function requestReviewActions(
   return actions;
 }
 
+/** Bulk review is intentionally narrower: registrations still require detail review before approval. */
+export function requestBulkReviewActions(
+  reqType: RequestReviewType,
+  request: ReviewableRequest | undefined,
+  isAdmin: boolean,
+): ResolveUserRequestAction[] {
+  return requestReviewActions(reqType, request, isAdmin).filter(
+    (action) => !(reqType === 'registration' && action === 'approve'),
+  );
+}
+
+export function requestCanEnterBulkReview(
+  reqType: RequestReviewType,
+  request: ReviewableRequest | undefined,
+  isAdmin: boolean,
+  isLocked: boolean,
+): boolean {
+  return !isLocked && requestBulkReviewActions(reqType, request, isAdmin).length > 0;
+}
+
 /** Prove that the request still has an exact linked user, never just a historical id. */
 export function requestLinkedUserId(request: ReviewableRequest | undefined): number | null {
   if (!request?.user || typeof request.user !== 'object') return null;

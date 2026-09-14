@@ -839,24 +839,14 @@ test('@workflow-matrix @smoke @smoke-mobile admin requests: correction queue sta
   await expect(page).toHaveURL(/state=pending_correction/);
 
   await expect(page.locator('[data-testid^="admin.requests.expand."]')).toHaveCount(0);
-  await page.getByTestId('admin.requests.bulk.selection_mode').click();
-  const selectionCheckbox = page.locator(
-    '[data-testid="admin.requests.bulk.select.registration.500"]:visible, [data-testid="admin.requests.bulk.select.mobile.registration.500"]:visible',
-  );
-  if ((page.viewportSize()?.width ?? 1_000) < 768) {
-    await visibleRegistration(500).click();
-  } else {
-    await selectionCheckbox.check();
-  }
-  await expect(selectionCheckbox).toBeChecked();
-  await expect(page.getByTestId('admin.requests.bulk.action').locator('option[value="request_correction"]')).toHaveCount(0);
-  await expect(page.getByTestId('admin.requests.bulk.action').locator('option[value="approve"]')).toHaveCount(0);
+  await expect(page.getByTestId('admin.requests.bulk.selection_mode')).toHaveCount(0);
 
   correctionState = 'awaiting';
   await page.getByTestId('admin.requests.quick.awaiting').click();
   await expect.poll(() => registrationStates.at(-1)).toBe('awaiting');
   await expect(visibleRegistration(500)).toBeVisible();
   await expect(visibleRegistration(501)).toBeVisible();
+  await expect(page.getByTestId('admin.requests.bulk.selection_mode')).toBeVisible();
   await expect(page).not.toHaveURL(/[?&]state=/);
 });
 
@@ -892,6 +882,34 @@ test('@workflow-matrix @smoke @smoke-mobile admin requests: all states is explic
   await expect(visibleRegistration(602)).toBeVisible();
   await expect(visibleRegistration(601)).toBeVisible();
   await expect(page.getByTestId('admin.requests.quick.all')).toHaveAttribute('aria-pressed', 'true');
+
+  const correctionHref = await visibleRegistration(602).evaluate((element) => {
+    const link = element.closest('a') ?? element.querySelector('a');
+    return link?.getAttribute('href') ?? '';
+  });
+  expect(correctionHref).toContain('/admin/requests/registration/602');
+
+  await page.getByTestId('admin.requests.bulk.selection_mode').click();
+  const awaitingCheckbox = page.locator(
+    '[data-testid="admin.requests.bulk.select.registration.603"]:visible, [data-testid="admin.requests.bulk.select.mobile.registration.603"]:visible',
+  );
+  const correctionCheckbox = page.locator(
+    '[data-testid="admin.requests.bulk.select.registration.602"]:visible, [data-testid="admin.requests.bulk.select.mobile.registration.602"]:visible',
+  );
+  const deniedCheckbox = page.locator(
+    '[data-testid="admin.requests.bulk.select.registration.601"]:visible, [data-testid="admin.requests.bulk.select.mobile.registration.601"]:visible',
+  );
+  await expect(awaitingCheckbox).toBeEnabled();
+  await expect(correctionCheckbox).toBeDisabled();
+  await expect(deniedCheckbox).toBeDisabled();
+  await expect(correctionCheckbox).toHaveAttribute('title', /awaiting review|čekající na posouzení/i);
+  await awaitingCheckbox.check();
+  await expect(page.getByTestId('admin.requests.bulk')).toBeVisible();
+  await expect(page.getByTestId('admin.requests.bulk.no_common_action')).toHaveCount(0);
+  await expect(page.getByTestId('admin.requests.bulk.action').locator('option[value="ignore"]')).toHaveCount(1);
+  await expect(correctionCheckbox).not.toBeChecked();
+  await expect(deniedCheckbox).not.toBeChecked();
+  await page.getByTestId('admin.requests.bulk.selection_mode').click();
 
   const registrationCalls = registrationStates.length;
   await page.reload();
@@ -1165,7 +1183,9 @@ test('@workflow-matrix @smoke admin requests: ambiguous bulk mutation stops befo
   await expect.poll(() => uncertainCalls).toBe(1);
   expect(untouchedCalls).toBe(0);
   await expect(page.getByTestId('admin.requests.bulk.select.change.820')).toBeDisabled();
+  await expect(page.getByTestId('admin.requests.bulk.select.change.820')).not.toBeChecked();
   await expect(page.getByTestId('admin.requests.bulk.select.change.819')).toBeChecked();
+  await expect(page.getByTestId('admin.requests.bulk')).toContainText(/Selected: 1|Vybráno: 1/);
 });
 
 test('@workflow-matrix @smoke admin requests: stale bulk row is not posted and remains selected', async ({ page }) => {
