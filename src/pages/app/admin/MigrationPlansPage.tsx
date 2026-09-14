@@ -20,6 +20,8 @@ import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 import { useTierCIntervalMs } from '../../../lib/refreshTiers';
 import { cursorFromDescendingPage } from '../../../lib/lockIndex';
 import { parseNumericToken, splitKeyValueToken, tokenizeSmartInput, unquoteSmartValue } from '../../../lib/smartFilter';
+import { MigrationPlansRouteGuard } from './MigrationPlansRouteGuard';
+import { updateMigrationPlanFilterSearchParams } from './migrationPlansFilterSemantics';
 
 import { useChrome } from '../../../components/layout/ChromeContext';
 import { Alert } from '../../../components/ui/Alert';
@@ -101,6 +103,10 @@ function formatRef(ref: any, na: string): string {
 }
 
 export function MigrationPlansPage() {
+  return <MigrationPlansRouteGuard><MigrationPlansContent /></MigrationPlansRouteGuard>;
+}
+
+function MigrationPlansContent() {
   const { basePath } = useAppMode();
   const chrome = useChrome();
   const { t } = useI18n();
@@ -109,12 +115,10 @@ export function MigrationPlansPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const qText = useMemo(() => String(searchParams.get('q') ?? ''), [searchParams]);
   const state = useMemo(() => parsePlanState(searchParams.get('state')), [searchParams]);
   const userId = useMemo(() => searchParams.get('user') ?? '', [searchParams]);
 
   const userIdNum = safeNumber(userId);
-  const qTrim = qText.trim() || undefined;
 
   const [smart, setSmart] = useState('');
   const [smartErrors, setSmartErrors] = useState<string[]>([]);
@@ -137,14 +141,13 @@ export function MigrationPlansPage() {
     });
   };
 
-  const filtersActive = Boolean(qTrim || state || userIdNum !== undefined);
+  const filtersActive = Boolean(state || userIdNum !== undefined);
 
   const clearFilters = () => {
     setSmart('');
     setSmartErrors([]);
     setSearchParams((prev) => {
       const p = new URLSearchParams(prev);
-      p.delete('q');
       p.delete('state');
       p.delete('user');
       return p;
@@ -153,7 +156,7 @@ export function MigrationPlansPage() {
 
   const pagination = useKeysetPagination({
     id: 'admin.migration_plans.list',
-    filterKey: JSON.stringify({ q: qTrim, state: state || undefined, userId: userIdNum, scope: basePath }),
+    filterKey: JSON.stringify({ state: state || undefined, userId: userIdNum, scope: basePath }),
     searchParams,
     setSearchParams,
     defaultLimit: 50,
@@ -163,13 +166,12 @@ export function MigrationPlansPage() {
   const tierCRefetchMs = useTierCIntervalMs();
 
   const listQ = useQuery({
-    queryKey: ['migration_plans', 'list', { q: qTrim, state, userId: userIdNum, limit: pagination.limit, fromId: pagination.fromId }],
+    queryKey: ['migration_plans', 'list', { state, userId: userIdNum, limit: pagination.limit, fromId: pagination.fromId }],
     queryFn: async () =>
       (
         await fetchMigrationPlans({
           limit: pagination.limit,
           fromId: pagination.fromId,
-          q: qTrim,
           state: state || undefined,
           userId: userIdNum,
         })
@@ -312,10 +314,9 @@ export function MigrationPlansPage() {
     return null;
   };
 
-  const canonicalKey = (rawKey: string): 'q' | 'state' | 'user' | 'id' | null => {
+  const canonicalKey = (rawKey: string): 'state' | 'user' | 'id' | null => {
     const k = String(rawKey ?? '').trim().toLowerCase();
     if (!k) return null;
-    if (k === 'q' || k === 'search' || k === 's' || k === 'text') return 'q';
     if (k === 'state' || k === 'st') return 'state';
     if (k === 'user' || k === 'u' || k === 'owner') return 'user';
     if (k === 'id' || k === '#') return 'id';
@@ -353,7 +354,6 @@ export function MigrationPlansPage() {
       return;
     }
 
-    let nextQ = qText;
     let nextState = state;
     let nextUser = userId;
     const free: string[] = [];
@@ -372,15 +372,6 @@ export function MigrationPlansPage() {
 
       if (!key) {
         errors.push(t('filters.smart.error.unknown_key', { key: kv.rawKey }));
-        continue;
-      }
-
-      if (key === 'q') {
-        if (!value.trim()) {
-          errors.push(t('filters.smart.error.missing_value', { key: kv.rawKey }));
-          continue;
-        }
-        nextQ = value;
         continue;
       }
 
@@ -433,11 +424,12 @@ export function MigrationPlansPage() {
       errors.push(t('filters.smart.error.unknown_key', { key: kv.rawKey }));
     }
 
-    if (free.length > 0) nextQ = free.join(' ');
+    if (free.length > 0) {
+      errors.push(t('admin.migration_plans.smart.error.explicit_filter_required', { value: free.join(' ') }));
+    }
 
-    setTextParam('q', nextQ.trim() || undefined);
-    setTextParam('state', nextState || undefined);
-    setTextParam('user', nextUser.trim() || undefined);
+    const nextSearchParams = updateMigrationPlanFilterSearchParams({ searchParams, state: nextState, user: nextUser });
+    if (nextSearchParams) setSearchParams(nextSearchParams);
 
     setSmart('');
     setSmartErrors(errors);
@@ -507,34 +499,11 @@ export function MigrationPlansPage() {
       }
     }
 
-    out.push({
-      id: 'search',
-      primary: t('admin.migration_plans.smart.suggest.search', { q: needle }),
-      secondary: t('admin.migration_plans.smart.suggest.search.secondary'),
-      onPick: () => {
-        setTextParam('q', needle);
-        setSmart('');
-      },
-      testId: 'admin.migration_plans.smart.suggest.search',
-    });
-
     return out;
   }, [openPlan, smartNeedle, stateLabel, t, userSuggestQuery.data]);
 
   const activeFilterChips = useMemo(() => {
     const chips: React.ReactNode[] = [];
-
-    if (qTrim) {
-      chips.push(
-        <FilterChip
-          key="q"
-          label={`q:${qTrim}`}
-          tone="neutral"
-          onRemove={() => setTextParam('q', undefined)}
-          testId="admin.migration_plans.chip.q"
-        />
-      );
-    }
 
     if (state) {
       chips.push(
@@ -573,7 +542,7 @@ export function MigrationPlansPage() {
     });
 
     return chips;
-  }, [qTrim, setTextParam, smartErrors, state, userIdNum]);
+  }, [setTextParam, smartErrors, state, userIdNum]);
 
   return (
     <ListShell
@@ -664,10 +633,8 @@ export function MigrationPlansPage() {
               { example: '123', description: t('admin.migration_plans.smart_help.examples.open') },
               { example: 'state:running', description: t('admin.migration_plans.smart_help.examples.state') },
               { example: 'user:alice', description: t('admin.migration_plans.smart_help.examples.user') },
-              { example: 'q:maintenance', description: t('admin.migration_plans.smart_help.examples.search') },
             ]}
             topKeys={[
-              { key: 'q', description: t('admin.migration_plans.smart_help.keys.q'), example: 'q:maintenance' },
               { key: 'state', description: t('admin.migration_plans.smart_help.keys.state'), example: 'state:running' },
               { key: 'user', description: t('admin.migration_plans.smart_help.keys.user'), example: 'user:alice' },
               { key: 'id', description: t('admin.migration_plans.smart_help.keys.id'), example: 'id:123' },
@@ -706,16 +673,6 @@ export function MigrationPlansPage() {
           >
             <div className="space-y-4">
               <div className="text-sm text-muted">{t('admin.migration_plans.advanced.hint')}</div>
-
-              <div>
-                <div className="text-xs font-medium text-faint">{t('admin.migration_plans.advanced.q.label')}</div>
-                <Input
-                  value={qText}
-                  onChange={(e) => setTextParam('q', e.target.value)}
-                  placeholder={t('admin.migration_plans.smart.placeholder')}
-                  testId="admin.migration_plans.advanced.q"
-                />
-              </div>
 
               <div>
                 <div className="text-xs font-medium text-faint">{t('admin.migration_plans.filter.state.label')}</div>

@@ -943,6 +943,7 @@ See also:
 - `admin.migration_plans.card.<id>` (mobile cards)
 - `admin.migration_plans.pagination.mobile`
 - `admin.migration_plans.pagination.desktop`
+- `admin.migration_plans.normalizing` (legacy URL guard; list is not mounted yet)
 - `admin.migration_plans.loading` (LoadingState)
 - `admin.migration_plans.error` (ErrorState)
 - `admin.migration_plans.empty` (EmptyState)

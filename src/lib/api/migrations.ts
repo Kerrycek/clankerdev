@@ -35,14 +35,12 @@ export interface VpsMigration {
 export async function fetchMigrationPlans(opts?: {
   limit?: number;
   fromId?: number;
-  q?: string;
   state?: string;
   userId?: number;
 }) {
   const params: Record<string, string | number | boolean> = {};
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
-  if (opts?.q) params['q'] = opts.q;
   if (opts?.state) params['state'] = opts.state;
   if (opts?.userId !== undefined) params['user'] = opts.userId;
 
