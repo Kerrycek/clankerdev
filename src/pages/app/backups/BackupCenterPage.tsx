@@ -15,15 +15,7 @@ import { ErrorState } from '../../../components/ui/ErrorState';
 import { Input } from '../../../components/ui/Input';
 import { LoadingState } from '../../../components/ui/LoadingState';
 import { StatCard } from '../../../components/ui/StatCard';
-import { TableCard } from '../../../components/ui/TableCard';
-import { type Dataset, type SnapshotDownload } from '../../../lib/api/datasets';
-import { formatDateTime, formatMiB } from '../../../lib/format';
-import {
-  snapshotDownloadCanOpen,
-  snapshotDownloadHref,
-  snapshotDownloadStatus,
-} from '../datasets/DatasetDownloadModel';
-import { DatasetDownloadOpenButton, DatasetDownloadStateBadge } from '../datasets/DatasetDownloadStatusView';
+import { type Dataset } from '../../../lib/api/datasets';
 import {
   BACKUP_CENTER_TABS,
   backupCenterCount,
@@ -32,10 +24,10 @@ import {
   parseBackupCenterTab,
   resourceLabel,
   resolveSnapshotDownloadDataset,
-  snapshotDownloadDatasetPath,
   summarizeBackupCenter,
   type BackupCenterTab,
 } from './BackupCenterModel';
+import { BackupCenterDownloadsList } from './BackupCenterDownloadsList';
 import {
   fetchAllBackupDatasets,
   fetchAuthorizedSnapshotDownloads,
@@ -94,74 +86,6 @@ function BackupTabs(props: { active: BackupCenterTab; onChange: (tab: BackupCent
         </Button>
       ))}
     </div>
-  );
-}
-
-function DownloadRows(props: {
-  downloads: SnapshotDownload[];
-  datasets: Dataset[];
-  compact?: boolean;
-  hrefOptions: { webuiUrl?: string; origin?: string };
-}) {
-  const { t } = useI18n();
-  const rows = props.compact ? props.downloads.slice(0, 5) : props.downloads;
-  return (
-    <TableCard minWidth="lg" testId="backups.downloads.table">
-      <thead>
-        <tr>
-          <th className="px-3 py-2 text-left">{t('backups.dataset')}</th>
-          <th className="px-3 py-2 text-left">{t('backups.snapshot')}</th>
-          <th className="px-3 py-2 text-left">{t('backups.downloads.format')}</th>
-          <th className="px-3 py-2 text-left">{t('backups.downloads.state')}</th>
-          <th className="px-3 py-2 text-left">{t('backups.downloads.expires')}</th>
-          <th className="px-3 py-2 text-right">{t('backups.actions')}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((download) => {
-          const href = snapshotDownloadHref(download, props.hrefOptions);
-          const status = snapshotDownloadStatus(download, { href });
-          const dataset = resolveSnapshotDownloadDataset(download, props.datasets);
-          const detailPath = snapshotDownloadDatasetPath(download, dataset);
-          const expiration = String(download.expiration_date ?? download.expires_at ?? '');
-          return (
-            <tr key={download.id} data-testid={`backups.downloads.row.${download.id}`}>
-              <td className="px-3 py-2">
-                <div className="font-medium">{resourceLabel(dataset, t('backups.dataset.unknown'))}</div>
-                <div className="text-xs text-faint">#{dataset?.id ?? '—'}</div>
-              </td>
-              <td className="px-3 py-2 text-muted">{resourceLabel(download.snapshot, `#${download.snapshot?.id ?? '—'}`)}</td>
-              <td className="px-3 py-2">
-                {download.format ? t(`dataset.download.format.${download.format}`) : '—'}
-                {download.size !== undefined ? <div className="text-xs text-faint">{formatMiB(download.size)}</div> : null}
-              </td>
-              <td className="px-3 py-2"><DatasetDownloadStateBadge status={status} t={t} /></td>
-              <td className="px-3 py-2 text-muted">{expiration ? formatDateTime(expiration) : '—'}</td>
-              <td className="px-3 py-2">
-                <div className="flex justify-end gap-2">
-                  {detailPath ? (
-                    <Button
-                      to={detailPath}
-                      size="sm"
-                      variant="ghost"
-                      testId={`backups.downloads.row.${download.id}.detail`}
-                    >
-                      {t('backups.open')}
-                    </Button>
-                  ) : null}
-                  <DatasetDownloadOpenButton
-                    href={href}
-                    canOpen={snapshotDownloadCanOpen(status, href)}
-                    disabledTitle={t(`dataset.downloads.state_detail.${status}`)}
-                    testId={`backups.downloads.row.${download.id}.download`}
-                  />
-                </div>
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </TableCard>
   );
 }
 
@@ -424,7 +348,7 @@ export function BackupCenterPage() {
             <div>
               <h2 className="mb-3 text-base font-semibold">{t('backups.recent_downloads')}</h2>
               {downloads.length ? (
-                <DownloadRows
+                <BackupCenterDownloadsList
                   downloads={downloads}
                   datasets={datasets}
                   compact
@@ -479,7 +403,7 @@ export function BackupCenterPage() {
         {!loading && !error && tab === 'downloads' ? (
           <div data-testid="backups.downloads">
             {filteredDownloads.length ? (
-              <DownloadRows
+              <BackupCenterDownloadsList
                 downloads={filteredDownloads}
                 datasets={datasets}
                 hrefOptions={hrefOptions}

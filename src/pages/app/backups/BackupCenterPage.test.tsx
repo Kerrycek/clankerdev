@@ -115,6 +115,31 @@ describe('BackupCenterPage', () => {
     });
   });
 
+  it('renders download cards for mobile while preserving the desktop table', async () => {
+    renderPage('/app/backups?tab=downloads');
+
+    const card = await screen.findByTestId('backups.downloads.card.1');
+    expect(card).toHaveTextContent('root');
+    expect(screen.getByTestId('backups.downloads.cards')).toHaveClass('xl:hidden');
+    expect(screen.getByTestId('backups.downloads.table')).toHaveClass('hidden', 'xl:block');
+    expect(screen.getByTestId('backups.downloads.card.1.detail')).toHaveAttribute(
+      'href',
+      '/app/datasets/10/downloads',
+    );
+    expect(screen.getByTestId('backups.downloads.card.1.detail')).toHaveAttribute(
+      'aria-label',
+      'backups.downloads.open_dataset',
+    );
+    expect(screen.getByTestId('backups.downloads.card.1.download')).toHaveAttribute(
+      'href',
+      expect.stringContaining('/download/1'),
+    );
+    expect(screen.getByTestId('backups.downloads.card.1.download')).toHaveAttribute(
+      'aria-label',
+      'backups.downloads.download_snapshot',
+    );
+  });
+
   it('loads snapshot tools only after selecting one dataset', async () => {
     const user = userEvent.setup();
     renderPage();

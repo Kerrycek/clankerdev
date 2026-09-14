@@ -78,6 +78,7 @@ export function DatasetDownloadOpenButton(props: {
   href?: string;
   canOpen: boolean;
   disabledTitle: string;
+  ariaLabel?: string;
   testId: string;
 }) {
   const { t } = useI18n();
@@ -91,6 +92,7 @@ export function DatasetDownloadOpenButton(props: {
         rel="noopener noreferrer"
         size="sm"
         variant="secondary"
+        ariaLabel={props.ariaLabel}
         testId={props.testId}
       >
         {t("common.download")}
@@ -104,6 +106,7 @@ export function DatasetDownloadOpenButton(props: {
       variant="secondary"
       disabled
       title={props.disabledTitle}
+      ariaLabel={props.ariaLabel}
       testId={props.testId}
     >
       {t("common.download")}
