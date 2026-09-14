@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { requestReviewActions } from './RequestReviewActions';
-import { requestNodeSupportsTemplate, safePositiveInteger } from './RequestReviewModel';
+import { requestMissingRequiredUser, requestNodeSupportsTemplate, safePositiveInteger } from './RequestReviewModel';
 
 describe('requestReviewActions', () => {
   it('fails closed once a request is no longer awaiting review', () => {
@@ -13,12 +13,29 @@ describe('requestReviewActions', () => {
   });
 
   it('does not strand change requests in a correction state applicants cannot resubmit', () => {
-    expect(requestReviewActions('change', { id: 4, state: 'awaiting' }, true)).toEqual([
+    expect(requestReviewActions('change', { id: 4, state: 'awaiting', user: { id: 42 } }, true)).toEqual([
       'approve',
       'deny',
       'ignore',
     ]);
     expect(requestReviewActions('change', { id: 5, state: 'approved' }, true)).toEqual([]);
+  });
+
+  it('keeps orphaned change requests read-only without blocking new registrations', () => {
+    const orphan = { id: 5, state: 'awaiting', user: null, raw_user_id: 42 };
+    const newRegistration = { id: 6, state: 'awaiting', user: null };
+    expect(requestMissingRequiredUser('change', orphan)).toBe(true);
+    expect(requestReviewActions('change', orphan, true)).toEqual([]);
+    expect(requestMissingRequiredUser('registration', newRegistration)).toBe(false);
+    expect(requestReviewActions('registration', newRegistration, true)).toEqual([
+      'approve',
+      'deny',
+      'ignore',
+      'request_correction',
+    ]);
+    expect(requestReviewActions('registration', orphan, true)).toEqual([]);
+    expect(requestReviewActions('change', { ...orphan, user: { id: 1.5 } }, true)).toEqual([]);
+    expect(requestReviewActions('change', { ...orphan, user: { id: Number.MAX_SAFE_INTEGER + 1 } }, true)).toEqual([]);
   });
 
   it('offers the complete registration decision set only while awaiting', () => {

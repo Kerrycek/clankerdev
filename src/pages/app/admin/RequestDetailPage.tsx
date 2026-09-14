@@ -37,7 +37,7 @@ import {
   RequestReviewActions,
   requestOperationalLinks,
 } from './RequestReviewActions';
-import { resourceId, safePositiveInteger } from './RequestReviewModel';
+import { requestLinkedUserId, requestMissingRequiredUser, safePositiveInteger } from './RequestReviewModel';
 
 class RequestTypeMismatchError extends Error {
   constructor(message: string) {
@@ -113,6 +113,7 @@ function ChangeDetails(props: {
   currentUser?: User;
   currentLoading: boolean;
   currentUnavailable: boolean;
+  ownerMissing: boolean;
 }) {
   const { t } = useI18n();
   const current = props.currentUser ?? embeddedUser(props.request);
@@ -141,7 +142,7 @@ function ChangeDetails(props: {
 
   return (
     <div className="space-y-4" data-testid="admin.requests.detail.change.comparison">
-      {props.currentUnavailable ? (
+      {props.currentUnavailable && !props.ownerMissing ? (
         <Alert variant="warn" testId="admin.requests.detail.change.current_fallback">
           {t('requests.detail.change.fallback')}
         </Alert>
@@ -224,7 +225,9 @@ export function RequestDetailPage() {
   });
 
   const request = requestQ.data as RegistrationRequest | ChangeRequest | undefined;
-  const changeUserId = reqType === 'change' ? resourceId(request?.user) : null;
+  const requestUserId = requestLinkedUserId(request);
+  const changeUserId = reqType === 'change' ? requestUserId : null;
+  const historicalUserId = safePositiveInteger(String(request?.raw_user_id ?? ''));
   const currentUserQ = useQuery({
     queryKey: ['users', 'show', changeUserId, 'request-comparison'],
     enabled: Boolean(isAdmin && reqType === 'change' && request && changeUserId),
@@ -338,6 +341,7 @@ export function RequestDetailPage() {
                   currentUser={currentUserQ.data}
                   currentLoading={currentUserQ.isLoading}
                   currentUnavailable={!changeUserId || currentUserQ.isError}
+                  ownerMissing={requestMissingRequiredUser('change', request)}
                 />
               )}
             </CardBody>
@@ -365,12 +369,14 @@ export function RequestDetailPage() {
                 <dl className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
                     <dt className="text-xs text-muted">{t('common.user')}</dt>
-                    <dd className="mt-0.5 text-sm">
-                      {resourceId(request.user) ? (
-                        <Link className="text-accent hover:underline" to={`${basePath}/users/${resourceId(request.user)}`}>
+                    <dd className="mt-0.5 text-sm" data-testid="admin.requests.detail.metadata.user">
+                      {requestUserId ? (
+                        <Link className="text-accent hover:underline" to={`${basePath}/users/${requestUserId}`}>
                           {userLabel(request.user)}
                         </Link>
-                      ) : userLabel(request.user)}
+                      ) : historicalUserId
+                        ? `${t('requests.resolve.owner_missing.label')} #${historicalUserId}`
+                        : userLabel(request.user)}
                     </dd>
                   </div>
                   <DetailField label={t('requests.detail.admin')} value={userLabel(request.admin)} />

@@ -10,6 +10,7 @@ import {
   mergeByIdDesc,
   parseTypeValue,
   requestKey,
+  requestUserLabel,
   requestTypeFilterFromUrl,
   resetAdminRequestPaginationOnFilterChange,
   resolveStateValue,
@@ -43,6 +44,9 @@ describe('RequestsModel', () => {
     expect(userLabel({ id: 5, login: 'alice' })).toBe('alice');
     expect(userLabel({ id: 5 })).toBe('#5');
     expect(userLabel(null)).toBe('—');
+    expect(requestUserLabel({ id: 8, _type: 'change', user: null, raw_user_id: 42 })).toBe('#42');
+    expect(requestUserLabel({ id: 9, _type: 'change', user: { id: 7, login: 'linked' }, raw_user_id: 42 })).toBe('linked');
+    expect(requestUserLabel({ id: 10, _type: 'change', user: null, raw_user_id: 0 })).toBe('—');
   });
 
   it('resets a stale cursor only when an admin request filter changes', () => {

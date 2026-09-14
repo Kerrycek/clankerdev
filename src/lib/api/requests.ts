@@ -19,7 +19,9 @@ export type UserRequestState =
 export interface UserRequestCommon {
   id: number;
 
-  user?: UserRef;
+  user?: UserRef | null;
+  /** Historical owner id exposed to admins when the linked user no longer exists. */
+  raw_user_id?: number | null;
   state?: UserRequestState;
 
   api_ip_addr?: string;
