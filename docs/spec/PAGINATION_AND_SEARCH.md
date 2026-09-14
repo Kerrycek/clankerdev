@@ -336,12 +336,12 @@ Admin pages follow the same keyset pagination rules (`from_id`, `limit`, numeric
 
 - **Cluster resource packages** (`/admin/cluster/resource-packages`)
   - Index: `ClusterResourcePackage.Index` (`GET /api/v7.0/cluster_resource_packages`) with `cluster_resource_package[from_id]`, `cluster_resource_package[limit]`.
-  - Search + filters: **server-side**.
-    - `q` (`cluster_resource_package[q]`) – label / `#id`
-    - `is_personal` (`cluster_resource_package[is_personal]`)
-    - `environment` (`cluster_resource_package[environment]`)
-    - `user` (`cluster_resource_package[user]`)
-  - UI now uses Smart Filter Input (SFI) + an advanced drawer; shareable links preserve filter state.
+  - Exact server-side filters: `environment` and nullable `user` only.
+    - Global/shared scope sends `cluster_resource_package[user]` with a null value.
+    - Personal scope requires a concrete user ID; this avoids pretending that an incomplete client-side page is the complete personal catalogue.
+    - All scope omits the user filter.
+  - The API does not support `q` or `is_personal`; the UI never sends either parameter and normalizes legacy `?q=` links.
+  - A bare numeric smart-filter value opens the package detail. The advanced drawer exposes the supported scope, environment, and user filters, and shareable links preserve them.
 
 - **System config** (`/admin/cluster/system-config`)
   - List is currently loaded in full from `SystemConfig.Index` and filtered client-side.
