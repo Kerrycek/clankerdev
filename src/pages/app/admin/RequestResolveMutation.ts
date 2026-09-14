@@ -6,7 +6,7 @@ import {
   type ResolveUserRequestAction,
 } from '../../../lib/api/requests';
 import { requestMatchesReviewTarget } from './RequestDetailModel';
-import { safePositiveInteger } from './RequestReviewModel';
+import { requestMissingRequiredUser, safePositiveInteger } from './RequestReviewModel';
 import type { RequestResolveOverrides, RequestReviewType } from './RequestReviewTypes';
 
 export type TouchedRequestOverrides = ReadonlySet<keyof RequestResolveOverrides>;
@@ -15,10 +15,14 @@ const NUMERIC_OVERRIDE_KEYS = ['yearOfBirth', 'osTemplate', 'location', 'languag
 export type NumericRequestOverrideKey = typeof NUMERIC_OVERRIDE_KEYS[number];
 
 export class RequestReviewPreconditionError extends Error {
-  public readonly reason: 'target_mismatch' | 'state_changed';
+  public readonly reason: 'target_mismatch' | 'state_changed' | 'owner_missing';
 
-  constructor(reason: 'target_mismatch' | 'state_changed') {
-    super(reason === 'target_mismatch' ? 'Request target mismatch' : 'Request is no longer awaiting review');
+  constructor(reason: 'target_mismatch' | 'state_changed' | 'owner_missing') {
+    super(reason === 'target_mismatch'
+      ? 'Request target mismatch'
+      : reason === 'owner_missing'
+        ? 'Request owner no longer exists'
+        : 'Request is no longer awaiting review');
     this.name = 'RequestReviewPreconditionError';
     this.reason = reason;
   }
@@ -149,6 +153,9 @@ export async function fetchAwaitingReviewTarget(reqType: RequestReviewType, reqI
 
   if (!requestMatchesReviewTarget(loaded, reqType, reqId)) {
     throw new RequestReviewPreconditionError('target_mismatch');
+  }
+  if (requestMissingRequiredUser(reqType, loaded)) {
+    throw new RequestReviewPreconditionError('owner_missing');
   }
   if (!requestMatchesReviewTarget(loaded, reqType, reqId, 'awaiting')) {
     throw new RequestReviewPreconditionError('state_changed');

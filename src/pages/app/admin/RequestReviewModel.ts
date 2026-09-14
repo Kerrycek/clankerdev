@@ -90,6 +90,7 @@ export function requestReviewActions(
   isAdmin: boolean,
 ): ResolveUserRequestAction[] {
   if (!isAdmin || !request) return [];
+  if (requestMissingRequiredUser(reqType, request)) return [];
   const state = String(request.state ?? '').trim();
   if (state !== 'awaiting') return [];
 
@@ -98,6 +99,20 @@ export function requestReviewActions(
     actions.push('request_correction');
   }
   return actions;
+}
+
+/** Prove that the request still has an exact linked user, never just a historical id. */
+export function requestLinkedUserId(request: ReviewableRequest | undefined): number | null {
+  if (!request?.user || typeof request.user !== 'object') return null;
+  return safePositiveInteger(String(request.user.id ?? '')) ?? null;
+}
+
+export function requestMissingRequiredUser(
+  reqType: RequestReviewType,
+  request: ReviewableRequest | undefined,
+): boolean {
+  if (requestLinkedUserId(request) !== null) return false;
+  return reqType === 'change' || safePositiveInteger(String(request?.raw_user_id ?? '')) !== undefined;
 }
 
 export function requestActionVariant(

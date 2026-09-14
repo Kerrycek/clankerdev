@@ -1,11 +1,19 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { fetchChangeRequest, fetchRegistrationRequest } from '../../../lib/api/requests';
 import { emptyRequestOverrides } from './RequestReviewModel';
 import {
   changeResolvePayload,
+  fetchAwaitingReviewTarget,
   hasInvalidNumericResolveOverride,
   registrationResolvePayload,
 } from './RequestResolveMutation';
+
+vi.mock('../../../lib/api/requests', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../../lib/api/requests')>(),
+  fetchChangeRequest: vi.fn(),
+  fetchRegistrationRequest: vi.fn(),
+}));
 
 const baseOptions = (): Parameters<typeof registrationResolvePayload>[1] => ({
   reason: undefined,
@@ -17,6 +25,8 @@ const baseOptions = (): Parameters<typeof registrationResolvePayload>[1] => ({
 });
 
 describe('request resolve payloads', () => {
+  beforeEach(() => vi.clearAllMocks());
+
   it('does not send populated approve fields until the operator changes them', () => {
     const options = baseOptions();
     options.overrides.fullName = 'Current name';
@@ -92,5 +102,28 @@ describe('request resolve payloads', () => {
       action: 'approve',
       email: '',
     });
+  });
+
+  it('blocks an orphaned change during the last preflight without blocking a registration', async () => {
+    vi.mocked(fetchChangeRequest).mockResolvedValue({
+      data: { id: 42, state: 'awaiting', change_reason: 'Update profile', user: null, raw_user_id: 7 },
+      meta: {},
+    } as never);
+    await expect(fetchAwaitingReviewTarget('change', 42)).rejects.toMatchObject({
+      reason: 'owner_missing',
+    });
+
+    vi.mocked(fetchRegistrationRequest).mockResolvedValueOnce({
+      data: { id: 43, state: 'awaiting', login: 'former-user', user: null, raw_user_id: 7 },
+      meta: {},
+    } as never);
+    await expect(fetchAwaitingReviewTarget('registration', 43)).rejects.toMatchObject({
+      reason: 'owner_missing',
+    });
+    vi.mocked(fetchRegistrationRequest).mockResolvedValue({
+      data: { id: 43, state: 'awaiting', login: 'new-user', user: null },
+      meta: {},
+    } as never);
+    await expect(fetchAwaitingReviewTarget('registration', 43)).resolves.toMatchObject({ id: 43 });
   });
 });

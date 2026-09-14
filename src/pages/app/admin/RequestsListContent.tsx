@@ -27,9 +27,10 @@ import {
   requestLabel,
   requestState,
   requestType,
+  requestUserLabel,
   type UnifiedRequestRow,
-  userLabel,
 } from './RequestsModel';
+import { requestMissingRequiredUser } from './RequestReviewModel';
 
 type RequestsPaginationProps = {
   page: number;
@@ -72,7 +73,7 @@ function detailHref(basePath: string, request: UnifiedRequestRow, returnTo: stri
 }
 
 function applicantLabel(request: UnifiedRequestRow): string {
-  const linkedUser = userLabel(request.user);
+  const linkedUser = requestUserLabel(request);
   if (linkedUser !== '—') return linkedUser;
 
   if (request._type === 'registration') {
@@ -109,7 +110,8 @@ export function RequestsListContent(props: {
   onToggleAllVisible: (selected: boolean) => void;
 }) {
   const { t } = useI18n();
-  const selectableRows = props.rows.filter((request) => !props.lockedRequestIds.has(requestId(request)));
+  const selectableRows = props.rows.filter((request) => !props.lockedRequestIds.has(requestId(request))
+    && !requestMissingRequiredUser(requestType(request), request));
   const allVisibleSelected = selectableRows.length > 0
     && selectableRows.every((request) => props.selectedKeys.has(requestKey(request)));
   const selectedVisibleCount = selectableRows.filter((request) => props.selectedKeys.has(requestKey(request))).length;
@@ -133,6 +135,8 @@ export function RequestsListContent(props: {
           const key = requestKey(request);
           const createdAt = requestDateValue(request, 'created_at');
           const locked = props.lockedRequestIds.has(id);
+          const ownerMissing = requestMissingRequiredUser(reqType, request);
+          const selectable = !locked && !ownerMissing;
           const card = (
             <Card
               className="p-4 transition-colors hover:border-accent/40"
@@ -144,8 +148,10 @@ export function RequestsListContent(props: {
                     className="mt-0.5 h-5 w-5 shrink-0 rounded border-border"
                     type="checkbox"
                     checked={props.selectedKeys.has(key)}
-                    disabled={locked}
-                    title={locked ? t('requests.resolve.in_progress.title') : undefined}
+                    disabled={!selectable}
+                    title={locked
+                      ? t('requests.resolve.in_progress.title')
+                      : ownerMissing ? t('requests.resolve.owner_missing.title') : undefined}
                     onChange={(event) => props.onToggleSelected(key, event.target.checked)}
                     aria-label={t('requests.bulk.select_one', { id: String(id) })}
                     data-testid={`admin.requests.bulk.select.mobile.${reqType}.${id}`}
@@ -159,6 +165,11 @@ export function RequestsListContent(props: {
                     <Badge variant={requestTypeBadgeVariant(reqType)}>{t(requestTypeLabelKey(reqType))}</Badge>
                   </div>
                   <div className="mt-2 truncate text-sm font-medium">{applicantLabel(request)}</div>
+                  {ownerMissing ? (
+                    <div className="mt-0.5 text-xs font-medium text-warn" data-testid={`admin.requests.mobile.row.${reqType}.${id}.owner_missing`}>
+                      {t('requests.resolve.owner_missing.label')}
+                    </div>
+                  ) : null}
                   <div className="mt-0.5 truncate text-xs text-muted">{applicantContext(request)}</div>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
                     <Badge variant={stateVar}>{t(requestStateLabelKey(state))}</Badge>
@@ -175,7 +186,7 @@ export function RequestsListContent(props: {
           );
 
           return props.selectionMode ? (
-            <label key={key} className={locked ? 'block cursor-not-allowed' : 'block cursor-pointer'}>
+            <label key={key} className={!selectable ? 'block cursor-not-allowed' : 'block cursor-pointer'}>
               {card}
             </label>
           ) : (
@@ -250,6 +261,8 @@ export function RequestsListContent(props: {
             const key = requestKey(request);
             const createdAt = requestDateValue(request, 'created_at');
             const locked = props.lockedRequestIds.has(id);
+            const ownerMissing = requestMissingRequiredUser(reqType, request);
+            const selectable = !locked && !ownerMissing;
 
             return (
               <TableRowLink
@@ -266,8 +279,10 @@ export function RequestsListContent(props: {
                       className="h-4 w-4 rounded border-border"
                       type="checkbox"
                       checked={props.selectedKeys.has(key)}
-                      disabled={locked}
-                      title={locked ? t('requests.resolve.in_progress.title') : undefined}
+                      disabled={!selectable}
+                      title={locked
+                        ? t('requests.resolve.in_progress.title')
+                        : ownerMissing ? t('requests.resolve.owner_missing.title') : undefined}
                       onChange={(event) => props.onToggleSelected(key, event.target.checked)}
                       aria-label={t('requests.bulk.select_one', { id: String(id) })}
                       data-testid={`admin.requests.bulk.select.${reqType}.${id}`}
@@ -291,6 +306,11 @@ export function RequestsListContent(props: {
                 </td>
                 <td className="px-3 py-3">
                   <div className="max-w-xs truncate text-sm font-medium">{applicantLabel(request)}</div>
+                  {ownerMissing ? (
+                    <div className="mt-0.5 text-xs font-medium text-warn" data-testid={`admin.requests.row.${reqType}.${id}.owner_missing`}>
+                      {t('requests.resolve.owner_missing.label')}
+                    </div>
+                  ) : null}
                   <div className="mt-0.5 max-w-xs truncate text-xs text-muted">{applicantContext(request)}</div>
                 </td>
                 <td className="px-3 py-3">

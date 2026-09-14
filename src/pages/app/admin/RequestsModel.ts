@@ -60,6 +60,13 @@ export function userLabel(user: UserRef | unknown): string {
   return '—';
 }
 
+export function requestUserLabel(request: UnifiedRequestRow): string {
+  const linkedUser = userLabel(request.user);
+  if (linkedUser !== '—') return linkedUser;
+  const historicalId = safeNumber(String(request.raw_user_id ?? ''));
+  return historicalId ? `#${historicalId}` : '—';
+}
+
 export function requestKey(request: UnifiedRequestRow): string {
   return `${request._type}-${Number(request.id)}`;
 }

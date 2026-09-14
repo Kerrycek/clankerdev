@@ -34,7 +34,7 @@ import { RequestsListContent } from './RequestsListContent';
 import { RequestsListStatus } from './RequestsListStatus';
 import { requestMatchesReviewTarget } from './RequestDetailModel';
 import { fetchAwaitingReviewTarget, RequestReviewPreconditionError } from './RequestResolveMutation';
-import { requestActionNeedsReason, requestReviewActions } from './RequestReviewModel';
+import { requestActionNeedsReason, requestMissingRequiredUser, requestReviewActions } from './RequestReviewModel';
 import {
   ALL_ADMIN_REQUEST_STATES,
   DEFAULT_ADMIN_REQUEST_STATE,
@@ -304,21 +304,21 @@ export function RequestsPage() {
     return visibleRequestRows(raw, stateFilter);
   }, [ch, pagination.limit, reg, stateFilter, type]);
 
-  const visibleKeys = useMemo(() => new Set(rows.map(requestKey)), [rows]);
   const lockedRequestIds = useMemo(
     () => new Set(chrome.localLocks.filter((lock) => lock.kind === 'UserRequest').map((lock) => lock.id)),
     [chrome.localLocks],
   );
+  const ownerEligibleKeys = useMemo(() => new Set(rows.filter((row) =>
+    !requestMissingRequiredUser(requestType(row), row)).map(requestKey)), [rows]);
   useEffect(() => {
     setSelectedKeys((previous) => {
-      const next = new Set([...previous].filter((key) => visibleKeys.has(key)));
+      const next = new Set([...previous].filter((key) => ownerEligibleKeys.has(key)));
       return next.size === previous.size ? previous : next;
     });
-  }, [visibleKeys]);
-
+  }, [ownerEligibleKeys]);
   function toggleSelected(key: string, selected: boolean) {
     const target = rows.find((row) => requestKey(row) === key);
-    if (selected && target && lockedRequestIds.has(requestId(target))) return;
+    if (selected && (!ownerEligibleKeys.has(key) || (target && lockedRequestIds.has(requestId(target))))) return;
     setSelectedKeys((previous) => {
       const next = new Set(previous);
       if (selected) next.add(key);
@@ -332,7 +332,7 @@ export function RequestsPage() {
       const next = new Set(previous);
       for (const row of rows) {
         const key = requestKey(row);
-        if (selected && !lockedRequestIds.has(requestId(row))) next.add(key);
+        if (selected && ownerEligibleKeys.has(key) && !lockedRequestIds.has(requestId(row))) next.add(key);
         else next.delete(key);
       }
       return next;

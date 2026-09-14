@@ -33,6 +33,7 @@ import {
   emptyRequestOverrides,
   requestActionNeedsReason,
   requestActionVariant,
+  requestMissingRequiredUser,
   requestOperationalLinks,
   requestOverrides,
   requestReviewActions,
@@ -116,6 +117,8 @@ export function RequestReviewActions(props: {
     () => requestReviewActions(props.reqType, props.request, props.isAdmin),
     [props.isAdmin, props.reqType, props.request],
   );
+  const ownerMissing = requestMissingRequiredUser(props.reqType, props.request);
+  const historicalUserId = safePositiveInteger(String(props.request.raw_user_id ?? ''));
   const [resolveOpen, setResolveOpen] = useState(false);
   const [overridesOpen, setOverridesOpen] = useState(false);
   const [resolveAction, setResolveAction] = useState<ResolveUserRequestAction>('approve');
@@ -293,6 +296,16 @@ export function RequestReviewActions(props: {
         <Button className="mt-3" size="sm" variant="secondary" onClick={() => chrome.openTasks()}>
           {t('common.open_tasks')}
         </Button>
+      </Alert>
+    );
+  }
+
+  if (props.isAdmin && ownerMissing) {
+    return (
+      <Alert variant="warn" title={t('requests.resolve.owner_missing.title')} testId={`${props.testIdPrefix}.owner_missing`}>
+        {historicalUserId
+          ? t('requests.resolve.owner_missing.body', { id: `#${historicalUserId}` })
+          : t('requests.resolve.owner_missing.body_unknown')}
       </Alert>
     );
   }
