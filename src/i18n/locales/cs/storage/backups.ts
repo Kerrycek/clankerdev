@@ -57,6 +57,8 @@ export const csBackups = {
   'backups.downloads.format': 'Formát',
   'backups.downloads.state': 'Stav',
   'backups.downloads.expires': 'Platnost',
+  'backups.downloads.open_dataset': 'Otevřít downloady datasetu {dataset}',
+  'backups.downloads.download_snapshot': 'Stáhnout snapshot {snapshot}',
   'backups.downloads.empty.title': 'Žádné snapshot downloady',
   'backups.downloads.empty.body': 'Vytvoř download ze snapshotu datasetu. Vygenerovaný odkaz se pak objeví tady.',
   'backups.downloads.partial.title': 'Přehled downloadů není úplný',

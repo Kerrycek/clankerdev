@@ -57,6 +57,8 @@ export const enBackups = {
   'backups.downloads.format': 'Format',
   'backups.downloads.state': 'State',
   'backups.downloads.expires': 'Expires',
+  'backups.downloads.open_dataset': 'Open downloads for {dataset}',
+  'backups.downloads.download_snapshot': 'Download snapshot {snapshot}',
   'backups.downloads.empty.title': 'No snapshot downloads',
   'backups.downloads.empty.body': 'Create a download from a dataset snapshot. Generated links will then appear here.',
   'backups.downloads.partial.title': 'The download overview is incomplete',

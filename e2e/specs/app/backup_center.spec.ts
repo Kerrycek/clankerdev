@@ -1,9 +1,91 @@
 import { expect, test } from '@playwright/test';
 
 import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock } from '../../fixtures';
+import { expectNoDocumentHorizontalOverflow } from '../../helpers/horizontalOverflow';
 
 test.describe('Backup center', () => {
-  test('@smoke shows the bounded overview and opens dataset backup tools', async ({ page }) => {
+  test('@pr-smoke @pr-smoke-mobile keeps backup download actions visible without horizontal scrolling', async ({ page }, testInfo) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'backup-user', level: 1 },
+      handlers: {
+        'GET datasets': () => ({
+          datasets: [
+            {
+              id: 10,
+              name: 'root-volume-with-a-long-mobile-friendly-name',
+              full_name: 'mail.example/root-volume-with-a-long-mobile-friendly-name',
+              vps: { id: 20, hostname: 'mail.example' },
+              user: { id: 1, login: 'backup-user' },
+            },
+          ],
+          _meta: { total_count: 1 },
+        }),
+        'GET snapshot_downloads': () => ({
+          snapshot_downloads: [
+            {
+              id: 41,
+              state: 'ready',
+              format: 'archive',
+              size: 128,
+              expiration_date: '2099-12-01T12:00:00Z',
+              url: '/download/41',
+              snapshot: {
+                id: 31,
+                name: 'before-upgrade-with-a-long-name',
+                dataset: { id: 10, vps: { id: 20 } },
+              },
+            },
+          ],
+          _meta: { total_count: 1 },
+        }),
+      },
+    });
+
+    const mobile = testInfo.project.name === 'mobile-chrome';
+
+    async function expectResponsiveDownload(layout: 'card' | 'row') {
+      const entryTestId = `backups.downloads.${layout}.41`;
+      const actionPrefix = entryTestId;
+      const entry = page.getByTestId(entryTestId);
+      await expect(entry).toBeVisible();
+      await entry.scrollIntoViewIfNeeded();
+      await expect(page.getByTestId(`${actionPrefix}.detail`)).toBeInViewport();
+      await expect(page.getByTestId(`${actionPrefix}.download`)).toBeInViewport();
+      await expectNoDocumentHorizontalOverflow(page);
+
+      if (layout === 'card') {
+        await expect(page.getByTestId('backups.downloads.cards')).toBeVisible();
+        await expect(page.getByTestId('backups.downloads.table')).toBeHidden();
+        await expect(page.getByTestId(`${entryTestId}.status`)).toContainText('Ready');
+        await expect(page.getByTestId(`${entryTestId}.expiration`)).toContainText('2099');
+        await expect(page.getByTestId(`${entryTestId}.detail`)).toHaveAccessibleName(
+          'Open downloads for mail.example/root-volume-with-a-long-mobile-friendly-name',
+        );
+        await expect(page.getByTestId(`${entryTestId}.download`)).toHaveAccessibleName(
+          'Download snapshot before-upgrade-with-a-long-name',
+        );
+      } else {
+        await expect(page.getByTestId('backups.downloads.cards')).toBeHidden();
+        await expect(page.getByTestId('backups.downloads.table')).toBeVisible();
+      }
+    }
+
+    await page.goto('/app/backups');
+    await expectResponsiveDownload(mobile ? 'card' : 'row');
+
+    if (!mobile) {
+      await page.setViewportSize({ width: 1024, height: 720 });
+      await expectResponsiveDownload('card');
+    }
+
+    await page.getByTestId('backups.tab.downloads').click();
+    await expect(page).toHaveURL(/tab=downloads/);
+    await expectResponsiveDownload('card');
+  });
+
+  test('@smoke shows the bounded overview and opens dataset backup tools', async ({ page }, testInfo) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     const requests: string[] = [];
 
@@ -126,7 +208,8 @@ test.describe('Backup center', () => {
     await expect(page.getByTestId('nav.sidebar.backups')).toHaveAttribute('aria-current', 'page');
     await expect(page.getByTestId('backups.stats.datasets')).toContainText('2');
     await expect(page.getByTestId('backups.stats.downloads')).toContainText('1');
-    await expect(page.getByTestId('backups.downloads.row.41')).toContainText('root');
+    const downloadLayout = testInfo.project.name === 'mobile-chrome' ? 'card' : 'row';
+    await expect(page.getByTestId(`backups.downloads.${downloadLayout}.41`)).toContainText('root');
     expect(requests).toHaveLength(2);
 
     await page.getByTestId('backups.tab.snapshots').click();
@@ -371,7 +454,7 @@ test.describe('Backup center', () => {
     expect(rollbackCalls).toBe(1);
   });
 
-  test('keeps an administrator My view on explicit owned dataset requests', async ({ page }) => {
+  test('keeps an administrator My view on explicit owned dataset requests', async ({ page }, testInfo) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     const requestedDatasetIds: Array<string | null> = [];
 
@@ -423,9 +506,10 @@ test.describe('Backup center', () => {
 
     await page.goto('/app/backups');
 
-    await expect(page.getByTestId('backups.downloads.row.51')).toContainText('mail.example/root');
-    await expect(page.getByTestId('backups.downloads.row.999')).toHaveCount(0);
-    await expect(page.getByTestId('backups.downloads.row.51.detail')).toHaveAttribute(
+    const layout = testInfo.project.name === 'mobile-chrome' ? 'card' : 'row';
+    await expect(page.getByTestId(`backups.downloads.${layout}.51`)).toContainText('mail.example/root');
+    await expect(page.getByTestId(`backups.downloads.${layout}.999`)).toHaveCount(0);
+    await expect(page.getByTestId(`backups.downloads.${layout}.51.detail`)).toHaveAttribute(
       'href',
       '/app/datasets/10/downloads',
     );
@@ -433,7 +517,7 @@ test.describe('Backup center', () => {
     expect(requestedDatasetIds).not.toContain(null);
   });
 
-  test('keeps backend-authorized user downloads available without dataset metadata', async ({ page }) => {
+  test('keeps backend-authorized user downloads available without dataset metadata', async ({ page }, testInfo) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
     await installHaveApiMock(page, {
@@ -460,7 +544,8 @@ test.describe('Backup center', () => {
 
     await page.goto('/app/backups?tab=downloads');
 
-    await expect(page.getByTestId('backups.downloads.row.61')).toBeVisible();
+    const layout = testInfo.project.name === 'mobile-chrome' ? 'card' : 'row';
+    await expect(page.getByTestId(`backups.downloads.${layout}.61`)).toBeVisible();
     await expect(page.getByTestId('backups.error')).toHaveCount(0);
     await expect(page.getByTestId('backups.datasets.metadata_partial')).toBeVisible();
   });
