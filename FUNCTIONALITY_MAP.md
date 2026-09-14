@@ -190,11 +190,15 @@ Current implementation:
 | Show change request | `GET /v7.0/user_request/changes/:id` |
 | Resolve change request | `POST /v7.0/user_request/changes/:id/resolve` |
 
-The UI merges the two independently paginated lists by descending ID. Its
-default admin queue requests only `awaiting`; `pending_correction` is a separate
-queue and `state=all` is explicit. Filter state and keyset position are kept in
-the URL. The list sends only structured filters declared by the Requests API;
-it does not send the unsupported `q` parameter.
+The UI merges the two independently paginated lists by descending ID. Both are
+STI views of the same globally numbered request table, so they safely share one
+exclusive `from_id` cursor. Each endpoint fetches one lookahead row beyond the
+visible page size; the merged lookahead decides whether **Next** is available,
+while the cursor always comes from the last visible row. Its default admin queue
+requests only `awaiting`; `pending_correction` is a separate queue and
+`state=all` is explicit. Filter state and keyset position are kept in the URL.
+The list sends only structured filters declared by the Requests API; it does not
+send the unsupported `q` parameter.
 
 #### Registration review data and side effects
 
