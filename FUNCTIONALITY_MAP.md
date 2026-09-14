@@ -730,6 +730,66 @@ evidence.
 
 ---
 
+## Admin node index filtering and health view
+
+**Status:** `mapped / partial`
+
+### Purpose and actors
+
+The node list at `/admin/nodes` lets administrators and support staff inspect
+the cluster inventory and current health, then open an exact node detail.
+Administrators may include inactive nodes; support accounts are intentionally
+active-only, matching the backend restriction rather than presenting a state
+control that the API would ignore.
+
+### Index, filter, and status contract
+
+| Concern | Current contract |
+| --- | --- |
+| Authenticated inventory | `Node.Index` (`GET /v7.0/nodes`) accepts `from_id` and `limit` plus exact `location`, `environment`, `type`, and `hypervisor_type` filters. |
+| State | `state` accepts `active`, `inactive`, or `all` for administrators only. `Node.Index` blacklists it for non-admins and restricts support output to active nodes, so the support UI neither displays nor sends it. |
+| Text search | The action has no `q` or other full-text input. The UI does not claim name, domain, or FQDN search and never sends `node[q]`. |
+| Exact navigation | A single numeric value or `id:<number>` opens `/admin/nodes/:id`; it is navigation, not an index filter. |
+| Health and issues | Unpaginated `Node.PublicStatus` (`GET /v7.0/nodes/public_status`) augments the authenticated rows. `issues` is computed from public-status health after the current index page is loaded, so it is explicitly page-local and is never sent as `node[issues]`. |
+| Degraded read path | If the authenticated index fails, the page can still show the unpaginated public-status list; if public status fails, it can show authenticated metadata without health. |
+
+The smart input retains useful page-local `issues` filtering and exact numeric
+navigation. Arbitrary text, including `q:` and `search:` aliases, produces
+actionable unsupported-search feedback without changing the canonical URL or
+issuing a replacement list request.
+
+Direct-entry URLs are normalized before either the inventory or public-status
+query mounts. A legacy `q` value is removed, the stale `from_id` is removed,
+and presentational `page` is reset to 1 while valid `issues`, `limit`, and an
+administrator's `state` survive. For support accounts, a stale or forged
+`state` is also removed before the first request. This prevents the page from
+showing an active filter whose corresponding API input was ignored.
+
+### Evidence and remaining gap
+
+- Backend input and authorization contract:
+  `api/lib/vpsadmin/api/resources/node.rb` in the read-only upstream vpsAdmin
+  checkout.
+- Legacy cluster overview without a full-text-search claim:
+  `webui/forms/cluster.forms.php` in the read-only upstream checkout.
+- WebUI Next request and list behavior: `src/lib/api/nodes.ts`,
+  `src/pages/app/admin/NodesPage.tsx`,
+  `src/pages/app/admin/NodesFilters.tsx`, and
+  `src/pages/app/admin/NodesModel.ts`.
+- Contract tests: `src/lib/api/nodes.test.ts`,
+  `src/pages/app/admin/NodesModel.test.ts`, and
+  `e2e/specs/admin/nodes_filter_contract.spec.ts`.
+
+The deterministic tests cover serialization, direct-entry URL hygiene, the
+admin/support role boundary, unsupported text, page-local issues, and numeric
+navigation against HaveAPI mocks. They do not establish a deployed server's
+multi-page behavior. The remaining partial status is specifically the separate
+`from_id` cursor-direction and deterministic-ordering contract in issue #189;
+issue #227 corrects filter/search semantics but does not resolve or mask that
+pagination risk.
+
+---
+
 ## Remaining product inventory
 
 The areas below are confirmed by current routes/source. Their status is
@@ -782,7 +842,7 @@ current UX, and end-to-end evidence.
 | Mailer | templates/translations, mailboxes, recipients, logs | `inventory only` |
 | Content | news and contextual help-box administration | `inventory only` |
 | Cluster | summary, environments, locations, OS templates, networks, resource packages, system config, DNS resolvers/servers/TSIG keys | `inventory only` |
-| Nodes | list/detail, lifecycle and pool maintenance controls | `inventory only` |
+| Nodes | list/detail, lifecycle and pool maintenance controls; index filtering and health are mapped above | `mapped / partial` — multi-page ordering remains issue #189 |
 | Migration plans | plan list/detail and migration scheduling/control | `inventory only` |
 | Admin diagnostics | `/admin/admin-info` | `inventory only` |
 

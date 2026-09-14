@@ -14,12 +14,62 @@ import {
   nodeSecondaryLabel,
   nodeStats,
   nodeStatusBadge,
+  normalizeLegacyNodesUrl,
   normalizeNodeState,
   parseIssuesValue,
   resolveNodeStateValue,
 } from './NodesModel';
 
 describe('NodesModel', () => {
+  test('canonicalizes unsupported node filters before list queries mount', () => {
+    const adminParams = new URLSearchParams(
+      'q=brno&q=ignored&state=inactive&issues=1&limit=25&from_id=400&page=3'
+    );
+    const adminOriginal = adminParams.toString();
+    expect(
+      normalizeLegacyNodesUrl({ basePath: '/admin', searchParams: adminParams, allowState: true })
+    ).toEqual({
+      changed: true,
+      href: '/admin/nodes?state=inactive&issues=1&limit=25',
+    });
+    expect(adminParams.toString()).toBe(adminOriginal);
+
+    expect(
+      normalizeLegacyNodesUrl({
+        basePath: '/admin',
+        searchParams: new URLSearchParams('state=all&issues=1&limit=50&from_id=90&page=2'),
+        allowState: false,
+      })
+    ).toEqual({
+      changed: true,
+      href: '/admin/nodes?issues=1&limit=50',
+    });
+  });
+
+  test('leaves supported role-specific filters and pagination untouched', () => {
+    expect(
+      normalizeLegacyNodesUrl({
+        basePath: '/admin',
+        searchParams: new URLSearchParams('state=inactive&issues=1&limit=25&from_id=400&page=3'),
+        allowState: true,
+      })
+    ).toEqual({
+      changed: false,
+      href: '/admin/nodes?state=inactive&issues=1&limit=25&from_id=400&page=3',
+    });
+
+    expect(
+      normalizeLegacyNodesUrl({
+        basePath: '/admin',
+        searchParams: new URLSearchParams('issues=1&limit=25&from_id=400&page=3'),
+        allowState: false,
+      })
+    ).toEqual({
+      changed: false,
+      href: '/admin/nodes?issues=1&limit=25&from_id=400&page=3',
+    });
+  });
+
   test('normalizes node state and issues smart values', () => {
     expect(normalizeNodeState(' inactive ')).toBe('inactive');
     expect(normalizeNodeState('all')).toBe('all');
@@ -89,7 +139,7 @@ describe('NodesModel', () => {
     expect(nodeRowVariant(rows[1]!)).toBeUndefined();
   });
 
-  test('falls back to public status rows and filters them client-side', () => {
+  test('falls back to public status rows and keeps the issues filter honest', () => {
     const statuses: PublicNodeStatus[] = [
       { name: 'node125.example.test', fqdn: 'node125.example.test', status: false },
       { name: 'node124.example.test', fqdn: 'node124.example.test', status: true, maintenance_lock: 'maint' },
@@ -108,14 +158,11 @@ describe('NodesModel', () => {
       'node124.example.test',
       'node123.example.test',
     ]);
-    expect(filterNodeRows(rows, { issuesOnly: true, qText: '', nodesUnavailable: true }).map((row) => row.name)).toEqual([
+    expect(filterNodeRows(rows, { issuesOnly: true }).map((row) => row.name)).toEqual([
       'node125.example.test',
       'node124.example.test',
     ]);
-    expect(filterNodeRows(rows, { issuesOnly: false, qText: 'node124', nodesUnavailable: true }).map((row) => row.name)).toEqual([
-      'node124.example.test',
-    ]);
-    expect(filterNodeRows(rows, { issuesOnly: false, qText: 'node124', nodesUnavailable: false })).toHaveLength(3);
+    expect(filterNodeRows(rows, { issuesOnly: false })).toHaveLength(3);
   });
 
   test('derives row presentation helpers without renderer state', () => {
