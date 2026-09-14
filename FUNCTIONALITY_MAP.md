@@ -642,6 +642,94 @@ end-to-end password recovery is currently enabled or deployed.
 
 ---
 
+## Dataset backup-plan automation
+
+### Capability: understand, assign, and remove automatic dataset plans
+
+**Status:** `mapped / implemented`
+
+#### Purpose and actors
+
+A dataset plan is an administrator-defined set of automatic actions applied to
+one dataset. The plans currently registered by the backend schedule group
+snapshots or copies to backup storage. An owner may assign or remove only the
+environment plans whose respective `user_add` or `user_remove` flag permits it.
+An administrator may manage all plans available in the dataset's environment.
+
+#### Backend contract and effects
+
+| Capability | Endpoint and contract |
+| --- | --- |
+| List assigned plans | `GET /v7.0/datasets/:datasetId/plans`; owner-restricted for a regular user, admin-accessible, and capable of including `environment_dataset_plan__dataset_plan`. |
+| List plans available in the environment | `GET /v7.0/environments/:environmentId/dataset_plans`; a regular user is restricted to `user_add=true`, while an admin may list all; `dataset_plan` is includable. |
+| Assign | `POST /v7.0/datasets/:datasetId/plans` with the exact namespaced body `{ "plan": { "environment_dataset_plan": ID } }`. The backend verifies that the plan belongs to the dataset's environment and enforces `user_add` for non-admins. |
+| Remove | `DELETE /v7.0/datasets/:datasetId/plans/:assignedPlanId`. The path ID is the `DatasetInPoolPlan` assignment ID, not the environment-plan or base-plan ID; the backend enforces `user_remove` for non-admins. |
+| Explain the plan | The nested base `DatasetPlan` exposes `label` and `description`; the environment relation adds the displayed label and permission flags. |
+
+Assign and remove both perform dataset object-state checks. Registering or
+unregistering a plan creates or removes the scheduled dataset actions defined
+by that plan. Current implementations include repeatable group-snapshot and
+backup-copy actions.
+
+Backend sources in the read-only upstream repository:
+
+- `api/lib/vpsadmin/api/resources/dataset.rb`, resource `Dataset::Plan`;
+- `api/lib/vpsadmin/api/resources/environment.rb`, resource
+  `Environment::DatasetPlan`;
+- `api/lib/vpsadmin/api/resources/dataset_plan.rb`;
+- `api/lib/vpsadmin/api/dataset_plans.rb`.
+
+#### Legacy and current workflows
+
+The legacy dataset edit form in `webui/forms/dataset.forms.php` listed each
+environment-plan label beside the nested base-plan description, then exposed a
+single environment-plan selector. Its add/delete actions in
+`webui/pages/page_dataset.php` sent the environment-plan ID on create and the
+assigned-plan ID on delete.
+
+WebUI Next exposes the capability at:
+
+- `/app/backups?tab=plans`, including direct dataset selection through
+  `dataset=:id`;
+- `/app/datasets/:datasetId/plans` and `/app/nas/:datasetId/plans`;
+- `/admin/datasets/:datasetId/plans` and `/admin/nas/:datasetId/plans`.
+
+The backup center explains the purpose before a dataset is selected. Once a
+dataset is selected, the assigned list requests the full nested relation and
+shows the backend description as the primary explanation, with the technical
+base-plan label retained as subdued source metadata. Missing, null, whitespace,
+or unresolved descriptions get an explicit safe fallback. The assignment
+dialog likewise previews the description before submission. Client-side gates
+mirror `user_add` and `user_remove`, fail closed for unresolved regular-user
+permission data, and retain the backend's administrator bypass. The POST body
+and delete target remain unchanged.
+
+Current sources:
+
+- `src/pages/app/backups/BackupCenterPage.tsx`;
+- `src/pages/app/backups/BackupCenterDatasetWorkspaceView.tsx`;
+- `src/pages/app/datasets/DatasetPlansPage.tsx`;
+- `src/lib/api/datasets.ts`;
+- Czech and English storage locale modules under `src/i18n/locales/`.
+
+#### Test evidence and limits
+
+- `src/lib/api/datasets.test.ts` verifies both nested include query parameters.
+- `src/pages/app/datasets/DatasetPlansPage.test.tsx` renders the real page and
+  covers descriptions and all fallback shapes, exact includes and mutation IDs,
+  regular-user gates, unresolved permission data, and the administrator bypass.
+- `e2e/specs/app/backup_center.spec.ts` directly opens
+  `/app/backups?tab=plans&dataset=10` on desktop and mobile, verifies explanatory
+  copy, descriptions, include parameters, exact assignment payload, and
+  document-width containment against deterministic HaveAPI mocks.
+
+These tests validate the browser/API contract without mutating a real dataset.
+A live assignment would create scheduled work and therefore requires a
+disposable dataset and an agreed cleanup plan; it is not implied by the mocked
+evidence.
+
+---
+
 ## Remaining product inventory
 
 The areas below are confirmed by current routes/source. Their status is
@@ -667,8 +755,9 @@ current UX, and end-to-end evidence.
 | --- | --- | --- |
 | Dashboard | user overview and summary cards | `inventory only` |
 | VPS | list/create; overview, configuration, access, network, storage, features, maintenance, history, lifecycle, console | `inventory only` |
-| Datasets and NAS | lists; dataset overview, snapshots, downloads, exports, plans, expansion; NAS creation | `inventory only` |
-| Backup Center | cross-dataset overview, snapshots, generated downloads, plans, and restore guidance | `inventory only` |
+| Datasets and NAS | lists; dataset overview, snapshots, downloads, exports, expansion; NAS creation | `inventory only` |
+| Dataset backup-plan automation | backup-center workspace and dataset/NAS plan details; see the mapped capability above | `mapped / implemented` |
+| Backup Center | cross-dataset overview, snapshots, generated downloads, and restore guidance; plan assignment is mapped separately above | `inventory only` |
 | Exports | list and detail | `inventory only` |
 | DNS | zones; records, transfers, DNSSEC, servers, settings, logs; user TSIG keys | `inventory only` |
 | Networking | user addresses/traffic/live networking surface | `inventory only` |

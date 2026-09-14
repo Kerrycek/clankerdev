@@ -24,35 +24,69 @@ import {
   fetchDatasetPlans,
   fetchEnvironmentDatasetPlans,
   type DatasetInPoolPlan,
+  type DatasetPlan,
   type EnvironmentDatasetPlan,
+  type ResourceRef,
 } from '../../../lib/api/datasets';
 import { fetchTransactionChains } from '../../../lib/api/transactions';
 import { hasActiveChains } from '../../../lib/taskStatus';
 
 import { useDatasetContext } from './DatasetContext';
 
-function refLabel(ref: any, fallback: string): string {
+function refLabel(ref: unknown, fallback: string): string {
   if (ref && typeof ref === 'object') {
-    const label = String(ref.label ?? ref.name ?? ref.description ?? '').trim();
+    const resource = ref as ResourceRef & {
+      label?: unknown;
+      name?: unknown;
+      description?: unknown;
+    };
+    const label = String(resource.label ?? resource.name ?? resource.description ?? '').trim();
     if (label) return label;
-    if (typeof ref.id === 'number') return `#${ref.id}`;
+    if (typeof resource.id === 'number') return `#${resource.id}`;
   }
   return fallback;
 }
 
+function technicalRefLabel(ref: unknown, fallback: string): string {
+  if (ref && typeof ref === 'object') {
+    const resource = ref as ResourceRef & { label?: unknown; name?: unknown };
+    const label = String(resource.label ?? resource.name ?? '').trim();
+    if (label) return label;
+    if (typeof resource.id === 'number') return `#${resource.id}`;
+  }
+  return fallback;
+}
+
+function assignedEnvironmentPlan(plan: DatasetInPoolPlan): EnvironmentDatasetPlan | ResourceRef | undefined {
+  return plan.environment_dataset_plan;
+}
+
+function basePlanFromEnvironmentPlan(plan: EnvironmentDatasetPlan | ResourceRef | undefined): DatasetPlan | undefined {
+  if (!plan || typeof plan !== 'object') return undefined;
+  const nested = plan.dataset_plan;
+  if (!nested || typeof nested !== 'object') return undefined;
+  return nested as DatasetPlan;
+}
+
+function planDescription(plan: DatasetPlan | undefined, fallback: string): string {
+  const description = typeof plan?.description === 'string' ? plan.description.trim() : '';
+  return description || fallback;
+}
+
 function envPlanIdFromAssigned(plan: DatasetInPoolPlan): number | null {
-  const p: any = plan.environment_dataset_plan;
+  const p = assignedEnvironmentPlan(plan);
   return typeof p?.id === 'number' ? Number(p.id) : null;
 }
 
 function envPlanLabel(plan: DatasetInPoolPlan, t: (k: string) => string): string {
-  const p: any = plan.environment_dataset_plan;
-  return refLabel(p, t('common.na'));
+  return refLabel(assignedEnvironmentPlan(plan), t('common.na'));
 }
 
 function basePlanLabel(plan: DatasetInPoolPlan, t: (k: string) => string): string {
-  const p: any = plan.environment_dataset_plan;
-  return refLabel(p?.dataset_plan, t('common.na'));
+  return technicalRefLabel(
+    basePlanFromEnvironmentPlan(assignedEnvironmentPlan(plan)),
+    t('common.na')
+  );
 }
 
 function allowedAdd(mode: 'user' | 'admin', plan: EnvironmentDatasetPlan): boolean {
@@ -60,7 +94,7 @@ function allowedAdd(mode: 'user' | 'admin', plan: EnvironmentDatasetPlan): boole
 }
 
 function allowedRemove(mode: 'user' | 'admin', plan: DatasetInPoolPlan): boolean {
-  const p: any = plan.environment_dataset_plan;
+  const p = assignedEnvironmentPlan(plan);
   return mode === 'admin' || p?.user_remove === true;
 }
 
@@ -89,7 +123,11 @@ export function DatasetPlansPage() {
 
   const assignedQ = useQuery({
     queryKey: ['datasets', dataset.id, 'plans'],
-    queryFn: async () => (await fetchDatasetPlans(dataset.id, { limit: 200 })).data,
+    queryFn: async () =>
+      (await fetchDatasetPlans(dataset.id, {
+        limit: 200,
+        includes: 'environment_dataset_plan__dataset_plan',
+      })).data,
     staleTime: 15_000,
   });
 
@@ -97,7 +135,10 @@ export function DatasetPlansPage() {
     queryKey: ['environments', environmentId, 'dataset_plans'],
     enabled: environmentId !== null,
     queryFn: async () =>
-      (await fetchEnvironmentDatasetPlans(environmentId as number, { limit: 200 })).data,
+      (await fetchEnvironmentDatasetPlans(environmentId as number, {
+        limit: 200,
+        includes: 'dataset_plan',
+      })).data,
     staleTime: 15_000,
   });
 
@@ -268,7 +309,7 @@ export function DatasetPlansPage() {
           <thead>
             <tr>
               <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-faint">{t('dataset.plans.column.label')}</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-faint">{t('dataset.plans.column.source')}</th>
+              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-faint">{t('dataset.plans.column.description')}</th>
               <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-faint">{t('dataset.plans.column.permissions')}</th>
               <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-faint">{t('common.actions')}</th>
             </tr>
@@ -276,11 +317,25 @@ export function DatasetPlansPage() {
           <tbody>
             {assignedRows.map((row) => {
               const removable = allowedRemove(mode, row);
-              const envPlan: any = row.environment_dataset_plan;
+              const envPlan = assignedEnvironmentPlan(row);
+              const basePlan = basePlanFromEnvironmentPlan(envPlan);
               return (
                 <tr key={row.id} data-testid={`dataset.plans.row.${row.id}`}>
-                  <td className="px-3 py-2 font-medium text-fg">{envPlanLabel(row, t)}</td>
-                  <td className="px-3 py-2 text-sm text-muted">{basePlanLabel(row, t)}</td>
+                  <td className="px-3 py-2">
+                    <div className="font-medium text-fg">{envPlanLabel(row, t)}</div>
+                    <div
+                      className="mt-1 text-xs text-faint"
+                      data-testid={`dataset.plans.row.${row.id}.source`}
+                    >
+                      {t('dataset.plans.column.source')}: {basePlanLabel(row, t)}
+                    </div>
+                  </td>
+                  <td
+                    className="max-w-md whitespace-pre-wrap break-words px-3 py-2 text-sm text-muted"
+                    data-testid={`dataset.plans.row.${row.id}.description`}
+                  >
+                    {planDescription(basePlan, t('dataset.plans.description.fallback'))}
+                  </td>
                   <td className="px-3 py-2">
                     <div className="flex flex-wrap gap-2">
                       <Badge variant={envPlan?.user_add ? 'ok' : 'neutral'}>{t(envPlan?.user_add ? 'dataset.plans.permission.user_add' : 'dataset.plans.permission.user_add_off')}</Badge>
@@ -348,7 +403,7 @@ export function DatasetPlansPage() {
             const selected = assignable.find((p) => String(p.id) === selectedEnvPlanId);
             if (!selected) return null;
             return (
-              <Card>
+              <Card testId="dataset.plans.assign.preview">
                 <CardBody>
                   <div className="space-y-2 text-sm">
                     <div>
@@ -356,8 +411,25 @@ export function DatasetPlansPage() {
                       <div className="font-medium text-fg">{refLabel(selected, t('common.na'))}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-faint">{t('dataset.plans.column.source')}</div>
-                      <div className="font-medium text-fg">{refLabel((selected as any).dataset_plan, t('common.na'))}</div>
+                      <div className="text-xs text-faint">{t('dataset.plans.column.description')}</div>
+                      <div
+                        className="whitespace-pre-wrap break-words text-fg"
+                        data-testid="dataset.plans.assign.preview.description"
+                      >
+                        {planDescription(
+                          basePlanFromEnvironmentPlan(selected),
+                          t('dataset.plans.description.fallback')
+                        )}
+                      </div>
+                    </div>
+                    <div
+                      className="text-xs text-faint"
+                      data-testid="dataset.plans.assign.preview.source"
+                    >
+                      {t('dataset.plans.column.source')}: {technicalRefLabel(
+                        basePlanFromEnvironmentPlan(selected),
+                        t('common.na')
+                      )}
                     </div>
                   </div>
                 </CardBody>

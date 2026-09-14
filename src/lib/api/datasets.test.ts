@@ -5,8 +5,10 @@ import {
   createDatasetSnapshot,
   createSnapshotDownload,
   deleteDataset,
+  fetchDatasetPlans,
   fetchDatasetSnapshots,
   fetchDatasets,
+  fetchEnvironmentDatasetPlans,
   fetchSnapshotDownloads,
   findDatasetByName,
   rollbackDatasetSnapshot,
@@ -100,6 +102,49 @@ describe('datasets API wrappers', () => {
     expect(u.searchParams.get('dataset[name]')).toBe('tank/user/app');
     expect(u.searchParams.get('dataset[user]')).toBe('42');
     expect(u.searchParams.has('dataset[q]')).toBe(false);
+  });
+
+  test('dataset plan lists serialize the requested nested resource includes', async () => {
+    setMockRuntime();
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          status: true,
+          response: { plans: [], _meta: { total_count: 0 } },
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({
+          status: true,
+          response: { dataset_plans: [], _meta: { total_count: 0 } },
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await fetchDatasetPlans(123, {
+      limit: 200,
+      includes: 'environment_dataset_plan__dataset_plan',
+    });
+    await fetchEnvironmentDatasetPlans(7, { limit: 200, includes: 'dataset_plan' });
+
+    const assignedUrl = new URL(String(fetchMock.mock.calls[0]?.[0]));
+    const availableUrl = new URL(String(fetchMock.mock.calls[1]?.[0]));
+
+    expect(assignedUrl.pathname).toBe('/v7.0/datasets/123/plans');
+    expect(assignedUrl.searchParams.get('plan[limit]')).toBe('200');
+    expect(assignedUrl.searchParams.get('_meta[includes]')).toBe(
+      'environment_dataset_plan__dataset_plan'
+    );
+    expect(availableUrl.pathname).toBe('/v7.0/environments/7/dataset_plans');
+    expect(availableUrl.searchParams.get('dataset_plan[limit]')).toBe('200');
+    expect(availableUrl.searchParams.get('_meta[includes]')).toBe('dataset_plan');
   });
 
   test('createDatasetSnapshot sends namespaced payload', async () => {
