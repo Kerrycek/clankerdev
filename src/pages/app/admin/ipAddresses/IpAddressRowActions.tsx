@@ -70,7 +70,7 @@ export function IpAddressRowActions({
             <Bug className={iconClass} aria-hidden="true" />
           </IconAction>
           <IconAction
-            to={`${basePath}/networking/ip-address-assignments?q=${encodeURIComponent(ipAddr)}`}
+            to={`${basePath}/networking/ip-address-assignments?ip_addr=${encodeURIComponent(ipAddr)}`}
             label={t('admin.ip_addresses.action.assignments')}
             testId={`${testIdPrefix}.action.assignments`}
           >

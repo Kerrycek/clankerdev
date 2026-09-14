@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { Navigate, useLocation, useSearchParams } from 'react-router-dom';
 
 import { useI18n } from '../../../../app/i18n';
 import { fetchIpAddressAssignments } from '../../../../lib/api/networking';
@@ -43,11 +43,11 @@ function resourceLabel(v: any, primary: string, fallback = '—') {
   return fallback;
 }
 
-export function IpAssignmentsPage() {
+function IpAssignmentsPageContent() {
   const { t } = useI18n();
   const [sp, setSp] = useSearchParams();
 
-  const q = String(sp.get('q') ?? '').trim();
+  const ipAddr = String(sp.get('ip_addr') ?? '').trim();
   const userId = parsePositiveInt(sp.get('user'));
   const vpsId = parsePositiveInt(sp.get('vps'));
   const active = parseBoolParam(sp.get('active'));
@@ -56,7 +56,7 @@ export function IpAssignmentsPage() {
 
   const paging = useKeysetPagination({
     id: 'admin.ip_address_assignments.list',
-    filterKey: JSON.stringify({ q, userId, vpsId, active, order }),
+    filterKey: JSON.stringify({ ipAddr, userId, vpsId, active, order }),
     searchParams: sp,
     setSearchParams: setSp,
     defaultLimit: limit,
@@ -64,9 +64,9 @@ export function IpAssignmentsPage() {
   });
 
   const listQ = useQuery({
-    queryKey: ['ip_address_assignments', 'list', { q, userId, vpsId, active, order, limit: paging.limit, fromId: paging.cursor ?? null }],
+    queryKey: ['ip_address_assignments', 'list', { ipAddr, userId, vpsId, active, order, limit: paging.limit, fromId: paging.cursor ?? null }],
     queryFn: async () =>
-      (await fetchIpAddressAssignments({ q: q || undefined, user: userId, vps: vpsId, active, order, limit: paging.limit, fromId: paging.cursor ?? undefined })).data,
+      (await fetchIpAddressAssignments({ ipAddr: ipAddr || undefined, user: userId, vps: vpsId, active, order, limit: paging.limit, fromId: paging.cursor ?? undefined })).data,
     placeholderData: (prev) => prev,
   });
 
@@ -88,7 +88,7 @@ export function IpAssignmentsPage() {
     setSp(next);
   };
 
-  const filtersActive = Boolean(q || userId || vpsId || active !== undefined || order !== 'newest');
+  const filtersActive = Boolean(ipAddr || userId || vpsId || active !== undefined || order !== 'newest');
 
   return (
     <ListShell
@@ -97,7 +97,7 @@ export function IpAssignmentsPage() {
       filters={
         <FilterBar
           left={<div className="flex flex-wrap items-center gap-3">
-            <div className="w-full max-w-sm"><Input testId="admin.ip_assignments.filter.q" value={q} onChange={(e) => setParam('q', e.target.value)} placeholder={t('admin.ip_assignments.filter.q.placeholder')} /></div>
+            <div className="w-full max-w-sm"><Input testId="admin.ip_assignments.filter.ip_addr" value={ipAddr} onChange={(e) => setParam('ip_addr', e.target.value)} placeholder={t('admin.ip_assignments.filter.ip_addr.placeholder')} /></div>
             <div className="w-64"><UserLookupInput testId="admin.ip_assignments.filter.user" value={userId ? String(userId) : ''} onChange={(v) => setParam('user', v)} placeholder={t('admin.ip_assignments.filter.user.placeholder')} /></div>
             <div className="w-64"><VpsLookupInput testId="admin.ip_assignments.filter.vps" value={vpsId ?? null} onChange={(v) => setParam('vps', v == null ? '' : String(v))} placeholder={t('admin.ip_assignments.filter.vps.placeholder')} /></div>
           </div>}
@@ -153,4 +153,27 @@ export function IpAssignmentsPage() {
       )}
     </ListShell>
   );
+}
+
+export function IpAssignmentsPage() {
+  const location = useLocation();
+  const [sp] = useSearchParams();
+
+  if (!sp.has('q')) return <IpAssignmentsPageContent />;
+
+  // Older links used an unsupported free-text `q` filter. Canonicalize before
+  // mounting the data-fetching page so a legacy URL can never issue an
+  // unfiltered assignment request while still looking filtered.
+  const next = new URLSearchParams(sp);
+  const legacyIpAddr = String(next.get('q') ?? '').trim();
+  const canonicalIpAddr = String(next.get('ip_addr') ?? '').trim();
+  if (canonicalIpAddr) next.set('ip_addr', canonicalIpAddr);
+  else if (legacyIpAddr) next.set('ip_addr', legacyIpAddr);
+  else next.delete('ip_addr');
+  next.delete('q');
+  next.delete('from_id');
+  next.delete('page');
+
+  const search = next.toString();
+  return <Navigate replace to={`${location.pathname}${search ? `?${search}` : ''}`} />;
 }

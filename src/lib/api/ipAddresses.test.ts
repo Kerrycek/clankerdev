@@ -135,10 +135,11 @@ describe('network address API wrappers', () => {
     );
   });
 
-  test('fetchIpAddressAssignments supports one active user-scoped request with nested address data', async () => {
+  test('fetchIpAddressAssignments supports exact IP and active user filters with nested address data', async () => {
     globalThis.fetch = mockFetchOk({ ip_address_assignments: [] }) as typeof fetch;
 
     await fetchIpAddressAssignments({
+      ipAddr: '2001:db8::1',
       user: 7,
       active: true,
       limit: 250,
@@ -148,6 +149,8 @@ describe('network address API wrappers', () => {
     const [url] = lastFetchCall();
     const parsed = new URL(url);
     expect(parsed.pathname).toBe('/v7.0/ip_address_assignments');
+    expect(parsed.searchParams.get('ip_address_assignment[ip_addr]')).toBe('2001:db8::1');
+    expect(parsed.searchParams.get('ip_address_assignment[q]')).toBeNull();
     expect(parsed.searchParams.get('ip_address_assignment[user]')).toBe('7');
     expect(parsed.searchParams.get('ip_address_assignment[active]')).toBe('true');
     expect(parsed.searchParams.get('ip_address_assignment[limit]')).toBe('250');
