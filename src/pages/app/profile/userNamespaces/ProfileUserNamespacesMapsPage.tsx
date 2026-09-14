@@ -29,7 +29,6 @@ export function ProfileUserNamespacesMapsPage() {
       fixedUserId={userId}
       showAdminFields={false}
       createWithNamespaceSelect
-      createNamespacesUserId={userId}
     />
   );
 }

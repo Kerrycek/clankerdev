@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CircleHelp, SlidersHorizontal } from 'lucide-react';
 
+import { useAuth } from '../../app/auth';
 import { useI18n } from '../../app/i18n';
 
 import { FilterBar } from '../layout/FilterBar';
@@ -30,11 +31,16 @@ import { parseNumericToken, splitKeyValueToken, tokenizeSmartInput, unquoteSmart
 import {
   createUserNamespaceMap,
   deleteUserNamespaceMap,
+  explicitUserNamespaceOwnerId,
   fetchUserNamespaceMaps,
   fetchUserNamespaces,
   type UserNamespace,
   type UserNamespaceMap,
 } from '../../lib/api/userNamespaces';
+import type { UserRole } from '../../lib/roles';
+import { UserNamespaceContractGuard } from './UserNamespaceContractGuard';
+import { canFilterUserNamespaceOwners } from './userNamespaceFilterSemantics';
+import type { UserNamespaceMapListProps } from './userNamespaceListProps';
 
 function parseIntParam(v: string | null): number | undefined {
   if (!v) return undefined;
@@ -58,24 +64,23 @@ function namespaceRefLabel(ns: any, sizeLabel?: string): string {
   return '—';
 }
 
-export function UserNamespaceMapList(props: {
-  testIdPrefix: string;
-  /** Detail route base, e.g. /app/profile/user-namespaces/maps */
-  mapsBase: string;
-  /** Namespaces base, e.g. /app/profile/user-namespaces/namespaces */
-  namespacesBase: string;
-  /** If set, list is restricted to this user (profile view). */
-  fixedUserId?: number;
-  /** Show admin-only filters and columns. */
-  showAdminFields?: boolean;
-  /**
-   * When true, the create drawer offers a namespace dropdown populated from the API.
-   * Intended for user/profile use where the namespace set is small.
-   */
-  createWithNamespaceSelect?: boolean;
-  /** Optional user filter used when fetching namespaces for the create dropdown. */
-  createNamespacesUserId?: number;
-}) {
+export function UserNamespaceMapList(props: UserNamespaceMapListProps) {
+  const { role } = useAuth();
+
+  return (
+    <UserNamespaceContractGuard
+      fixedOwnerId={props.fixedUserId}
+      kind="map"
+      showAdminFields={props.showAdminFields}
+      testIdPrefix={props.testIdPrefix}
+      viewerRole={role}
+    >
+      <UserNamespaceMapListContent {...props} viewerRole={role} />
+    </UserNamespaceContractGuard>
+  );
+}
+
+function UserNamespaceMapListContent(props: UserNamespaceMapListProps & { viewerRole: UserRole }) {
   const { t } = useI18n();
   const navigate = useNavigate();
   const qc = useQueryClient();
@@ -83,8 +88,18 @@ export function UserNamespaceMapList(props: {
 
   const [sp, setSp] = useSearchParams();
 
-  const q = (sp.get('q') ?? '').trim();
-  const userId = props.fixedUserId ?? parseIntParam(sp.get('user'));
+  const requestedUserId = parseIntParam(sp.get('user'));
+  const adminFiltersEnabled = canFilterUserNamespaceOwners({
+    viewerRole: props.viewerRole,
+    showAdminFields: props.showAdminFields,
+    fixedOwnerId: props.fixedUserId,
+  });
+  const userId = explicitUserNamespaceOwnerId({
+    viewerRole: props.viewerRole,
+    fixedOwnerId: props.fixedUserId,
+    requestedOwnerId: requestedUserId,
+    allowRequestedOwner: adminFiltersEnabled,
+  });
   const userNamespaceId = parseIntParam(sp.get('user_namespace'));
 
   const [smart, setSmart] = useState('');
@@ -93,8 +108,8 @@ export function UserNamespaceMapList(props: {
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const filterKey = useMemo(() => {
-    return JSON.stringify({ q, userId: props.fixedUserId ? props.fixedUserId : userId, userNamespaceId, admin: props.showAdminFields ? 1 : 0 });
-  }, [q, userId, userNamespaceId, props.fixedUserId, props.showAdminFields]);
+    return JSON.stringify({ userId, userNamespaceId, admin: adminFiltersEnabled ? 1 : 0 });
+  }, [adminFiltersEnabled, userId, userNamespaceId]);
 
   const pagination = useKeysetPagination({
     id: `${props.testIdPrefix}.list`,
@@ -105,12 +120,11 @@ export function UserNamespaceMapList(props: {
   });
 
   const qList = useQuery({
-    queryKey: ['user_namespace_map', 'list', { cursor: pagination.cursor, limit: pagination.limit, q, userId, userNamespaceId, fixed: props.fixedUserId }],
+    queryKey: ['user_namespace_map', 'list', { cursor: pagination.cursor, limit: pagination.limit, userId, userNamespaceId }],
     queryFn: async () =>
       (await fetchUserNamespaceMaps({
         limit: pagination.limit,
         fromId: pagination.cursor,
-        q: q || undefined,
         userId,
         userNamespaceId,
       })).data,
@@ -121,7 +135,7 @@ export function UserNamespaceMapList(props: {
   const pageCursor = cursorFromDescendingPage(rows);
   const canNext = rows.length >= pagination.limit && pageCursor !== null;
 
-  const filtersActive = Boolean(q || userNamespaceId !== undefined || (props.showAdminFields && !props.fixedUserId && userId !== undefined) || smartErrors.length > 0);
+  const filtersActive = Boolean(userNamespaceId !== undefined || (adminFiltersEnabled && userId !== undefined) || smartErrors.length > 0);
   const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
 
   function focusSmartInput() {
@@ -136,10 +150,8 @@ export function UserNamespaceMapList(props: {
     focusSmartInput();
   }
 
-  function setFilters(nextVals: { q?: string; userId?: number | undefined; userNamespaceId?: number | undefined }) {
+  function setFilters(nextVals: { userId?: number | undefined; userNamespaceId?: number | undefined }) {
     const next = new URLSearchParams(sp);
-    if (nextVals.q && nextVals.q.trim()) next.set('q', nextVals.q.trim());
-    else next.delete('q');
     if (typeof nextVals.userNamespaceId === 'number') next.set('user_namespace', String(nextVals.userNamespaceId));
     else next.delete('user_namespace');
     if (!props.fixedUserId) {
@@ -150,7 +162,7 @@ export function UserNamespaceMapList(props: {
   }
 
   const clearFilters = () => {
-    setFilters({ q: '', userId: undefined, userNamespaceId: undefined });
+    setFilters({ userId: undefined, userNamespaceId: undefined });
     setSmart('');
     setSmartErrors([]);
   };
@@ -164,7 +176,6 @@ export function UserNamespaceMapList(props: {
     }
 
     const tokens = tokenizeSmartInput(raw);
-    let nextQ = q;
     let nextUserId = userId;
     let nextUserNamespaceId = userNamespaceId;
     const errors: string[] = [];
@@ -179,7 +190,7 @@ export function UserNamespaceMapList(props: {
           setSmartErrors([]);
           return;
         }
-        nextQ = unquoteSmartValue(token);
+        errors.push(t('filters.smart.error.numeric_only', { key: 'id', value: token }));
         continue;
       }
 
@@ -202,11 +213,6 @@ export function UserNamespaceMapList(props: {
           }
           break;
         }
-        case 'q':
-        case 'search':
-        case 'label':
-          nextQ = value;
-          break;
         case 'namespace':
         case 'user_namespace': {
           const n = parseNumericToken(value);
@@ -215,7 +221,7 @@ export function UserNamespaceMapList(props: {
           break;
         }
         case 'user': {
-          if (!(props.showAdminFields && !props.fixedUserId)) {
+          if (!adminFiltersEnabled) {
             errors.push(t('filters.smart.error.admin_only', { key }));
             break;
           }
@@ -231,7 +237,7 @@ export function UserNamespaceMapList(props: {
 
     setSmartErrors(errors);
     if (errors.length > 0) return;
-    setFilters({ q: nextQ, userId: nextUserId, userNamespaceId: nextUserNamespaceId });
+    setFilters({ userId: nextUserId, userNamespaceId: nextUserNamespaceId });
     setSmart('');
   }
 
@@ -252,11 +258,20 @@ export function UserNamespaceMapList(props: {
       }];
     }
 
+    if (needle.includes(':')) {
+      return [{
+        id: 'apply',
+        primary: t('filters.smart.suggest.apply.primary'),
+        secondary: t('filters.smart.suggest.apply.secondary'),
+        onPick: () => applySmart(needle),
+      }];
+    }
+
     return [{
-      id: 'apply',
-      primary: t('filters.smart.suggest.apply.primary'),
-      secondary: t('filters.smart.suggest.apply.secondary'),
-      onPick: () => applySmart(needle),
+      id: 'help-text',
+      primary: t('filters.help.title'),
+      secondary: t('filters.help.suggestion.secondary'),
+      onPick: () => setHelpOpen(true),
     }];
   }, [navigate, props.mapsBase, smart, t]);
 
@@ -267,8 +282,8 @@ export function UserNamespaceMapList(props: {
   const [createErr, setCreateErr] = useState<string | null>(null);
 
   const namespacesQ = useQuery({
-    queryKey: ['user_namespace', 'list', { forCreate: true, userId: props.createNamespacesUserId }],
-    queryFn: async () => (await fetchUserNamespaces({ limit: 200, userId: props.createNamespacesUserId })).data,
+    queryKey: ['user_namespace', 'list', { forCreate: true, userId }],
+    queryFn: async () => (await fetchUserNamespaces({ limit: 200, userId })).data,
     enabled: createOpen && Boolean(props.createWithNamespaceSelect),
   });
 
@@ -377,9 +392,8 @@ export function UserNamespaceMapList(props: {
 
       {filtersActive ? (
         <div className="flex flex-wrap gap-2" data-testid={`${props.testIdPrefix}.filters.chips`}>
-          {q ? <FilterChip label={q.startsWith('#') || /^\d+$/.test(q) ? `#${q.replace(/^#/, '')}` : q} onRemove={() => setFilters({ q: '', userId, userNamespaceId })} /> : null}
-          {typeof userNamespaceId === 'number' ? <FilterChip label={`${t('userns.map.namespace')}: #${userNamespaceId}`} onRemove={() => setFilters({ q, userId, userNamespaceId: undefined })} /> : null}
-          {props.showAdminFields && !props.fixedUserId && typeof userId === 'number' ? <FilterChip label={`${t('common.user')}: #${userId}`} onRemove={() => setFilters({ q, userId: undefined, userNamespaceId })} /> : null}
+          {typeof userNamespaceId === 'number' ? <FilterChip label={`${t('userns.map.namespace')}: #${userNamespaceId}`} onRemove={() => setFilters({ userId, userNamespaceId: undefined })} /> : null}
+          {adminFiltersEnabled && typeof userId === 'number' ? <FilterChip label={`${t('common.user')}: #${userId}`} onRemove={() => setFilters({ userId: undefined, userNamespaceId })} /> : null}
           {smartErrors.map((err, idx) => <FilterChip key={`${err}-${idx}`} label={err} tone="danger" onRemove={() => setSmartErrors((cur) => cur.filter((_, i) => i !== idx))} />)}
         </div>
       ) : null}
@@ -393,18 +407,6 @@ export function UserNamespaceMapList(props: {
       >
         <div className="space-y-4">
           <div>
-            <div className="text-xs text-muted">{t('common.search')}</div>
-            <div className="mt-1">
-              <Input
-                testId={`${props.testIdPrefix}.search.advanced`}
-                placeholder={t('userns.map.search_placeholder')}
-                value={q}
-                onChange={(e) => setFilters({ q: e.target.value, userId, userNamespaceId })}
-              />
-            </div>
-          </div>
-
-          <div>
             <div className="text-xs text-muted">{t('userns.map.namespace')}</div>
             <div className="mt-1">
               <Input
@@ -413,13 +415,13 @@ export function UserNamespaceMapList(props: {
                 value={userNamespaceId !== undefined ? String(userNamespaceId) : ''}
                 onChange={(e) => {
                   const v = e.target.value.trim();
-                  setFilters({ q, userId, userNamespaceId: v ? parseIntParam(v.replace(/^#/, '')) : undefined });
+                  setFilters({ userId, userNamespaceId: v ? parseIntParam(v.replace(/^#/, '')) : undefined });
                 }}
               />
             </div>
           </div>
 
-          {props.showAdminFields && !props.fixedUserId ? (
+          {adminFiltersEnabled ? (
             <div>
               <div className="text-xs text-muted">{t('common.user')}</div>
               <div className="mt-1">
@@ -429,7 +431,7 @@ export function UserNamespaceMapList(props: {
                   value={userId !== undefined ? String(userId) : ''}
                   onChange={(e) => {
                     const v = e.target.value.trim();
-                    setFilters({ q, userId: v ? parseIntParam(v.replace(/^#/, '')) : undefined, userNamespaceId });
+                    setFilters({ userId: v ? parseIntParam(v.replace(/^#/, '')) : undefined, userNamespaceId });
                   }}
                 />
               </div>
@@ -450,16 +452,14 @@ export function UserNamespaceMapList(props: {
         intro={t('userns.map.smart.help.intro')}
         examples={[
           { example: '?', description: t('userns.map.smart.help.examples.help') },
-          { example: 'default', description: t('userns.map.smart.help.examples.search') },
           { example: '123', description: t('userns.map.smart.help.examples.open_id') },
           { example: 'namespace:101', description: t('userns.map.smart.help.examples.namespace') },
-          ...(props.showAdminFields && !props.fixedUserId ? [{ example: 'user:42', description: t('userns.map.smart.help.examples.user') }] : []),
+          ...(adminFiltersEnabled ? [{ example: 'user:42', description: t('userns.map.smart.help.examples.user') }] : []),
         ]}
         topKeys={[
-          { key: 'q', description: t('userns.map.smart.help.keys.q'), example: 'q:default' },
           { key: 'id', description: t('userns.map.smart.help.keys.id'), example: 'id:123' },
           { key: 'namespace', description: t('userns.map.smart.help.keys.namespace'), example: 'namespace:101' },
-          ...(props.showAdminFields && !props.fixedUserId ? [{ key: 'user', description: t('userns.map.smart.help.keys.user'), example: 'user:42' }] : []),
+          ...(adminFiltersEnabled ? [{ key: 'user', description: t('userns.map.smart.help.keys.user'), example: 'user:42' }] : []),
         ]}
         inference={[
           t('userns.map.smart.help.inference.enter_applies'),
