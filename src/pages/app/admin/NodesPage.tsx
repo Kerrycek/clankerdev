@@ -22,6 +22,7 @@ import { parseNumericToken, splitKeyValueToken, tokenizeSmartInput, unquoteSmart
 
 import { NodesFilters } from './NodesFilters';
 import { NodesListContent } from './NodesListContent';
+import { NodesRouteGuard } from './NodesRouteGuard';
 import { NodeCreateModal } from './nodes/NodeCreateModal';
 import { NodeCreateIndeterminateGuard, type IndeterminateNodeCreateAttempt } from './nodes/NodeCreateIndeterminateGuard';
 import {
@@ -36,6 +37,14 @@ import {
 } from './NodesModel';
 
 export function NodesPage() {
+  return (
+    <NodesRouteGuard>
+      <NodesPageContent />
+    </NodesRouteGuard>
+  );
+}
+
+function NodesPageContent() {
   const { basePath } = useAppMode();
   const auth = useAuth();
   const { t } = useI18n();
@@ -43,7 +52,7 @@ export function NodesPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const qText = useMemo(() => String(searchParams.get('q') ?? ''), [searchParams]);
+  const canFilterState = auth.role === 'admin';
   const issuesOnly = useMemo(() => parseBoolParam(searchParams.get('issues')) === true, [searchParams]);
   const state = useMemo(() => normalizeNodeState(searchParams.get('state')), [searchParams]);
 
@@ -69,19 +78,6 @@ export function NodesPage() {
     if (smartNeedle === '?') setHelpOpen(true);
   }, [smartNeedle]);
 
-  const setTextParam = useCallback(
-    (key: string, value: string | undefined) => {
-      const v = String(value ?? '').trim();
-      setSearchParams((prev) => {
-        const p = new URLSearchParams(prev);
-        if (v) p.set(key, v);
-        else p.delete(key);
-        return p;
-      });
-    },
-    [setSearchParams]
-  );
-
   const setIssuesParam = useCallback(
     (on: boolean) => {
       setSearchParams((prev) => {
@@ -106,7 +102,7 @@ export function NodesPage() {
     [setSearchParams]
   );
 
-  const filtersActive = Boolean(qText.trim() || issuesOnly || state !== 'active');
+  const filtersActive = Boolean(issuesOnly || (canFilterState && state !== 'active'));
 
   const clearFilters = useCallback(() => {
     setSmart('');
@@ -114,16 +110,15 @@ export function NodesPage() {
 
     setSearchParams((prev) => {
       const p = new URLSearchParams(prev);
-      p.delete('q');
       p.delete('issues');
-      p.delete('state');
+      if (canFilterState) p.delete('state');
       return p;
     });
-  }, [setSearchParams]);
+  }, [canFilterState, setSearchParams]);
 
   const pagination = useKeysetPagination({
     id: 'admin.nodes.list',
-    filterKey: JSON.stringify({ q: qText.trim(), state, issuesOnly, scope: basePath }),
+    filterKey: JSON.stringify({ state: canFilterState ? state : 'active', issuesOnly, scope: basePath }),
     searchParams,
     setSearchParams,
     defaultLimit: 50,
@@ -139,8 +134,7 @@ export function NodesPage() {
       {
         limit: pagination.limit,
         fromId: pagination.fromId,
-        q: qText.trim() || undefined,
-        state: state === 'active' ? undefined : state,
+        state: canFilterState && state !== 'active' ? state : undefined,
       },
     ],
     queryFn: async () =>
@@ -148,8 +142,7 @@ export function NodesPage() {
         await fetchNodes({
           limit: pagination.limit,
           fromId: pagination.fromId,
-          q: qText.trim() || undefined,
-          state: state === 'active' ? undefined : state,
+          state: canFilterState && state !== 'active' ? state : undefined,
         })
       ).data,
     staleTime: 15000,
@@ -196,8 +189,10 @@ export function NodesPage() {
         }
       }
 
-      const free: string[] = [];
       const errors: string[] = [];
+      let hasUnsupportedText = false;
+      let nextIssuesOnly: boolean | undefined;
+      let nextState: NodeStateFilter | undefined;
 
       for (const tok of tokens) {
         const kv = splitKeyValueToken(tok);
@@ -206,18 +201,22 @@ export function NodesPage() {
           const low = bare.trim().toLowerCase();
 
           if (low === 'issues' || low === 'issue' || low === 'problem' || low === 'problems') {
-            setIssuesParam(true);
+            nextIssuesOnly = true;
             continue;
           }
 
           // Convenience: allow bare state tokens.
           const st = resolveNodeStateValue(low);
           if (st) {
-            setStateParam(st);
+            if (!canFilterState && st !== 'active') {
+              errors.push(t('admin.nodes.smart.error.state_admin_only'));
+              continue;
+            }
+            nextState = st;
             continue;
           }
 
-          free.push(bare);
+          hasUnsupportedText = true;
           continue;
         }
 
@@ -247,7 +246,7 @@ export function NodesPage() {
             errors.push(t('filters.smart.error.missing_value', { key: keyRaw }));
             continue;
           }
-          free.push(value);
+          hasUnsupportedText = true;
           continue;
         }
 
@@ -263,7 +262,12 @@ export function NodesPage() {
             continue;
           }
 
-          setStateParam(st);
+          if (!canFilterState && st !== 'active') {
+            errors.push(t('admin.nodes.smart.error.state_admin_only'));
+            continue;
+          }
+
+          nextState = st;
           continue;
         }
 
@@ -273,15 +277,34 @@ export function NodesPage() {
             errors.push(t('admin.nodes.smart.error.issues', { value }));
             continue;
           }
-          setIssuesParam(b);
+          nextIssuesOnly = b;
           continue;
         }
 
         errors.push(t('filters.smart.error.unknown_key', { key: kv.rawKey }));
       }
 
-      const q = free.join(' ').trim();
-      setTextParam('q', q || undefined);
+      if (hasUnsupportedText) {
+        errors.push(t('admin.nodes.smart.error.unsupported_text', { value: input }));
+      }
+
+      if (nextState !== undefined || nextIssuesOnly !== undefined) {
+        setSearchParams((prev) => {
+          const p = new URLSearchParams(prev);
+
+          if (nextState !== undefined) {
+            if (nextState === 'active') p.delete('state');
+            else p.set('state', nextState);
+          }
+
+          if (nextIssuesOnly !== undefined) {
+            if (nextIssuesOnly) p.set('issues', '1');
+            else p.delete('issues');
+          }
+
+          return p;
+        });
+      }
 
       setSmart('');
       setSmartErrors(errors);
@@ -290,7 +313,7 @@ export function NodesPage() {
         toasts.pushToast({ variant: 'danger', title: errors[0] ?? t('common.unknown_error') });
       }
     },
-    [openNode, setIssuesParam, setStateParam, setTextParam, t, toasts]
+    [canFilterState, openNode, setSearchParams, t, toasts]
   );
 
   const smartSuggestions = useMemo<SmartFilterSuggestion[]>(() => {
@@ -337,7 +360,7 @@ export function NodesPage() {
     }
 
     const st = resolveNodeStateValue(low);
-    if (st && st !== 'active') {
+    if (canFilterState && st && st !== 'active') {
       out.push({
         id: `state.${st}`,
         primary: `state:${st}`,
@@ -349,19 +372,8 @@ export function NodesPage() {
       });
     }
 
-    out.push({
-      id: 'search',
-      primary: t('admin.nodes.smart.suggest.search', { q: needle }),
-      secondary: t('admin.nodes.smart.suggest.search.secondary'),
-      onPick: () => {
-        setTextParam('q', needle);
-        setSmart('');
-      },
-      testId: 'admin.nodes.smart.suggest.search',
-    });
-
     return out;
-  }, [openNode, setIssuesParam, setStateParam, setTextParam, smartNeedle, t]);
+  }, [canFilterState, openNode, setIssuesParam, setStateParam, smartNeedle, t]);
 
   const pageNodes = nodesQ.data ?? [];
   const rows = useMemo(
@@ -374,10 +386,7 @@ export function NodesPage() {
       }),
     [nodesQ.data, nodesQ.isError, statusIndex, statusQ.data]
   );
-  const filtered = useMemo(
-    () => filterNodeRows(rows, { issuesOnly, qText, nodesUnavailable: nodesQ.isError }),
-    [issuesOnly, nodesQ.isError, qText, rows]
-  );
+  const filtered = useMemo(() => filterNodeRows(rows, { issuesOnly }), [issuesOnly, rows]);
   const stats = useMemo(() => nodeStats(rows), [rows]);
 
   const pageCursor = useMemo(() => cursorFromDescendingPage(pageNodes, (node) => node.id), [pageNodes]);
@@ -436,7 +445,7 @@ export function NodesPage() {
           shareUrl={shareUrl}
           helpOpen={helpOpen}
           advancedOpen={advancedOpen}
-          qText={qText}
+          canFilterState={canFilterState}
           state={state}
           issuesOnly={issuesOnly}
           shownCount={filtered.length}
@@ -446,7 +455,6 @@ export function NodesPage() {
           onSetSmartErrors={setSmartErrors}
           onHelpOpenChange={setHelpOpen}
           onAdvancedOpenChange={setAdvancedOpen}
-          onSetTextParam={setTextParam}
           onSetIssuesParam={setIssuesParam}
           onSetStateParam={setStateParam}
           onClearFilters={clearFilters}
