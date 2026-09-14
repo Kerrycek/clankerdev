@@ -200,7 +200,10 @@ describe('requests API wrappers', () => {
     expect(u.pathname).toBe('/v7.0/user_request/registrations/11/fix%20token%2F42');
   });
 
-  test('updateRegistrationRequestByToken sends namespaced payload', async () => {
+  test.each([
+    { label: 'an explicit IANA zone', timeZone: 'Europe/Prague' },
+    { label: 'an explicit server-default clear', timeZone: null },
+  ])('updateRegistrationRequestByToken sends namespaced payload with $label', async ({ timeZone }) => {
     globalThis.fetch = mockFetchOk({ registration: { id: 11 } });
 
     await updateRegistrationRequestByToken(11, 'fix-token', {
@@ -213,6 +216,7 @@ describe('requests API wrappers', () => {
       location: 9,
       currency: 'eur',
       language: 1,
+      time_zone: timeZone,
     });
 
     const [url, init] = lastFetchCall();
@@ -232,6 +236,7 @@ describe('requests API wrappers', () => {
         location: 9,
         currency: 'eur',
         language: 1,
+        time_zone: timeZone,
       },
     });
   });

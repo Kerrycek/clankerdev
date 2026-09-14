@@ -2,49 +2,8 @@ import { Button } from '../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
 import { Select } from '../../../components/ui/Select';
 import type { User } from '../../../lib/api/users';
+import { timeZoneOptions } from '../../../lib/timeZones';
 import { ProfilePreferenceRow } from './ProfilePreferenceRow';
-
-const FALLBACK_TIME_ZONES = [
-  'Europe/Prague',
-  'Europe/Bratislava',
-  'Europe/Berlin',
-  'Europe/London',
-  'UTC',
-  'America/New_York',
-  'America/Los_Angeles',
-  'Asia/Tokyo',
-];
-
-function supportedTimeZones(): string[] {
-  const intl = Intl as typeof Intl & {
-    supportedValuesOf?: (key: 'timeZone') => string[];
-  };
-  return typeof intl.supportedValuesOf === 'function'
-    ? intl.supportedValuesOf('timeZone')
-    : FALLBACK_TIME_ZONES;
-}
-
-export function browserTimeZone(): string | null {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
-  } catch {
-    return null;
-  }
-}
-
-function timeZoneOptions(current?: string | null, server?: string | null, browser?: string | null) {
-  const pinned = ['Europe/Prague', server, browser, current, 'UTC'].filter(
-    (value): value is string => typeof value === 'string' && value.trim() !== ''
-  );
-  const seen = new Set<string>();
-  return [...pinned, ...supportedTimeZones()]
-    .filter((zone) => {
-      if (seen.has(zone)) return false;
-      seen.add(zone);
-      return true;
-    })
-    .map((zone) => ({ value: zone, label: zone }));
-}
 
 export function ProfileSidebarCards(props: {
   t: (key: any, vars?: Record<string, unknown>) => string;

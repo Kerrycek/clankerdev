@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 
+import { getRuntimeConfig } from '../../app/config';
 import { useI18n } from '../../app/i18n';
 
 import { Alert } from '../../components/ui/Alert';
@@ -21,6 +22,7 @@ import {
   updateRegistrationRequestByToken,
   type RegistrationRequest,
 } from '../../lib/api/requests';
+import { browserTimeZone, isValidTimeZone, timeZoneOptions } from '../../lib/timeZones';
 
 type FormState = {
   login: string;
@@ -36,6 +38,7 @@ type FormState = {
   location: string;
   currency: string;
   language: string;
+  time_zone: string;
 };
 
 const emptyForm: FormState = {
@@ -52,6 +55,7 @@ const emptyForm: FormState = {
   location: '',
   currency: '',
   language: '',
+  time_zone: '',
 };
 
 function parsePositiveInt(value: string): number | undefined {
@@ -99,6 +103,11 @@ export function RegistrationCorrectionPage() {
   const params = useParams();
   const requestId = parsePositiveInt(String(params['requestId'] ?? ''));
   const token = String(params['token'] ?? '').trim();
+  const serverTimeZone = useMemo(() => {
+    const candidate = getRuntimeConfig().serverTimeZone;
+    return isValidTimeZone(candidate) ? candidate : null;
+  }, []);
+  const detectedBrowserTimeZone = useMemo(() => browserTimeZone(), []);
 
   const [form, setForm] = useState<FormState>(emptyForm);
   const [success, setSuccess] = useState(false);
@@ -155,6 +164,7 @@ export function RegistrationCorrectionPage() {
       location: refId(req.location) ? String(refId(req.location)) : '',
       currency: String(req.currency ?? ''),
       language: refId(req.language) ? String(refId(req.language)) : '',
+      time_zone: typeof req.time_zone === 'string' ? req.time_zone : '',
     });
     setSubmitError(null);
   }, [previewQ.data]);
@@ -186,6 +196,11 @@ export function RegistrationCorrectionPage() {
     return ensureOption(languagesQ.data ?? [], currentId, fallback);
   }, [languagesQ.data, previewQ.data]);
 
+  const availableTimeZoneOptions = useMemo(
+    () => timeZoneOptions(previewQ.data?.time_zone, serverTimeZone, detectedBrowserTimeZone),
+    [detectedBrowserTimeZone, previewQ.data?.time_zone, serverTimeZone]
+  );
+
   const mutation = useMutation({
     mutationFn: async () => {
       if (!requestId || !token) throw new Error(t('requests.correction.invalid.body'));
@@ -203,6 +218,7 @@ export function RegistrationCorrectionPage() {
         location: Number(form.location),
         currency: form.currency.trim(),
         language: Number(form.language),
+        time_zone: form.time_zone.trim() || null,
       };
       return (await updateRegistrationRequestByToken(requestId, token, payload)).data;
     },
@@ -221,6 +237,7 @@ export function RegistrationCorrectionPage() {
   const loading = previewQ.isLoading;
   const loadError = previewQ.isError;
   const request = previewQ.data as RegistrationRequest | undefined;
+  const timeZoneInvalid = form.time_zone !== '' && !isValidTimeZone(form.time_zone);
 
   const requiredMissing =
     !form.login.trim() ||
@@ -290,7 +307,7 @@ export function RegistrationCorrectionPage() {
             className="space-y-4"
             onSubmit={(e) => {
               e.preventDefault();
-              if (!requiredMissing && !mutation.isPending) mutation.mutate();
+              if (!requiredMissing && !timeZoneInvalid && !mutation.isPending) mutation.mutate();
             }}
           >
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -361,10 +378,64 @@ export function RegistrationCorrectionPage() {
                   ))}
                 </Select>
               </div>
+              <div>
+                <label
+                  htmlFor="public-registration-correction-time-zone"
+                  className="mb-1 block text-sm font-medium"
+                >
+                  {t('requests.field.time_zone')}
+                </label>
+                <Select
+                  selectId="public-registration-correction-time-zone"
+                  value={form.time_zone}
+                  onChange={(e) => setForm((f) => ({ ...f, time_zone: e.target.value }))}
+                  ariaInvalid={timeZoneInvalid}
+                  ariaDescribedBy={timeZoneInvalid
+                    ? 'public.requests.correction.time_zone.error'
+                    : 'public.requests.correction.time_zone.help'}
+                  testId="public.requests.correction.time_zone"
+                >
+                  {timeZoneInvalid ? (
+                    <option value={form.time_zone} disabled>{form.time_zone}</option>
+                  ) : null}
+                  <option value="">
+                    {serverTimeZone
+                      ? t('requests.correction.field.time_zone.server_default_with_zone', {
+                          zone: serverTimeZone,
+                        })
+                      : t('requests.correction.field.time_zone.server_default')}
+                  </option>
+                  {availableTimeZoneOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </Select>
+                {timeZoneInvalid ? (
+                  <div
+                    id="public.requests.correction.time_zone.error"
+                    data-testid="public.requests.correction.time_zone.error"
+                    className="mt-1 text-xs text-danger"
+                  >
+                    {t('requests.correction.field.time_zone.invalid')}
+                  </div>
+                ) : (
+                  <div
+                    id="public.requests.correction.time_zone.help"
+                    data-testid="public.requests.correction.time_zone.help"
+                    className="mt-1 text-xs text-muted"
+                  >
+                    {t('requests.correction.field.time_zone.help')}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2">
-              <Button type="submit" variant="primary" disabled={requiredMissing || mutation.isPending} testId="public.requests.correction.submit">
+              <Button
+                type="submit"
+                variant="primary"
+                disabled={requiredMissing || timeZoneInvalid || mutation.isPending}
+                testId="public.requests.correction.submit"
+              >
                 {mutation.isPending ? t('common.working') : t('requests.correction.submit')}
               </Button>
             </div>

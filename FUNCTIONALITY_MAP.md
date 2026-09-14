@@ -437,7 +437,7 @@ below and must not weaken owner isolation here.
 
 ### Capability: tokenized registration correction and resubmission
 
-**Status:** `mapped / partial`
+**Status:** `mapped / implemented`
 
 #### Purpose and actors
 
@@ -453,6 +453,7 @@ Sources:
 
 - `src/pages/public/RegistrationCorrectionPage.tsx`
 - `src/lib/api/requests.ts`
+- `src/lib/timeZones.ts`
 - `plugins/requests/api/resources/registration.rb` in the backend source.
 
 #### API and lifecycle
@@ -465,9 +466,13 @@ Sources:
 
 The form currently lets the applicant edit login, full name, organization,
 e-mail, address, year of birth, referral answer, note, OS template, location,
-currency, and language. It loads public location/template/language choices and
-keeps the request's existing option visible when necessary. Required fields
-gate submission and API validation errors remain visible.
+currency, language, and time zone. It loads public location/template/language
+choices and keeps the request's existing option visible when necessary.
+Required fields gate submission and API validation errors remain visible. The
+nullable time zone is prefilled without falling back to the browser zone. The
+picker shares the account-preferences IANA option semantics, pins useful
+current/server/browser choices, and exposes server default as an explicit clear
+that sends `time_zone: null` rather than omitting the key.
 
 #### Legacy capability and current workflow
 
@@ -481,24 +486,35 @@ registration requests. The backend has no equivalent tokenized preview/update
 route for change requests; putting a change request into
 `pending_correction` would strand the user.
 
-#### Known gap
+#### Nullable time-zone safety
 
-The backend registration schema includes nullable `time_zone`, and both the
-registration API type and authenticated request detail expose it. The public
-correction form and its PUT wrapper do not currently include `time_zone`, so an
-applicant cannot correct that field in this workflow. Add it using the same
-IANA-zone semantics as account preferences, or explicitly document why it is
-immutable during correction.
+The tokenized PUT wrapper requires `time_zone: string | null`, matching the
+backend registration schema and preventing accidental omission from the
+resubmission payload. A null/undefined preview selects server default without
+auto-selecting the browser zone. A legacy invalid preview value remains visible
+with an error and blocks submission until the applicant selects a valid IANA
+zone or explicitly clears it. The existing exact ID, token, and
+`pending_correction` backend guards remain unchanged.
 
 #### Test evidence
 
 - `e2e/specs/app/public_registration_correction_smoke.spec.ts`
-  - token preview, prefilled fields, required option loading, PUT payload, and
-    successful resubmission.
+  - token preview, time-zone prefill/change, exact namespaced PUT value,
+    explicit own `null` clear key, successful resubmission, invalid-token
+    fail-closed behavior, and no horizontal overflow;
+  - targeted run: three scenarios in Chromium and mobile Chromium, six passed.
 - `src/pages/public/RegistrationCorrectionPage.test.tsx`
-  - page-level correction behavior.
+  - page-level prefill/change/clear behavior, accessible label/help, and
+    invalid legacy-zone submission guard.
 - `src/lib/api/requests.test.ts`
-  - token path encoding and namespaced update payload.
+  - token path encoding and namespaced update payload for both an IANA string
+    and an explicit `null` clear.
+- `src/lib/timeZones.test.ts`
+  - shared picker emits only valid, deduplicated contextual IANA choices.
+
+The targeted API, utility, and page Vitest run passes 22 tests across three
+files. The full Vitest suite passes 1,043 tests across 207 files, and TypeScript
+typechecking also passes.
 
 The automated flow is mocked. A live test must use a disposable registration,
 exercise the `pending_correction → awaiting` transition, verify token expiry by
