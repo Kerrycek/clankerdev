@@ -154,6 +154,7 @@ export function TransactionChainsFilters({
                 { example: 'state:failed', description: t('transactions.chains.smart_help.item.state') },
                 { example: 'errors', description: t('transactions.chains.smart_help.item.errors') },
                 { example: 'Vps:123', description: t('transactions.chains.smart_help.item.concern') },
+                { example: 'session:456', description: t('transactions.chains.smart_help.item.session') },
               ]
         }
         topKeys={[
@@ -182,13 +183,15 @@ export function TransactionChainsFilters({
             description: t('transactions.chains.smart_help.item.concern'),
             example: 'Vps:123',
           },
+          {
+            key: 'session',
+            description: t('transactions.chains.smart_help.item.session'),
+            example: 'session:456',
+          },
         ]}
         moreKeys={
           mode === 'admin'
-            ? [
-                { key: 'user', description: t('transactions.chains.smart_help.item.user'), example: 'user:alice' },
-                { key: 'session', description: t('transactions.chains.smart_help.item.session'), example: 'session:456' },
-              ]
+            ? [{ key: 'user', description: t('transactions.chains.smart_help.item.user'), example: 'user:alice' }]
             : undefined
         }
         onInsertKey={(key) => {
@@ -280,8 +283,8 @@ export function TransactionChainsFilters({
             </div>
           </div>
 
-          {mode === 'admin' ? (
-            <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {mode === 'admin' ? (
               <div>
                 <div className="text-sm font-medium">{t('transactions.chains.advanced.user')}</div>
                 <div className="mt-2">
@@ -293,20 +296,22 @@ export function TransactionChainsFilters({
                   />
                 </div>
               </div>
-              <div>
-                <div className="text-sm font-medium">{t('transactions.chains.advanced.session')}</div>
-                <div className="mt-2">
-                  <Input
-                    value={userSessionId}
-                    onChange={(e) => setUserSessionId(e.target.value)}
-                    placeholder={t('transactions.chains.filter.user_session_id.placeholder')}
-                    type="number"
-                    testId="transactions.chains.advanced.session"
-                  />
-                </div>
+            ) : null}
+            <div>
+              <div className="text-sm font-medium">{t('transactions.chains.advanced.session')}</div>
+              <div className="mt-2">
+                <Input
+                  value={userSessionId}
+                  onChange={(e) => setUserSessionId(e.target.value)}
+                  placeholder={t('transactions.chains.filter.user_session_id.placeholder')}
+                  ariaLabel={t('transactions.chains.advanced.session')}
+                  type="number"
+                  min={1}
+                  testId="transactions.chains.advanced.session"
+                />
               </div>
             </div>
-          ) : null}
+          </div>
 
           <div className="flex flex-wrap gap-2 pt-2">
             <Button variant="secondary" onClick={clearFilters}>

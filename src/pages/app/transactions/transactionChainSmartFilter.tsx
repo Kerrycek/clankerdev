@@ -309,7 +309,7 @@ export function buildTransactionChainActiveFilterChips({
     chips.push(<FilterChip key="user" label={`user:${userIdNum}`} tone="muted" onRemove={clearUserId} />);
   }
 
-  if (mode === 'admin' && userSessionNum !== undefined) {
+  if (userSessionNum !== undefined) {
     chips.push(
       <FilterChip key="user_session" label={`session:${userSessionNum}`} tone="muted" onRemove={clearUserSessionId} />
     );

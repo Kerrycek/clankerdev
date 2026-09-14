@@ -32,6 +32,10 @@ import {
 } from './transactions/transactionChainSemantics';
 import { TransactionChainsFilters } from './transactions/TransactionChainsFilters';
 import { TransactionChainsListContent } from './transactions/TransactionChainsListContent';
+import {
+  parseTransactionChainSessionId,
+  TransactionChainSessionFilterGuard,
+} from './transactions/TransactionChainSessionFilterGuard';
 import { buildTransactionChainActiveFilterChips, buildTransactionChainSmartSuggestions } from './transactions/transactionChainSmartFilter';
 import { splitTransactionActivityRows } from './transactions/transactionActivityVisibility';
 import { useChrome } from '../../components/layout/ChromeContext';
@@ -44,6 +48,10 @@ import { isFailedChainState, isFinishedChainState } from '../../lib/taskStatus';
 
 
 export function TransactionChainsPage() {
+  return <TransactionChainSessionFilterGuard><TransactionChainsContent /></TransactionChainSessionFilterGuard>;
+}
+
+function TransactionChainsContent() {
   const { basePath, mode } = useAppMode();
   const uiMode = mode === 'admin' ? 'admin' : 'app';
   const scope = useObjectScope();
@@ -79,10 +87,7 @@ export function TransactionChainsPage() {
   const initialErrors = useMemo(() => parseBool(searchParams.get('errors')), [searchParams]);
 
   const initialUser = useMemo(() => (mode === 'admin' ? (searchParams.get('user') ?? '') : ''), [mode, searchParams]);
-  const initialUserSession = useMemo(
-    () => (mode === 'admin' ? (searchParams.get('user_session') ?? '') : ''),
-    [mode, searchParams]
-  );
+  const initialUserSession = useMemo(() => searchParams.get('user_session') ?? '', [searchParams]);
   const initialQ = useMemo(() => searchParams.get('q') ?? '', [searchParams]);
 
   const [state, setState] = useState<ChainState | ''>(initialState);
@@ -98,13 +103,8 @@ export function TransactionChainsPage() {
     setState(parseChainState(searchParams.get('state')));
     setClassName(searchParams.get('class_name') ?? '');
     setRowId(searchParams.get('row_id') ?? '');
-    if (mode === 'admin') {
-      setUserId(searchParams.get('user') ?? '');
-      setUserSessionId(searchParams.get('user_session') ?? '');
-    } else {
-      setUserId('');
-      setUserSessionId('');
-    }
+    setUserId(mode === 'admin' ? (searchParams.get('user') ?? '') : '');
+    setUserSessionId(searchParams.get('user_session') ?? '');
     setErrorsOnly(parseBool(searchParams.get('errors')));
     setQuery(searchParams.get('q') ?? '');
   }, [mode, searchParams]);
@@ -122,16 +122,16 @@ export function TransactionChainsPage() {
     if (rowId.trim()) next.set('row_id', rowId.trim());
     else next.delete('row_id');
 
-    // Admin-only filters.
     if (mode === 'admin') {
       if (userId.trim()) next.set('user', userId.trim());
       else next.delete('user');
-      if (userSessionId.trim()) next.set('user_session', userSessionId.trim());
-      else next.delete('user_session');
     } else {
       next.delete('user');
-      next.delete('user_session');
     }
+
+    const sessionId = parseTransactionChainSessionId(userSessionId);
+    if (sessionId !== undefined) next.set('user_session', String(sessionId));
+    else next.delete('user_session');
 
     if (errorsOnly) next.set('errors', '1');
     else next.delete('errors');
@@ -144,7 +144,8 @@ export function TransactionChainsPage() {
 
   const rowIdNum = safePositiveNumber(rowId);
   const userIdNum = mode === 'admin' ? safePositiveNumber(userId) : undefined;
-  const userSessionNum = mode === 'admin' ? safePositiveNumber(userSessionId) : undefined;
+  const userSessionNum = parseTransactionChainSessionId(userSessionId);
+  const invalidUserSession = userSessionId.trim() !== '' && userSessionNum === undefined;
   const effectiveUserId = mode === 'admin' ? userIdNum : scope.mineUserId;
   const classNameNorm = className.trim() || undefined;
   const queryTrim = query.trim();
@@ -217,7 +218,7 @@ export function TransactionChainsPage() {
       if (!queryId) throw new Error('missing chain id');
       return (await fetchTransactionChain(queryId)).data;
     },
-    enabled: Boolean(queryId),
+    enabled: Boolean(queryId) && !invalidUserSession,
     refetchInterval: (query) => {
       const data = query.state.data as TransactionChain | undefined;
       if (!data) return tierARefetchMs;
@@ -292,7 +293,7 @@ export function TransactionChainsPage() {
       ).data;
     },
     refetchInterval: tierARefetchMs,
-    enabled: !queryId,
+    enabled: !queryId && !invalidUserSession,
   });
 
   const filtersActive =
@@ -464,13 +465,8 @@ export function TransactionChainsPage() {
         }
 
         if (key === 'user_session') {
-          if (mode !== 'admin') {
-            errs.push(t('transactions.chains.smart.error.admin_only', { key: 'session' }));
-            continue;
-          }
-
-          const n = parseNumericToken(value);
-          if (n === null) errs.push(t('transactions.chains.smart.error.session_id_numeric_only', { value }));
+          const n = parseTransactionChainSessionId(value);
+          if (n === undefined) errs.push(t('transactions.chains.smart.error.session_id_numeric_only', { value }));
           else nextUserSessionId = String(n);
           continue;
         }
@@ -512,13 +508,8 @@ export function TransactionChainsPage() {
     setErrorsOnly(nextErrorsOnly);
     setClassName(nextClassName);
     setRowId(nextRowId);
-    if (mode === 'admin') {
-      setUserId(nextUserId);
-      setUserSessionId(nextUserSessionId);
-    } else {
-      setUserId('');
-      setUserSessionId('');
-    }
+    setUserId(mode === 'admin' ? nextUserId : '');
+    setUserSessionId(nextUserSessionId);
     setSmart('');
     setSmartErrors([]);
   }
