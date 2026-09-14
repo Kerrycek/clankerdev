@@ -211,11 +211,8 @@ Admin pages follow the same keyset pagination rules (`from_id`, `limit`, numeric
 
 - **Mailer log** (`/admin/mailer/log`)
   - Index: `MailLog.Index` (`GET /api/v7.0/mail_logs`) with `mail_log[from_id]`, `mail_log[limit]`.
-  - Filters:
-    - `q` (`mail_log[q]`)
-    - `mail_template` (`mail_log[mail_template]`)
-    - `user` (`mail_log[user]`)
-    - `created_after`, `created_before`
+  - The current API exposes no list filters. The UI offers keyset browsing and exact detail navigation by mail-log ID only.
+  - Legacy `q`, `user`, template and date-filter URLs are normalized before the list request; stale cursor/page state is reset while a supported `limit` is preserved.
 
 - **Mailer templates** (`/admin/mailer/templates`)
   - Index: `MailTemplate.Index` (`GET /api/v7.0/mail_templates`) with `mail_template[from_id]`, `mail_template[limit]`.
