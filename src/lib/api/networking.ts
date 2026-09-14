@@ -148,7 +148,7 @@ export async function freeHostIpAddress(hostIpAddressId: number) {
 export async function fetchIpAddressAssignments(opts?: {
   limit?: number;
   fromId?: number;
-  q?: string;
+  ipAddr?: string;
   user?: number;
   vps?: number;
   active?: boolean;
@@ -160,7 +160,7 @@ export async function fetchIpAddressAssignments(opts?: {
   const params: Record<string, unknown> = {};
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
-  if (opts?.q) params['q'] = opts.q;
+  if (opts?.ipAddr) params['ip_addr'] = opts.ipAddr;
   if (opts?.user !== undefined) params['user'] = opts.user;
   if (opts?.vps !== undefined) params['vps'] = opts.vps;
   if (opts?.active !== undefined) params['active'] = opts.active;
