@@ -189,8 +189,6 @@ export const csStorage = {
   "nas.create.empty.body": "Nejdřív potřebuješ NAS dataset, pod který lze subdataset vytvořit.",
   "dataset.snapshots.title": "Snapshoty",
   "dataset.snapshots.subtitle": "Vytvářej, obnovuj a maž snapshoty datasetu.",
-  "dataset.snapshots.search.placeholder":
-    "Filtrovat podle názvu, popisku nebo ID snapshotu",
   "dataset.snapshots.load_error.title": "Nepodařilo se načíst snapshoty",
   "dataset.snapshots.empty": "Žádné snapshoty.",
   "dataset.snapshots.created_at": "Vytvořeno {dt}",
@@ -252,8 +250,6 @@ export const csStorage = {
   "dataset.downloads.title": "Downloady",
   "dataset.downloads.subtitle":
     "Vytvářej a spravuj odkazy pro stažení snapshotů.",
-  "dataset.downloads.search.placeholder":
-    "Filtrovat podle ID snapshotu, formátu, názvu souboru nebo ID downloadu",
   "dataset.downloads.create.open": "Nový download",
   "dataset.downloads.load_error.title":
     "Nepodařilo se načíst snapshot downloady",

@@ -54,6 +54,67 @@ test.describe("@smoke Dataset downloads", () => {
     await expect(page).toHaveURL(/\/app\/datasets\/10\/downloads$/);
   });
 
+  test("@pr-smoke @pr-smoke-mobile loads older snapshot candidates with the API cursor", async ({
+    page,
+  }) => {
+    const requestedSnapshotParams: URLSearchParams[] = [];
+    const makeSnapshot = (id: number) => ({
+      id,
+      dataset: 10,
+      name: `snap-${id}`,
+      label: `Snapshot ${id}`,
+      created_at: "2026-01-26T00:00:00.000Z",
+    });
+    const firstBatch = Array.from({ length: 101 }, (_, index) =>
+      makeSnapshot(index + 1),
+    );
+    const secondBatch = Array.from({ length: 100 }, (_, index) =>
+      makeSnapshot(index + 101),
+    );
+
+    await bootstrapVpsAdminWindow(page, { sessionToken: "TEST" });
+    await installHaveApiMock(page, {
+      user: { id: 1, login: "admin", level: 99 },
+      handlers: {
+        "GET datasets/10": () => ({
+          id: 10,
+          full_name: "tank/vps/ds10",
+          name: "ds10",
+          used: 2048,
+          refquota: 10240,
+          snapshots_count: 200,
+          mount_count: 0,
+          export_count: 0,
+          object_state: "active",
+          vps: { id: 300, hostname: "alpha.example" },
+        }),
+        "GET snapshot_downloads": () => ({ snapshot_downloads: [] }),
+        "GET datasets/10/snapshots": ({ searchParams }) => {
+          requestedSnapshotParams.push(new URLSearchParams(searchParams));
+          return searchParams.get("snapshot[from_id]") === "100"
+            ? { snapshots: secondBatch }
+            : { snapshots: firstBatch };
+        },
+      },
+    });
+
+    await page.goto("/app/datasets/10/downloads?action=create");
+    const snapshotSelect = page.getByTestId("dataset.downloads.create.snapshot");
+    const loadMore = page.getByTestId("dataset.downloads.create.load_more");
+
+    await expect(snapshotSelect.locator('option[value="100"]')).toHaveCount(1);
+    await expect(snapshotSelect.locator('option[value="101"]')).toHaveCount(0);
+    await expect(loadMore).toBeEnabled();
+    await loadMore.click();
+    await expect(snapshotSelect.locator('option[value="200"]')).toHaveCount(1);
+    await expect(loadMore).toBeDisabled();
+
+    expect(requestedSnapshotParams).toHaveLength(2);
+    expect(requestedSnapshotParams[0]?.get("snapshot[limit]")).toBe("101");
+    expect(requestedSnapshotParams[0]?.has("snapshot[from_id]")).toBe(false);
+    expect(requestedSnapshotParams[1]?.get("snapshot[from_id]")).toBe("100");
+  });
+
   test("creates download, tracks action state, and shows details from the API", async ({
     page,
   }) => {
@@ -111,7 +172,7 @@ test.describe("@smoke Dataset downloads", () => {
                   file_name: "incremental.zfs",
                   size: 128,
                   sha256sum: "b".repeat(64),
-                  expires_at: "2026-12-10T00:00:00.000Z",
+                  expires_at: "2099-12-10T00:00:00.000Z",
                 },
               ]
             : [],
@@ -173,7 +234,7 @@ test.describe("@smoke Dataset downloads", () => {
       "From base",
     );
     await expect(page.getByTestId("dataset.downloads.row.501")).toContainText(
-      "2026",
+      "2099",
     );
   });
 
@@ -349,7 +410,7 @@ test.describe("@smoke Dataset downloads", () => {
                 file_name: "dl.tar.gz",
                 size: 128,
                 sha256: "a".repeat(64),
-                expires_at: "2026-12-10T00:00:00.000Z",
+                expires_at: "2099-12-10T00:00:00.000Z",
               },
             ],
           };
@@ -393,9 +454,14 @@ test.describe("@smoke Dataset downloads", () => {
     expect(deleteCalls).toBe(1);
   });
 
-  test("normal users can download ready backups but cannot delete download records", async ({
+  test("@pr-smoke @pr-smoke-mobile @smoke-mobile normal users can download and delete their own ready backups", async ({
     page,
   }) => {
+    const mobile = (page.viewportSize()?.width ?? 1024) < 768;
+    const itemPrefix = `dataset.downloads.${mobile ? "card" : "row"}.501`;
+    let deleted = false;
+    let deleteCalls = 0;
+
     await bootstrapVpsAdminWindow(page, {
       sessionToken: "TEST",
     });
@@ -417,36 +483,48 @@ test.describe("@smoke Dataset downloads", () => {
         }),
 
         "GET snapshot_downloads": () => ({
-          snapshot_downloads: [
-            {
-              id: 501,
-              dataset: 10,
-              snapshot: { id: 200, label: "snap-200" },
-              format: "archive",
-              ready: true,
-              url: "https://example.test/dl.tar.gz",
-              file_name: "dl.tar.gz",
-              size: 128,
-              sha256: "a".repeat(64),
-              expires_at: "2026-12-10T00:00:00.000Z",
-            },
-          ],
+          snapshot_downloads: deleted
+            ? []
+            : [
+                {
+                  id: 501,
+                  user: { id: 2, login: "member" },
+                  dataset: 10,
+                  snapshot: { id: 200, label: "snap-200" },
+                  format: "archive",
+                  ready: true,
+                  url: "https://example.test/dl.tar.gz",
+                  file_name: "dl.tar.gz",
+                  size: 128,
+                  sha256: "a".repeat(64),
+                  expires_at: "2099-12-10T00:00:00.000Z",
+                },
+              ],
         }),
+        "DELETE snapshot_downloads/501": () => {
+          deleteCalls += 1;
+          deleted = true;
+          return { ok: true };
+        },
       },
     });
 
     await page.goto("/app/datasets/10/downloads");
 
-    await expect(page.getByTestId("dataset.downloads.row.501")).toBeVisible();
+    await expect(page.getByTestId(itemPrefix)).toBeVisible();
     await expect(
-      page.getByTestId("dataset.downloads.row.501.download"),
+      page.getByTestId(`${itemPrefix}.download`),
     ).toBeVisible();
     await expect(
-      page.getByTestId("dataset.downloads.row.501.download"),
+      page.getByTestId(`${itemPrefix}.download`),
     ).toHaveAttribute("href", "https://example.test/dl.tar.gz");
+    await page.getByTestId(`${itemPrefix}.delete`).click();
     await expect(
-      page.getByTestId("dataset.downloads.row.501.delete"),
-    ).toHaveCount(0);
+      page.getByTestId("dataset.downloads.delete_confirm.confirm"),
+    ).toBeEnabled();
+    await page.getByTestId("dataset.downloads.delete_confirm.confirm").click();
+    await expect(page.getByTestId(itemPrefix)).toHaveCount(0);
+    expect(deleteCalls).toBe(1);
   });
   test("shows pending, expired and failed download artifacts without exposing stale links", async ({
     page,
@@ -498,7 +576,7 @@ test.describe("@smoke Dataset downloads", () => {
               ready: false,
               url: "https://example.test/pending.tar.gz",
               file_name: "pending.tar.gz",
-              expires_at: "2026-12-01T00:00:00.000Z",
+              expires_at: "2099-12-01T00:00:00.000Z",
             },
             {
               id: 602,

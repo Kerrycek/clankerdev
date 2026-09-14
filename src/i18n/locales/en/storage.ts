@@ -184,8 +184,6 @@ export const enStorage = {
   "dataset.snapshots.title": "Snapshots",
   "dataset.snapshots.subtitle":
     "Create, rollback and delete dataset snapshots.",
-  "dataset.snapshots.search.placeholder":
-    "Filter by snapshot name, label or ID",
   "dataset.snapshots.load_error.title": "Failed to load snapshots",
   "dataset.snapshots.empty": "No snapshots.",
   "dataset.snapshots.created_at": "Created {dt}",
@@ -246,8 +244,6 @@ export const enStorage = {
   "dataset.download.created.open_downloads": "Open downloads",
   "dataset.downloads.title": "Downloads",
   "dataset.downloads.subtitle": "Create and manage snapshot download links.",
-  "dataset.downloads.search.placeholder":
-    "Filter by snapshot ID, format, filename or download ID",
   "dataset.downloads.create.open": "New download",
   "dataset.downloads.load_error.title": "Failed to load snapshot downloads",
   "dataset.downloads.empty": "No downloads.",

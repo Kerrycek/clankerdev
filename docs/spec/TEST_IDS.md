@@ -679,7 +679,6 @@ Snapshots:
 - `dataset.snapshots.list`
 - `dataset.snapshots.loading` (LoadingState)
 - `dataset.snapshots.error` (ErrorState)
-- `dataset.snapshots.search.input`
 - `dataset.snapshots.refresh`
 - `dataset.snapshots.create.open`
 - `dataset.snapshots.row.<id>` (desktop table)
@@ -721,7 +720,6 @@ Downloads:
 - `dataset.downloads.list`
 - `dataset.downloads.loading` (LoadingState)
 - `dataset.downloads.error` (ErrorState)
-- `dataset.downloads.search.input`
 - `dataset.downloads.refresh`
 - `dataset.downloads.create.open`
 - `dataset.downloads.row.<id>` (desktop table)

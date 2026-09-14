@@ -9,13 +9,14 @@ import {
   type SnapshotDownloadsFetcher,
 } from './BackupCenterDownloads';
 
-function descendingPage<T extends { id: number }>(
+function ascendingPage<T extends { id: number }>(
   rows: T[],
   fromId: number | undefined,
   limit: number,
 ): T[] {
-  return rows
-    .filter((row) => fromId === undefined || row.id < fromId)
+  return [...rows]
+    .sort((a, b) => a.id - b.id)
+    .filter((row) => fromId === undefined || row.id > fromId)
     .slice(0, limit);
 }
 
@@ -25,9 +26,9 @@ function dataset(id: number): Dataset {
 
 describe('BackupCenterDownloads', () => {
   it('loads every owned dataset beyond the first API page', async () => {
-    const rows = Array.from({ length: 151 }, (_, index) => dataset(500 - index));
+    const rows = Array.from({ length: 151 }, (_, index) => dataset(index + 1));
     const fetcherMock = vi.fn(async (options) => ({
-      data: descendingPage(rows, options?.fromId, options?.limit ?? 100),
+      data: ascendingPage(rows, options?.fromId, options?.limit ?? 100),
       meta: { total_count: rows.length },
     }));
 
@@ -49,18 +50,18 @@ describe('BackupCenterDownloads', () => {
       count: true,
     });
     expect(fetcherMock.mock.calls[1]?.[0]).toMatchObject({
-      fromId: 401,
+      fromId: 100,
       count: false,
     });
   });
 
   it('loads every globally authorized user download beyond the first API page', async () => {
     const rows: SnapshotDownload[] = Array.from({ length: 151 }, (_, index) => ({
-      id: 900 - index,
+      id: index + 1,
       state: 'ready',
     }));
     const fetcherMock = vi.fn(async (options) => ({
-      data: descendingPage(rows, options?.fromId, options?.limit ?? 100),
+      data: ascendingPage(rows, options?.fromId, options?.limit ?? 100),
       meta: { total_count: rows.length },
     }));
 
@@ -74,16 +75,16 @@ describe('BackupCenterDownloads', () => {
     expect(result.complete).toBe(true);
     expect(fetcherMock).toHaveBeenCalledTimes(2);
     expect(fetcherMock.mock.calls.every(([options]) => options?.dataset === undefined)).toBe(true);
-    expect(fetcherMock.mock.calls[1]?.[0]).toMatchObject({ fromId: 801, count: false });
+    expect(fetcherMock.mock.calls[1]?.[0]).toMatchObject({ fromId: 100, count: false });
   });
 
   it('loads every download for an owned dataset beyond the first API page', async () => {
     const rows: SnapshotDownload[] = Array.from({ length: 151 }, (_, index) => ({
-      id: 700 - index,
+      id: index + 1,
       snapshot: { id: 1_000 + index, dataset: { id: 10 } },
     }));
     const fetcherMock = vi.fn(async (options) => ({
-      data: descendingPage(rows, options?.fromId, options?.limit ?? 100),
+      data: ascendingPage(rows, options?.fromId, options?.limit ?? 100),
       meta: { total_count: rows.length },
     }));
 
@@ -98,7 +99,7 @@ describe('BackupCenterDownloads', () => {
     expect(fetcherMock).toHaveBeenCalledTimes(2);
     expect(fetcherMock.mock.calls[1]?.[0]).toMatchObject({
       dataset: 10,
-      fromId: 601,
+      fromId: 100,
       count: false,
     });
   });
@@ -168,9 +169,9 @@ describe('BackupCenterDownloads', () => {
   });
 
   it('marks a capped traversal incomplete and counts only rows actually loaded', async () => {
-    const rows = Array.from({ length: 250 }, (_, index) => dataset(1_000 - index));
+    const rows = Array.from({ length: 250 }, (_, index) => dataset(index + 1));
     const fetcherMock = vi.fn(async (options) => ({
-      data: descendingPage(rows, options?.fromId, options?.limit ?? 100),
+      data: ascendingPage(rows, options?.fromId, options?.limit ?? 100),
       meta: { total_count: rows.length },
     }));
 

@@ -53,7 +53,6 @@ type DatasetDownloadsPaginationProps = {
 
 export function DatasetDownloadsList(props: {
   rows: SnapshotDownload[];
-  isAdmin: boolean;
   createGate: GateDecision;
   deleteGate: GateDecision;
   onDelete: (download: SnapshotDownload) => void;
@@ -203,22 +202,20 @@ export function DatasetDownloadsList(props: {
                       </ActionButton>
                     ) : null}
 
-                    {props.isAdmin ? (
-                      <ActionButton
-                        size="sm"
-                        variant="danger"
-                        onClick={() => props.onDelete(download)}
-                        disabled={!props.deleteGate.allowed}
-                        disabledReason={
-                          !props.deleteGate.allowed
-                            ? props.deleteGate.reason
-                            : undefined
-                        }
-                        testId={`dataset.downloads.card.${download.id}.delete`}
-                      >
-                        {t("common.delete")}
-                      </ActionButton>
-                    ) : null}
+                    <ActionButton
+                      size="sm"
+                      variant="danger"
+                      onClick={() => props.onDelete(download)}
+                      disabled={!props.deleteGate.allowed}
+                      disabledReason={
+                        !props.deleteGate.allowed
+                          ? props.deleteGate.reason
+                          : undefined
+                      }
+                      testId={`dataset.downloads.card.${download.id}.delete`}
+                    >
+                      {t("common.delete")}
+                    </ActionButton>
                   </div>
                 </div>
               </Card>
@@ -393,22 +390,20 @@ export function DatasetDownloadsList(props: {
                             </ActionButton>
                           ) : null}
 
-                          {props.isAdmin ? (
-                            <ActionButton
-                              size="sm"
-                              variant="danger"
-                              onClick={() => props.onDelete(download)}
-                              disabled={!props.deleteGate.allowed}
-                              disabledReason={
-                                !props.deleteGate.allowed
-                                  ? props.deleteGate.reason
-                                  : undefined
-                              }
-                              testId={`dataset.downloads.row.${download.id}.delete`}
-                            >
-                              {t("common.delete")}
-                            </ActionButton>
-                          ) : null}
+                          <ActionButton
+                            size="sm"
+                            variant="danger"
+                            onClick={() => props.onDelete(download)}
+                            disabled={!props.deleteGate.allowed}
+                            disabledReason={
+                              !props.deleteGate.allowed
+                                ? props.deleteGate.reason
+                                : undefined
+                            }
+                            testId={`dataset.downloads.row.${download.id}.delete`}
+                          >
+                            {t("common.delete")}
+                          </ActionButton>
                         </div>
                       </td>
                     </tr>

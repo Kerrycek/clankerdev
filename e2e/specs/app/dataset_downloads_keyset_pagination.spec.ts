@@ -2,8 +2,11 @@ import { expect, test } from "@playwright/test";
 
 import { bootstrapVpsAdminWindow, installHaveApiMock } from "../../fixtures";
 
-test.describe("Dataset downloads keyset pagination", () => {
+test.describe("@pr-smoke @pr-smoke-mobile Dataset downloads keyset pagination", () => {
+  let requestedDownloadParams: URLSearchParams[];
+
   test.beforeEach(async ({ page }) => {
+    requestedDownloadParams = [];
     await bootstrapVpsAdminWindow(page, {
       sessionToken: "TEST",
     });
@@ -34,33 +37,27 @@ test.describe("Dataset downloads keyset pagination", () => {
       sha256: "00".repeat(32),
       url: `/download/${id}`,
       ready: true,
-      expiration_date: "2026-12-27T00:00:00.000Z",
+      expiration_date: "2099-12-27T00:00:00.000Z",
     });
 
-    const page1 = Array.from({ length: 50 }, (_, i) => 300 - i).map(makeDl);
-    const page2 = Array.from({ length: 50 }, (_, i) => 250 - i).map(makeDl);
+    const allDownloads = Array.from({ length: 100 }, (_, i) => i + 1).map(makeDl);
 
     await installHaveApiMock(page, {
       user: { id: 1, login: "test", level: 1 },
       handlers: {
         "GET datasets/10": () => dataset,
         "GET snapshot_downloads": ({ searchParams }) => {
-          const fromId = searchParams.get("snapshot_download[from_id]");
+          requestedDownloadParams.push(new URLSearchParams(searchParams));
           const ds = searchParams.get("snapshot_download[dataset]");
-          const q = (searchParams.get("snapshot_download[q]") || "").trim();
           if (ds !== "10")
             return { snapshot_downloads: [], _meta: { total_count: 0 } };
-          if (q) {
-            return {
-              snapshot_downloads: page1.filter(
-                (dl) => String(dl.id) === q || String(dl.file_name).includes(q),
-              ),
-              _meta: { total_count: 1 },
-            };
-          }
+          const fromId = Number(searchParams.get("snapshot_download[from_id]") ?? 0);
+          const limit = Number(searchParams.get("snapshot_download[limit]") ?? 50);
           return {
-            snapshot_downloads: fromId ? page2 : page1,
-            _meta: { total_count: 100 },
+            snapshot_downloads: allDownloads
+              .filter((download) => download.id > fromId)
+              .slice(0, limit),
+            _meta: { total_count: allDownloads.length },
           };
         },
       },
@@ -68,27 +65,50 @@ test.describe("Dataset downloads keyset pagination", () => {
   });
 
   test("next/prev updates URL and rows", async ({ page }) => {
+    const mobile = (page.viewportSize()?.width ?? 1024) < 768;
+    const item = (id: number) =>
+      page.getByTestId(`dataset.downloads.${mobile ? "card" : "row"}.${id}`);
+    const paginationKind = mobile ? "mobile" : "desktop";
+    const pagination = page.getByTestId(`dataset.downloads.pagination.${paginationKind}`);
+
     await page.goto("/app/datasets/10/downloads");
 
     await expect(page.getByTestId("dataset.downloads.list")).toBeVisible();
-    await expect(page.getByTestId("dataset.downloads.row.300")).toBeVisible();
+    await expect(item(1)).toBeVisible();
+    expect(requestedDownloadParams.at(-1)?.get("snapshot_download[limit]")).toBe("51");
 
-    await page.getByTestId("dataset.downloads.pagination.desktop.next").click();
-    await expect(page).toHaveURL(/from_id=251/);
+    await pagination
+      .getByTestId(`dataset.downloads.pagination.${paginationKind}.next`)
+      .click();
+    await expect(page).toHaveURL(/from_id=50/);
     await expect(page).toHaveURL(/page=2/);
-    await expect(page.getByTestId("dataset.downloads.row.250")).toBeVisible();
+    await expect(item(51)).toBeVisible();
+    expect(requestedDownloadParams.at(-1)?.get("snapshot_download[limit]")).toBe("51");
+    await expect(item(1)).toHaveCount(0);
+    await expect(
+      pagination.getByTestId(`dataset.downloads.pagination.${paginationKind}.next`),
+    ).toBeDisabled();
 
-    await page.getByTestId("dataset.downloads.pagination.desktop.prev").click();
+    await pagination
+      .getByTestId(`dataset.downloads.pagination.${paginationKind}.prev`)
+      .click();
     await expect(page).toHaveURL(/page=1/);
     await expect(page).not.toHaveURL(/from_id=/);
-    await expect(page.getByTestId("dataset.downloads.row.300")).toBeVisible();
+    await expect(item(1)).toBeVisible();
   });
 
-  test("search uses server-side q and persists in URL", async ({ page }) => {
-    await page.goto("/app/datasets/10/downloads");
+  test("does not offer or send the unsupported q filter", async ({ page }) => {
+    const mobile = (page.viewportSize()?.width ?? 1024) < 768;
+    await page.goto("/app/datasets/10/downloads?q=legacy-search");
 
-    await page.getByTestId("dataset.downloads.search.input").fill("300");
-    await expect(page).toHaveURL(/q=300/);
-    await expect(page.getByTestId("dataset.downloads.row.300")).toBeVisible();
+    await expect(
+      page.getByTestId(`dataset.downloads.${mobile ? "card" : "row"}.1`),
+    ).toBeVisible();
+    await expect(page.getByTestId("dataset.downloads.search.input")).toHaveCount(0);
+    expect(requestedDownloadParams.length).toBeGreaterThan(0);
+    expect(requestedDownloadParams.every((params) => !params.has("snapshot_download[q]"))).toBe(true);
+    expect(
+      requestedDownloadParams.every((params) => params.get("_meta[count]") === "true"),
+    ).toBe(true);
   });
 });
