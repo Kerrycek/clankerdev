@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { CircleHelp, SlidersHorizontal } from 'lucide-react';
 
+import { useAuth } from '../../app/auth';
 import { useI18n } from '../../app/i18n';
 
 import { FilterBar } from '../layout/FilterBar';
@@ -25,7 +26,11 @@ import { cursorFromDescendingPage } from '../../lib/lockIndex';
 import { useKeysetPagination } from '../../lib/hooks/useKeysetPagination';
 import { parseNumericToken, splitKeyValueToken, tokenizeSmartInput, unquoteSmartValue } from '../../lib/smartFilter';
 
-import { fetchUserNamespaces, type UserNamespace } from '../../lib/api/userNamespaces';
+import { explicitUserNamespaceOwnerId, fetchUserNamespaces, type UserNamespace } from '../../lib/api/userNamespaces';
+import type { UserRole } from '../../lib/roles';
+import { UserNamespaceContractGuard } from './UserNamespaceContractGuard';
+import { canFilterUserNamespaceOwners } from './userNamespaceFilterSemantics';
+import type { UserNamespaceListProps } from './userNamespaceListProps';
 
 function parseIntParam(v: string | null): number | undefined {
   if (!v) return undefined;
@@ -39,27 +44,43 @@ function userLabel(u: any): string {
   return String(u.login ?? u.label ?? u.id ?? '—');
 }
 
-export function UserNamespaceList(props: {
-  testIdPrefix: string;
-  /** Detail route base, e.g. /app/profile/user-namespaces/namespaces */
-  namespaceBase: string;
-  /** Maps list base, e.g. /app/profile/user-namespaces/maps */
-  mapsBase: string;
-  /** If set, list is restricted to this user (profile view). */
-  fixedUserId?: number;
-  /** Show admin-only filters and columns. */
-  showAdminFields?: boolean;
-}) {
+export function UserNamespaceList(props: UserNamespaceListProps) {
+  const { role } = useAuth();
+
+  return (
+    <UserNamespaceContractGuard
+      fixedOwnerId={props.fixedUserId}
+      kind="namespace"
+      showAdminFields={props.showAdminFields}
+      testIdPrefix={props.testIdPrefix}
+      viewerRole={role}
+    >
+      <UserNamespaceListContent {...props} viewerRole={role} />
+    </UserNamespaceContractGuard>
+  );
+}
+
+function UserNamespaceListContent(props: UserNamespaceListProps & { viewerRole: UserRole }) {
   const { t } = useI18n();
   const navigate = useNavigate();
   const smartInputRef = useRef<HTMLInputElement | null>(null);
 
   const [sp, setSp] = useSearchParams();
 
-  const q = (sp.get('q') ?? '').trim();
   const size = parseIntParam(sp.get('size'));
-  const userId = props.fixedUserId ?? parseIntParam(sp.get('user'));
-  const blockCount = parseIntParam(sp.get('block_count'));
+  const requestedUserId = parseIntParam(sp.get('user'));
+  const adminFiltersEnabled = canFilterUserNamespaceOwners({
+    viewerRole: props.viewerRole,
+    showAdminFields: props.showAdminFields,
+    fixedOwnerId: props.fixedUserId,
+  });
+  const userId = explicitUserNamespaceOwnerId({
+    viewerRole: props.viewerRole,
+    fixedOwnerId: props.fixedUserId,
+    requestedOwnerId: requestedUserId,
+    allowRequestedOwner: adminFiltersEnabled,
+  });
+  const blockCount = adminFiltersEnabled ? parseIntParam(sp.get('block_count')) : undefined;
 
   const [smart, setSmart] = useState('');
   const [smartErrors, setSmartErrors] = useState<string[]>([]);
@@ -67,8 +88,8 @@ export function UserNamespaceList(props: {
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const filterKey = useMemo(() => {
-    return JSON.stringify({ q, size, userId: props.fixedUserId ? props.fixedUserId : userId, blockCount, admin: props.showAdminFields ? 1 : 0 });
-  }, [blockCount, q, size, userId, props.fixedUserId, props.showAdminFields]);
+    return JSON.stringify({ size, userId, blockCount, admin: adminFiltersEnabled ? 1 : 0 });
+  }, [adminFiltersEnabled, blockCount, size, userId]);
 
   const pagination = useKeysetPagination({
     id: `${props.testIdPrefix}.list`,
@@ -79,12 +100,11 @@ export function UserNamespaceList(props: {
   });
 
   const qList = useQuery({
-    queryKey: ['user_namespace', 'list', { cursor: pagination.cursor, limit: pagination.limit, q, size, userId, blockCount, fixed: props.fixedUserId }],
+    queryKey: ['user_namespace', 'list', { cursor: pagination.cursor, limit: pagination.limit, size, userId, blockCount }],
     queryFn: async () =>
       (await fetchUserNamespaces({
         limit: pagination.limit,
         fromId: pagination.cursor,
-        q: q || undefined,
         size,
         userId,
         blockCount,
@@ -96,7 +116,7 @@ export function UserNamespaceList(props: {
   const pageCursor = cursorFromDescendingPage(rows);
   const canNext = rows.length >= pagination.limit && pageCursor !== null;
 
-  const filtersActive = Boolean(q || size !== undefined || (props.showAdminFields && !props.fixedUserId && (userId !== undefined || blockCount !== undefined)) || smartErrors.length > 0);
+  const filtersActive = Boolean(size !== undefined || (adminFiltersEnabled && (userId !== undefined || blockCount !== undefined)) || smartErrors.length > 0);
   const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
 
   function focusSmartInput() {
@@ -113,7 +133,6 @@ export function UserNamespaceList(props: {
 
   function clearFilters() {
     const next = new URLSearchParams(sp);
-    next.delete('q');
     next.delete('size');
     next.delete('block_count');
     if (!props.fixedUserId) next.delete('user');
@@ -122,17 +141,15 @@ export function UserNamespaceList(props: {
     setSmartErrors([]);
   }
 
-  function setFilters(nextVals: { q?: string; size?: number | undefined; userId?: number | undefined; blockCount?: number | undefined }) {
+  function setFilters(nextVals: { size?: number | undefined; userId?: number | undefined; blockCount?: number | undefined }) {
     const next = new URLSearchParams(sp);
-    if (nextVals.q && nextVals.q.trim()) next.set('q', nextVals.q.trim());
-    else next.delete('q');
     if (typeof nextVals.size === 'number') next.set('size', String(nextVals.size));
     else next.delete('size');
     if (!props.fixedUserId) {
       if (typeof nextVals.userId === 'number') next.set('user', String(nextVals.userId));
       else next.delete('user');
     }
-    if (typeof nextVals.blockCount === 'number') next.set('block_count', String(nextVals.blockCount));
+    if (adminFiltersEnabled && typeof nextVals.blockCount === 'number') next.set('block_count', String(nextVals.blockCount));
     else next.delete('block_count');
     setSp(next, { replace: true });
   }
@@ -146,7 +163,6 @@ export function UserNamespaceList(props: {
     }
 
     const tokens = tokenizeSmartInput(raw);
-    let nextQ = q;
     let nextSize = size;
     let nextUserId = userId;
     let nextBlockCount = blockCount;
@@ -185,13 +201,6 @@ export function UserNamespaceList(props: {
           }
           break;
         }
-        case 'q':
-        case 'search': {
-          const n = parseNumericToken(value);
-          if (n === null) errors.push(t('filters.smart.error.numeric_only', { key, value }));
-          else nextQ = String(n);
-          break;
-        }
         case 'size': {
           const n = parseNumericToken(value);
           if (n === null) errors.push(t('filters.smart.error.numeric_only', { key, value }));
@@ -200,7 +209,7 @@ export function UserNamespaceList(props: {
         }
         case 'blocks':
         case 'block_count': {
-          if (!(props.showAdminFields && !props.fixedUserId)) {
+          if (!adminFiltersEnabled) {
             errors.push(t('filters.smart.error.admin_only', { key }));
             break;
           }
@@ -210,7 +219,7 @@ export function UserNamespaceList(props: {
           break;
         }
         case 'user': {
-          if (!(props.showAdminFields && !props.fixedUserId)) {
+          if (!adminFiltersEnabled) {
             errors.push(t('filters.smart.error.admin_only', { key }));
             break;
           }
@@ -226,7 +235,7 @@ export function UserNamespaceList(props: {
 
     setSmartErrors(errors);
     if (errors.length > 0) return;
-    setFilters({ q: nextQ, size: nextSize, userId: nextUserId, blockCount: nextBlockCount });
+    setFilters({ size: nextSize, userId: nextUserId, blockCount: nextBlockCount });
     setSmart('');
   }
 
@@ -324,12 +333,11 @@ export function UserNamespaceList(props: {
         </div>
       </FilterBar>
 
-      {(q || size !== undefined || (props.showAdminFields && !props.fixedUserId && (userId !== undefined || blockCount !== undefined)) || smartErrors.length > 0) ? (
+      {(size !== undefined || (adminFiltersEnabled && (userId !== undefined || blockCount !== undefined)) || smartErrors.length > 0) ? (
         <div className="flex flex-wrap gap-2" data-testid={`${props.testIdPrefix}.filters.chips`}>
-          {q ? <FilterChip label={`#${q.replace(/^#/, '')}`} onRemove={() => setFilters({ q: '', size, userId, blockCount })} /> : null}
-          {typeof size === 'number' ? <FilterChip label={`${t('userns.namespace.size')}: ${size}`} onRemove={() => setFilters({ q, size: undefined, userId, blockCount })} /> : null}
-          {props.showAdminFields && !props.fixedUserId && typeof userId === 'number' ? <FilterChip label={`${t('common.user')}: #${userId}`} onRemove={() => setFilters({ q, size, userId: undefined, blockCount })} /> : null}
-          {props.showAdminFields && !props.fixedUserId && typeof blockCount === 'number' ? <FilterChip label={`${t('userns.namespace.blocks')}: ${blockCount}`} onRemove={() => setFilters({ q, size, userId, blockCount: undefined })} /> : null}
+          {typeof size === 'number' ? <FilterChip label={`${t('userns.namespace.size')}: ${size}`} onRemove={() => setFilters({ size: undefined, userId, blockCount })} /> : null}
+          {adminFiltersEnabled && typeof userId === 'number' ? <FilterChip label={`${t('common.user')}: #${userId}`} onRemove={() => setFilters({ size, userId: undefined, blockCount })} /> : null}
+          {adminFiltersEnabled && typeof blockCount === 'number' ? <FilterChip label={`${t('userns.namespace.blocks')}: ${blockCount}`} onRemove={() => setFilters({ size, userId, blockCount: undefined })} /> : null}
           {smartErrors.map((err, idx) => <FilterChip key={`${err}-${idx}`} label={err} tone="danger" onRemove={() => setSmartErrors((cur) => cur.filter((_, i) => i !== idx))} />)}
         </div>
       ) : null}
@@ -432,17 +440,6 @@ export function UserNamespaceList(props: {
       >
         <div className="space-y-4">
           <div>
-            <div className="text-xs text-muted">{t('common.search')}</div>
-            <div className="mt-1">
-              <Input
-                testId={`${props.testIdPrefix}.search.advanced`}
-                placeholder={t('userns.namespace.search_placeholder')}
-                value={q}
-                onChange={(e) => setFilters({ q: e.target.value.replace(/^#/, ''), size, userId, blockCount })}
-              />
-            </div>
-          </div>
-          <div>
             <div className="text-xs text-muted">{t('userns.namespace.size')}</div>
             <div className="mt-1">
               <Input
@@ -451,12 +448,12 @@ export function UserNamespaceList(props: {
                 value={size !== undefined ? String(size) : ''}
                 onChange={(e) => {
                   const v = e.target.value.trim();
-                  setFilters({ q, size: v ? parseIntParam(v) : undefined, userId, blockCount });
+                  setFilters({ size: v ? parseIntParam(v) : undefined, userId, blockCount });
                 }}
               />
             </div>
           </div>
-          {props.showAdminFields && !props.fixedUserId ? (
+          {adminFiltersEnabled ? (
             <>
               <div>
                 <div className="text-xs text-muted">{t('common.user')}</div>
@@ -467,7 +464,7 @@ export function UserNamespaceList(props: {
                     value={userId !== undefined ? String(userId) : ''}
                     onChange={(e) => {
                       const v = e.target.value.trim();
-                      setFilters({ q, size, userId: v ? parseIntParam(v.replace(/^#/, '')) : undefined, blockCount });
+                      setFilters({ size, userId: v ? parseIntParam(v.replace(/^#/, '')) : undefined, blockCount });
                     }}
                   />
                 </div>
@@ -481,7 +478,7 @@ export function UserNamespaceList(props: {
                     value={blockCount !== undefined ? String(blockCount) : ''}
                     onChange={(e) => {
                       const v = e.target.value.trim();
-                      setFilters({ q, size, userId, blockCount: v ? parseIntParam(v) : undefined });
+                      setFilters({ size, userId, blockCount: v ? parseIntParam(v) : undefined });
                     }}
                   />
                 </div>
@@ -504,13 +501,13 @@ export function UserNamespaceList(props: {
           { example: '?', description: t('userns.namespace.smart.help.examples.help') },
           { example: '123', description: t('userns.namespace.smart.help.examples.open_id') },
           { example: 'size:65536', description: t('userns.namespace.smart.help.examples.size') },
-          ...(props.showAdminFields && !props.fixedUserId ? [{ example: 'user:42', description: t('userns.namespace.smart.help.examples.user') }] : []),
+          ...(adminFiltersEnabled ? [{ example: 'user:42', description: t('userns.namespace.smart.help.examples.user') }] : []),
         ]}
         topKeys={[
           { key: 'id', description: t('userns.namespace.smart.help.keys.id'), example: 'id:123' },
           { key: 'size', description: t('userns.namespace.smart.help.keys.size'), example: 'size:65536' },
-          ...(props.showAdminFields && !props.fixedUserId ? [{ key: 'user', description: t('userns.namespace.smart.help.keys.user'), example: 'user:42' }] : []),
-          ...(props.showAdminFields && !props.fixedUserId ? [{ key: 'blocks', description: t('userns.namespace.smart.help.keys.blocks'), example: 'blocks:3' }] : []),
+          ...(adminFiltersEnabled ? [{ key: 'user', description: t('userns.namespace.smart.help.keys.user'), example: 'user:42' }] : []),
+          ...(adminFiltersEnabled ? [{ key: 'blocks', description: t('userns.namespace.smart.help.keys.blocks'), example: 'blocks:3' }] : []),
         ]}
         inference={[
           t('userns.namespace.smart.help.inference.enter_applies'),

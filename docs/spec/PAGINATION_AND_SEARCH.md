@@ -101,8 +101,8 @@ Pages already migrated to the shared implementation:
 - Incident reports list: `src/pages/app/incidents/IncidentsPage.tsx`
 - OOM reports list: `src/pages/app/oom/OomReportsPage.tsx`
 - Profile / Admin user data templates: `src/components/user/UserDataTemplatesPanel.tsx` (server-side `q`, SFI)
-- User namespaces list: `src/components/userNamespaces/UserNamespaceList.tsx` (SFI; numeric-id oriented)
-- User namespace maps list: `src/components/userNamespaces/UserNamespaceMapList.tsx` (server-side `q`, SFI)
+- User namespaces list: `src/components/userNamespaces/UserNamespaceList.tsx` (SFI; numeric ID opens detail; exact `size` plus admin-only `user`/`block_count` filters)
+- User namespace maps list: `src/components/userNamespaces/UserNamespaceMapList.tsx` (SFI; numeric ID opens detail; exact `user_namespace` plus admin-only `user` filter; no server-side `q`)
 
 ### Smart Filter Input pages
 

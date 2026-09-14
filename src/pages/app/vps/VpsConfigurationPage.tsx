@@ -17,7 +17,7 @@ import { Spinner } from '../../../components/ui/Spinner';
 import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 import { fetchDnsResolvers } from '../../../lib/api/dnsResolvers';
 import { getMetaActionStateId, isMissingActionStateError } from '../../../lib/api/haveapi';
-import { fetchUserNamespaceMaps } from '../../../lib/api/userNamespaces';
+import { explicitUserNamespaceOwnerId, fetchUserNamespaceMaps } from '../../../lib/api/userNamespaces';
 import { updateVps } from '../../../lib/api/vps';
 import { gateVpsMutation } from '../../../lib/gates/vps';
 import { objectRef } from '../../../lib/objectRef';
@@ -95,10 +95,10 @@ export function VpsConfigurationPage() {
     refetchOnWindowFocus: false,
   });
 
-  const ownerId = resourceId(vps.user) ?? undefined;
+  const explicitOwnerId = explicitUserNamespaceOwnerId({ viewerRole: auth.role, fixedOwnerId: resourceId(vps.user) ?? undefined });
   const userNamespaceMapsQ = useQuery({
-    queryKey: ['user_namespace_map', 'list', { limit: 250, userId: ownerId ?? null }],
-    queryFn: async () => (await fetchUserNamespaceMaps({ limit: 250, userId: ownerId })).data,
+    queryKey: ['user_namespace_map', 'list', { limit: 250, userId: explicitOwnerId ?? null }],
+    queryFn: async () => (await fetchUserNamespaceMaps({ limit: 250, userId: explicitOwnerId })).data,
     refetchOnWindowFocus: false,
   });
 
