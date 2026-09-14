@@ -63,7 +63,7 @@ export function VpsActionsMenu(props: {
         <option value={`${vpsPath}/features`}>{t('vps.tabs.features')}</option>
         <option value={`${vpsPath}/maintenance`}>{t('vps.tabs.maintenance')}</option>
         <option value={`${vpsPath}/history`}>{t('vps.tabs.history')}</option>
-        <option value={`${props.basePath}/transactions/items?vps=${props.vpsId}`}>{t('vps.overview.admin_actions.transaction_log')}</option>
+        <option value={`${props.basePath}/transactions?class_name=Vps&row_id=${props.vpsId}`}>{t('vps.overview.admin_actions.transaction_log')}</option>
       </optgroup>
       {props.canMutateVps ? (
         <optgroup label={t('vps.actions.more.group.lifecycle')}>

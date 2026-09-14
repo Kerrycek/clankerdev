@@ -57,7 +57,12 @@ test('admin migration plan detail: migrations list keyset pagination (from_id)',
 
   await page.goto('/admin/migration-plans/777');
 
-  await expect(page.getByTestId('admin.migration_plan.migrations.row.1000')).toBeVisible();
+  const firstRow = page.getByTestId('admin.migration_plan.migrations.row.1000');
+  await expect(firstRow).toBeVisible();
+  await expect(firstRow.locator('a[href="/admin/transactions?class_name=Vps&row_id=11000"]')).toBeVisible();
+  await expect(firstRow.locator('a[href="/admin/transactions/items?node=1"]')).toBeVisible();
+  await expect(firstRow.locator('a[href="/admin/transactions/items?node=2"]')).toBeVisible();
+  await expect(firstRow.locator('a[href="/admin/transactions/items?transaction_chain=10000"]')).toBeVisible();
 
   await page.getByTestId('admin.migration_plan.migrations.pagination.next').click();
   await expect(page.getByTestId('admin.migration_plan.migrations.row.950')).toBeVisible();

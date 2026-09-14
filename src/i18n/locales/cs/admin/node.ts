@@ -173,7 +173,7 @@ export const csAdmin_node = {
   "admin.node.tabs.storage": "Úložiště",
   "admin.node.transactions.empty": "Žádné nedávné transakce.",
   "admin.node.transactions.filter_by_chain_title": "řetězec #{id} · klikni pro filtrování položek transakcí (node + řetězec)",
-  "admin.node.transactions.filter_by_vps_title": "VPS #{id} · klikni pro filtrování položek transakcí (node + VPS)",
+  "admin.node.transactions.filter_by_vps_title": "VPS #{id} · zobrazit související řetězce transakcí",
   "admin.node.transactions.link.chain": "řetězec",
   "admin.node.transactions.link.tx": "tx",
   "admin.node.transactions.link.vps": "VPS",

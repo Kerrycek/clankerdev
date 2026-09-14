@@ -122,22 +122,18 @@ export async function fetchTransactions(opts?: {
   fromId?: number;
   transactionChainId?: number;
   nodeId?: number;
-  userId?: number;
   type?: number;
-  success?: number;
-  done?: string;
-  q?: string;
+  success?: 0 | 1;
+  done?: 'waiting' | 'staged' | 'done';
 }) {
   const params: Record<string, string | number | boolean> = {};
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
   if (opts?.transactionChainId !== undefined) params['transaction_chain'] = opts.transactionChainId;
   if (opts?.nodeId !== undefined) params['node'] = opts.nodeId;
-  if (opts?.userId !== undefined) params['user'] = opts.userId;
   if (opts?.type !== undefined) params['type'] = opts.type;
   if (opts?.success !== undefined) params['success'] = opts.success;
   if (opts?.done) params['done'] = opts.done;
-  if (opts?.q) params['q'] = opts.q;
 
   const res = await haveApiCall<Transaction[]>({
     method: 'GET',

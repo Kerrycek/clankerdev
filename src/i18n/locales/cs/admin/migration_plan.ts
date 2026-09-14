@@ -21,7 +21,7 @@ export const csAdmin_migration_plan = {
   "admin.migration_plan.migrations.field.source_node": "Zdrojový node",
   "admin.migration_plan.migrations.filter_by_chain_title": "řetězec #{id} · klikni pro filtrování položek transakcí",
   "admin.migration_plan.migrations.filter_by_node_title": "{label} · klikni pro filtrování položek transakcí",
-  "admin.migration_plan.migrations.filter_by_vps_title": "VPS #{id} · klikni pro filtrování položek transakcí",
+  "admin.migration_plan.migrations.filter_by_vps_title": "VPS #{id} · zobrazit související řetězce transakcí",
   "admin.migration_plan.migrations.schedule.allowed_prefix": "Povoleno pouze pokud je plán",
   "admin.migration_plan.migrations.schedule.batch.clear": "Vyčistit dávku",
   "admin.migration_plan.migrations.schedule.batch.error_title": "Dávkové plánování selhalo",

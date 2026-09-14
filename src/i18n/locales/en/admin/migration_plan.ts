@@ -21,7 +21,7 @@ export const enAdmin_migration_plan = {
   "admin.migration_plan.migrations.field.source_node": "Source node",
   "admin.migration_plan.migrations.filter_by_chain_title": "chain #{id} · click to filter tx items",
   "admin.migration_plan.migrations.filter_by_node_title": "{label} · click to filter tx items",
-  "admin.migration_plan.migrations.filter_by_vps_title": "VPS #{id} · click to filter tx items",
+  "admin.migration_plan.migrations.filter_by_vps_title": "VPS #{id} · show related transaction chains",
   "admin.migration_plan.migrations.schedule.allowed_prefix": "Allowed only while the plan is",
   "admin.migration_plan.migrations.schedule.batch.clear": "Clear batch",
   "admin.migration_plan.migrations.schedule.batch.error_title": "Batch scheduling failed",

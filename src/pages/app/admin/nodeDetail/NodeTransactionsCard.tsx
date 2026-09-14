@@ -177,7 +177,7 @@ export function NodeTransactionsCard(props: {
                         <td className="px-3 py-2 text-xs">
                           {vpsId ? (
                             <span className="inline-flex items-center gap-1">
-                              <ChipLink to={`${basePath}/transactions/items?node=${encodeURIComponent(String(nodeId))}&vps=${encodeURIComponent(String(vpsId))}`} title={t('admin.node.transactions.filter_by_vps_title', { id: vpsId })}>
+                              <ChipLink to={`${basePath}/transactions?class_name=Vps&row_id=${encodeURIComponent(String(vpsId))}`} title={t('admin.node.transactions.filter_by_vps_title', { id: vpsId })}>
                                 #{vpsId}
                               </ChipLink>
                               <MiniLink to={`${basePath}/vps/${vpsId}`} title={t('common.open_vps')}>

@@ -131,7 +131,10 @@ export function TransactionItemsTable({ rows, basePath, t, mode, pagination, can
             {mode === 'admin' ? (
               <td className="px-4 py-2 text-xs text-muted">
                 {row.userId ? (
-                  <ChipLink to={buildFilterHref({ user: row.userId })} title={t('filters.smart.suggest.user_id', { id: row.userId })}>
+                  <ChipLink
+                    to={`${basePath}/transactions?user=${encodeURIComponent(String(row.userId))}`}
+                    title={t('transactions.items.row.user_chains_title', { id: row.userId })}
+                  >
                     {row.userLabel || `#${row.userId}`}
                   </ChipLink>
                 ) : (
@@ -159,8 +162,8 @@ export function TransactionItemsTable({ rows, basePath, t, mode, pagination, can
               {row.vpsId ? (
                 <span className="inline-flex items-center gap-1">
                   <ChipLink
-                    to={buildFilterHref({ vps: row.vpsId })}
-                    title={t('transactions.filter.title', { text: t('transactions.items.row.vps_chip', { id: row.vpsId }) })}
+                    to={`${basePath}/transactions?class_name=Vps&row_id=${encodeURIComponent(String(row.vpsId))}`}
+                    title={t('transactions.items.row.vps_chains_title', { id: row.vpsId })}
                   >
                     #{row.vpsId}
                   </ChipLink>

@@ -173,7 +173,7 @@ export const enAdmin_node = {
   "admin.node.tabs.storage": "Storage",
   "admin.node.transactions.empty": "No recent transactions.",
   "admin.node.transactions.filter_by_chain_title": "chain #{id} · click to filter tx items (node + chain)",
-  "admin.node.transactions.filter_by_vps_title": "VPS #{id} · click to filter tx items (node + vps)",
+  "admin.node.transactions.filter_by_vps_title": "VPS #{id} · show related transaction chains",
   "admin.node.transactions.link.chain": "open chain",
   "admin.node.transactions.link.tx": "open tx",
   "admin.node.transactions.link.vps": "open vps",

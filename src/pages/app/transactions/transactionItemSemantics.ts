@@ -5,40 +5,47 @@ import { transactionBadge, type BadgeVariant } from '../../../lib/taskStatus';
 import { resourceId, refLabel } from '../../../lib/resources';
 import type { Transaction } from '../../../lib/api/transactions';
 import { classifyTransaction, operationLabel, type OperationTaxonomy } from '../../../lib/operationTaxonomy';
+import { parsePositiveInt } from '../../../lib/parse';
 
 export const DONE_VALUES = ['waiting', 'staged', 'done'] as const;
 
 export type DoneValue = (typeof DONE_VALUES)[number];
 export type TransactionItemsTranslator = (key: string, params?: Record<string, unknown>) => string;
-export type TransactionItemsSmartKey = 'q' | 'transaction_chain' | 'node' | 'vps' | 'type' | 'done' | 'success' | 'user' | 'id';
+export type TransactionItemsSmartKey = 'transaction_chain' | 'node' | 'type' | 'done' | 'success' | 'id';
 
 export interface TransactionItemsFilterOverride {
   transaction_chain?: number;
   node?: number;
-  vps?: number;
   type?: number;
-  user?: number;
   done?: DoneValue | '';
   success?: '' | 0 | 1;
   limit?: number;
-  q?: string;
 }
 
 export interface TransactionItemFilterHrefArgs {
   basePath: string;
-  qTrim: string;
   chainIdNum?: number;
   nodeIdNum?: number;
-  vpsIdNum?: number;
   typeNum?: number;
   done: DoneValue | '';
   success: '' | 0 | 1;
-  userIdNum?: number;
   limit: number;
   overrides: TransactionItemsFilterOverride;
 }
 
 export type TransactionItemsFilterHrefArgs = TransactionItemFilterHrefArgs;
+
+export interface NormalizeLegacyTransactionItemsUrlArgs {
+  basePath: string;
+  searchParams: URLSearchParams;
+}
+
+export interface NormalizedLegacyTransactionItemsUrl {
+  href: string;
+  changed: boolean;
+  removedQuery: boolean;
+  destination: 'items' | 'chains';
+}
 
 export interface TransactionItemRow {
   tx: Transaction;
@@ -82,18 +89,94 @@ export function parseSuccess(value: string | null): '' | 0 | 1 {
   return '';
 }
 
+function hrefWithSearch(path: string, searchParams: URLSearchParams): string {
+  const search = searchParams.toString();
+  return search ? `${path}?${search}` : path;
+}
+
+/**
+ * Normalize URLs created while the item list advertised filters which the
+ * HaveAPI transaction index silently ignores.
+ *
+ * A valid chain is the most specific item-list scope, so it wins over stale
+ * VPS/user context. Without one, those contexts belong to the chain list.
+ * Pagination is reset only when a legacy parameter is actually present.
+ */
+export function normalizeLegacyTransactionItemsUrl({
+  basePath,
+  searchParams,
+}: NormalizeLegacyTransactionItemsUrlArgs): NormalizedLegacyTransactionItemsUrl {
+  const itemPath = `${basePath}/transactions/items`;
+  const legacyPresent = searchParams.has('q') || searchParams.has('vps') || searchParams.has('user');
+
+  if (!legacyPresent) {
+    return {
+      href: hrefWithSearch(itemPath, searchParams),
+      changed: false,
+      removedQuery: false,
+      destination: 'items',
+    };
+  }
+
+  const removedQuery = searchParams.has('q');
+  const chainId = parsePositiveInt(searchParams.get('transaction_chain'));
+  const vpsId = parsePositiveInt(searchParams.get('vps'));
+  const userId = parsePositiveInt(searchParams.get('user'));
+  const normalized = new URLSearchParams(searchParams);
+
+  normalized.delete('q');
+  normalized.delete('vps');
+  normalized.delete('user');
+  normalized.delete('from_id');
+  normalized.delete('page');
+
+  if (chainId !== undefined) {
+    return {
+      href: hrefWithSearch(itemPath, normalized),
+      changed: true,
+      removedQuery,
+      destination: 'items',
+    };
+  }
+
+  if (vpsId !== undefined) {
+    const context = new URLSearchParams({ class_name: 'Vps', row_id: String(vpsId) });
+    if (basePath === '/admin' && userId !== undefined) context.set('user', String(userId));
+    return {
+      href: hrefWithSearch(`${basePath}/transactions`, context),
+      changed: true,
+      removedQuery,
+      destination: 'chains',
+    };
+  }
+
+  if (basePath === '/admin' && userId !== undefined) {
+    const context = new URLSearchParams({ user: String(userId) });
+    return {
+      href: hrefWithSearch(`${basePath}/transactions`, context),
+      changed: true,
+      removedQuery,
+      destination: 'chains',
+    };
+  }
+
+  return {
+    href: hrefWithSearch(itemPath, normalized),
+    changed: true,
+    removedQuery,
+    destination: 'items',
+  };
+}
+
 export function canonicalTransactionItemKey(raw: string): TransactionItemsSmartKey | null {
   const k = raw.trim().toLowerCase();
   if (!k) return null;
 
-  if (['q', 'search', 'name'].includes(k)) return 'q';
   if (['chain', 'txc', 'transaction_chain', 'transaction-chain'].includes(k)) return 'transaction_chain';
   if (['node', 'n'].includes(k)) return 'node';
-  if (['vps', 'v'].includes(k)) return 'vps';
   if (['type', 't'].includes(k)) return 'type';
   if (['done', 'state'].includes(k)) return 'done';
   if (['success', 'status', 'ok'].includes(k)) return 'success';
-  if (['user', 'u', 'owner'].includes(k)) return 'user';
   if (['id', 'tx', 'transaction', '#'].includes(k)) return 'id';
 
   return null;
@@ -124,21 +207,15 @@ export function transactionItemsFilterToneFromSuccess(success: '' | 0 | 1): Excl
 
 export function buildTransactionItemsFilterHref({
   basePath,
-  qTrim,
   chainIdNum,
   nodeIdNum,
-  vpsIdNum,
   typeNum,
   done,
   success,
-  userIdNum,
   limit,
   overrides,
 }: TransactionItemFilterHrefArgs): string {
   const p = new URLSearchParams();
-
-  const qVal = overrides.q !== undefined ? overrides.q : qTrim;
-  if (qVal.trim()) p.set('q', qVal.trim());
 
   const chainV = overrides.transaction_chain !== undefined ? overrides.transaction_chain : chainIdNum;
   if (chainV) p.set('transaction_chain', String(chainV));
@@ -146,14 +223,8 @@ export function buildTransactionItemsFilterHref({
   const nodeV = overrides.node !== undefined ? overrides.node : nodeIdNum;
   if (nodeV) p.set('node', String(nodeV));
 
-  const vpsV = overrides.vps !== undefined ? overrides.vps : vpsIdNum;
-  if (vpsV) p.set('vps', String(vpsV));
-
   const typeV = overrides.type !== undefined ? overrides.type : typeNum;
   if (typeV) p.set('type', String(typeV));
-
-  const userV = overrides.user !== undefined ? overrides.user : userIdNum;
-  if (userV && basePath === '/admin') p.set('user', String(userV));
 
   const doneV = overrides.done !== undefined ? overrides.done : done;
   if (doneV) p.set('done', doneV);

@@ -3,10 +3,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
 import { fetchTransactions } from '../../lib/api/transactions';
-import { searchUsers } from '../../lib/api/users';
 import { useAppMode } from '../../app/appMode';
 import { useI18n } from '../../app/i18n';
-import { useObjectScope } from '../../app/objectScope';
 import { useToasts } from '../../app/toasts';
 import { ListShell } from '../../components/layout/ListShell';
 import { PageHeader } from '../../components/layout/PageHeader';
@@ -21,7 +19,6 @@ import { cursorFromDescendingPage } from '../../lib/lockIndex';
 import { parsePositiveInt } from '../../lib/parse';
 import { useTierAIntervalMs } from '../../lib/refreshTiers';
 import { parseNumericToken, splitKeyValueToken, tokenizeSmartInput, unquoteSmartValue } from '../../lib/smartFilter';
-import { useDebouncedValue } from '../../lib/hooks/useDebouncedValue';
 
 import { TransactionItemsFilters } from './transactions/TransactionItemsFilters';
 import { TransactionItemsTable } from './transactions/TransactionItemsTable';
@@ -35,13 +32,21 @@ import {
   type DoneValue,
 } from './transactions/transactionItemSemantics';
 import { buildTransactionItemFilterChips, buildTransactionItemSmartSuggestions } from './transactions/transactionItemSmartFilter';
+import { TransactionItemsRouteGuard } from './transactions/TransactionItemsRouteGuard';
 
 export function TransactionsListPage() {
+  return (
+    <TransactionItemsRouteGuard>
+      <TransactionsListContent />
+    </TransactionItemsRouteGuard>
+  );
+}
+
+function TransactionsListContent() {
   const { basePath } = useAppMode();
   const mode = basePath === '/admin' ? 'admin' : 'app';
-  const scope = useObjectScope();
   const { t } = useI18n();
-  const toasts = useToasts();
+  const { pushToast } = useToasts();
   const navigate = useNavigate();
   const tierARefetchMs = useTierAIntervalMs();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -53,30 +58,20 @@ export function TransactionsListPage() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
-  const qText = useMemo(() => searchParams.get('q') ?? '', [searchParams]);
-  const qTrim = qText.trim();
   const chainIdNum = useMemo(() => parsePositiveInt(searchParams.get('transaction_chain')), [searchParams]);
   const nodeIdNum = useMemo(() => parsePositiveInt(searchParams.get('node')), [searchParams]);
-  const vpsIdNum = useMemo(() => parsePositiveInt(searchParams.get('vps')), [searchParams]);
   const typeNum = useMemo(() => parsePositiveInt(searchParams.get('type')), [searchParams]);
   const done = useMemo(() => parseDone(searchParams.get('done')), [searchParams]);
   const success = useMemo(() => parseSuccess(searchParams.get('success')), [searchParams]);
-  const userIdNum = useMemo(() => (mode === 'admin' ? parsePositiveInt(searchParams.get('user')) : undefined), [mode, searchParams]);
-
-  const debouncedSmartNeedle = useDebouncedValue(smartNeedle, 200);
 
   const pagination = useKeysetPagination({
     id: 'transactions.items.list',
     filterKey: JSON.stringify({
       transaction_chain: chainIdNum,
       node: nodeIdNum,
-      vps: vpsIdNum,
       type: typeNum,
       done,
       success,
-      q: qTrim,
-      user: userIdNum,
-      mineUserId: scope.mineUserId,
       scope: basePath,
     }),
     searchParams,
@@ -92,11 +87,9 @@ export function TransactionsListPage() {
       {
         chainId: chainIdNum,
         nodeId: nodeIdNum,
-        userId: scope.mineUserId ?? userIdNum,
         type: typeNum,
         done,
         success,
-        q: qTrim,
         limit: pagination.limit,
         fromId: pagination.fromId,
       },
@@ -108,11 +101,9 @@ export function TransactionsListPage() {
           fromId: pagination.fromId,
           transactionChainId: chainIdNum,
           nodeId: nodeIdNum,
-          userId: scope.mineUserId ?? userIdNum,
           type: typeNum,
           done: done || undefined,
           success: success === '' ? undefined : success,
-          q: qTrim || undefined,
         })
       ).data,
     refetchInterval: done === 'done' ? false : tierARefetchMs,
@@ -122,21 +113,7 @@ export function TransactionsListPage() {
   const pageCursor = useMemo(() => cursorFromDescendingPage(pageData), [pageData]);
   const hasMore = pageData.length >= pagination.limit;
   const canNext = pagination.hasForward || (hasMore && pageCursor !== null);
-  const implicitMineFilter = scope.mineUserId !== undefined;
-  const filtersActive = Boolean(qTrim || chainIdNum || nodeIdNum || vpsIdNum || typeNum || done || success !== '' || userIdNum || implicitMineFilter);
-
-  const userSuggestQuery = useQuery({
-    queryKey: ['users', 'search', { q: debouncedSmartNeedle }],
-    enabled:
-      mode === 'admin' &&
-      debouncedSmartNeedle.length >= 2 &&
-      debouncedSmartNeedle !== '?' &&
-      !debouncedSmartNeedle.includes(':') &&
-      !debouncedSmartNeedle.includes(' ') &&
-      parseNumericToken(debouncedSmartNeedle) === null,
-    queryFn: async () => (await searchUsers({ q: debouncedSmartNeedle, limit: 6 })).data,
-    staleTime: 10_000,
-  });
+  const filtersActive = Boolean(chainIdNum || nodeIdNum || typeNum || done || success !== '');
 
   const rows = useMemo(() => (txQuery.data ?? []).map((tx) => buildTransactionItemRow(tx, t)), [txQuery.data, t]);
   const primaryLoading = txQuery.isLoading;
@@ -181,21 +158,18 @@ export function TransactionsListPage() {
     });
   };
 
-  const setNumericParam = (key: 'transaction_chain' | 'node' | 'vps' | 'type' | 'user', value: number) => setParam(key, String(value));
+  const setNumericParam = (key: 'transaction_chain' | 'node' | 'type', value: number) => setParam(key, String(value));
 
   const clearFilters = () => {
     setSmart('');
     setSmartErrors([]);
     setSearchParams((prev) => {
       const p = new URLSearchParams(prev);
-      p.delete('q');
       p.delete('transaction_chain');
       p.delete('node');
-      p.delete('vps');
       p.delete('type');
       p.delete('done');
       p.delete('success');
-      p.delete('user');
       return p;
     });
   };
@@ -203,32 +177,23 @@ export function TransactionsListPage() {
   const activeFilterChips = useMemo(
     () =>
       buildTransactionItemFilterChips({
-        mode,
-        qTrim,
         chainIdNum,
         nodeIdNum,
-        vpsIdNum,
         typeNum,
         done,
         success,
-        userIdNum,
-        implicitMineFilter,
-        mineUserId: scope.mineUserId,
         smartErrors,
-        onRemoveQuery: () => removeParam('q'),
         onRemoveChain: () => removeParam('transaction_chain'),
         onRemoveNode: () => removeParam('node'),
-        onRemoveVps: () => removeParam('vps'),
         onRemoveType: () => removeParam('type'),
         onRemoveDone: () => removeParam('done'),
         onRemoveSuccess: () => removeParam('success'),
-        onRemoveUser: () => removeParam('user'),
         onClearSmartErrors: () => setSmartErrors([]),
       }),
-    [mode, qTrim, chainIdNum, nodeIdNum, vpsIdNum, typeNum, done, success, userIdNum, implicitMineFilter, scope.mineUserId, smartErrors]
+    [chainIdNum, nodeIdNum, typeNum, done, success, smartErrors]
   );
 
-  async function applySmartText(raw: string) {
+  function applySmartText(raw: string) {
     const input = raw.trim();
     if (!input) return;
 
@@ -247,17 +212,12 @@ export function TransactionsListPage() {
       return;
     }
 
-    let nextQ = qText;
-    let qExplicit = false;
     let nextChain = chainIdNum ? String(chainIdNum) : '';
     let nextNode = nodeIdNum ? String(nodeIdNum) : '';
-    let nextVps = vpsIdNum ? String(vpsIdNum) : '';
     let nextType = typeNum ? String(typeNum) : '';
     let nextDone: DoneValue | '' = done;
     let nextSuccess: '' | 0 | 1 = success;
-    let nextUser = userIdNum ? String(userIdNum) : '';
 
-    const free: string[] = [];
     const errs: string[] = [];
 
     for (const token of tokens) {
@@ -288,11 +248,6 @@ export function TransactionsListPage() {
           }
           continue;
         }
-        if (key === 'q') {
-          nextQ = value;
-          qExplicit = true;
-          continue;
-        }
         if (key === 'transaction_chain') {
           const n = parseNumericToken(value);
           if (n === null) errs.push(t('transactions.items.smart.error.chain_numeric_only', { value }));
@@ -303,12 +258,6 @@ export function TransactionsListPage() {
           const n = parseNumericToken(value);
           if (n === null) errs.push(t('transactions.items.smart.error.node_numeric_only', { value }));
           else nextNode = String(n);
-          continue;
-        }
-        if (key === 'vps') {
-          const n = parseNumericToken(value);
-          if (n === null) errs.push(t('transactions.items.smart.error.vps_numeric_only', { value }));
-          else nextVps = String(n);
           continue;
         }
         if (key === 'type') {
@@ -329,29 +278,6 @@ export function TransactionsListPage() {
           else nextSuccess = parsedSuccess;
           continue;
         }
-        if (key === 'user') {
-          if (mode !== 'admin') {
-            errs.push(t('filters.smart.error.user_admin_only'));
-            continue;
-          }
-          const n = parseNumericToken(value);
-          if (n !== null) {
-            nextUser = String(n);
-            continue;
-          }
-          try {
-            const users = (await searchUsers({ q: value, limit: 10 })).data;
-            const exact = users.filter((u) => u.login.toLowerCase() === value.toLowerCase());
-            const [resolvedUser] = exact;
-            if (resolvedUser) {
-              nextUser = String(resolvedUser.id);
-              continue;
-            }
-            errs.push(t('filters.smart.error.user_unresolved', { value }));
-          } catch {
-            errs.push(t('filters.smart.error.user_unresolved', { value }));
-          }
-        }
         continue;
       }
 
@@ -367,42 +293,30 @@ export function TransactionsListPage() {
         nextSuccess = parsedSuccess;
         continue;
       }
-      free.push(plain);
-    }
-
-    if (free.length > 0) {
-      const freeText = free.join(' ');
-      nextQ = qExplicit ? [nextQ.trim(), freeText].filter(Boolean).join(' ') : freeText;
+      errs.push(t('transactions.items.smart.error.explicit_filter_required', { value: plain }));
     }
 
     if (errs.length > 0) {
       setSmartErrors(errs);
-      toasts.pushToast({ variant: 'danger', title: errs[0] ?? t('common.unknown_error') });
+      pushToast({ variant: 'danger', title: errs[0] ?? t('common.unknown_error') });
       return;
     }
 
     setSearchParams((prev) => {
       const p = new URLSearchParams(prev);
-      if (nextQ.trim()) p.set('q', nextQ.trim());
-      else p.delete('q');
       if (nextChain.trim()) p.set('transaction_chain', nextChain.trim());
       else p.delete('transaction_chain');
       if (nextNode.trim()) p.set('node', nextNode.trim());
       else p.delete('node');
-      if (nextVps.trim()) p.set('vps', nextVps.trim());
-      else p.delete('vps');
       if (nextType.trim()) p.set('type', nextType.trim());
       else p.delete('type');
       if (nextDone) p.set('done', nextDone);
       else p.delete('done');
       if (nextSuccess !== '') p.set('success', String(nextSuccess));
       else p.delete('success');
-      if (mode === 'admin') {
-        if (nextUser.trim()) p.set('user', nextUser.trim());
-        else p.delete('user');
-      } else {
-        p.delete('user');
-      }
+      p.delete('q');
+      p.delete('vps');
+      p.delete('user');
       return p;
     });
 
@@ -410,46 +324,34 @@ export function TransactionsListPage() {
     setSmartErrors([]);
   }
 
-  const smartSuggestions = useMemo(
-    () =>
-      buildTransactionItemSmartSuggestions({
-        needle: smartNeedle,
-        mode,
-        basePath,
-        navigate,
-        t,
-        userSuggestions: userSuggestQuery.data ?? [],
-        onOpenHelp: () => setHelpOpen(true),
-        onApply: () => void applySmartText(smart),
-        onSetDone: setDoneValue,
-        onSetSuccess: setSuccessValue,
-        onSetQuery: (value) => setParam('q', value),
-        onSetChainId: (value) => setNumericParam('transaction_chain', value),
-        onSetVpsId: (value) => setNumericParam('vps', value),
-        onSetNodeId: (value) => setNumericParam('node', value),
-        onSetUserId: (value) => setNumericParam('user', value),
-        onResetSmart: () => {
-          setSmart('');
-          setSmartErrors([]);
-        },
-      }),
-    [basePath, mode, navigate, smart, smartNeedle, t, userSuggestQuery.data]
-  );
+  const smartSuggestions = buildTransactionItemSmartSuggestions({
+    needle: smartNeedle,
+    basePath,
+    navigate,
+    t,
+    onOpenHelp: () => setHelpOpen(true),
+    onApply: () => applySmartText(smart),
+    onSetDone: setDoneValue,
+    onSetSuccess: setSuccessValue,
+    onSetChainId: (value) => setNumericParam('transaction_chain', value),
+    onSetNodeId: (value) => setNumericParam('node', value),
+    onResetSmart: () => {
+      setSmart('');
+      setSmartErrors([]);
+    },
+  });
 
   const filterHrefArgs = useMemo(
     () => ({
       basePath,
-      qTrim,
       chainIdNum,
       nodeIdNum,
-      vpsIdNum,
       typeNum,
       done,
       success,
-      userIdNum,
       limit: pagination.limit,
     }),
-    [basePath, qTrim, chainIdNum, nodeIdNum, vpsIdNum, typeNum, done, success, userIdNum, pagination.limit]
+    [basePath, chainIdNum, nodeIdNum, typeNum, done, success, pagination.limit]
   );
 
   return (
@@ -470,7 +372,6 @@ export function TransactionsListPage() {
       filters={
         <TransactionItemsFilters
           t={t}
-          mode={mode}
           smartInputRef={smartInputRef}
           smart={smart}
           smartNeedle={smartNeedle}
@@ -479,10 +380,9 @@ export function TransactionsListPage() {
             setSmart(value);
             if (smartErrors.length) setSmartErrors([]);
           }}
-          onSmartSubmit={() => void applySmartText(smart)}
+          onSmartSubmit={() => applySmartText(smart)}
           smartSuggestions={smartSuggestions}
           activeFilterChips={activeFilterChips}
-          queryId={undefined}
           filtersActive={filtersActive}
           helpOpen={helpOpen}
           onHelpOpen={() => setHelpOpen(true)}
@@ -491,22 +391,16 @@ export function TransactionsListPage() {
           onAdvancedOpen={() => setAdvancedOpen(true)}
           onAdvancedClose={() => setAdvancedOpen(false)}
           clearFilters={clearFilters}
-          qText={qText}
-          setQueryText={(value) => setParam('q', value)}
           chainIdText={chainIdNum ? String(chainIdNum) : ''}
           setChainIdText={(value) => setParam('transaction_chain', value)}
           nodeIdText={nodeIdNum ? String(nodeIdNum) : ''}
           setNodeIdText={(value) => setParam('node', value)}
-          vpsIdText={vpsIdNum ? String(vpsIdNum) : ''}
-          setVpsIdText={(value) => setParam('vps', value)}
           typeText={typeNum ? String(typeNum) : ''}
           setTypeText={(value) => setParam('type', value)}
           done={done}
           setDoneValue={setDoneValue}
           success={success}
           setSuccessValue={setSuccessValue}
-          userIdText={userIdNum ? String(userIdNum) : ''}
-          setUserIdText={(value) => setParam('user', value)}
         />
       }
     >

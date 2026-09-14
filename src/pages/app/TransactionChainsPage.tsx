@@ -8,6 +8,7 @@ import { PageHeader } from '../../components/layout/PageHeader';
 import { fetchTransactionChain, fetchTransactionChains, type TransactionChain } from '../../lib/api/transactions';
 import { searchUsers } from '../../lib/api/users';
 import { useAppMode } from '../../app/appMode';
+import { useAuth } from '../../app/auth';
 import { useI18n } from '../../app/i18n';
 import { useObjectScope } from '../../app/objectScope';
 import { useToasts } from '../../app/toasts';
@@ -45,6 +46,7 @@ import { isFailedChainState, isFinishedChainState } from '../../lib/taskStatus';
 
 export function TransactionChainsPage() {
   const { basePath, mode } = useAppMode();
+  const auth = useAuth();
   const uiMode = mode === 'admin' ? 'admin' : 'app';
   const scope = useObjectScope();
   const chrome = useChrome();
@@ -656,11 +658,11 @@ export function TransactionChainsPage() {
           title={t('transactions.chains.title')}
           description={t('transactions.chains.description')}
           testId="transactions.list.header"
-          actions={
+          actions={uiMode !== 'app' || auth.role !== 'admin' || scope.mineUserId === undefined ? (
             <LinkButton to={`${basePath}/transactions/items`} variant="secondary" size="sm">
               {t('transactions.items.title')}
             </LinkButton>
-          }
+          ) : undefined}
         />
       }
       filters={

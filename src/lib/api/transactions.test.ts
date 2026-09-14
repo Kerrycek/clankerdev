@@ -48,7 +48,7 @@ describe('transactions API wrappers', () => {
     expect(u.searchParams.get('_meta[count]')).toBe('true');
   });
 
-  test('fetchTransactions forwards transaction-chain debug filters', async () => {
+  test('fetchTransactions forwards only filters supported by the transaction index', async () => {
     globalThis.fetch = mockFetchOk({ transaction: [{ id: 501, name: 'tx' }] }) as any;
 
     const res = await fetchTransactions({
@@ -56,12 +56,15 @@ describe('transactions API wrappers', () => {
       fromId: 600,
       transactionChainId: 42,
       nodeId: 3,
-      userId: 7,
       type: 12,
       success: 0,
       done: 'done',
+      // Keep runtime coverage for stale callers while the public type rejects
+      // these legacy, unsupported filters.
+      userId: 7,
       q: 'mount',
-    });
+      vpsId: 55,
+    } as Parameters<typeof fetchTransactions>[0] & { userId: number; q: string; vpsId: number });
 
     expect(res.data).toEqual([{ id: 501, name: 'tx' }]);
 
@@ -71,11 +74,12 @@ describe('transactions API wrappers', () => {
     expect(u.searchParams.get('transaction[from_id]')).toBe('600');
     expect(u.searchParams.get('transaction[transaction_chain]')).toBe('42');
     expect(u.searchParams.get('transaction[node]')).toBe('3');
-    expect(u.searchParams.get('transaction[user]')).toBe('7');
     expect(u.searchParams.get('transaction[type]')).toBe('12');
     expect(u.searchParams.get('transaction[success]')).toBe('0');
     expect(u.searchParams.get('transaction[done]')).toBe('done');
-    expect(u.searchParams.get('transaction[q]')).toBe('mount');
+    expect(u.searchParams.has('transaction[user]')).toBe(false);
+    expect(u.searchParams.has('transaction[q]')).toBe(false);
+    expect(u.searchParams.has('transaction[vps]')).toBe(false);
   });
 
   test('detail helpers use show endpoints without namespaced query params', async () => {

@@ -34,7 +34,7 @@ export function directConcernLink(basePath: string, className: string, rowId: nu
 }
 
 
-export type TxItemsFilterParam = { key: 'vps' | 'node' | 'transaction_chain'; value: string };
+export type TxItemsFilterParam = { key: 'node' | 'transaction_chain'; value: string };
 
 /**
  * Map a concern ref to a transaction-items filter parameter, when possible.
@@ -46,7 +46,6 @@ export function txItemsFilterForConcern(className: string, rowId: number): TxIte
   const key = normalizeClassKey(className);
   const value = String(rowId);
 
-  if (key === 'vps') return { key: 'vps', value };
   if (key === 'node') return { key: 'node', value };
   if (key === 'transactionchain') return { key: 'transaction_chain', value };
 
