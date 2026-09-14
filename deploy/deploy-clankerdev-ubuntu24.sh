@@ -136,6 +136,11 @@ NG
 
 write_nginx_http_only() {
   cat > "${NGINX_CONF}" <<NG
+map \$uri \$clankerdev_referrer_policy {
+  default strict-origin-when-cross-origin;
+  ~^/oauth/ no-referrer;
+}
+
 server {
   listen 80;
   listen [::]:80;
@@ -143,6 +148,8 @@ server {
 
   root ${WEBROOT};
   index index.html;
+
+  add_header Referrer-Policy \$clankerdev_referrer_policy always;
 
   location ^~ /.well-known/acme-challenge/ {
     default_type "text/plain";
@@ -184,6 +191,7 @@ server {
 
   location ^~ /oauth/ {
     proxy_pass http://127.0.0.1:${BFF_PORT};
+    proxy_hide_header Referrer-Policy;
     proxy_set_header Host \$host;
     proxy_set_header X-Forwarded-Proto \$scheme;
     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -208,6 +216,11 @@ NG
 
 write_nginx_https() {
   cat > "${NGINX_CONF}" <<NG
+map \$uri \$clankerdev_referrer_policy {
+  default strict-origin-when-cross-origin;
+  ~^/oauth/ no-referrer;
+}
+
 server {
   listen 80;
   listen [::]:80;
@@ -240,7 +253,7 @@ server {
 
   add_header X-Content-Type-Options nosniff always;
   add_header X-Frame-Options SAMEORIGIN always;
-  add_header Referrer-Policy strict-origin-when-cross-origin always;
+  add_header Referrer-Policy \$clankerdev_referrer_policy always;
   add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-wyf6w6jZL1nQnvQ3z5xyWt1FnxVZMXcEAzprShSzkQY='; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https: wss:; frame-src 'self' https:; form-action 'self'; frame-ancestors 'self'; object-src 'none'; base-uri 'self'" always;
   add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()" always;
   add_header Strict-Transport-Security "max-age=31536000" always;
@@ -290,6 +303,7 @@ server {
 
   location ^~ /oauth/ {
     proxy_pass http://127.0.0.1:${BFF_PORT};
+    proxy_hide_header Referrer-Policy;
     proxy_set_header Host \$host;
     proxy_set_header X-Forwarded-Proto https;
     proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
