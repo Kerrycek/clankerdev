@@ -52,6 +52,60 @@ not silently restore historical documents as current requirements.
 
 ---
 
+## Incident report listing and exact filters
+
+**Status:** `mapped / implemented`
+
+The incident-report lists at `/app/incidents` and `/admin/incidents` use the
+backend's declared exact filters. They do not offer full-text search: the
+`incident_reports` index has no `q`, `query`, `search`, `text`, or `subject`
+filter contract.
+
+| Scope | Exact list filters |
+| --- | --- |
+| All authenticated roles | `vps`, `ip_address_assignment`, `ip_addr`, `codename` |
+| Admin only | `user`, `filed_by`, `mailbox` |
+| Pagination | `limit` and descending-ID keyset cursor `from_id` |
+
+Entering a numeric ID opens that incident; it is navigation, not a list
+filter. The smart input accepts the supported `key:value` forms and reports
+plain text, full-text aliases, and unknown keys without issuing a replacement
+list request. Applying a supported filter resets the cursor. Direct-entry URLs
+are normalized before the first list request: obsolete `q`, unauthorized
+admin-only fields, and their stale cursor are removed while supported fields
+and `limit` are preserved.
+
+Only an authenticated administrator in the global admin view gets arbitrary
+`user`, `filed_by`, and `mailbox` filter controls and the related includes.
+Non-admin roles cannot choose or send arbitrary admin-only filters. In My view,
+privileged admin and support accounts may send only their own user ID as an
+implicit owner scope; that value is not exposed as a selectable filter or URL
+parameter. Regular users rely on the backend's mandatory owner restriction,
+which remains the authority for isolation and is applied before exact filters
+and pagination.
+
+Evidence:
+
+- Backend filter and authorization contract:
+  `api/lib/vpsadmin/api/resources/incident_report.rb` in the read-only upstream
+  vpsAdmin checkout.
+- Legacy exact-filter surface: `webui/forms/incidents.forms.php` in the
+  read-only upstream checkout.
+- WebUI Next request wrapper and parsing:
+  `src/lib/api/incidents.ts` and
+  `src/pages/app/incidents/incidentListSemantics.ts`.
+- WebUI Next list workflow: `src/pages/app/incidents/IncidentsPage.tsx`.
+- Contract tests: `src/lib/api/incidents.test.ts`,
+  `src/pages/app/incidents/incidentListSemantics.test.ts`, and
+  `e2e/specs/app/incidents_smart_filter.spec.ts`.
+
+The Playwright coverage uses a strict mocked API to prove request
+serialization, direct-entry URL hygiene, role gating, keyset retention, and
+desktop/mobile containment. It does not prove a deployed backend's data or
+authorization configuration; that still requires read-only live smoke checks
+with separate admin and non-admin sessions. No create or other mutation is
+part of that live verification.
+
 ## Identity lifecycle and requests
 
 The requests plugin models two related but different workflows:

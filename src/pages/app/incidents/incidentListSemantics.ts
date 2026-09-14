@@ -11,16 +11,30 @@ export function safeNumber(value: string): number | undefined {
   return i;
 }
 
-type SmartKey = 'id' | 'q' | 'vps' | 'user' | 'filed_by' | 'ip' | 'assignment' | 'codename' | 'mailbox';
+export type SupportedIncidentSmartKey =
+  | 'id'
+  | 'vps'
+  | 'user'
+  | 'filed_by'
+  | 'ip'
+  | 'assignment'
+  | 'codename'
+  | 'mailbox';
 
-export function canonicalKey(raw: string): SmartKey | null {
+export const UNSUPPORTED_INCIDENT_SEARCH_KEY = 'unsupported_search' as const;
+
+export type CanonicalIncidentSmartKey =
+  | SupportedIncidentSmartKey
+  | typeof UNSUPPORTED_INCIDENT_SEARCH_KEY;
+
+export function canonicalKey(raw: string): CanonicalIncidentSmartKey | null {
   const k = String(raw ?? '')
     .trim()
     .toLowerCase();
   if (!k) return null;
 
   if (['id', '#', 'incident', 'report'].includes(k)) return 'id';
-  if (['q', 'query', 'search', 'text'].includes(k)) return 'q';
+  if (['q', 'query', 'search', 'text'].includes(k)) return UNSUPPORTED_INCIDENT_SEARCH_KEY;
   if (['vps', 'vm', 'host'].includes(k)) return 'vps';
   if (['user', 'owner', 'login'].includes(k)) return 'user';
   if (['filed_by', 'filed', 'reporter'].includes(k)) return 'filed_by';
