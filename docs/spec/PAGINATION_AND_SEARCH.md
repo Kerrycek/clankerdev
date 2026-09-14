@@ -178,10 +178,10 @@ Admin pages follow the same keyset pagination rules (`from_id`, `limit`, numeric
 
 - **Migration plans** (`/admin/migration-plans`)
   - Index: `MigrationPlan.Index` (`GET /api/v7.0/migration_plans`) with `migration_plan[from_id]`, `migration_plan[limit]`.
-  - Filters:
-    - `q` (`migration_plan[q]`)
+  - Server-side filters:
     - `state` (`migration_plan[state]`)
     - `user` (`migration_plan[user]`)
+  - The index has no free-text filter. The UI supports exact plan-ID navigation separately and removes legacy `q` links before mounting the list.
 
 - **Migration plan migrations** (`/admin/migration-plans/:id`)
   - Index: `VpsMigration.Index` (`GET /api/v7.0/migration_plans/:id/vps_migrations`) with `vps_migration[from_id]`, `vps_migration[limit]`.
