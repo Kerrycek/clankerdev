@@ -5,7 +5,7 @@ import {
   type SnapshotDownload,
 } from '../../../lib/api/datasets';
 import { getMetaTotalCount } from '../../../lib/api/haveapi';
-import { cursorFromDescendingPage } from '../../../lib/lockIndex';
+import { cursorFromAscendingPage } from '../../../lib/lockIndex';
 
 const DEFAULT_PAGE_LIMIT = 100;
 const DEFAULT_MAX_PAGES = 10_000;
@@ -138,7 +138,7 @@ async function collectKeysetRows<T extends KeysetRow>(
       };
     }
 
-    const nextCursor = cursorFromDescendingPage(page.data) ?? undefined;
+    const nextCursor = cursorFromAscendingPage(page.data) ?? undefined;
     if (nextCursor === undefined || seenCursors.has(nextCursor)) {
       return { data: [...rows.values()], complete: false, expectedTotal, rejectedRows };
     }

@@ -57,7 +57,7 @@ describe('datasets API wrappers', () => {
     expect(u.searchParams.get('_meta[count]')).toBe('true');
   });
 
-  test('fetchDatasetSnapshots uses snapshot namespace and dataset-scoped endpoint', async () => {
+  test('fetchDatasetSnapshots uses only supported pagination params', async () => {
     setMockRuntime();
     const fetchMock = mockFetchOk({
       snapshots: [{ id: 9, name: '@s1', dataset: { id: 123 } }],
@@ -65,13 +65,25 @@ describe('datasets API wrappers', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    await fetchDatasetSnapshots(123, { limit: 10 });
+    if (false) {
+      // @ts-expect-error Snapshot#index has no q filter in the API contract.
+      void fetchDatasetSnapshots(123, { q: 'legacy-search' });
+    }
+    await fetchDatasetSnapshots(123, {
+      fromId: 9,
+      limit: 10,
+      count: true,
+      q: 'legacy-search',
+    } as never);
 
     const [url] = firstFetchCall(fetchMock);
     const u = new URL(String(url));
 
     expect(u.pathname).toBe('/v7.0/datasets/123/snapshots');
+    expect(u.searchParams.get('snapshot[from_id]')).toBe('9');
     expect(u.searchParams.get('snapshot[limit]')).toBe('10');
+    expect(u.searchParams.has('snapshot[q]')).toBe(false);
+    expect(u.searchParams.get('_meta[count]')).toBe('true');
   });
 
   test('createDatasetSnapshot sends namespaced payload', async () => {
@@ -166,7 +178,7 @@ describe('datasets API wrappers', () => {
     expect(body).toEqual({ snapshot_download: { snapshot: 9, format: 'archive', send_mail: false } });
   });
 
-  test('fetchSnapshotDownloads preserves dataset and q params', async () => {
+  test('fetchSnapshotDownloads preserves supported filters and omits unsupported q', async () => {
     setMockRuntime();
     const fetchMock = mockFetchOk({
       snapshot_downloads: [{ id: 7, snapshot: { id: 9 }, format: 'archive' }],
@@ -174,21 +186,29 @@ describe('datasets API wrappers', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
+    if (false) {
+      // @ts-expect-error SnapshotDownload#index has no q filter in the API contract.
+      void fetchSnapshotDownloads({ q: 'legacy-search' });
+    }
     await fetchSnapshotDownloads({
       dataset: 123,
-      q: 'archive',
+      snapshot: 9,
+      fromId: 7,
       limit: 5,
       includes: 'snapshot__dataset',
       count: true,
-    });
+      q: 'legacy-search',
+    } as never);
 
     const [url] = firstFetchCall(fetchMock);
     const u = new URL(String(url));
 
     expect(u.pathname).toBe('/v7.0/snapshot_downloads');
     expect(u.searchParams.get('snapshot_download[dataset]')).toBe('123');
-    expect(u.searchParams.get('snapshot_download[q]')).toBe('archive');
+    expect(u.searchParams.get('snapshot_download[snapshot]')).toBe('9');
+    expect(u.searchParams.get('snapshot_download[from_id]')).toBe('7');
     expect(u.searchParams.get('snapshot_download[limit]')).toBe('5');
+    expect(u.searchParams.has('snapshot_download[q]')).toBe(false);
     expect(u.searchParams.get('_meta[includes]')).toBe('snapshot__dataset');
     expect(u.searchParams.get('_meta[count]')).toBe('true');
   });

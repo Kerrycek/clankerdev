@@ -35,9 +35,20 @@ describe('gateDatasetAction', () => {
     }
   });
 
-  it('allows download delete even when deleted (still gated by busy)', () => {
-    const r = gateDatasetAction('download.delete', { dataset: { ...baseDataset, object_state: 'deleted' } });
+  it('allows download delete even when the dataset is deleted, but still gates busy state', () => {
+    const r = gateDatasetAction('download.delete', {
+      dataset: { ...baseDataset, object_state: 'deleted' },
+      role: 'user',
+    });
     expect(r.allowed).toBe(true);
+
+    expect(
+      gateDatasetAction('download.delete', {
+        dataset: { ...baseDataset, object_state: 'deleted' },
+        role: 'user',
+        busyTransaction: true,
+      }).allowed,
+    ).toBe(false);
   });
 
   it('keeps owner-scoped snapshot and backup actions available to regular users', () => {
@@ -64,12 +75,9 @@ describe('gateDatasetAction', () => {
     expect(gateDatasetAction('snapshot.delete', { dataset: baseDataset, role: 'user' }).allowed).toBe(false);
   });
 
-  it('keeps download deletion admin-only', () => {
+  it('keeps API-visible download deletion available to regular users', () => {
     const r = gateDatasetAction('download.delete', { dataset: baseDataset, role: 'user' });
-    expect(r.allowed).toBe(false);
-    if (!r.allowed) {
-      expect(r.reason.titleKey).toBe('gate.admin_only.title');
-    }
+    expect(r.allowed).toBe(true);
   });
 
   it('honors an explicit object permission denial for snapshot mutations', () => {

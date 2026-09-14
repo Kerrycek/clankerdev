@@ -214,17 +214,21 @@ export async function deleteDataset(datasetId: number) {
   });
 }
 
-export async function fetchDatasetSnapshots(datasetId: number, opts?: { fromId?: number; limit?: number; q?: string }) {
+export async function fetchDatasetSnapshots(datasetId: number, opts?: {
+  fromId?: number;
+  limit?: number;
+  count?: boolean;
+}) {
   const params: Record<string, unknown> = {};
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
-  if (opts?.q !== undefined) params['q'] = opts.q;
 
   const res = await haveApiCall<Snapshot[]>({
     method: 'GET',
     path: `/datasets/${datasetId}/snapshots`,
     namespace: 'snapshot',
     params,
+    meta: opts?.count ? { count: true } : undefined,
   });
 
   return { ...res, data: expectArray<Snapshot>(res.data, `datasets/${datasetId}/snapshots#index`) };
@@ -259,7 +263,6 @@ export async function fetchSnapshotDownloads(opts?: {
   limit?: number;
   dataset?: number;
   snapshot?: number;
-  q?: string;
   includes?: string;
   count?: boolean;
 }) {
@@ -268,7 +271,6 @@ export async function fetchSnapshotDownloads(opts?: {
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.dataset !== undefined) params['dataset'] = opts.dataset;
   if (opts?.snapshot !== undefined) params['snapshot'] = opts.snapshot;
-  if (opts?.q !== undefined) params['q'] = opts.q;
 
   const res = await haveApiCall<SnapshotDownload[]>({
     method: 'GET',

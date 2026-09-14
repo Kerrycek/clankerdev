@@ -18,7 +18,7 @@ import { LoadingState } from '../../../components/ui/LoadingState';
 import { Modal } from '../../../components/ui/Modal';
 
 import { fetchActiveTransactionChains } from '../../../lib/api/transactions';
-import { getMetaActionStateId, isAmbiguousMutationError } from '../../../lib/api/haveapi';
+import { getMetaActionStateId, getMetaTotalCount, isAmbiguousMutationError } from '../../../lib/api/haveapi';
 import {
   createDatasetSnapshot,
   createSnapshotDownload,
@@ -32,7 +32,7 @@ import {
 import { formatErrorMessage } from '../../../lib/errors';
 import { formatDateTime } from '../../../lib/format';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
-import { cursorFromDescendingPage } from '../../../lib/lockIndex';
+import { cursorFromAscendingPage } from '../../../lib/lockIndex';
 import { hasActiveChains } from '../../../lib/taskStatus';
 
 import { useDatasetContext } from './DatasetContext';
@@ -64,7 +64,6 @@ export type DatasetSnapshotsPageProps = { queryParamPrefix?: string };
 
 export function datasetSnapshotQueryParamKeys(prefix = '') {
   return {
-    search: `${prefix}q`,
     action: `${prefix}action`,
   } as const;
 }
@@ -88,17 +87,9 @@ export function DatasetSnapshotsPage({ queryParamPrefix = '' }: DatasetSnapshots
   const queryKeys = useMemo(() => datasetSnapshotQueryParamKeys(queryParamPrefix), [queryParamPrefix]);
   const datasetLabelForToast = String((dataset as any).label ?? (dataset as any).name ?? `Dataset #${dataset.id}`);
   const [searchParams, setSearchParams] = useSearchParams();
-  const qstr = searchParams.get(queryKeys.search) ?? '';
-  function changeQuery(nextQuery: string) {
-    const next = new URLSearchParams(searchParams);
-    const trimmed = nextQuery.trim();
-    if (trimmed) next.set(queryKeys.search, trimmed);
-    else next.delete(queryKeys.search);
-    if (next.toString() !== searchParams.toString()) setSearchParams(next, { replace: true });
-  }
   const pagination = useKeysetPagination({
     id: `dataset.snapshots.list${queryParamPrefix ? `.${queryParamPrefix}` : ''}`,
-    filterKey: JSON.stringify({ datasetId: dataset.id, q: qstr.trim() }),
+    filterKey: String(dataset.id),
     searchParams,
     setSearchParams,
     paramPrefix: queryParamPrefix,
@@ -124,9 +115,15 @@ export function DatasetSnapshotsPage({ queryParamPrefix = '' }: DatasetSnapshots
   const [rollbackOutcomeUncertain, setRollbackOutcomeUncertain] = useState(false);
 
   const snapsQ = useQuery({
-    queryKey: ['datasets', dataset.id, 'snapshots', { limit: pagination.limit, fromId: pagination.fromId, q: qstr.trim() }],
+    queryKey: ['datasets', dataset.id, 'snapshots', { limit: pagination.limit, fromId: pagination.fromId }],
     queryFn: async () =>
-      fetchDatasetSnapshots(dataset.id, { limit: pagination.limit, fromId: pagination.fromId, q: qstr.trim() || undefined }),
+      fetchDatasetSnapshots(dataset.id, {
+        // HaveAPI's cursor does not expose an end marker. Fetch one extra row so
+        // Next remains correct for exact-size pages, deep links and count churn.
+        limit: pagination.limit + 1,
+        fromId: pagination.fromId,
+        count: true,
+      }),
   });
 
   const rollbackUncertainLock = (chrome.localLocks ?? []).find((lock) =>
@@ -294,13 +291,12 @@ export function DatasetSnapshotsPage({ queryParamPrefix = '' }: DatasetSnapshots
   });
 
   const pageData = snapsQ.data?.data ?? [];
-  const totalCount =
-    typeof snapsQ.data?.meta?.['total_count'] === 'number' ? Number(snapsQ.data.meta['total_count']) : pageData.length;
-  const rows = pageData;
+  const reportedTotalCount = getMetaTotalCount(snapsQ.data?.meta);
+  const rows = pageData.slice(0, pagination.limit);
+  const totalCount = reportedTotalCount ?? rows.length;
 
-  const pageCursor = useMemo(() => cursorFromDescendingPage(pageData as any), [pageData]);
-  const hasMore = pageData.length >= pagination.limit;
-  const filtersActive = Boolean(qstr.trim());
+  const pageCursor = useMemo(() => cursorFromAscendingPage(rows as any), [rows]);
+  const hasMore = pagination.hasForward || pageData.length > pagination.limit;
 
   function requestSnapshotDownload(s: Snapshot) {
     createDl.mutate(s);
@@ -358,40 +354,28 @@ export function DatasetSnapshotsPage({ queryParamPrefix = '' }: DatasetSnapshots
         <div>
           <h2 className="text-xl font-semibold text-fg">{t('dataset.snapshots.title')}</h2>
           <p className="mt-1 text-sm text-muted">{t('dataset.snapshots.subtitle')}</p>
-          {filtersActive ? <p className="mt-1 text-xs text-faint">{t('list.meta.filters_active')}</p> : null}
+          <p className="mt-1 text-xs text-faint">
+            {t('common.showing_n_of_m', { shown: rows.length, total: totalCount })}
+          </p>
         </div>
 
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-end">
-          <div className="w-full sm:w-72">
-            <Input
-              value={qstr}
-              onChange={(e) => changeQuery(e.target.value)}
-              placeholder={t('dataset.snapshots.search.placeholder')}
-              autoComplete="off"
-              testId="dataset.snapshots.search.input"
-            />
-            <div className="mt-1 text-xs text-faint">
-              {t('common.showing_n_of_m', { shown: rows.length, total: totalCount })}
-            </div>
-          </div>
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button
-              testId="dataset.snapshots.refresh"
-              variant="secondary"
-              onClick={() => snapsQ.refetch()}
-              disabled={snapsQ.isFetching}
-            >
-              {t('common.refresh')}
-            </Button>
-            <ActionButton
-              onClick={() => setCreateOpen(true)}
-              disabled={!createGate.allowed}
-              disabledReason={!createGate.allowed ? createGate.reason : undefined}
-              testId="dataset.snapshots.create.open"
-            >
-              {t('dataset.snapshots.create.open')}
-            </ActionButton>
-          </div>
+        <div className="flex w-full flex-wrap justify-end gap-2 sm:w-auto">
+          <Button
+            testId="dataset.snapshots.refresh"
+            variant="secondary"
+            onClick={() => snapsQ.refetch()}
+            disabled={snapsQ.isFetching}
+          >
+            {t('common.refresh')}
+          </Button>
+          <ActionButton
+            onClick={() => setCreateOpen(true)}
+            disabled={!createGate.allowed}
+            disabledReason={!createGate.allowed ? createGate.reason : undefined}
+            testId="dataset.snapshots.create.open"
+          >
+            {t('dataset.snapshots.create.open')}
+          </ActionButton>
         </div>
       </div>
 

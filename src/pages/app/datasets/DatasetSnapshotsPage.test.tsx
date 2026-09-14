@@ -119,15 +119,14 @@ function HistoryControls() {
 }
 
 describe('DatasetSnapshotsPage', () => {
-  it('keeps detail query parameters unchanged by default and namespaces embedded state', () => {
-    expect(datasetSnapshotQueryParamKeys()).toEqual({ search: 'q', action: 'action' });
+  it('keeps detail query parameters unchanged by default and namespaces embedded actions', () => {
+    expect(datasetSnapshotQueryParamKeys()).toEqual({ action: 'action' });
     expect(datasetSnapshotQueryParamKeys('backup_snapshot_')).toEqual({
-      search: 'backup_snapshot_q',
       action: 'backup_snapshot_action',
     });
   });
 
-  it('reads the namespaced search without consuming the detail-page search', async () => {
+  it('does not forward unsupported ambient or legacy snapshot searches', async () => {
     api.fetchDatasetSnapshots.mockResolvedValue({ data: [], meta: { total_count: 0 } });
 
     renderPage({
@@ -138,35 +137,10 @@ describe('DatasetSnapshotsPage', () => {
     await waitFor(() =>
       expect(api.fetchDatasetSnapshots).toHaveBeenCalledWith(
         10402,
-        expect.objectContaining({ q: 'embedded-search' })
+        { limit: 51, fromId: undefined, count: true }
       )
     );
-    expect(screen.getByTestId('dataset.snapshots.search.input')).toHaveValue('embedded-search');
-  });
-
-  it('restores the namespaced search when browser history changes', async () => {
-    api.fetchDatasetSnapshots.mockResolvedValue({ data: [], meta: { total_count: 0 } });
-
-    renderPage({
-      prefix: 'backup_snapshot_',
-      initialEntries: [
-        '/?backup_snapshot_q=first',
-        '/?backup_snapshot_q=second',
-      ],
-      initialIndex: 1,
-    });
-
-    expect(await screen.findByTestId('dataset.snapshots.search.input')).toHaveValue('second');
-    screen.getByTestId('history.back').click();
-    await waitFor(() =>
-      expect(screen.getByTestId('dataset.snapshots.search.input')).toHaveValue('first')
-    );
-    await waitFor(() =>
-      expect(api.fetchDatasetSnapshots).toHaveBeenLastCalledWith(
-        10402,
-        expect.objectContaining({ q: 'first' })
-      )
-    );
+    expect(screen.queryByTestId('dataset.snapshots.search.input')).not.toBeInTheDocument();
   });
 
   it('shows rollback and delete actions to a regular owner when gates allow them', async () => {

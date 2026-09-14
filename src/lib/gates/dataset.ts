@@ -45,22 +45,6 @@ function blocksWhenInactive(action: DatasetAction): boolean {
   return action !== 'download.delete';
 }
 
-function requiresAdmin(action: DatasetAction): boolean {
-  switch (action) {
-    case 'download.delete':
-      return true;
-    // Snapshot mutations are owner-or-admin in the API. Dataset reads are
-    // owner-scoped for regular users and the API remains authoritative.
-    case 'snapshot.rollback':
-    case 'snapshot.delete':
-    case 'snapshot.create':
-    case 'download.create':
-      return false;
-    default:
-      return false;
-  }
-}
-
 function resourceId(value: unknown): number | undefined {
   if (!value || typeof value !== 'object') return undefined;
   const id = (value as { id?: unknown }).id;
@@ -140,10 +124,6 @@ export function gateDatasetAction(
     )
   ) {
     return deny({ titleKey: 'gate.blocked.permission.title', descriptionKey: 'gate.blocked.permission.body' });
-  }
-
-  if (ctx.role && ctx.role !== 'admin' && requiresAdmin(action)) {
-    return deny({ titleKey: 'gate.admin_only.title', descriptionKey: 'gate.admin_only.body' });
   }
 
   if (ctx.busyTransaction) {
