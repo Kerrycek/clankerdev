@@ -29,8 +29,8 @@ export interface SmartFilterInputProps {
   /** Suggestion rows rendered below the input. */
   suggestions?: SmartFilterSuggestion[];
 
-  /** Called when the user presses Enter with no suggestions. */
-  onSubmit?: () => void;
+  /** Called with the current input value when the user presses Enter with no suggestions. */
+  onSubmit?: (value: string) => void;
 
   /** Backward-compatible validation surface used by older pages. */
   errors?: string[];
@@ -122,7 +122,7 @@ export const SmartFilterInput = React.forwardRef<HTMLInputElement, SmartFilterIn
         return;
       }
 
-      props.onSubmit?.();
+      props.onSubmit?.(e.currentTarget.value);
       e.preventDefault();
     }
   }

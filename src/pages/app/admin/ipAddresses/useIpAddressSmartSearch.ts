@@ -132,7 +132,7 @@ export function useIpAddressSmartSearch({
     const generation = lookupGenerationRef.current + 1;
     lookupGenerationRef.current = generation;
 
-    const initialSearchParamsSignature = searchParamsSignature;
+    const initialSearchParamsSignature = latestSearchParamsSignatureRef.current;
     const tokens = tokenizeSmartInput(input);
 
     if (tokens.length === 1) {
