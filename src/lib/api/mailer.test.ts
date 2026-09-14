@@ -196,10 +196,10 @@ describe('mailer API wrappers', () => {
     });
   });
 
-  test('fetchMailLogs forwards search, relation and date-window filters', async () => {
+  test('fetchMailLogs forwards only supported pagination parameters', async () => {
     globalThis.fetch = mockFetchOk({ mail_logs: [], _meta: { total_count: 0 } }) as any;
 
-    await fetchMailLogs({
+    const optionsWithUnsupportedFilters = {
       limit: 50,
       fromId: 123,
       q: 'subject:test',
@@ -207,19 +207,17 @@ describe('mailer API wrappers', () => {
       templateId: 7,
       createdAfter: '2026-03-01T00:00:00Z',
       createdBefore: '2026-03-09T00:00:00Z',
-    });
+    };
+    await fetchMailLogs(optionsWithUnsupportedFilters);
 
     const [url] = lastFetchCall();
     const u = new URL(url);
 
     expect(u.pathname).toBe('/v7.0/mail_logs');
-    expect(u.searchParams.get('mail_log[limit]')).toBe('50');
-    expect(u.searchParams.get('mail_log[from_id]')).toBe('123');
-    expect(u.searchParams.get('mail_log[q]')).toBe('subject:test');
-    expect(u.searchParams.get('mail_log[user]')).toBe('42');
-    expect(u.searchParams.get('mail_log[mail_template]')).toBe('7');
-    expect(u.searchParams.get('mail_log[created_after]')).toBe('2026-03-01T00:00:00Z');
-    expect(u.searchParams.get('mail_log[created_before]')).toBe('2026-03-09T00:00:00Z');
+    expect(Array.from(u.searchParams.entries())).toEqual([
+      ['mail_log[limit]', '50'],
+      ['mail_log[from_id]', '123'],
+    ]);
   });
 
   test('fetchMailboxes forwards pagination/count and never sends unsupported filters', async () => {
