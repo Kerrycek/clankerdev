@@ -5,8 +5,6 @@ import { Alert } from '../../../components/ui/Alert';
 import { Button } from '../../../components/ui/Button';
 import { Card, CardBody } from '../../../components/ui/Card';
 import { Checkbox } from '../../../components/ui/Checkbox';
-import { DatasetLookupInput } from '../../../components/ui/DatasetLookupInput';
-import { HostIpLookupInput } from '../../../components/ui/HostIpLookupInput';
 import { Input } from '../../../components/ui/Input';
 import { Modal } from '../../../components/ui/Modal';
 import { Select } from '../../../components/ui/Select';
@@ -35,8 +33,6 @@ function issueLabel(issue: ExportCreateIssue, t: (k: string) => string): string 
       return t('exports.validation.dataset_required');
     case 'snapshot_required':
       return t('exports.validation.snapshot_required');
-    case 'host_required':
-      return t('exports.validation.host_required');
     case 'threads_invalid':
       return t('exports.validation.threads_invalid');
   }
@@ -70,10 +66,6 @@ function ExportCreateReview(props: {
         <div>
           <div className="text-xs text-faint">{t('exports.field.source')}</div>
           <div className="font-medium text-fg">{sourceLabel}</div>
-        </div>
-        <div>
-          <div className="text-xs text-faint">{t('exports.field.address')}</div>
-          <div className="font-medium text-fg">{form.hostIpId ? `#${form.hostIpId}` : '—'}</div>
         </div>
         <div>
           <div className="text-xs text-faint">{t('exports.field.scope')}</div>
@@ -122,7 +114,9 @@ export function ExportCreateDrawer(props: {
   onFormChange: (form: CreateExportFormState) => void;
   selectedDataset: Dataset | undefined;
   snapshots: Snapshot[];
-  selectedDatasetOwnerId?: number;
+  datasetSelectionAllowed: boolean;
+  datasetSelectionPending: boolean;
+  datasetSelectionAlert?: { title: string; body: string };
   isAdmin: boolean;
   pending: boolean;
   onSubmit: () => void;
@@ -146,7 +140,7 @@ export function ExportCreateDrawer(props: {
           <Button variant="secondary" onClick={props.onClose}>{t('common.cancel')}</Button>
           <Button
             variant="primary"
-            disabled={!validation.ok || props.pending}
+            disabled={!validation.ok || !props.datasetSelectionAllowed || props.datasetSelectionPending || props.pending}
             loading={props.pending}
             onClick={props.onSubmit}
             testId="exports.create.submit"
@@ -160,13 +154,15 @@ export function ExportCreateDrawer(props: {
         {props.fixedDatasetId === undefined ? (
           <div>
             <div className="mb-1 text-sm font-medium text-fg">{t('common.dataset')}</div>
-            <DatasetLookupInput
+            <Input
               value={props.form.datasetId}
-              onChange={(value) => patch({ datasetId: value, snapshotId: '' })}
+              onChange={(event) => patch({ datasetId: event.target.value, snapshotId: '' })}
               testId="exports.create.dataset"
               ariaLabel={t('common.dataset')}
               placeholder={t('exports.form.dataset.placeholder')}
+              inputMode="numeric"
             />
+            <div className="mt-1 text-xs text-faint">{t('exports.form.dataset.help')}</div>
           </div>
         ) : (
           <Card>
@@ -175,6 +171,12 @@ export function ExportCreateDrawer(props: {
             </CardBody>
           </Card>
         )}
+
+        {props.datasetSelectionAlert ? (
+          <Alert title={props.datasetSelectionAlert.title} variant="warn">
+            {props.datasetSelectionAlert.body}
+          </Alert>
+        ) : null}
 
         <div>
           <div className="mb-1 text-sm font-medium text-fg">{t('exports.form.source')}</div>
@@ -194,7 +196,7 @@ export function ExportCreateDrawer(props: {
             <Select
               value={props.form.snapshotId}
               onChange={(e) => patch({ snapshotId: e.target.value })}
-              disabled={!props.form.datasetId}
+              disabled={!props.datasetSelectionAllowed || props.datasetSelectionPending}
               ariaLabel={t('common.snapshot')}
             >
               <option value="">{t('exports.form.snapshot.placeholder')}</option>
@@ -204,18 +206,6 @@ export function ExportCreateDrawer(props: {
             </Select>
           </div>
         ) : null}
-
-        <div>
-          <div className="mb-1 text-sm font-medium text-fg">{t('exports.field.address')}</div>
-          <HostIpLookupInput
-            value={props.form.hostIpId}
-            onChange={(value) => patch({ hostIpId: value })}
-            userId={props.selectedDatasetOwnerId}
-            testId="exports.create.host_ip"
-            ariaLabel={t('exports.field.address')}
-            placeholder={t('exports.form.address.placeholder')}
-          />
-        </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <Checkbox checked={props.form.allVps} onChange={(value) => patch({ allVps: value })} label={t('exports.field.all_vps')} />

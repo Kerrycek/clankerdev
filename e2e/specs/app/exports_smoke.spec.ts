@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 
 test.describe('@smoke exports', () => {
-  test('lists exports and opens detail with mount instructions', async ({ page }) => {
+  test('@smoke-mobile lists exports and opens detail with mount instructions', async ({ page }, testInfo) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
     const exportRow = {
@@ -47,16 +47,19 @@ test.describe('@smoke exports', () => {
 
     await page.goto('/app/exports');
     await expect(page.getByTestId('exports.page')).toBeVisible();
-    await expect(page.getByTestId('exports.row.10')).toBeVisible();
+    const exportSurface = page.getByTestId(
+      testInfo.project.name.includes('mobile') ? 'exports.card.10' : 'exports.row.10'
+    );
+    await expect(exportSurface).toBeVisible();
 
-    await page.getByTestId('exports.row.10').click();
+    await exportSurface.click();
     await expect(page).toHaveURL(/\/app\/exports\/10$/);
     await expect(page.getByTestId('exports.detail.page')).toBeVisible();
     await expect(page.getByTestId('exports.detail.instructions.command')).toContainText('198.51.100.10:/tank/user/data');
     await expect(page.getByTestId('exports.detail.hosts.row.11')).toBeVisible();
   });
 
-  test('opens create export form as a centered modal', async ({ page }) => {
+  test('@smoke-mobile opens create export form as a centered modal', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
     await installHaveApiMock(page, {

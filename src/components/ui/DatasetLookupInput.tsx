@@ -2,13 +2,18 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import type { Dataset } from '../../lib/api/datasets';
-import { fetchDatasets } from '../../lib/api/datasets';
+import { findDatasetByName } from '../../lib/api/datasets';
 import { useDebouncedValue } from '../../lib/hooks/useDebouncedValue';
+import { formatLookupId, parseLookupIdLike } from '../../lib/lookupInput';
 
 import { Input } from './Input';
 import { clsx } from './clsx';
-import { parseLookupIdLike, formatLookupId } from '../../lib/lookupInput';
 
+/**
+ * Resolve either an exact dataset ID or an exact dataset name.
+ * Dataset::Index has no text-search input; names therefore use the dedicated
+ * Dataset::FindByName action instead of pretending that Index supports `q`.
+ */
 export function DatasetLookupInput(props: {
   value: number | null;
   onChange: (datasetId: number | null) => void;
@@ -20,35 +25,30 @@ export function DatasetLookupInput(props: {
 }) {
   const [open, setOpen] = useState(false);
   const [needleRaw, setNeedleRaw] = useState('');
-  const needle = useDebouncedValue(needleRaw, 150);
+  const needle = useDebouncedValue(needleRaw.trim(), 250);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (props.value === null) return;
     if (open && needleRaw.trim().length > 0) return;
-    setNeedleRaw(`#${props.value}`);
+    setNeedleRaw(formatLookupId(props.value));
   }, [props.value, open, needleRaw]);
 
   const idLike = useMemo(() => parseLookupIdLike(needle), [needle]);
-
   const q = useQuery({
-    queryKey: ['dataset_lookup', { needle, user: props.userId ?? null }],
-    queryFn: async () => {
-      if (!needle.trim()) return [] as Dataset[];
-      if (parseLookupIdLike(needle) !== null) return [] as Dataset[];
-      const res = await fetchDatasets({ q: needle.trim(), limit: 10, user: props.userId });
-      return res.data as Dataset[];
-    },
-    enabled: open && needle.trim().length >= 2 && idLike === null && !props.disabled,
+    queryKey: ['dataset_lookup', 'find_by_name', { name: needle, user: props.userId ?? null }],
+    queryFn: async () => (await findDatasetByName(needle, props.userId)).data,
+    enabled: open && needle.length >= 2 && idLike === null && !props.disabled,
+    retry: false,
     staleTime: 15_000,
   });
 
-  const suggestions = q.data ?? [];
+  const suggestions: Dataset[] = q.data ? [q.data] : [];
 
-  const onSelect = (ds: Dataset) => {
-    const id = Number(ds.id);
-    if (!Number.isFinite(id) || id <= 0) return;
-    props.onChange(Math.floor(id));
+  const onSelect = (dataset: Dataset) => {
+    const id = Number(dataset.id);
+    if (!Number.isSafeInteger(id) || id <= 0) return;
+    props.onChange(id);
     setNeedleRaw(formatLookupId(id));
     setOpen(false);
   };
@@ -59,9 +59,7 @@ export function DatasetLookupInput(props: {
     if (id !== null) {
       props.onChange(id);
       setNeedleRaw(formatLookupId(id));
-      return;
     }
-    if (!needleRaw.trim()) props.onChange(null);
   };
 
   return (
@@ -71,32 +69,30 @@ export function DatasetLookupInput(props: {
         testId={props.testId}
         ariaLabel={props.ariaLabel}
         value={needleRaw}
-        onChange={(e) => {
-          const v = e.target.value;
-          setNeedleRaw(v);
-          const id = parseLookupIdLike(v);
-          if (id !== null) {
-            props.onChange(id);
-            return;
-          }
-          if (!v.trim()) props.onChange(null);
+        onChange={(event) => {
+          const value = event.target.value;
+          setNeedleRaw(value);
+          props.onChange(parseLookupIdLike(value));
         }}
         onFocus={() => setOpen(true)}
         onBlur={onBlur}
-        onKeyDown={(e) => {
-          if (e.key === 'Escape') {
-            e.preventDefault();
+        onKeyDown={(event) => {
+          if (event.key === 'Escape') {
+            event.preventDefault();
             setOpen(false);
             inputRef.current?.blur();
           }
-          if (e.key === 'Enter') {
+          if (event.key === 'Enter') {
             const id = parseLookupIdLike(needleRaw);
             if (id !== null) {
-              e.preventDefault();
+              event.preventDefault();
               props.onChange(id);
               setNeedleRaw(formatLookupId(id));
               setOpen(false);
               inputRef.current?.blur();
+            } else if (suggestions[0]) {
+              event.preventDefault();
+              onSelect(suggestions[0]);
             }
           }
         }}
@@ -115,9 +111,9 @@ export function DatasetLookupInput(props: {
           data-overlay="popover"
           data-overlay-surface="overlay"
         >
-          {suggestions.map((ds) => {
-            const id = Number(ds.id);
-            const name = String(ds.full_name ?? ds.name ?? formatLookupId(id));
+          {suggestions.map((dataset) => {
+            const id = Number(dataset.id);
+            const name = String(dataset.full_name ?? dataset.name ?? formatLookupId(id));
             return (
               <button
                 type="button"
@@ -126,8 +122,8 @@ export function DatasetLookupInput(props: {
                   'block w-full px-3 py-2 text-left text-sm',
                   'hover:bg-surface-2 focus:bg-surface-2 focus:outline-none'
                 )}
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => onSelect(ds)}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => onSelect(dataset)}
                 data-testid={props.testId ? `${props.testId}.opt.${id}` : undefined}
               >
                 <div className="min-w-0">

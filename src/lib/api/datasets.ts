@@ -21,6 +21,8 @@ export interface Dataset {
   user?: ResourceRef;
   vps?: ResourceRef;
   parent?: ResourceRef;
+  /** Persistent, non-snapshot NFS export reference exposed by Dataset#show. */
+  export?: ResourceRef | null;
 
   // Space values are typically reported in MiB.
   used?: number;
@@ -167,6 +169,15 @@ export async function fetchDataset(datasetId: number, opts?: { includes?: string
     method: 'GET',
     path: `/datasets/${datasetId}`,
     meta: opts?.includes ? { includes: opts.includes } : undefined,
+  });
+}
+
+export async function findDatasetByName(name: string, userId?: number) {
+  return haveApiCall<Dataset>({
+    method: 'GET',
+    path: '/datasets/find_by_name',
+    namespace: 'dataset',
+    params: { name, user: userId },
   });
 }
 

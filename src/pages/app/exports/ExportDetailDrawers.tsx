@@ -143,7 +143,27 @@ export function ExportEditDrawer(props: {
   const { t } = useI18n();
 
   return (
-    <Drawer open={props.open} onClose={props.onClose} title={t('exports.update.title')} width="lg" testId="exports.detail.edit.drawer">
+    <Drawer
+      open={props.open}
+      onClose={props.onClose}
+      title={t('exports.update.title')}
+      width="lg"
+      testId="exports.detail.edit.drawer"
+      footer={(
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={props.onClose}>{t('common.cancel')}</Button>
+          <Button
+            variant="primary"
+            loading={props.pending}
+            disabled={props.invalidThreads || props.diff.length === 0 || props.pending}
+            onClick={props.onSubmit}
+            testId="exports.edit.submit"
+          >
+            {t('common.save')}
+          </Button>
+        </div>
+      )}
+    >
       <div className="space-y-4">
         <Checkbox checked={props.form.enabled} onChange={(checked) => props.setForm((prev) => ({ ...prev, enabled: checked }))} testId="exports.edit.enabled">{t('common.enabled')}</Checkbox>
         <Checkbox checked={props.form.all_vps} onChange={(checked) => props.setForm((prev) => ({ ...prev, all_vps: checked }))} testId="exports.edit.all_vps">{t('exports.field.all_vps')}</Checkbox>
@@ -160,18 +180,6 @@ export function ExportEditDrawer(props: {
           </div>
         ) : null}
         <ExportEditReview diff={props.diff} invalidThreads={props.invalidThreads} />
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={props.onClose}>{t('common.cancel')}</Button>
-          <Button
-            variant="primary"
-            loading={props.pending}
-            disabled={props.invalidThreads || props.diff.length === 0 || props.pending}
-            onClick={props.onSubmit}
-            testId="exports.edit.submit"
-          >
-            {t('common.save')}
-          </Button>
-        </div>
       </div>
     </Drawer>
   );
@@ -192,7 +200,27 @@ export function ExportHostEditorDrawer(props: {
   const { t } = useI18n();
 
   return (
-    <Drawer open={props.open} onClose={props.onClose} title={props.editingHost ? t('exports.host.edit_title') : t('exports.host.add_title')} width="lg" testId="exports.detail.host.editor">
+    <Drawer
+      open={props.open}
+      onClose={props.onClose}
+      title={props.editingHost ? t('exports.host.edit_title') : t('exports.host.add_title')}
+      width="lg"
+      testId="exports.detail.host.editor"
+      footer={(
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={props.onClose}>{t('common.cancel')}</Button>
+          <Button
+            variant="primary"
+            loading={props.pending}
+            onClick={props.onSubmit}
+            disabled={(!props.editingHost && !props.form.ip_address) || (Boolean(props.editingHost) && props.diff.length === 0) || props.pending}
+            testId="exports.host.submit"
+          >
+            {props.editingHost ? t('common.save') : t('exports.host.add')}
+          </Button>
+        </div>
+      )}
+    >
       <div className="space-y-4">
         {!props.editingHost ? (
           <div>
@@ -212,18 +240,6 @@ export function ExportHostEditorDrawer(props: {
           <Checkbox checked={props.form.root_squash} onChange={(checked) => props.setForm((prev) => ({ ...prev, root_squash: checked }))} testId="exports.host.root_squash">{t('exports.field.root_squash')}</Checkbox>
         </div>
         <HostEditReview editingHost={props.editingHost} form={props.form} diff={props.diff} />
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={props.onClose}>{t('common.cancel')}</Button>
-          <Button
-            variant="primary"
-            loading={props.pending}
-            onClick={props.onSubmit}
-            disabled={(!props.editingHost && !props.form.ip_address) || (Boolean(props.editingHost) && props.diff.length === 0) || props.pending}
-            testId="exports.host.submit"
-          >
-            {props.editingHost ? t('common.save') : t('exports.host.add')}
-          </Button>
-        </div>
       </div>
     </Drawer>
   );

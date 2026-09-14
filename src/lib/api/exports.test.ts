@@ -28,7 +28,7 @@ afterEach(() => {
 });
 
 describe('exports API wrappers', () => {
-  test('fetchExports preserves Next UI filter params', async () => {
+  test('fetchExports sends only the real Export Index fields', async () => {
     setMockRuntime();
     const fetchMock = mockFetchOk({
       exports: [{ id: 1, path: '/export/spec', enabled: true }],
@@ -39,10 +39,7 @@ describe('exports API wrappers', () => {
     await fetchExports({
       limit: 25,
       fromId: 99,
-      q: 'spec',
-      dataset: 123,
       user: 55,
-      enabled: false,
       includes: 'dataset,snapshot,host_ip_address,user',
     });
 
@@ -52,10 +49,12 @@ describe('exports API wrappers', () => {
     expect(u.pathname).toBe('/v7.0/exports');
     expect(u.searchParams.get('export[limit]')).toBe('25');
     expect(u.searchParams.get('export[from_id]')).toBe('99');
-    expect(u.searchParams.get('export[q]')).toBe('spec');
-    expect(u.searchParams.get('export[dataset]')).toBe('123');
     expect(u.searchParams.get('export[user]')).toBe('55');
-    expect(u.searchParams.get('export[enabled]')).toBe('false');
+    expect([...u.searchParams.keys()].filter((key) => key.startsWith('export[')).sort()).toEqual([
+      'export[from_id]',
+      'export[limit]',
+      'export[user]',
+    ]);
     expect(u.searchParams.get('_meta[includes]')).toBe('dataset,snapshot,host_ip_address,user');
   });
 
@@ -64,7 +63,7 @@ describe('exports API wrappers', () => {
     const fetchMock = mockFetchOk({ export: { id: 9, path: '/export/spec' } });
     vi.stubGlobal('fetch', fetchMock);
 
-    await createExport({ dataset: 123, host_ip_address: 456, enabled: true, rw: true });
+    await createExport({ dataset: 123, enabled: true, rw: true });
 
     const [, init] = firstFetchCall(fetchMock);
     expect(init?.method).toBe('POST');
@@ -74,7 +73,6 @@ describe('exports API wrappers', () => {
     expect(body).toEqual({
       export: {
         dataset: 123,
-        host_ip_address: 456,
         enabled: true,
         rw: true,
       },

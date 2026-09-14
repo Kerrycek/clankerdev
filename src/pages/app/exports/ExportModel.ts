@@ -4,13 +4,12 @@ import type { ExportHost, ExportItem } from '../../../lib/api/exports';
 export type ExportSourceType = 'dataset' | 'snapshot';
 export type ExportDiffField = 'enabled' | 'all_vps' | 'rw' | 'sync' | 'subtree_check' | 'root_squash' | 'threads';
 export type ExportHostDiffField = 'rw' | 'sync' | 'subtree_check' | 'root_squash';
-export type ExportCreateIssue = 'dataset_required' | 'snapshot_required' | 'host_required' | 'threads_invalid';
+export type ExportCreateIssue = 'dataset_required' | 'snapshot_required' | 'threads_invalid';
 
 export type CreateExportFormState = {
-  datasetId: number | null;
+  datasetId: string;
   sourceType: ExportSourceType;
   snapshotId: string;
-  hostIpId: number | null;
   allVps: boolean;
   rw: boolean;
   sync: boolean;
@@ -48,8 +47,23 @@ export interface ExportCreateValidationResult {
 }
 
 export function parsePositiveInt(value: unknown): number | null {
-  const n = typeof value === 'number' ? value : Number(value);
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
+  if (typeof value === 'number') {
+    return Number.isSafeInteger(value) && value > 0 ? value : null;
+  }
+  if (typeof value !== 'string') return null;
+
+  const match = /^#?(\d+)$/.exec(value.trim());
+  if (!match?.[1]) return null;
+  const parsed = Number(match[1]);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+export function exportDatasetMatchesRequiredOwner(
+  dataset: Dataset | null | undefined,
+  requiredOwnerId: number | undefined
+): boolean {
+  if (requiredOwnerId === undefined) return true;
+  return parsePositiveInt(dataset?.user?.id) === requiredOwnerId;
 }
 
 export function parseBoolToken(raw: string): boolean | undefined {
@@ -118,10 +132,9 @@ export function exportRowVariant(ex: ExportItem): 'ok' | 'warn' {
 
 export function defaultCreateForm(datasetId: number | null): CreateExportFormState {
   return {
-    datasetId,
+    datasetId: datasetId === null ? '' : String(datasetId),
     sourceType: 'dataset',
     snapshotId: '',
-    hostIpId: null,
     allVps: true,
     rw: true,
     sync: true,
@@ -145,15 +158,16 @@ export function editFormFromExport(ex: ExportItem): EditExportFormState {
 }
 
 function parseAdminThreads(value: string): number | undefined {
-  const threads = Number(value);
-  return Number.isFinite(threads) && threads > 0 ? Math.floor(threads) : undefined;
+  const raw = value.trim();
+  if (!/^\d+$/.test(raw)) return undefined;
+  const threads = Number(raw);
+  return Number.isSafeInteger(threads) && threads > 0 ? threads : undefined;
 }
 
 export function validateCreateExportForm(form: CreateExportFormState, isAdmin: boolean): ExportCreateValidationResult {
   const issues: ExportCreateIssue[] = [];
-  if (!form.datasetId) issues.push('dataset_required');
+  if (!parsePositiveInt(form.datasetId)) issues.push('dataset_required');
   if (form.sourceType === 'snapshot' && !parsePositiveInt(form.snapshotId)) issues.push('snapshot_required');
-  if (!form.hostIpId) issues.push('host_required');
   if (isAdmin && form.threads.trim() && !parseAdminThreads(form.threads)) issues.push('threads_invalid');
   return { ok: issues.length === 0, issues };
 }
@@ -161,9 +175,8 @@ export function validateCreateExportForm(form: CreateExportFormState, isAdmin: b
 export function buildCreateExportPayload(form: CreateExportFormState, isAdmin: boolean) {
   const threads = parseAdminThreads(form.threads);
   return {
-    dataset: form.sourceType === 'dataset' ? form.datasetId ?? undefined : undefined,
-    snapshot: form.sourceType === 'snapshot' ? Number(form.snapshotId) : undefined,
-    host_ip_address: form.hostIpId ?? 0,
+    dataset: form.sourceType === 'dataset' ? parsePositiveInt(form.datasetId) ?? undefined : undefined,
+    snapshot: form.sourceType === 'snapshot' ? parsePositiveInt(form.snapshotId) ?? undefined : undefined,
     all_vps: form.allVps,
     rw: form.rw,
     sync: form.sync,

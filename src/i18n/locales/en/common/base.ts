@@ -144,6 +144,7 @@ export const enCommon_base = {
   'object_kind.vps': 'VPS',
   'object_kind.dataset': 'Dataset',
   'object_kind.dns_zone': 'DNS zone',
+  'object_kind.export': 'Export',
   'state.active': 'Active',
   'state.planned': 'Planned',
   'state.resolved': 'Resolved',
