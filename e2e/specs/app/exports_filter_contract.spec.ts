@@ -354,7 +354,7 @@ test.describe('Export list filter contract', () => {
     const exportIndexRequests: Array<Record<string, string>> = [];
     const datasetShowRequests: Array<{ id: number; includes: string | null }> = [];
     const createBodies: unknown[] = [];
-    const createRequestOrder: string[] = [];
+    const createRequestOrder: Array<'show-own-dataset' | 'create-export'> = [];
     let foreignSnapshotRequests = 0;
 
     const ownDataset = {
@@ -433,9 +433,17 @@ test.describe('Export list filter contract', () => {
     await expect(page.getByTestId('exports.create.host_ip')).toHaveCount(0);
     await page.getByTestId('exports.create.submit').click();
 
-    await expect.poll(() => createBodies.length).toBe(1);
-    expect(createRequestOrder.filter((event) => event === 'show-own-dataset').length).toBeGreaterThanOrEqual(2);
-    expect(createRequestOrder.lastIndexOf('show-own-dataset')).toBeLessThan(createRequestOrder.indexOf('create-export'));
+    await expect.poll(() => createRequestOrder.indexOf('create-export')).toBeGreaterThanOrEqual(0);
+    expect(createBodies).toHaveLength(1);
+
+    // Creating an export invalidates the active dataset query and can append a
+    // post-create detail request. Scope the ordering contract to the first POST:
+    // the selection lookup and fresh owner check must precede it, with the fresh
+    // owner check immediately adjacent to Create.
+    const createRequestIndex = createRequestOrder.indexOf('create-export');
+    const requestsBeforeCreate = createRequestOrder.slice(0, createRequestIndex);
+    expect(requestsBeforeCreate.filter((event) => event === 'show-own-dataset').length).toBeGreaterThanOrEqual(2);
+    expect(requestsBeforeCreate[requestsBeforeCreate.length - 1]).toBe('show-own-dataset');
     expect(createBodies[0]).toEqual({
       export: {
         dataset: 20,
