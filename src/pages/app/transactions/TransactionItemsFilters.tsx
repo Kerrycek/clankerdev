@@ -9,12 +9,10 @@ import { Input } from '../../../components/ui/Input';
 import { Select } from '../../../components/ui/Select';
 import { SmartFilterInput, type SmartFilterSuggestion } from '../../../components/ui/SmartFilterInput';
 import { SmartInputHelp } from '../../../components/ui/SmartInputHelp';
-import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 import type { DoneValue, TransactionItemsTranslator } from './transactionItemSemantics';
 
 interface TransactionItemsFiltersProps {
   t: TransactionItemsTranslator;
-  mode: 'app' | 'admin';
   smartInputRef: MutableRefObject<HTMLInputElement | null>;
   smart: string;
   smartNeedle: string;
@@ -23,7 +21,6 @@ interface TransactionItemsFiltersProps {
   onSmartSubmit: () => void;
   smartSuggestions: SmartFilterSuggestion[];
   activeFilterChips: React.ReactNode[];
-  queryId?: number;
   filtersActive: boolean;
   helpOpen: boolean;
   onHelpOpen: () => void;
@@ -32,27 +29,20 @@ interface TransactionItemsFiltersProps {
   onAdvancedOpen: () => void;
   onAdvancedClose: () => void;
   clearFilters: () => void;
-  qText: string;
-  setQueryText: (value: string) => void;
   chainIdText: string;
   setChainIdText: (value: string) => void;
   nodeIdText: string;
   setNodeIdText: (value: string) => void;
-  vpsIdText: string;
-  setVpsIdText: (value: string) => void;
   typeText: string;
   setTypeText: (value: string) => void;
   done: DoneValue | '';
   setDoneValue: (value: DoneValue | '') => void;
   success: '' | 0 | 1;
   setSuccessValue: (value: '' | 0 | 1) => void;
-  userIdText: string;
-  setUserIdText: (value: string) => void;
 }
 
 export function TransactionItemsFilters({
   t,
-  mode,
   smartInputRef,
   smart,
   smartNeedle,
@@ -61,7 +51,6 @@ export function TransactionItemsFilters({
   onSmartSubmit,
   smartSuggestions,
   activeFilterChips,
-  queryId,
   filtersActive,
   helpOpen,
   onHelpOpen,
@@ -70,22 +59,16 @@ export function TransactionItemsFilters({
   onAdvancedOpen,
   onAdvancedClose,
   clearFilters,
-  qText,
-  setQueryText,
   chainIdText,
   setChainIdText,
   nodeIdText,
   setNodeIdText,
-  vpsIdText,
-  setVpsIdText,
   typeText,
   setTypeText,
   done,
   setDoneValue,
   success,
   setSuccessValue,
-  userIdText,
-  setUserIdText,
 }: TransactionItemsFiltersProps) {
   return (
     <>
@@ -120,7 +103,6 @@ export function TransactionItemsFilters({
               {activeFilterChips}
             </div>
           ) : null}
-          {queryId ? <div className="mt-1 text-xs text-muted">{t('transactions.search.id_lookup')}</div> : null}
         </div>
 
         <Button
@@ -155,25 +137,19 @@ export function TransactionItemsFilters({
         examples={[
           { example: '?', description: t('transactions.items.smart_help.examples.help') },
           { example: '123', description: t('transactions.items.smart_help.examples.open_id') },
-          { example: 'backup', description: t('transactions.items.smart_help.examples.search') },
           { example: 'chain:123', description: t('transactions.items.smart_help.examples.chain') },
           { example: 'done:waiting', description: t('transactions.items.smart_help.examples.done') },
           { example: 'success:0', description: t('transactions.items.smart_help.examples.success') },
         ]}
         topKeys={[
-          { key: 'q', description: t('transactions.items.smart_help.keys.q'), example: 'q:backup' },
           { key: 'id', description: t('transactions.items.smart_help.keys.id'), example: 'id:123' },
           { key: 'chain', description: t('transactions.items.smart_help.keys.chain'), example: 'chain:123' },
-          { key: 'vps', description: t('transactions.items.smart_help.keys.vps'), example: 'vps:100' },
           { key: 'node', description: t('transactions.items.smart_help.keys.node'), example: 'node:5' },
+          { key: 'type', description: t('transactions.items.smart_help.keys.type'), example: 'type:2' },
         ]}
         moreKeys={[
-          { key: 'type', description: t('transactions.items.smart_help.keys.type'), example: 'type:2' },
           { key: 'done', description: t('transactions.items.smart_help.keys.done'), example: 'done:done' },
           { key: 'success', description: t('transactions.items.smart_help.keys.success'), example: 'success:1' },
-          ...(mode === 'admin'
-            ? [{ key: 'user', description: t('transactions.items.smart_help.keys.user'), example: 'user:42' }]
-            : []),
         ]}
         inference={[
           t('transactions.items.smart_help.inference.enter_applies'),
@@ -218,13 +194,6 @@ export function TransactionItemsFilters({
         }
       >
         <div className="space-y-4">
-          <div>
-            <div className="text-sm font-medium">{t('transactions.items.advanced.q.label')}</div>
-            <div className="mt-1">
-              <Input value={qText} onChange={(e) => setQueryText(e.target.value)} placeholder={t('transactions.items.search.placeholder')} testId="transactions.items.advanced.q" />
-            </div>
-          </div>
-
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <div className="text-sm font-medium">{t('transactions.items.advanced.chain.label')}</div>
@@ -242,20 +211,11 @@ export function TransactionItemsFilters({
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <div className="text-sm font-medium">{t('transactions.items.advanced.vps.label')}</div>
-              <div className="mt-1">
-                <Input value={vpsIdText} onChange={(e) => setVpsIdText(e.target.value)} placeholder="100" testId="transactions.items.advanced.vps" />
-              </div>
-            </div>
-            <div>
               <div className="text-sm font-medium">{t('transactions.items.advanced.type.label')}</div>
               <div className="mt-1">
                 <Input value={typeText} onChange={(e) => setTypeText(e.target.value)} placeholder="2" testId="transactions.items.advanced.type" />
               </div>
             </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
             <div>
               <div className="text-sm font-medium">{t('transactions.items.advanced.done.label')}</div>
               <div className="mt-1">
@@ -267,6 +227,9 @@ export function TransactionItemsFilters({
                 </Select>
               </div>
             </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
             <div>
               <div className="text-sm font-medium">{t('transactions.items.advanced.success.label')}</div>
               <div className="mt-1">
@@ -282,15 +245,6 @@ export function TransactionItemsFilters({
               </div>
             </div>
           </div>
-
-          {mode === 'admin' ? (
-            <div>
-              <div className="text-sm font-medium">{t('transactions.items.advanced.user.label')}</div>
-              <div className="mt-1">
-                <UserLookupInput value={userIdText} onChange={setUserIdText} allowRawId testId="transactions.items.advanced.user" />
-              </div>
-            </div>
-          ) : null}
         </div>
       </Drawer>
     </>

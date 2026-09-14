@@ -136,6 +136,7 @@ test('@workflow-matrix @smoke VPS detail tabs expose storage and backups, access
   await expect(moreActions.locator('option[value="/app/vps/123/storage"]')).toHaveCount(1);
   await expect(moreActions.locator('option[value="/app/vps/123/access"]')).toHaveCount(1);
   await expect(moreActions.locator('option[value="/app/vps/123/console"]')).toHaveCount(0);
+  await expect(moreActions.locator('option[value="/app/transactions?class_name=Vps&row_id=123"]')).toHaveCount(1);
 
   await captureOptInScreenshot(page, 'E2E_VPS_USER_OVERVIEW_SCREENSHOT');
 
@@ -285,6 +286,7 @@ test('@workflow-matrix VPS detail shows admin operational metadata in admin mode
 
   const moreActions = page.getByTestId('vps.actions.menu');
   await expect(moreActions.locator('option[value="/admin/vps/123/lifecycle/migrate"]')).toHaveCount(1);
+  await expect(moreActions.locator('option[value="/admin/transactions?class_name=Vps&row_id=123"]')).toHaveCount(1);
 
   await captureOptInScreenshot(page, 'E2E_VPS_ADMIN_OVERVIEW_SCREENSHOT');
 

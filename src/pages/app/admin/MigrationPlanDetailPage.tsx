@@ -916,7 +916,7 @@ export function MigrationPlanDetailPage() {
                               {vId ? (
                                 <span className="inline-flex items-center gap-1">
                                   <ChipLink
-                                    to={`${basePath}/transactions/items?vps=${encodeURIComponent(String(vId))}`}
+                                    to={`${basePath}/transactions?class_name=Vps&row_id=${encodeURIComponent(String(vId))}`}
                                     title={t('admin.migration_plan.migrations.filter_by_vps_title', { id: vId })}
                                   >
                                     #{vId}
@@ -1040,7 +1040,7 @@ export function MigrationPlanDetailPage() {
                                 {vId ? (
                                   <span className="inline-flex items-center gap-1">
                                     <ChipLink
-                                      to={`${basePath}/transactions/items?vps=${encodeURIComponent(String(vId))}`}
+                                      to={`${basePath}/transactions?class_name=Vps&row_id=${encodeURIComponent(String(vId))}`}
                                       title={t('admin.migration_plan.migrations.filter_by_vps_title', { id: vId })}
                                     >
                                       #{vId}

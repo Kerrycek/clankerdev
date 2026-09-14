@@ -253,7 +253,6 @@ export function TransactionChainsTable({
                         const filter = txItemsFilterForConcern(ref.class_name, ref.row_id);
                         if (!filter) return null;
                         const params = new URLSearchParams();
-                        if (!queryId && queryTrim) params.set('q', queryTrim);
                         params.set(filter.key, filter.value);
                         return `${basePath}/transactions/items?${params.toString()}`;
                       })();

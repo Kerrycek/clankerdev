@@ -104,7 +104,9 @@ test.describe('Admin node detail: embedded keyset pagination', () => {
 
     // Page 1 rows.
     await expect(page.getByTestId('admin.node.statuses.row.125')).toBeVisible();
-    await expect(page.getByTestId('admin.node.transactions.row.240')).toBeVisible();
+    const firstTransaction = page.getByTestId('admin.node.transactions.row.240');
+    await expect(firstTransaction).toBeVisible();
+    await expect(firstTransaction.locator('a[href="/admin/transactions?class_name=Vps&row_id=1240"]')).toBeVisible();
 
     // Next statuses: uses status_* query params.
     await page.getByTestId('admin.node.statuses.pagination.next').click();
