@@ -5,7 +5,7 @@ This spec captures two cross-cutting UX requirements:
 1) **Pagination** for all list pages (using HaveAPI `from_id`).
 2) **Global search / quick-jump** (admin via `Cluster.Search`, non-admin limited unless backend adds support).
 
-Last updated: 2026-02-28
+Last updated: 2026-09-15
 
 ## Pagination
 
@@ -205,12 +205,31 @@ The search surface should not overwhelm:
 Admin pages follow the same keyset pagination rules (`from_id`, `limit`, numeric `page` stack in the URL). The page UI may apply additional client-side filtering/sorting **within the loaded page**.
 
 - **Nodes** (`/admin/nodes`)
-  - Primary index: `Node.Index` (`GET /api/v7.0/nodes`) with namespaced params:
+  - Primary index: `Node.Index` (`GET /api/v7.0/nodes`) with namespaced
+    params:
     - `node[from_id]`, `node[limit]` (keyset pagination)
-    - `node[q]` (server-side search by id/name/domain/fqdn)
-    - `node[state]` (`active`/`inactive`/`all`)
-  - Health augmentation: `Node.PublicStatus` (`GET /api/v7.0/nodes/public_status`) (not paginated).
+    - exact filters `node[location]`, `node[environment]`, `node[type]`, and
+      `node[hypervisor_type]`
+    - admin-only `node[state]` (`active`/`inactive`/`all`)
+  - `Node.Index` has no `q` or other full-text input. A single numeric value or
+    `id:<number>` navigates to node detail; arbitrary text and legacy
+    `q`/`search` aliases are reported as unsupported without issuing another
+    list request.
+  - Support accounts cannot send or select `state`: the backend blacklists that
+    input for non-admins and restricts their index to active nodes.
+  - Health augmentation: `Node.PublicStatus`
+    (`GET /api/v7.0/nodes/public_status`) is not paginated. `issues` is a
+    page-local UI filter, derived from public-status health for the current
+    authenticated index page; it is never sent as `node[issues]`.
   - When the authenticated index is unavailable, the page falls back to the public status list (unpaginated).
+  - Legacy `q` URLs are canonicalized before either node query: `q` and the
+    stale `from_id` are removed and `page` is reset to 1, while valid `issues`,
+    `limit`, and (for administrators) `state` survive. Support URLs receive the
+    same pre-query cursor reset and also lose the unauthorized `state` value.
+  - The filter and role contract is separate from the unresolved `from_id`
+    direction/deterministic-ordering problem tracked by issue #189. Until that
+    upstream pagination contract is guaranteed, complete multi-page traversal
+    is not claimed here.
 
 - **Migration plans** (`/admin/migration-plans`)
   - Index: `MigrationPlan.Index` (`GET /api/v7.0/migration_plans`) with `migration_plan[from_id]`, `migration_plan[limit]`.

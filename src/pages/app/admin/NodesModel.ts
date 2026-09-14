@@ -36,6 +36,50 @@ export interface NodeStats {
   locked: number;
 }
 
+export interface NormalizedLegacyNodesUrl {
+  changed: boolean;
+  href: string;
+}
+
+function hrefWithSearch(path: string, searchParams: URLSearchParams): string {
+  const search = searchParams.toString();
+  return search ? `${path}?${search}` : path;
+}
+
+/**
+ * Canonicalize links created by older versions of the page before its queries
+ * mount. Node.Index has no text-search input, and its state input is
+ * administrator-only. Removing stale pagination alongside unsupported filters
+ * prevents a rewritten link from opening an unrelated cursor page.
+ */
+export function normalizeLegacyNodesUrl(input: {
+  basePath: string;
+  searchParams: URLSearchParams;
+  allowState: boolean;
+}): NormalizedLegacyNodesUrl {
+  const path = `${input.basePath}/nodes`;
+  const removeQ = input.searchParams.has('q');
+  const removeState = !input.allowState && input.searchParams.has('state');
+
+  if (!removeQ && !removeState) {
+    return {
+      changed: false,
+      href: hrefWithSearch(path, input.searchParams),
+    };
+  }
+
+  const normalized = new URLSearchParams(input.searchParams);
+  if (removeQ) normalized.delete('q');
+  if (removeState) normalized.delete('state');
+  normalized.delete('from_id');
+  normalized.delete('page');
+
+  return {
+    changed: true,
+    href: hrefWithSearch(path, normalized),
+  };
+}
+
 function isRecord(v: unknown): v is Record<string, unknown> {
   return Boolean(v) && typeof v === 'object';
 }
@@ -253,24 +297,8 @@ export function maintenanceReason(row: NodeRow): string | undefined {
   return undefined;
 }
 
-export function filterNodeRows(rows: NodeRow[], opts: { issuesOnly: boolean; qText: string; nodesUnavailable: boolean }): NodeRow[] {
-  let out = rows;
-  if (opts.issuesOnly) out = out.filter(hasNodeIssues);
-
-  // If the authenticated node index is unavailable, we fall back to the public status list.
-  // In that mode, apply q filtering client-side, because the public endpoint is unfiltered.
-  const q = opts.qText.trim().toLowerCase();
-  if (q && opts.nodesUnavailable) {
-    out = out.filter((r) => {
-      const hay = [r.name, r.fqdn, r.domain_name, r.locationLabel, String(r.id ?? '')]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-      return hay.includes(q);
-    });
-  }
-
-  return out;
+export function filterNodeRows(rows: NodeRow[], opts: { issuesOnly: boolean }): NodeRow[] {
+  return opts.issuesOnly ? rows.filter(hasNodeIssues) : rows;
 }
 
 export function nodeStats(rows: NodeRow[]): NodeStats {

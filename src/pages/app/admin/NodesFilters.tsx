@@ -8,7 +8,6 @@ import { Checkbox } from '../../../components/ui/Checkbox';
 import { CopyButton } from '../../../components/ui/CopyButton';
 import { Drawer } from '../../../components/ui/Drawer';
 import { FilterChip } from '../../../components/ui/FilterChip';
-import { Input } from '../../../components/ui/Input';
 import { Select } from '../../../components/ui/Select';
 import { SmartFilterInput, type SmartFilterSuggestion } from '../../../components/ui/SmartFilterInput';
 import { SmartInputHelp } from '../../../components/ui/SmartInputHelp';
@@ -17,15 +16,12 @@ import { normalizeNodeState, type NodeStateFilter } from './NodesModel';
 
 export type NodesPageTranslator = (key: string, vars?: Record<string, unknown>) => string;
 
-type SetTextParam = (key: string, value: string | undefined) => void;
-
 type NodesFilterChangeHandlers = {
   onSmartChange: (value: string) => void;
   onSmartSubmit: () => void;
   onSetSmartErrors: React.Dispatch<React.SetStateAction<string[]>>;
   onHelpOpenChange: (open: boolean) => void;
   onAdvancedOpenChange: (open: boolean) => void;
-  onSetTextParam: SetTextParam;
   onSetIssuesParam: (on: boolean) => void;
   onSetStateParam: (state: NodeStateFilter) => void;
   onClearFilters: () => void;
@@ -42,7 +38,7 @@ interface NodesFiltersProps extends NodesFilterChangeHandlers {
   shareUrl: string;
   helpOpen: boolean;
   advancedOpen: boolean;
-  qText: string;
+  canFilterState: boolean;
   state: NodeStateFilter;
   issuesOnly: boolean;
   shownCount: number;
@@ -50,30 +46,17 @@ interface NodesFiltersProps extends NodesFilterChangeHandlers {
 }
 
 function NodesActiveFilterChips(props: {
-  qText: string;
+  canFilterState: boolean;
   state: NodeStateFilter;
   issuesOnly: boolean;
   smartErrors: string[];
-  onSetTextParam: SetTextParam;
   onSetStateParam: (state: NodeStateFilter) => void;
   onSetIssuesParam: (on: boolean) => void;
   onSetSmartErrors: React.Dispatch<React.SetStateAction<string[]>>;
 }) {
   const chips: React.ReactNode[] = [];
 
-  if (props.qText.trim()) {
-    chips.push(
-      <FilterChip
-        key="q"
-        label={`q:${props.qText.trim()}`}
-        tone="neutral"
-        onRemove={() => props.onSetTextParam('q', undefined)}
-        testId="admin.nodes.chip.q"
-      />
-    );
-  }
-
-  if (props.state !== 'active') {
+  if (props.canFilterState && props.state !== 'active') {
     chips.push(
       <FilterChip
         key="state"
@@ -128,7 +111,7 @@ export function NodesFilters({
   shareUrl,
   helpOpen,
   advancedOpen,
-  qText,
+  canFilterState,
   state,
   issuesOnly,
   shownCount,
@@ -138,7 +121,6 @@ export function NodesFilters({
   onSetSmartErrors,
   onHelpOpenChange,
   onAdvancedOpenChange,
-  onSetTextParam,
   onSetIssuesParam,
   onSetStateParam,
   onClearFilters,
@@ -168,6 +150,7 @@ export function NodesFilters({
                 onClick={() => onHelpOpenChange(true)}
                 aria-label={t('filters.help.open')}
                 title={t('filters.help.open')}
+                testId="admin.nodes.smart_help.open"
               >
                 <CircleHelp className="h-4 w-4" aria-hidden />
               </Button>
@@ -175,11 +158,10 @@ export function NodesFilters({
           />
 
           <NodesActiveFilterChips
-            qText={qText}
+            canFilterState={canFilterState}
             state={state}
             issuesOnly={issuesOnly}
             smartErrors={smartErrors}
-            onSetTextParam={onSetTextParam}
             onSetStateParam={onSetStateParam}
             onSetIssuesParam={onSetIssuesParam}
             onSetSmartErrors={onSetSmartErrors}
@@ -239,12 +221,14 @@ export function NodesFilters({
           { example: '?', description: t('admin.nodes.smart_help.examples.help') },
           { example: '123', description: t('admin.nodes.smart_help.examples.open') },
           { example: 'issues', description: t('admin.nodes.smart_help.examples.issues') },
-          { example: 'state:inactive', description: t('admin.nodes.smart_help.examples.state') },
-          { example: 'q:node7 state:all', description: t('admin.nodes.smart_help.examples.q_state') },
+          ...(canFilterState
+            ? [{ example: 'state:inactive', description: t('admin.nodes.smart_help.examples.state') }]
+            : []),
         ]}
         topKeys={[
-          { key: 'q', description: t('admin.nodes.smart_help.keys.q'), example: 'q:node7' },
-          { key: 'state', description: t('admin.nodes.smart_help.keys.state'), example: 'state:inactive' },
+          ...(canFilterState
+            ? [{ key: 'state', description: t('admin.nodes.smart_help.keys.state'), example: 'state:inactive' }]
+            : []),
           { key: 'issues', description: t('admin.nodes.smart_help.keys.issues'), example: 'issues:true' },
           { key: 'id', description: t('admin.nodes.smart_help.keys.id'), example: 'id:123' },
         ]}
@@ -283,29 +267,21 @@ export function NodesFilters({
         <div className="space-y-4">
           <div className="text-sm text-muted">{t('admin.nodes.advanced.hint')}</div>
 
-          <div>
-            <div className="text-xs font-medium text-faint">{t('admin.nodes.advanced.q.label')}</div>
-            <Input
-              value={qText}
-              onChange={(e) => onSetTextParam('q', e.target.value)}
-              placeholder={t('admin.nodes.search.placeholder')}
-              testId="admin.nodes.advanced.q"
-            />
-          </div>
-
-          <div>
-            <div className="text-xs font-medium text-faint">{t('admin.nodes.advanced.state.label')}</div>
-            <Select
-              value={state}
-              onChange={(e) => onSetStateParam(normalizeNodeState(e.target.value))}
-              testId="admin.nodes.advanced.state"
-              className="w-56"
-            >
-              <option value="active">{t('admin.nodes.advanced.state.active')}</option>
-              <option value="all">{t('admin.nodes.advanced.state.all')}</option>
-              <option value="inactive">{t('admin.nodes.advanced.state.inactive')}</option>
-            </Select>
-          </div>
+          {canFilterState ? (
+            <div>
+              <div className="text-xs font-medium text-faint">{t('admin.nodes.advanced.state.label')}</div>
+              <Select
+                value={state}
+                onChange={(e) => onSetStateParam(normalizeNodeState(e.target.value))}
+                testId="admin.nodes.advanced.state"
+                className="w-56"
+              >
+                <option value="active">{t('admin.nodes.advanced.state.active')}</option>
+                <option value="all">{t('admin.nodes.advanced.state.all')}</option>
+                <option value="inactive">{t('admin.nodes.advanced.state.inactive')}</option>
+              </Select>
+            </div>
+          ) : null}
 
           <Checkbox
             checked={issuesOnly}

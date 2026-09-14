@@ -27,11 +27,10 @@ function lastFetchCall() {
 }
 
 describe('nodes API wrappers', () => {
-  test('fetchNodes forwards q, state, limit, from_id, and node filters', async () => {
+  test('fetchNodes only forwards filters declared by Node.Index', async () => {
     vi.stubGlobal('fetch', mockFetchOk({ nodes: [{ id: 12, name: 'node12' }], _meta: { total_count: 1 } }));
 
     const res = await fetchNodes({
-      q: 'node12',
       state: 'inactive',
       limit: 25,
       fromId: 400,
@@ -46,7 +45,7 @@ describe('nodes API wrappers', () => {
     const u = new URL(String(url));
 
     expect(u.pathname).toBe('/v7.0/nodes');
-    expect(u.searchParams.get('node[q]')).toBe('node12');
+    expect(u.searchParams.has('node[q]')).toBe(false);
     expect(u.searchParams.get('node[state]')).toBe('inactive');
     expect(u.searchParams.get('node[limit]')).toBe('25');
     expect(u.searchParams.get('node[from_id]')).toBe('400');

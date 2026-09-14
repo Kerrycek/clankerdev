@@ -250,7 +250,6 @@ export async function fetchNodes(
   opts: {
     limit?: number;
     fromId?: number;
-    q?: string;
     state?: 'all' | 'active' | 'inactive';
     location?: number;
     type?: string;
@@ -261,7 +260,6 @@ export async function fetchNodes(
   const params: Record<string, string | number | boolean> = {};
   if (opts.limit !== undefined) params['limit'] = opts.limit;
   if (opts.fromId !== undefined) params['from_id'] = opts.fromId;
-  if (opts.q) params['q'] = opts.q;
   if (opts.state) params['state'] = opts.state;
   if (opts.location !== undefined) params['location'] = opts.location;
   if (opts.type) params['type'] = opts.type;
