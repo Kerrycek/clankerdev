@@ -2,11 +2,11 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CircleHelp, SlidersHorizontal } from 'lucide-react';
-
 import { useI18n } from '../../../../app/i18n';
 import { useToasts } from '../../../../app/toasts';
 import { formatErrorMessage } from '../../../../lib/errors';
 import { useKeysetPagination } from '../../../../lib/hooks/useKeysetPagination';
+import { parseLookupIdLike } from '../../../../lib/lookupInput';
 import { parsePositiveInt } from '../../../../lib/parse';
 import { parseNumericToken, splitKeyValueToken, tokenizeSmartInput, unquoteSmartValue } from '../../../../lib/smartFilter';
 
@@ -29,7 +29,7 @@ import { TableCard } from '../../../../components/ui/TableCard';
 import { UserLookupInput } from '../../../../components/ui/UserLookupInput';
 
 import { getMetaTotalCount } from '../../../../lib/api/haveapi';
-import { fetchEnvironments, type Environment } from '../../../../lib/api/infra';
+import { fetchEnvironments } from '../../../../lib/api/infra';
 import {
   createClusterResourcePackage,
   deleteClusterResourcePackage,
@@ -38,21 +38,7 @@ import {
   updateClusterResourcePackage,
   type ClusterResourcePackage,
 } from '../../../../lib/api/clusterResourcePackages';
-
-function envLabel(env: Environment | null | undefined): string {
-  const e: any = env ?? {};
-  const label = typeof e.label === 'string' ? e.label.trim() : '';
-  return label || (typeof e.id === 'number' ? `#${e.id}` : '—');
-}
-
-function userLabel(u: any): string {
-  if (!u) return '—';
-  const login = typeof u.login === 'string' ? u.login.trim() : '';
-  if (login) return login;
-  return typeof u.id === 'number' ? `#${u.id}` : '—';
-}
-
-type Scope = 'global' | 'personal' | 'all';
+import { normalizeResourcePackageScope, resolveResourcePackageEnvironment, resourcePackageEnvironmentLabel, resourcePackageScopeFilters, resourcePackageUserLabel, type ResourcePackageScope } from './ResourcePackagesListModel';
 
 type EditorState =
   | null
@@ -69,41 +55,45 @@ export function ResourcePackagesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const smartInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [q, setQ] = useState(() => searchParams.get('q') ?? '');
-  const [scope, setScope] = useState<Scope>(() => (searchParams.get('scope') as Scope) ?? 'global');
+  const [scope, setScope] = useState<ResourcePackageScope>(() => normalizeResourcePackageScope(searchParams.get('scope')));
   const [environment, setEnvironment] = useState(() => searchParams.get('environment') ?? '');
   const [user, setUser] = useState(() => searchParams.get('user') ?? '');
+  const [userDraft, setUserDraft] = useState(() => searchParams.get('user') ?? '');
   const [smart, setSmart] = useState('');
   const [smartErrors, setSmartErrors] = useState<string[]>([]);
   const [helpOpen, setHelpOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
-  // Environment/user filters do not apply to global packages.
+  // User is the exact personal-package selector. It must not silently narrow
+  // the explicit global or all scopes.
   useEffect(() => {
-    if (scope !== 'global') return;
-    if (environment) setEnvironment('');
-    if (user) setUser('');
+    if (scope === 'global' && environment) setEnvironment('');
+    if (scope !== 'personal' && (user || userDraft)) {
+      setUser('');
+      setUserDraft('');
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scope]);
 
   // Sync local state on navigation.
   useEffect(() => {
-    const urlQ = searchParams.get('q') ?? '';
-    const urlScope = (searchParams.get('scope') as Scope) ?? 'global';
+    const urlScope = normalizeResourcePackageScope(searchParams.get('scope'));
     const urlEnv = searchParams.get('environment') ?? '';
     const urlUser = searchParams.get('user') ?? '';
-    if (urlQ !== q) setQ(urlQ);
     if (urlScope !== scope) setScope(urlScope);
     if (urlEnv !== environment) setEnvironment(urlEnv);
-    if (urlUser !== user) setUser(urlUser);
+    if (urlUser !== user) {
+      setUser(urlUser);
+      setUserDraft(urlUser);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  const qTrim = useMemo(() => q.trim(), [q]);
   const envId = useMemo(() => parsePositiveInt(environment), [environment]);
   const userId = useMemo(() => parsePositiveInt(user), [user]);
-  const isPersonal = scope === 'all' ? undefined : scope === 'personal';
-  const filtersActive = Boolean(qTrim || scope !== 'global' || envId || userId || smartErrors.length > 0);
+  const { environmentId: effectiveEnvironmentId, userId: effectiveUserId, personalUserRequired: scopeRequiresUser } = resourcePackageScopeFilters(scope, envId, userId);
+  const personalUserRequired = scopeRequiresUser || (scope === 'personal' && userDraft.trim() !== user.trim());
+  const filtersActive = Boolean(scope !== 'global' || effectiveEnvironmentId || effectiveUserId || smartErrors.length > 0);
   const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
 
   function focusSmartInput() {
@@ -121,33 +111,38 @@ export function ResourcePackagesPage() {
   function clearAllFilters() {
     setSmart('');
     setSmartErrors([]);
-    setQ('');
     setScope('global');
     setEnvironment('');
     setUser('');
+    setUserDraft('');
   }
 
+  function closeAdvancedFilters() {
+    setUserDraft(user);
+    setAdvancedOpen(false);
+  }
   // Persist filters in URL.
   useEffect(() => {
     const next = new URLSearchParams(searchParams);
-    if (qTrim) next.set('q', qTrim);
-    else next.delete('q');
+    // Older links exposed a full-text filter that the API never supported.
+    // Normalize them before sharing or navigating without issuing an invalid request.
+    next.delete('q');
 
     if (scope && scope !== 'global') next.set('scope', scope);
     else next.delete('scope');
 
-    if (envId) next.set('environment', String(envId));
+    if (effectiveEnvironmentId) next.set('environment', String(effectiveEnvironmentId));
     else next.delete('environment');
 
-    if (userId) next.set('user', String(userId));
+    if (typeof effectiveUserId === 'number') next.set('user', String(effectiveUserId));
     else next.delete('user');
 
     if (next.toString() !== searchParams.toString()) setSearchParams(next, { replace: true });
-  }, [envId, qTrim, scope, searchParams, setSearchParams, userId]);
+  }, [effectiveEnvironmentId, effectiveUserId, scope, searchParams, setSearchParams, user]);
 
   const pagination = useKeysetPagination({
     id: 'admin.cluster.resource_packages',
-    filterKey: JSON.stringify({ q: qTrim, s: scope, e: envId, u: userId }),
+    filterKey: JSON.stringify({ s: scope, e: effectiveEnvironmentId, u: effectiveUserId }),
     searchParams,
     setSearchParams,
     allowedLimits: [25, 50, 100, 200],
@@ -161,20 +156,19 @@ export function ResourcePackagesPage() {
   });
 
   const listQ = useQuery({
-    queryKey: ['cluster_resource_packages', { q: qTrim, isPersonal, envId, userId, limit: pagination.limit, fromId: pagination.fromId }],
+    queryKey: ['cluster_resource_packages', { scope, envId: effectiveEnvironmentId, userId: effectiveUserId, limit: pagination.limit, fromId: pagination.fromId }],
+    enabled: !personalUserRequired,
     queryFn: async () =>
       await fetchClusterResourcePackages({
-        q: qTrim,
-        isPersonal,
-        environmentId: envId ?? undefined,
-        userId: userId ?? undefined,
+        environmentId: effectiveEnvironmentId,
+        userId: effectiveUserId,
         limit: pagination.limit,
         fromId: pagination.fromId ?? undefined,
       }),
     staleTime: 5_000,
   });
 
-  const packages = listQ.data?.data ?? [];
+  const packages = personalUserRequired ? [] : listQ.data?.data ?? [];
   const lastPackage = packages[packages.length - 1];
   const pageCursor = lastPackage ? lastPackage.id : null;
   const hasMore = packages.length === pagination.limit && typeof pageCursor === 'number';
@@ -184,7 +178,7 @@ export function ResourcePackagesPage() {
     const list = envQ.data ?? [];
     return [
       { value: '', label: t('common.all') },
-      ...list.map((e) => ({ value: String(e.id), label: envLabel(e) })),
+      ...list.map((e) => ({ value: String(e.id), label: resourcePackageEnvironmentLabel(e) })),
     ];
   }, [envQ.data, t]);
 
@@ -201,15 +195,6 @@ export function ResourcePackagesPage() {
     if (smart.trim() === '?') setHelpOpen(true);
   }, [smart]);
 
-  function resolveEnvironment(value: string): number | undefined {
-    const id = parsePositiveInt(value);
-    if (id) return id;
-    const lower = value.trim().toLowerCase();
-    if (!lower) return undefined;
-    const match = (envQ.data ?? []).find((e) => envLabel(e).toLowerCase() === lower || envLabel(e).toLowerCase().startsWith(lower));
-    return match?.id;
-  }
-
   function applySmart(rawInput?: string) {
     const raw = String(rawInput ?? smart).trim();
     if (!raw) return;
@@ -219,10 +204,12 @@ export function ResourcePackagesPage() {
     }
 
     const tokens = tokenizeSmartInput(raw);
-    let nextQ = qTrim;
     let nextScope = scope;
     let nextEnvironment = environment;
     let nextUser = user;
+    let scopeSpecified = false;
+    let environmentSpecified = false;
+    let userSpecified = false;
     const errors: string[] = [];
 
     for (const token of tokens) {
@@ -235,7 +222,7 @@ export function ResourcePackagesPage() {
           setSmartErrors([]);
           return;
         }
-        nextQ = unquoteSmartValue(token);
+        errors.push(t('admin.cluster.resource_packages.smart.error.text_unsupported'));
         continue;
       }
 
@@ -250,7 +237,7 @@ export function ResourcePackagesPage() {
         case 'q':
         case 'search':
         case 'label':
-          nextQ = value;
+          errors.push(t('admin.cluster.resource_packages.smart.error.text_unsupported'));
           break;
         case 'id': {
           const n = parseNumericToken(value);
@@ -265,23 +252,32 @@ export function ResourcePackagesPage() {
         }
         case 'scope':
         case 'personal':
-          if (value === 'global' || value === 'personal' || value === 'all') nextScope = value as Scope;
+          if (value === 'global' || value === 'personal' || value === 'all') {
+            nextScope = value as ResourcePackageScope;
+            scopeSpecified = true;
+          }
           else errors.push(t('filters.smart.error.option_unresolved', { key, value }));
           break;
         case 'environment':
         case 'env': {
           if (value === 'all') nextEnvironment = '';
           else {
-            const id = resolveEnvironment(value);
+            const id = resolveResourcePackageEnvironment(envQ.data ?? [], value);
             if (!id) errors.push(t('filters.smart.error.option_unresolved', { key, value }));
-            else nextEnvironment = String(id);
+            else {
+              nextEnvironment = String(id);
+              environmentSpecified = true;
+            }
           }
           break;
         }
         case 'user': {
           const id = parsePositiveInt(value);
           if (!id) errors.push(t('filters.smart.error.option_unresolved', { key, value }));
-          else nextUser = String(id);
+          else {
+            nextUser = String(id);
+            userSpecified = true;
+          }
           break;
         }
         default:
@@ -289,12 +285,30 @@ export function ResourcePackagesPage() {
       }
     }
 
+    if (userSpecified && scopeSpecified && nextScope !== 'personal') {
+      errors.push(t('admin.cluster.resource_packages.smart.error.user_scope'));
+    } else if (userSpecified) {
+      nextScope = 'personal';
+    }
+
+    if (environmentSpecified && scopeSpecified && nextScope === 'global') {
+      errors.push(t('admin.cluster.resource_packages.smart.error.environment_global'));
+    } else if (environmentSpecified && !scopeSpecified && nextScope === 'global') {
+      nextScope = 'all';
+    }
+
     setSmartErrors(errors);
     if (errors.length > 0) return;
-    setQ(nextQ);
+    if (nextScope === 'global') {
+      nextEnvironment = '';
+    }
+    if (nextScope !== 'personal') {
+      nextUser = '';
+    }
     setScope(nextScope);
     setEnvironment(nextEnvironment);
     setUser(nextUser);
+    setUserDraft(nextUser);
     setSmart('');
   }
 
@@ -309,7 +323,6 @@ export function ResourcePackagesPage() {
     if (n !== null) {
       out.push({ id: `open-${n}`, primary: t('admin.cluster.resource_packages.smart.suggestion.id', { id: n }), secondary: t('admin.cluster.resource_packages.smart.suggestion.id_hint'), onPick: () => { navigate(`/admin/cluster/resource-packages/${n}`); setSmart(''); setSmartErrors([]); } });
     }
-    out.push({ id: `search-${needle}`, primary: t('admin.cluster.resource_packages.smart.suggestion.search', { value: needle }), secondary: t('admin.cluster.resource_packages.smart.suggestion.search_hint'), onPick: () => applySmart(needle) });
     return out;
   }, [navigate, smart, t]);
 
@@ -396,8 +409,8 @@ export function ResourcePackagesPage() {
               onChange={setSmart}
               onSubmit={() => applySmart()}
               suggestions={smartSuggestions}
-              placeholder={t('admin.cluster.resource_packages.filter.search_placeholder')}
-              ariaLabel={t('admin.cluster.resource_packages.filter.search_placeholder')}
+              placeholder={t('admin.cluster.resource_packages.filter.smart_placeholder')}
+              ariaLabel={t('admin.cluster.resource_packages.filter.smart_placeholder')}
               className="min-w-0 flex-1"
               suffix={
                 <Button variant="ghost" size="sm" aria-label={t('filters.help.open')} className="px-2" onClick={() => setHelpOpen(true)} testId="admin.cluster.resource_packages.smart.help_button">
@@ -412,7 +425,7 @@ export function ResourcePackagesPage() {
                 {t('common.advanced')}
               </Button>
               <CopyButton text={shareUrl} label={t('common.copy_link')} testId="admin.cluster.resource_packages.copy_link" />
-              <Button variant="secondary" onClick={() => listQ.refetch()} disabled={listQ.isFetching}>{t('common.refresh')}</Button>
+              <Button variant="secondary" onClick={() => listQ.refetch()} disabled={personalUserRequired || listQ.isFetching}>{t('common.refresh')}</Button>
               {filtersActive ? <Button variant="secondary" onClick={clearAllFilters} testId="admin.cluster.resource_packages.filter.clear">{t('common.clear_filters')}</Button> : null}
               <Button variant="primary" onClick={openCreate} testId="admin.cluster.resource_packages.create">{t('admin.cluster.resource_packages.create.button')}</Button>
             </div>
@@ -420,10 +433,9 @@ export function ResourcePackagesPage() {
 
           {filtersActive ? (
             <div className="flex flex-wrap gap-2">
-              {qTrim ? <FilterChip label={`q: ${qTrim}`} onRemove={() => setQ('')} /> : null}
               {scope !== 'global' ? <FilterChip label={`${t('admin.cluster.resource_packages.col.scope')}: ${t(scope === 'personal' ? 'admin.cluster.resource_packages.scope.personal' : 'common.all')}`} onRemove={() => setScope('global')} /> : null}
-              {envId ? <FilterChip label={`${t('common.environment')}: ${envLabel((envQ.data ?? []).find((e) => e.id === envId))}`} onRemove={() => setEnvironment('')} /> : null}
-              {userId ? <FilterChip label={`${t('common.user')}: #${userId}`} onRemove={() => setUser('')} /> : null}
+              {effectiveEnvironmentId ? <FilterChip label={`${t('common.environment')}: ${resourcePackageEnvironmentLabel((envQ.data ?? []).find((e) => e.id === effectiveEnvironmentId))}`} onRemove={() => setEnvironment('')} /> : null}
+              {typeof effectiveUserId === 'number' ? <FilterChip label={`${t('common.user')}: #${effectiveUserId}`} onRemove={() => { setUser(''); setUserDraft(''); }} testId="admin.cluster.resource_packages.chip.user" /> : null}
               {smartErrors.map((err, idx) => <FilterChip key={`${err}-${idx}`} label={err} tone="danger" onRemove={() => setSmartErrors((prev) => prev.filter((_, i) => i !== idx))} />)}
             </div>
           ) : null}
@@ -437,42 +449,46 @@ export function ResourcePackagesPage() {
         intro={t('admin.cluster.resource_packages.smart.help.intro')}
         examples={[
           { example: '?', description: t('admin.cluster.resource_packages.smart.help.example_help') },
-          { example: 'shared', description: t('admin.cluster.resource_packages.smart.help.example_search') },
-          { example: 'scope:personal', description: t('admin.cluster.resource_packages.smart.help.example_scope') },
+          { example: '21', description: t('admin.cluster.resource_packages.smart.help.example_id') },
+          { example: 'scope:personal user:42', description: t('admin.cluster.resource_packages.smart.help.example_scope') },
           { example: 'env:1', description: t('admin.cluster.resource_packages.smart.help.example_environment') },
         ]}
         topKeys={[
-          { key: 'q', description: t('admin.cluster.resource_packages.smart.key.q'), example: 'q:shared' },
           { key: 'id', description: t('admin.cluster.resource_packages.smart.key.id'), example: 'id:10' },
           { key: 'scope', description: t('admin.cluster.resource_packages.smart.key.scope'), example: 'scope:personal' },
           { key: 'env', description: t('admin.cluster.resource_packages.smart.key.environment'), example: 'env:1' },
           { key: 'user', description: t('admin.cluster.resource_packages.smart.key.user'), example: 'user:42' },
         ]}
         inference={[
-          t('admin.cluster.resource_packages.smart.help.inference.text'),
           t('admin.cluster.resource_packages.smart.help.inference.number'),
           t('admin.cluster.resource_packages.smart.help.inference.keyvalue'),
+          t('admin.cluster.resource_packages.smart.help.inference.exact'),
         ]}
         onInsertKey={insertSmartKey}
       />
 
       <Drawer
         open={advancedOpen}
-        onClose={() => setAdvancedOpen(false)}
+        onClose={closeAdvancedFilters}
         title={t('common.advanced_filters')}
         width="lg"
         testId="admin.cluster.resource_packages.advanced"
-        footer={<div className="flex items-center justify-between gap-2"><Button variant="secondary" onClick={clearAllFilters}>{t('common.clear_filters')}</Button><Button variant="primary" onClick={() => setAdvancedOpen(false)}>{t('common.done')}</Button></div>}
+        footer={<div className="flex items-center justify-between gap-2"><Button variant="secondary" onClick={clearAllFilters}>{t('common.clear_filters')}</Button><Button variant="primary" onClick={closeAdvancedFilters}>{t('common.done')}</Button></div>}
       >
         <div className="space-y-4">
-          <Input testId="admin.cluster.resource_packages.search.advanced" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('admin.cluster.resource_packages.filter.search_placeholder')} />
-          <Select testId="admin.cluster.resource_packages.scope" value={scope} onChange={(e) => setScope(e.target.value as Scope)} options={scopeOptions} className="w-full" />
-          <Select testId="admin.cluster.resource_packages.environment" value={environment} onChange={(e) => setEnvironment(e.target.value)} options={environmentOptions} disabled={scope === 'global'} className="w-full" />
-          <UserLookupInput value={user} onChange={(v) => setUser(v)} placeholder={t('admin.cluster.resource_packages.filter.user_placeholder')} className="w-full" testId="admin.cluster.resource_packages.user" loadingLabel={t('common.loading')} noResultsLabel={t('common.no_results')} disabled={scope === 'global'} />
+          <div><label htmlFor="admin-resource-packages-scope" className="mb-1 block text-xs font-semibold text-muted">{t('admin.cluster.resource_packages.col.scope')}</label><Select selectId="admin-resource-packages-scope" testId="admin.cluster.resource_packages.scope" value={scope} onChange={(e) => setScope(e.target.value as ResourcePackageScope)} options={scopeOptions} className="w-full" /></div>
+          <div><label htmlFor="admin-resource-packages-environment" className="mb-1 block text-xs font-semibold text-muted">{t('common.environment')}</label><Select selectId="admin-resource-packages-environment" testId="admin.cluster.resource_packages.environment" value={environment} onChange={(e) => setEnvironment(e.target.value)} options={environmentOptions} disabled={scope === 'global'} className="w-full" /></div>
+          <UserLookupInput label={t('common.user')} value={userDraft} onChange={(value) => { const id = parseLookupIdLike(value); setUserDraft(id ? String(id) : value); if (!value.trim() || id) setUser(id ? String(id) : ''); }} placeholder={t('admin.cluster.resource_packages.filter.user_placeholder')} className="w-full" testId="admin.cluster.resource_packages.user" loadingLabel={t('common.loading')} noResultsLabel={t('common.no_results')} disabled={scope !== 'personal'} />
         </div>
       </Drawer>
 
-      {listQ.isError ? (
+      {personalUserRequired ? (
+        <EmptyState
+          title={t('admin.cluster.resource_packages.personal_user_required.title')}
+          message={t('admin.cluster.resource_packages.personal_user_required.body')}
+          testId="admin.cluster.resource_packages.personal_user_required"
+        />
+      ) : listQ.isError ? (
         <ErrorState error={listQ.error} testId="admin.cluster.resource_packages.error" />
       ) : packages.length === 0 ? (
         <EmptyState
@@ -531,8 +547,8 @@ export function ResourcePackagesPage() {
                       {personal ? t('admin.cluster.resource_packages.scope.personal') : t('admin.cluster.resource_packages.scope.global')}
                     </Badge>
                   </td>
-                  <td className="px-3 py-2 text-muted">{personal ? envLabel((p as any).environment) : '—'}</td>
-                  <td className="px-3 py-2 text-muted">{personal ? userLabel((p as any).user) : '—'}</td>
+                  <td className="px-3 py-2 text-muted">{personal ? resourcePackageEnvironmentLabel((p as any).environment) : '—'}</td>
+                  <td className="px-3 py-2 text-muted">{personal ? resourcePackageUserLabel((p as any).user) : '—'}</td>
                   <td className="px-3 py-2 text-right">
                     <div className="inline-flex items-center gap-2">
                       <Button
