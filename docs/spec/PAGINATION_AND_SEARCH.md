@@ -84,6 +84,21 @@ Pages already migrated to the shared implementation:
 
 - VPS list: `src/pages/app/VpsListPage.tsx`
 - Transaction chains: `src/pages/app/TransactionChainsPage.tsx`
+  - `TransactionChain.Index` is descending: the next request uses the last
+    visible chain ID as `from_id`.
+  - The UI requests `limit + 1`, renders at most `limit`, and enables Next only
+    when the hidden look-ahead row exists. This distinguishes an exact-size
+    terminal page from a page with more results.
+  - `errors=1` reads the `failed` and `fatal` streams with the same look-ahead,
+    deduplicates and orders their union, then applies the visible limit. The
+    cursor and Next state are derived from that merged page, not either stream
+    in isolation.
+  - Pinned chains are supplemental rows and never affect the page cursor or
+    look-ahead decision.
+  - This look-ahead fixes the exact-terminal-page signal; it does not establish
+    lossless traversal while the API filters its cursor by ID but orders first
+    by `created_at`. That upstream ordering limitation remains tracked by issue
+    #189.
 - Action states: `src/pages/app/ActionStatesPage.tsx`
 - Datasets list: `src/pages/app/datasets/DatasetsListPage.tsx`
 - NAS list alias: `src/pages/app/datasets/NasDatasetsPage.tsx` (same list implementation, fixed `role=primary`, no VPS filter)
