@@ -36,11 +36,13 @@ export function ExportsListResults(props: {
   rows: ExportItem[];
   basePath: string;
   embedded: boolean;
+  showUser?: boolean;
   canPaginate: boolean;
-  pagination: PaginationProps;
+  pagination?: PaginationProps;
 }) {
   const { t } = useI18n();
   const prefix = props.embedded ? 'dataset.exports' : 'exports';
+  const pagination = props.pagination;
 
   return (
     <>
@@ -49,47 +51,53 @@ export function ExportsListResults(props: {
           testId={`${prefix}.table`}
           tableClassName="table-fixed"
           footer={
-            props.canPaginate ? (
-              <KeysetPagination {...props.pagination} testId={`${prefix}.pagination.desktop`} />
+            props.canPaginate && pagination ? (
+              <KeysetPagination {...pagination} testId={`${prefix}.pagination.desktop`} />
             ) : null
           }
         >
-              <thead>
-                <tr className="border-b border-border text-left text-xs text-muted">
-                  <th className="w-8 px-3 py-2" />
-                  <th className="w-24 px-3 py-2">{t('common.id')}</th>
-                  <th className="px-3 py-2">{t('common.dataset')}</th>
-                  <th className="px-3 py-2">{t('exports.field.address')}</th>
-                  <th className="px-3 py-2">{t('exports.field.path')}</th>
-                  <th className="w-28 px-3 py-2">{t('common.state')}</th>
-                  <th className="w-28 px-3 py-2">{t('exports.field.mode')}</th>
-                  <th className="w-36 px-3 py-2">{t('common.updated')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {props.rows.map((ex) => {
-                  const variant = exportRowVariant(ex);
-                  const badge = exportBadge(ex, t);
-                  return (
-                    <TableRowLink
-                      key={ex.id}
-                      to={`${props.basePath}/exports/${ex.id}`}
-                      variant={variant}
-                      testId={`exports.row.${ex.id}`}
-                      className="border-b border-border/80 hover:bg-surface-2"
-                    >
-                      <td className="px-3 py-2 align-top"><StatusDot variant={variant === 'warn' ? 'warn' : 'ok'} /></td>
-                      <td className="px-3 py-2 align-top font-medium text-fg">#{ex.id}</td>
-                      <td className="px-3 py-2 align-top text-muted">{sourceLabel(ex)}</td>
-                      <td className="px-3 py-2 align-top font-mono text-xs text-fg">{exportAddress(ex)}</td>
-                      <td className="px-3 py-2 align-top font-mono text-xs text-fg">{String(ex.path ?? '—')}</td>
-                      <td className="px-3 py-2 align-top"><Badge variant={badge.variant}>{badge.label}</Badge></td>
-                      <td className="px-3 py-2 align-top text-muted">{ex.rw ? t('exports.mode.rw') : t('exports.mode.ro')}</td>
-                      <td className="px-3 py-2 align-top text-muted">{ex.updated_at ? formatDateTime(ex.updated_at) : '—'}</td>
-                    </TableRowLink>
-                  );
-                })}
-              </tbody>
+          <thead>
+            <tr className="border-b border-border text-left text-xs text-muted">
+              <th className="w-8 px-3 py-2" />
+              <th className="w-24 px-3 py-2">{t('common.id')}</th>
+              {props.showUser ? <th className="w-40 px-3 py-2">{t('common.user')}</th> : null}
+              <th className="px-3 py-2">{t('common.dataset')}</th>
+              <th className="px-3 py-2">{t('exports.field.address')}</th>
+              <th className="px-3 py-2">{t('exports.field.path')}</th>
+              <th className="w-28 px-3 py-2">{t('common.state')}</th>
+              <th className="w-28 px-3 py-2">{t('exports.field.mode')}</th>
+              <th className="w-36 px-3 py-2">{t('common.updated')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {props.rows.map((ex) => {
+              const variant = exportRowVariant(ex);
+              const badge = exportBadge(ex, t);
+              return (
+                <TableRowLink
+                  key={ex.id}
+                  to={`${props.basePath}/exports/${ex.id}`}
+                  variant={variant}
+                  testId={`exports.row.${ex.id}`}
+                  className="border-b border-border/80 hover:bg-surface-2"
+                >
+                  <td className="px-3 py-2 align-top"><StatusDot variant={variant === 'warn' ? 'warn' : 'ok'} /></td>
+                  <td className="px-3 py-2 align-top font-medium text-fg">#{ex.id}</td>
+                  {props.showUser ? (
+                    <td className="px-3 py-2 align-top text-muted">
+                      {String(ex.user?.['login'] ?? (ex.user?.id ? `#${ex.user.id}` : '—'))}
+                    </td>
+                  ) : null}
+                  <td className="px-3 py-2 align-top text-muted">{sourceLabel(ex)}</td>
+                  <td className="px-3 py-2 align-top font-mono text-xs text-fg">{exportAddress(ex)}</td>
+                  <td className="px-3 py-2 align-top font-mono text-xs text-fg">{String(ex.path ?? '—')}</td>
+                  <td className="px-3 py-2 align-top"><Badge variant={badge.variant}>{badge.label}</Badge></td>
+                  <td className="px-3 py-2 align-top text-muted">{ex.rw ? t('exports.mode.rw') : t('exports.mode.ro')}</td>
+                  <td className="px-3 py-2 align-top text-muted">{ex.updated_at ? formatDateTime(ex.updated_at) : '—'}</td>
+                </TableRowLink>
+              );
+            })}
+          </tbody>
         </TableCard>
       </div>
 
@@ -108,6 +116,11 @@ export function ExportsListResults(props: {
                       <Badge variant={badge.variant}>{badge.label}</Badge>
                     </div>
                     <div className="mt-1 text-sm text-muted">{sourceLabel(ex)}</div>
+                    {props.showUser ? (
+                      <div className="mt-1 text-xs text-faint">
+                        {t('common.user')}: {String(ex.user?.['login'] ?? (ex.user?.id ? `#${ex.user.id}` : '—'))}
+                      </div>
+                    ) : null}
                     <div className="mt-2 font-mono text-xs text-fg">{exportAddress(ex)}:{String(ex.path ?? '')}</div>
                   </div>
                 </div>
@@ -117,9 +130,9 @@ export function ExportsListResults(props: {
         })}
       </div>
 
-      {props.canPaginate ? (
+      {props.canPaginate && pagination ? (
         <Card className="md:hidden">
-          <KeysetPagination {...props.pagination} testId={`${prefix}.pagination.mobile`} />
+          <KeysetPagination {...pagination} testId={`${prefix}.pagination.mobile`} />
         </Card>
       ) : null}
     </>

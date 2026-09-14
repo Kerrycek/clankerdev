@@ -75,12 +75,12 @@ export function Drawer(props: {
         tabIndex={-1}
         ref={setContainerEl}
         className={clsx(
-          'absolute top-0 z-10 h-full bg-overlay-surface shadow-panel ring-1 ring-border flex flex-col pointer-events-auto',
+          'absolute top-0 z-10 flex h-dvh flex-col overflow-hidden bg-overlay-surface shadow-panel ring-1 ring-border pointer-events-auto',
           widthClass,
           side === 'left' ? 'left-0' : 'right-0'
         )}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+        <div className="relative z-10 flex shrink-0 items-center justify-between gap-3 border-b border-border bg-overlay-surface px-4 py-3">
           <div className="min-w-0 flex-1 text-base font-semibold">
             <span className="block truncate" id={titleId}>
               {props.title ?? ''}
@@ -98,10 +98,10 @@ export function Drawer(props: {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-4">{props.children}</div>
+        <div className="relative z-0 min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4">{props.children}</div>
 
         {props.footer ? (
-          <div className="border-t border-border px-4 py-3">{props.footer}</div>
+          <div className="relative z-10 shrink-0 border-t border-border bg-overlay-surface px-4 py-3">{props.footer}</div>
         ) : null}
       </div>
     </div>,

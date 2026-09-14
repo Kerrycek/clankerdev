@@ -8,6 +8,7 @@ import {
   fetchDatasetSnapshots,
   fetchDatasets,
   fetchSnapshotDownloads,
+  findDatasetByName,
   rollbackDatasetSnapshot,
   updateDataset,
 } from './datasets';
@@ -72,6 +73,21 @@ describe('datasets API wrappers', () => {
 
     expect(u.pathname).toBe('/v7.0/datasets/123/snapshots');
     expect(u.searchParams.get('snapshot[limit]')).toBe('10');
+  });
+
+  test('findDatasetByName uses the declared exact-name action and optional owner', async () => {
+    setMockRuntime();
+    const fetchMock = mockFetchOk({ dataset: { id: 9, name: 'tank/user/app' } });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await findDatasetByName('tank/user/app', 42);
+
+    const [url] = firstFetchCall(fetchMock);
+    const u = new URL(String(url));
+    expect(u.pathname).toBe('/v7.0/datasets/find_by_name');
+    expect(u.searchParams.get('dataset[name]')).toBe('tank/user/app');
+    expect(u.searchParams.get('dataset[user]')).toBe('42');
+    expect(u.searchParams.has('dataset[q]')).toBe(false);
   });
 
   test('createDatasetSnapshot sends namespaced payload', async () => {

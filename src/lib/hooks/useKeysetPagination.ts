@@ -156,6 +156,12 @@ export function useKeysetPagination(opts: {
   cursorInteger?: boolean;
   /** Extra query-string keys to delete whenever we sync pagination state (useful when cursor param switches). */
   wipeQueryKeys?: string[];
+  /**
+   * Restore a cursor already present in the URL when the filter signature
+   * changes (for example after browser Back to another filter's page 2).
+   * Callers opting in must remove their cursor when applying a new filter.
+   */
+  restoreUrlCursorOnSignatureChange?: boolean;
   defaultLimit?: number;
   allowedLimits?: readonly number[];
 }) {
@@ -166,6 +172,7 @@ export function useKeysetPagination(opts: {
   const cursorParam = opts.cursorParam ?? 'from_id';
   const cursorMin = typeof opts.cursorMin === 'number' ? opts.cursorMin : 1;
   const cursorInteger = typeof opts.cursorInteger === 'boolean' ? opts.cursorInteger : true;
+  const restoreUrlCursorOnSignatureChange = opts.restoreUrlCursorOnSignatureChange === true;
 
   const limitKey = `${paramPrefix}limit`;
   const cursorKey = `${paramPrefix}${cursorParam}`;
@@ -233,10 +240,12 @@ export function useKeysetPagination(opts: {
   useLayoutEffect(() => {
     if (state.sig === sig) return;
 
-    const reset: KeysetState = { sig, stack: [null], index: 0 };
+    const reset = restoreUrlCursorOnSignatureChange
+      ? initialStateFor({ sig, storageKey, urlCursor, cursorMin, cursorInteger })
+      : { sig, stack: [null], index: 0 };
     setState(reset);
     writeStack(storageKey, reset.stack, { integer: cursorInteger });
-    syncUrl(reset.stack, 0, 'replace');
+    syncUrl(reset.stack, reset.index, 'replace');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sig, storageKey]);
 

@@ -9,6 +9,7 @@ import {
   defaultCreateForm,
   editFormFromExport,
   exportAddress,
+  exportDatasetMatchesRequiredOwner,
   exportDeleteConfirmText,
   hostDeleteConfirmText,
   hostLabel,
@@ -42,7 +43,10 @@ const exportItem: ExportItem = {
 
 describe('ExportModel', () => {
   it('parses filter and form primitives defensively', () => {
-    expect(parsePositiveInt('42.9')).toBe(42);
+    expect(parsePositiveInt('#0042')).toBe(42);
+    expect(parsePositiveInt('42.9')).toBeNull();
+    expect(parsePositiveInt('1e2')).toBeNull();
+    expect(parsePositiveInt('9007199254740992')).toBeNull();
     expect(parsePositiveInt('0')).toBeNull();
     expect(parseBoolToken('enabled')).toBe(true);
     expect(parseBoolToken('off')).toBe(false);
@@ -64,14 +68,13 @@ describe('ExportModel', () => {
 
   it('validates create requests before building HaveAPI payloads', () => {
     const empty = defaultCreateForm(null);
-    expect(validateCreateExportForm(empty, true).issues).toEqual(['dataset_required', 'host_required']);
+    expect(validateCreateExportForm(empty, true).issues).toEqual(['dataset_required']);
 
     const snapshotForm = {
       ...empty,
-      datasetId: 4,
+      datasetId: '4',
       sourceType: 'snapshot' as const,
       snapshotId: '12',
-      hostIpId: 50,
       allVps: false,
       threads: '16',
     };
@@ -80,7 +83,6 @@ describe('ExportModel', () => {
     expect(buildCreateExportPayload(snapshotForm, true)).toEqual({
       dataset: undefined,
       snapshot: 12,
-      host_ip_address: 50,
       all_vps: false,
       rw: true,
       sync: true,
@@ -89,6 +91,27 @@ describe('ExportModel', () => {
       threads: 16,
       enabled: true,
     });
+    expect(buildCreateExportPayload(snapshotForm, false)).toEqual({
+      dataset: undefined,
+      snapshot: 12,
+      all_vps: false,
+      rw: true,
+      sync: true,
+      subtree_check: false,
+      root_squash: false,
+      threads: undefined,
+      enabled: true,
+    });
+
+    expect(validateCreateExportForm({ ...snapshotForm, snapshotId: '12.5' }, true).issues).toContain('snapshot_required');
+    expect(validateCreateExportForm({ ...snapshotForm, threads: '1.5' }, true).issues).toContain('threads_invalid');
+  });
+
+  it('fails closed when a My-view admin selects a dataset owned by somebody else', () => {
+    expect(exportDatasetMatchesRequiredOwner({ id: 4, name: 'mine', user: { id: 90 } }, 90)).toBe(true);
+    expect(exportDatasetMatchesRequiredOwner({ id: 5, name: 'other', user: { id: 91 } }, 90)).toBe(false);
+    expect(exportDatasetMatchesRequiredOwner(undefined, 90)).toBe(false);
+    expect(exportDatasetMatchesRequiredOwner({ id: 5, name: 'global', user: { id: 91 } }, undefined)).toBe(true);
   });
 
   it('builds edit payloads and review diffs from changed export fields only', () => {
@@ -108,6 +131,20 @@ describe('ExportModel', () => {
       { field: 'rw', before: true, after: false },
       { field: 'root_squash', before: false, after: true },
       { field: 'threads', before: 8, after: 12 },
+    ]);
+
+    expect(buildUpdateExportPayload(form, false)).toEqual({
+      all_vps: true,
+      rw: false,
+      sync: true,
+      subtree_check: false,
+      root_squash: true,
+      threads: undefined,
+      enabled: true,
+    });
+    expect(buildExportDiff(exportItem, form, false)).toEqual([
+      { field: 'rw', before: true, after: false },
+      { field: 'root_squash', before: false, after: true },
     ]);
   });
 

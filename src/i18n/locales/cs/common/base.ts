@@ -144,6 +144,7 @@ export const csCommon_base = {
   'object_kind.vps': 'VPS',
   'object_kind.dataset': 'Dataset',
   'object_kind.dns_zone': 'DNS zóna',
+  'object_kind.export': 'Export',
   'state.active': 'Aktivní',
   'state.planned': 'Plánováno',
   'state.resolved': 'Vyřešeno',

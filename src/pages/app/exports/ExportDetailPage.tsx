@@ -1,13 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAppMode } from '../../../app/appMode';
+import { useAuth } from '../../../app/auth';
 import { useI18n } from '../../../app/i18n';
+import { useObjectScope } from '../../../app/objectScope';
 import { useToasts } from '../../../app/toasts';
 import { useChrome } from '../../../components/layout/ChromeContext';
 import { DetailShell } from '../../../components/layout/DetailShell';
 import { PageHeader } from '../../../components/layout/PageHeader';
+import { ScopeMismatchCard } from '../../../components/layout/ScopeMismatchCard';
 import { Alert } from '../../../components/ui/Alert';
 import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
@@ -83,25 +86,48 @@ export function ExportDetailPage() {
   const { exportId } = useParams();
   const id = useMemo(() => parsePositiveInt(exportId), [exportId]);
   const { basePath, mode } = useAppMode();
+  const auth = useAuth();
+  const scope = useObjectScope();
   const { t } = useI18n();
   const { pushToast } = useToasts();
   const chrome = useChrome();
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isAdminAccount = auth.role === 'admin';
 
   const exportQ = useQuery({
-    queryKey: ['exports', 'show', id],
+    queryKey: ['exports', 'show', id, isAdminAccount ? 'admin' : 'owner'],
     enabled: id !== null,
     queryFn: async () => {
       if (id === null) throw new Error('invalid export id');
-      return (await fetchExport(id, { includes: 'dataset,snapshot,host_ip_address,user' })).data;
+      return (
+        await fetchExport(id, {
+          includes: isAdminAccount
+            ? 'dataset,snapshot,host_ip_address,user'
+            : 'dataset,snapshot,host_ip_address',
+        })
+      ).data;
     },
     staleTime: 10_000,
   });
 
+  const ex = exportQ.data ?? null;
+  const userId = parsePositiveInt(ex?.user?.id);
+  const requiresOwnerScope = isAdminAccount && mode === 'user';
+  const ownerScopeVerified =
+    !requiresOwnerScope ||
+    (scope.mineUserId !== undefined &&
+      Number.isFinite(scope.mineUserId) &&
+      userId !== null &&
+      userId === scope.mineUserId);
+
   const hostsQ = useQuery({
     queryKey: ['exports', 'hosts', id],
-    enabled: id !== null,
+    // Export::Show is the minimum request needed to establish ownership. An
+    // admin using My view must not load the child collection until that check
+    // succeeds, because the backend otherwise permits access to every export.
+    enabled: id !== null && ownerScopeVerified,
     queryFn: async () => {
       if (id === null) throw new Error('invalid export id');
       return (await fetchExportHosts(id, { limit: 200, includes: 'ip_address' })).data;
@@ -109,10 +135,8 @@ export function ExportDetailPage() {
     staleTime: 10_000,
   });
 
-  const ex = exportQ.data ?? null;
   const hosts = hostsQ.data ?? [];
   const datasetId = parsePositiveInt(ex?.dataset?.id);
-  const userId = parsePositiveInt(ex?.user?.id);
   const datasetRef = datasetId ? objectRef('Dataset', datasetId) : null;
   const snapshotId = parsePositiveInt(ex?.snapshot?.id);
   const address = exportAddress(ex);
@@ -206,7 +230,7 @@ export function ExportDetailPage() {
   const updateExportM = useMutation({
     mutationFn: async () => {
       if (id === null) throw new Error('invalid export id');
-      return await updateExport(id, buildUpdateExportPayload(editForm, mode === 'admin'));
+      return await updateExport(id, buildUpdateExportPayload(editForm, isAdminAccount));
     },
     onMutate: onMutateLock,
     onSuccess: async (res) => {
@@ -317,13 +341,29 @@ export function ExportDetailPage() {
     );
   }
 
+  if (requiresOwnerScope && !ownerScopeVerified) {
+    const adminHref = location.pathname.replace(/^\/app\b/, '/admin') + location.search + location.hash;
+    return (
+      <DetailShell testId="exports.detail.scope-mismatch">
+        <ScopeMismatchCard
+          objectKind={t('object_kind.export')}
+          objectLabel={`#${id}`}
+          ownerUserId={userId ?? undefined}
+          adminHref={adminHref}
+          backHref={`${basePath}/exports`}
+          testId="exports.scope-mismatch"
+        />
+      </DetailShell>
+    );
+  }
+
   const badgeVariant = ex.enabled === false ? 'warn' : 'ok';
   const mountCommand = snippetMountCommand(address, path, mountPoint);
   const fstabLine = snippetFstab(address, path, mountPoint, rw);
   const systemdUnit = snippetSystemd(address, path, mountPoint, rw);
   const nixSnippet = snippetNix(address, path, mountPoint, rw);
-  const editDiff = buildExportDiff(ex, editForm, mode === 'admin');
-  const adminThreadsInvalid = mode === 'admin' && editForm.threads.trim() !== '' && parsePositiveInt(editForm.threads) === null;
+  const editDiff = buildExportDiff(ex, editForm, isAdminAccount);
+  const adminThreadsInvalid = isAdminAccount && editForm.threads.trim() !== '' && parsePositiveInt(editForm.threads) === null;
   const hostDiff = editingHost ? buildExportHostDiff(editingHost, hostForm) : [];
 
   return (
@@ -350,12 +390,12 @@ export function ExportDetailPage() {
         />
       }
     >
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-4">
+      <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="min-w-0 space-y-4">
           <Card testId="exports.detail.summary">
             <CardHeader title={t('exports.detail.summary.title')} subtitle={t('exports.detail.summary.subtitle')} />
             <CardBody>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2">
                 <div>
                   <div className="text-xs font-semibold text-muted">{t('exports.field.source')}</div>
                   <div className="mt-1 text-sm text-fg">{sourceLabel(ex)}</div>
@@ -371,7 +411,7 @@ export function ExportDetailPage() {
                 <div>
                   <div className="text-xs font-semibold text-muted">{t('common.user')}</div>
                   <div className="mt-1 text-sm text-fg">
-                    {mode === 'admin' && userId ? <Link className="text-accent hover:underline" to={`${basePath}/users/${userId}`}>#{userId}</Link> : userId ? `#${userId}` : '—'}
+                    {mode === 'admin' && isAdminAccount && userId ? <Link className="text-accent hover:underline" to={`${basePath}/users/${userId}`}>#{userId}</Link> : userId ? `#${userId}` : '—'}
                   </div>
                 </div>
                 <div>
@@ -387,7 +427,7 @@ export function ExportDetailPage() {
                   <div className="text-xs font-semibold text-muted">{t('exports.field.scope')}</div>
                   <div className="mt-1 flex flex-wrap gap-2">
                     <Badge variant={allVps ? 'info' : 'neutral'}>{allVps ? t('exports.field.all_vps') : t('exports.field.selected_hosts')}</Badge>
-                    {mode === 'admin' ? <Badge variant="neutral">{t('exports.field.threads_label', { count: String(ex.threads ?? 0) })}</Badge> : null}
+                    {isAdminAccount ? <Badge variant="neutral">{t('exports.field.threads_label', { count: String(ex.threads ?? 0) })}</Badge> : null}
                   </div>
                 </div>
               </div>
@@ -415,31 +455,31 @@ export function ExportDetailPage() {
 
               <div>
                 <div className="mb-2 text-xs font-semibold text-muted">{t('exports.instructions.command')}</div>
-                <pre data-testid="exports.detail.instructions.command" className="overflow-x-auto rounded-md border border-border bg-code p-3 text-xs text-fg">{mountCommand}</pre>
+                <pre data-testid="exports.detail.instructions.command" className="max-w-full overflow-x-auto rounded-md border border-border bg-code p-3 text-xs text-fg">{mountCommand}</pre>
               </div>
 
               {!sourceIsSnapshot ? (
-                <div className="grid gap-4 xl:grid-cols-3">
-                  <div>
+                <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-3">
+                  <div className="min-w-0">
                     <div className="mb-2 flex items-center justify-between gap-2 text-xs font-semibold text-muted">
                       <span>{t('exports.instructions.fstab')}</span>
                       <CopyButton text={fstabLine} label={t('common.copy')} testId="exports.detail.instructions.fstab.copy" />
                     </div>
-                    <pre className="overflow-x-auto rounded-md border border-border bg-code p-3 text-xs text-fg">{fstabLine}</pre>
+                    <pre className="max-w-full overflow-x-auto rounded-md border border-border bg-code p-3 text-xs text-fg">{fstabLine}</pre>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="mb-2 flex items-center justify-between gap-2 text-xs font-semibold text-muted">
                       <span>{t('exports.instructions.systemd')}</span>
                       <CopyButton text={systemdUnit} label={t('common.copy')} testId="exports.detail.instructions.systemd.copy" />
                     </div>
-                    <pre className="max-h-scroll-lg overflow-auto rounded-md border border-border bg-code p-3 text-xs text-fg">{systemdUnit}</pre>
+                    <pre className="max-h-scroll-lg max-w-full overflow-auto rounded-md border border-border bg-code p-3 text-xs text-fg">{systemdUnit}</pre>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="mb-2 flex items-center justify-between gap-2 text-xs font-semibold text-muted">
                       <span>{t('exports.instructions.nixos')}</span>
                       <CopyButton text={nixSnippet} label={t('common.copy')} testId="exports.detail.instructions.nixos.copy" />
                     </div>
-                    <pre className="max-h-scroll-lg overflow-auto rounded-md border border-border bg-code p-3 text-xs text-fg">{nixSnippet}</pre>
+                    <pre className="max-h-scroll-lg max-w-full overflow-auto rounded-md border border-border bg-code p-3 text-xs text-fg">{nixSnippet}</pre>
                   </div>
                 </div>
               ) : null}
@@ -447,7 +487,7 @@ export function ExportDetailPage() {
           </Card>
         </div>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <ExportHostsCard
             allVps={allVps}
             hosts={hosts}
@@ -464,7 +504,7 @@ export function ExportDetailPage() {
       <ExportEditDrawer
         open={editOpen}
         onClose={() => setEditOpen(false)}
-        isAdmin={mode === 'admin'}
+        isAdmin={isAdminAccount}
         form={editForm}
         setForm={setEditForm}
         diff={editDiff}
