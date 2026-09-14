@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
+import { HaveApiError } from '../../../lib/api/haveapi';
 import {
   fraudCheckStatus,
   inferRequestReviewType,
+  isDefinitiveRequestNotFound,
   isResolvedRequestReviewState,
   requestMatchesReviewTarget,
   requestResourceLabel,
@@ -53,6 +55,37 @@ describe('isResolvedRequestReviewState', () => {
 
   it.each(['awaiting', '', undefined, 'unknown'])('rejects non-terminal state %s', (state) => {
     expect(isResolvedRequestReviewState(state)).toBe(false);
+  });
+});
+
+describe('isDefinitiveRequestNotFound', () => {
+  it('accepts an exact HTTP 404 and legacy HaveAPI not-found envelopes without a transport status', () => {
+    expect(isDefinitiveRequestNotFound(new HaveApiError(
+      { status: false, message: 'Request not found' },
+      'HTTP 404',
+      404,
+    ))).toBe(true);
+    expect(isDefinitiveRequestNotFound(new HaveApiError(
+      { status: false, message: 'Object not found' },
+    ))).toBe(true);
+    expect(isDefinitiveRequestNotFound(new HaveApiError(
+      { status: false, message: 'Žádost nebyla nalezena' },
+    ))).toBe(true);
+  });
+
+  it('keeps generic errors and non-404 transport failures retryable', () => {
+    expect(isDefinitiveRequestNotFound(new HaveApiError(
+      { status: false, message: 'Request not found' },
+      'HTTP 503',
+      503,
+    ))).toBe(false);
+    expect(isDefinitiveRequestNotFound(new Error('Request not found'))).toBe(false);
+    expect(isDefinitiveRequestNotFound(new HaveApiError(
+      { status: false, message: 'Temporary failure' },
+    ))).toBe(false);
+    expect(isDefinitiveRequestNotFound(new HaveApiError(
+      { status: false, message: 'Session not found' },
+    ))).toBe(false);
   });
 });
 
