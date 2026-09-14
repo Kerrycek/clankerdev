@@ -75,7 +75,6 @@ export interface OomReportTask {
 export async function fetchOomReports(opts?: {
   limit?: number;
   fromId?: number;
-  q?: string;
   vpsId?: number;
   userId?: number;
   nodeId?: number;
@@ -91,9 +90,6 @@ export async function fetchOomReports(opts?: {
 
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
-
-  const q = opts?.q ? String(opts.q).trim() : '';
-  if (q) params['q'] = q;
 
   if (opts?.vpsId !== undefined) params['vps'] = opts.vpsId;
   if (opts?.userId !== undefined) params['user'] = opts.userId;

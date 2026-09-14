@@ -12,13 +12,12 @@ function lastFetchCall() {
 }
 
 describe('oom API wrappers', () => {
-  test('fetchOomReports forwards q and filter params', async () => {
+  test('fetchOomReports forwards only supported filter params', async () => {
     globalThis.fetch = mockFetchOk({ oom_reports: [], _meta: { total_count: 0 } }) as any;
 
     await fetchOomReports({
       limit: 50,
       fromId: 999,
-      q: 'cgroup:/user',
       vpsId: 7,
       userId: 42,
       nodeId: 3,
@@ -28,6 +27,7 @@ describe('oom API wrappers', () => {
       cgroup: '/user.slice/demo',
       sinceIso: '2026-03-01T00:00:00Z',
       untilIso: '2026-03-02T00:00:00Z',
+      includes: 'vps__node,vps__user,oom_report_rule',
     });
 
     const [url] = lastFetchCall();
@@ -36,7 +36,7 @@ describe('oom API wrappers', () => {
     expect(u.pathname).toBe('/v7.0/oom_reports');
     expect(u.searchParams.get('oom_report[limit]')).toBe('50');
     expect(u.searchParams.get('oom_report[from_id]')).toBe('999');
-    expect(u.searchParams.get('oom_report[q]')).toBe('cgroup:/user');
+    expect(u.searchParams.get('oom_report[q]')).toBeNull();
     expect(u.searchParams.get('oom_report[vps]')).toBe('7');
     expect(u.searchParams.get('oom_report[user]')).toBe('42');
     expect(u.searchParams.get('oom_report[node]')).toBe('3');
@@ -46,5 +46,9 @@ describe('oom API wrappers', () => {
     expect(u.searchParams.get('oom_report[cgroup]')).toBe('/user.slice/demo');
     expect(u.searchParams.get('oom_report[since]')).toBe('2026-03-01T00:00:00Z');
     expect(u.searchParams.get('oom_report[until]')).toBe('2026-03-02T00:00:00Z');
+    expect(u.searchParams.get('_meta[includes]')).toBe('vps__node,vps__user,oom_report_rule');
+    for (const unsupported of ['q', 'query', 'search', 'text', 'process']) {
+      expect(u.searchParams.get(`oom_report[${unsupported}]`)).toBeNull();
+    }
   });
 });

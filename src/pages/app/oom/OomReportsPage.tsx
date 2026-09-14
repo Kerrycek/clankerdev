@@ -1,9 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { CircleHelp, SlidersHorizontal } from 'lucide-react';
 
 import { useAppMode } from '../../../app/appMode';
+import { useAuth } from '../../../app/auth';
 import { useI18n } from '../../../app/i18n';
 import { useObjectScope } from '../../../app/objectScope';
 import { useToasts } from '../../../app/toasts';
@@ -47,15 +48,19 @@ import {
   envLabel,
   locLabel,
   nodeLabel,
+  normalizeOomListSearchParams,
   parseDateTimeLocalValue,
   resolveOptionId,
   ruleLabelKey,
   ruleVariant,
   safeNumber,
+  UNSUPPORTED_OOM_SEARCH_KEY,
 } from './oomReportsListSemantics';
 
 export function OomReportsPage() {
   const { basePath, mode } = useAppMode();
+  const auth = useAuth();
+  const isGlobalAdminView = mode === 'admin' && auth.role === 'admin';
   const scope = useObjectScope();
   const { t } = useI18n();
   const navigate = useNavigate();
@@ -63,28 +68,41 @@ export function OomReportsPage() {
 
   const [sp, setSp] = useSearchParams();
   const searchParamsKey = sp.toString();
+  const normalizedSearch = useMemo(
+    () => normalizeOomListSearchParams(new URLSearchParams(searchParamsKey), isGlobalAdminView),
+    [isGlobalAdminView, searchParamsKey]
+  );
+  const activeSearchParams = normalizedSearch.searchParams;
+  const activeSearchParamsKey = activeSearchParams.toString();
 
-  const [q, setQ] = useState(() => sp.get('q') ?? '');
-  const [vps, setVps] = useState(() => sp.get('vps') ?? '');
-  const [user, setUser] = useState(() => sp.get('user') ?? '');
-  const [node, setNode] = useState(() => sp.get('node') ?? '');
-  const [location, setLocation] = useState(() => sp.get('location') ?? '');
-  const [environment, setEnvironment] = useState(() => sp.get('environment') ?? '');
-  const [rule, setRule] = useState(() => sp.get('oom_report_rule') ?? '');
-  const [cgroup, setCgroup] = useState(() => sp.get('cgroup') ?? '');
-  const [since, setSince] = useState(() => sp.get('since') ?? '');
-  const [until, setUntil] = useState(() => sp.get('until') ?? '');
+  const [vps, setVps] = useState(() => activeSearchParams.get('vps') ?? '');
+  const [user, setUser] = useState(() => activeSearchParams.get('user') ?? '');
+  const [node, setNode] = useState(() => activeSearchParams.get('node') ?? '');
+  const [location, setLocation] = useState(() => activeSearchParams.get('location') ?? '');
+  const [environment, setEnvironment] = useState(() => activeSearchParams.get('environment') ?? '');
+  const [rule, setRule] = useState(() => activeSearchParams.get('oom_report_rule') ?? '');
+  const [cgroup, setCgroup] = useState(() => activeSearchParams.get('cgroup') ?? '');
+  const [since, setSince] = useState(() => activeSearchParams.get('since') ?? '');
+  const [until, setUntil] = useState(() => activeSearchParams.get('until') ?? '');
 
   const [smart, setSmart] = useState('');
   const [smartErrors, setSmartErrors] = useState<string[]>([]);
   const smartNeedle = smart.trim();
   const smartInputRef = useRef<HTMLInputElement | null>(null);
+  const hydratingFiltersFromUrlRef = useRef(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
-  useEffect(() => {
-    const current = new URLSearchParams(searchParamsKey);
-    setQ(current.get('q') ?? '');
+  // Remove obsolete or unauthorized filters before the list query can run.
+  useLayoutEffect(() => {
+    if (!normalizedSearch.changed) return;
+    setSp(activeSearchParams, { replace: true });
+  }, [activeSearchParams, normalizedSearch.changed, setSp]);
+
+  // Sync from URL on navigation.
+  useLayoutEffect(() => {
+    hydratingFiltersFromUrlRef.current = true;
+    const current = new URLSearchParams(activeSearchParamsKey);
     setVps(current.get('vps') ?? '');
     setUser(current.get('user') ?? '');
     setNode(current.get('node') ?? '');
@@ -94,21 +112,19 @@ export function OomReportsPage() {
     setCgroup(current.get('cgroup') ?? '');
     setSince(current.get('since') ?? '');
     setUntil(current.get('until') ?? '');
-  }, [searchParamsKey]);
+  }, [activeSearchParamsKey]);
 
   useEffect(() => {
     if (smartNeedle === '?') setHelpOpen(true);
   }, [smartNeedle]);
 
   const vpsId = useMemo(() => safeNumber(vps), [vps]);
-  const userId = useMemo(() => (mode === 'admin' ? safeNumber(user) : undefined), [mode, user]);
-  const effectiveUserId = mode === 'admin' ? userId : scope.mineUserId;
+  const userId = useMemo(() => (isGlobalAdminView ? safeNumber(user) : undefined), [isGlobalAdminView, user]);
+  const effectiveUserId = auth.role === 'admin' ? (isGlobalAdminView ? userId : scope.mineUserId) : undefined;
   const nodeId = useMemo(() => safeNumber(node), [node]);
   const locationId = useMemo(() => safeNumber(location), [location]);
   const envId = useMemo(() => safeNumber(environment), [environment]);
   const ruleId = useMemo(() => safeNumber(rule), [rule]);
-
-  const qTrim = q.trim();
 
   const sinceIso = useMemo(() => {
     const r = localInputToIso(since);
@@ -121,15 +137,18 @@ export function OomReportsPage() {
   }, [until]);
 
   useEffect(() => {
-    const next = new URLSearchParams(sp);
+    if (hydratingFiltersFromUrlRef.current) {
+      hydratingFiltersFromUrlRef.current = false;
+      return;
+    }
 
-    if (qTrim) next.set('q', qTrim);
-    else next.delete('q');
+    const next = new URLSearchParams(activeSearchParams);
+    next.delete('q');
 
     if (vpsId) next.set('vps', String(vpsId));
     else if (!vps.trim()) next.delete('vps');
 
-    if (mode === 'admin') {
+    if (isGlobalAdminView) {
       if (userId) next.set('user', String(userId));
       else if (!user.trim()) next.delete('user');
     } else {
@@ -160,22 +179,22 @@ export function OomReportsPage() {
     if (uTrim) next.set('until', uTrim);
     else next.delete('until');
 
-    if (next.toString() !== sp.toString()) setSp(next, { replace: true });
+    if (next.toString() !== searchParamsKey) setSp(next, { replace: true });
   }, [
+    activeSearchParams,
     cgroup,
     envId,
     environment,
     location,
     locationId,
-    mode,
+    isGlobalAdminView,
     node,
     nodeId,
-    qTrim,
     rule,
     ruleId,
     setSp,
     since,
-    sp,
+    searchParamsKey,
     until,
     user,
     userId,
@@ -184,24 +203,22 @@ export function OomReportsPage() {
   ]);
 
   const filtersActive = Boolean(
-    qTrim ||
-      vpsId ||
-      (mode === 'admin' && userId) ||
+    vpsId ||
+      (isGlobalAdminView && userId) ||
       nodeId ||
       locationId ||
       envId ||
       ruleId ||
       cgroup.trim() ||
       since.trim() ||
-      until.trim() ||
-      smartErrors.length > 0
+      until.trim()
   );
+  const hasFilterState = filtersActive || smartErrors.length > 0;
 
   const pagination = useKeysetPagination({
     id: 'oom_reports.list',
     filterKey: JSON.stringify({
       scope: basePath,
-      q: qTrim,
       vps: vpsId,
       user: effectiveUserId,
       node: nodeId,
@@ -212,7 +229,7 @@ export function OomReportsPage() {
       since: since.trim(),
       until: until.trim(),
     }),
-    searchParams: sp,
+    searchParams: activeSearchParams,
     setSearchParams: setSp,
     defaultLimit: 50,
     allowedLimits: [25, 50, 100],
@@ -225,7 +242,6 @@ export function OomReportsPage() {
       {
         limit: pagination.limit,
         from: pagination.cursor,
-        q: qTrim,
         vps: vpsId,
         user: effectiveUserId,
         node: nodeId,
@@ -243,7 +259,6 @@ export function OomReportsPage() {
         await fetchOomReports({
           limit: pagination.limit,
           fromId: pagination.cursor as number | undefined,
-          q: qTrim || undefined,
           vpsId,
           userId: effectiveUserId,
           nodeId,
@@ -253,9 +268,10 @@ export function OomReportsPage() {
           cgroup: cgroup.trim() || undefined,
           sinceIso,
           untilIso,
-          includes: mode === 'admin' ? 'vps__node,vps__user,oom_report_rule' : 'vps__node,oom_report_rule',
+          includes: isGlobalAdminView ? 'vps__node,vps__user,oom_report_rule' : 'vps__node,oom_report_rule',
         })
       ).data,
+    enabled: !normalizedSearch.changed,
   });
 
   const nodesQ = useQuery({
@@ -302,7 +318,6 @@ export function OomReportsPage() {
   }, [searchParamsKey]);
 
   const clearFilters = () => {
-    setQ('');
     setVps('');
     setUser('');
     setNode('');
@@ -341,7 +356,6 @@ export function OomReportsPage() {
       }
     }
 
-    let nextQ = q;
     let nextVps = vps;
     let nextUser = user;
     let nextNode = node;
@@ -352,7 +366,7 @@ export function OomReportsPage() {
     let nextSince = since;
     let nextUntil = until;
 
-    const free: string[] = [];
+    let hasUnsupportedText = false;
     const errs: string[] = [];
 
     const nodes = nodesQ.data ?? [];
@@ -362,24 +376,24 @@ export function OomReportsPage() {
     for (const token of tokens) {
       const kv = splitKeyValueToken(token);
       if (!kv) {
-        free.push(unquoteSmartValue(token));
+        hasUnsupportedText = true;
         continue;
       }
 
       const key = canonicalKey(kv.rawKey);
       if (!key) {
-        free.push(unquoteSmartValue(token));
+        errs.push(t('filters.smart.error.unknown_key', { key: kv.rawKey }));
+        continue;
+      }
+
+      if (key === UNSUPPORTED_OOM_SEARCH_KEY) {
+        hasUnsupportedText = true;
         continue;
       }
 
       const value = unquoteSmartValue(kv.rawValue);
       if (!value.trim()) {
         errs.push(t('filters.smart.error.missing_value', { key: kv.rawKey }));
-        continue;
-      }
-
-      if (key === 'q') {
-        nextQ = value;
         continue;
       }
 
@@ -406,7 +420,7 @@ export function OomReportsPage() {
       }
 
       if (key === 'user') {
-        if (mode !== 'admin') {
+        if (!isGlobalAdminView) {
           errs.push(t('filters.smart.error.user_admin_only'));
           continue;
         }
@@ -516,7 +530,7 @@ export function OomReportsPage() {
       }
     }
 
-    if (free.length > 0) nextQ = free.join(' ');
+    if (hasUnsupportedText) errs.push(t('oom.smart.error.unsupported_text'));
 
     if (errs.length > 0) {
       setSmartErrors(errs);
@@ -524,7 +538,6 @@ export function OomReportsPage() {
       return;
     }
 
-    setQ(nextQ);
     setVps(nextVps);
     setUser(nextUser);
     setNode(nextNode);
@@ -593,7 +606,7 @@ export function OomReportsPage() {
         testId: 'oom.smart.suggest.vps',
       });
 
-      if (mode === 'admin') {
+      if (isGlobalAdminView) {
         out.push({
           id: 'user',
           primary: t('oom.smart.suggest.user', { id: n }),
@@ -608,29 +621,15 @@ export function OomReportsPage() {
       }
     }
 
-    out.push({
-      id: 'search',
-      primary: t('oom.smart.suggest.search', { q: needle }),
-      secondary: t('oom.smart.suggest.search.secondary'),
-      onPick: () => {
-        setQ(needle);
-        setSmart('');
-        setSmartErrors([]);
-      },
-      testId: 'oom.smart.suggest.search',
-    });
-
     return out;
-  }, [mode, openReport, smartNeedle, t]);
+  }, [isGlobalAdminView, openReport, smartNeedle, t]);
 
   const activeChips = useMemo(() => {
     const chips: React.ReactNode[] = [];
 
-    if (qTrim) chips.push(<FilterChip key="q" label={`q:${qTrim}`} onRemove={() => setQ('')} testId="oom.chip.q" />);
-
     if (vpsId) chips.push(<FilterChip key="vps" label={`vps:${vpsId}`} onRemove={() => setVps('')} testId="oom.chip.vps" />);
 
-    if (mode === 'admin' && userId)
+    if (isGlobalAdminView && userId)
       chips.push(<FilterChip key="user" label={`user:${userId}`} onRemove={() => setUser('')} testId="oom.chip.user" />);
 
     if (nodeId) chips.push(<FilterChip key="node" label={`node:${nodeId}`} onRemove={() => setNode('')} testId="oom.chip.node" />);
@@ -685,7 +684,7 @@ export function OomReportsPage() {
     }
 
     return chips;
-  }, [cgroup, envId, locationId, mode, nodeId, qTrim, ruleId, since, smartErrors, until, userId, vpsId]);
+  }, [cgroup, envId, isGlobalAdminView, locationId, nodeId, ruleId, since, smartErrors, until, userId, vpsId]);
 
   const header = (
     <PageHeader
@@ -749,7 +748,7 @@ export function OomReportsPage() {
               testId="oom.filters.copy_link"
             />
 
-            {filtersActive ? (
+            {hasFilterState ? (
               <Button variant="secondary" size="sm" onClick={clearFilters} testId="oom.filters.clear">
                 {t('common.clear_filters')}
               </Button>
@@ -775,11 +774,6 @@ export function OomReportsPage() {
                 description: t('oom.smart_help.examples.open.description'),
               },
               {
-                label: t('oom.smart_help.examples.search.label'),
-                value: 'nginx',
-                description: t('oom.smart_help.examples.search.description'),
-              },
-              {
                 label: t('oom.smart_help.examples.vps.label'),
                 value: 'vps:123',
                 description: t('oom.smart_help.examples.vps.description'),
@@ -796,9 +790,8 @@ export function OomReportsPage() {
               },
             ]}
             keys={[
-              { key: 'q', description: t('oom.smart_help.keys.q') },
               { key: 'vps', description: t('oom.smart_help.keys.vps') },
-              ...(mode === 'admin' ? [{ key: 'user', description: t('oom.smart_help.keys.user') }] : []),
+              ...(isGlobalAdminView ? [{ key: 'user', description: t('oom.smart_help.keys.user') }] : []),
               { key: 'node', description: t('oom.smart_help.keys.node') },
               { key: 'location', description: t('oom.smart_help.keys.location') },
               { key: 'environment', description: t('oom.smart_help.keys.environment') },
@@ -808,7 +801,6 @@ export function OomReportsPage() {
               { key: 'until', description: t('oom.smart_help.keys.until') },
             ]}
             inferences={[
-              t('oom.smart_help.inferences.plain_search'),
               t('oom.smart_help.inferences.numeric_open'),
               t('oom.smart_help.inferences.key_value'),
             ]}
@@ -824,19 +816,6 @@ export function OomReportsPage() {
           <Drawer open={advancedOpen} onClose={() => setAdvancedOpen(false)} title={t('filters.advanced.title')} testId="oom.filters.drawer">
             <div className="space-y-4">
               <div>
-                <div className="text-sm font-medium">{t('oom.filter.q')}</div>
-                <div className="mt-1">
-                  <Input
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                    placeholder={t('oom.search.placeholder')}
-                    autoComplete="off"
-                    testId="oom.advanced.q"
-                  />
-                </div>
-              </div>
-
-              <div>
                 <div className="text-sm font-medium">{t('common.vps')}</div>
                 <div className="mt-1">
                   <VpsLookupInput
@@ -848,7 +827,7 @@ export function OomReportsPage() {
                 </div>
               </div>
 
-              {mode === 'admin' ? (
+              {isGlobalAdminView ? (
                 <div>
                   <div className="text-sm font-medium">{t('common.user')}</div>
                   <div className="mt-1">
@@ -930,7 +909,7 @@ export function OomReportsPage() {
             </div>
 
             <div className="mt-6 flex items-center justify-end gap-2">
-              {filtersActive ? (
+              {hasFilterState ? (
                 <Button variant="secondary" size="sm" onClick={clearFilters} testId="oom.advanced.clear">
                   {t('common.clear_filters')}
                 </Button>
@@ -973,7 +952,7 @@ export function OomReportsPage() {
                   <col className="w-24" />
                   <col className="w-40" />
                   <col className="w-36" />
-                  {mode === 'admin' ? <col className="w-32" /> : null}
+                  {isGlobalAdminView ? <col className="w-32" /> : null}
                   <col className="w-24" />
                   <col />
                   <col className="w-24" />
@@ -986,7 +965,7 @@ export function OomReportsPage() {
                     <th className="px-4 py-2">{t('common.id')}</th>
                     <th className="px-4 py-2">{t('oom.field.created_at')}</th>
                     <th className="px-4 py-2">{t('common.vps')}</th>
-                    {mode === 'admin' ? <th className="px-4 py-2">{t('common.user')}</th> : null}
+                    {isGlobalAdminView ? <th className="px-4 py-2">{t('common.user')}</th> : null}
                     <th className="px-4 py-2">{t('common.node')}</th>
                     <th className="px-4 py-2">{t('oom.field.killed')}</th>
                     <th className="px-4 py-2">{t('oom.field.rule_action')}</th>
@@ -1036,7 +1015,7 @@ export function OomReportsPage() {
                           )}
                         </td>
 
-                        {mode === 'admin' ? (
+                        {isGlobalAdminView ? (
                           <td className="px-4 py-2">
                             {userIdRow ? (
                               <ChipLink data-row-no-nav to={`${basePath}/users/${userIdRow}`} className="max-w-full">
@@ -1144,7 +1123,7 @@ export function OomReportsPage() {
                           ) : (
                             <span>{t('common.vps')}: —</span>
                           )}
-                          {mode === 'admin' && userIdRow ? (
+                          {isGlobalAdminView && userIdRow ? (
                             <ChipLink to={`${basePath}/users/${userIdRow}`}>{userLogin || `#${userIdRow}`}</ChipLink>
                           ) : null}
                           <span>{nodeName || '—'}</span>
