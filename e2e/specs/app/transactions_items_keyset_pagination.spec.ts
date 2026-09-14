@@ -22,35 +22,47 @@ function makeTx(id: number) {
 }
 
 test.describe('Transactions items list keyset pagination', () => {
-  test('Next/Prev updates URL and data', async ({ page }) => {
+  test('@pr-smoke @pr-smoke-mobile lookahead keeps an exact terminal page in place without gaps', async ({ page }, testInfo) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
-    const page1 = Array.from({ length: 50 }, (_, i) => 300 - i).map(makeTx);
-    const page2 = Array.from({ length: 50 }, (_, i) => 250 - i).map(makeTx);
+    const basePath = testInfo.project.name.includes('mobile') ? '/admin' : '/app';
+    const allTransactions = Array.from({ length: 100 }, (_, i) => 300 - i).map(makeTx);
+    const requests: Array<{ limit: number; fromId: number | null }> = [];
 
     await installHaveApiMock(page, {
-      user: { id: 1, login: 'test', level: 1 },
+      user: { id: 1, login: 'test', level: basePath === '/admin' ? 99 : 1 },
       handlers: {
         'GET transactions': ({ searchParams }) => {
-          const fromId = searchParams.get('transaction[from_id]');
-          return { transactions: fromId ? page2 : page1, _meta: { total_count: 100 } };
+          const limit = Number(searchParams.get('transaction[limit]'));
+          const rawFromId = searchParams.get('transaction[from_id]');
+          const fromId = rawFromId === null ? null : Number(rawFromId);
+          requests.push({ limit, fromId });
+
+          const eligible = fromId === null ? allTransactions : allTransactions.filter((tx) => tx.id < fromId);
+          return { transactions: eligible.slice(0, limit), _meta: { total_count: allTransactions.length } };
         },
       },
     });
 
-    await page.goto('/app/transactions/items');
+    await page.goto(`${basePath}/transactions/items`);
 
     await expect(page.getByTestId('transactions.items.list')).toBeVisible();
     await expect(page.getByTestId('transactions.items.row.300')).toBeVisible();
+    await expect(page.getByTestId('transactions.items.row.251')).toBeVisible();
+    await expect(page.getByTestId('transactions.items.row.250')).toHaveCount(0);
     await expect(page.getByTestId('transactions.items.row.300')).toHaveAttribute('data-row-variant', 'danger');
     await expect(page.getByTestId('transactions.items.row.299')).toHaveAttribute('data-row-variant', 'ok');
     await expect(page.getByTestId('transactions.items.row.300.dot')).toBeVisible();
+    expect(requests[0]).toEqual({ limit: 51, fromId: null });
 
     await page.getByTestId('transactions.items.pagination.next').click();
     await expect(page).toHaveURL(/from_id=251/);
     await expect(page).toHaveURL(/page=2/);
     await expect(page.getByTestId('transactions.items.row.250')).toBeVisible();
+    await expect(page.getByTestId('transactions.items.row.201')).toBeVisible();
     await expect(page.getByTestId('transactions.items.row.250')).toHaveAttribute('data-row-variant', 'danger');
+    await expect(page.getByTestId('transactions.items.pagination.next')).toBeDisabled();
+    expect(requests.at(-1)).toEqual({ limit: 51, fromId: 251 });
 
     await page.getByTestId('transactions.items.pagination.prev').click();
     await expect(page).not.toHaveURL(/from_id=/);
