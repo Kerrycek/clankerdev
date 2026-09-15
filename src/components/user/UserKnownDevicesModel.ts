@@ -5,6 +5,33 @@ export interface ParsedUserAgent {
   browser: string;
 }
 
+export interface KnownDevicePageWindow<T> {
+  rows: T[];
+  cursor: number | null;
+  hasMore: boolean;
+}
+
+export function buildKnownDevicePageWindow<T extends { id?: unknown }>(
+  devices: readonly T[] | undefined,
+  limit: number,
+): KnownDevicePageWindow<T> {
+  const source = devices ?? [];
+  const rows = source.slice(0, limit);
+  let cursor: number | null = null;
+
+  for (const row of rows) {
+    const id = row.id;
+    if (typeof id !== "number" || !Number.isSafeInteger(id) || id <= 0) continue;
+    if (cursor === null || id > cursor) cursor = id;
+  }
+
+  return {
+    rows,
+    cursor,
+    hasMore: source.length > limit,
+  };
+}
+
 export function knownDeviceSearchHaystack(device: UserKnownDevice): string {
   return [
     String(device.id ?? ""),
