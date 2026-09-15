@@ -781,7 +781,7 @@ current UX, and end-to-end evidence.
 | Security advisories | admin lifecycle and affected-object workflow | `inventory only` |
 | Mailer | templates/translations, mailboxes, recipients, logs | `inventory only` |
 | Content | news and contextual help-box administration | `inventory only` |
-| Cluster | summary, environments, locations, OS templates, networks, resource packages, system config, DNS resolvers/servers/TSIG keys | `inventory only` |
+| Cluster | summary, environments, locations, OS templates, networks, resource packages, system config, DNS resolvers/servers/TSIG keys; the resolver catalogue/CRUD follows the real pagination-only API and legacy unfiltered list | `inventory only` |
 | Nodes | list/detail, lifecycle and pool maintenance controls | `inventory only` |
 | Migration plans | plan list/detail and migration scheduling/control | `inventory only` |
 | Admin diagnostics | `/admin/admin-info` | `inventory only` |

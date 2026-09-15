@@ -258,12 +258,9 @@ Admin pages follow the same keyset pagination rules (`from_id`, `limit`, numeric
   - UI uses Smart Filter Input (SFI) + an advanced drawer; shareable links preserve filter state.
 
 - **Cluster DNS resolvers** (`/admin/cluster/dns-resolvers`)
-  - Index: `DnsResolver.Index` (`GET /api/v7.0/dns_resolvers`) with `dns_resolver[from_id]`, `dns_resolver[limit]`.
-  - Search + filters: **server-side**.
-    - `q` (`dns_resolver[q]`) – label / IP / `#id`
-    - `is_universal` (`dns_resolver[is_universal]`)
-    - `location` (`dns_resolver[location]`)
-  - UI now uses Smart Filter Input (SFI) + an advanced drawer; shareable links preserve filter state.
+  - Index: `DnsResolver.Index` (`GET /api/v7.0/dns_resolvers`) with `dns_resolver[from_id]`, `dns_resolver[limit]`, and the optional `dns_resolver[vps]` selector used outside the admin catalogue.
+  - The current API does **not** declare `q`, `is_universal`, or `location` list filters. The admin UI therefore presents a paginated catalogue without search/filter controls and removes those stale parameters from old shared URLs.
+  - This matches the legacy cluster UI, which also loads the resolver catalogue without filters. Filtering only the currently loaded page would be incomplete and is intentionally avoided.
 
 - **Cluster OS templates** (`/admin/cluster/os-templates`)
   - Index: `OsTemplate.Index` (`GET /api/v7.0/os_templates`) with server-side filtering.
