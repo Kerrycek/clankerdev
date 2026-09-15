@@ -332,6 +332,14 @@ Admin pages follow the same keyset pagination rules (`from_id`, `limit`, numeric
 - DNS zone servers status: keyset pagination by `from_id` inside zone detail; admin add/remove actions.
 - Admin DNS servers: server-side `q`, `hidden`, `enable_user_dns_zones`, keyset pagination.
 - Admin DNS TSIG keys: server-side `q`, `user`, `algorithm`, keyset pagination.
+- User DNS TSIG keys (`/app/dns/tsig-keys`): the index request is scoped by
+  the exact authenticated `user` and optional exact `algorithm` filters. The
+  HaveAPI action applies the ascending, exclusive cursor predicate
+  `id > from_id`. The UI requests the visible limit plus one, hides
+  the look-ahead row, and uses the greatest visible ID as the next cursor. An
+  exactly full terminal page therefore disables **Next** without issuing an
+  empty follow-up request. Explicit backend ordering is tracked separately in
+  issue #189.
 
 
 - **Admin networking / Host IP addresses** (`/admin/networking/host-ip-addresses`)

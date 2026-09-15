@@ -759,7 +759,7 @@ current UX, and end-to-end evidence.
 | Dataset backup-plan automation | backup-center workspace and dataset/NAS plan details; see the mapped capability above | `mapped / implemented` |
 | Backup Center | cross-dataset overview, snapshots, generated downloads, and restore guidance; plan assignment is mapped separately above | `inventory only` |
 | Exports | list and detail | `inventory only` |
-| DNS | zones; records, transfers, DNSSEC, servers, settings, logs; user TSIG keys | `inventory only` |
+| DNS | zones; records, transfers, DNSSEC, servers, settings, logs; user TSIG keys (pagination mapped below) | `mapped / partial` |
 | Networking | user addresses/traffic/live networking surface | `inventory only` |
 | Operations | transaction chains/items, action states, monitoring events | `inventory only` |
 | Support events | incidents including report creation; OOM reports, details, and rules | `inventory only` |
@@ -799,3 +799,47 @@ current UX, and end-to-end evidence.
 | Responsive/accessibility behavior | desktop/mobile list variants, drawers, focus-trap tests, localized labels | `inventory only` |
 | Localization/preferences | Czech/English resources, UI preferences, theme and time-zone handling | `inventory only` |
 | Deployment/live parity | build metadata, dev deployment scripts, live route sweep and optional parity suite | `inventory only` |
+
+---
+
+## User DNS TSIG key pagination
+
+### Capability: browse an owner-scoped TSIG key list without repeating pages
+
+The authenticated user route `/app/dns/tsig-keys` lists the current user's
+TSIG keys, optionally filtered by algorithm. Every index request includes the
+authenticated user ID, and the client rejects the complete raw response if any
+row belongs to another user. This keeps the page fail-closed if the backend's
+owner scoping ever regresses.
+
+The backend `DnsTsigKey.Index` action uses HaveAPI keyset pagination with the
+ascending, exclusive cursor predicate `id > from_id`. The page therefore
+requests one more row than the selected visible limit, renders only the visible
+rows, and uses the greatest visible ID as the next cursor. The hidden look-ahead
+row is the sole evidence that another page exists. Previously, this user route
+used a descending-page cursor and treated an exactly full response as proof of
+another page; that could repeat already visible rows and expose an empty
+terminal page.
+
+Current sources:
+
+- `src/pages/app/dns/DnsTsigKeysPage.tsx`;
+- `src/pages/app/dns/dnsTsigKeyPagination.ts`;
+- `src/lib/api/dns.ts`;
+- upstream `api/lib/vpsadmin/api/resources/dns_tsig_key.rb` (read-only contract
+  reference).
+
+### Test evidence and limits
+
+- `src/pages/app/dns/dnsTsigKeyPagination.test.ts` verifies the ascending
+  cursor, hidden look-ahead row, exact terminal page, and empty-page behavior.
+- `e2e/specs/app/dns_tsig_keys.spec.ts` covers the two-page browser workflow on
+  desktop and mobile: owner filter, `limit + 1`, cursor URL, non-overlapping
+  rows, terminal **Next**, and backward navigation.
+- Existing end-to-end coverage verifies owner scoping, one-time secret display,
+  creation, and fail-closed handling of a foreign-owner response.
+
+The deterministic tests prove the client/API contract without creating or
+deleting a real TSIG key. The upstream action does not currently declare an
+explicit order; issue #189 remains the broader hardening task for stable
+ordering across DNS indexes.
