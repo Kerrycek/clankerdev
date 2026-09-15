@@ -6,6 +6,7 @@ export interface AppHeaderProps {
   canSwitchMode: boolean;
   shortcutHint: string;
   onOpenMobileNav: () => void;
+  onOpenPalette: () => void;
   showSyncIndicator: boolean;
   syncRef: React.RefObject<HTMLDivElement | null>;
   syncOpen: boolean;
