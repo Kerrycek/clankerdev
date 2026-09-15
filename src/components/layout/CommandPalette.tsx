@@ -544,6 +544,7 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
     <Modal
       open={props.open}
       onClose={props.onClose}
+      ariaLabel={t('palette.open')}
       mobileFullScreen
       size="lg"
       testId="palette.modal"
@@ -554,6 +555,7 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
             <Input
               ref={inputRef}
               testId="palette.input"
+              ariaLabel={t('search.inline.aria')}
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);

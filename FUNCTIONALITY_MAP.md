@@ -99,6 +99,51 @@ ordering limitation remains tracked by issue #189.
 
 ---
 
+## Global object discovery
+
+**Status:** `mapped / implemented`
+
+Authenticated users need a search entry point that stays usable from every
+application route. Administrators use the admin-only `Cluster.Search` action to
+jump across supported cluster objects. Members cannot call that action; WebUI
+Next instead searches only their permitted VPS, IP-address, and DNS-zone
+surfaces, with the backend remaining authoritative for ownership.
+
+The legacy administrator UI kept a small `jumpto` field in its global chrome,
+submitted it to `Cluster.Search`, and either opened a unique result or rendered
+the returned object list. WebUI Next preserves that global discovery capability
+while using two viewport-specific entry points in `src/components/layout`:
+
+- desktop keeps the inline header search and the `Ctrl/Cmd+K` or `/` command
+  palette shortcut;
+- below the `sm` breakpoint, a dedicated search button opens the existing
+  full-screen command palette and focuses its input;
+- public, OAuth, login-required, and forbidden-admin screens do not mount the
+  authenticated application header.
+
+The mobile button and desktop inline form are mutually exclusive, so a compact
+touch target never masquerades as a text field with no writable width. Both
+entry points use the same member/admin search implementations; changing the
+responsive launcher does not change API filters or authorization.
+
+Evidence:
+
+- legacy workflow: read-only upstream `webui/pages/page_jumpto.php` and
+  `webui/template/template.html`;
+- backend authorization and response contract: read-only upstream
+  `api/lib/vpsadmin/api/resources/cluster.rb`;
+- current header, palette, and full-screen modal:
+  `src/components/layout/AppHeader.tsx`, `AppLayout.tsx`,
+  `CommandPalette.tsx`, and `src/components/ui/Modal.tsx`;
+- mocked browser coverage: `e2e/specs/app/header_mobile_controls.spec.ts`,
+  `command_palette.spec.ts`, and `user_global_search.spec.ts`.
+
+The browser tests prove responsive containment, focus, and deterministic search
+behavior against mocks. They do not grant or verify a deployed account's live
+search permissions.
+
+---
+
 ## Incident report listing and exact filters
 
 **Status:** `mapped / implemented`
