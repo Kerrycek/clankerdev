@@ -88,4 +88,76 @@ test.describe('@smoke Admin user payments', () => {
     await page.getByTestId('admin.user.payments.add.save').click();
     await expect(page.getByTestId('admin.user.payments.add.amount_input')).toHaveValue('');
   });
+
+  test('@pr-smoke @pr-smoke-mobile admin payment history hides its lookahead and stops on an exact 200-row terminal page', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page);
+    const paymentRequests: Array<{ fromId: number | null; limit: number; userId: number | null }> = [];
+    const allIds = Array.from({ length: 400 }, (_, index) => 10_000 - index);
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 100 },
+      handlers: {
+        'GET users/42': () => ({
+          user: {
+            id: 42,
+            login: 'alice',
+            level: 1,
+            monthly_payment: 100,
+            paid_until: '2026-03-01T00:00:00.000Z',
+          },
+        }),
+        'GET user_accounts/42': () => ({
+          user_account: {
+            id: 42,
+            monthly_payment: 100,
+            paid_until: '2026-03-01T00:00:00.000Z',
+          },
+        }),
+        'GET user_payments': ({ searchParams }) => {
+          const limit = Number(searchParams.get('user_payment[limit]') ?? 50);
+          const rawFromId = searchParams.get('user_payment[from_id]');
+          const fromId = rawFromId ? Number(rawFromId) : null;
+          const rawUserId = searchParams.get('user_payment[user]');
+          const userId = rawUserId ? Number(rawUserId) : null;
+          paymentRequests.push({ fromId, limit, userId });
+
+          const ids = allIds
+            .filter((id) => (fromId === null ? true : id < fromId))
+            .slice(0, limit);
+
+          return {
+            user_payments: ids.map((id) => ({
+              id,
+              amount: 100,
+              created_at: '2026-02-10T12:00:00.000Z',
+              from_date: '2026-02-01T00:00:00.000Z',
+              to_date: '2026-03-01T00:00:00.000Z',
+              accounted_by: { id: 1, login: 'admin' },
+            })),
+          };
+        },
+      },
+    });
+
+    await page.goto('/admin/users/42/payments?limit=200');
+
+    const tableRows = page.getByTestId('admin.user.payments.history.table').locator('tbody tr');
+    const next = page.getByTestId('admin.user.payments.history.pagination.next');
+    await expect(tableRows).toHaveCount(200);
+    await expect(page.getByTestId('admin.user.payments.history.row.10000')).toBeVisible();
+    await expect(page.getByTestId('admin.user.payments.history.row.9801')).toBeVisible();
+    await expect(page.getByTestId('admin.user.payments.history.row.9800')).toHaveCount(0);
+    await expect(next).toBeEnabled();
+    expect(paymentRequests[0]).toEqual({ fromId: null, limit: 201, userId: 42 });
+
+    await next.click();
+
+    await expect(page).toHaveURL(/(?:\?|&)from_id=9801(?:&|$)/);
+    await expect(tableRows).toHaveCount(200);
+    await expect(page.getByTestId('admin.user.payments.history.row.9800')).toBeVisible();
+    await expect(page.getByTestId('admin.user.payments.history.row.9601')).toBeVisible();
+    await expect(next).toBeDisabled();
+    await expect(page.getByTestId('admin.user.payments.history.pagination.prev')).toBeEnabled();
+    expect(paymentRequests.at(-1)).toEqual({ fromId: 9801, limit: 201, userId: 42 });
+  });
 });
