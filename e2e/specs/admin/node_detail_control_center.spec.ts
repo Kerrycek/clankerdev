@@ -1,6 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { bootstrapVpsAdminWindow, installHaveApiMock, setUiSettingsLocalStorage } from '../../fixtures';
+import {
+  bootstrapVpsAdminWindow,
+  installHaveApiMock,
+  setUiSettingsLocalStorage,
+  type HaveApiHandler,
+} from '../../fixtures';
 
 const node = {
   id: 5,
@@ -16,7 +21,11 @@ const node = {
   pool_checked_at: '2026-08-22T10:00:00Z',
 };
 
-async function installNodeHandlers(page: Page, poolsHandler: () => unknown) {
+async function installNodeHandlers(
+  page: Page,
+  poolsHandler: () => unknown,
+  extraHandlers: Record<string, HaveApiHandler> = {},
+) {
   await setUiSettingsLocalStorage(page, { language: 'en' });
   await bootstrapVpsAdminWindow(page);
   await installHaveApiMock(page, {
@@ -30,6 +39,7 @@ async function installNodeHandlers(page: Page, poolsHandler: () => unknown) {
       'GET nodes/5/statuses': () => ({ statuses: [] }),
       'GET transactions': () => ({ transactions: [] }),
       'GET pools': poolsHandler,
+      ...extraHandlers,
     },
   });
 }
@@ -196,5 +206,50 @@ test.describe('Admin node detail control center', () => {
 
     await expect.poll(() => nodeReads).toBeGreaterThan(1);
     expect(transactionReads).toBe(0);
+  });
+
+  test('@pr-smoke @pr-smoke-mobile keeps a pending maintenance confirmation visible', async ({ page }) => {
+    let maintenanceCalls = 0;
+    let releaseMaintenance!: () => void;
+    const maintenanceGate = new Promise<void>((resolve) => {
+      releaseMaintenance = resolve;
+    });
+
+    await installNodeHandlers(
+      page,
+      () => ({ pools: [] }),
+      {
+        'POST nodes/5/set_maintenance': async () => {
+          maintenanceCalls += 1;
+          await maintenanceGate;
+          return {};
+        },
+      },
+    );
+
+    await page.goto('/admin/nodes/5?section=maintenance');
+    await page.getByTestId('admin.node.maintenance.lock').click();
+
+    const dialog = page.getByRole('dialog');
+    const cancel = dialog.getByRole('button', { name: 'Cancel', exact: true });
+    const confirm = dialog.getByRole('button', { name: 'Lock', exact: true });
+
+    try {
+      await confirm.click();
+      await expect.poll(() => maintenanceCalls).toBe(1);
+      await expect(cancel).toBeDisabled();
+      await expect(confirm).toBeDisabled();
+
+      await page.keyboard.press('Escape');
+      await expect(dialog).toBeVisible();
+
+      await page.locator('[data-overlay-backdrop="true"]').click({ position: { x: 5, y: 5 } });
+      await expect(dialog).toBeVisible();
+      expect(maintenanceCalls).toBe(1);
+    } finally {
+      releaseMaintenance();
+    }
+
+    await expect(dialog).toBeHidden();
   });
 });
