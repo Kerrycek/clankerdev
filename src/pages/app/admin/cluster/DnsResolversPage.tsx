@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CircleHelp, SlidersHorizontal } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useI18n } from '../../../../app/i18n';
@@ -16,25 +15,20 @@ import { Badge } from '../../../../components/ui/Badge';
 import { Button } from '../../../../components/ui/Button';
 import { CopyButton } from '../../../../components/ui/CopyButton';
 import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog';
-import { Drawer } from '../../../../components/ui/Drawer';
 import { EmptyState } from '../../../../components/ui/EmptyState';
 import { ErrorState } from '../../../../components/ui/ErrorState';
-import { FilterChip } from '../../../../components/ui/FilterChip';
 import { Input } from '../../../../components/ui/Input';
 import { LoadingState } from '../../../../components/ui/LoadingState';
 import { Modal } from '../../../../components/ui/Modal';
 import { KeysetPagination } from '../../../../components/ui/KeysetPagination';
-import { Select, type SelectOption } from '../../../../components/ui/Select';
+import { Select } from '../../../../components/ui/Select';
 import { SwitchRow } from '../../../../components/ui/SwitchRow';
-import { SmartFilterInput, type SmartFilterSuggestion } from '../../../../components/ui/SmartFilterInput';
-import { SmartInputHelp } from '../../../../components/ui/SmartInputHelp';
 import { TableCard } from '../../../../components/ui/TableCard';
 
 import { getMetaActionStateId } from '../../../../lib/api/haveapi';
 import { fetchLocations, type Location } from '../../../../lib/api/infra';
 import { objectRef } from '../../../../lib/objectRef';
-import { parseNumericToken, splitKeyValueToken, unquoteSmartValue } from '../../../../lib/smartFilter';
-import { parseBoolParam, parsePositiveInt } from '../../../../lib/parse';
+import { parsePositiveInt } from '../../../../lib/parse';
 import {
   createDnsResolver,
   deleteDnsResolver,
@@ -79,52 +73,13 @@ export function DnsResolversPage() {
   const { pushToast } = useToasts();
   const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const smartInputRef = useRef<HTMLInputElement | null>(null);
-
-  const [q, setQ] = useState(() => searchParams.get('q') ?? '');
-  const [isUniversal, setIsUniversal] = useState(() => searchParams.get('is_universal') ?? '');
-  const [location, setLocation] = useState(() => searchParams.get('location') ?? '');
-  const [smart, setSmart] = useState('');
-  const [smartErrors, setSmartErrors] = useState<string[]>([]);
-  const [helpOpen, setHelpOpen] = useState(false);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
-
-  // Sync local state on navigation.
-  useEffect(() => {
-    const urlQ = searchParams.get('q') ?? '';
-    const urlU = searchParams.get('is_universal') ?? '';
-    const urlL = searchParams.get('location') ?? '';
-    if (urlQ !== q) setQ(urlQ);
-    if (urlU !== isUniversal) setIsUniversal(urlU);
-    if (urlL !== location) setLocation(urlL);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
-
-  const qTrim = useMemo(() => q.trim(), [q]);
-  const isUniversalBool = useMemo(() => parseBoolParam(isUniversal), [isUniversal]);
-  const locationId = useMemo(() => parsePositiveInt(location), [location]);
-
-  // Persist filters in URL.
-  useEffect(() => {
-    const next = new URLSearchParams(searchParams);
-    if (qTrim) next.set('q', qTrim);
-    else next.delete('q');
-
-    if (isUniversalBool === true) next.set('is_universal', 'true');
-    else if (isUniversalBool === false) next.set('is_universal', 'false');
-    else next.delete('is_universal');
-
-    if (locationId) next.set('location', String(locationId));
-    else next.delete('location');
-
-    if (next.toString() !== searchParams.toString()) setSearchParams(next, { replace: true });
-  }, [isUniversalBool, locationId, qTrim, searchParams, setSearchParams]);
 
   const pagination = useKeysetPagination({
     id: 'admin.cluster.dns_resolvers',
-    filterKey: JSON.stringify({ q: qTrim, u: isUniversalBool, l: locationId }),
+    filterKey: '',
     searchParams,
     setSearchParams,
+    wipeQueryKeys: ['q', 'is_universal', 'location'],
     allowedLimits: [25, 50, 100, 200],
     defaultLimit: 50,
   });
@@ -137,31 +92,13 @@ export function DnsResolversPage() {
 
   const locs = locationsQ.data ?? [];
 
-  const locationOptions = useMemo<SelectOption[]>(() => {
-    const opts: SelectOption[] = [{ value: '', label: t('common.all') }];
-    for (const l of locs) opts.push({ value: String(l.id), label: locLabel(l) });
-    return opts;
-  }, [locs, t]);
-
-  const universalOptions = useMemo<SelectOption[]>(
-    () => [
-      { value: '', label: t('common.all') },
-      { value: 'true', label: t('admin.cluster.dns_resolvers.filter.universal_true') },
-      { value: 'false', label: t('admin.cluster.dns_resolvers.filter.universal_false') },
-    ],
-    [t]
-  );
-
   const listQ = useQuery({
-    queryKey: ['dns_resolvers', pagination.cursor, pagination.limit, qTrim, isUniversalBool, locationId],
+    queryKey: ['dns_resolvers', pagination.cursor, pagination.limit],
     queryFn: async () =>
       (
         await fetchDnsResolvers({
           limit: pagination.limit,
           fromId: pagination.cursor,
-          q: qTrim || undefined,
-          isUniversal: isUniversalBool,
-          locationId,
         })
       ).data,
     staleTime: 5_000,
@@ -173,172 +110,6 @@ export function DnsResolversPage() {
   const hasMore = resolvers.length === pagination.limit && typeof pageCursor === 'number';
   const canNext = pagination.hasForward || hasMore;
   const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
-
-  function focusSmartInput() {
-    window.requestAnimationFrame(() => smartInputRef.current?.focus());
-  }
-
-  function insertSmartKey(key: string) {
-    setSmart((prev) => {
-      const trim = prev.trim();
-      return trim ? `${trim} ${key}:` : `${key}:`;
-    });
-    focusSmartInput();
-  }
-
-  function clearAllFilters() {
-    setSmart('');
-    setSmartErrors([]);
-    setQ('');
-    setIsUniversal('');
-    setLocation('');
-  }
-
-  function applySmart(rawInput?: string) {
-    const raw = String(rawInput ?? smart).trim();
-    if (!raw) return;
-    if (raw === '?') {
-      setHelpOpen(true);
-      return;
-    }
-
-    const tokens = raw.match(/\S+/g) ?? [];
-    let nextQ = qTrim;
-    let nextUniversal = isUniversal;
-    let nextLocation = location;
-    const errors: string[] = [];
-
-    for (const token of tokens) {
-      const kv = splitKeyValueToken(token);
-
-      if (!kv) {
-        const n = parseNumericToken(token);
-        if (n !== undefined) {
-          nextQ = String(n);
-        } else {
-          nextQ = unquoteSmartValue(token);
-        }
-        continue;
-      }
-
-      const key = kv.key.trim().toLowerCase();
-      const value = unquoteSmartValue(kv.value).trim();
-      if (!value) {
-        errors.push(t('filters.smart.error.missing_value', { key }));
-        continue;
-      }
-
-      switch (key) {
-        case 'q':
-        case 'search':
-        case 'label':
-          nextQ = value;
-          break;
-        case 'id': {
-          const n = parseNumericToken(value);
-          if (n === undefined) errors.push(t('filters.smart.error.numeric_only', { key, value }));
-          else nextQ = String(n);
-          break;
-        }
-        case 'location':
-        case 'loc': {
-          const n = parseNumericToken(value);
-          if (n === undefined) errors.push(t('filters.smart.error.numeric_only', { key, value }));
-          else nextLocation = String(n);
-          break;
-        }
-        case 'universal':
-        case 'is_universal':
-        case 'scope': {
-          if (value === 'all' || value === '*') nextUniversal = '';
-          else {
-            const b = parseBoolParam(value);
-            if (b === undefined) errors.push(t('filters.smart.error.option_unresolved', { key, value }));
-            else nextUniversal = b ? 'true' : 'false';
-          }
-          break;
-        }
-        default:
-          errors.push(t('filters.smart.error.unknown_key', { key }));
-      }
-    }
-
-    if (errors.length > 0) {
-      setSmartErrors(errors);
-      return;
-    }
-
-    setSmart('');
-    setSmartErrors([]);
-    setQ(nextQ);
-    setIsUniversal(nextUniversal);
-    setLocation(nextLocation);
-  }
-
-  const activeChips = useMemo(() => {
-    const chips: React.ReactNode[] = [];
-    if (qTrim) chips.push(<FilterChip key="q" label={`q:${qTrim}`} onRemove={() => setQ('')} />);
-    if (isUniversalBool === true) chips.push(<FilterChip key="u-t" label={t('admin.cluster.dns_resolvers.filter.universal_true')} tone="info" onRemove={() => setIsUniversal('')} />);
-    if (isUniversalBool === false) chips.push(<FilterChip key="u-f" label={t('admin.cluster.dns_resolvers.filter.universal_false')} tone="warn" onRemove={() => setIsUniversal('')} />);
-    if (locationId) chips.push(<FilterChip key="loc" label={`${t('common.location')}: ${locationId}`} onRemove={() => setLocation('')} />);
-    smartErrors.forEach((msg, i) => chips.push(<FilterChip key={`err-${i}`} label={msg} tone="danger" onRemove={() => setSmartErrors((prev) => prev.filter((_, idx) => idx !== i))} />));
-    return chips;
-  }, [isUniversalBool, locationId, qTrim, smartErrors, t]);
-
-  const smartSuggestions = useMemo<SmartFilterSuggestion[]>(() => {
-    const raw = smart.trim();
-    if (!raw) return [];
-    if (raw === '?') {
-      return [{
-        id: 'help',
-        primary: t('filters.help.open'),
-        secondary: t('admin.cluster.dns_resolvers.smart.help.intro'),
-        onPick: () => {
-          setHelpOpen(true);
-          setSmart('');
-        },
-      }];
-    }
-
-    const suggestions: SmartFilterSuggestion[] = [];
-    const numeric = parseNumericToken(raw);
-    if (numeric !== undefined) {
-      suggestions.push({
-        id: 'id',
-        primary: t('admin.cluster.dns_resolvers.smart.suggestion.id', { id: numeric }),
-        secondary: t('admin.cluster.dns_resolvers.smart.suggestion.id_hint'),
-        onPick: () => {
-          setQ(String(numeric));
-          setSmart('');
-          setSmartErrors([]);
-        },
-      });
-    }
-
-    const kv = splitKeyValueToken(raw);
-    if (kv) {
-      suggestions.push({
-        id: 'apply-kv',
-        primary: t('filters.smart.suggest.apply.primary'),
-        secondary: raw,
-        onPick: () => applySmart(raw),
-      });
-      return suggestions;
-    }
-
-    suggestions.push({
-      id: 'search',
-      primary: t('admin.cluster.dns_resolvers.smart.suggestion.search', { value: raw }),
-      secondary: t('admin.cluster.dns_resolvers.smart.suggestion.search_hint'),
-      onPick: () => {
-        setQ(raw);
-        setSmart('');
-        setSmartErrors([]);
-      },
-    });
-
-    return suggestions;
-  }, [smart, t]);
 
   const [editor, setEditor] = useState<EditorState>(null);
   const [form, setForm] = useState<FormState>(() => initForm());
@@ -478,44 +249,9 @@ export function DnsResolversPage() {
 
   return (
     <div className="mt-4 space-y-4" data-testid="admin.cluster.dns_resolvers.page">
-      <FilterBar testId="admin.cluster.dns_resolvers.filters">
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <SmartFilterInput
-            ref={smartInputRef}
-            testId="admin.cluster.dns_resolvers.search.input"
-            value={smart}
-            onChange={setSmart}
-            onSubmit={() => applySmart()}
-            placeholder={t('admin.cluster.dns_resolvers.filter.search_placeholder')}
-            ariaLabel={t('admin.cluster.dns_resolvers.filter.search_placeholder')}
-            suggestions={smartSuggestions}
-            suffix={
-              <button
-                type="button"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-2 hover:text-fg"
-                aria-label={t('filters.help.open')}
-                title={t('filters.help.open')}
-                onClick={() => setHelpOpen(true)}
-              >
-                <CircleHelp className="h-4 w-4" aria-hidden />
-              </button>
-            }
-          />
-
-          {activeChips.length > 0 ? <div className="flex flex-wrap gap-2">{activeChips}</div> : null}
-        </div>
-
+      <FilterBar testId="admin.cluster.dns_resolvers.filters" className="justify-end">
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant="secondary" onClick={() => setAdvancedOpen(true)} testId="admin.cluster.dns_resolvers.advanced">
-            <SlidersHorizontal className="h-4 w-4" aria-hidden />
-            <span>{t('filters.advanced.label')}</span>
-          </Button>
           <CopyButton text={shareUrl} label={t('common.copy_link')} testId="admin.cluster.dns_resolvers.copy_link" />
-          {(qTrim || isUniversal || location || smartErrors.length > 0) ? (
-            <Button variant="secondary" onClick={clearAllFilters} testId="admin.cluster.dns_resolvers.filter.clear">
-              {t('common.clear_filters')}
-            </Button>
-          ) : null}
           <Button variant="secondary" onClick={() => listQ.refetch()}>{t('common.refresh')}</Button>
           <Button variant="primary" onClick={openCreate} testId="admin.cluster.dns_resolvers.create">
             {t('admin.cluster.dns_resolvers.create.button')}
@@ -601,86 +337,6 @@ export function DnsResolversPage() {
           </tbody>
         </TableCard>
       )}
-
-      <Drawer
-        open={advancedOpen}
-        onClose={() => setAdvancedOpen(false)}
-        width="lg"
-        title={t('filters.advanced.title')}
-        testId="admin.cluster.dns_resolvers.advanced.drawer"
-        footer={
-          <div className="flex items-center justify-between gap-2">
-            <Button variant="secondary" onClick={clearAllFilters}>
-              {t('common.clear_filters')}
-            </Button>
-            <Button variant="primary" onClick={() => setAdvancedOpen(false)}>
-              {t('common.done')}
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          <div className="space-y-1">
-            <div className="text-sm font-medium text-fg">{t('common.search')}</div>
-            <Input
-              testId="admin.cluster.dns_resolvers.advanced.q"
-              ariaLabel={t('common.search')}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder={t('admin.cluster.dns_resolvers.filter.search_placeholder')}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <div className="text-sm font-medium text-fg">{t('admin.cluster.dns_resolvers.field.universal')}</div>
-            <Select
-              testId="admin.cluster.dns_resolvers.universal.select"
-              aria-label={t('admin.cluster.dns_resolvers.field.universal')}
-              value={isUniversal}
-              onChange={(e) => setIsUniversal(e.target.value)}
-              options={universalOptions}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <div className="text-sm font-medium text-fg">{t('common.location')}</div>
-            <Select
-              testId="admin.cluster.dns_resolvers.location.select"
-              aria-label={t('common.location')}
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              options={locationOptions}
-            />
-          </div>
-        </div>
-      </Drawer>
-
-      <SmartInputHelp
-        open={helpOpen}
-        onClose={() => setHelpOpen(false)}
-        title={t('admin.cluster.dns_resolvers.smart.help.title')}
-        intro={t('admin.cluster.dns_resolvers.smart.help.intro')}
-        examples={[
-          { example: '?', description: t('admin.cluster.dns_resolvers.smart.help.example_help') },
-          { example: '8.8.8.8', description: t('admin.cluster.dns_resolvers.smart.help.example_search') },
-          { example: 'location:1', description: t('admin.cluster.dns_resolvers.smart.help.example_location') },
-          { example: 'universal:true', description: t('admin.cluster.dns_resolvers.smart.help.example_universal') },
-        ]}
-        topKeys={[
-          { key: 'q', description: t('admin.cluster.dns_resolvers.smart.key.q'), example: 'q:google' },
-          { key: 'location', description: t('admin.cluster.dns_resolvers.smart.key.location'), example: 'location:1' },
-          { key: 'universal', description: t('admin.cluster.dns_resolvers.smart.key.universal'), example: 'universal:true' },
-          { key: 'id', description: t('admin.cluster.dns_resolvers.smart.key.id'), example: 'id:12' },
-        ]}
-        inference={[
-          t('admin.cluster.dns_resolvers.smart.help.inference.text'),
-          t('admin.cluster.dns_resolvers.smart.help.inference.number'),
-          t('admin.cluster.dns_resolvers.smart.help.inference.keyvalue'),
-        ]}
-        onInsertKey={insertSmartKey}
-        testId="admin.cluster.dns_resolvers.smart.help"
-        keyRowTestIdPrefix="admin.cluster.dns_resolvers.smart.help.key"
-      />
 
       <Modal
         open={Boolean(editor)}

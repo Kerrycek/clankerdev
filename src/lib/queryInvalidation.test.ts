@@ -144,7 +144,7 @@ describe('queryKeyMatchesObject', () => {
   it('matches DNS resolver queries', () => {
     const ref = objectRef('DnsResolver', 9);
 
-    expect(queryKeyMatchesObject(ref, ['dns_resolvers', null, 50, '', '', null])).toBe(true);
+    expect(queryKeyMatchesObject(ref, ['dns_resolvers', null, 50])).toBe(true);
     expect(queryKeyMatchesObject(ref, ['dns_resolvers'])).toBe(true);
   });
 });
