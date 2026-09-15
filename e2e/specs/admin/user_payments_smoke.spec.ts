@@ -93,6 +93,7 @@ test.describe('@smoke Admin user payments', () => {
     await bootstrapVpsAdminWindow(page);
     const paymentRequests: Array<{ fromId: number | null; limit: number; userId: number | null }> = [];
     const allIds = Array.from({ length: 400 }, (_, index) => 10_000 - index);
+    let revisitWithoutLookahead = false;
 
     await installHaveApiMock(page, {
       user: { id: 1, login: 'admin', level: 100 },
@@ -121,9 +122,10 @@ test.describe('@smoke Admin user payments', () => {
           const userId = rawUserId ? Number(rawUserId) : null;
           paymentRequests.push({ fromId, limit, userId });
 
+          const responseLimit = fromId === null && revisitWithoutLookahead ? 200 : limit;
           const ids = allIds
             .filter((id) => (fromId === null ? true : id < fromId))
-            .slice(0, limit);
+            .slice(0, responseLimit);
 
           return {
             user_payments: ids.map((id) => ({
@@ -157,7 +159,25 @@ test.describe('@smoke Admin user payments', () => {
     await expect(page.getByTestId('admin.user.payments.history.row.9800')).toBeVisible();
     await expect(page.getByTestId('admin.user.payments.history.row.9601')).toBeVisible();
     await expect(next).toBeDisabled();
-    await expect(page.getByTestId('admin.user.payments.history.pagination.prev')).toBeEnabled();
+    const previous = page.getByTestId('admin.user.payments.history.pagination.prev');
+    await expect(previous).toBeEnabled();
     expect(paymentRequests.at(-1)).toEqual({ fromId: 9801, limit: 201, userId: 42 });
+
+    await previous.click();
+
+    await expect(page).not.toHaveURL(/(?:\?|&)from_id=/);
+    revisitWithoutLookahead = true;
+    await page.reload();
+    await expect(page.getByTestId('admin.user.payments.history.row.10000')).toBeVisible();
+    await expect(page.getByTestId('admin.user.payments.history.row.9801')).toBeVisible();
+    await expect(next).toBeEnabled();
+    expect(paymentRequests.at(-1)).toEqual({ fromId: null, limit: 201, userId: 42 });
+
+    await next.click();
+
+    await expect(page).toHaveURL(/(?:\?|&)from_id=9801(?:&|$)/);
+    await expect(page.getByTestId('admin.user.payments.history.row.9800')).toBeVisible();
+    await expect(page.getByTestId('admin.user.payments.history.row.9601')).toBeVisible();
+    await expect(next).toBeDisabled();
   });
 });

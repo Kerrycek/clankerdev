@@ -75,6 +75,7 @@ test('@pr-smoke @pr-smoke-mobile user payment history uses a hidden lookahead an
   const haveApiMock = await installHaveApiMock(page);
   const paymentRequests: Array<{ fromId: number | null; limit: number; userId: number | null }> = [];
   const allIds = Array.from({ length: 50 }, (_, index) => 400 - index);
+  let revisitWithoutLookahead = false;
 
   haveApiMock.addHandler('GET users/current', () => ({
     user: {
@@ -96,9 +97,10 @@ test('@pr-smoke @pr-smoke-mobile user payment history uses a hidden lookahead an
     const userId = rawUserId ? Number(rawUserId) : null;
     paymentRequests.push({ fromId, limit, userId });
 
+    const responseLimit = fromId === null && revisitWithoutLookahead ? 25 : limit;
     const ids = allIds
       .filter((id) => (fromId === null ? true : id < fromId))
-      .slice(0, limit);
+      .slice(0, responseLimit);
 
     return {
       user_payments: ids.map((id) => ({
@@ -128,8 +130,26 @@ test('@pr-smoke @pr-smoke-mobile user payment history uses a hidden lookahead an
   await expect(tableRows.first()).toContainText('375');
   await expect(tableRows.last()).toContainText('351');
   await expect(next).toBeDisabled();
-  await expect(page.getByTestId('payments.my.history.pagination.prev')).toBeEnabled();
+  const previous = page.getByTestId('payments.my.history.pagination.prev');
+  await expect(previous).toBeEnabled();
   expect(paymentRequests.at(-1)).toEqual({ fromId: 376, limit: 26, userId: 1 });
+
+  await previous.click();
+
+  await expect(page).not.toHaveURL(/(?:\?|&)from_id=/);
+  revisitWithoutLookahead = true;
+  await page.reload();
+  await expect(tableRows.first()).toContainText('400');
+  await expect(tableRows.last()).toContainText('376');
+  await expect(next).toBeEnabled();
+  expect(paymentRequests.at(-1)).toEqual({ fromId: null, limit: 26, userId: 1 });
+
+  await next.click();
+
+  await expect(page).toHaveURL(/(?:\?|&)from_id=376(?:&|$)/);
+  await expect(tableRows.first()).toContainText('375');
+  await expect(tableRows.last()).toContainText('351');
+  await expect(next).toBeDisabled();
 });
 
 test('user payments page: localizes and constrains legacy payment instruction HTML', async ({ page }) => {

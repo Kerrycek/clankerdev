@@ -777,8 +777,10 @@ Evidence:
 
 The browser tests use strict HaveAPI mocks with monotonic IDs/timestamps to
 prove the look-ahead boundary, current ID-cursor continuity, owner/admin request
-scopes, and visible row limit. They do not prove traversal of non-monotonic live
-history, certify live payment data, or perform a real payment/account mutation.
+shapes, and visible row limit. Authorization and owner restriction are evidenced
+by the cited upstream resource rather than emulated by the browser mock. The
+tests do not prove traversal of non-monotonic live history, certify live payment
+data, or perform a real payment/account mutation.
 
 ---
 
