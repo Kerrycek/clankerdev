@@ -18,7 +18,6 @@ import { parseBoolParam, parsePositiveInt } from '../../../../lib/parse';
 import { parseNumericToken, splitKeyValueToken, unquoteSmartValue } from '../../../../lib/smartFilter';
 import { FilterBar } from '../../../../components/layout/FilterBar';
 import { Alert } from '../../../../components/ui/Alert';
-import { Badge } from '../../../../components/ui/Badge';
 import { Button } from '../../../../components/ui/Button';
 import { CopyButton } from '../../../../components/ui/CopyButton';
 import { Card, CardBody } from '../../../../components/ui/Card';
@@ -34,29 +33,11 @@ import { Select, type SelectOption } from '../../../../components/ui/Select';
 import { SmartFilterInput, type SmartFilterSuggestion } from '../../../../components/ui/SmartFilterInput';
 import { SmartInputHelp } from '../../../../components/ui/SmartInputHelp';
 import { SwitchRow } from '../../../../components/ui/SwitchRow';
-import { TableCard } from '../../../../components/ui/TableCard';
 import { Textarea } from '../../../../components/ui/Textarea';
+import { OsTemplatesList } from './OsTemplatesList';
 function osFamilyLabel(f: OsFamily): string {
   const label = typeof (f as any).label === 'string' ? String((f as any).label).trim() : '';
   return label || `#${f.id}`;
-}
-function tplOsFamilyLabel(tpl: OsTemplate): string {
-  const f = (tpl as any).os_family;
-  if (!f) return '—';
-  if (typeof f === 'string') return f;
-  if (typeof f === 'number') return `#${f}`;
-  if (typeof f === 'object' && typeof f.id === 'number') {
-    const label = typeof (f as any).label === 'string' ? String((f as any).label).trim() : '';
-    return label || `#${f.id}`;
-  }
-  return '—';
-}
-function boolBadge(v: boolean | undefined, onKey: string, offKey: string, t: (k: string) => string) {
-  const b = Boolean(v);
-  return {
-    label: b ? t(onKey) : t(offKey),
-    variant: b ? ('ok' as const) : ('warn' as const),
-  };
 }
 type EditorState =
   | null
@@ -733,77 +714,11 @@ export function OsTemplatesPage() {
       {rowsEmpty ? <EmptyState title={t('admin.cluster.os_templates.empty.title')} message={t('admin.cluster.os_templates.empty.body')} /> : null}
 
       {!listQ.isLoading && !listQ.isError && rows.length > 0 ? (
-        <TableCard testId="admin.cluster.os_templates.table">
-          <thead>
-            <tr>
-              <th className="w-1/3">{t('admin.cluster.os_templates.col.label')}</th>
-              <th className="w-48">{t('admin.cluster.os_templates.col.family')}</th>
-              <th className="w-24">{t('admin.cluster.os_templates.col.enabled')}</th>
-              <th className="w-24">{t('admin.cluster.os_templates.col.supported')}</th>
-              <th className="w-20">{t('admin.cluster.os_templates.col.uses')}</th>
-              <th className="w-20">{t('admin.cluster.os_templates.col.order')}</th>
-              <th className="w-44" />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((tpl) => {
-              const label = typeof tpl.label === 'string' ? tpl.label : `#${tpl.id}`;
-              const dist = typeof tpl.distribution === 'string' ? tpl.distribution : '';
-              const version = typeof tpl.version === 'string' ? tpl.version : '';
-              const name = typeof tpl.name === 'string' ? tpl.name : '';
-              const usesCount = typeof (tpl as any).uses_count === 'number' ? (tpl as any).uses_count : undefined;
-
-              const enabledBadge = boolBadge(tpl.enabled, 'common.enabled', 'common.disabled', t);
-              const supportedBadge = boolBadge(tpl.supported, 'common.supported', 'common.unsupported', t);
-
-              const canDelete = !usesCount || usesCount <= 0;
-
-              return (
-                <tr key={tpl.id}>
-                  <td className="min-w-0">
-                    <div className="min-w-0">
-                      <div className="font-medium truncate">{label}</div>
-                      <div className="mt-0.5 text-xs text-muted truncate">
-                        {dist && version ? `${dist} ${version}` : name || '—'}
-                      </div>
-                    </div>
-                  </td>
-                  <td>{tplOsFamilyLabel(tpl)}</td>
-                  <td>
-                    <Badge variant={enabledBadge.variant}>{enabledBadge.label}</Badge>
-                  </td>
-                  <td>
-                    <Badge variant={supportedBadge.variant}>{supportedBadge.label}</Badge>
-                  </td>
-                  <td className="tabular-nums">{usesCount !== undefined ? usesCount : '—'}</td>
-                  <td className="tabular-nums">{typeof tpl.order === 'number' ? tpl.order : '—'}</td>
-                  <td>
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        testId={`admin.cluster.os_templates.row.${tpl.id}.edit`}
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => openEdit(tpl)}
-                      >
-                        {t('common.edit')}
-                      </Button>
-                      <Button
-                        testId={`admin.cluster.os_templates.row.${tpl.id}.delete`}
-                        variant="danger"
-                        size="sm"
-                        disabled={!canDelete}
-                        title={!canDelete ? t('admin.cluster.os_templates.delete.blocked') : undefined}
-                        onClick={() => setConfirmDelete({ tpl })}
-                      >
-                        {t('common.delete')}
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </TableCard>
+        <OsTemplatesList
+          templates={rows}
+          onEdit={openEdit}
+          onDelete={(template) => setConfirmDelete({ tpl: template })}
+        />
       ) : null}
 
       <Modal
