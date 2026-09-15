@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
 import {
+  buildUserDataPageWindow,
   buildUserDataCreatePayload,
   buildUserDataUpdatePayload,
   buildUserDataValidationHints,
@@ -22,6 +23,53 @@ import {
 import type { VpsUserData } from '../../lib/api/vpsUserData';
 
 describe('UserDataTemplatesModel', () => {
+  test('hides the lookahead row and derives the ascending cursor from visible rows', () => {
+    const rawRows = Array.from({ length: 26 }, (_, index) => ({ id: index + 1 }));
+
+    expect(buildUserDataPageWindow(rawRows, 25)).toEqual({
+      rows: rawRows.slice(0, 25),
+      cursor: 25,
+      hasMore: true,
+    });
+  });
+
+  test('recognizes an exact-size terminal page', () => {
+    const rawRows = Array.from({ length: 25 }, (_, index) => ({ id: index + 1 }));
+
+    expect(buildUserDataPageWindow(rawRows, 25)).toEqual({
+      rows: rawRows,
+      cursor: 25,
+      hasMore: false,
+    });
+  });
+
+  test('fails closed when visible rows contain no valid cursor ID', () => {
+    const rawRows = [
+      { id: 'invalid' },
+      { id: 0 },
+      { id: -1 },
+      { id: 1.5 },
+      { id: Number.MAX_SAFE_INTEGER + 1 },
+    ];
+
+    expect(buildUserDataPageWindow(rawRows, 5)).toEqual({
+      rows: rawRows,
+      cursor: null,
+      hasMore: false,
+    });
+    expect(buildUserDataPageWindow([], 25)).toEqual({ rows: [], cursor: null, hasMore: false });
+  });
+
+  test('uses the greatest valid visible ID for an unsorted page', () => {
+    const rawRows = [{ id: 9 }, { id: 3 }, { id: 7 }, { id: 100 }];
+
+    expect(buildUserDataPageWindow(rawRows, 3)).toEqual({
+      rows: rawRows.slice(0, 3),
+      cursor: 9,
+      hasMore: true,
+    });
+  });
+
   test('normalizes template fields and IDs', () => {
     const item: VpsUserData = {
       id: 42.9,

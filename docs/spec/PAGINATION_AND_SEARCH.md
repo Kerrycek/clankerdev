@@ -5,7 +5,7 @@ This spec captures two cross-cutting UX requirements:
 1) **Pagination** for all list pages (using HaveAPI `from_id`).
 2) **Global search / quick-jump** (admin via `Cluster.Search`, non-admin limited unless backend adds support).
 
-Last updated: 2026-02-28
+Last updated: 2026-09-15
 
 ## Pagination
 
@@ -100,7 +100,7 @@ Pages already migrated to the shared implementation:
 - Admin incoming payments list: `src/pages/app/admin/IncomingPaymentsPage.tsx`
 - Incident reports list: `src/pages/app/incidents/IncidentsPage.tsx`
 - OOM reports list: `src/pages/app/oom/OomReportsPage.tsx`
-- Profile / Admin user data templates: `src/components/user/UserDataTemplatesPanel.tsx` (server-side `q`, SFI)
+- Profile / Admin user data templates: `src/components/user/UserDataTemplatesPanel.tsx` (bounded client-side label/ID search because the index has no `q`; ascending `id > from_id`; SFI)
 - User namespaces list: `src/components/userNamespaces/UserNamespaceList.tsx` (SFI; numeric-id oriented)
 - User namespace maps list: `src/components/userNamespaces/UserNamespaceMapList.tsx` (server-side `q`, SFI)
 

@@ -22,10 +22,15 @@ export function UserDataTemplatesList(props: {
   error: unknown;
   filtersActive: boolean;
   limit: number;
+  page: number;
+  pageCount: number;
+  maxDirectPage: number;
+  jumpPending: boolean;
   canPrev: boolean;
   canNext: boolean;
   onPrev: () => void;
   onNext: () => void;
+  onGoToPage: (page: number) => void;
   onLimitChange: (limit: number) => void;
   onCreate: () => void;
   onDeploy: (item: VpsUserData) => void;
@@ -52,22 +57,24 @@ export function UserDataTemplatesList(props: {
 
   if (props.rows.length === 0) {
     return (
-      <div
-        className="rounded-md border border-border bg-surface-2 p-6 text-center"
-        data-testid={`${props.prefix}.empty`}
-      >
-        <div className="text-sm font-semibold text-fg">
-          {props.filtersActive ? t('empty.list.no_matches.title') : t('empty.list.empty.title')}
-        </div>
-        <div className="mt-1 text-sm text-muted">
-          {props.filtersActive ? t('empty.list.no_matches.body') : t('user_data.empty.body')}
-        </div>
-        {!props.filtersActive ? (
-          <div className="mt-4 flex justify-center">
-            <Button variant="secondary" onClick={props.onCreate}>
-              {t('user_data.action.create')}
-            </Button>
+      <div className="overflow-hidden rounded-md border border-border bg-surface-2">
+        <div className="p-6 text-center" data-testid={`${props.prefix}.empty`}>
+          <div className="text-sm font-semibold text-fg">
+            {props.filtersActive ? t('empty.list.no_matches.title') : t('empty.list.empty.title')}
           </div>
+          <div className="mt-1 text-sm text-muted">
+            {props.filtersActive ? t('empty.list.no_matches.body') : t('user_data.empty.body')}
+          </div>
+          {!props.filtersActive ? (
+            <div className="mt-4 flex justify-center">
+              <Button variant="secondary" onClick={props.onCreate}>
+                {t('user_data.action.create')}
+              </Button>
+            </div>
+          ) : null}
+        </div>
+        {props.canPrev || props.canNext ? (
+          <UserDataPagination {...props} />
         ) : null}
       </div>
     );
@@ -76,18 +83,9 @@ export function UserDataTemplatesList(props: {
   return (
     <TableCard
       testId={`${props.prefix}.table`}
+      tableTestId={`${props.prefix}.table.element`}
       minWidth="md"
-      footer={
-        <KeysetPagination
-          testId={`${props.prefix}.pagination`}
-          limit={props.limit}
-          canPrev={props.canPrev}
-          canNext={props.canNext}
-          onPrev={props.onPrev}
-          onNext={props.onNext}
-          onLimitChange={props.onLimitChange}
-        />
-      }
+      footer={<UserDataPagination {...props} />}
     >
       <thead>
         <tr>
@@ -154,5 +152,38 @@ export function UserDataTemplatesList(props: {
         })}
       </tbody>
     </TableCard>
+  );
+}
+
+function UserDataPagination(props: {
+  prefix: string;
+  limit: number;
+  page: number;
+  pageCount: number;
+  maxDirectPage: number;
+  jumpPending: boolean;
+  canPrev: boolean;
+  canNext: boolean;
+  onPrev: () => void;
+  onNext: () => void;
+  onGoToPage: (page: number) => void;
+  onLimitChange: (limit: number) => void;
+}) {
+  return (
+    <KeysetPagination
+      testId={`${props.prefix}.pagination`}
+      page={props.page}
+      pageCount={props.pageCount}
+      maxDirectPage={props.maxDirectPage}
+      jumpPending={props.jumpPending}
+      limit={props.limit}
+      allowedLimits={[25, 50, 100, 200]}
+      canPrev={props.canPrev}
+      canNext={props.canNext}
+      onPrev={props.onPrev}
+      onNext={props.onNext}
+      onGoToPage={props.onGoToPage}
+      onLimitChange={props.onLimitChange}
+    />
   );
 }

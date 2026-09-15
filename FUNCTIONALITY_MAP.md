@@ -730,6 +730,75 @@ evidence.
 
 ---
 
+## VPS user-data template lifecycle and discovery
+
+**Status:** `mapped / implemented`
+
+### Purpose, actors, and API contract
+
+User-data templates let a member keep reusable provisioning content and deploy
+it to a VPS. The same list/create/edit/deploy/delete workflow is exposed in the
+member profile and, scoped to a selected account, in the administrator's user
+detail. The backend remains authoritative for ownership and mutation
+authorization.
+
+| Capability | Current contract |
+| --- | --- |
+| List | `GET /v7.0/vps_user_data`; declared inputs are `user`, `format`, `limit`, and `from_id`. There is no `q` input. |
+| Pagination | The backend applies `id > from_id`. WebUI Next therefore uses the greatest visible ID as the next cursor and requests one lookahead row to distinguish a full terminal page from a page with a successor. |
+| Search | Label search is case-insensitive in WebUI Next; a complete numeric or `#ID` term matches that ID exactly. A bounded client-side scan walks supported `from_id` batches while retaining `user` and `format`; it fails visibly if progress or completeness cannot be established. |
+| Mutations | Create and update store `label`, `format`, and `content`; administrator create may include `user`. Delete targets the template ID. Deploy posts `vps` to `/vps_user_data/:id/deploy` and accepts success only with a valid action-state ID. |
+
+The index resource currently has no explicit SQL ordering even though its
+cursor predicate is ascending. The UI validates strict cursor progress in
+each received batch, but it cannot prove stable selection inside a
+backend `LIMIT`; that remaining backend-wide risk is tracked in issue #189.
+
+Backend sources in the read-only upstream checkout:
+
+- `api/lib/vpsadmin/api/resources/vps_user_data.rb`;
+- `api/spec/api/resources/vps_user_data_spec.rb` (including the explicit
+  `id > from_id` expectation).
+
+### Legacy and current workflows
+
+The legacy `webui/forms/userdata.forms.php` page was a scoped CRUD list. It
+passed only the administrator's selected user and the generic list limit; it
+did not offer label search. WebUI Next preserves the lifecycle while adding a
+shareable smart filter and visited-page navigation at:
+
+- `/app/profile/user-data`;
+- `/admin/users/:userId/user-data`.
+
+`src/components/user/UserDataTemplatesPanel.tsx` resets a changed filter before
+fetching, restores filter/cursor pairs during browser Back/Forward navigation,
+discards stale forward cursors after a changed page edge, and returns to the
+previous page if deleting the final item empties a cursor page. The lookahead
+row is never rendered or considered a visible search result. The shared table
+keeps its pagination reachable on recoverable empty pages and remains contained
+by its horizontal table scroller on narrow screens.
+
+### Automated evidence and limits
+
+- `src/lib/api/vpsUserData.test.ts` verifies the supported request shape,
+  multi-batch search, retained scope filters, and explicit bounded/progress
+  failures.
+- `src/components/user/UserDataTemplatesModel.test.ts` verifies lookahead
+  slicing, terminal detection, and fail-closed cursor selection.
+- `e2e/specs/app/profile_user_data.spec.ts` keeps the complete mocked lifecycle
+  test aligned with the real ascending index contract.
+- `e2e/specs/app/user_data_keyset_pagination.spec.ts` covers member and
+  administrator scopes on desktop and mobile, including non-repeating pages,
+  terminal-page detection, filter reset/history, strict user scoping, and
+  deletion recovery.
+
+These tests exercise deterministic browser mocks rather than mutate a deployed
+account or VPS. A live read-only smoke check can validate deployed rendering
+and real response shape; create, edit, delete, and deploy still require an
+explicitly disposable target and cleanup authority.
+
+---
+
 ## Remaining product inventory
 
 The areas below are confirmed by current routes/source. Their status is
@@ -764,7 +833,7 @@ current UX, and end-to-end evidence.
 | Operations | transaction chains/items, action states, monitoring events | `inventory only` |
 | Support events | incidents including report creation; OOM reports, details, and rules | `inventory only` |
 | Payments | user payment/billing surface | `inventory only` |
-| Account | profile, resources, security, MFA, mail, keys, sessions, metrics tokens, user data, user namespaces/maps | `inventory only` |
+| Account | profile, resources, security, MFA, mail, keys, sessions, metrics tokens, user namespaces/maps; user-data templates are mapped separately above | `inventory only` |
 
 ### Administrator surfaces
 
@@ -773,7 +842,7 @@ current UX, and end-to-end evidence.
 | Admin dashboard | global operational overview | `inventory only` |
 | VPS, datasets, NAS, exports, DNS | admin-scoped versions of the core service surfaces | `inventory only` |
 | Networking | IP addresses/detail, host IPs, assignments, live view, traffic by user | `inventory only` |
-| Users | list/detail; resources/usage, payments, environment config, security, MFA, sessions, keys, metrics, mail, user data, history | `inventory only` |
+| Users | list/detail; resources/usage, payments, environment config, security, MFA, sessions, keys, metrics, mail, history; scoped user-data templates are mapped separately above | `inventory only` |
 | User namespaces | namespace and map lists/details | `inventory only` |
 | Finance | global overview, income forecast, incoming-payment list/detail/assignment and reconciliation | `inventory only` |
 | Audit | history list and event detail | `inventory only` |
