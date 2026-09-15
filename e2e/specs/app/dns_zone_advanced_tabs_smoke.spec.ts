@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 
-test('@smoke dns zone advanced tabs render', async ({ page }) => {
+test('@smoke dns zone advanced tabs render', async ({ page }, testInfo) => {
   let createdTransfer: any;
   let hostIpLookupParams: URLSearchParams | null = null;
   let tsigRequests = 0;
@@ -34,7 +34,13 @@ test('@smoke dns zone advanced tabs render', async ({ page }) => {
 
   await page.goto('/app/dns/zones/42/transfers');
   await expect(page.getByTestId('dns.transfers.page')).toBeVisible();
-  await expect(page.getByTestId('dns.transfers.row.1')).toBeVisible();
+  await expect(
+    page.getByTestId(
+      testInfo.project.name === 'mobile-chrome'
+        ? 'dns.transfers.card.1'
+        : 'dns.transfers.row.1',
+    ),
+  ).toBeVisible();
   expect(tsigRequests).toBe(0);
   await page.getByTestId('dns.transfers.create.open').click();
   await expect.poll(() => tsigRequests).toBe(1);
