@@ -6,11 +6,13 @@ import { mergeTransactionChainStreams, transactionChainPage } from './transactio
 const chains = (...ids: number[]) => ids.map((id) => ({ id }) as TransactionChain);
 
 describe('transaction chain pagination', () => {
-  it('disables Next for an exact-limit terminal page', () => {
-    expect(transactionChainPage(chains(30, 29, 28), 3)).toEqual({
-      rows: chains(30, 29, 28),
+  it.each([25, 50, 100])('disables Next for an exact terminal page at limit %i', (limit) => {
+    const exactPage = chains(...Array.from({ length: limit }, (_, index) => limit - index));
+
+    expect(transactionChainPage(exactPage, limit)).toEqual({
+      rows: exactPage,
       hasMore: false,
-      cursor: 28,
+      cursor: 1,
     });
   });
 
