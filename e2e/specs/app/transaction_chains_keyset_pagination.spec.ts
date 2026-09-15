@@ -29,29 +29,32 @@ test.describe('Transaction chains keyset pagination', () => {
     { label: 'user', path: '/app/transactions', level: 1 },
     { label: 'admin', path: '/admin/transactions', level: 100 },
   ]) {
-    test(`@pr-smoke @pr-smoke-mobile ${label} view disables Next on an exact terminal page`, async ({ page }) => {
-      const requestedLimits: string[] = [];
-      const terminalPage = Array.from({ length: 50 }, (_, i) => 300 - i).map((id) => makeChain(id));
+    for (const limit of [25, 50, 100]) {
+      test(`@pr-smoke @pr-smoke-mobile ${label} view disables Next on an exact terminal ${limit}-row page`, async ({ page }) => {
+        const requestedLimits: string[] = [];
+        const terminalPage = Array.from({ length: limit }, (_, i) => 300 - i).map((id) => makeChain(id));
+        const lookaheadLimit = String(limit + 1);
 
-      await bootstrap(page, {
-        'GET transaction_chains': ({ searchParams }) => {
-          if (searchParams.has('transaction_chain[state]')) return { transaction_chains: [] };
-          const limit = searchParams.get('transaction_chain[limit]') ?? '';
-          requestedLimits.push(limit);
-          if (limit !== '51') return { transaction_chains: [] };
-          return { transaction_chains: terminalPage };
-        },
-      }, level);
+        await bootstrap(page, {
+          'GET transaction_chains': ({ searchParams }) => {
+            if (searchParams.has('transaction_chain[state]')) return { transaction_chains: [] };
+            const requestedLimit = searchParams.get('transaction_chain[limit]') ?? '';
+            requestedLimits.push(requestedLimit);
+            if (requestedLimit !== lookaheadLimit) return { transaction_chains: [] };
+            return { transaction_chains: terminalPage };
+          },
+        }, level);
 
-      await page.goto(path);
+        await page.goto(`${path}?limit=${limit}`);
 
-      await expect(page.getByTestId('transactions.list')).toBeVisible();
-      await expect(page.getByTestId('transactions.row.300')).toBeVisible();
-      await expect(page.getByTestId('transactions.row.251')).toBeVisible();
-      await expect(page.getByTestId('transactions.pagination.next')).toBeDisabled();
-      await expect.poll(() => requestedLimits).toContain('51');
-      await expect(page.getByTestId(/^transactions\.row\.\d+$/)).toHaveCount(50);
-    });
+        await expect(page.getByTestId('transactions.list')).toBeVisible();
+        await expect(page.getByTestId('transactions.row.300')).toBeVisible();
+        await expect(page.getByTestId(`transactions.row.${301 - limit}`)).toBeVisible();
+        await expect(page.getByTestId('transactions.pagination.next')).toBeDisabled();
+        await expect.poll(() => requestedLimits).toContain(lookaheadLimit);
+        await expect(page.getByTestId(/^transactions\.row\.\d+$/)).toHaveCount(limit);
+      });
+    }
   }
 
   test('@pr-smoke @pr-smoke-mobile Next uses a hidden look-ahead row and keeps cursor continuity', async ({ page }) => {
