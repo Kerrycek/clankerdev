@@ -4,6 +4,7 @@ import type { TransactionChain } from '../../../lib/api/transactions';
 import type { Vps } from '../../../lib/api/vps';
 import { buildTransactionLockIndex } from '../../../lib/lockIndex';
 import {
+  buildVpsListPageWindow,
   buildVpsListRecord,
   extractVpsIpCandidates,
   normalizeVpsListStateFilter,
@@ -36,6 +37,32 @@ function recordFor(vps: Vps, failedChains: TransactionChain[] = []) {
 }
 
 describe('vpsListSemantics', () => {
+  it.each([25, 50, 100])('uses one hidden lookahead row for a %i-row VPS page', (limit) => {
+    const data = Array.from({ length: limit + 1 }, (_, index) => ({ id: index + 1 }));
+
+    expect(buildVpsListPageWindow(data, limit)).toEqual({
+      rows: data.slice(0, limit),
+      cursor: limit,
+      hasMore: true,
+    });
+  });
+
+  it('uses the largest visible ID as the ascending cursor and excludes the lookahead row', () => {
+    expect(buildVpsListPageWindow([{ id: 4 }, { id: 9 }, { id: 2 }, { id: 20 }], 3)).toEqual({
+      rows: [{ id: 4 }, { id: 9 }, { id: 2 }],
+      cursor: 9,
+      hasMore: true,
+    });
+  });
+
+  it('stops on an exact terminal page and fails closed when visible IDs are invalid', () => {
+    expect(buildVpsListPageWindow([{ id: 1 }, { id: 2 }], 2)).toMatchObject({ cursor: 2, hasMore: false });
+    expect(buildVpsListPageWindow([{ id: 0 }, { id: Number.NaN }, { id: -3 }], 2)).toMatchObject({
+      cursor: null,
+      hasMore: false,
+    });
+  });
+
   it('builds scan-friendly labels and chooses a running row primary action', () => {
     const row = recordFor(baseVps);
 
