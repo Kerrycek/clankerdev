@@ -26,7 +26,7 @@
 
     /* Size tokens */
     --drawer-w-sm: 18rem;
-    --drawer-w-md: 22rem;
+    --drawer-w-md: min(22rem, calc(100vw - 2rem));
     --drawer-w-lg: 34rem;
     --drawer-w-xl: min(47.5rem, calc(100vw - 2rem));
 
