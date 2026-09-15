@@ -49,7 +49,7 @@ function t(key: any, vars?: Record<string, unknown>): string {
   return translations[String(key)] ?? String(key);
 }
 
-function HeaderHarness() {
+function HeaderHarness(props: { onOpenPalette?: () => void } = {}) {
   const syncRef = useRef<HTMLDivElement | null>(null);
   const userMenuRef = useRef<HTMLDivElement | null>(null);
   const [syncOpen, setSyncOpen] = useState(false);
@@ -63,6 +63,7 @@ function HeaderHarness() {
         canSwitchMode={false}
         shortcutHint="⌘K"
         onOpenMobileNav={() => undefined}
+        onOpenPalette={props.onOpenPalette ?? (() => undefined)}
         showSyncIndicator={false}
         syncRef={syncRef}
         syncOpen={syncOpen}
@@ -94,6 +95,15 @@ function HeaderHarness() {
 }
 
 describe('AppHeader', () => {
+  it('opens the command palette from the mobile search trigger', () => {
+    const onOpenPalette = vi.fn();
+    render(<HeaderHarness onOpenPalette={onOpenPalette} />);
+
+    fireEvent.click(screen.getByTestId('palette.open'));
+
+    expect(onOpenPalette).toHaveBeenCalledTimes(1);
+  });
+
   it('anchors the user menu below the top-right trigger', () => {
     render(<HeaderHarness />);
 

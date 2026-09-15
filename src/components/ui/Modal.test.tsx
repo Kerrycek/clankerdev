@@ -5,6 +5,17 @@ import { render, screen } from '@testing-library/react';
 import { Modal } from './Modal';
 
 describe('Modal', () => {
+  it('gives a titleless dialog an explicit accessible name', () => {
+    render(
+      <Modal open ariaLabel="Search" onClose={() => undefined} testId="modal">
+        Content
+      </Modal>
+    );
+
+    expect(screen.getByRole('dialog', { name: 'Search' })).toBeInTheDocument();
+    expect(screen.getByTestId('modal')).not.toHaveAttribute('aria-labelledby');
+  });
+
   it('keeps the page visible behind an opaque dialog surface', () => {
     render(
       <Modal open title="Edit settings" onClose={() => undefined} testId="modal">
