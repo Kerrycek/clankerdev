@@ -502,7 +502,7 @@ function NetworksContent() {
               testId="admin.cluster.networks.search.input"
               value={smart}
               onChange={setSmart}
-              onSubmit={() => applySmart()}
+              onSubmit={(submittedValue?: string) => applySmart(submittedValue ?? smartInputRef.current?.value)}
               suggestions={smartSuggestions}
               ariaLabel={t('admin.cluster.networks.filter.placeholder')}
               placeholder={t('admin.cluster.networks.filter.placeholder')}

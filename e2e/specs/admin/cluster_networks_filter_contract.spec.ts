@@ -64,6 +64,18 @@ test('@pr-smoke @pr-smoke-mobile admin cluster networks use only exact Network.I
   await page.getByTestId('drawer.close').click();
 
   const input = page.getByTestId('admin.cluster.networks.search.input');
+  const rapidSubmitBefore = requests.length;
+  await input.evaluate((element) => {
+    const inputElement = element as HTMLInputElement;
+    const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+    valueSetter?.call(inputElement, 'managed:true');
+    inputElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  });
+  await expect(page.getByTestId('admin.cluster.networks.filter.error.0')).toContainText(
+    'Network.Index supports only location:, purpose: or a numeric network ID.'
+  );
+  expect(requests).toHaveLength(rapidSubmitBefore);
+
   for (const unsupported of ['public', 'role:public_access']) {
     const before = requests.length;
     await input.fill(unsupported);
