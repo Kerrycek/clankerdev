@@ -44,6 +44,7 @@ import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 import { VpsLookupInput } from '../../../components/ui/VpsLookupInput';
 import { dotVariantFromRowVariant } from '../../../lib/variantMap';
 import {
+  buildOomReportPage,
   canonicalKey,
   envLabel,
   locLabel,
@@ -234,13 +235,14 @@ export function OomReportsPage() {
     defaultLimit: 50,
     allowedLimits: [25, 50, 100],
   });
+  const reportRequestLimit = pagination.limit + 1;
 
   const listQ = useQuery({
     queryKey: [
       'oom_reports',
       'index',
       {
-        limit: pagination.limit,
+        limit: reportRequestLimit,
         from: pagination.cursor,
         vps: vpsId,
         user: effectiveUserId,
@@ -257,7 +259,7 @@ export function OomReportsPage() {
     queryFn: async () =>
       (
         await fetchOomReports({
-          limit: pagination.limit,
+          limit: reportRequestLimit,
           fromId: pagination.cursor as number | undefined,
           vpsId,
           userId: effectiveUserId,
@@ -310,7 +312,9 @@ export function OomReportsPage() {
     return opts;
   }, [locQ.data, t]);
 
-  const rows = listQ.data ?? [];
+  const reportPage = useMemo(() => buildOomReportPage(listQ.data, pagination.limit), [listQ.data, pagination.limit]);
+  const rows = reportPage.rows;
+  const canNext = pagination.hasForward || (reportPage.hasMore && reportPage.cursor !== null);
 
   const shareUrl = useMemo(() => {
     if (typeof window === 'undefined') return '';
@@ -1164,9 +1168,9 @@ export function OomReportsPage() {
               page={pagination.page}
               pageCount={pagination.stack.length}
               canPrev={pagination.canPrev}
-              canNext={!pagination.hasForward && rows.length === pagination.limit}
+              canNext={canNext}
               onPrev={() => pagination.goPrev()}
-              onNext={() => pagination.goNext(rows[rows.length - 1]?.id)}
+              onNext={() => pagination.goNext(reportPage.cursor)}
               onGoToPage={pagination.goToPage}
               limit={pagination.limit}
               allowedLimits={pagination.allowedLimits}

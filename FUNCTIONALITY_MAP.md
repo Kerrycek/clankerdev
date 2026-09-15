@@ -730,6 +730,61 @@ evidence.
 
 ---
 
+## OOM report list traversal
+
+**Status:** `mapped / partial`
+
+OOM reports are troubleshooting records for memory-pressure kills. Members and
+support users can browse reports for their own VPSes on `/app/oom-reports`;
+administrators can use the same owner-oriented view or inspect the global list
+on `/admin/oom-reports`. Browsing the list is read-only and does not create,
+change, or remove the separate OOM notification rules.
+
+`OomReport::Index` owner-restricts non-administrators and blacklists their
+`user` filter. Administrators may filter the global list by user. The resource
+also accepts exact VPS, node, location, environment, rule, and cgroup filters,
+plus inclusive since/until time bounds. It applies HaveAPI descending ID
+pagination and then orders the result by `oom_reports.created_at DESC`.
+
+WebUI Next offers visible limits of 25, 50, or 100 reports. It requests one
+additional row, renders only the selected limit, derives `from_id` from the
+last visible report, and enables **Next** only when the hidden look-ahead row
+exists or the local cursor stack already contains a visited forward page. The
+largest request is therefore 101 rows, below HaveAPI's maximum of 1,000. This
+removes the empty next page at an exact terminal boundary and preserves forward
+navigation after returning to an earlier page.
+
+The legacy report form requests exactly its visible limit. Its shared paginator
+also assumes another page whenever the response count equals that limit, so it
+has the same exact-terminal false positive. Following that false signal to an
+empty WebUI Next result also removed its paginator, leaving browser Back as the
+only recovery. Legacy does preserve known forward history; the inverted
+`!pagination.hasForward` gate was specific to the former WebUI Next
+implementation and disabled **Next** despite an already visited forward page.
+
+Backend evidence comes from the read-only upstream
+`api/lib/vpsadmin/api/resources/oom_report.rb`,
+`api/lib/vpsadmin/supervisor/node/oom_reports.rb`, and the pinned HaveAPI
+pagination implementation. Legacy evidence comes from
+`webui/forms/oom_reports.forms.php` and `webui/lib/pagination.lib.php`. Current
+implementation and deterministic desktop/mobile coverage are in
+`src/pages/app/oom/OomReportsPage.tsx` and
+`e2e/specs/app/oom_reports_smart_filter.spec.ts`.
+
+The browser test proves the 26-row request and hidden sentinel, a two-page
+50-report boundary, visible-row cursor continuity, the exact terminal state,
+and Prev → reload → Next behavior using strict HaveAPI mocks. It does not claim
+a live OOM report or rule mutation.
+
+Complete traversal remains an upstream limitation: `from_id` filters by ID,
+while the primary order is `created_at`, and node ingestion sets that timestamp
+from the reported event time. IDs that are non-monotonic with event time, or
+reports sharing the same timestamp, can still be skipped or repeated. Issue
+#189 tracks the required deterministic aligned order/cursor contract; this
+frontend change claims only the narrower UI guarantees above.
+
+---
+
 ## Remaining product inventory
 
 The areas below are confirmed by current routes/source. Their status is
@@ -762,7 +817,7 @@ current UX, and end-to-end evidence.
 | DNS | zones; records, transfers, DNSSEC, servers, settings, logs; user TSIG keys | `inventory only` |
 | Networking | user addresses/traffic/live networking surface | `inventory only` |
 | Operations | transaction chains/items, action states, monitoring events | `inventory only` |
-| Support events | incidents including report creation; OOM reports, details, and rules | `inventory only` |
+| Support events | incidents including report creation; OOM reports, details, and rules; OOM list traversal is mapped above | `inventory only` |
 | Payments | user payment/billing surface | `inventory only` |
 | Account | profile, resources, security, MFA, mail, keys, sessions, metrics tokens, user data, user namespaces/maps | `inventory only` |
 
