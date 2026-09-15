@@ -1,6 +1,17 @@
 import type { Node } from '../../../lib/api/nodes';
 import type { Environment, Location } from '../../../lib/api/oom';
 
+export function buildOomReportPage<T extends { id?: unknown }>(reports: T[] | undefined, limit: number) {
+  const rows = (reports ?? []).slice(0, limit);
+  const rawCursor = rows.at(-1)?.id;
+
+  return {
+    rows,
+    hasMore: (reports?.length ?? 0) > limit,
+    cursor: typeof rawCursor === 'number' && Number.isSafeInteger(rawCursor) && rawCursor > 0 ? rawCursor : null,
+  };
+}
+
 export function safeNumber(value: string): number | undefined {
   const t = value.trim();
   if (!t) return undefined;
