@@ -728,6 +728,60 @@ A live assignment would create scheduled work and therefore requires a
 disposable dataset and an agreed cleanup plan; it is not implied by the mocked
 evidence.
 
+## User payment history traversal
+
+**Status:** `mapped / partial`
+
+Authenticated members can inspect their accepted-payment history on
+`/app/payments`; administrators can inspect the same history for a selected
+member on `/admin/users/:userId/payments`. The administrator surface keeps the
+related account settings and manual-payment controls, but browsing history is
+read-only and does not invoke those mutations.
+
+`UserPayment::Index` owner-restricts ordinary members, accepts an exact `user`
+scope for administrators, applies descending keyset pagination, and orders by
+`created_at DESC, id DESC`. Both WebUI Next surfaces use the endpoint's existing
+descending ID cursor, ask for one additional row, render only the selected
+limit, and expose **Next** only when that hidden look-ahead row exists (or a
+forward page was already visited). This avoids an empty page when the final
+result contains exactly 25, 50, 100, or the administrator-only 200 rows. The
+largest request is 201 rows, below the HaveAPI maximum of 1,000.
+
+The current backend cursor predicate is ID-only even though time is the primary
+sort key. Historical rows whose IDs are not monotonic with `created_at` can
+therefore still be skipped by complete multi-page traversal. Issue #189 tracks
+the required deterministic upstream order/cursor contract; this frontend fix
+claims only truthful exact-terminal detection under the current API.
+
+The legacy administrator-wide payment history uses `from_id`, but its shared
+paginator infers another page from `count == limit`; it therefore has the same
+exact-terminal false positive. The legacy per-user payment panel lists a
+single bounded result without pagination controls. WebUI Next intentionally
+provides consistent traversable history in both member and administrator
+contexts while preserving the API's role boundary.
+
+Evidence:
+
+- Backend ordering, filtering, and authorization:
+  `plugins/payments/api/resources/user_payment.rb` in the read-only upstream
+  checkout.
+- Legacy administrator and per-user presentations:
+  `webui/forms/users.forms.php` and `webui/lib/pagination.lib.php` in the
+  read-only upstream checkout.
+- WebUI Next API wrapper and surfaces: `src/lib/api/payments.ts`,
+  `src/pages/app/payments/PaymentsPage.tsx`, and
+  `src/pages/app/admin/user/AdminUserPaymentsPage.tsx`.
+- Deterministic desktop/mobile contract coverage:
+  `e2e/specs/app/payments_page.spec.ts` and
+  `e2e/specs/admin/user_payments_smoke.spec.ts`.
+
+The browser tests use strict HaveAPI mocks with monotonic IDs/timestamps to
+prove the look-ahead boundary, current ID-cursor continuity, owner/admin request
+shapes, and visible row limit. Authorization and owner restriction are evidenced
+by the cited upstream resource rather than emulated by the browser mock. The
+tests do not prove traversal of non-monotonic live history, certify live payment
+data, or perform a real payment/account mutation.
+
 ---
 
 ## Remaining product inventory
@@ -763,7 +817,7 @@ current UX, and end-to-end evidence.
 | Networking | user addresses/traffic/live networking surface | `inventory only` |
 | Operations | transaction chains/items, action states, monitoring events | `inventory only` |
 | Support events | incidents including report creation; OOM reports, details, and rules | `inventory only` |
-| Payments | user payment/billing surface | `inventory only` |
+| Payments | user payment/billing surface; history traversal is mapped above | `inventory only` |
 | Account | profile, resources, security, MFA, mail, keys, sessions, metrics tokens, user data, user namespaces/maps | `inventory only` |
 
 ### Administrator surfaces

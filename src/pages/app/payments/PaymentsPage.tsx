@@ -68,14 +68,16 @@ export function PaymentsPage() {
   });
 
   const historyQ = useQuery({
-    queryKey: ['user_payments', 'list', { limit: pagination.limit, fromId: pagination.fromId, userId }],
-    queryFn: async () => (await fetchUserPayments({ limit: pagination.limit, fromId: pagination.fromId, userId })).data,
+    queryKey: ['user_payments', 'list', { limit: pagination.limit + 1, fromId: pagination.fromId, userId }],
+    queryFn: async () => (await fetchUserPayments({ limit: pagination.limit + 1, fromId: pagination.fromId, userId })).data,
     enabled: Boolean(userId),
     refetchInterval: tierBRefetchMs,
   });
 
-  const canNext = (historyQ.data?.length ?? 0) >= pagination.limit;
-  const cursor = cursorFromDescendingPage(historyQ.data);
+  const historyPage = historyQ.data ?? [];
+  const visibleHistory = historyPage.slice(0, pagination.limit);
+  const cursor = cursorFromDescendingPage(visibleHistory);
+  const canNext = pagination.hasForward || (historyPage.length > pagination.limit && cursor !== null);
 
   const instructions = normalizePaymentInstructions(instructionsQ.data);
 
@@ -142,7 +144,7 @@ export function PaymentsPage() {
             ) : null}
 
             {!historyQ.isLoading && !historyQ.isError ? (
-              historyQ.data && historyQ.data.length > 0 ? (
+              visibleHistory.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm table-list" data-testid="payments.my.history.table">
                     <thead className="bg-surface-2">
@@ -153,7 +155,7 @@ export function PaymentsPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {historyQ.data.map((p) => (
+                      {visibleHistory.map((p) => (
                         <tr key={p.id}>
                           <td className="px-3 py-2 font-medium tabular-nums">{formatDateTime(p.created_at)}</td>
                           <td className="px-3 py-2 text-right tabular-nums">{formatMoneyLike(safeInt(p.amount))}</td>
