@@ -773,7 +773,7 @@ current UX, and end-to-end evidence.
 | Admin dashboard | global operational overview | `inventory only` |
 | VPS, datasets, NAS, exports, DNS | admin-scoped versions of the core service surfaces | `inventory only` |
 | Networking | IP addresses/detail, host IPs, assignments, live view, traffic by user | `inventory only` |
-| Users | list/detail; resources/usage, payments, environment config, security, MFA, sessions, keys, metrics, mail, user data, history | `inventory only` |
+| Users | list/detail; resources/usage with distinct loading, empty, and retryable error states; payments, environment config, security, MFA, sessions, keys, metrics, mail, user data, history | `inventory only` |
 | User namespaces | namespace and map lists/details | `inventory only` |
 | Finance | global overview, income forecast, incoming-payment list/detail/assignment and reconciliation | `inventory only` |
 | Audit | history list and event detail | `inventory only` |
