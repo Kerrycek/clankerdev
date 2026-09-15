@@ -106,6 +106,45 @@ authorization configuration; that still requires read-only live smoke checks
 with separate admin and non-admin sessions. No create or other mutation is
 part of that live verification.
 
+## Core VPS inventory pagination
+
+**Status:** `mapped / partial`
+
+The shared VPS inventory at `/app/vps` and `/admin/vps` follows the deployed
+HaveAPI `from_id` contract: the endpoint advances with the exclusive predicate
+`id > from_id`. WebUI Next requests one bounded lookahead row, renders only the
+selected 25, 50, or 100 rows, and uses the greatest visible VPS ID as the next
+cursor. The hidden row distinguishes a full page with more data from an
+exactly full terminal page. Previously visited forward cursors remain
+available after returning to an earlier page, and a stale cursor that produces
+an empty page offers Previous instead of trapping the user in the empty state.
+Browser Back and Forward restore the URL's filter set and its deep cursor
+without a page-one request using stale local filter drafts.
+
+Administrator filters for owner, node, location, namespace map, and hostname
+remain server-side and reset pagination before the filtered request. In the
+member workspace, privileged users in My view send their own owner ID while
+regular users rely on the backend's mandatory owner restriction. Runtime-state
+and IP-shaped searches remain client-side filters of the fetched page; they are
+not full-inventory searches.
+
+Evidence:
+
+- Backend resource: `api/lib/vpsadmin/api/resources/vps.rb` in the read-only
+  upstream vpsAdmin checkout, which applies HaveAPI `with_pagination`.
+- WebUI Next request and page-window logic:
+  `src/pages/app/VpsListPage.tsx` and
+  `src/pages/app/vps/vpsListSemantics.ts`.
+- Unit and strict mocked-browser coverage:
+  `src/pages/app/vps/vpsListSemantics.test.ts`,
+  `e2e/specs/app/vps_list_keyset_pagination.spec.ts`, and
+  `e2e/specs/app/admin_scope_filters_requests.spec.ts`.
+
+The upstream VPS index does not yet declare an explicit deterministic order,
+so this UI follows the deployed ascending ID behavior but cannot itself
+guarantee ordering if the backend changes it. That upstream hardening remains
+tracked separately.
+
 ## Identity lifecycle and requests
 
 The requests plugin models two related but different workflows:

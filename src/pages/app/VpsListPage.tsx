@@ -20,7 +20,7 @@ import { EmptyState } from '../../components/ui/EmptyState';
 import { ErrorState } from '../../components/ui/ErrorState';
 import { LoadingState } from '../../components/ui/LoadingState';
 import { Button } from '../../components/ui/Button';
-import { buildTransactionLockIndex, cursorFromDescendingPage } from '../../lib/lockIndex';
+import { buildTransactionLockIndex } from '../../lib/lockIndex';
 import { hasActiveChains } from '../../lib/taskStatus';
 import { useKeysetPagination } from '../../lib/hooks/useKeysetPagination';
 import { useTierAIntervalMs } from '../../lib/refreshTiers';
@@ -30,7 +30,13 @@ import { VpsListFilters } from './vps/VpsListFilters';
 import { VpsListMobile } from './vps/VpsListMobile';
 import { VpsListTable } from './vps/VpsListTable';
 import { VpsListActionConfirmDialog, type VpsListActionConfirm } from './vps/VpsListActionConfirmDialog';
-import { buildVpsListRecord, extractVpsIpCandidates, recordMatchesStateFilter, type VpsListRecord } from './vps/vpsListSemantics';
+import {
+  buildVpsListPageWindow,
+  buildVpsListRecord,
+  extractVpsIpCandidates,
+  recordMatchesStateFilter,
+  type VpsListRecord,
+} from './vps/vpsListSemantics';
 import { useVpsListSmartFilters } from './vps/useVpsListSmartFilters';
 
 type VpsPowerKind = 'start' | 'stop' | 'restart';
@@ -106,16 +112,18 @@ export function VpsListPage() {
     filterKey: listFilters.filterKey,
     searchParams: listFilters.searchParams,
     setSearchParams: listFilters.setSearchParams,
+    restoreUrlCursorOnSignatureChange: true,
     defaultLimit: 50,
     allowedLimits: [25, 50, 100],
   });
+  const requestLimit = pagination.limit + 1;
 
   const q = useQuery({
     queryKey: [
       'vps',
       'list',
       {
-        limit: pagination.limit,
+        limit: requestLimit,
         fromId: pagination.fromId,
         hostnameAny: serverHostnameNeedle,
         node: listFilters.nodeIdNum,
@@ -127,7 +135,7 @@ export function VpsListPage() {
     queryFn: async () =>
       (
         await fetchVpsList({
-          limit: pagination.limit,
+          limit: requestLimit,
           fromId: pagination.fromId,
           hostnameAny: serverHostnameNeedle,
           node: listFilters.nodeIdNum,
@@ -273,9 +281,13 @@ export function VpsListPage() {
     onSettled: (_res, error, vars, context) => settleMutationLock(vars, error, context),
   });
 
-  const rows = useMemo(() => q.data ?? [], [q.data]);
-  const pageCursor = useMemo(() => cursorFromDescendingPage(q.data), [q.data]);
-  const hasMore = rows.length >= pagination.limit;
+  const pageWindow = useMemo(
+    () => buildVpsListPageWindow(q.data, pagination.limit),
+    [q.data, pagination.limit]
+  );
+  const rows = pageWindow.rows;
+  const pageCursor = pageWindow.cursor;
+  const hasMore = pageWindow.hasMore;
   const canPaginate = pagination.canPrev || pagination.hasForward || hasMore;
 
   const displayRows = useMemo(
@@ -298,7 +310,8 @@ export function VpsListPage() {
     [displayRows, listFilters.stateFilter, searchNeedle]
   );
 
-  const emptyNone = rows.length === 0 && !listFilters.filtersActive;
+  const emptyCursorPage = rows.length === 0 && pagination.canPrev;
+  const emptyNone = rows.length === 0 && !listFilters.filtersActive && !emptyCursorPage;
   const emptyTitle = emptyNone
     ? scope.scope === 'mine'
       ? t('empty.vps.none.title')
@@ -370,8 +383,20 @@ export function VpsListPage() {
           testId="vps.list.empty"
           title={emptyTitle}
           body={emptyBody}
-          actionLabel={listFilters.filtersActive ? t('common.clear_filters') : undefined}
-          onAction={listFilters.filtersActive ? listFilters.clearFilters : undefined}
+          actionLabel={
+            emptyCursorPage
+              ? t('pagination.prev')
+              : listFilters.filtersActive
+                ? t('common.clear_filters')
+                : undefined
+          }
+          onAction={
+            emptyCursorPage
+              ? pagination.goPrev
+              : listFilters.filtersActive
+                ? listFilters.clearFilters
+                : undefined
+          }
         />
       ) : (
         <>
