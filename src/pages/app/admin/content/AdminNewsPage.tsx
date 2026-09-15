@@ -7,6 +7,7 @@ import { useToasts } from '../../../../app/toasts';
 import { Alert } from '../../../../components/ui/Alert';
 import { Badge } from '../../../../components/ui/Badge';
 import { Button } from '../../../../components/ui/Button';
+import { Card } from '../../../../components/ui/Card';
 import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog';
 import { Input } from '../../../../components/ui/Input';
 import { Modal } from '../../../../components/ui/Modal';
@@ -185,55 +186,98 @@ export function AdminNewsPage() {
           {t('admin.newslog.empty.body')}
         </Alert>
       ) : (
-        <TableCard testId="admin.newslog.table">
-          <thead>
-            <tr>
-              <th className="px-4 py-2 text-left text-xs font-semibold text-faint">{t('admin.newslog.table.published_at')}</th>
-              <th className="px-4 py-2 text-left text-xs font-semibold text-faint">{t('admin.newslog.table.status')}</th>
-              <th className="px-4 py-2 text-left text-xs font-semibold text-faint">{t('admin.newslog.table.message')}</th>
-              <th className="px-4 py-2 text-right text-xs font-semibold text-faint">{t('common.actions')}</th>
-            </tr>
-          </thead>
-          <tbody>
+        <>
+          <div className="space-y-3 md:hidden" data-testid="admin.newslog.cards">
             {rows.map((n) => {
               const scheduled = isFuture(n.published_at ?? null);
               return (
-                <tr key={n.id} className="table-row-tone">
-                  <td className="px-4 py-2 text-xs text-muted">{formatDateTime(String(n.published_at ?? ''))}</td>
-                  <td className="px-4 py-2">
-                    {scheduled ? (
-                      <Badge variant="info">{t('admin.newslog.status.scheduled')}</Badge>
-                    ) : (
-                      <Badge variant="neutral">{t('admin.newslog.status.published')}</Badge>
-                    )}
-                  </td>
-                  <td className="px-4 py-2">
-                    <div className="text-sm font-medium text-fg">{snippet(n.message)}</div>
+                <Card key={n.id} testId={`admin.newslog.card.${n.id}`}>
+                  <div className="min-w-0 p-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="text-xs text-muted">{formatDateTime(String(n.published_at ?? ''))}</div>
+                      {scheduled ? (
+                        <Badge variant="info">{t('admin.newslog.status.scheduled')}</Badge>
+                      ) : (
+                        <Badge variant="neutral">{t('admin.newslog.status.published')}</Badge>
+                      )}
+                    </div>
+
+                    <div className="mt-3 break-words text-sm font-medium text-fg">{snippet(n.message)}</div>
                     <div className="mt-0.5 text-xs text-faint">#{n.id}</div>
-                  </td>
-                  <td className="px-4 py-2 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button size="sm" variant="secondary" onClick={() => openEdit(n)} testId={`admin.newslog.edit.${n.id}`}>
+
+                    <div className="mt-4 grid grid-cols-2 gap-2 border-t border-border pt-3" role="group" aria-label={t('common.actions')}>
+                      <Button size="sm" variant="secondary" className="min-h-11 min-w-0 px-3" onClick={() => openEdit(n)} testId={`admin.newslog.card.${n.id}.edit`}>
                         {t('admin.newslog.action.edit')}
                       </Button>
                       <Button
                         size="sm"
                         variant="danger"
+                        className="min-h-11 min-w-0 px-3"
                         onClick={() => {
                           setDeleteTarget(n);
                           setDeleteOpen(true);
                         }}
-                        testId={`admin.newslog.delete.${n.id}`}
+                        testId={`admin.newslog.card.${n.id}.delete`}
                       >
                         {t('admin.newslog.action.delete')}
                       </Button>
                     </div>
-                  </td>
-                </tr>
+                  </div>
+                </Card>
               );
             })}
-          </tbody>
-        </TableCard>
+          </div>
+
+          <TableCard className="hidden md:block" testId="admin.newslog.table">
+            <thead>
+              <tr>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-faint">{t('admin.newslog.table.published_at')}</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-faint">{t('admin.newslog.table.status')}</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-faint">{t('admin.newslog.table.message')}</th>
+                <th className="px-4 py-2 text-right text-xs font-semibold text-faint">{t('common.actions')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((n) => {
+                const scheduled = isFuture(n.published_at ?? null);
+                return (
+                  <tr key={n.id} className="table-row-tone">
+                    <td className="px-4 py-2 text-xs text-muted">{formatDateTime(String(n.published_at ?? ''))}</td>
+                    <td className="px-4 py-2">
+                      {scheduled ? (
+                        <Badge variant="info">{t('admin.newslog.status.scheduled')}</Badge>
+                      ) : (
+                        <Badge variant="neutral">{t('admin.newslog.status.published')}</Badge>
+                      )}
+                    </td>
+                    <td className="px-4 py-2">
+                      <div className="text-sm font-medium text-fg">{snippet(n.message)}</div>
+                      <div className="mt-0.5 text-xs text-faint">#{n.id}</div>
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button size="sm" variant="secondary" onClick={() => openEdit(n)} testId={`admin.newslog.edit.${n.id}`}>
+                          {t('admin.newslog.action.edit')}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          onClick={() => {
+                            setDeleteTarget(n);
+                            setDeleteOpen(true);
+                          }}
+                          testId={`admin.newslog.delete.${n.id}`}
+                        >
+                          {t('admin.newslog.action.delete')}
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </TableCard>
+        </>
       )}
 
       <Modal
