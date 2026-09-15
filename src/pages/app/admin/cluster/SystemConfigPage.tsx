@@ -75,6 +75,10 @@ function valuePreview(cfg: SystemConfigItem): string {
   }
 }
 
+function configRowId(cfg: SystemConfigItem): string {
+  return `${norm(cfg.category)}.${norm(cfg.name)}`.replace(/[^a-zA-Z0-9_.-]/g, '_');
+}
+
 type EditorState =
   | null
   | {
@@ -378,8 +382,54 @@ export function SystemConfigPage() {
           testId="admin.cluster.system_config.empty"
         />
       ) : (
-        <TableCard testId="admin.cluster.system_config.table" minWidth="lg">
-          <thead>
+        <>
+          <div className="space-y-3 md:hidden" data-testid="admin.cluster.system_config.cards">
+            {filtered.map((cfg) => {
+              const rowId = configRowId(cfg);
+              const label = norm(cfg.label) || norm(cfg.name) || '—';
+              return (
+                <Card key={rowId} testId={`admin.cluster.system_config.card.${rowId}`}>
+                  <div className="min-w-0 p-4">
+                    <div className="break-words text-base font-semibold text-fg">{label}</div>
+                    <dl className="mt-4 space-y-3 text-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <dt className="shrink-0 text-faint">{t('admin.cluster.system_config.col.category')}</dt>
+                        <dd className="min-w-0 break-all text-right text-fg">{norm(cfg.category) || '—'}</dd>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <dt className="shrink-0 text-faint">{t('admin.cluster.system_config.col.name')}</dt>
+                        <dd className="min-w-0 break-all text-right font-mono text-xs text-fg">{norm(cfg.name) || '—'}</dd>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <dt className="shrink-0 text-faint">{t('admin.cluster.system_config.col.value')}</dt>
+                        <dd className="min-w-0 break-all text-right font-mono text-xs text-muted">{valuePreview(cfg)}</dd>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <dt className="shrink-0 text-faint">{t('common.type')}</dt>
+                        <dd className="min-w-0 text-right">
+                          <Badge variant="neutral">{norm((cfg as any).type) || '—'}</Badge>
+                        </dd>
+                      </div>
+                    </dl>
+                    <div className="mt-4 border-t border-border pt-3">
+                      <Button
+                        size="lg"
+                        variant="secondary"
+                        className="w-full min-w-0"
+                        ariaLabel={`${t('common.edit')}: ${label}`}
+                        onClick={() => openEditor(cfg)}
+                        testId={`admin.cluster.system_config.card.${rowId}.edit`}
+                      >
+                        {t('common.edit')}
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+          <TableCard className="hidden md:block" testId="admin.cluster.system_config.table" minWidth="lg">
+            <thead>
             <tr>
               {!catTrim ? <th className="px-3 py-2 text-left text-xs font-semibold text-muted">{t('admin.cluster.system_config.col.category')}</th> : null}
               <th className="px-3 py-2 text-left text-xs font-semibold text-muted">{t('admin.cluster.system_config.col.name')}</th>
@@ -388,11 +438,11 @@ export function SystemConfigPage() {
               <th className="px-3 py-2 text-left text-xs font-semibold text-muted">{t('common.type')}</th>
               <th className="px-3 py-2 text-right text-xs font-semibold text-muted">{t('common.actions')}</th>
             </tr>
-          </thead>
+            </thead>
 
-          <tbody>
+            <tbody>
             {filtered.map((cfg) => {
-              const rowId = `${norm(cfg.category)}.${norm(cfg.name)}`.replace(/[^a-zA-Z0-9_.-]/g, '_');
+              const rowId = configRowId(cfg);
               return (
                 <tr key={rowId} data-testid={`admin.cluster.system_config.row.${rowId}`}>
                   {!catTrim ? <td className="whitespace-nowrap px-3 py-2 text-muted">{norm(cfg.category) || '—'}</td> : null}
@@ -420,8 +470,9 @@ export function SystemConfigPage() {
                 </tr>
               );
             })}
-          </tbody>
-        </TableCard>
+            </tbody>
+          </TableCard>
+        </>
       )}
 
       <Modal
