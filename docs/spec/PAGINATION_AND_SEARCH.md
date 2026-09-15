@@ -292,14 +292,17 @@ Admin pages follow the same keyset pagination rules (`from_id`, `limit`, numeric
 
 - **Cluster networks** (`/admin/cluster/networks`)
   - Index: `Network.Index` (`GET /api/v7.0/networks`) with `network[from_id]`, `network[limit]`.
-  - Filters mapped to API inputs:
-    - `q` (`network[q]`) (label/address search)
+  - Exact filters mapped to API inputs:
     - `location` (`network[location]`)
-    - `ip_version` (`network[ip_version]`)
-    - `role` (`network[role]`)
-    - `managed` (`network[managed]`)
     - `purpose` (`network[purpose]`)
-  - UI now uses Smart Filter Input (SFI) + an advanced drawer; shareable links preserve filter state.
+  - `Network.Index` does **not** declare free-text, `ip_version`, `role`, or
+    `managed` filters. The UI does not offer or send them; legacy URLs carrying
+    them are canonicalized with their stale cursor before the first list GET.
+  - A numeric Smart Filter Input value opens network detail. The advanced
+    drawer and shareable URL expose only `location` and `purpose`.
+  - The shared network lookup uses the supported exact filters to load a
+    bounded candidate set and matches labels/addresses locally; it never sends
+    a fictitious `network[q]` parameter.
 
 - **Cluster resource packages** (`/admin/cluster/resource-packages`)
   - Index: `ClusterResourcePackage.Index` (`GET /api/v7.0/cluster_resource_packages`) with `cluster_resource_package[from_id]`, `cluster_resource_package[limit]`.

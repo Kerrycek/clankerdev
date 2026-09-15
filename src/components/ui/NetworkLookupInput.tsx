@@ -30,6 +30,26 @@ function networkMeta(network: Network): string {
   return bits.join(' · ');
 }
 
+export function filterNetworkLookupOptions(
+  networks: readonly Network[],
+  needle: string,
+  limit = 25
+): Network[] {
+  const normalized = needle.trim().toLowerCase();
+  const matches = normalized
+    ? networks.filter((network) => {
+        const id = String(network.id);
+        const label = typeof network.label === 'string' ? network.label : '';
+        const address = typeof network.address === 'string' ? network.address : '';
+        const prefix = typeof network.prefix === 'number' ? `/${network.prefix}` : '';
+        const haystack = `${id} #${id} ${label} ${address}${prefix}`.toLowerCase();
+        return haystack.includes(normalized);
+      })
+    : networks;
+
+  return matches.slice(0, Math.max(0, limit));
+}
+
 export function NetworkLookupInput(props: {
   value: number | null;
   onChange: (networkId: number | null) => void;
@@ -60,13 +80,10 @@ export function NetworkLookupInput(props: {
   }, [props.value, open, needleRaw]);
 
   const q = useQuery({
-    queryKey: ['networks', 'lookup', { needle, purpose: props.purpose ?? null, locationId: props.locationId ?? null }],
+    queryKey: ['networks', 'lookup', { purpose: props.purpose ?? null, locationId: props.locationId ?? null }],
     queryFn: async () => {
-      if (parseLookupIdLike(needle) !== null) return [] as Network[];
-
       const res = await fetchNetworks({
-        q: needle.trim() || undefined,
-        limit: 25,
+        limit: 250,
         purpose: props.purpose,
         locationId: props.locationId,
       });
@@ -87,7 +104,7 @@ export function NetworkLookupInput(props: {
     staleTime: 60_000,
   });
 
-  const suggestions = q.data ?? [];
+  const suggestions = useMemo(() => filterNetworkLookupOptions(q.data ?? [], needle), [needle, q.data]);
 
   useEffect(() => {
     if (props.value === null || open) return;

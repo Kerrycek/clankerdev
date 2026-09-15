@@ -34,7 +34,7 @@ import { TableCard } from '../../../../components/ui/TableCard';
 import { getMetaActionStateId } from '../../../../lib/api/haveapi';
 import { fetchLocations, type Location } from '../../../../lib/api/infra';
 import { objectRef } from '../../../../lib/objectRef';
-import { parseBoolParam, parseNonNegativeInt, parsePositiveInt } from '../../../../lib/parse';
+import { parseNonNegativeInt, parsePositiveInt } from '../../../../lib/parse';
 import {
   createNetwork,
   fetchNetworks,
@@ -44,6 +44,7 @@ import {
   type NetworkRole,
   type NetworkSplitAccess,
 } from '../../../../lib/api/networks';
+import { normalizeLegacyNetworkSearch } from './networkFilterSemantics';
 
 function locLabel(l: Location | null | undefined): string {
   const x: any = l ?? {};
@@ -99,20 +100,6 @@ function initForm(n?: Network): FormState {
   };
 }
 
-function parseIpVersion(s: string | null | undefined): 4 | 6 | undefined {
-  const n = parseNonNegativeInt(s);
-  if (n === 4 || n === 6) return n;
-  return undefined;
-}
-
-function roleOptions(t: (k: string) => string): SelectOption[] {
-  return [
-    { value: '', label: t('common.all') },
-    { value: 'public_access', label: t('admin.cluster.networks.role.public') },
-    { value: 'private_access', label: t('admin.cluster.networks.role.private') },
-  ];
-}
-
 function purposeOptions(t: (k: string) => string): SelectOption[] {
   return [
     { value: '', label: t('common.all') },
@@ -122,23 +109,29 @@ function purposeOptions(t: (k: string) => string): SelectOption[] {
   ];
 }
 
-function ipVersionOptions(t: (k: string) => string): SelectOption[] {
-  return [
-    { value: '', label: t('common.all') },
-    { value: '4', label: t('admin.cluster.networks.ipv4') },
-    { value: '6', label: t('admin.cluster.networks.ipv6') },
-  ];
-}
-
-function managedOptions(t: (k: string) => string): SelectOption[] {
-  return [
-    { value: '', label: t('common.all') },
-    { value: 'true', label: t('admin.cluster.networks.managed.true') },
-    { value: 'false', label: t('admin.cluster.networks.managed.false') },
-  ];
-}
-
 export function NetworksPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const search = searchParams.toString();
+  const normalized = useMemo(
+    () => normalizeLegacyNetworkSearch(new URLSearchParams(search)),
+    [search]
+  );
+
+  useEffect(() => {
+    if (!normalized.changed) return;
+    setSearchParams(normalized.searchParams, { replace: true });
+  }, [normalized, setSearchParams]);
+
+  // Never mount the list query while a legacy URL still claims filters that
+  // Network.Index silently ignores.
+  if (normalized.changed) {
+    return <LoadingState testId="admin.cluster.networks.normalizing" />;
+  }
+
+  return <NetworksContent />;
+}
+
+function NetworksContent() {
   const { t } = useI18n();
   const chrome = useChrome();
   const { pushToast } = useToasts();
@@ -147,11 +140,7 @@ export function NetworksPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const smartInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [q, setQ] = useState(() => searchParams.get('q') ?? '');
   const [location, setLocation] = useState(() => searchParams.get('location') ?? '');
-  const [ipVersion, setIpVersion] = useState(() => searchParams.get('ip_version') ?? '');
-  const [role, setRole] = useState(() => searchParams.get('role') ?? '');
-  const [managed, setManaged] = useState(() => searchParams.get('managed') ?? '');
   const [purpose, setPurpose] = useState(() => searchParams.get('purpose') ?? '');
   const [smart, setSmart] = useState('');
   const [smartErrors, setSmartErrors] = useState<string[]>([]);
@@ -160,37 +149,21 @@ export function NetworksPage() {
 
   // Sync local state on navigation.
   useEffect(() => {
-    const urlQ = searchParams.get('q') ?? '';
     const urlLoc = searchParams.get('location') ?? '';
-    const urlIp = searchParams.get('ip_version') ?? '';
-    const urlRole = searchParams.get('role') ?? '';
-    const urlManaged = searchParams.get('managed') ?? '';
     const urlPurpose = searchParams.get('purpose') ?? '';
-    if (urlQ !== q) setQ(urlQ);
     if (urlLoc !== location) setLocation(urlLoc);
-    if (urlIp !== ipVersion) setIpVersion(urlIp);
-    if (urlRole !== role) setRole(urlRole);
-    if (urlManaged !== managed) setManaged(urlManaged);
     if (urlPurpose !== purpose) setPurpose(urlPurpose);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  const qTrim = useMemo(() => q.trim(), [q]);
   const locationId = useMemo(() => parsePositiveInt(location), [location]);
-  const ipV = useMemo(() => parseIpVersion(ipVersion), [ipVersion]);
-  const managedBool = useMemo(() => parseBoolParam(managed), [managed]);
-
-  const roleKey = useMemo(() => {
-    const s = (role ?? '').trim();
-    return s === 'public_access' || s === 'private_access' ? (s as NetworkRole) : undefined;
-  }, [role]);
 
   const purposeKey = useMemo(() => {
     const s = (purpose ?? '').trim();
     return s === 'any' || s === 'vps' || s === 'export' ? (s as NetworkPurpose) : undefined;
   }, [purpose]);
 
-  const filtersActive = Boolean(qTrim || locationId || ipV || roleKey || managedBool !== undefined || purposeKey || smartErrors.length > 0);
+  const filtersActive = Boolean(locationId || purposeKey || smartErrors.length > 0);
   const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
 
   function focusSmartInput() {
@@ -208,11 +181,7 @@ export function NetworksPage() {
   function clearAllFilters() {
     setSmart('');
     setSmartErrors([]);
-    setQ('');
     setLocation('');
-    setIpVersion('');
-    setRole('');
-    setManaged('');
     setPurpose('');
   }
 
@@ -220,31 +189,18 @@ export function NetworksPage() {
   useEffect(() => {
     const next = new URLSearchParams(searchParams);
 
-    if (qTrim) next.set('q', qTrim);
-    else next.delete('q');
-
     if (locationId) next.set('location', String(locationId));
     else next.delete('location');
-
-    if (ipV) next.set('ip_version', String(ipV));
-    else next.delete('ip_version');
-
-    if (roleKey) next.set('role', roleKey);
-    else next.delete('role');
-
-    if (managedBool === true) next.set('managed', 'true');
-    else if (managedBool === false) next.set('managed', 'false');
-    else next.delete('managed');
 
     if (purposeKey) next.set('purpose', purposeKey);
     else next.delete('purpose');
 
     if (next.toString() !== searchParams.toString()) setSearchParams(next, { replace: true });
-  }, [ipV, locationId, managedBool, purposeKey, qTrim, roleKey, searchParams, setSearchParams]);
+  }, [locationId, purposeKey, searchParams, setSearchParams]);
 
   const pagination = useKeysetPagination({
     id: 'admin.cluster.networks',
-    filterKey: JSON.stringify({ q: qTrim, l: locationId, ip: ipV, r: roleKey, m: managedBool, p: purposeKey }),
+    filterKey: JSON.stringify({ l: locationId, p: purposeKey }),
     searchParams,
     setSearchParams,
     allowedLimits: [25, 50, 100, 200],
@@ -290,11 +246,7 @@ export function NetworksPage() {
     }
 
     const tokens = tokenizeSmartInput(raw);
-    let nextQ = qTrim;
     let nextLocation = location;
-    let nextIpVersion = ipVersion;
-    let nextRole = role;
-    let nextManaged = managed;
     let nextPurpose = purpose;
     const errors: string[] = [];
 
@@ -309,7 +261,7 @@ export function NetworksPage() {
           setSmartErrors([]);
           return;
         }
-        nextQ = unquoteSmartValue(token);
+        errors.push(t('admin.cluster.networks.smart.error.unsupported_filter'));
         continue;
       }
 
@@ -326,7 +278,12 @@ export function NetworksPage() {
         case 'label':
         case 'addr':
         case 'address':
-          nextQ = value;
+        case 'version':
+        case 'ip_version':
+        case 'ipv':
+        case 'role':
+        case 'managed':
+          errors.push(t('admin.cluster.networks.smart.error.unsupported_filter'));
           break;
         case 'id': {
           const n = parseNumericToken(value);
@@ -349,26 +306,6 @@ export function NetworksPage() {
           }
           break;
         }
-        case 'version':
-        case 'ip_version':
-        case 'ipv':
-          if (value === 'all') nextIpVersion = '';
-          else if (value === '4' || value === '6') nextIpVersion = value;
-          else errors.push(t('filters.smart.error.option_unresolved', { key, value }));
-          break;
-        case 'role':
-          if (value === 'all') nextRole = '';
-          else if (value === 'public_access' || value === 'private_access') nextRole = value;
-          else errors.push(t('filters.smart.error.option_unresolved', { key, value }));
-          break;
-        case 'managed':
-          if (value === 'all') nextManaged = '';
-          else {
-            const parsed = parseBoolParam(value);
-            if (parsed === undefined) errors.push(t('filters.smart.error.option_unresolved', { key, value }));
-            else nextManaged = parsed ? 'true' : 'false';
-          }
-          break;
         case 'purpose':
           if (value === 'all') nextPurpose = '';
           else if (value === 'any' || value === 'vps' || value === 'export') nextPurpose = value;
@@ -382,11 +319,7 @@ export function NetworksPage() {
 
     setSmartErrors(errors);
     if (errors.length > 0) return;
-    setQ(nextQ);
     setLocation(nextLocation);
-    setIpVersion(nextIpVersion);
-    setRole(nextRole);
-    setManaged(nextManaged);
     setPurpose(nextPurpose);
     setSmart('');
   }
@@ -411,7 +344,7 @@ export function NetworksPage() {
     const out: SmartFilterSuggestion[] = [];
     const n = parseNumericToken(needle);
     if (n !== null) {
-      out.push({
+      return [{
         id: `open-${n}`,
         primary: t('admin.cluster.networks.smart.suggestion.id', { id: n }),
         secondary: t('admin.cluster.networks.smart.suggestion.id_hint'),
@@ -420,13 +353,13 @@ export function NetworksPage() {
           setSmart('');
           setSmartErrors([]);
         },
-      });
+      }];
     }
 
     out.push({
-      id: `search-${needle}`,
-      primary: t('admin.cluster.networks.smart.suggestion.search', { value: needle }),
-      secondary: t('admin.cluster.networks.smart.suggestion.search_hint'),
+      id: `apply-${needle}`,
+      primary: t('admin.cluster.networks.smart.suggestion.apply', { value: needle }),
+      secondary: t('admin.cluster.networks.smart.suggestion.apply_hint'),
       onPick: () => applySmart(needle),
     });
 
@@ -434,17 +367,13 @@ export function NetworksPage() {
   }, [navigate, smart, t]);
 
   const listQ = useQuery({
-    queryKey: ['networks', pagination.cursor, pagination.limit, qTrim, locationId, ipV, roleKey, managedBool, purposeKey],
+    queryKey: ['networks', pagination.cursor, pagination.limit, locationId, purposeKey],
     queryFn: async () =>
       (
         await fetchNetworks({
           limit: pagination.limit,
           fromId: pagination.cursor,
-          q: qTrim || undefined,
           locationId,
-          ipVersion: ipV,
-          role: roleKey,
-          managed: managedBool,
           purpose: purposeKey,
         })
       ).data,
@@ -575,8 +504,8 @@ export function NetworksPage() {
               onChange={setSmart}
               onSubmit={() => applySmart()}
               suggestions={smartSuggestions}
-              ariaLabel={t('admin.cluster.networks.filter.q_placeholder')}
-              placeholder={t('admin.cluster.networks.filter.q_placeholder')}
+              ariaLabel={t('admin.cluster.networks.filter.placeholder')}
+              placeholder={t('admin.cluster.networks.filter.placeholder')}
               className="min-w-0 flex-1"
               suffix={
                 <Button
@@ -616,16 +545,18 @@ export function NetworksPage() {
             </div>
           </div>
 
-          {qTrim || locationId || ipV || roleKey || managedBool !== undefined || purposeKey || smartErrors.length > 0 ? (
+          {locationId || purposeKey || smartErrors.length > 0 ? (
             <div className="flex flex-wrap gap-2">
-              {qTrim ? <FilterChip label={`q: ${qTrim}`} onRemove={() => setQ('')} /> : null}
               {locationId ? <FilterChip label={`${t('common.location')}: ${locLabel(locs.find((l) => l.id === locationId))}`} onRemove={() => setLocation('')} /> : null}
-              {ipV ? <FilterChip label={`${t('admin.cluster.networks.field.ip_version')}: IPv${ipV}`} onRemove={() => setIpVersion('')} /> : null}
-              {roleKey ? <FilterChip label={`${t('admin.cluster.networks.field.role')}: ${t(roleKey === 'public_access' ? 'admin.cluster.networks.role.public' : 'admin.cluster.networks.role.private')}`} onRemove={() => setRole('')} /> : null}
-              {managedBool !== undefined ? <FilterChip label={`${t('admin.cluster.networks.field.managed')}: ${t(managedBool ? 'admin.cluster.networks.managed.true' : 'admin.cluster.networks.managed.false')}`} onRemove={() => setManaged('')} /> : null}
               {purposeKey ? <FilterChip label={`${t('admin.cluster.networks.field.purpose')}: ${t(`admin.cluster.networks.purpose.${purposeKey}`)}`} onRemove={() => setPurpose('')} /> : null}
               {smartErrors.map((err, idx) => (
-                <FilterChip key={`${err}-${idx}`} label={err} tone="danger" onRemove={() => setSmartErrors((prev) => prev.filter((_, i) => i !== idx))} />
+                <FilterChip
+                  key={`${err}-${idx}`}
+                  label={err}
+                  tone="danger"
+                  onRemove={() => setSmartErrors((prev) => prev.filter((_, i) => i !== idx))}
+                  testId={`admin.cluster.networks.filter.error.${idx}`}
+                />
               ))}
             </div>
           ) : null}
@@ -639,25 +570,19 @@ export function NetworksPage() {
         intro={t('admin.cluster.networks.smart.help.intro')}
         examples={[
           { example: '?', description: t('admin.cluster.networks.smart.help.example_help') },
-          { example: '198.51.100', description: t('admin.cluster.networks.smart.help.example_search') },
+          { example: '101', description: t('admin.cluster.networks.smart.help.example_id') },
           { example: 'location:1', description: t('admin.cluster.networks.smart.help.example_location') },
-          { example: 'managed:true', description: t('admin.cluster.networks.smart.help.example_managed') },
+          { example: 'purpose:vps', description: t('admin.cluster.networks.smart.help.example_purpose') },
         ]}
         topKeys={[
-          { key: 'q', description: t('admin.cluster.networks.smart.key.q'), example: 'q:198.51.100' },
           { key: 'id', description: t('admin.cluster.networks.smart.key.id'), example: 'id:101' },
           { key: 'location', description: t('admin.cluster.networks.smart.key.location'), example: 'location:1' },
-          { key: 'version', description: t('admin.cluster.networks.smart.key.version'), example: 'version:6' },
-          { key: 'role', description: t('admin.cluster.networks.smart.key.role'), example: 'role:private_access' },
-          { key: 'managed', description: t('admin.cluster.networks.smart.key.managed'), example: 'managed:true' },
-        ]}
-        moreKeys={[
           { key: 'purpose', description: t('admin.cluster.networks.smart.key.purpose'), example: 'purpose:vps' },
         ]}
         inference={[
-          t('admin.cluster.networks.smart.help.inference.text'),
           t('admin.cluster.networks.smart.help.inference.number'),
           t('admin.cluster.networks.smart.help.inference.keyvalue'),
+          t('admin.cluster.networks.smart.help.inference.no_text'),
         ]}
         onInsertKey={insertSmartKey}
       />
@@ -676,11 +601,7 @@ export function NetworksPage() {
         }
       >
         <div className="space-y-4">
-          <Input testId="admin.cluster.networks.filter.q" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('admin.cluster.networks.filter.q_placeholder')} />
           <Select testId="admin.cluster.networks.filter.location" value={location} onChange={(e) => setLocation(e.target.value)} options={locationOptions} />
-          <Select testId="admin.cluster.networks.filter.ip_version" value={ipVersion} onChange={(e) => setIpVersion(e.target.value)} options={ipVersionOptions(t)} />
-          <Select testId="admin.cluster.networks.filter.role" value={role} onChange={(e) => setRole(e.target.value)} options={roleOptions(t)} />
-          <Select testId="admin.cluster.networks.filter.managed" value={managed} onChange={(e) => setManaged(e.target.value)} options={managedOptions(t)} />
           <Select testId="admin.cluster.networks.filter.purpose" value={purpose} onChange={(e) => setPurpose(e.target.value)} options={purposeOptions(t)} />
         </div>
       </Drawer>
