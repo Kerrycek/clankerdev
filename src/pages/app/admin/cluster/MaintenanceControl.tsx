@@ -4,7 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useI18n } from '../../../../app/i18n';
 import { useToasts } from '../../../../app/toasts';
 import { Badge } from '../../../../components/ui/Badge';
-import { Button } from '../../../../components/ui/Button';
+import { Button, type ButtonSize } from '../../../../components/ui/Button';
 import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog';
 import { Input } from '../../../../components/ui/Input';
 import { isAmbiguousMutationError } from '../../../../lib/api/haveapi';
@@ -78,6 +78,8 @@ export function MaintenanceControl(props: {
   settlingBlocked?: boolean;
   onVerificationRequired?: () => void;
   onSettlingChange?: (settling: boolean) => void;
+  actionSize?: ButtonSize;
+  actionClassName?: string;
 }) {
   const { t } = useI18n();
   const { pushToast } = useToasts();
@@ -220,11 +222,11 @@ export function MaintenanceControl(props: {
         </span>
       ) : null}
       {state === 'no' ? (
-        <Button size="sm" variant="secondary" disabled={controlsDisabled} onClick={() => setDialog('lock')} testId={`${props.testId}.lock`}>
+        <Button size={props.actionSize ?? 'sm'} className={props.actionClassName} variant="secondary" disabled={controlsDisabled} onClick={() => setDialog('lock')} testId={`${props.testId}.lock`}>
           {t('admin.cluster.maintenance.action.lock')}
         </Button>
       ) : state === 'lock' ? (
-        <Button size="sm" variant="secondary" disabled={controlsDisabled} onClick={() => setDialog('unlock')} testId={`${props.testId}.unlock`}>
+        <Button size={props.actionSize ?? 'sm'} className={props.actionClassName} variant="secondary" disabled={controlsDisabled} onClick={() => setDialog('unlock')} testId={`${props.testId}.unlock`}>
           {t('admin.cluster.maintenance.action.unlock')}
         </Button>
       ) : null}
