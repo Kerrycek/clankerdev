@@ -22,6 +22,7 @@ type OomListRequest = {
   url: string;
   includes: string | null;
   fields: Record<string, string>;
+  responseCount?: number;
 };
 
 type OomMockOptions = {
@@ -30,6 +31,8 @@ type OomMockOptions = {
   allowArbitraryUser?: boolean;
   expectedImplicitUserId?: number;
   includeUserRelation?: boolean;
+  totalReports?: number;
+  firstPageResponseLimit?: () => number | undefined;
 };
 
 function readOomFields(searchParams: URLSearchParams): Record<string, string> {
@@ -58,6 +61,7 @@ function readOomFields(searchParams: URLSearchParams): Record<string, string> {
 
 async function setupOomApi(page: Page, options: OomMockOptions): Promise<OomListRequest[]> {
   const requests: OomListRequest[] = [];
+  const reportIds = Array.from({ length: options.totalReports ?? 125 }, (_, index) => 125 - index);
 
   await setupHaveApiMock(page, {
     user: options.user,
@@ -76,7 +80,8 @@ async function setupOomApi(page: Page, options: OomMockOptions): Promise<OomList
       'GET oom_reports': async ({ request }) => {
         const fields = readOomFields(request.searchParams);
         const includes = request.searchParams.get('_meta[includes]');
-        requests.push({ url: request.toString(), includes, fields });
+        const requestRecord: OomListRequest = { url: request.toString(), includes, fields };
+        requests.push(requestRecord);
 
         if (!options.allowArbitraryUser && options.expectedImplicitUserId === undefined && fields.user !== undefined) {
           throw new Error(`Owner-scoped OOM request must not send oom_report[user], got ${fields.user}`);
@@ -98,31 +103,33 @@ async function setupOomApi(page: Page, options: OomMockOptions): Promise<OomList
         const limit = Number(fields.limit ?? '25') || 25;
         const fromId = fields.from_id ? Number(fields.from_id) : 0;
         const cgroup = fields.cgroup ?? '/default.slice';
-        const start = fromId > 0 ? fromId - 1 : 125;
-        const count = Math.min(limit, 25);
+        const responseLimit = fromId === 0 ? (options.firstPageResponseLimit?.() ?? limit) : limit;
 
-        const oom_reports = Array.from({ length: count }, (_, i) => {
-          const id = start - i;
-          return {
-            id,
-            created_at: '2026-03-01T10:00:00Z',
-            vps: {
-              id: 1000 + id,
-              hostname: `${options.ownerLabel}-vps-${id}.example.test`,
-              user: { id: options.user.id, login: `${options.ownerLabel}-owner` },
-              node: { id: 1, domain_name: 'node1.example.test', location: { id: 1, label: 'PRG' } },
-            },
-            cgroup,
-            killed_name: 'nginx',
-            killed_pid: 1234,
-            invoked_by_name: 'systemd',
-            invoked_by_pid: 1,
-            count: 1,
-            oom_report_rule: { id: 1, action: 'notify' },
-          };
-        });
+        const oom_reports = reportIds
+          .filter((id) => (fromId > 0 ? id < fromId : true))
+          .slice(0, responseLimit)
+          .map((id) => {
+            return {
+              id,
+              created_at: new Date(Date.parse('2026-03-01T10:00:00Z') + id * 1_000).toISOString(),
+              vps: {
+                id: 1000 + id,
+                hostname: `${options.ownerLabel}-vps-${id}.example.test`,
+                user: { id: options.user.id, login: `${options.ownerLabel}-owner` },
+                node: { id: 1, domain_name: 'node1.example.test', location: { id: 1, label: 'PRG' } },
+              },
+              cgroup,
+              killed_name: 'nginx',
+              killed_pid: 1234,
+              invoked_by_name: 'systemd',
+              invoked_by_pid: 1,
+              count: 1,
+              oom_report_rule: { id: 1, action: 'notify' },
+            };
+          });
+        requestRecord.responseCount = oom_reports.length;
 
-        return { oom_reports, _meta: { total_count: 125 } };
+        return { oom_reports, _meta: { total_count: reportIds.length } };
       },
       'GET oom_reports/777': async () => ({
         oom_report: {
@@ -165,6 +172,57 @@ async function expectNoNewListRequest(page: Page, requests: OomListRequest[], pr
 }
 
 test.describe('OOM report list filter contract', () => {
+  test('@pr-smoke @pr-smoke-mobile OOM pagination hides its lookahead, stops on an exact terminal page and preserves forward history', async ({
+    page,
+  }, testInfo) => {
+    let revisitWithoutLookahead = false;
+    const requests = await setupOomApi(page, {
+      user: { id: 90, login: 'admin', level: 100 },
+      ownerLabel: 'pagination',
+      allowArbitraryUser: true,
+      includeUserRelation: true,
+      totalReports: 50,
+      firstPageResponseLimit: () => (revisitWithoutLookahead ? 25 : undefined),
+    });
+
+    await page.goto(withAppUrl('/admin/oom-reports?limit=25'));
+
+    const next = page.getByTestId('oom.list.pagination.next');
+    const previous = page.getByTestId('oom.list.pagination.prev');
+    await expect(reportSurface(page, testInfo, 125)).toBeVisible();
+    await expect(reportSurface(page, testInfo, 101)).toBeVisible();
+    await expect(reportSurface(page, testInfo, 100)).toHaveCount(0);
+    await expect(next).toBeEnabled();
+    expect(requests[0]?.fields).toEqual({ limit: '26' });
+
+    await next.click();
+
+    await expect(page).toHaveURL(/(?:\?|&)from_id=101(?:&|$)/);
+    await expect(reportSurface(page, testInfo, 100)).toBeVisible();
+    await expect(reportSurface(page, testInfo, 76)).toBeVisible();
+    await expect(next).toBeDisabled();
+    await expect(previous).toBeEnabled();
+    expect(lastRequest(requests).fields).toEqual({ limit: '26', from_id: '101' });
+
+    await previous.click();
+
+    await expect(page).not.toHaveURL(/(?:\?|&)from_id=/);
+    revisitWithoutLookahead = true;
+    await page.reload();
+    await expect(reportSurface(page, testInfo, 125)).toBeVisible();
+    await expect(reportSurface(page, testInfo, 101)).toBeVisible();
+    expect(lastRequest(requests).responseCount).toBe(25);
+    await expect(next).toBeEnabled();
+    expect(lastRequest(requests).fields).toEqual({ limit: '26' });
+
+    await next.click();
+
+    await expect(page).toHaveURL(/(?:\?|&)from_id=101(?:&|$)/);
+    await expect(reportSurface(page, testInfo, 100)).toBeVisible();
+    await expect(reportSurface(page, testInfo, 76)).toBeVisible();
+    await expect(next).toBeDisabled();
+  });
+
   test('@pr-smoke @pr-smoke-mobile admin normalizes stale search before the first GET and keeps exact filters through pagination', async ({
     page,
   }, testInfo) => {
@@ -180,7 +238,7 @@ test.describe('OOM report list filter contract', () => {
     );
 
     await expect.poll(() => requests.length).toBeGreaterThan(0);
-    expect(requests[0]?.fields).toMatchObject({ limit: '25', cgroup: '/preserved.slice' });
+    expect(requests[0]?.fields).toMatchObject({ limit: '26', cgroup: '/preserved.slice' });
     expect(requests[0]?.fields).not.toHaveProperty('from_id');
     expect(requests[0]?.fields).not.toHaveProperty('q');
     await expect(page).toHaveURL(/\/admin\/oom-reports\?/);
@@ -211,7 +269,7 @@ test.describe('OOM report list filter contract', () => {
 
     const exactRequest = lastRequest(requests);
     expect(exactRequest.fields).toMatchObject({
-      limit: '25',
+      limit: '26',
       vps: '7',
       user: '42',
       node: '1',
@@ -286,7 +344,7 @@ test.describe('OOM report list filter contract', () => {
     await page.goto(withAppUrl('/admin/oom-reports?q=nginx&user=999&from_id=101&page=2&limit=25'));
 
     await expect(reportSurface(page, testInfo, 125)).toBeVisible();
-    expect(requests[0]?.fields).toEqual({ limit: '25' });
+    expect(requests[0]?.fields).toEqual({ limit: '26' });
     expect(requests[0]?.includes).not.toContain('vps__user');
     const normalized = new URL(page.url()).searchParams;
     expect(normalized.get('q')).toBeNull();
@@ -313,7 +371,7 @@ test.describe('OOM report list filter contract', () => {
     await page.goto(withAppUrl('/app/oom-reports?user=999&from_id=101&page=2&limit=25'));
 
     await expect(reportSurface(page, testInfo, 125)).toBeVisible();
-    expect(requests[0]?.fields).toEqual({ limit: '25', user: '90' });
+    expect(requests[0]?.fields).toEqual({ limit: '26', user: '90' });
     expect(requests[0]?.includes).not.toContain('vps__user');
     const normalized = new URL(page.url()).searchParams;
     expect(normalized.get('user')).toBeNull();
@@ -343,7 +401,7 @@ test.describe('OOM report list filter contract', () => {
       const surface = reportSurface(page, testInfo, 125);
       await expect(surface).toBeVisible();
       await expect(surface).toContainText(`${account.ownerLabel}-vps-125.example.test`);
-      expect(requests[0]?.fields).toEqual({ limit: '25' });
+      expect(requests[0]?.fields).toEqual({ limit: '26' });
       expect(requests[0]?.includes).not.toContain('vps__user');
       const normalized = new URL(page.url()).searchParams;
       expect(normalized.get('user')).toBeNull();

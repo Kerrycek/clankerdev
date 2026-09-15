@@ -1,11 +1,46 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildOomReportPage,
   canonicalKey,
   normalizeOomListSearchParams,
   resolveOptionId,
   UNSUPPORTED_OOM_SEARCH_KEY,
 } from './oomReportsListSemantics';
+
+describe('buildOomReportPage', () => {
+  for (const limit of [25, 50, 100]) {
+    it(`keeps a limit ${limit} sentinel hidden and derives the cursor from visible rows`, () => {
+      const reports = Array.from({ length: limit + 1 }, (_, index) => ({ id: 1_000 - index }));
+
+      const page = buildOomReportPage(reports, limit);
+
+      expect(page.rows).toHaveLength(limit);
+      expect(page.rows.at(-1)?.id).toBe(1_001 - limit);
+      expect(page.rows).not.toContainEqual({ id: 1_000 - limit });
+      expect(page.cursor).toBe(1_001 - limit);
+      expect(page.hasMore).toBe(true);
+    });
+  }
+
+  it('recognizes an exact terminal page and fails closed without a valid visible cursor', () => {
+    expect(buildOomReportPage([{ id: 2 }, { id: 1 }], 2)).toEqual({
+      rows: [{ id: 2 }, { id: 1 }],
+      hasMore: false,
+      cursor: 1,
+    });
+    expect(buildOomReportPage([{ id: 2 }, { id: 5 }], 2).cursor).toBe(5);
+    expect(buildOomReportPage([{ id: 'invalid' }, { id: 1 }], 1)).toEqual({
+      rows: [{ id: 'invalid' }],
+      hasMore: true,
+      cursor: null,
+    });
+    expect(buildOomReportPage([{ id: true }], 1).cursor).toBeNull();
+    expect(buildOomReportPage([{ id: '5' }], 1).cursor).toBeNull();
+    expect(buildOomReportPage([{ id: 5.9 }], 1).cursor).toBeNull();
+    expect(buildOomReportPage(undefined, 25)).toEqual({ rows: [], hasMore: false, cursor: null });
+  });
+});
 
 const options = [
   { id: 21, label: 'Production Prague' },
