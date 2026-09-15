@@ -7,7 +7,6 @@ import { useToasts } from '../../../app/toasts';
 
 import { useChrome } from '../../../components/layout/ChromeContext';
 import { Alert } from '../../../components/ui/Alert';
-import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
@@ -16,7 +15,6 @@ import { ErrorState } from '../../../components/ui/ErrorState';
 import { LoadingState } from '../../../components/ui/LoadingState';
 import { Modal } from '../../../components/ui/Modal';
 import { Select } from '../../../components/ui/Select';
-import { TableCard } from '../../../components/ui/TableCard';
 
 import {
   assignDatasetPlan,
@@ -32,6 +30,7 @@ import { fetchTransactionChains } from '../../../lib/api/transactions';
 import { hasActiveChains } from '../../../lib/taskStatus';
 
 import { useDatasetContext } from './DatasetContext';
+import { DatasetPlansList } from './DatasetPlansList';
 
 function refLabel(ref: unknown, fallback: string): string {
   if (ref && typeof ref === 'object') {
@@ -230,6 +229,20 @@ export function DatasetPlansPage() {
   }
 
   const canAssignAny = !availableQ.isError && assignable.length > 0;
+  const planListItems = assignedRows.map((row) => {
+    const environmentPlan = assignedEnvironmentPlan(row);
+    const basePlan = basePlanFromEnvironmentPlan(environmentPlan);
+
+    return {
+      plan: row,
+      label: envPlanLabel(row, t),
+      source: basePlanLabel(row, t),
+      description: planDescription(basePlan, t('dataset.plans.description.fallback')),
+      userCanAdd: environmentPlan?.user_add === true,
+      userCanRemove: environmentPlan?.user_remove === true,
+      removable: allowedRemove(mode, row),
+    };
+  });
 
   return (
     <div className="space-y-4">
@@ -305,57 +318,7 @@ export function DatasetPlansPage() {
           }
         />
       ) : (
-        <TableCard testId="dataset.plans.table" minWidth="lg">
-          <thead>
-            <tr>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-faint">{t('dataset.plans.column.label')}</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-faint">{t('dataset.plans.column.description')}</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-faint">{t('dataset.plans.column.permissions')}</th>
-              <th className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-faint">{t('common.actions')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {assignedRows.map((row) => {
-              const removable = allowedRemove(mode, row);
-              const envPlan = assignedEnvironmentPlan(row);
-              const basePlan = basePlanFromEnvironmentPlan(envPlan);
-              return (
-                <tr key={row.id} data-testid={`dataset.plans.row.${row.id}`}>
-                  <td className="px-3 py-2">
-                    <div className="font-medium text-fg">{envPlanLabel(row, t)}</div>
-                    <div
-                      className="mt-1 text-xs text-faint"
-                      data-testid={`dataset.plans.row.${row.id}.source`}
-                    >
-                      {t('dataset.plans.column.source')}: {basePlanLabel(row, t)}
-                    </div>
-                  </td>
-                  <td
-                    className="max-w-md whitespace-pre-wrap break-words px-3 py-2 text-sm text-muted"
-                    data-testid={`dataset.plans.row.${row.id}.description`}
-                  >
-                    {planDescription(basePlan, t('dataset.plans.description.fallback'))}
-                  </td>
-                  <td className="px-3 py-2">
-                    <div className="flex flex-wrap gap-2">
-                      <Badge variant={envPlan?.user_add ? 'ok' : 'neutral'}>{t(envPlan?.user_add ? 'dataset.plans.permission.user_add' : 'dataset.plans.permission.user_add_off')}</Badge>
-                      <Badge variant={envPlan?.user_remove ? 'ok' : 'neutral'}>{t(envPlan?.user_remove ? 'dataset.plans.permission.user_remove' : 'dataset.plans.permission.user_remove_off')}</Badge>
-                    </div>
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    {removable ? (
-                      <Button testId={`dataset.plans.row.${row.id}.remove`} variant="danger" onClick={() => setRemovePlan(row)} disabled={busy}>
-                        {t('common.remove')}
-                      </Button>
-                    ) : (
-                      <span className="text-xs text-faint">{t('dataset.plans.remove.not_allowed')}</span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </TableCard>
+        <DatasetPlansList items={planListItems} busy={busy} onRemove={setRemovePlan} />
       )}
 
       <Modal
