@@ -42,6 +42,33 @@ export interface UserDataUpdatePayload {
   content: string;
 }
 
+export interface UserDataPageWindow<T> {
+  rows: T[];
+  cursor: number | null;
+  hasMore: boolean;
+}
+
+export function buildUserDataPageWindow<T extends { id?: unknown }>(
+  rawRows: readonly T[] | undefined,
+  visibleLimit: number
+): UserDataPageWindow<T> {
+  const source = rawRows ?? [];
+  const rows = source.slice(0, visibleLimit);
+  let cursor: number | null = null;
+
+  for (const row of rows) {
+    const id = row.id;
+    if (typeof id !== 'number' || !Number.isSafeInteger(id) || id <= 0) continue;
+    if (cursor === null || id > cursor) cursor = id;
+  }
+
+  return {
+    rows,
+    cursor,
+    hasMore: source.length > visibleLimit,
+  };
+}
+
 export function isKnownUserDataFormat(format: string): format is VpsUserDataFormat {
   return USER_DATA_FORMATS.includes(format as VpsUserDataFormat);
 }

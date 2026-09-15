@@ -17,7 +17,6 @@ import {
 import { getMetaActionStateId } from '../../lib/api/haveapi';
 import { objectRef } from '../../lib/objectRef';
 import { formatErrorMessage } from '../../lib/errors';
-import { cursorFromDescendingPage } from '../../lib/lockIndex';
 import { useKeysetPagination } from '../../lib/hooks/useKeysetPagination';
 import { parseNumericToken, splitKeyValueToken, tokenizeSmartInput, unquoteSmartValue } from '../../lib/smartFilter';
 
@@ -30,6 +29,7 @@ import { UserDataTemplatesFilters, type UserDataFilterValues } from './UserDataT
 import { UserDataTemplatesList } from './UserDataTemplatesList';
 import {
   buildUserDataCreatePayload,
+  buildUserDataPageWindow,
   buildUserDataUpdatePayload,
   buildUserDataValidationHints,
   canSaveUserDataForm,
@@ -76,7 +76,8 @@ export function UserDataTemplatesPanel(props: {
     else next.delete('q');
     if (nextVals.format && nextVals.format.trim()) next.set('format', nextVals.format.trim());
     else next.delete('format');
-    next.delete('from');
+    next.delete('from_id');
+    next.set('page', '1');
     setSearchParams(next, { replace: true });
   }
 
@@ -158,16 +159,18 @@ export function UserDataTemplatesPanel(props: {
     filterKey: JSON.stringify({ q: qTrim, f: formatFilter, u: props.userIdForAdmin ?? null }),
     searchParams,
     setSearchParams,
+    restoreUrlCursorOnSignatureChange: true,
     defaultLimit: 50,
     allowedLimits: [25, 50, 100, 200],
   });
 
+  const requestLimit = pagination.limit + 1;
   const listQ = useQuery({
     queryKey: [
       'vps_user_data',
       'list',
       {
-        limit: pagination.limit,
+        limit: requestLimit,
         fromId: pagination.fromId,
         q: qTrim,
         format: formatFilter,
@@ -177,7 +180,7 @@ export function UserDataTemplatesPanel(props: {
     queryFn: async () =>
       (
         await fetchVpsUserDataList({
-          limit: pagination.limit,
+          limit: requestLimit,
           fromId: pagination.fromId,
           q: qTrim || undefined,
           format: formatFilter || undefined,
@@ -187,9 +190,56 @@ export function UserDataTemplatesPanel(props: {
     staleTime: 10_000,
   });
 
-  const rows = listQ.data ?? [];
-  const canNext = rows.length >= pagination.limit;
-  const cursor = useMemo(() => cursorFromDescendingPage(rows, (row) => row.id), [rows]);
+  const pageWindow = useMemo(
+    () => buildUserDataPageWindow(listQ.data, pagination.limit),
+    [listQ.data, pagination.limit]
+  );
+  const rows = pageWindow.rows;
+  const hasNextFromData = listQ.isSuccess && pageWindow.hasMore && pageWindow.cursor !== null;
+  const canNext = hasNextFromData && !listQ.isFetching;
+  const safePageCount = Math.min(
+    pagination.stack.length,
+    pagination.page + (hasNextFromData ? 1 : 0)
+  );
+
+  const shouldRecoverEmptyCursor =
+    listQ.isSuccess && !listQ.isFetching && rows.length === 0 && pagination.canPrev;
+
+  React.useLayoutEffect(() => {
+    if (!shouldRecoverEmptyCursor) return;
+
+    const previousIndex = pagination.index - 1;
+    const previousCursor = pagination.stack[previousIndex] ?? null;
+    const next = new URLSearchParams(searchParams);
+    next.set('limit', String(pagination.limit));
+    next.set('page', String(previousIndex + 1));
+    if (previousCursor === null) next.delete('from_id');
+    else next.set('from_id', String(previousCursor));
+    setSearchParams(next, { replace: true });
+  }, [
+    pagination.index,
+    pagination.limit,
+    pagination.stack,
+    searchParams,
+    setSearchParams,
+    shouldRecoverEmptyCursor,
+  ]);
+
+  const goNext = () => {
+    if (!canNext || pageWindow.cursor === null) return;
+    pagination.goToPageWithStack(
+      pagination.page + 1,
+      [...pagination.stack.slice(0, pagination.index + 1), pageWindow.cursor]
+    );
+  };
+
+  const goToPage = (page: number) => {
+    if (page === pagination.page + 1) {
+      goNext();
+      return;
+    }
+    if (page <= pagination.page) pagination.goToPage(page);
+  };
 
   const formatOptions = useMemo<SelectOption[]>(() => [
     { value: '', label: t('common.all') },
@@ -341,10 +391,15 @@ export function UserDataTemplatesPanel(props: {
           error={listQ.error}
           filtersActive={filtersActive}
           limit={pagination.limit}
+          page={pagination.page}
+          pageCount={safePageCount}
+          maxDirectPage={hasNextFromData ? pagination.page + 1 : pagination.page}
+          jumpPending={listQ.isFetching}
           canPrev={pagination.canPrev}
           canNext={canNext}
           onPrev={() => pagination.goPrev()}
-          onNext={() => pagination.goNext(cursor)}
+          onNext={goNext}
+          onGoToPage={goToPage}
           onLimitChange={(n) => pagination.setLimit(n)}
           onCreate={openCreate}
           onDeploy={openDeploy}

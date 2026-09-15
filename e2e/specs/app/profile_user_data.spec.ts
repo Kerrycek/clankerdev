@@ -34,20 +34,27 @@ test.describe('Profile: user data templates', () => {
       },
       handlers: {
         'GET vps_user_data': async ({ params }) => {
-          const q = (params['vps_user_data[q]'] ?? '').toString().trim().toLowerCase();
-          const format = (params['vps_user_data[format]'] ?? '').toString().trim();
-
-          let out = [...templates].sort((a, b) => b.id - a.id);
-
-          if (q) {
-            out = out.filter((x) => x.label.toLowerCase().includes(q) || `#${x.id}`.includes(q));
+          if (params['vps_user_data[q]'] !== undefined) {
+            return {
+              status: false,
+              message: 'Unsupported input vps_user_data[q]',
+              response: null,
+            };
           }
+
+          const format = (params['vps_user_data[format]'] ?? '').toString().trim();
+          const fromId = Number(params['vps_user_data[from_id]'] ?? 0);
+          const limit = Number(params['vps_user_data[limit]'] ?? 50);
+
+          let out = [...templates]
+            .filter((x) => x.id > fromId)
+            .sort((a, b) => a.id - b.id);
 
           if (format) {
             out = out.filter((x) => x.format === format);
           }
 
-          return out;
+          return out.slice(0, limit);
         },
 
         'POST vps_user_data': async ({ reqJson }) => {
@@ -172,18 +179,29 @@ test.describe('Profile: user data templates', () => {
           identity: { id: 1, provider: 'mock' },
         },
         handlers: {
-          'GET vps_user_data': () => ({
-            vps_user_data: [
-              {
-                id: 101,
-                label: 'Base cloud-init',
-                format: 'cloudinit_config',
-                content: '#cloud-config\n',
-                created_at: nowIso(),
-                updated_at: nowIso(),
-              },
-            ],
-          }),
+          'GET vps_user_data': ({ params }) => {
+            if (params['vps_user_data[q]'] !== undefined) {
+              return {
+                status: false,
+                message: 'Unsupported input vps_user_data[q]',
+                response: null,
+              };
+            }
+            const fromId = Number(params['vps_user_data[from_id]'] ?? 0);
+            const limit = Number(params['vps_user_data[limit]'] ?? 50);
+            return {
+              vps_user_data: [
+                {
+                  id: 101,
+                  label: 'Base cloud-init',
+                  format: 'cloudinit_config',
+                  content: '#cloud-config\n',
+                  created_at: nowIso(),
+                  updated_at: nowIso(),
+                },
+              ].filter((item) => item.id > fromId).slice(0, limit),
+            };
+          },
           'POST vps_user_data/101/deploy': () => {
             deployRequests += 1;
             return { _meta: {} };
