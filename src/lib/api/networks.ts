@@ -34,11 +34,7 @@ export interface Network {
 export async function fetchNetworks(opts?: {
   limit?: number;
   fromId?: number;
-  q?: string;
   locationId?: number;
-  ipVersion?: 4 | 6;
-  role?: NetworkRole;
-  managed?: boolean;
   purpose?: NetworkPurpose;
 }) {
   const params: Record<string, unknown> = {};
@@ -46,11 +42,7 @@ export async function fetchNetworks(opts?: {
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
 
-  if (opts?.q) params['q'] = opts.q;
   if (opts?.locationId !== undefined) params['location'] = opts.locationId;
-  if (opts?.ipVersion !== undefined) params['ip_version'] = opts.ipVersion;
-  if (opts?.role) params['role'] = opts.role;
-  if (opts?.managed !== undefined) params['managed'] = opts.managed;
   if (opts?.purpose) params['purpose'] = opts.purpose;
 
   const res = await haveApiCall<Network[]>({

@@ -730,6 +730,47 @@ evidence.
 
 ---
 
+## Cluster network list and exact filters
+
+**Status:** `mapped / implemented`
+
+The administrator network list at `/admin/cluster/networks` follows the
+declared `Network.Index` contract. Its only server-side selection inputs are
+`location` and `purpose`; `limit` and ascending-ID `from_id` provide keyset
+pagination. IP version, role, managed state, labels, and addresses remain
+network object fields, but the index action does not declare them as filters.
+
+The list therefore exposes only `location:` and `purpose:` exact filters.
+Entering a numeric ID opens network detail. Plain text and the historical
+`q`, `ip_version`, `role`, and `managed` forms produce an explicit validation
+message without issuing another list request. Bookmarks containing those
+unsupported parameters are replaced with a canonical URL and reset to page 1
+before the list component mounts, so an unfiltered response is never presented
+as filtered. The shared network picker similarly loads a bounded result set
+using only supported exact API inputs and performs its label/address matching
+locally.
+
+Evidence:
+
+- Backend contract: `api/lib/vpsadmin/api/resources/network.rb` in the
+  read-only upstream checkout.
+- Legacy list behavior: `webui/forms/cluster.forms.php` in the read-only
+  upstream checkout; it requests the network list without the invented
+  filters.
+- WebUI Next implementation: `src/lib/api/networks.ts`,
+  `src/pages/app/admin/cluster/NetworksPage.tsx`, and
+  `src/components/ui/NetworkLookupInput.tsx`.
+- Automated contract evidence: `src/lib/api/networks.test.ts`,
+  `src/pages/app/admin/cluster/networkFilterSemantics.test.ts`,
+  `src/components/ui/NetworkLookupInput.test.ts`, and
+  `e2e/specs/admin/cluster_networks_filter_contract.spec.ts`.
+
+The Playwright test uses deterministic HaveAPI mocks to prove request
+serialization, URL normalization, validation, and desktop/mobile controls. It
+does not claim that a deployed API contains particular network records.
+
+---
+
 ## Remaining product inventory
 
 The areas below are confirmed by current routes/source. Their status is
