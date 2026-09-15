@@ -10,6 +10,7 @@ import { Alert } from '../../../../components/ui/Alert';
 import { ActionButton } from '../../../../components/ui/ActionButton';
 import { Badge } from '../../../../components/ui/Badge';
 import { Button } from '../../../../components/ui/Button';
+import { Card } from '../../../../components/ui/Card';
 import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog';
 import { EmptyState } from '../../../../components/ui/EmptyState';
 import { ErrorState } from '../../../../components/ui/ErrorState';
@@ -155,34 +156,94 @@ export function DnsServersPage() {
       />
       {filtersActive ? <div className="text-xs text-faint">{t('list.meta.filters_progressive')}</div> : null}
       {rows.length === 0 ? <div className="space-y-2"><EmptyState testId="admin.cluster.dns_servers.empty" title={t('admin.cluster.dns_servers.empty')} body={t('admin.cluster.dns_servers.empty_body')} />{(rawRows.length > 0 || pagination.canPrev || canNext) ? <KeysetPagination testId="admin.cluster.dns_servers.pagination" page={pagination.page} pageCount={pageCount} totalPagesKnown={totalPagesKnown} maxDirectPage={maxDirectPage} jumpPending={isJumping} canPrev={pagination.canPrev} canNext={canNext} onPrev={pagination.goPrev} onNext={() => pagination.goNext(cursor)} onGoToPage={goToPage} limit={pagination.limit} allowedLimits={pagination.allowedLimits} onLimitChange={pagination.setLimit} /> : null}</div> : (
-        <TableCard
-          testId="admin.cluster.dns_servers.table"
-          minWidth="lg"
-          footer={
-            <KeysetPagination
-              testId="admin.cluster.dns_servers.pagination"
-              page={pagination.page}
-              pageCount={pageCount}
-              totalPagesKnown={totalPagesKnown}
-              maxDirectPage={maxDirectPage}
-              jumpPending={isJumping}
-              canPrev={pagination.canPrev}
-              canNext={canNext}
-              onPrev={pagination.goPrev}
-              onNext={() => pagination.goNext(cursor)}
-              onGoToPage={goToPage}
-              limit={pagination.limit}
-              allowedLimits={pagination.allowedLimits}
-              onLimitChange={pagination.setLimit}
-            />
-          }
-        >
+        <>
+          <div className="space-y-3 md:hidden" data-testid="admin.cluster.dns_servers.cards">
+            {rows.map((row) => (
+              <Card key={row.id} testId={`admin.cluster.dns_servers.card.${row.id}`}>
+                <div className="min-w-0 p-4">
+                  <div className="break-words text-base font-semibold text-fg">{String(row.name ?? `#${row.id}`)}</div>
+                  <div className="mt-1 text-xs text-faint">#{row.id}</div>
+
+                  <dl className="mt-4 space-y-3 text-sm">
+                    <div className="min-w-0">
+                      <dt className="text-xs text-faint">{t('common.node')}</dt>
+                      <dd className="mt-1 break-all text-fg">{nodeLabel(row)}</dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className="text-xs text-faint">{t('common.ipv4')}</dt>
+                      <dd className="mt-1 break-all text-fg">{row.ipv4_addr || t('common.na')}</dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className="text-xs text-faint">{t('common.ipv6')}</dt>
+                      <dd className="mt-1 break-all text-fg">{row.ipv6_addr || t('common.na')}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-faint">{t('common.flags')}</dt>
+                      <dd className="mt-1 flex flex-wrap gap-2">
+                        {row.hidden ? <Badge variant="warn">{t('common.hidden')}</Badge> : null}
+                        {row.enable_user_dns_zones ? <Badge variant="ok">{t('admin.cluster.dns_servers.badge.user_zones')}</Badge> : <Badge variant="neutral">{t('admin.cluster.dns_servers.badge.no_user_zones')}</Badge>}
+                      </dd>
+                    </div>
+                  </dl>
+
+                  <div className="mt-4 grid grid-cols-2 gap-2 border-t border-border pt-3" role="group" aria-label={t('common.actions')}>
+                    <ActionButton size="sm" variant="ghost" className="min-h-11 min-w-0 px-3" title={t('common.edit')} ariaLabel={t('common.edit')} testId={`admin.cluster.dns_servers.card.${row.id}.edit`} onClick={() => setEditor({ mode: 'edit', server: row })}><Pencil className="h-4 w-4" aria-hidden />{t('common.edit')}</ActionButton>
+                    <ActionButton size="sm" variant="danger" className="min-h-11 min-w-0 px-3" title={t('common.delete')} ariaLabel={t('common.delete')} testId={`admin.cluster.dns_servers.card.${row.id}.delete`} onClick={() => setConfirmDelete(row)}><Trash2 className="h-4 w-4" aria-hidden />{t('common.delete')}</ActionButton>
+                  </div>
+                </div>
+              </Card>
+            ))}
+
+            <Card className="overflow-hidden">
+              <KeysetPagination
+                testId="admin.cluster.dns_servers.pagination.mobile"
+                page={pagination.page}
+                pageCount={pageCount}
+                totalPagesKnown={totalPagesKnown}
+                maxDirectPage={maxDirectPage}
+                jumpPending={isJumping}
+                canPrev={pagination.canPrev}
+                canNext={canNext}
+                onPrev={pagination.goPrev}
+                onNext={() => pagination.goNext(cursor)}
+                onGoToPage={goToPage}
+                limit={pagination.limit}
+                allowedLimits={pagination.allowedLimits}
+                onLimitChange={pagination.setLimit}
+              />
+            </Card>
+          </div>
+
+          <TableCard
+            className="hidden md:block"
+            testId="admin.cluster.dns_servers.table"
+            minWidth="lg"
+            footer={
+              <KeysetPagination
+                testId="admin.cluster.dns_servers.pagination.desktop"
+                page={pagination.page}
+                pageCount={pageCount}
+                totalPagesKnown={totalPagesKnown}
+                maxDirectPage={maxDirectPage}
+                jumpPending={isJumping}
+                canPrev={pagination.canPrev}
+                canNext={canNext}
+                onPrev={pagination.goPrev}
+                onNext={() => pagination.goNext(cursor)}
+                onGoToPage={goToPage}
+                limit={pagination.limit}
+                allowedLimits={pagination.allowedLimits}
+                onLimitChange={pagination.setLimit}
+              />
+            }
+          >
               <thead><tr className="text-left text-xs uppercase tracking-wide text-faint"><th className="py-2 pl-4 pr-3">{t('common.name')}</th><th className="py-2 pr-3">{t('common.node')}</th><th className="py-2 pr-3">{t('common.ipv4')}</th><th className="py-2 pr-3">{t('common.ipv6')}</th><th className="py-2 pr-3">{t('common.flags')}</th><th className="py-2 pr-4">{t('common.actions')}</th></tr></thead>
               <tbody>{rows.map((row) => <tr key={row.id} className="border-t border-border" data-testid={`admin.cluster.dns_servers.row.${row.id}`}><td className="py-2 pl-4 pr-3 font-medium text-fg">{String(row.name ?? `#${row.id}`)}</td><td className="py-2 pr-3">{nodeLabel(row)}</td><td className="py-2 pr-3">{row.ipv4_addr || t('common.na')}</td><td className="py-2 pr-3">{row.ipv6_addr || t('common.na')}</td><td className="py-2 pr-3"><div className="flex flex-wrap gap-2">{row.hidden ? <Badge variant="warn">{t('common.hidden')}</Badge> : null}{row.enable_user_dns_zones ? <Badge variant="ok">{t('admin.cluster.dns_servers.badge.user_zones')}</Badge> : <Badge variant="neutral">{t('admin.cluster.dns_servers.badge.no_user_zones')}</Badge>}</div></td><td className="py-2 pr-4 text-right"><div className="inline-flex items-center justify-end gap-1" role="group" aria-label={t('common.actions')}><ActionButton size="sm" variant="ghost" className="h-8 w-8 min-w-8 px-0" title={t('common.edit')} ariaLabel={t('common.edit')} testId={`admin.cluster.dns_servers.row.${row.id}.edit`} onClick={() => setEditor({ mode: 'edit', server: row })}><Pencil className="h-4 w-4" aria-hidden /></ActionButton><ActionButton size="sm" variant="danger" className="h-8 w-8 min-w-8 px-0" title={t('common.delete')} ariaLabel={t('common.delete')} testId={`admin.cluster.dns_servers.row.${row.id}.delete`} onClick={() => setConfirmDelete(row)}><Trash2 className="h-4 w-4" aria-hidden /></ActionButton></div></td></tr>)}</tbody>
-        </TableCard>
+          </TableCard>
+        </>
       )}
 
-      <Modal open={editor !== null} onClose={() => setEditor(null)} title={editor?.mode === 'edit' ? t('admin.cluster.dns_servers.edit.title') : t('admin.cluster.dns_servers.create.title')}>
+      <Modal testId="admin.cluster.dns_servers.editor" open={editor !== null} onClose={() => setEditor(null)} title={editor?.mode === 'edit' ? t('admin.cluster.dns_servers.edit.title') : t('admin.cluster.dns_servers.create.title')}>
         <div className="space-y-4">
           {saveM.isError ? <Alert variant="danger" title={t('common.save_failed')}>{formatErrorMessage(saveM.error)}</Alert> : null}
           <div><div className="mb-1 text-sm font-medium text-fg">{t('common.name')}</div><Input value={name} onChange={(e) => setName(e.target.value)} testId="admin.cluster.dns_servers.editor.name" /></div>
@@ -194,7 +255,7 @@ export function DnsServersPage() {
         </div>
       </Modal>
 
-      <ConfirmDialog open={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title={t('admin.cluster.dns_servers.delete.title')} description={confirmDelete ? t('admin.cluster.dns_servers.delete.description', { name: String(confirmDelete.name ?? `#${confirmDelete.id}`) }) : ''} confirmLabel={t('common.delete')} confirmVariant="danger" onConfirm={() => deleteM.mutate()} loading={deleteM.isPending} />
+      <ConfirmDialog testId="admin.cluster.dns_servers.delete_confirm" open={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title={t('admin.cluster.dns_servers.delete.title')} description={confirmDelete ? t('admin.cluster.dns_servers.delete.description', { name: String(confirmDelete.name ?? `#${confirmDelete.id}`) }) : ''} confirmLabel={t('common.delete')} confirmVariant="danger" onConfirm={() => deleteM.mutate()} loading={deleteM.isPending} />
     </div>
   );
 }
