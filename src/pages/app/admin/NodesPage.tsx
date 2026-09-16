@@ -8,8 +8,6 @@ import { useI18n } from '../../../app/i18n';
 import { useToasts } from '../../../app/toasts';
 
 import { ListShell } from '../../../components/layout/ListShell';
-import { PageHeader } from '../../../components/layout/PageHeader';
-import { Button } from '../../../components/ui/Button';
 import type { SmartFilterSuggestion } from '../../../components/ui/SmartFilterInput';
 
 import { fetchNodeCreateCapability, fetchNodes } from '../../../lib/api/nodes';
@@ -22,6 +20,7 @@ import { parseNumericToken, splitKeyValueToken, tokenizeSmartInput, unquoteSmart
 
 import { NodesFilters } from './NodesFilters';
 import { NodesListContent } from './NodesListContent';
+import { NodesPageHeader } from './NodesPageHeader';
 import { NodesRouteGuard } from './NodesRouteGuard';
 import { NodeCreateModal } from './nodes/NodeCreateModal';
 import { NodeCreateIndeterminateGuard, type IndeterminateNodeCreateAttempt } from './nodes/NodeCreateIndeterminateGuard';
@@ -413,25 +412,15 @@ function NodesPageContent() {
     <ListShell
       testId="admin.nodes.page"
       header={
-        <PageHeader
-          title={t('admin.nodes.title')}
-          description={t('admin.nodes.subtitle')}
-          meta={filtersActive ? <span className="text-xs text-faint">{listHint ?? t('list.meta.filters_active')}</span> : null}
-          actions={
-            auth.role === 'admin' ? (
-              <Button
-                variant="primary"
-                disabled={createDisabled}
-                loading={createCapabilityQ.isLoading}
-                disabledReason={createDisabledReason}
-                onClick={() => setCreateOpen(true)}
-                testId="admin.nodes.create"
-              >
-                {t('admin.node.editor.action.create')}
-              </Button>
-            ) : null
-          }
-          testId="admin.nodes.list.header"
+        <NodesPageHeader
+          t={t}
+          filtersActive={filtersActive}
+          listHint={listHint}
+          showCreateAction={auth.role === 'admin'}
+          createDisabled={createDisabled}
+          createLoading={createCapabilityQ.isLoading}
+          createDisabledReason={createDisabledReason}
+          onCreate={() => setCreateOpen(true)}
         />
       }
       filters={
