@@ -78,6 +78,10 @@ function FieldLabel(props: { label: React.ReactNode; children: React.ReactNode }
   );
 }
 
+function MobileCellLabel(props: { children: React.ReactNode }) {
+  return <span className="text-xs font-semibold text-muted md:hidden">{props.children}</span>;
+}
+
 type LnEditorState =
   | null
   | {
@@ -393,9 +397,9 @@ export function NetworkDetailPage() {
               <dt className="text-xs font-semibold text-muted">{t('admin.cluster.network_detail.field.split_access')}</dt>
               <dd className="mt-1 text-fg">{String(net.split_access ?? '—')}</dd>
             </div>
-            <div>
+            <div className="min-w-0">
               <dt className="text-xs font-semibold text-muted">{t('admin.cluster.network_detail.field.primary_location')}</dt>
-              <dd className="mt-1 text-fg">{locLabel((net as any).primary_location ?? null)}</dd>
+              <dd className="mt-1 break-words text-fg">{locLabel((net as any).primary_location ?? null)}</dd>
             </div>
           </dl>
         </CardBody>
@@ -422,8 +426,11 @@ export function NetworkDetailPage() {
               testId="admin.cluster.network_detail.availability.empty"
             />
           ) : (
-            <TableCard testId="admin.cluster.network_detail.availability.table" minWidth="lg">
-              <thead>
+            <TableCard
+              testId="admin.cluster.network_detail.availability.table"
+              tableClassName="block md:table md:min-w-table-lg"
+            >
+              <thead className="hidden md:table-header-group">
                 <tr>
                   <th className="px-3 py-2 text-left text-xs font-semibold text-muted">{t('common.location')}</th>
                   <th className="px-3 py-2 text-left text-xs font-semibold text-muted">{t('admin.cluster.network_detail.col.primary')}</th>
@@ -433,7 +440,7 @@ export function NetworkDetailPage() {
                   <th className="px-3 py-2 text-right text-xs font-semibold text-muted">{t('common.actions')}</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="block md:table-row-group">
                 {sortedLns.map((ln) => {
                   const primary = Boolean(ln.primary);
                   const priority = typeof ln.priority === 'number' ? ln.priority : null;
@@ -443,24 +450,46 @@ export function NetworkDetailPage() {
                   const userB = ynBadge(t, userpick);
 
                   return (
-                    <tr key={ln.id} data-testid={`admin.cluster.network_detail.ln.${ln.id}`}
+                    <tr
+                      key={ln.id}
+                      data-testid={`admin.cluster.network_detail.ln.${ln.id}`}
+                      className="block border-b border-border py-2 last:border-b-0 md:table-row md:border-b-0 md:py-0"
                     >
-                      <td className="px-3 py-2 text-fg">{locLabel((ln as any).location ?? null)}</td>
-                      <td className="px-3 py-2">
-                        {primary ? <Badge variant="ok">{t('admin.cluster.network_detail.badge.primary')}</Badge> : '—'}
+                      <td className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] items-start gap-3 px-3 py-2 md:table-cell">
+                        <MobileCellLabel>{t('common.location')}</MobileCellLabel>
+                        <span className="min-w-0 break-words text-right text-fg md:text-left">
+                          {locLabel((ln as any).location ?? null)}
+                        </span>
                       </td>
-                      <td className="px-3 py-2 text-right font-mono text-xs text-muted tabular-nums">{priority ?? '—'}</td>
-                      <td className="px-3 py-2">
-                        <Badge variant={autoB.variant}>{autoB.label}</Badge>
+                      <td className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] items-start gap-3 px-3 py-2 md:table-cell">
+                        <MobileCellLabel>{t('admin.cluster.network_detail.col.primary')}</MobileCellLabel>
+                        <span className="flex min-w-0 justify-end md:inline-flex md:justify-start">
+                          {primary ? <Badge variant="ok">{t('admin.cluster.network_detail.badge.primary')}</Badge> : '—'}
+                        </span>
                       </td>
-                      <td className="px-3 py-2">
-                        <Badge variant={userB.variant}>{userB.label}</Badge>
+                      <td className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] items-start gap-3 px-3 py-2 md:table-cell md:text-right">
+                        <MobileCellLabel>{t('admin.cluster.network_detail.col.priority')}</MobileCellLabel>
+                        <span className="min-w-0 break-words text-right font-mono text-xs text-muted tabular-nums">{priority ?? '—'}</span>
                       </td>
-                      <td className="px-3 py-2 text-right">
-                        <div className="inline-flex items-center gap-2">
+                      <td className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] items-start gap-3 px-3 py-2 md:table-cell">
+                        <MobileCellLabel>{t('admin.cluster.network_detail.col.autopick')}</MobileCellLabel>
+                        <span className="flex min-w-0 justify-end md:inline-flex md:justify-start">
+                          <Badge variant={autoB.variant}>{autoB.label}</Badge>
+                        </span>
+                      </td>
+                      <td className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] items-start gap-3 px-3 py-2 md:table-cell">
+                        <MobileCellLabel>{t('admin.cluster.network_detail.col.userpick')}</MobileCellLabel>
+                        <span className="flex min-w-0 justify-end md:inline-flex md:justify-start">
+                          <Badge variant={userB.variant}>{userB.label}</Badge>
+                        </span>
+                      </td>
+                      <td className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] items-start gap-3 px-3 py-2 text-right md:table-cell">
+                        <MobileCellLabel>{t('common.actions')}</MobileCellLabel>
+                        <div className="flex flex-wrap items-center justify-end gap-2">
                           <Button
                             size="sm"
                             variant="secondary"
+                            className="min-h-11 md:min-h-8"
                             onClick={() => openEdit(ln)}
                             testId={`admin.cluster.network_detail.ln.${ln.id}.edit`}
                           >
@@ -469,6 +498,7 @@ export function NetworkDetailPage() {
                           <Button
                             size="sm"
                             variant="danger"
+                            className="min-h-11 md:min-h-8"
                             onClick={() => setDeleteState({ open: true, ln })}
                             testId={`admin.cluster.network_detail.ln.${ln.id}.remove`}
                           >
