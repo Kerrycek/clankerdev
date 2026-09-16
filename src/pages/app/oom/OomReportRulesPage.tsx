@@ -46,6 +46,10 @@ function ruleLabelKey(action?: string): string {
   return 'oom.rule.implicit';
 }
 
+function MobileCellLabel(props: { children: React.ReactNode }) {
+  return <span className="text-xs font-medium text-faint @4xl:hidden">{props.children}</span>;
+}
+
 export function OomReportRulesPage() {
   const { vpsId: vpsIdParam } = useParams();
   const vpsId = safeNumber(vpsIdParam ?? '') as number | undefined;
@@ -227,15 +231,18 @@ export function OomReportRulesPage() {
           </CardBody>
         </Card>
 
-        <Card testId="oom.rules.list">
+        <Card className="@container" testId="oom.rules.list">
           <CardHeader title={t('oom.rules.list.title')} subtitle={t('oom.rules.list.subtitle')} />
           <CardBody>
             {rules.length === 0 ? (
               <div className="text-sm text-muted">{t('oom.rules.list.empty')}</div>
             ) : (
-              <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-                <table className="min-w-full text-sm" data-testid="oom.rules.table">
-                  <thead>
+              <div
+                className="overflow-x-auto rounded-lg border border-border bg-surface"
+                data-testid="oom.rules.table.scroller"
+              >
+                <table className="block w-full text-sm @4xl:table @4xl:min-w-full" data-testid="oom.rules.table">
+                  <thead className="hidden @4xl:table-header-group">
                     <tr className="border-b border-border text-left text-xs text-muted">
                       <th className="px-4 py-2">{t('common.id')}</th>
                       <th className="px-4 py-2">{t('oom.rules.field.action')}</th>
@@ -244,41 +251,63 @@ export function OomReportRulesPage() {
                       <th className="px-4 py-2 text-right">{t('common.actions')}</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="block @4xl:table-row-group">
                     {rules.map((rule) => {
                       const action = rule.action ? String(rule.action) : undefined;
                       const isEditing = editingId === rule.id;
 
                       return (
-                        <tr key={rule.id} className="border-b border-border/50 last:border-b-0">
-                          <td className="px-4 py-2 font-mono text-xs">{rule.id}</td>
-                          <td className="px-4 py-2">
-                            {isEditing ? (
-                              <Select
-                                value={editAction}
-                                onChange={(e) => setEditAction(e.target.value as any)}
-                                options={[
-                                  { value: 'notify', label: t(ruleLabelKey('notify')) },
-                                  { value: 'ignore', label: t(ruleLabelKey('ignore')) },
-                                ]}
-                              />
-                            ) : (
-                              <Badge variant={ruleVariant(action)}>{t(ruleLabelKey(action))}</Badge>
-                            )}
+                        <tr
+                          key={rule.id}
+                          className="block border-b border-border/50 last:border-b-0 @4xl:table-row"
+                          data-testid={`oom.rules.row.${rule.id}`}
+                        >
+                          <td className="grid min-w-0 grid-cols-[minmax(6rem,0.38fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 @4xl:table-cell @4xl:px-4 @4xl:py-2">
+                            <MobileCellLabel>{t('common.id')}</MobileCellLabel>
+                            <span className="min-w-0 break-all font-mono text-xs">{rule.id}</span>
                           </td>
-                          <td className="px-4 py-2">
-                            {isEditing ? (
-                              <Input value={editPattern} onChange={(e) => setEditPattern(e.target.value)} />
-                            ) : (
-                              <span className="font-mono text-xs">{rule.cgroup_pattern ? String(rule.cgroup_pattern) : '—'}</span>
-                            )}
+                          <td className="grid min-w-0 grid-cols-[minmax(6rem,0.38fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 @4xl:table-cell @4xl:px-4 @4xl:py-2">
+                            <MobileCellLabel>{t('oom.rules.field.action')}</MobileCellLabel>
+                            <div className="min-w-0">
+                              {isEditing ? (
+                                <Select
+                                  value={editAction}
+                                  onChange={(e) => setEditAction(e.target.value as any)}
+                                  options={[
+                                    { value: 'notify', label: t(ruleLabelKey('notify')) },
+                                    { value: 'ignore', label: t(ruleLabelKey('ignore')) },
+                                  ]}
+                                />
+                              ) : (
+                                <Badge variant={ruleVariant(action)}>{t(ruleLabelKey(action))}</Badge>
+                              )}
+                            </div>
                           </td>
-                          <td className="px-4 py-2 font-mono text-xs">{typeof rule.hit_count === 'number' ? rule.hit_count : '—'}</td>
-                          <td className="px-4 py-2 text-right">
+                          <td className="grid min-w-0 grid-cols-[minmax(6rem,0.38fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 @4xl:table-cell @4xl:px-4 @4xl:py-2">
+                            <MobileCellLabel>{t('oom.rules.field.cgroup_pattern')}</MobileCellLabel>
+                            <div className="min-w-0">
+                              {isEditing ? (
+                                <Input value={editPattern} onChange={(e) => setEditPattern(e.target.value)} />
+                              ) : (
+                                <span className="min-w-0 break-all font-mono text-xs">
+                                  {rule.cgroup_pattern ? String(rule.cgroup_pattern) : '—'}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="grid min-w-0 grid-cols-[minmax(6rem,0.38fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 @4xl:table-cell @4xl:px-4 @4xl:py-2">
+                            <MobileCellLabel>{t('oom.rules.field.hit_count')}</MobileCellLabel>
+                            <span className="min-w-0 break-all font-mono text-xs">
+                              {typeof rule.hit_count === 'number' ? rule.hit_count : '—'}
+                            </span>
+                          </td>
+                          <td className="grid min-w-0 grid-cols-[minmax(6rem,0.38fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 @4xl:table-cell @4xl:px-4 @4xl:py-2 @4xl:text-right">
+                            <MobileCellLabel>{t('common.actions')}</MobileCellLabel>
                             {isEditing ? (
-                              <div className="flex justify-end gap-2">
+                              <div className="grid min-w-0 grid-cols-1 gap-2 @2xl:grid-cols-2 @4xl:flex @4xl:justify-end">
                                 <Button
                                   size="sm"
+                                  className="min-h-11 w-full @4xl:min-h-8 @4xl:w-auto"
                                   disabled={updateM.isPending}
                                   onClick={() => updateM.mutate()}
                                   testId={`oom.rules.row.${rule.id}.save`}
@@ -288,6 +317,7 @@ export function OomReportRulesPage() {
                                 <Button
                                   variant="secondary"
                                   size="sm"
+                                  className="min-h-11 w-full @4xl:min-h-8 @4xl:w-auto"
                                   disabled={updateM.isPending}
                                   onClick={() => setEditingId(null)}
                                   testId={`oom.rules.row.${rule.id}.cancel`}
@@ -296,10 +326,11 @@ export function OomReportRulesPage() {
                                 </Button>
                               </div>
                             ) : (
-                              <div className="flex justify-end gap-2">
+                              <div className="grid min-w-0 grid-cols-1 gap-2 @2xl:grid-cols-2 @4xl:flex @4xl:justify-end">
                                 <Button
                                   variant="secondary"
                                   size="sm"
+                                  className="min-h-11 w-full @4xl:min-h-8 @4xl:w-auto"
                                   onClick={() => {
                                     setEditingId(rule.id);
                                     setEditAction((rule.action as any) || 'notify');
@@ -312,6 +343,7 @@ export function OomReportRulesPage() {
                                 <Button
                                   variant="danger"
                                   size="sm"
+                                  className="min-h-11 w-full @4xl:min-h-8 @4xl:w-auto"
                                   onClick={() => setDeleteCandidate(rule)}
                                   testId={`oom.rules.row.${rule.id}.delete`}
                                 >
