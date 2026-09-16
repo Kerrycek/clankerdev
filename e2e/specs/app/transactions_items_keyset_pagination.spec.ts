@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 
@@ -19,6 +19,24 @@ function makeTx(id: number) {
     vps: { id: 100, label: 'vps100' },
     transaction_chain: { id: 123 },
   };
+}
+
+async function expectCanonicalAdminChainListUrl(
+  page: Page,
+  filters: Record<string, string>
+) {
+  await expect
+    .poll(() => {
+      const url = new URL(page.url());
+      return {
+        pathname: url.pathname,
+        params: Object.fromEntries(url.searchParams.entries()),
+      };
+    })
+    .toEqual({
+      pathname: '/admin/transactions',
+      params: { ...filters, limit: '50', page: '1' },
+    });
 }
 
 test.describe('Transactions items list keyset pagination', () => {
@@ -183,10 +201,10 @@ test.describe('Transactions items list keyset pagination', () => {
     });
 
     await page.goto('/admin/transactions/items?vps=100');
-    await expect(page).toHaveURL(/\/admin\/transactions\?class_name=Vps&row_id=100$/);
+    await expectCanonicalAdminChainListUrl(page, { class_name: 'Vps', row_id: '100' });
 
     await page.goto('/admin/transactions/items?user=7');
-    await expect(page).toHaveURL(/\/admin\/transactions\?user=7$/);
+    await expectCanonicalAdminChainListUrl(page, { user: '7' });
     expect(itemRequests).toBe(0);
   });
 
