@@ -102,6 +102,7 @@ export function RequestsListContent(props: {
   returnTo: string;
   selectionMode: boolean;
   selectedKeys: ReadonlySet<string>;
+  bulkSelectableKeys: ReadonlySet<string>;
   lockedRequestIds: ReadonlySet<number>;
   canNext: boolean;
   pageCursor: number | undefined;
@@ -110,8 +111,7 @@ export function RequestsListContent(props: {
   onToggleAllVisible: (selected: boolean) => void;
 }) {
   const { t } = useI18n();
-  const selectableRows = props.rows.filter((request) => !props.lockedRequestIds.has(requestId(request))
-    && !requestMissingRequiredUser(requestType(request), request));
+  const selectableRows = props.rows.filter((request) => props.bulkSelectableKeys.has(requestKey(request)));
   const allVisibleSelected = selectableRows.length > 0
     && selectableRows.every((request) => props.selectedKeys.has(requestKey(request)));
   const selectedVisibleCount = selectableRows.filter((request) => props.selectedKeys.has(requestKey(request))).length;
@@ -136,7 +136,7 @@ export function RequestsListContent(props: {
           const createdAt = requestDateValue(request, 'created_at');
           const locked = props.lockedRequestIds.has(id);
           const ownerMissing = requestMissingRequiredUser(reqType, request);
-          const selectable = !locked && !ownerMissing;
+          const selectable = props.bulkSelectableKeys.has(key);
           const card = (
             <Card
               className="p-4 transition-colors hover:border-accent/40"
@@ -151,7 +151,9 @@ export function RequestsListContent(props: {
                     disabled={!selectable}
                     title={locked
                       ? t('requests.resolve.in_progress.title')
-                      : ownerMissing ? t('requests.resolve.owner_missing.title') : undefined}
+                      : ownerMissing
+                        ? t('requests.resolve.owner_missing.title')
+                        : !selectable ? t('requests.bulk.not_reviewable') : undefined}
                     onChange={(event) => props.onToggleSelected(key, event.target.checked)}
                     aria-label={t('requests.bulk.select_one', { id: String(id) })}
                     data-testid={`admin.requests.bulk.select.mobile.${reqType}.${id}`}
@@ -262,7 +264,7 @@ export function RequestsListContent(props: {
             const createdAt = requestDateValue(request, 'created_at');
             const locked = props.lockedRequestIds.has(id);
             const ownerMissing = requestMissingRequiredUser(reqType, request);
-            const selectable = !locked && !ownerMissing;
+            const selectable = props.bulkSelectableKeys.has(key);
 
             return (
               <TableRowLink
@@ -282,7 +284,9 @@ export function RequestsListContent(props: {
                       disabled={!selectable}
                       title={locked
                         ? t('requests.resolve.in_progress.title')
-                        : ownerMissing ? t('requests.resolve.owner_missing.title') : undefined}
+                        : ownerMissing
+                          ? t('requests.resolve.owner_missing.title')
+                          : !selectable ? t('requests.bulk.not_reviewable') : undefined}
                       onChange={(event) => props.onToggleSelected(key, event.target.checked)}
                       aria-label={t('requests.bulk.select_one', { id: String(id) })}
                       data-testid={`admin.requests.bulk.select.${reqType}.${id}`}

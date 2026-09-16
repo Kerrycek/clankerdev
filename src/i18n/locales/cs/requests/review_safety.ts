@@ -36,6 +36,7 @@ export const csRequestReviewSafety = {
   'requests.bulk.deselect_all': 'Odznačit tuto stránku',
   'requests.bulk.cancel_selection': 'Zrušit výběr',
   'requests.bulk.select_one': 'Vybrat žádost #{id}',
+  'requests.bulk.not_reviewable': 'Vybrat lze jen žádosti čekající na posouzení.',
   'requests.bulk.review': 'Zkontrolovat akci',
   'requests.bulk.registration_approve_blocked': 'Registrace nelze schvalovat hromadně. Otevři každou registraci a zkontroluj identitu, rizikové signály a volby VPS.',
   'requests.bulk.no_common_action': 'Vybrané žádosti nemají společnou bezpečnou akci. Uprav výběr.',
