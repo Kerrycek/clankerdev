@@ -25,6 +25,10 @@ const WEEKDAYS: Array<{ weekday: number; key: string; shortKey: string }> = [
   { weekday: 7, key: 'common.weekday.sun', shortKey: 'common.weekday_short.sun' },
 ];
 
+function MobileCellLabel(props: { children: React.ReactNode }) {
+  return <div className="mb-1 text-xs font-semibold text-muted md:hidden">{props.children}</div>;
+}
+
 function clampInt(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, Math.trunc(n)));
 }
@@ -64,7 +68,7 @@ function TimePick(props: {
   const mins = Array.from({ length: Math.floor(60 / step) }, (_, i) => i * step);
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 md:flex">
       <Select
         testId={props.testId ? `${props.testId}.h` : undefined}
         value={String(h)}
@@ -74,7 +78,7 @@ function TimePick(props: {
           const next = nh === 24 ? hmToMinutes(24, 0) : hmToMinutes(nh, m);
           props.onChange(next);
         }}
-        className="w-24"
+        className="w-full min-w-0 md:w-24"
       >
         {hours.map((hh) => (
           <option key={hh} value={hh}>
@@ -91,7 +95,7 @@ function TimePick(props: {
           const nm = Number(e.target.value);
           props.onChange(hmToMinutes(h, nm));
         }}
-        className="w-24"
+        className="w-full min-w-0 md:w-24"
       >
         {mins.map((mm) => (
           <option key={mm} value={mm}>
@@ -347,8 +351,8 @@ export function VpsMaintenancePage() {
               </Alert>
             ) : (
               <div className="mt-4 overflow-x-auto">
-                <table className="min-w-table-md w-full table-list">
-                  <thead>
+                <table className="block w-full min-w-0 table-list md:table md:min-w-table-md">
+                  <thead className="hidden md:table-header-group">
                     <tr className="border-b border-border text-left text-xs text-muted">
                       <th className="px-4 py-3">{t('vps.maintenance.field.day')}</th>
                       <th className="px-4 py-3">{t('vps.maintenance.field.open')}</th>
@@ -357,7 +361,7 @@ export function VpsMaintenancePage() {
                       <th className="px-4 py-3">{t('vps.maintenance.field.summary')}</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="block md:table-row-group">
                     {effective.map((d) => {
                       const labelKey = WEEKDAYS.find((w) => w.weekday === d.weekday)?.key;
 
@@ -368,13 +372,15 @@ export function VpsMaintenancePage() {
                         <tr
                           key={d.weekday}
                           data-testid={`vps.maintenance.day.${d.weekday}`}
-                          className="border-b border-border/60 last:border-b-0"
+                          className="block border-b border-border/60 last:border-b-0 md:table-row"
                         >
-                          <td className="px-4 py-3 font-medium">
+                          <td className="block px-4 pb-2 pt-4 font-medium md:table-cell md:py-3">
+                            <MobileCellLabel>{t('vps.maintenance.field.day')}</MobileCellLabel>
                             {label}{' '}
                             {isDirty ? <span className="ml-2 text-xs text-muted">{t('common.changed')}</span> : null}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="block px-4 py-2 md:table-cell md:py-3">
+                            <MobileCellLabel>{t('vps.maintenance.field.open')}</MobileCellLabel>
                             {canMutateVps ? <label className="flex items-center gap-2 text-sm">
                               <input
                                 data-testid={`vps.maintenance.day.${d.weekday}.open`}
@@ -389,7 +395,8 @@ export function VpsMaintenancePage() {
                               <span>{d.is_open ? t('vps.maintenance.open') : t('vps.maintenance.closed')}</span>
                             </label> : <span className="text-sm">{d.is_open ? t('vps.maintenance.open') : t('vps.maintenance.closed')}</span>}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="block px-4 py-2 md:table-cell md:py-3">
+                            <MobileCellLabel>{t('vps.maintenance.field.opens')}</MobileCellLabel>
                             {canMutateVps ? <TimePick
                               testId={`vps.maintenance.day.${d.weekday}.opens`}
                               valueMinutes={d.opens_at}
@@ -398,7 +405,8 @@ export function VpsMaintenancePage() {
                               stepMinutes={5}
                             /> : <span className="font-mono text-sm">{d.is_open ? `${pad2(minutesToHM(d.opens_at).h)}:${pad2(minutesToHM(d.opens_at).m)}` : '—'}</span>}
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="block px-4 py-2 md:table-cell md:py-3">
+                            <MobileCellLabel>{t('vps.maintenance.field.closes')}</MobileCellLabel>
                             {canMutateVps ? <TimePick
                               testId={`vps.maintenance.day.${d.weekday}.closes`}
                               valueMinutes={d.closes_at}
@@ -408,7 +416,8 @@ export function VpsMaintenancePage() {
                               allow24
                             /> : <span className="font-mono text-sm">{d.is_open ? `${pad2(minutesToHM(d.closes_at).h)}:${pad2(minutesToHM(d.closes_at).m)}` : '—'}</span>}
                           </td>
-                          <td className="px-4 py-3 text-xs text-muted">
+                          <td className="block px-4 pb-4 pt-2 text-xs text-muted md:table-cell md:py-3">
+                            <MobileCellLabel>{t('vps.maintenance.field.summary')}</MobileCellLabel>
                             {d.is_open
                               ? t('vps.maintenance.summary_open', {
                                   opens: `${pad2(minutesToHM(d.opens_at).h)}:${pad2(minutesToHM(d.opens_at).m)}`,
