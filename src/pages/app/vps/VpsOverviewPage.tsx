@@ -49,7 +49,7 @@ export function VpsOverviewPage() {
     <div className="grid gap-4 lg:grid-cols-12" data-testid="vps.overview.control_center">
       <VpsHealthBanner
         className="lg:col-span-12"
-        hideNonActionable={isAdminView}
+        hideNonActionable
         vps={vps}
         busy={busyTransaction || busyLocalLock}
         stale={chainsStale}
