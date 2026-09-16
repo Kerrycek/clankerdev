@@ -444,6 +444,7 @@ export function VpsLayout() {
       <DetailShell>
         <ObjectHeader
           testId="vps.header"
+          horizontalAt="xl"
           kicker={
             <>
               <Link className="text-accent hover:underline" to={`${basePath}/vps`}>
@@ -479,14 +480,24 @@ export function VpsLayout() {
           }
           extra={
             <div className="space-y-2">
-              <div className="text-sm text-muted" data-testid="vps.header.ssh">
-                {t('vps.header.ssh.label')}: {sshCommand ? (
-                  <span className="inline-flex items-center gap-2">
-                    <code className="rounded bg-surface-2 px-2 py-1 font-mono text-xs text-fg">{sshCommand}</code>
-                    <CopyButton text={sshCommand} label={t('common.copy')} />
+              <div
+                className="min-w-0 text-sm text-muted xl:flex xl:items-center xl:gap-1"
+                data-testid="vps.header.ssh"
+              >
+                <span className="shrink-0">{t('vps.header.ssh.label')}:</span>
+                {sshCommand ? (
+                  <span className="mt-1 flex min-w-0 max-w-full items-center gap-2 xl:mt-0">
+                    <code className="min-w-0 flex-1 truncate rounded bg-surface-2 px-2 py-1 font-mono text-xs text-fg">
+                      {sshCommand}
+                    </code>
+                    <CopyButton
+                      className="min-h-11 shrink-0 xl:min-h-8"
+                      text={sshCommand}
+                      label={t('common.copy')}
+                    />
                   </span>
                 ) : (
-                  <span className="text-faint">{t('vps.header.ssh.no_address')}</span>
+                  <span className="ml-1 text-faint xl:ml-0">{t('vps.header.ssh.no_address')}</span>
                 )}
               </div>
 

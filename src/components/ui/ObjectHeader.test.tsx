@@ -28,4 +28,27 @@ describe('ObjectHeader responsive containment', () => {
     expect(actionGroup).toHaveClass('min-w-0', 'w-full', 'flex-wrap', 'sm:w-auto');
     expect(responsiveRightColumn).toHaveClass('min-w-0', 'w-full', 'sm:w-auto', 'sm:shrink-0');
   });
+
+  it('can keep dense headers stacked until a desktop-width breakpoint', () => {
+    render(
+      <MemoryRouter>
+        <ObjectHeader
+          testId="header"
+          horizontalAt="xl"
+          title="VPS"
+          actions={<button>Console</button>}
+        />
+      </MemoryRouter>
+    );
+
+    const header = screen.getByTestId('header');
+    const layout = header.querySelector('[data-document-title-root] > div');
+    const actionGroup = screen.getByRole('button', { name: 'Console' }).parentElement;
+    const responsiveRightColumn = actionGroup?.parentElement;
+
+    expect(layout).toHaveClass('flex-col', 'xl:flex-row');
+    expect(layout).not.toHaveClass('sm:flex-row');
+    expect(actionGroup).toHaveClass('w-full', 'xl:w-auto', 'xl:justify-end');
+    expect(responsiveRightColumn).toHaveClass('w-full', 'xl:w-auto', 'xl:shrink-0');
+  });
 });

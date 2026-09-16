@@ -46,6 +46,8 @@ export function ObjectHeader(props: {
   boxed?: boolean;
   testId?: string;
   className?: string;
+  /** Keep dense headers stacked until the content has enough horizontal room. */
+  horizontalAt?: 'sm' | 'xl';
 
   kicker?: HeaderKicker;
   title: React.ReactNode;
@@ -61,6 +63,7 @@ export function ObjectHeader(props: {
 }) {
   const boxed = props.boxed ?? true;
   const kicker = renderKicker(props.kicker);
+  const horizontalAt = props.horizontalAt ?? 'sm';
 
   const content = (
     <div
@@ -68,8 +71,15 @@ export function ObjectHeader(props: {
       data-document-title-root
       data-document-title-kind="object"
     >
-      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 sm:flex-1">
+      <div
+        className={clsx(
+          'flex min-w-0 flex-col gap-3',
+          horizontalAt === 'xl'
+            ? 'xl:flex-row xl:items-start xl:justify-between'
+            : 'sm:flex-row sm:items-start sm:justify-between'
+        )}
+      >
+        <div className={clsx('min-w-0', horizontalAt === 'xl' ? 'xl:flex-1' : 'sm:flex-1')}>
           {kicker ? <div className="text-xs text-muted">{kicker}</div> : null}
 
           <div className={clsx(kicker ? 'mt-1' : undefined, 'flex flex-wrap items-center gap-2')}>
@@ -85,10 +95,24 @@ export function ObjectHeader(props: {
         </div>
 
         {props.right || props.actions ? (
-          <div className="flex min-w-0 w-full flex-col gap-2 sm:w-auto sm:shrink-0 sm:items-end">
+          <div
+            className={clsx(
+              'flex min-w-0 w-full flex-col gap-2',
+              horizontalAt === 'xl'
+                ? 'xl:w-auto xl:shrink-0 xl:items-end'
+                : 'sm:w-auto sm:shrink-0 sm:items-end'
+            )}
+          >
             {props.right ? <div>{props.right}</div> : null}
             {props.actions ? (
-              <div className="flex min-w-0 w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">{props.actions}</div>
+              <div
+                className={clsx(
+                  'flex min-w-0 w-full flex-wrap items-center gap-2',
+                  horizontalAt === 'xl' ? 'xl:w-auto xl:justify-end' : 'sm:w-auto sm:justify-end'
+                )}
+              >
+                {props.actions}
+              </div>
             ) : null}
           </div>
         ) : null}
