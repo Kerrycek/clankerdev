@@ -319,53 +319,6 @@ export function OverviewNextActionsCard(props: {
   );
 }
 
-export function OverviewAdminContextCard(props: { vps: Vps; basePath: string }) {
-  const { t } = useI18n();
-  const id = ownerId(props.vps);
-
-  return (
-    <Card className="lg:col-span-12" testId="vps.overview.management.admin_context">
-      <CardHeader
-        title={t('vps.overview.management.admin_context_group')}
-        subtitle={t('vps.overview.management.admin_context_hint')}
-      />
-      <CardBody>
-        <div className="flex flex-wrap items-center gap-2">
-          <ChipLink to={`${props.basePath}/vps/${props.vps.id}/config`} title={t('vps.overview.admin_actions.change_owner_title')}>
-            {t('vps.overview.admin_actions.change_owner')}
-          </ChipLink>
-          <ChipLink to={`${props.basePath}/oom-reports?vps=${props.vps.id}`} title={t('vps.overview.admin_actions.oom_reports_title')}>
-            {t('vps.overview.admin_actions.oom_reports')}
-          </ChipLink>
-          <ChipLink to={`${props.basePath}/oom-reports/rules/${props.vps.id}`} title={t('vps.overview.admin_actions.oom_rules_title')}>
-            {t('vps.overview.admin_actions.oom_rules')}
-          </ChipLink>
-          <ChipLink to={`${props.basePath}/incidents?vps=${props.vps.id}`} title={t('vps.overview.admin_actions.incidents_title')}>
-            {t('vps.overview.admin_actions.incidents')}
-          </ChipLink>
-          <ChipLink to={`${props.basePath}/incidents/new?vps=${props.vps.id}`} title={t('vps.overview.admin_actions.report_incident_title')}>
-            {t('vps.overview.admin_actions.report_incident')}
-          </ChipLink>
-          <ChipLink to={`${props.basePath}/outages?vps=${props.vps.id}`} title={t('vps.overview.admin_actions.outages_title')}>
-            {t('vps.overview.admin_actions.outages')}
-          </ChipLink>
-          <ChipLink to={`${props.basePath}/transactions?class_name=Vps&row_id=${props.vps.id}`} title={t('vps.overview.admin_actions.transaction_log_title')}>
-            {t('vps.overview.admin_actions.transaction_log')}
-          </ChipLink>
-          {id ? (
-            <ChipLink to={`${props.basePath}/users/${id}/user-data`} title={t('vps.overview.admin_actions.user_data_title')}>
-              {t('vps.overview.admin_actions.user_data')}
-            </ChipLink>
-          ) : null}
-          <ChipLink to={`${props.basePath}/user-namespaces`} title={t('vps.overview.admin_actions.user_namespaces_title')}>
-            {t('vps.overview.admin_actions.user_namespaces')}
-          </ChipLink>
-        </div>
-      </CardBody>
-    </Card>
-  );
-}
-
 export function OverviewDiagnosticsCard(props: { vps: Vps; basePath: string }) {
   const { t } = useI18n();
 

@@ -1,9 +1,9 @@
 import React from 'react';
 
 import { useAppMode } from '../../../app/appMode';
+import { useAuth } from '../../../app/auth';
 import { LifecyclePanel } from '../../../components/lifetimes/LifecyclePanel';
 import { useVps } from './VpsContext';
-import { VpsOverviewAdminOperationsCard } from './VpsOverviewAdminOperationsCard';
 import { VpsOverviewMetricsCard } from './VpsOverviewMetricsCard';
 import {
   VpsAccessCard,
@@ -14,7 +14,6 @@ import {
   VpsStorageBackupsCard,
 } from './VpsControlCenterCards';
 import {
-  OverviewAdminContextCard,
   OverviewDiagnosticsCard,
 } from './VpsOverviewPrimitives';
 
@@ -25,7 +24,6 @@ export function VpsOverviewPage() {
     busyTransaction,
     busyLocalLock,
     chainsStale,
-    activeChainIds,
     ipAddresses,
     ipAddressesLoading,
     ipAddressesError,
@@ -35,28 +33,37 @@ export function VpsOverviewPage() {
     transactionChainsError,
   } = useVps();
   const { basePath, mode } = useAppMode();
+  const auth = useAuth();
   const isAdminView = mode === 'admin';
+  const showLifecycleSummary = !isAdminView || auth.role !== 'admin';
 
   return (
     <div className="grid gap-4 lg:grid-cols-12" data-testid="vps.overview.control_center">
-      <div className="lg:col-span-12">
-        <VpsHealthBanner
-          vps={vps}
-          busy={busyTransaction || busyLocalLock}
-          stale={chainsStale}
-          sshCommand={sshCommand}
-          ipAddressesLoading={ipAddressesLoading}
-          ipAddressesError={ipAddressesError}
-        />
-      </div>
+      <VpsHealthBanner
+        className="lg:col-span-12"
+        hideNonActionable={isAdminView}
+        vps={vps}
+        busy={busyTransaction || busyLocalLock}
+        stale={chainsStale}
+        sshCommand={sshCommand}
+        ipAddressesLoading={ipAddressesLoading}
+        ipAddressesError={ipAddressesError}
+      />
 
-      <VpsResourcesCard vps={vps} basePath={basePath} />
-
-      <VpsAccessCard
+      <VpsResourcesCard
         vps={vps}
         basePath={basePath}
-        sshCommand={sshCommand}
+        className={isAdminView ? 'lg:col-span-6' : undefined}
+        showRuntimeSummary={isAdminView}
       />
+
+      {!isAdminView ? (
+        <VpsAccessCard
+          vps={vps}
+          basePath={basePath}
+          sshCommand={sshCommand}
+        />
+      ) : null}
 
       <VpsNetworkCard
         vps={vps}
@@ -66,9 +73,14 @@ export function VpsOverviewPage() {
         error={ipAddressesError}
       />
 
-      <VpsStorageBackupsCard vps={vps} basePath={basePath} />
+      <VpsStorageBackupsCard
+        vps={vps}
+        basePath={basePath}
+        showUsage={!isAdminView}
+        showPool={isAdminView}
+      />
 
-      <VpsOverviewMetricsCard vps={vps} />
+      {!isAdminView ? <VpsOverviewMetricsCard vps={vps} /> : null}
 
       <VpsActivityCard
         vps={vps}
@@ -76,37 +88,27 @@ export function VpsOverviewPage() {
         chains={transactionChains}
         loading={transactionChainsLoading}
         error={transactionChainsError}
+        className={isAdminView ? 'lg:col-span-6' : undefined}
       />
+
+      {isAdminView ? <VpsOverviewMetricsCard vps={vps} collapsedByDefault /> : null}
 
       {!isAdminView ? <OverviewDiagnosticsCard vps={vps} basePath={basePath} /> : null}
 
-      {isAdminView ? (
-        <VpsOverviewAdminOperationsCard
-          vps={vps}
-          basePath={basePath}
-          busyTransaction={busyTransaction}
-          chainsStale={chainsStale}
-          activeChainIds={activeChainIds}
-          ipAddresses={ipAddresses}
-          ipAddressesLoading={ipAddressesLoading}
-          ipAddressesError={ipAddressesError}
-        />
+      {showLifecycleSummary ? (
+        <div className="lg:col-span-12">
+          <LifecyclePanel
+            kind="vps"
+            id={vps.id}
+            objectLabel={vps.hostname}
+            objectState={vps.object_state}
+            expirationDate={vps.expiration_date}
+            remindAfterDate={vps.remind_after_date}
+            onUpdated={refetch}
+            testId="vps.overview.lifecycle"
+          />
+        </div>
       ) : null}
-
-      <div className="lg:col-span-12">
-        <LifecyclePanel
-          kind="vps"
-          id={vps.id}
-          objectLabel={vps.hostname}
-          objectState={vps.object_state}
-          expirationDate={vps.expiration_date}
-          remindAfterDate={vps.remind_after_date}
-          onUpdated={refetch}
-          testId="vps.overview.lifecycle"
-        />
-      </div>
-
-      {isAdminView ? <OverviewAdminContextCard vps={vps} basePath={basePath} /> : null}
     </div>
   );
 }

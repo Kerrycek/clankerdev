@@ -290,8 +290,11 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.goto('/admin/vps/123');
 
-    await expect(page.getByTestId('vps.overview.lifecycle')).toBeVisible();
-    await expect(page.getByTestId('vps.overview.management.admin_context')).toBeVisible();
+    await expect(page.getByTestId('vps.overview.lifecycle')).toHaveCount(0);
+    await expect(page.getByTestId('vps.header.owner')).toBeVisible();
+    await expect(
+      page.getByTestId('vps.actions.menu').locator('option[value="/admin/vps/123/lifecycle"]'),
+    ).toHaveCount(1);
 
     await page.goto('/admin/vps/123/lifecycle');
     await expect(page.getByTestId('vps.lifecycle.action_link.reinstall')).toBeVisible();

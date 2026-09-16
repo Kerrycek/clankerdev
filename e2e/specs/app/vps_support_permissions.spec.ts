@@ -99,16 +99,25 @@ test('@pr-smoke support account stays read-only inside the admin VPS shell', asy
   await page.goto('/admin/vps/123');
 
   await expect(page.getByTestId('vps.overview.lifecycle')).toBeVisible();
+  await expect(page.getByTestId('vps.header.owner')).toBeVisible();
+  await expect(page.getByTestId('vps.overview.health')).toContainText('VPS is stopped');
   await expect(page.getByTestId('lifetimes.admin.edit')).toHaveCount(0);
   await expect(page.getByTestId('lifetimes.admin.log')).toHaveCount(0);
   await expect(page.getByTestId('lifetimes.user.snooze')).toHaveCount(0);
   await expect(page.getByTestId('vps.action.start')).toHaveCount(0);
   await expect(page.getByTestId('vps.action.restart.header')).toHaveCount(0);
   await expect(page.getByTestId('vps.action.snapshot')).toHaveCount(0);
-  await expect(page.getByTestId('vps.action.primary_console')).toBeVisible();
+  await expect(page.getByTestId('vps.action.primary_console')).toHaveCount(0);
+  await expect(page.getByTestId('vps.action.primary_access')).toHaveAttribute('href', '/admin/vps/123/access');
   await expect(page.getByTestId('vps.actions.menu').locator('option[value^="action:"]')).toHaveCount(0);
   await expect(page.getByTestId('vps.actions.menu').locator('option[value*="/lifecycle/"]')).toHaveCount(0);
   await expect(page.getByTestId('vps.actions.menu').locator('option[value$="/config"]')).toHaveCount(1);
+  await expect(page.getByTestId('vps.actions.menu').locator('option[value="/admin/vps/123/lifecycle"]')).toHaveCount(0);
+  await expect(page.getByTestId('vps.actions.menu').locator('option[value="/admin/oom-reports?vps=123"]')).toHaveCount(1);
+  await expect(page.getByTestId('vps.actions.menu').locator('option[value="/admin/incidents?vps=123"]')).toHaveCount(1);
+  await expect(page.getByTestId('vps.actions.menu').locator('option[value="/admin/oom-reports/rules/123"]')).toHaveCount(0);
+  await expect(page.getByTestId('vps.actions.menu').locator('option[value="/admin/incidents/new?vps=123"]')).toHaveCount(0);
+  await expect(page.getByTestId('vps.actions.menu').locator('option[value="/admin/users/77/user-data"]')).toHaveCount(0);
 
   await page.goto('/admin/vps/123/config');
 

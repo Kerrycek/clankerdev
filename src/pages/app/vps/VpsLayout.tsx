@@ -42,7 +42,7 @@ import { ScopeMismatchCard } from '../../../components/layout/ScopeMismatchCard'
 import { useFastPollIntervalMs, useTierAIntervalMs } from '../../../lib/refreshTiers';
 import { useNetworkStatus } from '../../../lib/useNetworkStatus';
 import { deriveChainLockState } from '../../../lib/lockState';
-import { primarySshIpAddress } from './VpsOverviewModel';
+import { isRemoteConsoleAvailable, ownerLabel, primarySshIpAddress } from './VpsOverviewModel';
 import { freezeVpsMutationSnapshot, type VpsMutationSnapshot } from './VpsMutationSnapshot';
 import {
   resolvePendingVpsCreateActionStateId,
@@ -347,6 +347,7 @@ export function VpsLayout() {
 
   const locationLabel = (vps as any).node?.location?.label ?? t('common.na');
   const nodeLabel = (vps as any).node?.domain_name ?? (vps as any).node?.name ?? t('common.na');
+  const ownerName = ownerLabel(vps);
 
   const sshIp = primarySshIpAddress(ipsQ.data);
   const sshCommand = sshIp ? `ssh root@${sshIp}` : null;
@@ -381,7 +382,11 @@ export function VpsLayout() {
   const lc = objectStateBadge(vps.object_state, t);
 
   const showAsyncError = currentPasswdAsyncError !== null;
-  const primaryHeaderAction = vps.is_running !== true ? 'start' : 'console';
+  const primaryHeaderAction = canMutateVps && vps.is_running !== true
+    ? 'start'
+    : vps.is_running === true && isRemoteConsoleAvailable(vps)
+      ? 'console'
+      : 'access';
 
   const handleHeaderMoreAction = (value: string) => {
     if (!value) return;
@@ -473,6 +478,21 @@ export function VpsLayout() {
           }
           meta={
             <>
+              {mode === 'admin' && ownerName ? (
+                <>
+                  <span className="min-w-0 [overflow-wrap:anywhere]" data-testid="vps.header.owner">
+                    {t('vps.control.admin.owner')}{' '}
+                    {ownerId ? (
+                      <Link className="font-medium text-link hover:underline [overflow-wrap:anywhere]" to={`${basePath}/users/${ownerId}`}>
+                        {ownerName} <span className="font-normal text-muted">#{ownerId}</span>
+                      </Link>
+                    ) : (
+                      <span className="font-medium text-fg">{ownerName}</span>
+                    )}
+                  </span>
+                  <span className="text-faint"> · </span>
+                </>
+              ) : null}
               {t('common.node')} <span className="font-medium text-fg">{nodeLabel}</span>
               <span className="text-faint"> · </span>
               {t('common.location')} <span className="font-medium text-fg">{locationLabel}</span>
@@ -531,13 +551,21 @@ export function VpsLayout() {
                 >
                   {t('action.vps.start.label')}
                 </ActionButton>
-              ) : (
+              ) : primaryHeaderAction === 'console' ? (
                 <LinkButton
                   to={`${basePath}/vps/${vps.id}/console`}
                   variant="primary"
                   testId="vps.action.primary_console"
                 >
                   {t('vps.tabs.console')}
+                </LinkButton>
+              ) : (
+                <LinkButton
+                  to={`${basePath}/vps/${vps.id}/access`}
+                  variant="primary"
+                  testId="vps.action.primary_access"
+                >
+                  {t('vps.tabs.access')}
                 </LinkButton>
               )}
 
@@ -577,7 +605,9 @@ export function VpsLayout() {
                 stopAllowed={stopGate.allowed}
                 passwordAllowed={passwdGate.allowed}
                 showTasks={busyTransaction || busyLocal}
+                showSupportActions={mode === 'admin'}
                 showAdminActions={mode === 'admin' && auth.role === 'admin'}
+                ownerUserId={ownerId}
                 onSelect={handleHeaderMoreAction}
               />
             </>

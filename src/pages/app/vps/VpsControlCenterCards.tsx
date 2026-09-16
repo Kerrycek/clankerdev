@@ -62,6 +62,8 @@ function MiniStat(props: { label: React.ReactNode; value: React.ReactNode; hint?
 }
 
 export function VpsHealthBanner(props: {
+  className?: string;
+  hideNonActionable?: boolean;
   vps: Vps;
   busy: boolean;
   stale: boolean;
@@ -81,6 +83,8 @@ export function VpsHealthBanner(props: {
     ipAddressesError: props.ipAddressesError,
   });
   const isReady = key === 'ready';
+  if (props.hideNonActionable && (isReady || key === 'access_loading')) return null;
+
   const needsAttention = key === 'running_no_access'
     || key === 'network_disabled'
     || key === 'access_error'
@@ -103,7 +107,7 @@ export function VpsHealthBanner(props: {
 
   return (
     <div
-      className={`flex flex-col gap-3 rounded-lg border px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${tone}`}
+      className={`flex flex-col gap-3 rounded-lg border px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${tone} ${props.className ?? ''}`}
       data-testid="vps.overview.health"
       role="status"
       aria-live="polite"
@@ -144,13 +148,18 @@ function ResourceUsage(props: {
   );
 }
 
-export function VpsResourcesCard(props: { vps: Vps; basePath: string }) {
+export function VpsResourcesCard(props: {
+  vps: Vps;
+  basePath: string;
+  className?: string;
+  showRuntimeSummary?: boolean;
+}) {
   const { t } = useI18n();
   const cpu = usageValue(props.vps.cpu ?? props.vps['cpus']);
   const swap = usageValue(props.vps.swap);
 
   return (
-    <Card className="lg:col-span-7" testId="vps.overview.resources_usage.card">
+    <Card className={props.className ?? 'lg:col-span-7'} testId="vps.overview.resources_usage.card">
       <CardHeader
         title={<SectionTitle icon={<Server className={iconClass} />}>{t('vps.control.resources.title')}</SectionTitle>}
         subtitle={t('vps.control.resources.subtitle')}
@@ -193,6 +202,12 @@ export function VpsResourcesCard(props: { vps: Vps; basePath: string }) {
             />
           ) : null}
         </div>
+        {props.showRuntimeSummary ? (
+          <div className="grid gap-3 border-t border-border pt-4 sm:grid-cols-2" data-testid="vps.overview.resources_usage.runtime">
+            <MiniStat label={t('vps.control.access.uptime')} value={formatDurationSeconds(props.vps.uptime)} />
+            <MiniStat label={t('vps.control.access.load')} value={formatLoadavg(props.vps)} />
+          </div>
+        ) : null}
       </CardBody>
     </Card>
   );
@@ -281,12 +296,12 @@ export function VpsNetworkCard(props: {
                 ? 'public_ipv4'
                 : kind === 'ipv4_private' ? 'private_ipv4' : 'ipv6';
               return (
-                <li key={ip.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
+                <li key={ip.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-2.5">
                   <div className="min-w-0">
                     <div className="truncate font-mono text-sm font-semibold text-fg">{label}</div>
                     <div className="mt-1"><Badge variant={kind === 'ipv4_public' ? 'info' : 'neutral'}>{t(`vps.control.network.type.${typeKey}`)}</Badge></div>
                   </div>
-                  <CopyButton text={label} label={t('common.copy')} />
+                  <CopyButton className="min-h-11 sm:min-h-8" text={label} label={t('common.copy')} />
                 </li>
               );
             })}
@@ -302,17 +317,25 @@ export function VpsNetworkCard(props: {
   );
 }
 
-export function VpsStorageBackupsCard(props: { vps: Vps; basePath: string }) {
+export function VpsStorageBackupsCard(props: {
+  vps: Vps;
+  basePath: string;
+  showUsage?: boolean;
+  showPool?: boolean;
+}) {
   const { t } = useI18n();
   const datasetId = resourceId(props.vps.dataset);
   const dataset = resourceLabel(props.vps.dataset);
+  const pool = resourceLabel(props.vps.pool);
   const usage = overviewUsageMetric(props.vps.used_diskspace, props.vps.diskspace);
 
   return (
     <Card className="lg:col-span-6" testId="vps.overview.storage.card">
       <CardHeader
         title={<SectionTitle icon={<HardDrive className={iconClass} />}>{t('vps.control.storage.title')}</SectionTitle>}
-        subtitle={t('vps.control.storage.subtitle')}
+        subtitle={props.showUsage === false
+          ? t('vps.control.storage.subtitle_admin')
+          : t('vps.control.storage.subtitle')}
         actions={<ChipLink to={`${props.basePath}/vps/${props.vps.id}/storage`}>{t('vps.control.storage.open')}</ChipLink>}
       />
       <CardBody className="space-y-4">
@@ -321,14 +344,17 @@ export function VpsStorageBackupsCard(props: { vps: Vps; basePath: string }) {
           value={datasetId && dataset ? (
             <Link className="text-link hover:underline" to={`${props.basePath}/datasets/${datasetId}`}>{dataset}</Link>
           ) : t('vps.control.storage.no_dataset')}
+          hint={props.showPool && pool ? t('vps.control.storage.pool_hint', { pool }) : undefined}
         />
-        <UsageBar
-          label={t('vps.control.storage.usage')}
-          used={usage.used}
-          max={usage.max}
-          formatValue={formatMiB}
-          ariaLabel={t('vps.control.storage.usage')}
-        />
+        {props.showUsage !== false ? (
+          <UsageBar
+            label={t('vps.control.storage.usage')}
+            used={usage.used}
+            max={usage.max}
+            formatValue={formatMiB}
+            ariaLabel={t('vps.control.storage.usage')}
+          />
+        ) : null}
         {datasetId ? (
           <Link
             className="inline-flex items-center gap-2 text-sm font-medium text-link hover:underline"

@@ -23,13 +23,15 @@ export function VpsActionsMenu(props: {
   basePath: string;
   vpsId: number;
   canMutateVps: boolean;
-  primaryHeaderAction: 'start' | 'console';
+  primaryHeaderAction: 'start' | 'console' | 'access';
   startAllowed: boolean;
   restartAllowed: boolean;
   stopAllowed: boolean;
   passwordAllowed: boolean;
   showTasks: boolean;
+  showSupportActions: boolean;
   showAdminActions: boolean;
+  ownerUserId?: number;
   onSelect: (value: string) => void;
 }) {
   const { t } = useI18n();
@@ -63,6 +65,7 @@ export function VpsActionsMenu(props: {
         <option value={`${vpsPath}/features`}>{t('vps.tabs.features')}</option>
         <option value={`${vpsPath}/maintenance`}>{t('vps.tabs.maintenance')}</option>
         <option value={`${vpsPath}/history`}>{t('vps.tabs.history')}</option>
+        {props.canMutateVps ? <option value={`${vpsPath}/lifecycle`}>{t('vps.tabs.lifecycle')}</option> : null}
         <option value={`${props.basePath}/transactions?class_name=Vps&row_id=${props.vpsId}`}>{t('vps.overview.admin_actions.transaction_log')}</option>
       </optgroup>
       {props.canMutateVps ? (
@@ -73,10 +76,34 @@ export function VpsActionsMenu(props: {
           <option value={`${vpsPath}/lifecycle/delete`}>{t('action.vps.delete.label')}</option>
         </optgroup>
       ) : null}
+      {props.showSupportActions ? (
+        <optgroup label={t('vps.actions.more.group.support')}>
+          <option value={`${props.basePath}/oom-reports?vps=${props.vpsId}`}>
+            {t('vps.overview.admin_actions.oom_reports')}
+          </option>
+          <option value={`${props.basePath}/incidents?vps=${props.vpsId}`}>
+            {t('vps.overview.admin_actions.incidents')}
+          </option>
+          <option value={`${props.basePath}/outages?vps=${props.vpsId}`}>
+            {t('vps.overview.admin_actions.outages')}
+          </option>
+        </optgroup>
+      ) : null}
       {props.showAdminActions ? (
         <optgroup label={t('vps.actions.more.group.admin')}>
+          <option value={`${props.basePath}/oom-reports/rules/${props.vpsId}`}>
+            {t('vps.overview.admin_actions.oom_rules')}
+          </option>
           <option value={`${props.basePath}/incidents/new?vps=${props.vpsId}`}>
             {t('vps.overview.admin_actions.report_incident')}
+          </option>
+          {props.ownerUserId ? (
+            <option value={`${props.basePath}/users/${props.ownerUserId}/user-data`}>
+              {t('vps.overview.admin_actions.user_data')}
+            </option>
+          ) : null}
+          <option value={`${props.basePath}/user-namespaces`}>
+            {t('vps.overview.admin_actions.user_namespaces')}
           </option>
           <option value={`${vpsPath}/lifecycle/lifetime`}>{t('action.vps.lifecycle.label')}</option>
           <option value={`${vpsPath}/lifecycle/template`}>{t('action.vps.template.label')}</option>
