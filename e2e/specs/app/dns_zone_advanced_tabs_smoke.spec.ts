@@ -75,7 +75,7 @@ test('@smoke dns zone advanced tabs render', async ({ page }, testInfo) => {
 
   await page.goto('/app/dns/zones/42/servers');
   await expect(page.getByTestId('dns.servers.page')).toBeVisible();
-  await expect(page.getByTestId('dns.servers.row.1')).toBeVisible();
+  await expect(page.getByTestId(test.info().project.name === 'mobile-chrome' ? 'dns.servers.card.1' : 'dns.servers.row.1')).toBeVisible();
 });
 
 test('@smoke @smoke-mobile user DNS server addresses are visible and copyable', async ({ page }) => {
@@ -111,12 +111,13 @@ test('@smoke @smoke-mobile user DNS server addresses are visible and copyable', 
 
   await page.goto('/app/dns/zones/42/servers');
 
-  const row = page.getByTestId('dns.servers.row.1');
-  await expect(row).toContainText('ns1.example.test');
-  await expect(page.getByTestId('dns.servers.row.1.ipv4')).toContainText('192.0.2.53');
-  await expect(page.getByTestId('dns.servers.row.1.ipv6')).toContainText('2001:db8::53');
-  await expect(page.getByTestId('dns.servers.row.1.ipv4.copy')).toHaveAccessibleName('Copy IPv4 address');
-  await expect(page.getByTestId('dns.servers.row.1.ipv6.copy')).toHaveAccessibleName('Copy IPv6 address');
+  const itemPrefix = test.info().project.name === 'mobile-chrome' ? 'dns.servers.card.1' : 'dns.servers.row.1';
+  const item = page.getByTestId(itemPrefix);
+  await expect(item).toContainText('ns1.example.test');
+  await expect(page.getByTestId(`${itemPrefix}.ipv4`)).toContainText('192.0.2.53');
+  await expect(page.getByTestId(`${itemPrefix}.ipv6`)).toContainText('2001:db8::53');
+  await expect(page.getByTestId(`${itemPrefix}.ipv4.copy`)).toHaveAccessibleName('Copy IPv4 address');
+  await expect(page.getByTestId(`${itemPrefix}.ipv6.copy`)).toHaveAccessibleName('Copy IPv6 address');
 });
 
 test('@smoke admin transfer host lookup is scoped to the DNS zone owner', async ({ page }) => {
