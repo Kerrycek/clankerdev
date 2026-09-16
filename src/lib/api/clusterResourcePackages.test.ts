@@ -7,20 +7,21 @@ function mockFetchOk(response: any) {
 }
 
 describe('cluster resource packages API wrappers', () => {
-  test('fetchClusterResourcePackages forwards q, is_personal, environment, and user filters', async () => {
+  test('fetchClusterResourcePackages forwards supported filters without q or is_personal', async () => {
     globalThis.fetch = mockFetchOk({
       cluster_resource_packages: [{ id: 77, label: 'Personal package', is_personal: true }],
       _meta: { total_count: 1 },
     }) as any;
 
-    const res = await fetchClusterResourcePackages({
-      q: 'alice',
-      isPersonal: true,
+    const legacyOptions = {
       environmentId: 5,
       userId: 9,
       limit: 20,
       fromId: 40,
-    });
+      q: 'alice',
+      isPersonal: true,
+    };
+    const res = await fetchClusterResourcePackages(legacyOptions);
 
     expect(res.data).toEqual([{ id: 77, label: 'Personal package', is_personal: true }]);
 
@@ -30,8 +31,8 @@ describe('cluster resource packages API wrappers', () => {
     const u = new URL(url instanceof Request ? url.url : url);
 
     expect(u.pathname).toBe('/v7.0/cluster_resource_packages');
-    expect(u.searchParams.get('cluster_resource_package[q]')).toBe('alice');
-    expect(u.searchParams.get('cluster_resource_package[is_personal]')).toBe('true');
+    expect(u.searchParams.has('cluster_resource_package[q]')).toBe(false);
+    expect(u.searchParams.has('cluster_resource_package[is_personal]')).toBe(false);
     expect(u.searchParams.get('cluster_resource_package[environment]')).toBe('5');
     expect(u.searchParams.get('cluster_resource_package[user]')).toBe('9');
     expect(u.searchParams.get('cluster_resource_package[limit]')).toBe('20');

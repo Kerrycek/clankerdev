@@ -1103,6 +1103,41 @@ does not claim that a deployed API contains particular network records.
 
 ---
 
+## Cluster resource packages
+
+**Status:** `mapped / implemented`
+
+Resource packages group cluster-resource adjustments that administrators can
+assign to users. A shared package has no owner or environment and can be
+created, edited, assigned, and removed independently. A personal package is
+owned by one user in one environment and cannot be deleted independently.
+
+`ClusterResourcePackage.Index` supports keyset pagination plus exact
+`environment` and nullable `user` filters. It has no full-text or
+`is_personal` input. WebUI Next therefore defaults the catalogue to shared
+packages with `user: null`, requires a concrete user before loading the
+personal scope, and omits the user filter only for the explicit all scope.
+Label search was removed because applying it to one paginated page would claim
+incomplete results; an ID still opens the detail directly.
+
+The legacy cluster page also lists shared packages with `user: null`; personal
+packages are normally reached through a user's resource view. WebUI Next keeps
+that reliable default while retaining exact user/environment inspection in the
+advanced filters.
+
+Implementation and evidence:
+
+- `src/pages/app/admin/cluster/ResourcePackagesPage.tsx`
+- `src/lib/api/clusterResourcePackages.ts`
+- `src/lib/api/clusterResourcePackages.test.ts`
+- `e2e/specs/admin/cluster_resource_packages_filter_contract.spec.ts`
+
+The browser coverage uses a contract-sensitive mock on desktop and mobile. The
+filter contract was also checked read-only against the deployed API source;
+no live resource package was mutated.
+
+---
+
 ## Remaining product inventory
 
 The areas below are confirmed by current routes/source. Their status is
@@ -1155,6 +1190,7 @@ current UX, and end-to-end evidence.
 | Mailer | templates/translations, mailboxes, recipients, logs | `inventory only` |
 | Content | news and contextual help-box administration | `inventory only` |
 | Cluster | summary, environments, locations, OS templates, networks, resource packages, system config, DNS resolvers/servers/TSIG keys; the resolver catalogue/CRUD follows the real pagination-only API and legacy unfiltered list | `inventory only` |
+| Cluster resource packages | shared/personal catalogue, exact scope filters, detail items and assignments | `mapped / implemented` |
 | Nodes | list/detail, lifecycle and pool maintenance controls | `inventory only` |
 | Migration plans | plan list/detail and migration scheduling/control | `inventory only` |
 | Admin diagnostics | `/admin/admin-info` | `inventory only` |

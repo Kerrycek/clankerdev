@@ -39,8 +39,6 @@ export interface UserClusterResourcePackage {
 export async function fetchClusterResourcePackages(opts?: {
   limit?: number;
   fromId?: number;
-  q?: string;
-  isPersonal?: boolean;
   environmentId?: number;
   userId?: number | null;
 }) {
@@ -48,10 +46,6 @@ export async function fetchClusterResourcePackages(opts?: {
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
 
-  const q = opts?.q ? String(opts.q).trim() : '';
-  if (q) params['q'] = q;
-
-  if (opts?.isPersonal !== undefined) params['is_personal'] = opts.isPersonal;
   if (opts?.environmentId !== undefined) params['environment'] = opts.environmentId;
   if (opts?.userId !== undefined) params['user'] = opts.userId;
 
