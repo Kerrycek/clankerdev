@@ -68,7 +68,7 @@ test('@smoke dns zone advanced tabs render', async ({ page }) => {
 
   await page.goto('/app/dns/zones/42/servers');
   await expect(page.getByTestId('dns.servers.page')).toBeVisible();
-  await expect(page.getByTestId('dns.servers.row.1')).toBeVisible();
+  await expect(page.getByTestId(test.info().project.name === 'mobile-chrome' ? 'dns.servers.card.1' : 'dns.servers.row.1')).toBeVisible();
 });
 
 test('@smoke admin transfer host lookup is scoped to the DNS zone owner', async ({ page }) => {
