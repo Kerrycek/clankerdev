@@ -730,6 +730,45 @@ evidence.
 
 ---
 
+## DNS record change history
+
+**Status:** `mapped / implemented`
+
+The authenticated zone log at `/app/dns/zones/:zoneId/logs` lists record
+changes for one mandatory `dns_zone` scope. Its optional server-side filters
+match the HaveAPI contract exactly: record `name`, record `type`, and
+`change_type`. All three are exact-match filters. The backend does not declare
+a general `q` input, so WebUI Next neither advertises nor sends one.
+
+The controls keep an editable draft and send a request only after **Apply
+filters**. Applied state is stored in the URL. Before the first list request,
+the page removes a stale `q`, blank names, unsupported type/change values, and
+their stale cursor. Applying or clearing valid filters likewise resets
+`from_id` and page to the first keyset page, while the selected page size
+remains intact. Change badges translate the real enum values `create_record`,
+`update_record`, and `delete_record`; an unknown future value remains visible
+as neutral raw text.
+
+Contract and implementation evidence:
+
+- backend: `api/lib/vpsadmin/api/resources/dns_record_log.rb` and
+  `api/models/dns_record_log.rb` in the read-only upstream repository;
+- legacy structured filters: `webui/forms/dns.forms.php` in the read-only
+  upstream repository;
+- WebUI Next: `src/pages/app/dns/DnsZoneLogsPage.tsx` and
+  `src/lib/api/dns.ts`;
+- focused checks: `src/lib/api/dns.test.ts` and
+  `e2e/specs/app/dns_zone_logs_keyset_pagination.spec.ts`.
+
+The Playwright check uses a strict deterministic HaveAPI mock and covers exact
+query serialization, URL/apply/clear behavior, keyset reset, enum badges, and
+desktop/mobile containment. It does not prove that a deployed API accepts the
+filters, returns production-shaped history, or enforces zone ownership. A
+read-only live smoke check should inspect the three filtered GET requests with
+an owned test zone; no DNS mutation is needed for that verification.
+
+---
+
 ## Remaining product inventory
 
 The areas below are confirmed by current routes/source. Their status is

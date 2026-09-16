@@ -208,14 +208,12 @@ export async function fetchDnsRecordLogs(opts?: {
   change_type?: string;
   name?: string;
   type?: string;
-  q?: string;
 }) {
   const params: Record<string, unknown> = {};
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.user !== undefined) params['user'] = opts.user;
   if (opts?.dns_zone !== undefined) params['dns_zone'] = opts.dns_zone;
-  if (opts?.q !== undefined) params['q'] = opts.q;
   if (opts?.dns_zone_name !== undefined) params['dns_zone_name'] = opts.dns_zone_name;
   if (opts?.change_type !== undefined) params['change_type'] = opts.change_type;
   if (opts?.name !== undefined) params['name'] = opts.name;

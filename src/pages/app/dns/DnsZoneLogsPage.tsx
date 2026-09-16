@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
@@ -16,50 +16,147 @@ import { ErrorState } from '../../../components/ui/ErrorState';
 import { Input } from '../../../components/ui/Input';
 import { KeysetPagination } from '../../../components/ui/KeysetPagination';
 import { LoadingState } from '../../../components/ui/LoadingState';
+import { Select } from '../../../components/ui/Select';
 
 import { useDnsZoneContext } from './DnsZoneContext';
+
+const DNS_RECORD_LOG_TYPES = ['A', 'AAAA', 'CAA', 'CNAME', 'DS', 'MX', 'NS', 'PTR', 'SRV', 'SSHFP', 'TLSA', 'TXT'] as const;
+const DNS_RECORD_LOG_CHANGE_TYPES = ['create_record', 'update_record', 'delete_record'] as const;
+
+function supportedValue(value: string | null, supported: readonly string[]): string {
+  return value && supported.includes(value) ? value : '';
+}
+
+function normalizeFilterSearchParams(source: URLSearchParams) {
+  const next = new URLSearchParams(source);
+  next.delete('q');
+
+  const name = (next.get('name') ?? '').trim();
+  if (name) next.set('name', name);
+  else next.delete('name');
+
+  const type = supportedValue(next.get('type'), DNS_RECORD_LOG_TYPES);
+  if (type) next.set('type', type);
+  else next.delete('type');
+
+  const changeType = supportedValue(next.get('change_type'), DNS_RECORD_LOG_CHANGE_TYPES);
+  if (changeType) next.set('change_type', changeType);
+  else next.delete('change_type');
+
+  const changed = next.toString() !== source.toString();
+  if (changed) {
+    next.delete('from_id');
+    next.set('page', '1');
+  }
+
+  return { changed, searchParams: next };
+}
 
 export function DnsZoneLogsPage() {
   const { basePath } = useAppMode();
   const { t } = useI18n();
   const { zone } = useDnsZoneContext();
-  const changeBadge = (changeType: unknown) => {
+  const changeBadge = (changeType: unknown, testId: string) => {
     const ct = String(changeType ?? '');
-    if (ct === 'create') return <Badge variant="ok">{t('common.created')}</Badge>;
-    if (ct === 'update') return <Badge variant="warn">{t('common.updated')}</Badge>;
-    if (ct === 'delete') return <Badge variant="neutral">{t('common.deleted')}</Badge>;
-    return <Badge variant="neutral">{ct || t('common.na')}</Badge>;
+    if (ct === 'create_record') return <Badge variant="ok" testId={testId}>{t('common.created')}</Badge>;
+    if (ct === 'update_record') return <Badge variant="warn" testId={testId}>{t('common.updated')}</Badge>;
+    if (ct === 'delete_record') return <Badge variant="neutral" testId={testId}>{t('common.deleted')}</Badge>;
+    return <Badge variant="neutral" testId={testId}>{ct || t('common.na')}</Badge>;
   };
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const [qstr, setQstr] = useState(() => searchParams.get('q') ?? '');
+  const normalizedFilters = useMemo(() => normalizeFilterSearchParams(searchParams), [searchParams]);
+  const normalizedSearchParams = normalizedFilters.searchParams;
+  const normalizedSearch = normalizedSearchParams.toString();
+  const appliedName = normalizedSearchParams.get('name') ?? '';
+  const appliedType = normalizedSearchParams.get('type') ?? '';
+  const appliedChangeType = normalizedSearchParams.get('change_type') ?? '';
+  const [draftName, setDraftName] = useState(appliedName);
+  const [draftType, setDraftType] = useState(appliedType);
+  const [draftChangeType, setDraftChangeType] = useState(appliedChangeType);
+
+  useLayoutEffect(() => {
+    if (!normalizedFilters.changed) return;
+    setSearchParams(normalizedSearch, { replace: true });
+  }, [normalizedFilters.changed, normalizedSearch, setSearchParams]);
 
   useEffect(() => {
+    setDraftName(appliedName);
+    setDraftType(appliedType);
+    setDraftChangeType(appliedChangeType);
+  }, [appliedChangeType, appliedName, appliedType]);
+
+  const updateFilters = (filters: { name: string; type: string; changeType: string }) => {
     const next = new URLSearchParams(searchParams);
-    const trimmed = qstr.trim();
-    if (trimmed) next.set('q', trimmed);
-    else next.delete('q');
-    if (next.toString() !== searchParams.toString()) setSearchParams(next, { replace: true });
-  }, [qstr, searchParams, setSearchParams]);
+    const name = filters.name.trim();
+
+    if (name) next.set('name', name);
+    else next.delete('name');
+
+    if (DNS_RECORD_LOG_TYPES.includes(filters.type as (typeof DNS_RECORD_LOG_TYPES)[number])) {
+      next.set('type', filters.type);
+    } else {
+      next.delete('type');
+    }
+
+    if (DNS_RECORD_LOG_CHANGE_TYPES.includes(filters.changeType as (typeof DNS_RECORD_LOG_CHANGE_TYPES)[number])) {
+      next.set('change_type', filters.changeType);
+    } else {
+      next.delete('change_type');
+    }
+
+    next.delete('q');
+    next.delete('from_id');
+    next.set('page', '1');
+    setSearchParams(next, { replace: true });
+  };
+
+  const applyFilters = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    updateFilters({ name: draftName, type: draftType, changeType: draftChangeType });
+  };
+
+  const clearFilters = () => {
+    setDraftName('');
+    setDraftType('');
+    setDraftChangeType('');
+    updateFilters({ name: '', type: '', changeType: '' });
+  };
 
   const pagination = useKeysetPagination({
     id: 'dns.logs.list',
-    filterKey: JSON.stringify({ zoneId: zone.id, q: qstr.trim() }),
-    searchParams,
+    filterKey: JSON.stringify({
+      zoneId: zone.id,
+      name: appliedName,
+      type: appliedType,
+      changeType: appliedChangeType,
+    }),
+    searchParams: normalizedSearchParams,
     setSearchParams,
+    wipeQueryKeys: ['q'],
     defaultLimit: 50,
     allowedLimits: [25, 50, 100],
   });
 
   const logsQ = useQuery({
-    queryKey: ['dns_record_logs', 'index', { dns_zone: zone.id, limit: pagination.limit, fromId: pagination.fromId, q: qstr.trim() }],
+    queryKey: ['dns_record_logs', 'index', {
+      dns_zone: zone.id,
+      limit: pagination.limit,
+      fromId: pagination.fromId,
+      name: appliedName,
+      type: appliedType,
+      change_type: appliedChangeType,
+    }],
     queryFn: async () =>
       fetchDnsRecordLogs({
         dns_zone: zone.id,
         limit: pagination.limit,
         fromId: pagination.fromId,
-        q: qstr.trim() || undefined,
+        name: appliedName || undefined,
+        type: appliedType || undefined,
+        change_type: appliedChangeType || undefined,
       }),
+    enabled: !normalizedFilters.changed,
   });
 
   const pageData = logsQ.data?.data ?? [];
@@ -69,7 +166,8 @@ export function DnsZoneLogsPage() {
 
   const pageCursor = useMemo(() => cursorFromDescendingPage(pageData as any), [pageData]);
   const hasMore = pageData.length >= pagination.limit;
-  const filtersActive = Boolean(qstr.trim());
+  const filtersActive = Boolean(appliedName || appliedType || appliedChangeType);
+  const hasDraftOrAppliedFilters = Boolean(draftName.trim() || draftType || draftChangeType || filtersActive);
 
   return (
     <div className="space-y-6" data-testid="dns.logs.list">
@@ -80,32 +178,81 @@ export function DnsZoneLogsPage() {
           {filtersActive ? <p className="mt-1 text-xs text-faint">{t('list.meta.filters_active')}</p> : null}
         </div>
 
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-end">
-          <div className="w-full sm:w-72">
-            <Input
-              value={qstr}
-              onChange={(e) => setQstr(e.target.value)}
-              placeholder={t('dns.zone.logs.search.placeholder')}
-              autoComplete="off"
-              testId="dns.logs.search.input"
-            />
-            <div className="mt-1 text-xs text-faint">
-              {t('common.showing_n_of_m', { shown: rows.length, total: totalCount })}
-            </div>
+        <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-end">
+          <div className="text-xs text-faint">
+            {t('common.showing_n_of_m', { shown: rows.length, total: totalCount })}
           </div>
-
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => logsQ.refetch()}
-              disabled={logsQ.isFetching}
-              testId="dns.logs.refresh"
-            >
-              {t('common.refresh')}
-            </Button>
-          </div>
+          <Button
+            variant="secondary"
+            onClick={() => logsQ.refetch()}
+            disabled={logsQ.isFetching}
+            testId="dns.logs.refresh"
+          >
+            {t('common.refresh')}
+          </Button>
         </div>
       </div>
+
+      <Card testId="dns.logs.filters">
+        <form
+          className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-[minmax(12rem,1fr)_10rem_12rem_auto] lg:items-end"
+          onSubmit={applyFilters}
+        >
+          <div className="min-w-0">
+            <Input
+              label={t('dns.zone.logs.filter.name.label')}
+              value={draftName}
+              onChange={(event) => setDraftName(event.target.value)}
+              placeholder={t('dns.zone.logs.filter.name.placeholder')}
+              autoComplete="off"
+              testId="dns.logs.filter.name"
+            />
+          </div>
+
+          <Select
+            label={t('dns.zone.logs.filter.type.label')}
+            value={draftType}
+            onChange={(event) => setDraftType(event.target.value)}
+            testId="dns.logs.filter.type"
+            options={[
+              { value: '', label: t('dns.zone.logs.filter.type.all') },
+              ...DNS_RECORD_LOG_TYPES.map((type) => ({ value: type, label: type })),
+            ]}
+          />
+
+          <Select
+            label={t('dns.zone.logs.filter.change_type.label')}
+            value={draftChangeType}
+            onChange={(event) => setDraftChangeType(event.target.value)}
+            testId="dns.logs.filter.change_type"
+            options={[
+              { value: '', label: t('dns.zone.logs.filter.change_type.all') },
+              { value: 'create_record', label: t('dns.zone.logs.filter.change_type.create_record') },
+              { value: 'update_record', label: t('dns.zone.logs.filter.change_type.update_record') },
+              { value: 'delete_record', label: t('dns.zone.logs.filter.change_type.delete_record') },
+            ]}
+          />
+
+          <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-1 lg:justify-end">
+            <Button type="submit" testId="dns.logs.filter.apply">
+              {t('dns.zone.logs.filter.apply')}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={clearFilters}
+              disabled={!hasDraftOrAppliedFilters}
+              testId="dns.logs.filter.clear"
+            >
+              {t('dns.zone.logs.filter.clear')}
+            </Button>
+          </div>
+
+          <p className="text-xs text-faint sm:col-span-2 lg:col-span-4">
+            {t('dns.zone.logs.filter.note')}
+          </p>
+        </form>
+      </Card>
 
       {logsQ.isLoading ? (
         <Card>
@@ -141,7 +288,7 @@ export function DnsZoneLogsPage() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            {changeBadge(l.change_type)}
+                            {changeBadge(l.change_type, `dns.logs.card.${l.id}.change`)}
                             <div className="truncate text-base font-semibold text-fg">{String(l.name ?? '')}</div>
                             <Badge variant="neutral">{String(l.type ?? t('common.na'))}</Badge>
                           </div>
@@ -209,7 +356,9 @@ export function DnsZoneLogsPage() {
                           <td className="py-2 pl-4 pr-3">
                             {l.created_at ? formatDateTime(String(l.created_at)) : t('common.na')}
                           </td>
-                          <td className="py-2 pr-3">{changeBadge(l.change_type)}</td>
+                          <td className="py-2 pr-3">
+                            {changeBadge(l.change_type, `dns.logs.row.${l.id}.change`)}
+                          </td>
                           <td className="py-2 pr-3">
                             <div className="font-medium text-fg">{String(l.name ?? '')}</div>
                             {l.dns_zone_name ? (
