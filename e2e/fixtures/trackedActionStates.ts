@@ -11,6 +11,7 @@ export interface TrackedActionStateSeed {
   actionLabel?: string;
   objectLabel?: string;
   blockUi?: boolean;
+  notifyOnInitialFinished?: boolean;
   progressTitleKey?: string;
 }
 

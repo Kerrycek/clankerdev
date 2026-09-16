@@ -41,6 +41,27 @@ export function shouldReplayFinishedLockCallback(
     && !deliveredIds.has(actionStateId);
 }
 
+export function shouldNotifyFinishedAction(opts: {
+  finished: boolean;
+  previouslyFinished?: boolean;
+  isTracked: boolean;
+  wasTrackedAtMount: boolean;
+  notifyOnInitialFinished: boolean;
+}): boolean {
+  if (!opts.finished || !opts.isTracked) return false;
+
+  // A normal running -> finished transition always deserves completion
+  // feedback, including actions restored from session storage.
+  if (opts.previouslyFinished === false) return true;
+
+  // Do not replay old completion notifications after a reload or scope
+  // switch. A newly tracked action can, however, finish before its first
+  // progress request, and must not disappear without feedback.
+  return opts.previouslyFinished === undefined
+    && !opts.wasTrackedAtMount
+    && opts.notifyOnInitialFinished;
+}
+
 function safeActionLabel(opts: {
   tracked: TrackedActionState;
   actionState?: ActionState | undefined;
@@ -105,6 +126,9 @@ export function useTaskCompletionToasts(opts: {
   const trackedIds = useMemo(
     () => uniqPositiveInts(trackedActionStates.map((x) => x.id), 40).sort((a, b) => b - a),
     [trackedActionStates]
+  );
+  const trackedActionIdsAtMountRef = useRef(
+    new Set(uniqPositiveInts(trackedActionStates.map((x) => x.id), 50))
   );
 
   const lockIds = useMemo(
@@ -196,6 +220,14 @@ export function useTaskCompletionToasts(opts: {
       const failing = isFailingActionState(s);
 
       const prev = prevActionRef.current.get(id);
+      const tracked = trackedById.get(id);
+      const shouldNotifyCompletion = shouldNotifyFinishedAction({
+        finished,
+        previouslyFinished: prev?.finished,
+        isTracked: tracked !== undefined,
+        wasTrackedAtMount: trackedActionIdsAtMountRef.current.has(id),
+        notifyOnInitialFinished: tracked?.notifyOnInitialFinished !== false,
+      });
       const replayFinishedLock = shouldReplayFinishedLockCallback(
         id, finished, lockIds, finishedLockCallbacksRef.current, prev?.finished
       );
@@ -221,23 +253,23 @@ export function useTaskCompletionToasts(opts: {
           });
         }
 
-        continue;
+        if (!shouldNotifyCompletion) continue;
       }
 
-      // Notify only on transition to finished.
-      if (!prev.finished && finished) {
-        if (onActionFinished) {
-          if (lockIds.includes(id)) finishedLockCallbacksRef.current.add(id);
-          onActionFinished(id, {
-            failed: failing,
-            actionState: s,
-            transactionChainId: extractRelatedTransactionChainIdFromActionState(s),
-          });
-        }
+      const transitionedToFinished = prev !== undefined && !prev.finished && finished;
+      if (transitionedToFinished && onActionFinished) {
+        if (lockIds.includes(id)) finishedLockCallbacksRef.current.add(id);
+        onActionFinished(id, {
+          failed: failing,
+          actionState: s,
+          transactionChainId: extractRelatedTransactionChainIdFromActionState(s),
+        });
+      }
 
-        const isTracked = trackedById.has(id);
-        if (isTracked) {
-          const tracked = trackedById.get(id) ?? { id, addedAt: Date.now() };
+      // Notify on the usual running -> finished transition and when a newly
+      // started action is already terminal on its very first progress read.
+      if (shouldNotifyCompletion) {
+        if (tracked) {
           const actionLabel = safeActionLabel({ tracked, actionState: s, t });
           const objectLabel = safeObjectLabel({ tracked, actionState: s });
 

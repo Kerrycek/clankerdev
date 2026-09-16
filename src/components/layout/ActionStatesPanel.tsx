@@ -325,7 +325,11 @@ function ActionStateInspect(props: {
               {i18n.t('tasks.action.dismiss')}
             </Button>
           ) : (
-            <Button size="sm" variant="secondary" onClick={() => chrome.trackActionState(id)}>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => chrome.trackActionState(id, { notifyOnInitialFinished: false })}
+            >
               {i18n.t('tasks.action.track')}
             </Button>
           )}
