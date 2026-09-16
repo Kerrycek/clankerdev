@@ -5,12 +5,10 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useI18n } from '../../../app/i18n';
 import { useAppMode } from '../../../app/appMode';
 import { useChrome } from '../../../components/layout/ChromeContext';
-import { ActionButton } from '../../../components/ui/ActionButton';
 import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
-import { CopyButton } from '../../../components/ui/CopyButton';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { ErrorState } from '../../../components/ui/ErrorState';
 import { KeysetPagination } from '../../../components/ui/KeysetPagination';
@@ -34,24 +32,9 @@ import {
 
 import { useDnsZoneContext } from './DnsZoneContext';
 import { DnsZoneTransferCreateModal } from './DnsZoneTransferCreateModal';
+import { DnsZoneTransfersList, dnsZoneTransferPeerLabel } from './DnsZoneTransfersList';
 import { dnsZoneTransferPeerType, isSecondaryDnsZone } from './DnsZoneModel';
 import { preflightDnsZoneNotBusy } from './dnsPreflight';
-
-function peerLabel(transfer: DnsZoneTransfer): string {
-  const host = transfer.host_ip_address;
-  if (!host) return `#${transfer.id}`;
-  const ip = 'ip_address' in host ? host.ip_address : undefined;
-  const ipAddress = ip && typeof ip === 'object' && 'ip_addr' in ip ? ip.ip_addr : undefined;
-  const address = 'addr' in host ? host.addr : undefined;
-  return String(ipAddress ?? address ?? `#${host.id ?? transfer.id}`);
-}
-
-function peerTypeLabel(t: (key: string) => string, v: unknown): string {
-  const s = String(v ?? '');
-  if (s === 'primary_type' || s === 'primary') return t('dns.zone.transfers.peer_type.primary');
-  if (s === 'secondary_type' || s === 'secondary') return t('dns.zone.transfers.peer_type.secondary');
-  return s || t('common.na');
-}
 
 function serverName(row: DnsServerZone): string {
   const server = row.dns_server;
@@ -95,17 +78,6 @@ function transferLogReason(t: (key: string) => string, row: DnsServerZoneTransfe
   const translationKey = TRANSFER_REASON_KEYS[reasonCode];
   if (translationKey) return t(translationKey);
   return String(row.reason ?? reasonCode ?? '').trim();
-}
-
-function transferSnippet(transfer: DnsZoneTransfer): string {
-  const host = peerLabel(transfer);
-  const keyName = transfer.dns_tsig_key?.name ?? '';
-  const lines = [
-    `server ${host} {`,
-    keyName ? `  keys { ${keyName}; };` : '  # no TSIG key configured',
-    '};',
-  ];
-  return lines.join('\n');
 }
 
 export function DnsZoneTransfersPage() {
@@ -283,46 +255,16 @@ export function DnsZoneTransfersPage() {
       {transfers.length === 0 ? (
         <EmptyState testId="dns.transfers.empty" title={t('dns.zone.transfers.empty')} body={t('dns.zone.transfers.empty_body')} />
       ) : (
-        <Card>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm table-list">
-              <thead>
-                <tr className="text-left text-xs uppercase tracking-wide text-faint">
-                  <th className="py-2 pl-4 pr-3">{t('dns.zone.transfers.table.peer')}</th>
-                  <th className="py-2 pr-3">{t('dns.zone.transfers.table.type')}</th>
-                  <th className="py-2 pr-3">{t('dns.zone.transfers.table.tsig')}</th>
-                  <th className="py-2 pr-3">{t('common.created')}</th>
-                  <th className="py-2 pr-3">{t('dns.zone.transfers.table.config')}</th>
-                  <th className="py-2 pr-4">{t('common.actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transfers.map((transfer) => {
-                  const snippet = transferSnippet(transfer);
-                  return (
-                    <tr key={transfer.id} className="border-t border-border" data-testid={`dns.transfers.row.${transfer.id}`}>
-                      <td className="py-2 pl-4 pr-3 font-medium text-fg">{peerLabel(transfer)}</td>
-                      <td className="py-2 pr-3"><Badge variant="neutral">{peerTypeLabel(t, transfer.peer_type)}</Badge></td>
-                      <td className="py-2 pr-3">{transfer.dns_tsig_key?.name ? <Badge variant="ok">{transfer.dns_tsig_key.name}</Badge> : <Badge variant="neutral">{t('common.none')}</Badge>}</td>
-                      <td className="py-2 pr-3">{transfer.created_at ? formatDateTime(String(transfer.created_at)) : t('common.na')}</td>
-                      <td className="py-2 pr-3">
-                        <details>
-                          <summary className="cursor-pointer text-sm text-muted">{t('dns.zone.transfers.table.show_config')}</summary>
-                          <pre className="mt-2 max-w-content-lg overflow-x-auto whitespace-pre-wrap text-xs text-muted">{snippet}</pre>
-                          <div className="mt-2"><CopyButton text={snippet} /></div>
-                        </details>
-                      </td>
-                      <td className="py-2 pr-4 text-right">
-                        <ActionButton variant="danger" size="sm" onClick={() => setConfirmDelete(transfer)} testId={`dns.transfers.row.${transfer.id}.delete`}>{t('common.delete')}</ActionButton>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <KeysetPagination page={pagination.page} pageCount={pagination.stack.length} canPrev={pagination.canPrev} canNext={hasMore} onPrev={pagination.goPrev} onNext={() => pagination.goNext(cursor)} />
-        </Card>
+        <DnsZoneTransfersList
+          transfers={transfers}
+          page={pagination.page}
+          pageCount={pagination.stack.length}
+          canPrev={pagination.canPrev}
+          canNext={hasMore}
+          onPrev={pagination.goPrev}
+          onNext={() => pagination.goNext(cursor)}
+          onDelete={setConfirmDelete}
+        />
       )}
 
       {secondaryZone ? (
@@ -470,7 +412,7 @@ export function DnsZoneTransfersPage() {
         onSubmit={() => createM.mutate()}
       />
 
-      <ConfirmDialog open={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title={t('dns.zone.transfers.delete.title')} description={confirmDelete ? t('dns.zone.transfers.delete.description', { peer: peerLabel(confirmDelete) }) : ''} confirmLabel={t('common.delete')} confirmVariant="danger" onConfirm={() => deleteM.mutate()} loading={deleteM.isPending} />
+      <ConfirmDialog open={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title={t('dns.zone.transfers.delete.title')} description={confirmDelete ? t('dns.zone.transfers.delete.description', { peer: dnsZoneTransferPeerLabel(confirmDelete) }) : ''} confirmLabel={t('common.delete')} confirmVariant="danger" onConfirm={() => deleteM.mutate()} loading={deleteM.isPending} testId="dns.transfers.delete" />
     </div>
   );
 }
