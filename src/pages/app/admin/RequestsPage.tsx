@@ -44,10 +44,8 @@ import {
   DEFAULT_ADMIN_REQUEST_STATE,
   adminRequestApiState,
   adminRequestStateFilterFromUrl,
-  changeRows,
+  buildRequestPage,
   defaultStateOptions,
-  mergeByIdDesc,
-  registrationRows,
   resetAdminRequestPaginationOnFilterChange,
   requestId,
   requestKey,
@@ -57,7 +55,6 @@ import {
   type RequestRowType,
   type RequestTypeFilter,
   type UnifiedRequestRow,
-  visibleRequestRows,
 } from './RequestsModel';
 
 function commonBulkActions(rows: UnifiedRequestRow[], canResolve: boolean): ResolveUserRequestAction[] {
@@ -213,6 +210,7 @@ export function RequestsPage() {
 
   const needRegs = isAdmin && (type === 'all' || type === 'registration');
   const needChanges = isAdmin && (type === 'all' || type === 'change');
+  const apiPageLimit = pagination.limit + 1;
 
   const regQ = useQuery({
     queryKey: [
@@ -221,7 +219,7 @@ export function RequestsPage() {
       'index',
       {
         enabled: needRegs,
-        limit: pagination.limit,
+        limit: apiPageLimit,
         fromId: pagination.fromId,
         state: apiState,
         userId: userIdNum,
@@ -234,7 +232,7 @@ export function RequestsPage() {
     enabled: needRegs,
     queryFn: async () =>
       await fetchRegistrationRequests({
-        limit: pagination.limit,
+        limit: apiPageLimit,
         fromId: pagination.fromId,
         state: apiState,
         userId: userIdNum,
@@ -254,7 +252,7 @@ export function RequestsPage() {
       'index',
       {
         enabled: needChanges,
-        limit: pagination.limit,
+        limit: apiPageLimit,
         fromId: pagination.fromId,
         state: apiState,
         userId: userIdNum,
@@ -267,7 +265,7 @@ export function RequestsPage() {
     enabled: needChanges,
     queryFn: async () =>
       await fetchChangeRequests({
-        limit: pagination.limit,
+        limit: apiPageLimit,
         fromId: pagination.fromId,
         state: apiState,
         userId: userIdNum,
@@ -282,15 +280,11 @@ export function RequestsPage() {
 
   const reg = regQ.data?.data ?? [];
   const ch = changeQ.data?.data ?? [];
-  const rows = useMemo(() => {
-    const raw =
-      type === 'registration'
-        ? registrationRows(reg)
-        : type === 'change'
-          ? changeRows(ch)
-          : mergeByIdDesc(reg, ch, pagination.limit);
-    return visibleRequestRows(raw, stateFilter);
-  }, [ch, pagination.limit, reg, stateFilter, type]);
+  const requestPage = useMemo(
+    () => buildRequestPage(reg, ch, type, pagination.limit, stateFilter),
+    [ch, pagination.limit, reg, stateFilter, type],
+  );
+  const rows = requestPage.rows;
 
   const lockedRequestIds = useMemo(
     () => new Set(chrome.localLocks.filter((lock) => lock.kind === 'UserRequest').map((lock) => lock.id)),
@@ -459,13 +453,7 @@ export function RequestsPage() {
   }
 
   const pageCursor = useMemo(() => cursorFromDescendingPage(rows, requestId) ?? undefined, [rows]);
-  const fetchedCount = reg.length + ch.length;
-  const canNext = useMemo(() => {
-    if (type === 'registration') return reg.length === pagination.limit;
-    if (type === 'change') return ch.length === pagination.limit;
-    if (fetchedCount > rows.length) return true;
-    return reg.length === pagination.limit || ch.length === pagination.limit;
-  }, [ch.length, fetchedCount, pagination.limit, reg.length, rows.length, type]);
+  const canNext = pagination.hasForward || (requestPage.hasMore && pageCursor !== undefined);
 
   const isLoading = (needRegs && regQ.isLoading) || (needChanges && changeQ.isLoading);
   const error = (needRegs && regQ.isError ? regQ.error : null) || (needChanges && changeQ.isError ? changeQ.error : null);

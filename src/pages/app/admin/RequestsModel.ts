@@ -131,6 +131,29 @@ export function changeRows(changes: ChangeRequest[]): UnifiedRequestRow[] {
   return changes.map((request) => ({ ...request, _type: 'change' as const }));
 }
 
+export function buildRequestPage(
+  registrations: RegistrationRequest[],
+  changes: ChangeRequest[],
+  type: RequestTypeFilter,
+  limit: number,
+  state: string | undefined,
+): { rows: UnifiedRequestRow[]; hasMore: boolean } {
+  const lookaheadLimit = limit + 1;
+  const candidates = visibleRequestRows(
+    type === 'registration'
+      ? registrationRows(registrations)
+      : type === 'change'
+        ? changeRows(changes)
+        : mergeByIdDesc(registrations, changes, lookaheadLimit),
+    state,
+  );
+
+  return {
+    rows: candidates.slice(0, limit),
+    hasMore: candidates.length > limit,
+  };
+}
+
 export function defaultStateOptions(): string[] {
   return ['', 'awaiting', 'pending_correction', 'approved', 'denied', 'ignored'];
 }
