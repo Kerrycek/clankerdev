@@ -9,6 +9,7 @@ interface HostIpAddressRowActionsProps {
   assigned: boolean;
   userCreated: boolean;
   testIdPrefix: string;
+  responsive?: boolean;
   assignLoading?: boolean;
   freeLoading?: boolean;
   onEditPtr: () => void;
@@ -24,6 +25,7 @@ export function HostIpAddressRowActions({
   assigned,
   userCreated,
   testIdPrefix,
+  responsive,
   assignLoading,
   freeLoading,
   onEditPtr,
@@ -36,13 +38,19 @@ export function HostIpAddressRowActions({
   const assignLabel = t('admin.host_ip_addresses.action.assign');
   const freeLabel = t('admin.host_ip_addresses.action.free');
   const deleteLabel = t('common.delete');
+  const actionGroupClass = responsive
+    ? 'flex flex-wrap items-center justify-start gap-2 md:inline-flex md:flex-nowrap md:justify-end md:gap-1'
+    : 'inline-flex flex-nowrap items-center justify-end gap-1';
+  const actionButtonClass = responsive
+    ? 'min-h-11 min-w-11 shrink-0 px-3 after:content-[attr(title)] md:w-8 md:min-h-0 md:min-w-8 md:px-0 md:after:hidden'
+    : iconButtonClass;
 
   return (
-    <div className="inline-flex flex-nowrap items-center justify-end gap-1" role="group" aria-label={t('common.actions')}>
+    <div className={actionGroupClass} role="group" aria-label={t('common.actions')}>
       <Button
         variant="ghost"
         size="sm"
-        className={iconButtonClass}
+        className={actionButtonClass}
         testId={`${testIdPrefix}.ptr`}
         title={ptrLabel}
         ariaLabel={ptrLabel}
@@ -55,7 +63,7 @@ export function HostIpAddressRowActions({
         <ActionButton
           variant="danger"
           size="sm"
-          className={iconButtonClass}
+          className={actionButtonClass}
           testId={`${testIdPrefix}.free`}
           loading={freeLoading}
           title={freeLabel}
@@ -68,7 +76,7 @@ export function HostIpAddressRowActions({
         <ActionButton
           variant="ghost"
           size="sm"
-          className={iconButtonClass}
+          className={actionButtonClass}
           testId={`${testIdPrefix}.assign`}
           loading={assignLoading}
           title={assignLabel}
@@ -83,7 +91,7 @@ export function HostIpAddressRowActions({
         <Button
           variant="danger"
           size="sm"
-          className={iconButtonClass}
+          className={actionButtonClass}
           testId={`${testIdPrefix}.delete`}
           title={deleteLabel}
           ariaLabel={deleteLabel}
