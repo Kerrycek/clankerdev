@@ -106,6 +106,46 @@ authorization configuration; that still requires read-only live smoke checks
 with separate admin and non-admin sessions. No create or other mutation is
 part of that live verification.
 
+### Safe admin incident creation
+
+**Status:** `mapped / implemented`
+
+The backend `incident_report#create` action is administrator-only and blocking.
+It requires a VPS, subject, and text, creates the incident, and starts the
+related transaction chain. The legacy WebUI submitted the form synchronously
+and redirected to the affected VPS after success. WebUI Next preserves that
+outcome while showing an explicit pending state and retaining its local VPS
+lock until the request settles.
+
+Submit and Cancel are both unavailable while creation is pending. Cancel is a
+router-link styled as a button, so visual pointer blocking alone is not a safe
+disabled state: keyboard or programmatic activation must not leave the form
+while the blocking request can still succeed. Shared disabled/loading link
+buttons now leave sequential focus order and suppress navigation, propagation,
+and consumer click callbacks. Enabled router-link and anchor behavior is
+unchanged. The compatibility `LinkButton` delegates to the same contract.
+
+Evidence:
+
+- Backend authorization, required inputs, blocking declaration, and transaction
+  side effect: `api/lib/vpsadmin/api/resources/incident_report.rb` in the
+  read-only upstream vpsAdmin checkout.
+- Legacy form and successful redirect:
+  `webui/forms/incidents.forms.php` and `webui/pages/page_incidents.php` in the
+  read-only upstream checkout.
+- WebUI Next workflow and shared control:
+  `src/pages/app/admin/IncidentReportNewPage.tsx`,
+  `src/components/ui/Button.tsx`, and `src/components/ui/LinkButton.tsx`.
+- Unit and mocked browser coverage:
+  `src/components/ui/Button.test.tsx` and
+  `e2e/specs/app/vps_report_incident_action.spec.ts`.
+
+The Playwright scenario deliberately delays a mocked create response to prove
+that keyboard and programmatic Cancel activation stay on the form, then lets
+the request complete and verifies the existing VPS redirect. It is not live
+mutation certification and does not validate a deployed API or permission
+configuration.
+
 ## Identity lifecycle and requests
 
 The requests plugin models two related but different workflows:

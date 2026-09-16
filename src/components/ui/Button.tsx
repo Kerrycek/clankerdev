@@ -75,13 +75,42 @@ export function Button(props: ButtonProps | AnchorProps | RouterLinkProps) {
     </>
   );
 
-  const to = 'to' in props ? props.to : undefined;
-  if (to) {
+  const routerTo = 'to' in props && typeof props.to === 'string' ? props.to : undefined;
+  if (disabled && (routerTo !== undefined || 'href' in props)) {
+    return (
+      <span
+        id={props.id}
+        data-testid={props.testId}
+        title={title}
+        aria-label={ariaLabel}
+        role={props.role ?? 'link'}
+        aria-selected={props['aria-selected']}
+        aria-pressed={props['aria-pressed']}
+        aria-controls={props['aria-controls']}
+        aria-disabled="true"
+        tabIndex={-1}
+        className={clsx(cls, 'cursor-not-allowed opacity-50')}
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        }}
+        onKeyDown={(event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          event.stopPropagation();
+        }}
+      >
+        {content}
+      </span>
+    );
+  }
+
+  if (routerTo !== undefined) {
     return (
       <Link
         id={props.id}
         data-testid={props.testId}
-        to={to}
+        to={routerTo}
         onClick={props.onClick}
         title={title}
         aria-label={ariaLabel}
@@ -90,8 +119,8 @@ export function Button(props: ButtonProps | AnchorProps | RouterLinkProps) {
         aria-pressed={props['aria-pressed']}
         aria-controls={props['aria-controls']}
         tabIndex={props.tabIndex}
-        aria-disabled={disabled}
-        className={clsx(cls, disabled ? 'pointer-events-none cursor-not-allowed opacity-50' : undefined)}
+        aria-disabled={false}
+        className={cls}
       >
         {content}
       </Link>
@@ -114,8 +143,8 @@ export function Button(props: ButtonProps | AnchorProps | RouterLinkProps) {
         aria-pressed={props['aria-pressed']}
         aria-controls={props['aria-controls']}
         tabIndex={props.tabIndex}
-        aria-disabled={disabled}
-        className={clsx(cls, disabled ? 'pointer-events-none cursor-not-allowed opacity-50' : undefined)}
+        aria-disabled={false}
+        className={cls}
       >
         {content}
       </a>

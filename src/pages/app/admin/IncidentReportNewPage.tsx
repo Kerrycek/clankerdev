@@ -316,7 +316,12 @@ export function IncidentReportNewPage() {
               <Button disabled={mutation.isPending} onClick={() => mutation.mutate()} testId="incidents.new.submit">
                 {mutation.isPending ? t('common.saving') : t('incidents.new.submit')}
               </Button>
-              <Button variant="secondary" disabled={mutation.isPending} to={`${basePath}/incidents`}>
+              <Button
+                variant="secondary"
+                disabled={mutation.isPending}
+                to={`${basePath}/incidents`}
+                testId="incidents.new.cancel"
+              >
                 {t('common.cancel')}
               </Button>
             </div>

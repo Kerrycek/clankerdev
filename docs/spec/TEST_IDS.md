@@ -183,6 +183,12 @@ Lock-state staleness banner (rendered on object detail pages when lock state is 
 - `palette.input`
 - `palette.result.<index>`
 
+### Incident report creation
+
+- `incidents.new`
+- `incidents.new.submit`
+- `incidents.new.cancel`
+
 ### Navigation
 
 Navigation is rendered in two variants:
