@@ -959,6 +959,70 @@ an owned test zone; no DNS mutation is needed for that verification.
 
 ---
 
+### MFA known-device history and pagination
+
+Status: `mapped / implemented` for the active-device list, responsive review,
+local page filter, pagination, and explicit Forget action in both the account
+and administrator user views.
+
+#### Purpose and backend contract
+
+The legacy administrator UI presents known login devices so an operator can
+review browser, operating-system, address, last-seen, and temporary MFA-trust
+information and explicitly forget a device. It accepts a bounded limit but does
+not expose cursor navigation. WebUI Next keeps that security-review purpose,
+adds the same panel to the owner's MFA page, and retains an explicit confirmed
+Forget action.
+
+The API resource is nested at `users/:userId/known_devices`. It returns only
+active `UserDevice` rows for the path owner and authorizes either an
+administrator or that exact owner. Its HaveAPI pagination cursor is exclusive
+and ascending (`id > from_id`); there is no arbitrary-user query filter to
+invent or widen.
+
+#### Current WebUI Next workflow
+
+- `/app/profile/mfa` reviews the signed-in owner's devices, while
+  `/admin/users/:userId/mfa` uses the same panel for the exact path user.
+- Each page requests one bounded lookahead row (26, 51, or 101), renders and
+  summarizes only the selected 25, 50, or 100 visible rows, and never exposes
+  the sentinel through the local filter.
+- Next uses the greatest valid visible ID. An exact terminal page disables
+  forward navigation instead of opening an empty page.
+- A previously visited forward edge is replaced from the current successful
+  response and later remembered edges are hidden. If removal empties the
+  current cursor page, the URL is replaced with the closest previous page, so
+  neither page controls nor browser history can reopen the obsolete edge.
+- Background refresh keeps the current page structure mounted while disabling
+  navigation, so periodic polling cannot drop a focused page control.
+- Changing the local page filter removes `from_id` and returns to page 1 before
+  the replacement page request; browser Back and Forward hydrate the input and
+  restore only the cursor belonging to that historical filter state.
+
+Current sources:
+
+- `src/components/user/UserKnownDevicesPanel.tsx`;
+- `src/components/user/UserKnownDevicesModel.ts`;
+- `src/components/user/UserKnownDevicesList.tsx`;
+- `src/lib/api/userDossier.ts`.
+
+#### Test evidence and limits
+
+- `src/components/user/UserKnownDevicesModel.test.ts` verifies hidden
+  lookahead rows, maximum visible cursors, exact terminal pages, and fail-closed
+  invalid IDs.
+- `e2e/specs/app/known_devices_keyset_pagination.spec.ts` uses a finite mock
+  that enforces `id > from_id` and the requested limit. Desktop and mobile runs
+  cover owner and administrator paths, non-overlapping pages, terminal state,
+  local-filter reset, responsive containment, and forward-edge rebuilding after
+  a confirmed in-memory Forget.
+
+The browser tests do not forget a real device or mutate a live account. The
+upstream index does not declare an explicit deterministic order; that broader
+backend contract risk remains tracked separately in issue #189.
+
+---
+
 ## Remaining product inventory
 
 The areas below are confirmed by current routes/source. Their status is

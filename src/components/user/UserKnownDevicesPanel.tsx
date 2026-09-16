@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -6,12 +6,15 @@ import { useI18n } from '../../app/i18n';
 
 import { deleteUserKnownDevice, fetchUserKnownDevices } from '../../lib/api/userDossier';
 
-import { cursorFromDescendingPage } from '../../lib/lockIndex';
 import { useKeysetPagination } from '../../lib/hooks/useKeysetPagination';
 import { useTierCIntervalMs } from '../../lib/refreshTiers';
 import { formatErrorMessage } from '../../lib/errors';
 
-import { buildKnownDeviceSummary, filterKnownDevices } from './UserKnownDevicesModel';
+import {
+  buildKnownDevicePageWindow,
+  buildKnownDeviceSummary,
+  filterKnownDevices,
+} from './UserKnownDevicesModel';
 import { UserKnownDeviceForgetDialog } from './UserKnownDevicesDialogs';
 import { UserKnownDevicesList } from './UserKnownDevicesList';
 import { UserSecurityMetricGrid } from './UserSecurityMetricGrid';
@@ -31,52 +34,120 @@ export function UserKnownDevicesPanel(props: {
   const { t } = useI18n();
   const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [q, setQ] = useState(() => searchParams.get('q') ?? '');
+  const activeSearch = (searchParams.get('q') ?? '').trim();
+  const [q, setQ] = useState(() => activeSearch);
+  const hydratingSearchFromUrlRef = useRef(false);
+
+  useLayoutEffect(() => {
+    hydratingSearchFromUrlRef.current = true;
+    setQ(activeSearch);
+  }, [activeSearch]);
 
   useEffect(() => {
+    if (hydratingSearchFromUrlRef.current) {
+      hydratingSearchFromUrlRef.current = false;
+      return;
+    }
+
     const next = new URLSearchParams(searchParams);
     const trimmed = q.trim();
+    const searchChanged = trimmed !== activeSearch;
     if (trimmed) next.set('q', trimmed);
     else next.delete('q');
+
+    if (searchChanged) {
+      next.delete('from_id');
+      next.set('page', '1');
+    }
 
     if (next.toString() !== searchParams.toString()) {
       setSearchParams(next, { replace: true });
     }
-  }, [q, searchParams, setSearchParams]);
+  }, [activeSearch, q, searchParams, setSearchParams]);
 
-  const searchTrim = q.trim();
+  const searchTrim = activeSearch;
   const pagination = useKeysetPagination({
     id: `${props.testIdPrefix}.known_devices.pagination`,
     filterKey: JSON.stringify({ userId: props.userId, q: searchTrim }),
     searchParams,
     setSearchParams,
+    restoreUrlCursorOnSignatureChange: true,
     defaultLimit: 25,
     allowedLimits: [25, 50, 100],
   });
 
   const interval = useTierCIntervalMs();
+  const requestLimit = pagination.limit + 1;
 
   const devicesQ = useQuery({
     queryKey: [
       'users',
       props.userId,
       'known_devices',
-      { fromId: pagination.fromId ?? null, limit: pagination.limit },
+      { fromId: pagination.fromId ?? null, limit: requestLimit },
     ],
     queryFn: async () => {
       const res = await fetchUserKnownDevices(props.userId, {
         fromId: pagination.fromId ?? undefined,
-        limit: pagination.limit,
+        limit: requestLimit,
       });
       return res.data;
     },
     refetchInterval: interval,
   });
 
-  const pageCursor = useMemo(() => cursorFromDescendingPage(devicesQ.data, (device) => device.id), [devicesQ.data]);
-  const hasMore = (devicesQ.data ?? []).length >= pagination.limit;
-  const devices = useMemo(() => filterKnownDevices(devicesQ.data, searchTrim), [devicesQ.data, searchTrim]);
-  const deviceSummary = useMemo(() => buildKnownDeviceSummary(devicesQ.data), [devicesQ.data]);
+  const pageWindow = useMemo(
+    () => buildKnownDevicePageWindow(devicesQ.data, pagination.limit),
+    [devicesQ.data, pagination.limit]
+  );
+  const devices = useMemo(() => filterKnownDevices(pageWindow.rows, searchTrim), [pageWindow.rows, searchTrim]);
+  const deviceSummary = useMemo(() => buildKnownDeviceSummary(pageWindow.rows), [pageWindow.rows]);
+  const hasNextFromData =
+    devicesQ.isSuccess && pageWindow.hasMore && pageWindow.cursor !== null;
+  const canNext = hasNextFromData && !devicesQ.isFetching;
+  const safePageCount = Math.min(
+    pagination.stack.length,
+    pagination.page + (hasNextFromData ? 1 : 0)
+  );
+
+  const shouldRecoverEmptyCursor =
+    devicesQ.isSuccess && !devicesQ.isFetching && pageWindow.rows.length === 0 && pagination.canPrev;
+
+  useLayoutEffect(() => {
+    if (!shouldRecoverEmptyCursor) return;
+
+    const previousIndex = pagination.index - 1;
+    const previousCursor = pagination.stack[previousIndex] ?? null;
+    const next = new URLSearchParams(searchParams);
+    next.set('limit', String(pagination.limit));
+    next.set('page', String(previousIndex + 1));
+    if (previousCursor === null) next.delete('from_id');
+    else next.set('from_id', String(previousCursor));
+    setSearchParams(next, { replace: true });
+  }, [
+    pagination.index,
+    pagination.limit,
+    pagination.stack,
+    searchParams,
+    setSearchParams,
+    shouldRecoverEmptyCursor,
+  ]);
+
+  const goNext = () => {
+    if (!canNext || pageWindow.cursor === null) return;
+    pagination.goToPageWithStack(
+      pagination.page + 1,
+      [...pagination.stack.slice(0, pagination.index + 1), pageWindow.cursor]
+    );
+  };
+
+  const goToPage = (page: number) => {
+    if (page === pagination.page + 1) {
+      goNext();
+      return;
+    }
+    if (page <= pagination.page) pagination.goToPage(page);
+  };
 
   const [removeId, setRemoveId] = useState<number | null>(null);
 
@@ -149,12 +220,14 @@ export function UserKnownDevicesPanel(props: {
         <KeysetPagination
           testId={`${prefix}.known_devices.pagination`}
           page={pagination.page}
-          pageCount={pagination.stack.length}
-          onGoToPage={(p) => pagination.goToPage(p)}
+          pageCount={safePageCount}
+          onGoToPage={goToPage}
+          maxDirectPage={hasNextFromData ? pagination.page + 1 : pagination.page}
+          jumpPending={devicesQ.isFetching}
           canPrev={pagination.canPrev}
           onPrev={() => pagination.goPrev()}
-          canNext={pagination.hasForward || (hasMore && pageCursor !== null)}
-          onNext={() => pagination.goNext(pageCursor)}
+          canNext={canNext}
+          onNext={goNext}
           limit={pagination.limit}
           allowedLimits={pagination.allowedLimits}
           onLimitChange={(l) => pagination.setLimit(l)}
