@@ -686,6 +686,51 @@ end-to-end password recovery is currently enabled or deployed.
 
 ---
 
+## Transaction-item diagnostics and reliable page boundaries
+
+**Status:** `mapped / implemented`
+
+The shared transaction-item list at `/app/transactions/items` and
+`/admin/transactions/items` is the drill-down for asynchronous operational
+work. It exposes the backend's exact `transaction_chain`, `node`, `type`,
+`done`, and `success` filters; a numeric transaction ID opens its detail rather
+than pretending to be a full-text search. Regular users remain restricted by
+the backend to their own transactions, while the administrator response also
+contains operational fields such as user, type, urgency, priority, input, and
+output.
+
+`Transaction::Index` applies descending keyset pagination and explicitly orders
+by `transactions.id DESC`; `from_id` is an exclusive boundary. WebUI Next asks
+for the selected visible limit plus one, renders only the visible rows, and
+uses the extra row only as proof that another page exists. The next cursor is
+always the last visible transaction ID. This intentionally improves on the
+legacy `Pagination\System` count-equals-limit heuristic, which offered a false
+Next action whenever the final page happened to be exactly full. The largest
+UI page requests 501 records, within the API maximum of 1000.
+
+Evidence:
+
+- backend contract and authorization:
+  `api/lib/vpsadmin/api/resources/transaction.rb` and
+  `api/spec/api/resources/transaction_read_spec.rb` in the read-only upstream
+  checkout;
+- legacy chain/item workflow and paginator:
+  `webui/pages/page_transactions.php` and `webui/lib/pagination.lib.php` in the
+  read-only upstream checkout;
+- WebUI Next request and list implementation:
+  `src/lib/api/transactions.ts`, `src/pages/app/TransactionsListPage.tsx`, and
+  `src/pages/app/transactions/TransactionItemsRouteGuard.tsx`;
+- deterministic desktop/mobile contract coverage:
+  `e2e/specs/app/transactions_items_keyset_pagination.spec.ts`.
+
+The Playwright test proves the lookahead request, hidden sentinel, exclusive
+cursor continuity, exact-terminal Next state, previous-page history, and both
+user/admin route variants against a strict mock. It performs no live mutation.
+A read-only live smoke check can confirm deployed rendering and authorization,
+but real data cannot deterministically guarantee an exact page boundary.
+
+---
+
 ## Dataset backup-plan automation
 
 ### Capability: understand, assign, and remove automatic dataset plans
