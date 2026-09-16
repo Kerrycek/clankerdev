@@ -29,6 +29,34 @@ describe('modeSwitch', () => {
     ).toBe('/admin/requests/details?state=open');
   });
 
+  it('resets scope-dependent VPS pagination while preserving filters and page size', () => {
+    expect(
+      computeOtherModeUrl({
+        mode: 'admin',
+        pathname: '/admin/vps',
+        search: '?from_id=50&page=2&limit=50&q=database',
+      })
+    ).toBe('/app/vps?page=1&limit=50&q=database');
+
+    expect(
+      computeOtherModeUrl({
+        mode: 'user',
+        pathname: '/app/vps',
+        search: '?page=4&limit=25&state=running',
+      })
+    ).toBe('/admin/vps?page=1&limit=25&state=running');
+  });
+
+  it('keeps detail-page query state when switching the VPS detail scope', () => {
+    expect(
+      computeOtherModeUrl({
+        mode: 'user',
+        pathname: '/app/vps/123',
+        search: '?page=2&tab=history',
+      })
+    ).toBe('/admin/vps/123?page=2&tab=history');
+  });
+
   it('rewrites user-only route shapes to their admin counterparts', () => {
     expect(
       computeOtherModeUrl({

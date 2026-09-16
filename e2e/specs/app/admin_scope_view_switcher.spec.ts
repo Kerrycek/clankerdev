@@ -16,7 +16,7 @@ async function expectNormalizedVpsListUrl(page: Page, pathname: '/app/vps' | '/a
     .toEqual({ pathname, page: '1', limit: '50' });
 }
 
-test.describe('@smoke Admin scope switcher', () => {
+test.describe('@smoke @smoke-mobile Admin scope switcher', () => {
   test('switches between All and Mine views preserving safe routes', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
@@ -54,7 +54,7 @@ test.describe('@smoke Admin scope switcher', () => {
 
     // When switching to Mine from an admin-only page, fall back to /app.
     await page.goto('/admin/nodes');
-    await expect(page.getByTestId('admin.nodes.table')).toBeVisible();
+    await expect(page.getByTestId('admin.nodes.page')).toBeVisible();
 
     await page.getByTestId('shell.user-menu-button').click();
     await page.getByTestId('shell.user-menu.scope.mine').click();
