@@ -11,6 +11,7 @@ import { Alert } from '../../../../components/ui/Alert';
 import { ActionButton } from '../../../../components/ui/ActionButton';
 import { Badge } from '../../../../components/ui/Badge';
 import { Button } from '../../../../components/ui/Button';
+import { Card } from '../../../../components/ui/Card';
 import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog';
 import { EmptyState } from '../../../../components/ui/EmptyState';
 import { ErrorState } from '../../../../components/ui/ErrorState';
@@ -114,31 +115,90 @@ export function DnsTsigKeysPage() {
       />
       {filtersActive ? <div className="text-xs text-faint">{t('list.meta.filters_active')}</div> : null}
       {rows.length === 0 ? <EmptyState testId="admin.cluster.dns_tsig.empty" title={t('admin.cluster.dns_tsig.empty')} body={t('admin.cluster.dns_tsig.empty_body')} /> : (
-        <TableCard
-          testId="admin.cluster.dns_tsig.table"
-          minWidth="md"
-          footer={
-            <KeysetPagination
-              testId="admin.cluster.dns_tsig.pagination"
-              page={pagination.page}
-              pageCount={pageCount}
-              totalPagesKnown={totalPagesKnown}
-              maxDirectPage={maxDirectPage}
-              jumpPending={isJumping}
-              canPrev={pagination.canPrev}
-              canNext={canNext}
-              onPrev={pagination.goPrev}
-              onNext={() => pagination.goNext(cursor)}
-              onGoToPage={goToPage}
-              limit={pagination.limit}
-              allowedLimits={pagination.allowedLimits}
-              onLimitChange={pagination.setLimit}
-            />
-          }
-        >
+        <>
+          <div className="space-y-3 md:hidden" data-testid="admin.cluster.dns_tsig.cards">
+            {rows.map((row) => (
+              <Card key={row.id} testId={`admin.cluster.dns_tsig.card.${row.id}`}>
+                <div className="min-w-0 p-4">
+                  <div className="break-all text-base font-semibold text-fg">{String(row.name ?? `#${row.id}`)}</div>
+                  <div className="mt-1 text-xs text-faint">#{row.id}</div>
+                  <dl className="mt-4 space-y-3 text-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <dt className="shrink-0 text-faint">{t('common.user')}</dt>
+                      <dd className="min-w-0 break-all text-right text-fg">{typeof row.user?.login === 'string' ? String(row.user.login) : t('common.na')}</dd>
+                    </div>
+                    <div className="flex items-start justify-between gap-3">
+                      <dt className="shrink-0 text-faint">{t('common.algorithm')}</dt>
+                      <dd className="min-w-0 text-right"><Badge variant="neutral">{String(row.algorithm ?? t('common.na'))}</Badge></dd>
+                    </div>
+                    <div className="flex items-start justify-between gap-3">
+                      <dt className="shrink-0 text-faint">{t('common.created')}</dt>
+                      <dd className="min-w-0 break-words text-right text-fg">{row.created_at ? formatDateTime(String(row.created_at)) : t('common.na')}</dd>
+                    </div>
+                  </dl>
+                  <div className="mt-4 border-t border-border pt-3">
+                    <ActionButton
+                      size="sm"
+                      variant="danger"
+                      className="min-h-11 w-full min-w-0 justify-center px-3"
+                      title={t('common.delete')}
+                      ariaLabel={`${t('common.delete')}: ${String(row.name ?? `#${row.id}`)}`}
+                      testId={`admin.cluster.dns_tsig.card.${row.id}.delete`}
+                      onClick={() => setConfirmDelete(row)}
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden />
+                      {t('common.delete')}
+                    </ActionButton>
+                  </div>
+                </div>
+              </Card>
+            ))}
+            <Card className="overflow-hidden">
+              <KeysetPagination
+                testId="admin.cluster.dns_tsig.pagination.mobile"
+                page={pagination.page}
+                pageCount={pageCount}
+                totalPagesKnown={totalPagesKnown}
+                maxDirectPage={maxDirectPage}
+                jumpPending={isJumping}
+                canPrev={pagination.canPrev}
+                canNext={canNext}
+                onPrev={pagination.goPrev}
+                onNext={() => pagination.goNext(cursor)}
+                onGoToPage={goToPage}
+                limit={pagination.limit}
+                allowedLimits={pagination.allowedLimits}
+                onLimitChange={pagination.setLimit}
+              />
+            </Card>
+          </div>
+          <TableCard
+            className="hidden md:block"
+            testId="admin.cluster.dns_tsig.table"
+            minWidth="md"
+            footer={
+              <KeysetPagination
+                testId="admin.cluster.dns_tsig.pagination"
+                page={pagination.page}
+                pageCount={pageCount}
+                totalPagesKnown={totalPagesKnown}
+                maxDirectPage={maxDirectPage}
+                jumpPending={isJumping}
+                canPrev={pagination.canPrev}
+                canNext={canNext}
+                onPrev={pagination.goPrev}
+                onNext={() => pagination.goNext(cursor)}
+                onGoToPage={goToPage}
+                limit={pagination.limit}
+                allowedLimits={pagination.allowedLimits}
+                onLimitChange={pagination.setLimit}
+              />
+            }
+          >
               <thead><tr className="text-left text-xs uppercase tracking-wide text-faint"><th className="py-2 pl-4 pr-3">{t('common.name')}</th><th className="py-2 pr-3">{t('common.user')}</th><th className="py-2 pr-3">{t('common.algorithm')}</th><th className="py-2 pr-3">{t('common.created')}</th><th className="py-2 pr-4">{t('common.actions')}</th></tr></thead>
               <tbody>{rows.map((row) => <tr key={row.id} className="border-t border-border" data-testid={`admin.cluster.dns_tsig.row.${row.id}`}><td className="py-2 pl-4 pr-3 font-medium text-fg">{String(row.name ?? `#${row.id}`)}</td><td className="py-2 pr-3">{typeof row.user?.login === 'string' ? String(row.user.login) : t('common.na')}</td><td className="py-2 pr-3"><Badge variant="neutral">{String(row.algorithm ?? t('common.na'))}</Badge></td><td className="py-2 pr-3">{row.created_at ? formatDateTime(String(row.created_at)) : t('common.na')}</td><td className="py-2 pr-4 text-right"><ActionButton size="sm" variant="danger" className="h-8 w-8 min-w-8 px-0" title={t('common.delete')} ariaLabel={t('common.delete')} testId={`admin.cluster.dns_tsig.row.${row.id}.delete`} onClick={() => setConfirmDelete(row)}><Trash2 className="h-4 w-4" aria-hidden /></ActionButton></td></tr>)}</tbody>
-        </TableCard>
+          </TableCard>
+        </>
       )}
 
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title={t('admin.cluster.dns_tsig.create.title')} testId="admin.cluster.dns_tsig.create.modal">
@@ -178,7 +238,7 @@ export function DnsTsigKeysPage() {
         </div>
       </Modal>
 
-      <ConfirmDialog open={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title={t('admin.cluster.dns_tsig.delete.title')} description={confirmDelete ? t('admin.cluster.dns_tsig.delete.description', { name: String(confirmDelete.name ?? `#${confirmDelete.id}`) }) : ''} confirmLabel={t('common.delete')} confirmVariant="danger" onConfirm={() => deleteM.mutate()} loading={deleteM.isPending} />
+      <ConfirmDialog testId="admin.cluster.dns_tsig.delete_confirm" open={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title={t('admin.cluster.dns_tsig.delete.title')} description={confirmDelete ? t('admin.cluster.dns_tsig.delete.description', { name: String(confirmDelete.name ?? `#${confirmDelete.id}`) }) : ''} confirmLabel={t('common.delete')} confirmVariant="danger" onConfirm={() => deleteM.mutate()} loading={deleteM.isPending} />
     </div>
   );
 }
