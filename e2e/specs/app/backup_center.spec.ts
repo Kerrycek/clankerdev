@@ -45,44 +45,49 @@ test.describe('Backup center', () => {
 
     const mobile = testInfo.project.name === 'mobile-chrome';
 
-    async function expectResponsiveDownload(layout: 'card' | 'row') {
+    async function expectResponsiveDownload(
+      sectionTestId: 'backups.overview' | 'backups.downloads',
+      layout: 'card' | 'row',
+    ) {
       const entryTestId = `backups.downloads.${layout}.41`;
       const actionPrefix = entryTestId;
-      const entry = page.getByTestId(entryTestId);
+      const section = page.getByTestId(sectionTestId);
+      await expect(section).toBeVisible();
+      const entry = section.getByTestId(entryTestId);
       await expect(entry).toBeVisible();
       await entry.scrollIntoViewIfNeeded();
-      await expect(page.getByTestId(`${actionPrefix}.detail`)).toBeInViewport();
-      await expect(page.getByTestId(`${actionPrefix}.download`)).toBeInViewport();
+      await expect(entry.getByTestId(`${actionPrefix}.detail`)).toBeInViewport();
+      await expect(entry.getByTestId(`${actionPrefix}.download`)).toBeInViewport();
       await expectNoDocumentHorizontalOverflow(page);
 
       if (layout === 'card') {
-        await expect(page.getByTestId('backups.downloads.cards')).toBeVisible();
-        await expect(page.getByTestId('backups.downloads.table')).toBeHidden();
-        await expect(page.getByTestId(`${entryTestId}.status`)).toContainText('Ready');
-        await expect(page.getByTestId(`${entryTestId}.expiration`)).toContainText('2099');
-        await expect(page.getByTestId(`${entryTestId}.detail`)).toHaveAccessibleName(
+        await expect(section.getByTestId('backups.downloads.cards')).toBeVisible();
+        await expect(section.getByTestId('backups.downloads.table')).toBeHidden();
+        await expect(entry.getByTestId(`${entryTestId}.status`)).toContainText('Ready');
+        await expect(entry.getByTestId(`${entryTestId}.expiration`)).toContainText('2099');
+        await expect(entry.getByTestId(`${entryTestId}.detail`)).toHaveAccessibleName(
           'Open downloads for mail.example/root-volume-with-a-long-mobile-friendly-name',
         );
-        await expect(page.getByTestId(`${entryTestId}.download`)).toHaveAccessibleName(
+        await expect(entry.getByTestId(`${entryTestId}.download`)).toHaveAccessibleName(
           'Download snapshot before-upgrade-with-a-long-name',
         );
       } else {
-        await expect(page.getByTestId('backups.downloads.cards')).toBeHidden();
-        await expect(page.getByTestId('backups.downloads.table')).toBeVisible();
+        await expect(section.getByTestId('backups.downloads.cards')).toBeHidden();
+        await expect(section.getByTestId('backups.downloads.table')).toBeVisible();
       }
     }
 
     await page.goto('/app/backups');
-    await expectResponsiveDownload(mobile ? 'card' : 'row');
+    await expectResponsiveDownload('backups.overview', mobile ? 'card' : 'row');
 
     if (!mobile) {
       await page.setViewportSize({ width: 1024, height: 720 });
-      await expectResponsiveDownload('card');
+      await expectResponsiveDownload('backups.overview', 'card');
     }
 
     await page.getByTestId('backups.tab.downloads').click();
     await expect(page).toHaveURL(/tab=downloads/);
-    await expectResponsiveDownload('card');
+    await expectResponsiveDownload('backups.downloads', 'card');
   });
 
   test('@smoke shows the bounded overview and opens dataset backup tools', async ({ page }, testInfo) => {
