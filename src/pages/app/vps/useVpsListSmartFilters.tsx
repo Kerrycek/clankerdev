@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
@@ -63,18 +63,73 @@ function isStateLiteral(value: string): boolean {
   return ['running', 'stopped', 'stop', 'busy', 'locked', 'failed', 'failure', 'error', 'all'].includes(normalized);
 }
 
+function normalizeVpsListSearchParams(input: URLSearchParams, mode: VpsListMode) {
+  const next = new URLSearchParams(input);
+  const filterKeys = ['q', 'node', 'user', 'user_namespace_map', 'location', 'state'] as const;
+  const q = (next.get('q') ?? '').trim();
+  if (q) next.set('q', q);
+  else next.delete('q');
+
+  for (const key of ['node', 'user_namespace_map', 'location'] as const) {
+    const value = numericParam(next.get(key) ?? '');
+    if (value !== undefined) next.set(key, String(value));
+    else next.delete(key);
+  }
+
+  if (mode === 'admin') {
+    const user = numericParam(next.get('user') ?? '');
+    if (user !== undefined) next.set('user', String(user));
+    else next.delete('user');
+  } else {
+    next.delete('user');
+  }
+
+  const state = normalizeVpsListStateFilter(next.get('state'));
+  if (state === 'all') next.delete('state');
+  else next.set('state', state);
+
+  if (filterKeys.some((key) => next.get(key) !== input.get(key))) {
+    next.delete('from_id');
+    next.set('page', '1');
+  }
+
+  return { searchParams: next, changed: next.toString() !== input.toString() };
+}
+
 
 export function useVpsListSmartFilters(args: UseVpsListSmartFiltersArgs) {
   const { basePath, mode, scope, t, toasts } = args;
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const [search, setSearch] = useState(() => searchParams.get('q') ?? '');
-  const [nodeId, setNodeId] = useState(() => searchParams.get('node') ?? '');
-  const [userId, setUserId] = useState(() => searchParams.get('user') ?? '');
-  const [userNamespaceMapId, setUserNamespaceMapId] = useState(() => searchParams.get('user_namespace_map') ?? '');
-  const [locationId, setLocationId] = useState(() => searchParams.get('location') ?? '');
-  const [stateFilter, setStateFilter] = useState<VpsListStateFilter>(() => normalizeVpsListStateFilter(searchParams.get('state')));
+  const searchParamsKey = searchParams.toString();
+  const normalizedSearch = useMemo(
+    () => normalizeVpsListSearchParams(new URLSearchParams(searchParamsKey), mode),
+    [mode, searchParamsKey]
+  );
+  const activeSearchParamsKey = normalizedSearch.searchParams.toString();
+  const activeSearchParams = useMemo(
+    () => new URLSearchParams(activeSearchParamsKey),
+    [activeSearchParamsKey]
+  );
+  const activeSearch = activeSearchParams.get('q') ?? '';
+  const activeNodeIdNum = numericParam(activeSearchParams.get('node') ?? '');
+  const activeUserIdNum = mode === 'admin' ? numericParam(activeSearchParams.get('user') ?? '') : undefined;
+  const activeUserNamespaceMapIdNum = numericParam(activeSearchParams.get('user_namespace_map') ?? '');
+  const activeLocationIdNum = numericParam(activeSearchParams.get('location') ?? '');
+  const activeStateFilter = normalizeVpsListStateFilter(activeSearchParams.get('state'));
+  const hydratingFiltersFromUrlRef = useRef(false);
+
+  const [search, setSearch] = useState(() => activeSearch);
+  const [nodeId, setNodeId] = useState(() => activeNodeIdNum === undefined ? '' : String(activeNodeIdNum));
+  const [userId, setUserId] = useState(() => activeUserIdNum === undefined ? '' : String(activeUserIdNum));
+  const [userNamespaceMapId, setUserNamespaceMapId] = useState(
+    () => activeUserNamespaceMapIdNum === undefined ? '' : String(activeUserNamespaceMapIdNum)
+  );
+  const [locationId, setLocationId] = useState(
+    () => activeLocationIdNum === undefined ? '' : String(activeLocationIdNum)
+  );
+  const [stateFilter, setStateFilter] = useState<VpsListStateFilter>(() => activeStateFilter);
 
   const [smart, setSmart] = useState('');
   const [smartErrors, setSmartErrors] = useState<string[]>([]);
@@ -90,12 +145,42 @@ export function useVpsListSmartFilters(args: UseVpsListSmartFiltersArgs) {
   const userNamespaceMapIdNum = useMemo(() => numericParam(userNamespaceMapId), [userNamespaceMapId]);
   const locationIdNum = useMemo(() => numericParam(locationId), [locationId]);
 
+  useLayoutEffect(() => {
+    if (!normalizedSearch.changed) return;
+    setSearchParams(activeSearchParams, { replace: true });
+  }, [activeSearchParams, normalizedSearch.changed, setSearchParams]);
+
+  useLayoutEffect(() => {
+    hydratingFiltersFromUrlRef.current = true;
+    setSearch(activeSearch);
+    setNodeId(activeNodeIdNum === undefined ? '' : String(activeNodeIdNum));
+    setUserId(activeUserIdNum === undefined ? '' : String(activeUserIdNum));
+    setUserNamespaceMapId(
+      activeUserNamespaceMapIdNum === undefined ? '' : String(activeUserNamespaceMapIdNum)
+    );
+    setLocationId(activeLocationIdNum === undefined ? '' : String(activeLocationIdNum));
+    setStateFilter(activeStateFilter);
+  }, [
+    activeLocationIdNum,
+    activeNodeIdNum,
+    activeSearch,
+    activeSearchParamsKey,
+    activeStateFilter,
+    activeUserIdNum,
+    activeUserNamespaceMapIdNum,
+  ]);
+
   useEffect(() => {
     if (smartNeedle === '?') setHelpOpen(true);
   }, [smartNeedle]);
 
   useEffect(() => {
-    const next = new URLSearchParams(searchParams);
+    if (hydratingFiltersFromUrlRef.current) {
+      hydratingFiltersFromUrlRef.current = false;
+      return;
+    }
+
+    const next = new URLSearchParams(activeSearchParams);
 
     if (search.trim()) next.set('q', search.trim());
     else next.delete('q');
@@ -119,10 +204,28 @@ export function useVpsListSmartFilters(args: UseVpsListSmartFiltersArgs) {
     if (stateFilter !== 'all') next.set('state', stateFilter);
     else next.delete('state');
 
-    if (next.toString() !== searchParams.toString()) {
+    const filterKeys = ['q', 'node', 'user', 'user_namespace_map', 'location', 'state'] as const;
+    const filtersChanged = filterKeys.some((key) => next.get(key) !== activeSearchParams.get(key));
+    if (filtersChanged) {
+      next.delete('from_id');
+      next.set('page', '1');
+    }
+
+    if (next.toString() !== searchParamsKey) {
       setSearchParams(next, { replace: true });
     }
-  }, [locationIdNum, mode, nodeIdNum, search, searchParams, setSearchParams, stateFilter, userIdNum, userNamespaceMapIdNum]);
+  }, [
+    activeSearchParams,
+    locationIdNum,
+    mode,
+    nodeIdNum,
+    search,
+    searchParamsKey,
+    setSearchParams,
+    stateFilter,
+    userIdNum,
+    userNamespaceMapIdNum,
+  ]);
 
   const userSuggestQuery = useQuery({
     queryKey: ['users', 'search', { q: debouncedSmartNeedle }],
@@ -416,32 +519,32 @@ export function useVpsListSmartFilters(args: UseVpsListSmartFiltersArgs) {
   }, [locationIdNum, mode, nodeIdNum, search, smartErrors, stateFilter, t, userIdNum, userNamespaceMapIdNum]);
 
   const filtersActive =
-    Boolean(search.trim()) ||
-    Boolean(nodeId.trim()) ||
-    userIdNum !== undefined ||
-    Boolean(userNamespaceMapId.trim()) ||
-    Boolean(locationId.trim()) ||
-    stateFilter !== 'all';
+    Boolean(activeSearch) ||
+    activeNodeIdNum !== undefined ||
+    activeUserIdNum !== undefined ||
+    activeUserNamespaceMapIdNum !== undefined ||
+    activeLocationIdNum !== undefined ||
+    activeStateFilter !== 'all';
 
   const filterKey = JSON.stringify({
-    q: search.trim(),
-    node: nodeIdNum ?? null,
-    user: (mode === 'admin' ? userIdNum : scope.mineUserId) ?? null,
-    user_namespace_map: userNamespaceMapIdNum ?? null,
-    location: locationIdNum ?? null,
-    state: stateFilter,
+    q: activeSearch,
+    node: activeNodeIdNum ?? null,
+    user: (mode === 'admin' ? activeUserIdNum : scope.mineUserId) ?? null,
+    user_namespace_map: activeUserNamespaceMapIdNum ?? null,
+    location: activeLocationIdNum ?? null,
+    state: activeStateFilter,
     scope: scope.scope,
   });
 
   return {
-    searchParams,
+    searchParams: activeSearchParams,
     setSearchParams,
-    search,
-    nodeIdNum,
-    userIdNum,
-    userNamespaceMapIdNum,
-    locationIdNum,
-    stateFilter,
+    search: activeSearch,
+    nodeIdNum: activeNodeIdNum,
+    userIdNum: activeUserIdNum,
+    userNamespaceMapIdNum: activeUserNamespaceMapIdNum,
+    locationIdNum: activeLocationIdNum,
+    stateFilter: activeStateFilter,
     filtersActive,
     filterKey,
     filterProps: {
