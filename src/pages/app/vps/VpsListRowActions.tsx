@@ -120,11 +120,11 @@ export function VpsListRowActions({
         size="sm"
         className={buttonClass}
         testId={`${testIdPrefix}.action.details`}
-        title={t('common.detail')}
-        ariaLabel={t('common.detail')}
+        title={t('common.details')}
+        ariaLabel={t('common.details')}
       >
         <ExternalLink className={iconClass} aria-hidden="true" />
-        <IconLabel visible={showLabels}>{t('common.detail')}</IconLabel>
+        <IconLabel visible={showLabels}>{t('common.details')}</IconLabel>
       </Button>
 
       <ActionButton

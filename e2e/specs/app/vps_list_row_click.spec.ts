@@ -239,7 +239,10 @@ test.describe('@workflow-matrix @smoke VPS list row navigation', () => {
 
     await page.goto('/app/vps');
     const action = page.getByTestId('vps.card.300.action.console');
+    const detailsAction = page.getByTestId('vps.card.300.action.details');
     await expect(action).toBeVisible();
+    await expect(detailsAction).toHaveAccessibleName('Details');
+    await expect(detailsAction).toContainText('Details');
 
     const box = await action.boundingBox();
     expect(box?.width).toBeGreaterThanOrEqual(44);
