@@ -65,7 +65,7 @@ export function OomReportLayout() {
     const count = typeof r.count === 'number' ? r.count : undefined;
 
     return (
-      <div className="flex flex-wrap items-center gap-3 text-sm">
+      <div className="flex min-w-0 flex-wrap items-center gap-3 text-sm">
         <span className="text-muted">{t('oom.field.created_at')}:</span>
         <span>{createdAt}</span>
 
@@ -75,7 +75,14 @@ export function OomReportLayout() {
 
         {nodeName ? <span className="text-faint">· {nodeName}</span> : null}
 
-        {r.cgroup ? <span className="font-mono text-xs">{String(r.cgroup)}</span> : null}
+        {r.cgroup ? (
+          <span
+            className="min-w-0 max-w-full break-all font-mono text-xs"
+            data-testid="oom.detail.header.cgroup"
+          >
+            {String(r.cgroup)}
+          </span>
+        ) : null}
 
         <span className="text-faint">
           {t('oom.field.killed')}: <span className="font-medium text-text">{killed}</span>
