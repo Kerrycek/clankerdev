@@ -33,6 +33,11 @@ interface UseIpAddressSmartSearchOptions {
   clearUrlFilters: () => void;
 }
 
+function readCurrentSearchParamsSignature(fallback: string): string {
+  if (typeof window === 'undefined') return fallback;
+  return new URLSearchParams(window.location.search).toString();
+}
+
 export function useIpAddressSmartSearch({
   searchParams,
   setSearchParams,
@@ -67,9 +72,7 @@ export function useIpAddressSmartSearch({
   }, []);
 
   const searchParamsSignature = searchParams.toString();
-  const latestSearchParamsSignatureRef = useRef(searchParamsSignature);
   const previousSearchParamsSignatureRef = useRef(searchParamsSignature);
-  latestSearchParamsSignatureRef.current = searchParamsSignature;
 
   useEffect(() => {
     if (previousSearchParamsSignatureRef.current === searchParamsSignature) return;
@@ -143,7 +146,10 @@ export function useIpAddressSmartSearch({
     const generation = lookupGenerationRef.current + 1;
     lookupGenerationRef.current = generation;
 
-    const initialSearchParamsSignature = latestSearchParamsSignatureRef.current;
+    // React Router can expose the new browser URL before this hook has rendered
+    // its matching searchParams object. Read the URL at submit time so a fast
+    // follow-up lookup is not mistaken for a stale request by a late effect.
+    const initialSearchParamsSignature = readCurrentSearchParamsSignature(searchParamsSignature);
     const tokens = tokenizeSmartInput(input);
 
     if (tokens.length === 1) {
@@ -157,7 +163,7 @@ export function useIpAddressSmartSearch({
       }
     }
 
-    const next = new URLSearchParams(searchParams);
+    const next = new URLSearchParams(initialSearchParamsSignature);
     const plain: string[] = [];
     const errors: string[] = [];
     const userLogins: string[] = [];
@@ -315,7 +321,7 @@ export function useIpAddressSmartSearch({
       if (
         controller.signal.aborted ||
         lookupGenerationRef.current !== generation ||
-        latestSearchParamsSignatureRef.current !== initialSearchParamsSignature
+        readCurrentSearchParamsSignature(searchParamsSignature) !== initialSearchParamsSignature
       ) return;
 
       if (resolvedUserId === null) {
@@ -327,7 +333,7 @@ export function useIpAddressSmartSearch({
 
     if (
       lookupGenerationRef.current !== generation ||
-      latestSearchParamsSignatureRef.current !== initialSearchParamsSignature
+      readCurrentSearchParamsSignature(searchParamsSignature) !== initialSearchParamsSignature
     ) return;
 
     lookupAbortRef.current = null;
