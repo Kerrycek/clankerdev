@@ -66,6 +66,7 @@ test.describe('VPS overview metrics charts', () => {
     await page.goto('/app/vps/123');
 
     await expect(page.getByTestId('vps.overview.metrics.card')).toBeVisible();
+    await page.getByTestId('vps.overview.metrics.toggle').click();
     await expect(page.getByTestId('vps.overview.metrics.chart.load1')).toBeVisible();
     await expect(page.getByTestId('vps.overview.metrics.chart.load5')).toBeVisible();
     await expect(page.getByTestId('vps.overview.metrics.chart.mem_used')).toBeVisible();
@@ -74,7 +75,7 @@ test.describe('VPS overview metrics charts', () => {
     await page.getByTestId('vps.overview.metrics.window.7d').click();
     await expect(page).toHaveURL(/metrics_window=7d/);
   });
-  test('fetches metrics on load (no disclosure) and renders charts', async ({ page }) => {
+  test('fetches user metrics on demand and renders charts', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
     let statusesCalls = 0;
@@ -95,9 +96,13 @@ test.describe('VPS overview metrics charts', () => {
     await page.goto('/app/vps/123');
 
     await expect(page.getByTestId('vps.overview.metrics.card')).toBeVisible();
+    await expect(page.getByTestId('vps.overview.metrics.toggle')).toHaveAttribute('aria-expanded', 'false');
+    expect(statusesCalls).toBe(0);
+
+    await page.getByTestId('vps.overview.metrics.toggle').click();
     await expect(page.getByTestId('vps.overview.metrics.chart.load1')).toBeVisible();
 
-    // Metrics should be fetched without requiring a disclosure click.
+    // The heavier history request is deferred until the user asks for charts.
     expect(statusesCalls).toBeGreaterThan(0);
 
   });
