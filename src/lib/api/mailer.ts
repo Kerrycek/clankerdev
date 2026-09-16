@@ -95,24 +95,11 @@ export interface MailLog {
 export async function fetchMailLogs(opts?: {
   limit?: number;
   fromId?: number;
-  userId?: number;
-  templateId?: number;
-  q?: string;
-  createdAfter?: string;
-  createdBefore?: string;
 }) {
   const params: Record<string, unknown> = {};
 
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
-
-  const q = opts?.q ? String(opts.q).trim() : '';
-  if (q) params['q'] = q;
-  if (opts?.userId !== undefined) params['user'] = opts.userId;
-  if (opts?.templateId !== undefined) params['mail_template'] = opts.templateId;
-
-  if (opts?.createdAfter) params['created_after'] = opts.createdAfter;
-  if (opts?.createdBefore) params['created_before'] = opts.createdBefore;
 
   const res = await haveApiCall<MailLog[]>({
     method: 'GET',
