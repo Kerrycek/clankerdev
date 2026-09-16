@@ -113,11 +113,32 @@ Pages already migrated to the shared implementation:
 - Monitoring events list: `src/pages/app/MonitoringEventsPage.tsx`
 - Admin requests list: `src/pages/app/admin/RequestsPage.tsx`
 - Admin incoming payments list: `src/pages/app/admin/IncomingPaymentsPage.tsx`
+- Member payment history: `src/pages/app/payments/PaymentsPage.tsx`
+- Admin member payment history: `src/pages/app/admin/user/AdminUserPaymentsPage.tsx`
 - Incident reports list: `src/pages/app/incidents/IncidentsPage.tsx`
 - OOM reports list: `src/pages/app/oom/OomReportsPage.tsx`
 - Profile / Admin user data templates: `src/components/user/UserDataTemplatesPanel.tsx` (server-side `q`, SFI)
 - User namespaces list: `src/components/userNamespaces/UserNamespaceList.tsx` (SFI; numeric-id oriented)
 - User namespace maps list: `src/components/userNamespaces/UserNamespaceMapList.tsx` (server-side `q`, SFI)
+
+### Exact terminal pages
+
+An API response containing exactly the visible limit is not evidence that a
+next page exists. Where the endpoint maximum permits it, request one additional
+row, render only the selected limit, and derive the next cursor from the last
+visible row rather than from the hidden sentinel. Keep **Next** available when
+the local cursor stack already contains a forward-visited page.
+
+Both member and administrator user-payment histories follow this pattern.
+`UserPayment.Index` uses descending pagination and explicitly orders by
+`created_at DESC, id DESC`; the current frontend cursor is the smallest visible
+payment ID, matching the endpoint's descending-ID cursor direction. Visible
+limits are 25/50/100 for members and
+25/50/100/200 for administrators, so look-ahead requests remain at or below
+201 rows. This makes the exact-terminal **Next** signal reliable. Complete
+traversal of historical rows whose IDs are not monotonic with `created_at`
+still requires the deterministic upstream cursor/order contract tracked in
+#189; an ID-only `from_id` predicate cannot prove that stronger guarantee.
 
 ### Smart Filter Input pages
 

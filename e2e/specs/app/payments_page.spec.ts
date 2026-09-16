@@ -70,6 +70,88 @@ test('user payments page: shows status, instructions and history', async ({ page
   await expect(page.getByTestId('payments.my.history.table').locator('tbody tr')).toHaveCount(10);
 });
 
+test('@pr-smoke @pr-smoke-mobile user payment history uses a hidden lookahead and stops on an exact terminal page', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+  const haveApiMock = await installHaveApiMock(page);
+  const paymentRequests: Array<{ fromId: number | null; limit: number; userId: number | null }> = [];
+  const allIds = Array.from({ length: 50 }, (_, index) => 400 - index);
+  let revisitWithoutLookahead = false;
+
+  haveApiMock.addHandler('GET users/current', () => ({
+    user: {
+      id: 1,
+      login: 'alice',
+      level: 1,
+      monthly_payment: 200,
+      paid_until: '2099-01-01T00:00:00Z',
+    },
+  }));
+  haveApiMock.addHandler('GET users/1/get_payment_instructions', () => ({
+    instructions: 'VS: 1',
+  }));
+  haveApiMock.addHandler('GET user_payments', ({ searchParams }) => {
+    const limit = Number(searchParams.get('user_payment[limit]') ?? 50);
+    const rawFromId = searchParams.get('user_payment[from_id]');
+    const fromId = rawFromId ? Number(rawFromId) : null;
+    const rawUserId = searchParams.get('user_payment[user]');
+    const userId = rawUserId ? Number(rawUserId) : null;
+    paymentRequests.push({ fromId, limit, userId });
+
+    const responseLimit = fromId === null && revisitWithoutLookahead ? 25 : limit;
+    const ids = allIds
+      .filter((id) => (fromId === null ? true : id < fromId))
+      .slice(0, responseLimit);
+
+    return {
+      user_payments: ids.map((id) => ({
+        id,
+        amount: id,
+        created_at: '2026-02-14T09:00:00Z',
+        from_date: '2026-02-01T00:00:00Z',
+        to_date: '2026-03-01T00:00:00Z',
+      })),
+    };
+  });
+
+  await page.goto(withAppUrl('/app/payments?limit=25'));
+
+  const tableRows = page.getByTestId('payments.my.history.table').locator('tbody tr');
+  const next = page.getByTestId('payments.my.history.pagination.next');
+  await expect(tableRows).toHaveCount(25);
+  await expect(tableRows.first()).toContainText('400');
+  await expect(tableRows.last()).toContainText('376');
+  await expect(next).toBeEnabled();
+  expect(paymentRequests[0]).toEqual({ fromId: null, limit: 26, userId: 1 });
+
+  await next.click();
+
+  await expect(page).toHaveURL(/(?:\?|&)from_id=376(?:&|$)/);
+  await expect(tableRows).toHaveCount(25);
+  await expect(tableRows.first()).toContainText('375');
+  await expect(tableRows.last()).toContainText('351');
+  await expect(next).toBeDisabled();
+  const previous = page.getByTestId('payments.my.history.pagination.prev');
+  await expect(previous).toBeEnabled();
+  expect(paymentRequests.at(-1)).toEqual({ fromId: 376, limit: 26, userId: 1 });
+
+  await previous.click();
+
+  await expect(page).not.toHaveURL(/(?:\?|&)from_id=/);
+  revisitWithoutLookahead = true;
+  await page.reload();
+  await expect(tableRows.first()).toContainText('400');
+  await expect(tableRows.last()).toContainText('376');
+  await expect(next).toBeEnabled();
+  expect(paymentRequests.at(-1)).toEqual({ fromId: null, limit: 26, userId: 1 });
+
+  await next.click();
+
+  await expect(page).toHaveURL(/(?:\?|&)from_id=376(?:&|$)/);
+  await expect(tableRows.first()).toContainText('375');
+  await expect(tableRows.last()).toContainText('351');
+  await expect(next).toBeDisabled();
+});
+
 test('user payments page: localizes and constrains legacy payment instruction HTML', async ({ page }) => {
   test.setTimeout(90_000);
 
