@@ -19,6 +19,7 @@ import {
   resolveOrderValue,
   resolveVersionValue,
 } from './ipAddressListSemantics';
+import { shouldCancelIpAddressLookup } from './ipAddressSmartSearchGuard';
 
 interface UseIpAddressSmartSearchOptions {
   searchParams: URLSearchParams;
@@ -51,6 +52,7 @@ export function useIpAddressSmartSearch({
   const [smartSearchBlocked, setSmartSearchBlocked] = useState(false);
   const lookupGenerationRef = useRef(0);
   const lookupAbortRef = useRef<AbortController | null>(null);
+  const lookupSearchParamsSignatureRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (smartNeedle === '?') setHelpOpen(true);
@@ -60,6 +62,7 @@ export function useIpAddressSmartSearch({
     lookupGenerationRef.current += 1;
     lookupAbortRef.current?.abort();
     lookupAbortRef.current = null;
+    lookupSearchParamsSignatureRef.current = null;
     setSmartResolving(false);
   }, []);
 
@@ -72,7 +75,13 @@ export function useIpAddressSmartSearch({
     if (previousSearchParamsSignatureRef.current === searchParamsSignature) return;
 
     previousSearchParamsSignatureRef.current = searchParamsSignature;
-    if (lookupAbortRef.current) cancelLookup();
+    if (
+      lookupAbortRef.current &&
+      shouldCancelIpAddressLookup(
+        lookupSearchParamsSignatureRef.current,
+        searchParamsSignature
+      )
+    ) cancelLookup();
     setSmartErrors([]);
     setSmartSearchBlocked(false);
   }, [cancelLookup, searchParamsSignature]);
@@ -81,6 +90,7 @@ export function useIpAddressSmartSearch({
     lookupGenerationRef.current += 1;
     lookupAbortRef.current?.abort();
     lookupAbortRef.current = null;
+    lookupSearchParamsSignatureRef.current = null;
   }, []);
 
   const clearSmartErrors = () => {
@@ -128,11 +138,12 @@ export function useIpAddressSmartSearch({
 
     lookupAbortRef.current?.abort();
     lookupAbortRef.current = null;
+    lookupSearchParamsSignatureRef.current = null;
     setSmartResolving(false);
     const generation = lookupGenerationRef.current + 1;
     lookupGenerationRef.current = generation;
 
-    const initialSearchParamsSignature = searchParamsSignature;
+    const initialSearchParamsSignature = latestSearchParamsSignatureRef.current;
     const tokens = tokenizeSmartInput(input);
 
     if (tokens.length === 1) {
@@ -289,6 +300,7 @@ export function useIpAddressSmartSearch({
       usedUserLookup = true;
       const controller = new AbortController();
       lookupAbortRef.current = controller;
+      lookupSearchParamsSignatureRef.current = initialSearchParamsSignature;
       setSmartResolving(true);
 
       let resolvedUserId: number | null = null;
@@ -319,6 +331,7 @@ export function useIpAddressSmartSearch({
     ) return;
 
     lookupAbortRef.current = null;
+    lookupSearchParamsSignatureRef.current = null;
     setSmartResolving(false);
     setSmartErrors(errors);
     if (errors.length > 0) {
