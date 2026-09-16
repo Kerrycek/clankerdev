@@ -228,6 +228,8 @@ export function AppLayout(props: { children: React.ReactNode }) {
           actionLabelKey: typeof x?.actionLabelKey === 'string' ? x.actionLabelKey : undefined,
           actionLabel: typeof x?.actionLabel === 'string' ? x.actionLabel : undefined,
           objectLabel: typeof x?.objectLabel === 'string' ? x.objectLabel : undefined,
+          notifyOnInitialFinished:
+            typeof x?.notifyOnInitialFinished === 'boolean' ? x.notifyOnInitialFinished : undefined,
           object: normalizeObjectRef(x?.object) ?? undefined,
           blockUi: typeof x?.blockUi === 'boolean' ? x.blockUi : undefined,
           progressTitleKey: typeof x?.progressTitleKey === 'string' ? x.progressTitleKey : undefined,
@@ -387,6 +389,7 @@ export function AppLayout(props: { children: React.ReactNode }) {
         actionLabelKey?: string;
         actionLabel?: string;
         objectLabel?: string;
+        notifyOnInitialFinished?: boolean;
 
         /** When provided, binds a local transition lock to this action state. */
         object?: ObjectRef;
@@ -418,6 +421,7 @@ export function AppLayout(props: { children: React.ReactNode }) {
         actionLabelKey: meta?.actionLabelKey,
         actionLabel: meta?.actionLabel,
         objectLabel: meta?.objectLabel,
+        notifyOnInitialFinished: meta?.notifyOnInitialFinished,
         object: meta?.object,
         blockUi: meta?.blockUi,
         progressTitleKey: meta?.progressTitleKey,
