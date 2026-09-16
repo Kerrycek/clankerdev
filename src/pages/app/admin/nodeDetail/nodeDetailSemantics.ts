@@ -139,6 +139,34 @@ export function safePercent(num: unknown, den: unknown): number | null {
   return (n / d) * 100;
 }
 
+export function buildNodeMetricSeries(
+  rows: NodeStatus[],
+  fallbackTotalMemory: number | undefined,
+) {
+  const load1: { x: string; y: number }[] = [];
+  const cpuIdle: { x: string; y: number }[] = [];
+  const memoryUsedPercent: { x: string; y: number }[] = [];
+
+  for (const sample of rows) {
+    if (typeof sample.created_at !== 'string' || !sample.created_at) continue;
+    if (typeof sample.loadavg1 === 'number' && Number.isFinite(sample.loadavg1)) {
+      load1.push({ x: sample.created_at, y: sample.loadavg1 });
+    }
+    if (typeof sample.cpu_idle === 'number' && Number.isFinite(sample.cpu_idle)) {
+      cpuIdle.push({ x: sample.created_at, y: sample.cpu_idle });
+    }
+    const memoryPercent = safePercent(
+      sample.used_memory,
+      sample.total_memory ?? fallbackTotalMemory,
+    );
+    if (memoryPercent !== null && Number.isFinite(memoryPercent)) {
+      memoryUsedPercent.push({ x: sample.created_at, y: memoryPercent });
+    }
+  }
+
+  return { cpuIdle, load1, memoryUsedPercent };
+}
+
 export function sortStatusesByTimeAsc(list: NodeStatus[]): NodeStatus[] {
   return list
     .slice()

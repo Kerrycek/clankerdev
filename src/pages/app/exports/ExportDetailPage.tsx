@@ -33,6 +33,7 @@ import { getMetaActionStateId } from '../../../lib/api/haveapi';
 import { objectRef } from '../../../lib/objectRef';
 import { ExportDeleteDialogs } from './ExportDeleteDialogs';
 import { ExportEditDrawer, ExportHostEditorDrawer, type ExportHostFormState } from './ExportDetailDrawers';
+import { boolBadgeLabel, defaultEditForm, defaultHostForm, errorMessage } from './ExportDetailHelpers';
 import { ExportHostsCard } from './ExportHostsCard';
 import {
   buildExportDiff,
@@ -50,37 +51,6 @@ import {
   sourceShortName,
   type EditExportFormState,
 } from './ExportModel';
-
-function defaultEditForm(): EditExportFormState {
-  return {
-    all_vps: true,
-    rw: true,
-    sync: true,
-    subtree_check: false,
-    root_squash: false,
-    threads: '8',
-    enabled: true,
-  };
-}
-
-function defaultHostForm(): ExportHostFormState {
-  return {
-    ip_address: null,
-    rw: true,
-    sync: true,
-    subtree_check: false,
-    root_squash: false,
-  };
-}
-
-function errorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error ?? '');
-}
-
-function boolBadgeLabel(value: boolean, t: (key: string, vars?: Record<string, unknown>) => string) {
-  return value ? t('common.enabled') : t('common.disabled');
-}
 
 export function ExportDetailPage() {
   const { exportId } = useParams();
