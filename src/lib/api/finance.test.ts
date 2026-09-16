@@ -26,6 +26,47 @@ afterEach(() => {
 });
 
 describe('fetchFinanceUsersSnapshot', () => {
+  it('starts independent lifecycle-state scans concurrently', async () => {
+    installApiFixture();
+
+    let resolveActive!: (response: Response) => void;
+    let resolveSuspended!: (response: Response) => void;
+    const activeResponse = new Promise<Response>((resolve) => {
+      resolveActive = resolve;
+    });
+    const suspendedResponse = new Promise<Response>((resolve) => {
+      resolveSuspended = resolve;
+    });
+    const requestedStates: string[] = [];
+
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const objectState = String(new URL(String(input)).searchParams.get('user[object_state]'));
+      requestedStates.push(objectState);
+      if (objectState === 'active') return activeResponse;
+      if (objectState === 'suspended') return suspendedResponse;
+      throw new Error(`Unexpected object state: ${objectState}`);
+    });
+
+    const snapshotPromise = fetchFinanceUsersSnapshot({ batchSize: 2 });
+
+    await vi.waitFor(() => {
+      expect(requestedStates).toEqual(['active', 'suspended']);
+    });
+
+    resolveActive(makeOkResponse('users', [
+      { id: 1, login: 'active', level: 1, object_state: 'active' },
+    ]));
+    resolveSuspended(makeOkResponse('users', [
+      { id: 2, login: 'suspended', level: 1, object_state: 'suspended' },
+    ]));
+
+    await expect(snapshotPromise).resolves.toMatchObject({
+      complete: true,
+      scannedRows: 2,
+      batches: 2,
+    });
+  });
+
   it('uses the documented 1,000-row API page size to minimize global snapshot requests', async () => {
     installApiFixture();
 
@@ -91,21 +132,23 @@ describe('fetchFinanceUsersSnapshot', () => {
     expect(result.incompleteReason).toBeUndefined();
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(fetchMock.mock.calls.map(([input]) => new URL(String(input)).searchParams.get('user[object_state]')))
-      .toEqual(['active', 'active', 'suspended']);
+      .toEqual(['active', 'suspended', 'active']);
   });
 
   it('never presents a scan-limited user snapshot as a complete global set', async () => {
     installApiFixture();
 
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = new URL(String(input));
       const fromId = Number(url.searchParams.get('user[from_id]') ?? 0);
       const limit = Number(url.searchParams.get('user[limit]'));
+      const objectState = url.searchParams.get('user[object_state]');
+      const firstId = objectState === 'suspended' ? Math.max(100, fromId) + 1 : fromId + 1;
       return makeOkResponse(
         'users',
         Array.from({ length: limit }, (_, index) => ({
-          id: fromId + index + 1,
-          login: `user-${fromId + index + 1}`,
+          id: firstId + index,
+          login: `user-${firstId + index}`,
           level: 1,
         })),
       );
@@ -113,32 +156,37 @@ describe('fetchFinanceUsersSnapshot', () => {
 
     const result = await fetchFinanceUsersSnapshot({ batchSize: 2, scanLimit: 3 });
 
-    expect(result.rows.map((user) => user.id)).toEqual([1, 2, 3]);
+    expect(result.rows.map((user) => user.id)).toEqual([1, 2, 101]);
     expect(result).toMatchObject({
-      nextFromId: 3,
+      nextFromId: 2,
       complete: false,
       scannedRows: 3,
       batches: 2,
       incompleteReason: 'scan_limit',
     });
+    expect(fetchMock.mock.calls.map(([input]) => (
+      Number(new URL(String(input)).searchParams.get('user[limit]'))
+    ))).toEqual([2, 1]);
   });
 
   it('fails closed when a full page does not advance the ascending user cursor', async () => {
     installApiFixture();
 
-    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => (
-      makeOkResponse('users', [
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const objectState = new URL(String(input)).searchParams.get('user[object_state]');
+      if (objectState === 'suspended') return makeOkResponse('users', []);
+      return makeOkResponse('users', [
         { id: 1, login: 'one', level: 1, object_state: 'active' },
         { id: 2, login: 'two', level: 1, object_state: 'active' },
-      ])
-    ));
+      ]);
+    });
 
     const result = await fetchFinanceUsersSnapshot({ batchSize: 2 });
 
     expect(result).toMatchObject({
       complete: false,
       scannedRows: 4,
-      batches: 2,
+      batches: 3,
       incompleteReason: 'cursor_stalled',
     });
     expect(result.nextFromId).toBeUndefined();
