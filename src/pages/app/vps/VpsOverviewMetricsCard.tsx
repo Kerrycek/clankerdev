@@ -23,10 +23,22 @@ import {
   sortStatusesByTimeAsc,
 } from './VpsOverviewModel';
 
-export function VpsOverviewMetricsCard(props: { vps: Vps }) {
+export function VpsOverviewMetricsCard(props: { vps: Vps; collapsedByDefault?: boolean }) {
   const { t } = useI18n();
   const [searchParams, setSearchParams] = useSearchParams();
   const tierSlowRefetchMs = useTierSlowIntervalMs();
+  const [expandedVpsIds, setExpandedVpsIds] = React.useState<Set<number>>(() => new Set());
+  const expanded = props.collapsedByDefault !== true || expandedVpsIds.has(props.vps.id);
+  const bodyId = `vps-overview-metrics-${props.vps.id}`;
+
+  const setExpanded = (nextExpanded: boolean) => {
+    setExpandedVpsIds((current) => {
+      const next = new Set(current);
+      if (nextExpanded) next.add(props.vps.id);
+      else next.delete(props.vps.id);
+      return next;
+    });
+  };
 
   const metricsWindow = parseMetricsWindow(searchParams.get('metrics_window'));
   const metricsLimit = metricsLimitForWindow(metricsWindow);
@@ -50,7 +62,7 @@ export function VpsOverviewMetricsCard(props: { vps: Vps }) {
         return (await fetchVpsStatuses(props.vps.id, { limit: metricsLimit })).data;
       }
     },
-    enabled: Number.isFinite(props.vps.id) && props.vps.id > 0,
+    enabled: expanded && Number.isFinite(props.vps.id) && props.vps.id > 0,
     refetchInterval: tierSlowRefetchMs,
   });
 
@@ -222,39 +234,57 @@ export function VpsOverviewMetricsCard(props: { vps: Vps }) {
     <Card className="lg:col-span-12" testId="vps.overview.metrics.card">
       <CardHeader
         title={t('vps.overview.metrics.title')}
-        subtitle={t('vps.overview.metrics.subtitle', { window: metricsWindow, samples: metricsRows.length })}
+        subtitle={expanded
+          ? t('vps.overview.metrics.subtitle', { window: metricsWindow, samples: metricsRows.length })
+          : t('vps.overview.metrics.collapsed_subtitle')}
         actions={(
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1">
-              {(['24h', '7d', '30d'] as const).map((w) => (
-                <button
-                  key={w}
-                  type="button"
-                  data-testid={`vps.overview.metrics.window.${w}`}
-                  className={buttonClassName({
-                    size: 'sm',
-                    variant: metricsWindow === w ? 'primary' : 'secondary',
-                  })}
-                  aria-pressed={metricsWindow === w}
-                  onClick={() => setMetricsWindow(w)}
+            {expanded ? (
+              <>
+                <div className="flex items-center gap-1">
+                  {(['24h', '7d', '30d'] as const).map((w) => (
+                    <button
+                      key={w}
+                      type="button"
+                      data-testid={`vps.overview.metrics.window.${w}`}
+                      className={buttonClassName({
+                        size: 'sm',
+                        variant: metricsWindow === w ? 'primary' : 'secondary',
+                      })}
+                      aria-pressed={metricsWindow === w}
+                      onClick={() => setMetricsWindow(w)}
+                    >
+                      {w}
+                    </button>
+                  ))}
+                </div>
+                <Button
+                  testId="vps.overview.metrics.refresh"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => metricsQ.refetch()}
+                  disabled={metricsQ.isFetching}
                 >
-                  {w}
-                </button>
-              ))}
-            </div>
-            <Button
-              testId="vps.overview.metrics.refresh"
-              variant="secondary"
-              size="sm"
-              onClick={() => metricsQ.refetch()}
-              disabled={metricsQ.isFetching}
-            >
-              {t('common.refresh')}
-            </Button>
+                  {t('common.refresh')}
+                </Button>
+              </>
+            ) : null}
+            {props.collapsedByDefault ? (
+              <button
+                type="button"
+                data-testid="vps.overview.metrics.toggle"
+                className={buttonClassName({ size: 'sm', variant: 'secondary' })}
+                aria-expanded={expanded}
+                aria-controls={bodyId}
+                onClick={() => setExpanded(!expanded)}
+              >
+                {expanded ? t('vps.overview.metrics.hide') : t('vps.overview.metrics.show')}
+              </button>
+            ) : null}
           </div>
         )}
       />
-      <CardBody>{body}</CardBody>
+      {expanded ? <div id={bodyId}><CardBody>{body}</CardBody></div> : null}
     </Card>
   );
 }

@@ -73,6 +73,7 @@ export const enVps_core = {
   'vps.actions.more.group.daily': 'Daily actions',
   'vps.actions.more.group.sections': 'Detail sections',
   'vps.actions.more.group.lifecycle': 'Lifecycle',
+  'vps.actions.more.group.support': 'Support and diagnostics',
   'vps.actions.more.group.admin': 'Admin operations',
   'vps.tabs.config': 'Config',
   'vps.tabs.access': 'Access',
