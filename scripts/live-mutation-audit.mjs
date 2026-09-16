@@ -12,8 +12,10 @@ import {
   cleanupOwnedObjects,
   createLiveRunIdentity,
   createObjectLedger,
+  dnsZoneNamesMatch,
   ensurePrivateDirectory,
   extractHaveApiResourceId,
+  isHaveApiResourceMissing,
   matchesHaveApiMutation,
   registerOwnedObject,
   writeLedgerAtomic,
@@ -184,17 +186,6 @@ async function captureMutation(method, resource, action) {
   return envelope;
 }
 
-function isNotFoundResponse(status, envelope) {
-  if (status === 404) return true;
-  const message = String(envelope?.message ?? '').toLowerCase();
-  return (
-    message.includes('not found') ||
-    message.includes('does not exist') ||
-    message.includes('unable to find') ||
-    message.includes('no such')
-  );
-}
-
 async function apiFetch(pathname, options = {}) {
   if (!context) throw new Error('Playwright context is not available for cleanup.');
   return context.request.fetch(`${apiBaseURL}${pathname}`, {
@@ -271,7 +262,7 @@ async function reconcilePendingDnsCreates() {
     'dns_zones',
     'dns_zone',
     { q: zoneName, limit: 100 },
-    (row) => String(row?.name ?? '') === zoneName
+    (row) => dnsZoneNamesMatch(zoneName, row?.name)
   );
   const reconciledZoneId = Number(matchingZone?.id);
   if (!Number.isSafeInteger(reconciledZoneId) || reconciledZoneId <= 0) return;
@@ -309,7 +300,7 @@ async function reconcilePendingDnsCreates() {
 async function fetchResourceState(resource, namespace, id) {
   const response = await apiFetch(`/${resource}/${id}`);
   const envelope = await response.json().catch(() => ({ status: false, message: '' }));
-  if (isNotFoundResponse(response.status(), envelope)) return { exists: false, resource: null };
+  if (isHaveApiResourceMissing(response.status(), envelope)) return { exists: false, resource: null };
   if (!response.ok() || envelope?.status === false) {
     throw new Error(`Unable to verify ${resource} #${id} during cleanup (HTTP ${response.status()}).`);
   }
@@ -348,7 +339,7 @@ async function cleanupResource(object) {
 
       const response = await apiFetch(`/${resource}/${object.id}`, { method: 'DELETE', data: {} });
       const envelope = await response.json().catch(() => ({ status: false, message: '' }));
-      if (isNotFoundResponse(response.status(), envelope)) return;
+      if (isHaveApiResourceMissing(response.status(), envelope)) return;
       if (!response.ok() || envelope?.status === false) {
         throw new Error(`DELETE ${resource} #${object.id} failed (HTTP ${response.status()}): ${String(envelope?.message ?? 'request failed')}`);
       }

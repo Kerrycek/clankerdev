@@ -13,7 +13,9 @@ import {
   cleanupOwnedObjects,
   createLiveRunIdentity,
   createObjectLedger,
+  dnsZoneNamesMatch,
   extractHaveApiResourceId,
+  isHaveApiResourceMissing,
   matchesHaveApiMutation,
   registerOwnedObject,
   writeLedgerAtomic,
@@ -99,6 +101,31 @@ test('live mutation role guard accepts only a valid administrator response', () 
   );
 });
 
+test('HaveAPI missing-resource detection accepts the exact empty show envelope and fails closed otherwise', () => {
+  assert.equal(isHaveApiResourceMissing(404, null), true);
+  assert.equal(isHaveApiResourceMissing(200, { status: false, response: null, message: 'Object not found' }), true);
+  assert.equal(
+    isHaveApiResourceMissing(200, { status: false, response: null, message: null, errors: null }),
+    true
+  );
+
+  for (const [status, envelope] of [
+    [500, { status: false, response: null, message: null, errors: null }],
+    [200, { status: false, response: null, message: 'permission denied', errors: null }],
+    [200, { status: false, response: {}, message: null, errors: null }],
+    [200, { status: true, response: null, message: null, errors: null }],
+  ]) {
+    assert.equal(isHaveApiResourceMissing(status, envelope), false);
+  }
+});
+
+test('DNS zone names compare exactly while accepting HaveAPI canonical trailing dots', () => {
+  assert.equal(dnsZoneNamesMatch('test.dev.crucio.cz', 'test.dev.crucio.cz.'), true);
+  assert.equal(dnsZoneNamesMatch('test.dev.crucio.cz.', 'test.dev.crucio.cz'), true);
+  assert.equal(dnsZoneNamesMatch('test.dev.crucio.cz', 'other.dev.crucio.cz.'), false);
+  assert.equal(dnsZoneNamesMatch('', '.'), false);
+});
+
 test('ledger rejects objects outside the run allowlist and records atomically', () => {
   const ledger = fixtureLedger();
   assert.throws(
@@ -174,9 +201,16 @@ test('cleanup identity check fails closed on changed DNS resource identity', () 
   assert.equal(
     assertCleanupResourceIdentity(ledger, zone, {
       namespace: 'dns_zone',
-      resource: { id: '10', name: zone.label },
+      resource: { id: '10', name: `${zone.label}.` },
     }).id,
     10
+  );
+  assert.throws(
+    () => assertCleanupResourceIdentity(ledger, zone, {
+      namespace: 'dns_zone',
+      resource: { id: 10, name: `${ledger.prefix}.other.dev.crucio.cz.` },
+    }),
+    /Refusing cleanup/
   );
   assert.equal(
     assertCleanupResourceIdentity(ledger, record, {
