@@ -34,6 +34,10 @@ export function Drawer(props: {
 
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
+        const target = e.target instanceof Element ? e.target : null;
+        const targetOverlay = target?.closest('[data-overlay-surface="overlay"]');
+        if (targetOverlay && targetOverlay !== containerEl) return;
+
         e.preventDefault();
         props.onClose();
       }
@@ -41,7 +45,7 @@ export function Drawer(props: {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [props.open, props.onClose]);
+  }, [containerEl, props.open, props.onClose]);
 
   if (!props.open) return null;
 

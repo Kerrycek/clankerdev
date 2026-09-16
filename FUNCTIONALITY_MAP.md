@@ -958,6 +958,45 @@ read-only live smoke check should inspect the three filtered GET requests with
 an owned test zone; no DNS mutation is needed for that verification.
 
 ---
+## Pending mutation confirmation safety
+
+**Status:** `mapped / implemented`
+
+Administrators and users must retain visible context while a confirmed write is
+still awaiting its API result. The shared confirmation dialog therefore treats
+`confirmLoading` and `cancelDisabled` as one cancellation contract: the Cancel
+button, Escape key, and backdrop click are all inert until cancellation is
+allowed again. This prevents a slow write from being hidden while its outcome
+is still unknown. When a confirmation is opened from a drawer, Escape ownership
+also stays with the foreground overlay: a newer modal can close without taking
+the drawer and its pending confirmation with it.
+
+Node maintenance is the concrete admin workflow used for browser verification.
+The backend exposes the admin-only
+`POST /v7.0/nodes/:node_id/set_maintenance` action with required `lock` and an
+optional reason. The legacy WebUI submits the maintenance form and waits for
+that API action before redirecting or showing the failure. WebUI Next keeps its
+responsive confirmation visible during the same in-flight interval and closes
+it after the successful result.
+
+Evidence:
+
+- Backend contract: `api/lib/vpsadmin/api/maintainable.rb` in the read-only
+  upstream checkout.
+- Legacy workflow: `webui/pages/page_cluster.php` in the read-only upstream
+  checkout.
+- Shared UI contract: `src/components/ui/ConfirmDialog.tsx`,
+  `src/components/ui/Drawer.tsx`, and `src/components/ui/ConfirmDialog.test.tsx`.
+- Delayed admin mutation coverage:
+  `e2e/specs/admin/node_detail_control_center.spec.ts`.
+
+The component test exercises every dismissal path directly from pending props.
+The Playwright test uses a delayed mocked maintenance endpoint to prove that
+keyboard, pointer, and visible button dismissal remain blocked without sending
+a duplicate write. Neither test performs or certifies a live maintenance
+mutation.
+
+---
 
 ### MFA known-device history and pagination
 
