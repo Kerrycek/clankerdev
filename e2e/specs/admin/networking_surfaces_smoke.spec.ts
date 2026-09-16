@@ -24,7 +24,11 @@ async function expectNoDocumentHorizontalOverflow(page: import('@playwright/test
   expect(overflow.documentWidth, JSON.stringify(overflow, null, 2)).toBeLessThanOrEqual(overflow.viewportWidth);
 }
 
-async function expectTableScrollContained(page: import('@playwright/test').Page, testId: string) {
+async function expectTableScrollContained(
+  page: import('@playwright/test').Page,
+  testId: string,
+  requiresHorizontalScroll = true,
+) {
   const metrics = await page.getByTestId(testId).evaluate((card) => {
     const scroller = card.firstElementChild as HTMLElement | null;
     const rect = card.getBoundingClientRect();
@@ -39,7 +43,11 @@ async function expectTableScrollContained(page: import('@playwright/test').Page,
 
   expect(metrics.cardRight).toBeLessThanOrEqual(metrics.viewportWidth);
   expect(metrics.scrollerOverflowX).toBe('auto');
-  expect(metrics.scrollerScrollWidth).toBeGreaterThan(metrics.scrollerClientWidth);
+  if (requiresHorizontalScroll) {
+    expect(metrics.scrollerScrollWidth).toBeGreaterThan(metrics.scrollerClientWidth);
+  } else {
+    expect(metrics.scrollerScrollWidth).toBeLessThanOrEqual(metrics.scrollerClientWidth + 1);
+  }
 }
 
 test.describe('Admin / Networking surfaces (smoke)', () => {
@@ -100,7 +108,7 @@ test.describe('Admin / Networking surfaces (smoke)', () => {
 
     await page.setViewportSize({ width: 390, height: 844 });
     await expectNoDocumentHorizontalOverflow(page);
-    await expectTableScrollContained(page, 'admin.host_ip_addresses.table');
+    await expectTableScrollContained(page, 'admin.host_ip_addresses.table', false);
 
     const proofScreenshot = process.env.E2E_HOST_IP_ACTIONS_PROOF_SCREENSHOT?.trim();
     if (proofScreenshot) await page.screenshot({ path: proofScreenshot, fullPage: true });

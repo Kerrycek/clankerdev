@@ -109,6 +109,10 @@ function isDefaultHiddenLegacyHostIp(row: HostIpAddress): boolean {
   );
 }
 
+function MobileCellLabel(props: { children: React.ReactNode }) {
+  return <div className="mb-1 text-xs font-semibold text-muted md:hidden">{props.children}</div>;
+}
+
 export function HostIpAddressesPage() {
   const { t } = useI18n();
   const { pushToast } = useToasts();
@@ -275,9 +279,10 @@ export function HostIpAddressesPage() {
         <TableCard
           testId="admin.host_ip_addresses.table"
           className="relative min-w-0 max-w-full overflow-x-hidden"
+          tableClassName="block md:table"
           footer={<KeysetPagination testId="admin.host_ip_addresses.pagination" page={paging.page} pageCount={paging.pageCount} canPrev={paging.canPrev} canNext={canNext} onPrev={paging.goPrev} onNext={() => paging.goNext(nextCursor ?? null)} onGoToPage={paging.goToPage} limit={paging.limit} onLimitChange={paging.setLimit} />}
         >
-          <thead>
+          <thead className="hidden md:table-header-group">
             <tr>
               <th aria-label={t('common.state')} />
               <th>{t('admin.host_ip_addresses.field.address')}</th>
@@ -290,30 +295,61 @@ export function HostIpAddressesPage() {
               <th><span className="sr-only">{t('common.actions')}</span></th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="block md:table-row-group">
             {rows.map((row) => {
               const id = Number((row as any).id);
               const variant = rowVariant(row);
               return (
-                <tr key={id} data-testid={`admin.host_ip_addresses.row.${id}`} data-row-variant={variant} className={clsx(variant ? toneSurfaceClass(variant) : undefined)}>
-                  <td><StatusDot variant={variant ?? 'ok'} testId={`admin.host_ip_addresses.row.${id}.dot`} /></td>
-                  <td className="font-medium tabular-nums">{String((row as any).addr ?? `#${id}`)}</td>
-                  <td className="tabular-nums">{ipAddrLabel(row)}</td>
-                  <td>{ifaceLabel(row)}</td>
-                  <td>{vpsLabel(row)}</td>
-                  <td>{userLabel(row)}</td>
-                  <td className="max-w-80 truncate">{String((row as any).reverse_record_value ?? t('common.na'))}</td>
-                  <td>
+                <tr
+                  key={id}
+                  data-testid={`admin.host_ip_addresses.row.${id}`}
+                  data-row-variant={variant}
+                  className={clsx(
+                    'block border-b border-border last:border-b-0 md:table-row md:border-b-0',
+                    variant ? toneSurfaceClass(variant) : undefined,
+                  )}
+                >
+                  <td className="hidden md:table-cell">
+                    <StatusDot variant={variant ?? 'ok'} testId={`admin.host_ip_addresses.row.${id}.dot`} />
+                  </td>
+                  <td className="block px-3 pb-1 pt-3 font-medium tabular-nums md:table-cell md:p-0">
+                    <MobileCellLabel>{t('admin.host_ip_addresses.field.address')}</MobileCellLabel>
+                    <span className="break-words">{String((row as any).addr ?? `#${id}`)}</span>
+                  </td>
+                  <td className="block px-3 py-1 tabular-nums md:table-cell md:p-0">
+                    <MobileCellLabel>{t('admin.host_ip_addresses.field.route')}</MobileCellLabel>
+                    <span className="break-words">{ipAddrLabel(row)}</span>
+                  </td>
+                  <td className="block px-3 py-1 md:table-cell md:p-0">
+                    <MobileCellLabel>{t('admin.host_ip_addresses.field.interface')}</MobileCellLabel>
+                    <span className="break-words">{ifaceLabel(row)}</span>
+                  </td>
+                  <td className="block px-3 py-1 md:table-cell md:p-0">
+                    <MobileCellLabel>{t('admin.host_ip_addresses.field.vps')}</MobileCellLabel>
+                    <span className="break-words">{vpsLabel(row)}</span>
+                  </td>
+                  <td className="block px-3 py-1 md:table-cell md:p-0">
+                    <MobileCellLabel>{t('admin.host_ip_addresses.field.user')}</MobileCellLabel>
+                    <span className="break-words">{userLabel(row)}</span>
+                  </td>
+                  <td className="block px-3 py-1 md:table-cell md:max-w-80 md:truncate md:p-0">
+                    <MobileCellLabel>{t('admin.host_ip_addresses.field.ptr')}</MobileCellLabel>
+                    <span className="break-words">{String((row as any).reverse_record_value ?? t('common.na'))}</span>
+                  </td>
+                  <td className="block px-3 py-1 md:table-cell md:p-0">
+                    <MobileCellLabel>{t('admin.host_ip_addresses.field.flags')}</MobileCellLabel>
                     <div className="flex flex-wrap gap-1">
                       <Badge tone={row.assigned === false ? 'warn' : 'ok'}>{row.assigned === false ? t('common.unassigned') : t('common.assigned')}</Badge>
                       {(row as any).user_created ? <Badge tone="neutral">{t('common.custom')}</Badge> : null}
                     </div>
                   </td>
-                  <td className="text-right">
+                  <td className="block px-3 pb-3 pt-1 md:table-cell md:p-0 md:text-right">
+                    <MobileCellLabel>{t('common.actions')}</MobileCellLabel>
                     <HostIpAddressRowActions
                       assigned={row.assigned !== false}
                       userCreated={Boolean((row as any).user_created)}
                       testIdPrefix={`admin.host_ip_addresses.row.${id}`}
+                      responsive
                       assignLoading={assignM.isPending}
                       freeLoading={freeM.isPending}
                       onEditPtr={() => {
