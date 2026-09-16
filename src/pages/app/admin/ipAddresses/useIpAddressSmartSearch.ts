@@ -19,7 +19,10 @@ import {
   resolveOrderValue,
   resolveVersionValue,
 } from './ipAddressListSemantics';
-import { shouldCancelIpAddressLookup } from './ipAddressSmartSearchGuard';
+import {
+  isIpAddressSmartFeedbackCurrent,
+  shouldCancelIpAddressLookup,
+} from './ipAddressSmartSearchGuard';
 
 interface UseIpAddressSmartSearchOptions {
   searchParams: URLSearchParams;
@@ -58,6 +61,8 @@ export function useIpAddressSmartSearch({
   const lookupGenerationRef = useRef(0);
   const lookupAbortRef = useRef<AbortController | null>(null);
   const lookupSearchParamsSignatureRef = useRef<string | null>(null);
+  // A late Router effect for the same URL must not erase feedback from a lookup that already finished.
+  const smartFeedbackSearchParamsSignatureRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (smartNeedle === '?') setHelpOpen(true);
@@ -85,8 +90,16 @@ export function useIpAddressSmartSearch({
         searchParamsSignature
       )
     ) cancelLookup();
-    setSmartErrors([]);
-    setSmartSearchBlocked(false);
+    if (
+      !isIpAddressSmartFeedbackCurrent(
+        smartFeedbackSearchParamsSignatureRef.current,
+        searchParamsSignature
+      )
+    ) {
+      smartFeedbackSearchParamsSignatureRef.current = null;
+      setSmartErrors([]);
+      setSmartSearchBlocked(false);
+    }
   }, [cancelLookup, searchParamsSignature]);
 
   useEffect(() => () => {
@@ -97,12 +110,14 @@ export function useIpAddressSmartSearch({
   }, []);
 
   const clearSmartErrors = () => {
+    smartFeedbackSearchParamsSignatureRef.current = null;
     setSmartErrors([]);
     setSmartSearchBlocked(false);
   };
 
   const dismissSmartErrors = useCallback(() => {
     cancelLookup();
+    smartFeedbackSearchParamsSignatureRef.current = null;
     setSmartValue('');
     setSmartErrors([]);
     setSmartSearchBlocked(false);
@@ -124,6 +139,7 @@ export function useIpAddressSmartSearch({
 
   const clearFilters = () => {
     cancelLookup();
+    smartFeedbackSearchParamsSignatureRef.current = null;
     setSmartValue('');
     setSmartErrors([]);
     setSmartSearchBlocked(false);
@@ -155,6 +171,7 @@ export function useIpAddressSmartSearch({
     if (tokens.length === 1) {
       const num = parseNumericToken(tokens[0] ?? '');
       if (num) {
+        smartFeedbackSearchParamsSignatureRef.current = null;
         openIp(num);
         setSmartValue('');
         setSmartErrors([]);
@@ -211,6 +228,7 @@ export function useIpAddressSmartSearch({
           const id = parseNumericToken(valueRaw);
           if (!id) errors.push(t('admin.ip_addresses.smart.error.id', { value: valueRaw }));
           else {
+            smartFeedbackSearchParamsSignatureRef.current = null;
             setSmartValue('');
             setSmartErrors([]);
             setSmartSearchBlocked(false);
@@ -341,11 +359,13 @@ export function useIpAddressSmartSearch({
     setSmartResolving(false);
     setSmartErrors(errors);
     if (errors.length > 0) {
+      smartFeedbackSearchParamsSignatureRef.current = initialSearchParamsSignature;
       setSmartSearchBlocked(usedUserLookup);
       toasts.pushToast({ variant: 'danger', title: errors[0] ?? t('common.unknown_error') });
       return;
     }
 
+    smartFeedbackSearchParamsSignatureRef.current = null;
     setSmartValue('');
     next.delete('q');
     next.delete('from_id');
@@ -391,6 +411,7 @@ export function useIpAddressSmartSearch({
         primary: t('admin.ip_addresses.smart.suggest.open', { id: num }),
         secondary: t('admin.ip_addresses.smart.suggest.open.secondary'),
         onPick: () => {
+          smartFeedbackSearchParamsSignatureRef.current = null;
           openIp(num);
           setSmartValue('');
           setSmartErrors([]);
@@ -410,6 +431,7 @@ export function useIpAddressSmartSearch({
           : t('admin.ip_addresses.smart.suggest.addr', { addr }),
         secondary: t('admin.ip_addresses.smart.suggest.addr.secondary'),
         onPick: () => {
+          smartFeedbackSearchParamsSignatureRef.current = null;
           setAddressFilter(addr, prefix);
           setSmartValue('');
           setSmartErrors([]);

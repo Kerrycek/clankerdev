@@ -7,3 +7,13 @@ export function shouldCancelIpAddressLookup(
     lookupSearchParamsSignature !== currentSearchParamsSignature
   );
 }
+
+export function isIpAddressSmartFeedbackCurrent(
+  feedbackSearchParamsSignature: string | null,
+  currentSearchParamsSignature: string
+): boolean {
+  return (
+    feedbackSearchParamsSignature !== null &&
+    feedbackSearchParamsSignature === currentSearchParamsSignature
+  );
+}

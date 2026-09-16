@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'vitest';
 
-import { shouldCancelIpAddressLookup } from './ipAddressSmartSearchGuard';
+import {
+  isIpAddressSmartFeedbackCurrent,
+  shouldCancelIpAddressLookup,
+} from './ipAddressSmartSearchGuard';
 
 describe('shouldCancelIpAddressLookup', () => {
   test('keeps a lookup started after the current URL commit when its passive effect runs late', () => {
@@ -16,5 +19,23 @@ describe('shouldCancelIpAddressLookup', () => {
         'limit=50&user=48&version=6&page=1'
       )
     ).toBe(true);
+  });
+
+  test('keeps lookup feedback when a late effect observes the same URL', () => {
+    const currentSignature = 'limit=50&page=1';
+
+    expect(
+      isIpAddressSmartFeedbackCurrent(currentSignature, currentSignature)
+    ).toBe(true);
+  });
+
+  test('discards lookup feedback after a real URL change', () => {
+    expect(
+      isIpAddressSmartFeedbackCurrent(
+        'limit=50&page=1',
+        'limit=50&page=1&version=6'
+      )
+    ).toBe(false);
+    expect(isIpAddressSmartFeedbackCurrent(null, 'limit=50&page=1')).toBe(false);
   });
 });
