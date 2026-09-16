@@ -420,8 +420,7 @@ test('admin user view fetches assignments through own user scope instead of the 
 
   await page.getByTestId('network.user.tab.traffic').click();
   await expect(page.getByTestId('network.user.traffic')).toBeVisible();
-  expect(accountingRequests).toHaveLength(6);
-  expect(
-    accountingRequests.every((url) => url.searchParams.get('network_interface_accounting[user]') === '7')
-  ).toBe(true);
+  await expect.poll(() => (
+    accountingRequests.map((url) => url.searchParams.get('network_interface_accounting[user]'))
+  )).toEqual(Array(6).fill('7'));
 });
