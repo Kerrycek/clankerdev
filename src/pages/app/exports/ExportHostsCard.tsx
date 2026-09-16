@@ -12,6 +12,10 @@ import { clsx } from '../../../components/ui/clsx';
 import type { ExportHost } from '../../../lib/api/exports';
 import { hostLabel, parsePositiveInt } from './ExportModel';
 
+function NarrowCellLabel(props: { children: React.ReactNode }) {
+  return <span className="text-xs font-medium text-faint @xl:hidden">{props.children}</span>;
+}
+
 export function ExportHostsCard(props: {
   allVps: boolean;
   hosts: ExportHost[];
@@ -37,7 +41,7 @@ export function ExportHostsCard(props: {
             </Button>
           }
         />
-        <CardBody>
+        <CardBody className="@container">
           {props.allVps ? (
             <Alert title={t('exports.detail.hosts.all_vps_title')} variant="info">
               {t('exports.detail.hosts.all_vps_body')}
@@ -50,8 +54,12 @@ export function ExportHostsCard(props: {
             <div className="text-sm text-muted" data-testid="exports.detail.hosts.empty">{t('exports.detail.hosts.empty')}</div>
           ) : null}
           {!props.loading && !props.error && hasHosts ? (
-            <TableCard testId="exports.detail.hosts.table" variant="plain" minWidth="full">
-              <thead>
+            <TableCard
+              testId="exports.detail.hosts.table"
+              variant="plain"
+              tableClassName="block @xl:table"
+            >
+              <thead className="hidden @xl:table-header-group">
                 <tr>
                   <th className="px-2 py-2 text-left text-xs font-semibold text-muted">{t('exports.detail.hosts.address')}</th>
                   <th className="px-2 py-2 text-left text-xs font-semibold text-muted">{t('exports.field.mode')}</th>
@@ -59,24 +67,52 @@ export function ExportHostsCard(props: {
                   <th className="px-2 py-2 text-right text-xs font-semibold text-muted">{t('common.actions')}</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="block @xl:table-row-group">
                 {props.hosts.map((host) => {
                   const hostId = parsePositiveInt(host.id) ?? 0;
                   return (
-                    <tr key={hostId} data-testid={`exports.detail.hosts.row.${hostId}`} className={clsx('border-t border-border/80')}>
-                      <td className="px-2 py-2 font-mono text-xs text-fg">{hostLabel(host)}</td>
-                      <td className="px-2 py-2 text-sm text-fg">{host.rw ? t('exports.mode.rw') : t('exports.mode.ro')}</td>
-                      <td className="px-2 py-2">
-                        <div className="flex flex-wrap gap-1">
+                    <tr
+                      key={hostId}
+                      data-testid={`exports.detail.hosts.row.${hostId}`}
+                      className={clsx('block border-t border-border/80 @xl:table-row')}
+                    >
+                      <td className="grid min-w-0 grid-cols-[minmax(6rem,0.38fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 @xl:table-cell @xl:px-2">
+                        <NarrowCellLabel>{t('exports.detail.hosts.address')}</NarrowCellLabel>
+                        <span className="min-w-0 break-words font-mono text-xs text-fg">{hostLabel(host)}</span>
+                      </td>
+                      <td className="grid min-w-0 grid-cols-[minmax(6rem,0.38fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 text-sm text-fg @xl:table-cell @xl:px-2">
+                        <NarrowCellLabel>{t('exports.field.mode')}</NarrowCellLabel>
+                        <span className="min-w-0 break-words">{host.rw ? t('exports.mode.rw') : t('exports.mode.ro')}</span>
+                      </td>
+                      <td className="grid min-w-0 grid-cols-[minmax(6rem,0.38fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 @xl:table-cell @xl:px-2">
+                        <NarrowCellLabel>{t('common.state')}</NarrowCellLabel>
+                        <div className="flex min-w-0 flex-wrap gap-1">
                           <Badge variant={Boolean(host.sync) ? 'ok' : 'warn'}>{t('exports.field.sync')}</Badge>
                           <Badge variant={Boolean(host.subtree_check) ? 'info' : 'neutral'}>{t('exports.field.subtree_check')}</Badge>
                           <Badge variant={Boolean(host.root_squash) ? 'info' : 'neutral'}>{t('exports.field.root_squash')}</Badge>
                         </div>
                       </td>
-                      <td className="px-2 py-2 text-right">
-                        <div className="flex justify-end gap-2" data-row-no-nav>
-                          <Button size="sm" variant="secondary" onClick={() => props.onEditHost(host)} testId={`exports.detail.hosts.row.${hostId}.edit`}>{t('common.edit')}</Button>
-                          <Button size="sm" variant="danger" onClick={() => props.onDeleteHost(host)} testId={`exports.detail.hosts.row.${hostId}.delete`}>{t('common.delete')}</Button>
+                      <td className="grid min-w-0 grid-cols-[minmax(6rem,0.38fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 @xl:table-cell @xl:px-2">
+                        <NarrowCellLabel>{t('common.actions')}</NarrowCellLabel>
+                        <div className="flex min-w-0 flex-wrap justify-end gap-2 @xl:flex-nowrap" data-row-no-nav>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="min-h-11 w-full whitespace-nowrap @xl:min-h-8 @xl:w-auto"
+                            onClick={() => props.onEditHost(host)}
+                            testId={`exports.detail.hosts.row.${hostId}.edit`}
+                          >
+                            {t('common.edit')}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="danger"
+                            className="min-h-11 w-full whitespace-nowrap @xl:min-h-8 @xl:w-auto"
+                            onClick={() => props.onDeleteHost(host)}
+                            testId={`exports.detail.hosts.row.${hostId}.delete`}
+                          >
+                            {t('common.delete')}
+                          </Button>
                         </div>
                       </td>
                     </tr>
