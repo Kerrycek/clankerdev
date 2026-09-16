@@ -213,7 +213,7 @@ test('@pr-smoke @pr-smoke-mobile invalid user_session is removed before the page
             ? input.href
             : input.url;
       const requestUrl = new URL(rawUrl, window.location.href);
-      const isPageRequest = requestUrl.searchParams.get('transaction_chain[limit]') === '50';
+      const isPageRequest = requestUrl.searchParams.get('transaction_chain[limit]') === '51';
       const isUnfiltered = !requestUrl.searchParams.has('transaction_chain[user_session]');
 
       if (requestUrl.pathname.endsWith('/transaction_chains') && isPageRequest && isUnfiltered) {
@@ -229,7 +229,7 @@ test('@pr-smoke @pr-smoke-mobile invalid user_session is removed before the page
     user: { id: 1, login: 'e2e', level: 1 },
     handlers: {
       'GET transaction_chains': ({ searchParams }) => {
-        const isPageRequest = searchParams.get('transaction_chain[limit]') === '50';
+        const isPageRequest = searchParams.get('transaction_chain[limit]') === '51';
         const isUnfiltered = !searchParams.has('transaction_chain[user_session]');
 
         if (isPageRequest && isUnfiltered) {

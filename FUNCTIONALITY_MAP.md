@@ -52,6 +52,53 @@ not silently restore historical documents as current requirements.
 
 ---
 
+## Transaction-chain audit pagination
+
+**Status:** `mapped / partial`
+
+The transaction-chain audit at `/app/transactions` and
+`/admin/transactions` preserves the legacy capability to inspect asynchronous
+work by exact chain, state, operation name, concern class/object, user, and user
+session. Arbitrary user scope is admin-only; My view keeps exact filtering by
+the current user's own session. Transaction-item diagnostics and the broader
+task workflows are separate capability slices outside this section.
+
+`TransactionChain.Index` uses descending keyset pagination. WebUI Next asks for
+one more record than the selected visible page size, renders only the selected
+25/50/100 rows, and derives the next cursor from the last visible chain. Next
+is enabled only when the hidden look-ahead record proves another page exists;
+an exact-size final page therefore no longer opens an empty page. A previously
+visited forward cursor remains usable through the shared local cursor stack.
+
+The combined `errors=1` view performs the same look-ahead independently for
+the backend's `failed` and `fatal` states, deduplicates their union, orders it
+by descending chain ID, and only then trims the visible page. Pinned chains are
+supplemental status rows: they do not consume the page size or influence its
+cursor and Next state.
+
+Evidence:
+
+- Backend contract and authorization:
+  `api/lib/vpsadmin/api/resources/transaction_chain.rb` and
+  `api/spec/api/resources/transaction_chain_read_spec.rb` in the read-only
+  upstream vpsAdmin checkout.
+- Legacy audit and filter workflow: `webui/pages/page_transactions.php` in the
+  read-only upstream checkout.
+- WebUI Next page and cursor stack:
+  `src/pages/app/TransactionChainsPage.tsx` and
+  `src/lib/hooks/useKeysetPagination.ts`.
+- Mocked desktop/mobile browser contract:
+  `e2e/specs/app/transaction_chains_keyset_pagination.spec.ts`.
+
+The Playwright contract covers user/admin routes, exact terminal pages, a real
+look-ahead boundary, Prev/Next cursor continuity, and the merged error-state
+stream. It does not mutate or certify live transaction data. This fix makes
+the final-page signal exact, but it does not claim lossless traversal while the
+API applies an ID cursor to a query ordered first by `created_at`; that upstream
+ordering limitation remains tracked by issue #189.
+
+---
+
 ## Incident report listing and exact filters
 
 **Status:** `mapped / implemented`
@@ -889,7 +936,7 @@ current UX, and end-to-end evidence.
 | Exports | list and detail | `inventory only` |
 | DNS | zones; records, transfers, DNSSEC, servers, settings, logs; user TSIG keys | `inventory only` |
 | Networking | user addresses/traffic/live networking surface | `inventory only` |
-| Operations | transaction chains/items, action states, monitoring events | `inventory only` |
+| Operations | transaction-chain audit pagination is mapped above; transaction-item diagnostics, action states, monitoring events, and broader task behavior are tracked as separate slices | `mapped / partial` |
 | Support events | incidents including report creation; OOM reports, details, and rules | `inventory only` |
 | Payments | user payment/billing surface | `inventory only` |
 | Account | profile, resources, security, MFA, mail, keys, sessions, metrics tokens, user data, user namespaces/maps | `inventory only` |

@@ -41,11 +41,11 @@ import { buildTransactionChainActiveFilterChips, buildTransactionChainSmartSugge
 import { splitTransactionActivityRows } from './transactions/transactionActivityVisibility';
 import { useChrome } from '../../components/layout/ChromeContext';
 import { useKeysetPagination } from '../../lib/hooks/useKeysetPagination';
-import { cursorFromDescendingPage } from '../../lib/lockIndex';
 import { useTierAIntervalMs, useTierBIntervalMs } from '../../lib/refreshTiers';
 import { useDebouncedValue } from '../../lib/hooks/useDebouncedValue';
 import { parseNumericToken, splitKeyValueToken, tokenizeSmartInput, unquoteSmartValue } from '../../lib/smartFilter';
 import { isFailedChainState, isFinishedChainState } from '../../lib/taskStatus';
+import { mergeTransactionChainStreams, transactionChainPage } from './transactions/transactionChainPagination';
 
 
 export function TransactionChainsPage() {
@@ -245,10 +245,11 @@ function TransactionChainsContent() {
       },
     ],
     queryFn: async () => {
+      const lookaheadLimit = pagination.limit + 1;
       if (errorsOnly) {
         const [failedRes, fatalRes] = await Promise.all([
           fetchTransactionChains({
-            limit: pagination.limit,
+            limit: lookaheadLimit,
             fromId: pagination.fromId,
             state: 'failed',
             name: nameQuery,
@@ -258,7 +259,7 @@ function TransactionChainsContent() {
             userSessionId: userSessionNum,
           }),
           fetchTransactionChains({
-            limit: pagination.limit,
+            limit: lookaheadLimit,
             fromId: pagination.fromId,
             state: 'fatal',
             name: nameQuery,
@@ -269,21 +270,12 @@ function TransactionChainsContent() {
           }),
         ]);
 
-        const combined = [...(failedRes.data ?? []), ...(fatalRes.data ?? [])];
-        const byId = new Map<number, TransactionChain>();
-        for (const chain of combined) {
-          const id = getChainId(chain);
-          if (id > 0) byId.set(id, chain);
-        }
-
-        return [...byId.values()]
-          .sort((a, b) => getChainId(b) - getChainId(a))
-          .slice(0, pagination.limit);
+        return mergeTransactionChainStreams([failedRes.data, fatalRes.data], lookaheadLimit);
       }
 
       return (
         await fetchTransactionChains({
-          limit: pagination.limit,
+          limit: lookaheadLimit,
           fromId: pagination.fromId,
           state: state || undefined,
           name: nameQuery,
@@ -297,6 +289,8 @@ function TransactionChainsContent() {
     refetchInterval: tierARefetchMs,
     enabled: !queryId && !invalidUserSession,
   });
+
+  const page = useMemo(() => transactionChainPage(q.data, pagination.limit), [pagination.limit, q.data]);
 
   const filtersActive =
     Boolean(queryTrim) ||
@@ -588,7 +582,7 @@ function TransactionChainsContent() {
       }
     }
 
-    for (const c of q.data ?? []) {
+    for (const c of page.rows) {
       const id = getChainId(c);
       if (!Number.isFinite(id) || id <= 0) continue;
       if (map.has(id)) continue;
@@ -626,7 +620,7 @@ function TransactionChainsContent() {
     });
 
     return arr;
-  }, [classNameNorm, errorsOnly, idQ.data, pinnedIds, pinnedQs, pinnedSet, q.data, queryId, queryLower, queryTrim, rowIdNum, state, userIdNum, userSessionNum]);
+  }, [classNameNorm, errorsOnly, idQ.data, page.rows, pinnedIds, pinnedQs, pinnedSet, queryId, queryLower, queryTrim, rowIdNum, state, userIdNum, userSessionNum]);
 
   const collapseSystemActivity = uiMode !== 'admin' && !filtersActive;
   const { visibleRows, systemRows } = useMemo(
@@ -634,8 +628,8 @@ function TransactionChainsContent() {
     [collapseSystemActivity, rows]
   );
 
-  const pageCursor = useMemo(() => cursorFromDescendingPage(q.data as TransactionChain[] | undefined), [q.data]);
-  const hasMore = (q.data ?? []).length >= pagination.limit;
+  const pageCursor = page.cursor;
+  const hasMore = page.hasMore;
 
   const anyLoading = q.isLoading || pinnedQs.some((x) => x.isLoading) || idQ.isLoading;
   const anyError = q.isError || idQ.isError;
