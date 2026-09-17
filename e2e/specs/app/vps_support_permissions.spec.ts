@@ -31,6 +31,7 @@ const supportVps = {
 
 test('@pr-smoke support account stays read-only inside the admin VPS shell', async ({ page }) => {
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_SUPPORT_SESSION' });
+  const mobileLayout = (page.viewportSize()?.width ?? 0) < 768;
 
   let nodeRequests = 0;
   const mutatingApiRequests: string[] = [];
@@ -162,8 +163,11 @@ test('@pr-smoke support account stays read-only inside the admin VPS shell', asy
   await page.goto('/admin/vps/123/network');
 
   await expect(page.getByTestId('vps.network.read_only')).toBeVisible();
-  await expect(page.getByTestId('vps.network.interfaces.row.31')).toBeVisible();
-  await expect(page.getByTestId('vps.network.interfaces.row.31.edit')).toHaveCount(0);
+  const interfaceTestId = mobileLayout
+    ? 'vps.network.interfaces.card.31'
+    : 'vps.network.interfaces.row.31';
+  await expect(page.getByTestId(interfaceTestId)).toBeVisible();
+  await expect(page.getByTestId(`${interfaceTestId}.edit`)).toHaveCount(0);
   await expect(page.getByTestId('vps.network.ip_addresses.item.41')).toBeVisible();
   await expect(page.getByTestId('vps.network.ip_addresses.add')).toHaveCount(0);
   await expect(page.getByTestId('vps.network.ip_addresses.item.41.free_route')).toHaveCount(0);
@@ -176,9 +180,12 @@ test('@pr-smoke support account stays read-only inside the admin VPS shell', asy
 
   await expect(page.getByTestId('vps.storage.read_only')).toBeVisible();
   await expect(page.getByTestId('vps.storage.mounts.add')).toHaveCount(0);
-  await expect(page.getByTestId('vps.storage.mounts.row.61')).toBeVisible();
-  await expect(page.getByTestId('vps.storage.mounts.row.61.edit')).toHaveCount(0);
-  await expect(page.getByTestId('vps.storage.mounts.row.61.delete')).toHaveCount(0);
+  const mountTestId = mobileLayout
+    ? 'vps.storage.mounts.card.61'
+    : 'vps.storage.mounts.row.61';
+  await expect(page.getByTestId(mountTestId)).toBeVisible();
+  await expect(page.getByTestId(`${mountTestId}.edit`)).toHaveCount(0);
+  await expect(page.getByTestId(`${mountTestId}.delete`)).toHaveCount(0);
   await expect(page.getByTestId('vps.storage.root_dataset.create_subdataset')).toHaveCount(0);
 
   await page.goto('/admin/vps/123/features');
