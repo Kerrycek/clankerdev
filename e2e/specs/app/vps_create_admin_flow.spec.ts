@@ -60,9 +60,10 @@ function choicesHandlers() {
 }
 
 test.describe('@workflow-matrix @pr-smoke VPS create admin flow', () => {
-  test('keeps guard identity, payload and callback scope on the submitted form snapshot across rerender', async ({ page }) => {
+  test('keeps guard identity and payload on the submitted snapshot, then clears the receipt', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_USER' });
     const createBodies: any[] = [];
+    let receiptAtRequest: unknown = null;
     page.on('request', (request) => {
       if (request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/vpses')) {
         createBodies.push(request.postDataJSON());
@@ -71,6 +72,17 @@ test.describe('@workflow-matrix @pr-smoke VPS create admin flow', () => {
     await installHaveApiMock(page, {
       user: { id: 2, login: 'member', level: 1 },
       handlers: choicesHandlers(),
+    });
+    await page.route(/\/api\/v7\.0\/vpses$/, async (route) => {
+      if (route.request().method() === 'POST') {
+        receiptAtRequest = await page.evaluate(() => {
+          const key = Object.keys(localStorage).find((item) => (
+            item.startsWith('webui-next.vps-create-outcome-uncertain')
+          ));
+          return key ? JSON.parse(localStorage.getItem(key) ?? 'null') : null;
+        });
+      }
+      await route.fallback();
     });
     await page.goto('/app/vps/new');
     await page.getByTestId('vps.create.location').selectOption('2');
@@ -94,13 +106,13 @@ test.describe('@workflow-matrix @pr-smoke VPS create admin flow', () => {
 
     expect(createBodies).toHaveLength(1);
     expect(createBodies[0].vps.hostname).toBe('snapshot-a.example');
-    const receipts = await page.evaluate(() => Object.values(window.localStorage)
-      .map((value) => { try { return JSON.parse(value); } catch { return null; } })
-      .filter(Boolean));
-    expect(receipts).toContainEqual(expect.objectContaining({
-      phase: 'accepted',
+    expect(receiptAtRequest).toEqual(expect.objectContaining({
+      phase: 'pending',
       identity: expect.objectContaining({ hostname: 'snapshot-a.example', ownerId: 2, locationId: 2 }),
     }));
+    await expect.poll(() => page.evaluate(() => Object.keys(localStorage).filter((key) => (
+      key.startsWith('webui-next.vps-create-outcome-uncertain')
+    )))).toEqual([]);
   });
 
   test('keeps an admin in user-scope create flow on app route', async ({ page }) => {
