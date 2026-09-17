@@ -187,7 +187,7 @@ test.describe('@workflow-matrix VPS create failure regressions', () => {
     expect(postCount).toBe(1);
   });
 
-  test('persists an accepted create receipt and reconciles the exact returned VPS before clearing it', async ({ page }) => {
+  test('clears a normally bound accepted receipt before a later create form is opened', async ({ page }) => {
     let postCount = 0;
     const createdVps = {
       id: 153,
@@ -207,17 +207,53 @@ test.describe('@workflow-matrix VPS create failure regressions', () => {
     await page.getByTestId('vps.create.submit').click();
     await expect(page).toHaveURL(/\/app\/vps\/153$/);
     expect(postCount).toBe(1);
+    await expect.poll(() => page.evaluate(() => Object.keys(localStorage).filter(
+      (key) => key.startsWith('webui-next.vps-create-outcome-uncertain')
+    ))).toEqual([]);
 
     await page.goto('/app/vps/new');
-    await expect(page.getByTestId('vps.create.accepted')).toBeVisible();
-    await expect(page.getByTestId('vps.create.submit')).toBeDisabled();
-    await page.reload();
-    await expect(page.getByTestId('vps.create.accepted')).toBeVisible();
-    await page.getByTestId('vps.create.uncertain.open_tasks').click();
-    await page.getByTestId('tasks.close-button').click();
-    await expect(page.getByTestId('vps.create.uncertain.acknowledge')).toBeEnabled();
-    await page.getByTestId('vps.create.uncertain.acknowledge').click();
-    await expect(page).toHaveURL(/\/app\/vps\/153$/);
+    await expect(page.getByTestId('vps.create.accepted')).toHaveCount(0);
+    await expect(page.getByTestId('vps.create.submit')).toBeEnabled();
+    expect(postCount).toBe(1);
+  });
+
+  test('@pr-smoke @pr-smoke-mobile does not expose or follow another form\'s accepted VPS receipt', async ({ page }) => {
+    let postCount = 0;
+    await installCreateMock(page, () => {
+      postCount += 1;
+      return {
+        vps: { id: 30333, hostname: 'current-member.example' },
+        _meta: { action_state_id: 12806325 },
+      };
+    });
+
+    await page.goto('/app/vps/new');
+    await page.evaluate(() => {
+      const marker = {
+        id: 'stale-admin-receipt',
+        createdAt: Date.now(),
+        phase: 'accepted',
+        pageSessionId: 'another-tab:another-member-form',
+        identity: { hostname: 'someone-elses-vps', ownerId: 5402, locationId: 2 },
+        candidateVpsId: 30332,
+        actionStateId: 12806324,
+      };
+      localStorage.setItem(
+        'webui-next.vps-create-outcome-uncertain.user-2.generation-stale-admin-receipt',
+        JSON.stringify(marker),
+      );
+    });
+
+    await page.goto('/app/vps/new');
+    await expect(page.getByTestId('vps.create.accepted')).toHaveCount(0);
+    await expect(page.getByText(/30332|12806324/)).toHaveCount(0);
+    await expect(page.getByTestId('vps.create.submit')).toBeEnabled();
+
+    await fillCreateForm(page, 'current-member.example');
+    await page.getByTestId('vps.create.submit').click();
+
+    await expect(page).toHaveURL(/\/app\/vps\/30333$/);
+    await expect(page).not.toHaveURL(/\/app\/vps\/30332$/);
     expect(postCount).toBe(1);
   });
 
