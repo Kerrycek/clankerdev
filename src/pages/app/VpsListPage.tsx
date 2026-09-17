@@ -323,6 +323,9 @@ export function VpsListPage() {
       : t('empty.list.none.body')
     : t('empty.list.no_matches.body');
   const showOwnerContext = scope.scope !== 'mine';
+  const createPath = mode === 'admin' && listFilters.userIdNum !== undefined
+    ? `${basePath}/vps/new?user=${encodeURIComponent(String(listFilters.userIdNum))}`
+    : `${basePath}/vps/new`;
 
   const onStart = (row: (typeof displayRows)[number]) =>
     powerM.mutate({
@@ -342,7 +345,7 @@ export function VpsListPage() {
           title={t('nav.vps')}
           description={t('vps.list.description')}
           actions={
-            <Button to={`${basePath}/vps/new`} testId="vps.list.create">
+            <Button to={createPath} testId="vps.list.create">
               <Plus className="h-4 w-4" />
               {t('vps.create.open')}
             </Button>

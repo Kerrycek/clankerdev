@@ -18,6 +18,7 @@ const testState = vi.hoisted(() => ({
   createVps: vi.fn(),
   beginOutcome: vi.fn(),
   markAccepted: vi.fn(),
+  clearOutcome: vi.fn(),
   readLatest: vi.fn(),
 }));
 
@@ -67,7 +68,7 @@ vi.mock('../../../lib/api/vps', async (importOriginal) => {
 
 vi.mock('../../../lib/vpsCreateOutcomeGuard', () => ({
   beginVpsCreateOutcomeGuard: testState.beginOutcome,
-  clearVpsCreateOutcomeMarker: vi.fn(),
+  clearVpsCreateOutcomeMarker: testState.clearOutcome,
   markVpsCreateOutcomeAccepted: testState.markAccepted,
   markVpsCreateOutcomeUncertain: vi.fn(),
   readLatestVpsCreateOutcomeMarker: testState.readLatest,
@@ -86,6 +87,7 @@ describe('VpsCreatePage accepted action binding', () => {
     testState.readLatest.mockReturnValue(null);
     testState.beginOutcome.mockResolvedValue(pending);
     testState.markAccepted.mockResolvedValue({ ...pending, phase: 'accepted', candidateVpsId: 123, actionStateId: 456 });
+    testState.clearOutcome.mockResolvedValue(true);
     testState.createVps.mockResolvedValue({ data: { id: 123 }, meta: { action_state_id: 456 } });
   });
 
@@ -134,10 +136,41 @@ describe('VpsCreatePage accepted action binding', () => {
     expect(retryBinding.objectLabel).toBe('accepted-vps');
     expect(testState.settleLocalLock).not.toHaveBeenCalled();
     expect(testState.releaseLocalLock).not.toHaveBeenCalled();
+    expect(testState.clearOutcome).toHaveBeenCalledWith(expect.objectContaining({
+      userId: 9,
+      marker: expect.objectContaining({ phase: 'accepted', candidateVpsId: 123, actionStateId: 456 }),
+    }));
     expect(await screen.findByTestId('created-vps')).toBeInTheDocument();
     expect(router.state.location.state).toEqual({
       pendingVpsCreate: { vpsId: 123, actionStateId: 456 },
     });
+  });
+
+  it('does not project an accepted receipt from an older create page into a fresh form', async () => {
+    testState.readLatest.mockReturnValue({
+      id: 'old-receipt',
+      createdAt: 1,
+      phase: 'accepted',
+      pageSessionId: 'another-tab:another-entry',
+      identity: { hostname: 'someone-elses-vps', ownerId: 5402 },
+      candidateVpsId: 30332,
+      actionStateId: 12806324,
+    });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    const router = createMemoryRouter([
+      { path: '/app/vps/new', element: <VpsCreatePage /> },
+    ], { initialEntries: ['/app/vps/new'] });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByTestId('vps.create.submit')).not.toBeDisabled();
+    expect(screen.queryByTestId('vps.create.accepted')).not.toBeInTheDocument();
+    expect(screen.queryByText(/30332/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/12806324/)).not.toBeInTheDocument();
   });
 
   it('persists an accepted A receipt without projecting a deferred response into user B', async () => {
