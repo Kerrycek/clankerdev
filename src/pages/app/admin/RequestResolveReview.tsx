@@ -105,7 +105,9 @@ export function RequestResolveReview(props: {
 }) {
   const { t } = useI18n();
   const state = String(props.request.state ?? '').trim();
-  const risk = props.reqType === 'registration' ? fraudRiskBadge(props.request as RegistrationRequest) : null;
+  const risk = props.reqType === 'registration' && props.action === 'approve'
+    ? fraudRiskBadge(props.request as RegistrationRequest)
+    : null;
   const rows = useMemo(
     () => overrideRows(props.reqType, props.action, props.overrides, props.touchedOverrides),
     [props.action, props.overrides, props.reqType, props.touchedOverrides],

@@ -287,6 +287,34 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile @smoke admin requests: success
   await expect(page.getByTestId('admin.requests.chip.state')).toBeVisible();
 });
 
+test('@workflow-matrix @pr-smoke @pr-smoke-mobile @smoke admin requests: closing without a response is a single-step action', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+  await installOsmMapMock(page);
+
+  let current = registration(129);
+  let resolveBody: unknown;
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100 },
+    handlers: {
+      'GET user_request/registrations/129': () => ({ registration: current }),
+      'POST user_request/registrations/129/resolve': ({ reqJson }) => {
+        resolveBody = reqJson;
+        current = { ...current, state: 'ignored' };
+        return { registration: current };
+      },
+    },
+  });
+
+  await page.goto('/admin/requests/registration/129');
+  const ignore = page.getByTestId('admin.requests.resolve.action.ignore');
+  await expect(ignore).toBeVisible();
+  await ignore.click();
+
+  await expect(page.getByTestId('admin.requests.resolve.modal')).toHaveCount(0);
+  await expect.poll(() => resolveBody).toEqual({ registration: { action: 'ignore' } });
+});
+
 test('@workflow-matrix @smoke admin requests: detail correction exposes and submits all legacy overrides', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
   await installOsmMapMock(page);
