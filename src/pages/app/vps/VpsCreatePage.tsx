@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAppMode } from '../../../app/appMode';
 import { useAuth } from '../../../app/auth';
 import { useI18n } from '../../../app/i18n';
@@ -62,6 +62,12 @@ export function VpsCreatePage() {
   const { basePath, mode } = useAppMode();
   const isAdminMode = mode === 'admin';
   const effectiveBasePath = isAdminMode ? '/admin' : basePath;
+  const [searchParams] = useSearchParams();
+  const contextualUserId = isAdminMode ? optionalResource(searchParams.get('user') ?? '') : undefined;
+  const contextualUserValue = contextualUserId === undefined ? '' : String(contextualUserId);
+  const vpsListPath = contextualUserId === undefined
+    ? `${effectiveBasePath}/vps`
+    : `${effectiveBasePath}/vps?user=${contextualUserId}`;
   const auth = useAuth();
   const activeUserIdRef = useRef<number | null | undefined>(auth.user?.id); activeUserIdRef.current = auth.user?.id;
   useEffect(() => { activeUserIdRef.current = auth.user?.id; return () => { activeUserIdRef.current = null; }; }, [auth.user?.id]);
@@ -73,7 +79,8 @@ export function VpsCreatePage() {
   const chrome = useChrome();
   const qc = useQueryClient();
   const createOutcomeEntryPrefix = vpsCreateOutcomeEntryPrefix(auth.user?.id);
-  const [form, setForm] = useState<FormState>(() => defaultForm());
+  const [form, setForm] = useState<FormState>(() => ({ ...defaultForm(), userId: contextualUserValue }));
+  const contextualUserValueRef = useRef(contextualUserValue);
   const [submitted, setSubmitted] = useState(false);
   const outcomeUserIdRef = useRef(auth.user?.id);
   const [createOutcomeMarker, setCreateOutcomeMarker] = useState<VpsCreateOutcomeMarker | null>(
@@ -84,6 +91,11 @@ export function VpsCreatePage() {
   const [outcomeReviewPending, setOutcomeReviewPending] = useState(false);
   const [outcomeReviewError, setOutcomeReviewError] = useState<string | null>(null);
   const [outcomeCandidateVpsId, setOutcomeCandidateVpsId] = useState<number | null>(null);
+  useEffect(() => {
+    if (contextualUserValueRef.current === contextualUserValue) return;
+    contextualUserValueRef.current = contextualUserValue;
+    setForm((current) => ({ ...current, userId: contextualUserValue }));
+  }, [contextualUserValue]);
   useEffect(() => {
     outcomeUserIdRef.current = auth.user?.id;
     setCreateOutcomeMarker(readLatestVpsCreateOutcomeMarker(auth.user?.id));
@@ -393,7 +405,7 @@ export function VpsCreatePage() {
           title={t('vps.create.title')}
           description={t('vps.create.description')}
           actions={
-            <Button variant="secondary" to={`${effectiveBasePath}/vps`} testId="vps.create.back">
+            <Button variant="secondary" to={vpsListPath} testId="vps.create.back">
               <ArrowLeft className="h-4 w-4" />
               {t('common.back')}
             </Button>
