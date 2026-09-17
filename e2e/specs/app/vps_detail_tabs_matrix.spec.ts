@@ -120,7 +120,9 @@ test('@workflow-matrix @smoke VPS detail tabs expose storage and backups, access
   await expect(page.getByTestId('vps.overview.network.card')).toBeVisible();
   await expect(page.getByTestId('vps.overview.storage.card')).toBeVisible();
   await expect(page.getByTestId('vps.overview.diagnostics.card')).toBeVisible();
-  await expect(page.getByTestId('vps.overview.lifecycle')).toBeVisible();
+  await expect(page.getByTestId('vps.overview.metrics.toggle')).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByTestId('vps.overview.tx.card')).toHaveCount(0);
+  await expect(page.getByTestId('vps.overview.lifecycle')).toHaveCount(0);
   await expect(page.getByTestId('vps.overview.config.owner')).toHaveCount(0);
   await expect(page.getByTestId('vps.overview.admin_ops.card')).toHaveCount(0);
   await expect(page.getByTestId('vps.action.snapshot')).toHaveAttribute(

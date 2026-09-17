@@ -35,13 +35,21 @@ export function VpsOverviewPage() {
   const { basePath, mode } = useAppMode();
   const auth = useAuth();
   const isAdminView = mode === 'admin';
-  const showLifecycleSummary = !isAdminView || auth.role !== 'admin';
+  const lifecycleState = String(vps.object_state ?? '').trim().toLowerCase();
+  const hasLifecycleSignal = lifecycleState !== 'active'
+    || Boolean(vps.expiration_date)
+    || Boolean(vps.remind_after_date);
+  const showLifecycleSummary = (!isAdminView || auth.role !== 'admin') && hasLifecycleSignal;
+  const showActivity = isAdminView
+    || transactionChainsLoading
+    || transactionChainsError
+    || transactionChains.length > 0;
 
   return (
     <div className="grid gap-4 lg:grid-cols-12" data-testid="vps.overview.control_center">
       <VpsHealthBanner
         className="lg:col-span-12"
-        hideNonActionable={isAdminView}
+        hideNonActionable
         vps={vps}
         busy={busyTransaction || busyLocalLock}
         stale={chainsStale}
@@ -80,16 +88,18 @@ export function VpsOverviewPage() {
         showPool={isAdminView}
       />
 
-      {!isAdminView ? <VpsOverviewMetricsCard vps={vps} /> : null}
+      {!isAdminView ? <VpsOverviewMetricsCard vps={vps} collapsedByDefault /> : null}
 
-      <VpsActivityCard
-        vps={vps}
-        basePath={basePath}
-        chains={transactionChains}
-        loading={transactionChainsLoading}
-        error={transactionChainsError}
-        className={isAdminView ? 'lg:col-span-6' : undefined}
-      />
+      {showActivity ? (
+        <VpsActivityCard
+          vps={vps}
+          basePath={basePath}
+          chains={transactionChains}
+          loading={transactionChainsLoading}
+          error={transactionChainsError}
+          className={isAdminView ? 'lg:col-span-6' : undefined}
+        />
+      ) : null}
 
       {isAdminView ? <VpsOverviewMetricsCard vps={vps} collapsedByDefault /> : null}
 

@@ -97,6 +97,7 @@ test('@pr-smoke @pr-smoke-mobile keeps an IPv6 SSH command and copy action insid
   await expect(code).toHaveText(sshCommand);
   await expect(copy).toBeVisible();
   await expect(copy).toHaveAccessibleName(/Kopírovat|Copy/);
+  await expect(page.getByTestId('vps.overview.health')).toHaveCount(0);
 
   if (testInfo.project.name === 'mobile-chrome') {
     for (const width of [320, 390, 640, 768, 800]) {
