@@ -35,7 +35,7 @@ export function VpsConfigMobileActionBar(props: {
       data-testid="vps.config.mobile_actions"
       aria-live="polite"
     >
-      <div className="flex items-center justify-between gap-2 rounded-lg border border-info-border bg-overlay-surface/95 p-2 shadow-panel backdrop-blur">
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-info-border bg-overlay-surface p-2 shadow-panel">
         <div className="min-w-0 text-xs font-medium text-fg">
           {t('vps.config.unsaved', { n: props.changeCount })}
         </div>
