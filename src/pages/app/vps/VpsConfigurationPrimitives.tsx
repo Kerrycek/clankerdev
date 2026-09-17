@@ -1,8 +1,10 @@
 import React from 'react';
 
 import { useI18n } from '../../../app/i18n';
+import { ActionButton, type DisabledReason } from '../../../components/ui/ActionButton';
 import { Alert } from '../../../components/ui/Alert';
 import { Badge } from '../../../components/ui/Badge';
+import { Button } from '../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
 import { clsx } from '../../../components/ui/clsx';
 
@@ -15,6 +17,53 @@ import type { VpsConfigFieldError } from './VpsConfigurationErrors';
 import type { VpsConfigChangeSummary } from './VpsConfigurationReviewModel';
 
 const SECTION_ORDER: readonly VpsConfigSection[] = ['identity', 'resources', 'network', 'namespace', 'boot', 'admin'];
+
+export function VpsConfigMobileActionBar(props: {
+  changeCount: number;
+  pending: boolean;
+  saveDisabled: boolean;
+  disabledReason?: DisabledReason;
+  onReset: () => void;
+  onSave: () => void;
+}) {
+  const { t } = useI18n();
+  if (props.changeCount <= 0) return null;
+
+  return (
+    <div
+      className="sticky top-16 z-[9] lg:hidden"
+      data-testid="vps.config.mobile_actions"
+      aria-live="polite"
+    >
+      <div className="flex items-center justify-between gap-2 rounded-lg border border-info-border bg-overlay-surface/95 p-2 shadow-panel backdrop-blur">
+        <div className="min-w-0 text-xs font-medium text-fg">
+          {t('vps.config.unsaved', { n: props.changeCount })}
+        </div>
+        <div className="flex shrink-0 gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={props.onReset}
+            disabled={props.pending}
+            testId="vps.config.mobile_actions.reset"
+          >
+            {t('common.reset')}
+          </Button>
+          <ActionButton
+            size="sm"
+            onClick={props.onSave}
+            loading={props.pending}
+            disabled={props.saveDisabled}
+            disabledReason={props.disabledReason}
+            testId="vps.config.mobile_actions.save"
+          >
+            {t('vps.config.save_changes', { n: props.changeCount })}
+          </ActionButton>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function riskVariant(risk: VpsConfigRisk): React.ComponentProps<typeof Badge>['variant'] {
   switch (risk) {
