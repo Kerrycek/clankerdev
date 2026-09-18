@@ -117,6 +117,12 @@ export function VpsLayout() {
     queryKey: ['vps', 'show', { id: vpsId }],
     queryFn: async () => (await fetchVps(vpsId, { includes: 'node__location__environment,user,dns_resolver,user_namespace_map,os_template,dataset' })).data,
     enabled: Number.isFinite(vpsId) && vpsId > 0 && !deferVpsDetailQuery,
+    refetchInterval: (query) => {
+      const data = query.state.data as { is_running?: boolean } | undefined;
+      return pendingCreateActionStateId !== undefined && typeof data?.is_running !== 'boolean'
+        ? fastPollMs
+        : false;
+    },
   });
 
   const ipsQ = useQuery({
