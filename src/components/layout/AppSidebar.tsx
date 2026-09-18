@@ -99,7 +99,13 @@ export function buildSidebarNavItems(opts: {
   const items: NavItem[] = [
     { id: 'dashboard', to: basePath, label: t('nav.dashboard'), icon: <LayoutDashboard size={18} /> },
     { id: 'vps', to: `${basePath}/vps`, label: t('nav.vps'), icon: <Server size={18} />, ...adminGroup('services') },
-    { id: 'datasets', to: `${basePath}/datasets`, label: t('nav.datasets'), icon: <HardDrive size={18} />, ...adminGroup('services') },
+    {
+      id: 'datasets',
+      to: `${basePath}/datasets`,
+      label: t(appMode === 'user' ? 'nav.vps_disks' : 'nav.datasets'),
+      icon: <HardDrive size={18} />,
+      ...adminGroup('services'),
+    },
     { id: 'nas', to: `${basePath}/nas`, label: t('nav.nas'), icon: <Server size={18} />, ...adminGroup('services') },
     ...(appMode === 'user'
       ? [{ id: 'backups', to: `${basePath}/backups`, label: t('nav.backups'), icon: <DatabaseBackup size={18} /> }]

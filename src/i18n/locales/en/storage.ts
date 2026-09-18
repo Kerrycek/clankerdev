@@ -8,6 +8,14 @@ export const enStorage = {
   "datasets.list.description":
     "Browse storage datasets, snapshots and downloads.",
   "datasets.list.search.placeholder": "Filter this page (name, VPS, user, #id)…",
+  "vps_datasets.list.title": "VPS disks",
+  "vps_datasets.list.description":
+    "Browse disks attached to VPS instances, their snapshots and downloads.",
+  "vps_datasets.list.search.placeholder": "Filter this page (name, VPS, #id)…",
+  "vps_datasets.list.load_error.title": "Failed to load VPS disks",
+  "vps_datasets.list.empty.title": "No VPS disks found",
+  "vps_datasets.list.empty.body":
+    "Disks from the hypervisor pool appear here once they are assigned to a VPS.",
   "nas.list.title": "NAS",
   "nas.list.description":
     "Browse primary-pool user datasets without VPS-specific filters.",

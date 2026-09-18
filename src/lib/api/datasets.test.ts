@@ -57,6 +57,7 @@ describe('datasets API wrappers', () => {
       limit: 42,
       includes: 'vps',
       count: true,
+      role: 'hypervisor',
       q: 'legacy-search',
     } as never);
 
@@ -66,6 +67,7 @@ describe('datasets API wrappers', () => {
     expect(u.pathname).toBe('/v7.0/datasets');
     expect(u.searchParams.get('dataset[limit]')).toBe('42');
     expect(u.searchParams.has('dataset[q]')).toBe(false);
+    expect(u.searchParams.get('dataset[role]')).toBe('hypervisor');
     expect(u.searchParams.get('_meta[includes]')).toBe('vps');
     expect(u.searchParams.get('_meta[count]')).toBe('true');
   });
