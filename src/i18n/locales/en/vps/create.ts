@@ -19,6 +19,7 @@ export const enVps_create = {
   'vps.create.pending.title': 'VPS creation is still in progress',
   'vps.create.pending.body': 'Another tab is submitting this request. Creation stays locked until the request finishes; it cannot be acknowledged while it is still in flight.',
   'vps.create.submit': 'Create VPS',
+  'vps.create.review_missing': 'Review missing fields',
   'vps.create.option.auto': 'Automatic',
   'vps.create.option.other_templates': 'Other templates',
   'vps.create.section.target': 'Location',
