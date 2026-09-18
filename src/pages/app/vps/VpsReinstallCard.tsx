@@ -27,6 +27,7 @@ import {
   type ReinstallForm,
   type ReinstallUserDataFormat,
 } from './VpsReinstallModel';
+import { VpsConfirmTarget } from './VpsPowerConfirmation';
 
 function selectedTemplate(form: ReinstallForm, templates: OsTemplate[]): OsTemplate | undefined {
   const id = form.osTemplate.trim();
@@ -286,7 +287,13 @@ export function VpsReinstallCard(props: {
             props.onSubmit();
           }}
           testId="vps.lifecycle.reinstall.submit.confirm_dialog"
-        />
+        >
+          <VpsConfirmTarget
+            vpsId={props.vps.id}
+            objectLabel={String(props.vps.hostname ?? '') || `#${props.vps.id}`}
+            testId="vps.lifecycle.reinstall.submit.confirm_dialog.target"
+          />
+        </ConfirmDialog>
       </CardBody>
     </Card>
   );

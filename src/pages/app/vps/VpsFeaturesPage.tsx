@@ -17,6 +17,7 @@ import { objectRef } from '../../../lib/objectRef';
 import { preflightVpsNotBusy } from './vpsPreflight';
 import { useVps } from './VpsContext';
 import { freezeVpsMutationSnapshot, type VpsMutationSnapshot } from './VpsMutationSnapshot';
+import { VpsConfirmTarget } from './VpsPowerConfirmation';
 
 function featureLabel(f: VpsFeature): string {
   return (f.label as any) ?? f.name;
@@ -248,11 +249,14 @@ export function VpsFeaturesPage() {
           knownBusy: busyTransaction || busyLocalLock, objectLabel,
         }))}
       >
-        {dirty ? (
-          <div className="text-xs text-muted">
-            {t('vps.features.confirm.summary', { n: dirtyCount })}
-          </div>
-        ) : null}
+        <div className="space-y-3">
+          <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.features.confirm.target" />
+          {dirty ? (
+            <div className="text-xs text-muted">
+              {t('vps.features.confirm.summary', { n: dirtyCount })}
+            </div>
+          ) : null}
+        </div>
       </ConfirmDialog> : null}
     </div>
   );

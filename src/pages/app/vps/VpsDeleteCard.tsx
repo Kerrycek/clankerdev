@@ -40,6 +40,10 @@ export function VpsDeleteCard(props: {
           confirmation={{
             title: t('vps.lifecycle.delete.submit'),
             description: t('vps.lifecycle.delete.warning_body'),
+            target: {
+              vpsId: props.vps.id,
+              objectLabel: String(props.vps.hostname ?? '') || `#${props.vps.id}`,
+            },
           }}
         >
           {t('vps.lifecycle.delete.submit')}

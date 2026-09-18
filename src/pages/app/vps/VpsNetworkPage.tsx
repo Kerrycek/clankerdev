@@ -51,6 +51,7 @@ import {
   VpsHostAddressCreateModal,
 } from './VpsHostAddressCreateModal';
 import { AssignIpAddressModal } from '../networking/AssignIpAddressModal';
+import { VpsConfirmTarget } from './VpsPowerConfirmation';
 import {
   buildNetworkRouteSummary,
   canonicalBool,
@@ -888,7 +889,9 @@ export function VpsNetworkPage() {
         confirmDisabled={!gate.allowed}
         onCancel={() => setFreeHost(null)}
         onConfirm={submitFreeHost}
-      />
+      >
+        <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.network.host_addresses.free_confirm.target" />
+      </ConfirmDialog>
 
       <Modal
         open={!!assignHost}
@@ -1051,7 +1054,9 @@ export function VpsNetworkPage() {
         confirmDisabled={!gate.allowed}
         onCancel={() => setDeleteHost(null)}
         onConfirm={submitDeleteHost}
-      />
+      >
+        <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.network.host_addresses.delete_confirm.target" />
+      </ConfirmDialog>
 
       <ConfirmDialog
         testId="vps.network.ip_addresses.free_route_confirm"
@@ -1070,7 +1075,9 @@ export function VpsNetworkPage() {
         confirmDisabled={!gate.allowed}
         onCancel={() => setFreeRouteIp(null)}
         onConfirm={submitFreeRoute}
-      />
+      >
+        <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.network.ip_addresses.free_route_confirm.target" />
+      </ConfirmDialog>
 
       <ConfirmDialog
         testId="vps.network.disable_confirm"
@@ -1090,18 +1097,21 @@ export function VpsNetworkPage() {
           }
         }}
       >
-        <div>
-          <div className="text-xs font-medium text-muted">{t('vps.network.change_reason.label')}</div>
-          <div className="mt-1">
-            <Input
-              testId="vps.network.disable.reason"
-              value={changeReason}
-              onChange={(e) => setChangeReason(e.target.value)}
-              placeholder={t('vps.network.change_reason.placeholder')}
-              autoComplete="off"
-            />
+        <div className="space-y-3">
+          <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.network.disable_confirm.target" />
+          <div>
+            <div className="text-xs font-medium text-muted">{t('vps.network.change_reason.label')}</div>
+            <div className="mt-1">
+              <Input
+                testId="vps.network.disable.reason"
+                value={changeReason}
+                onChange={(e) => setChangeReason(e.target.value)}
+                placeholder={t('vps.network.change_reason.placeholder')}
+                autoComplete="off"
+              />
+            </div>
+            <div className="mt-1 text-xs text-muted">{t('vps.network.change_reason.help')}</div>
           </div>
-          <div className="mt-1 text-xs text-muted">{t('vps.network.change_reason.help')}</div>
         </div>
       </ConfirmDialog>
 
@@ -1121,7 +1131,9 @@ export function VpsNetworkPage() {
             // errors are shown via netToggleError
           }
         }}
-      />
+      >
+        <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.network.enable_confirm.target" />
+      </ConfirmDialog>
     </div>
   );
 }

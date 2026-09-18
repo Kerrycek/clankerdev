@@ -9,6 +9,7 @@ import { Checkbox } from '../../../components/ui/Checkbox';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import type { ButtonVariant } from '../../../components/ui/buttonStyles';
 import type { GateDecision } from '../../../lib/gates/types';
+import { VpsConfirmTarget } from './VpsPowerConfirmation';
 
 export type ActionChecklistItem = {
   checked: boolean;
@@ -147,6 +148,10 @@ export function LifecycleSubmitButton(props: {
   confirmation?: {
     title: string;
     description: string;
+    target?: {
+      vpsId: number;
+      objectLabel: string;
+    };
   };
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -181,7 +186,15 @@ export function LifecycleSubmitButton(props: {
             props.onClick();
           }}
           testId={`${props.testId}.confirm_dialog`}
-        />
+        >
+          {props.confirmation.target ? (
+            <VpsConfirmTarget
+              vpsId={props.confirmation.target.vpsId}
+              objectLabel={props.confirmation.target.objectLabel}
+              testId={`${props.testId}.confirm_dialog.target`}
+            />
+          ) : null}
+        </ConfirmDialog>
       ) : null}
     </>
   );
