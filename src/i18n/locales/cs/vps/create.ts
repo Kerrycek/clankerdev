@@ -19,6 +19,7 @@ export const csVps_create = {
   'vps.create.pending.title': 'Vytvoření VPS stále probíhá',
   'vps.create.pending.body': 'Požadavek odesílá jiná karta. Vytvoření zůstane uzamčeno do dokončení požadavku a během odesílání jej nelze potvrdit.',
   'vps.create.submit': 'Vytvořit VPS',
+  'vps.create.review_missing': 'Zkontrolovat chybějící údaje',
   'vps.create.option.auto': 'Automaticky',
   'vps.create.option.other_templates': 'Ostatní šablony',
   'vps.create.section.target': 'Lokalita',

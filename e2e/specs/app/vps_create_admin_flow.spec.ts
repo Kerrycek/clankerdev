@@ -61,6 +61,27 @@ function choicesHandlers() {
 }
 
 test.describe('@workflow-matrix @pr-smoke VPS create admin flow', () => {
+  test('incomplete create points to the first missing field before offering creation', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_ADMIN' });
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
+      handlers: choicesHandlers(),
+    });
+
+    await page.goto('/admin/vps/new?user=1');
+    await expect(page.getByTestId('vps.create.submit')).toHaveText('Review missing fields');
+    await page.getByTestId('vps.create.submit').click();
+
+    await expect(page.getByTestId('vps.create.validation')).toBeVisible();
+    await expect(page.getByTestId('vps.create.location')).toBeFocused();
+
+    await page.getByTestId('vps.create.location').selectOption('2');
+    await page.getByTestId('vps.create.node').selectOption('101');
+    await page.getByTestId('vps.create.os_template').selectOption('6');
+    await page.getByTestId('vps.create.hostname').fill('ready.example');
+    await expect(page.getByTestId('vps.create.submit')).toHaveText('Create VPS');
+  });
+
   test('keeps guard identity and payload on the submitted snapshot, then clears the receipt', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_USER' });
     const createBodies: any[] = [];
@@ -346,8 +367,10 @@ test.describe('@workflow-matrix @pr-smoke VPS create admin flow', () => {
 
     await expect(page.getByTestId('vps.create.owner.error')).toContainText('#999');
     await expect(page.getByTestId('vps.create.review.owner')).toContainText('#999');
+    await expect(page.getByTestId('vps.create.submit')).toHaveText('Review missing fields');
     await page.getByTestId('vps.create.submit').click();
     await expect(page.getByTestId('vps.create.validation')).toContainText('could not be loaded');
+    await expect(page.getByTestId('vps.create.user')).toBeFocused();
     expect(createRequests).toBe(0);
   });
 });

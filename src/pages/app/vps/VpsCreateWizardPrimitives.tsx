@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertCircle, CheckCircle2, Circle, HardDrive, KeyRound, Network, Plus, Server, SlidersHorizontal } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Circle, HardDrive, KeyRound, ListChecks, Network, Plus, Server, SlidersHorizontal } from 'lucide-react';
 import { useI18n } from '../../../app/i18n';
 import { Alert } from '../../../components/ui/Alert';
 import { Badge } from '../../../components/ui/Badge';
@@ -488,8 +488,12 @@ export function CreateReviewCard(props: {
           testId="vps.create.submit"
           className="w-full justify-center"
         >
-          <Plus className="h-4 w-4" />
-          {props.isPending ? t('common.creating') : t('vps.create.submit')}
+          {props.validationKeys.length > 0 ? <ListChecks className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+          {props.isPending
+            ? t('common.creating')
+            : props.validationKeys.length > 0
+              ? t('vps.create.review_missing')
+              : t('vps.create.submit')}
         </Button>
       </CardBody>
     </Card>
