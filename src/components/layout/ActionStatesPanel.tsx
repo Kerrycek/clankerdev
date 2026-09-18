@@ -167,6 +167,11 @@ function ActionStateInspect(props: {
   const chain = chainQ.data;
   const target = compactActionTarget(s);
   const failureSummary = compactFailureSummary(s);
+  const actionStateIdLabelKey = isFailingActionState(s)
+    ? 'tasks.inspect.action_state_id.failed'
+    : isFinishedActionState(s)
+      ? 'tasks.inspect.action_state_id.completed'
+      : 'tasks.inspect.action_state_id.running';
 
   const renderTxCard = (tx: Transaction) => {
     const b = transactionBadge(tx);
@@ -275,7 +280,7 @@ function ActionStateInspect(props: {
       <div className="mt-3 rounded-md border border-border bg-surface p-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-xs text-muted">{i18n.t('tasks.inspect.action_state_id')}</div>
+            <div className="text-xs text-muted">{i18n.t(actionStateIdLabelKey)}</div>
             <h3 className="mt-1 text-base font-semibold">#{id}</h3>
             <div className="mt-1 break-words text-sm">{label}</div>
           </div>
