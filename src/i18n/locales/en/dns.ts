@@ -295,6 +295,7 @@ export const enDns = {
   'dns.zone.servers.table.refresh': 'Refresh',
   'dns.zone.servers.table.expires': 'Expires',
   'dns.zone.servers.table.last_check': 'Last check',
+  'dns.zone.servers.copy_address': 'Copy {version} address',
   'dns.zone.servers.field.server': 'Server',
   'dns.zone.servers.field.type': 'Zone type',
   'dns.zone.servers.type.primary': 'Primary',
