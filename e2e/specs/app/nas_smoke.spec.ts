@@ -259,10 +259,16 @@ test.describe('NAS datasets alias', () => {
   test('shows NAS-specific empty state and keeps filter clearing available', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
+    const requestedQueries: string[] = [];
+
     await installHaveApiMock(page, {
       user: { id: 1, login: 'alice', level: 1 },
       handlers: {
-        'GET datasets': () => ({ datasets: [], _meta: { total_count: 0 } }),
+        'GET datasets': ({ searchParams }) => {
+          requestedQueries.push(searchParams.toString());
+          expect(searchParams.get('dataset[q]')).toBeNull();
+          return { datasets: [], _meta: { total_count: 0 } };
+        },
       },
     });
 
@@ -273,7 +279,9 @@ test.describe('NAS datasets alias', () => {
     await page.getByTestId('datasets.search.input').fill('missing-nas');
     await page.keyboard.press('Enter');
     await expect(page.getByTestId('datasets.active_filters')).toContainText('q:missing-nas');
-    await expect(page.getByTestId('datasets.list.empty')).toContainText('No results');
+    await expect(page.getByTestId('datasets.search.page_limited')).toBeVisible();
+    await expect(page.getByTestId('datasets.list.empty')).toContainText('No matches on this page');
+    expect(requestedQueries).toHaveLength(1);
     await page.getByTestId('datasets.filter.clear').click();
     await expect(page.getByTestId('datasets.active_filters')).toHaveCount(0);
   });

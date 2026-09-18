@@ -9,6 +9,7 @@ export function formatDashboardNumber(value: unknown): string {
 }
 
 export function DashboardSummaryCards(props: {
+  appMode: 'user' | 'admin';
   basePath: string;
   density: DashboardDensity;
   vps: {
@@ -40,7 +41,7 @@ export function DashboardSummaryCards(props: {
     {
       testId: 'app.dashboard.kpi.datasets',
       openTestId: 'app.dashboard.kpi.datasets.open',
-      label: t('nav.datasets'),
+      label: t(props.appMode === 'user' ? 'nav.vps_disks' : 'nav.datasets'),
       value: props.datasets.isLoading ? '…' : props.datasets.isError ? '—' : formatDashboardNumber(props.datasets.totalCount),
       to: `${props.basePath}/datasets`,
     },

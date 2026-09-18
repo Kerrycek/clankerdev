@@ -59,6 +59,61 @@ test.describe('Datasets list keyset pagination', () => {
   });
 });
 
+test.describe('Datasets list text filter contract', () => {
+  test('@pr-smoke @pr-smoke-mobile keeps text filtering local to the current API page', async ({ page }, testInfo) => {
+    await bootstrapVpsAdminWindow(page, {
+      sessionToken: 'TEST',
+    });
+
+    const requestedQueries: string[] = [];
+    const makeDataset = (id: number, name = `dataset-${id}`) => ({
+      id,
+      full_name: `tank/vps/${name}`,
+      name,
+      used: 512,
+      refquota: 4096,
+      object_state: 'active',
+      vps: { id: 7, hostname: 'mail.example.test' },
+    });
+    const firstPage = Array.from({ length: 50 }, (_, index) => makeDataset(300 - index));
+    const secondPage = [makeDataset(250, 'needle-on-next-page')];
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'test', level: 1 },
+      handlers: {
+        'GET datasets': ({ searchParams }) => {
+          requestedQueries.push(searchParams.toString());
+          expect(searchParams.get('dataset[q]')).toBeNull();
+          const fromId = searchParams.get('dataset[from_id]');
+          return {
+            datasets: fromId ? secondPage : firstPage,
+            _meta: { total_count: 51 },
+          };
+        },
+      },
+    });
+
+    await page.goto('/app/datasets?q=needle-on-next-page');
+
+    await expect(page.getByTestId('datasets.search.page_limited')).toContainText(
+      'Search is limited to this page',
+    );
+    await expect(page.getByTestId('datasets.list.empty')).toContainText('No matches on this page');
+    await expect(page.getByTestId('datasets.pagination.filtered.next')).toBeEnabled();
+    expect(requestedQueries).toHaveLength(1);
+
+    await page.getByTestId('datasets.pagination.filtered.next').click();
+
+    await expect(page).toHaveURL(/from_id=251/);
+    const resultTestId = testInfo.project.name === 'mobile-chrome'
+      ? 'datasets.card.250'
+      : 'datasets.row.250';
+    await expect(page.getByTestId(resultTestId)).toContainText('needle-on-next-page');
+    expect(requestedQueries).toHaveLength(2);
+    expect(requestedQueries.every((query) => !query.includes('dataset%5Bq%5D'))).toBe(true);
+  });
+});
+
 test.describe('Datasets list optional columns', () => {
   test.beforeEach(async ({ page }) => {
     await bootstrapVpsAdminWindow(page, {
