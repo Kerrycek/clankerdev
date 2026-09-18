@@ -7,37 +7,22 @@ import { useI18n } from '../../../app/i18n';
 import { useChrome } from '../../../components/layout/ChromeContext';
 import { Alert } from '../../../components/ui/Alert';
 import { ActionButton } from '../../../components/ui/ActionButton';
-import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
-import { Card } from '../../../components/ui/Card';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { ErrorState } from '../../../components/ui/ErrorState';
-import { KeysetPagination } from '../../../components/ui/KeysetPagination';
 import { LoadingState } from '../../../components/ui/LoadingState';
 import { Modal } from '../../../components/ui/Modal';
 import { Select } from '../../../components/ui/Select';
 import { fetchDnsServerZones, fetchDnsServers, createDnsServerZone, deleteDnsServerZone, type DnsServerZone } from '../../../lib/api/dns';
-import { formatDateTime } from '../../../lib/format';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 import { cursorFromDescendingPage } from '../../../lib/lockIndex';
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
 import { formatErrorMessage } from '../../../lib/errors';
 
 import { useDnsZoneContext } from './DnsZoneContext';
+import { DnsZoneServersList, dnsZoneServerName } from './DnsZoneServersList';
 import { preflightDnsZoneNotBusy } from './dnsPreflight';
-
-function serverName(x: any): string {
-  const server: any = x?.dns_server ?? {};
-  return String(server.name ?? (typeof server.id === 'number' ? `#${server.id}` : '—'));
-}
-
-function zoneTypeLabel(v: unknown, t: (key: string) => string): string {
-  const s = String(v ?? '');
-  if (s === 'primary_type' || s === 'primary') return t('dns.zone.servers.type.primary');
-  if (s === 'secondary_type' || s === 'secondary') return t('dns.zone.servers.type.secondary');
-  return s;
-}
 
 export function DnsZoneServersPage() {
   const { mode } = useAppMode();
@@ -145,39 +130,17 @@ export function DnsZoneServersPage() {
       {rows.length === 0 ? (
         <EmptyState testId="dns.servers.empty" title={t('dns.zone.servers.empty')} body={t('dns.zone.servers.empty_body')} />
       ) : (
-        <Card>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm table-list">
-              <thead>
-                <tr className="text-left text-xs uppercase tracking-wide text-faint">
-                  <th className="py-2 pl-4 pr-3">{t('dns.zone.servers.table.server')}</th>
-                  <th className="py-2 pr-3">{t('dns.zone.servers.table.type')}</th>
-                  <th className="py-2 pr-3">{t('dns.zone.servers.table.serial')}</th>
-                  <th className="py-2 pr-3">{t('dns.zone.servers.table.loaded')}</th>
-                  <th className="py-2 pr-3">{t('dns.zone.servers.table.refresh')}</th>
-                  <th className="py-2 pr-3">{t('dns.zone.servers.table.expires')}</th>
-                  <th className="py-2 pr-3">{t('dns.zone.servers.table.last_check')}</th>
-                  {isAdmin ? <th className="py-2 pr-4">{t('common.actions')}</th> : null}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={row.id} className="border-t border-border" data-testid={`dns.servers.row.${row.id}`}>
-                    <td className="py-2 pl-4 pr-3 font-medium text-fg">{serverName(row as any)}</td>
-                    <td className="py-2 pr-3"><Badge variant="neutral">{zoneTypeLabel((row as any).type, t)}</Badge></td>
-                    <td className="py-2 pr-3">{typeof (row as any).serial === 'number' ? Number((row as any).serial) : t('common.na')}</td>
-                    <td className="py-2 pr-3">{(row as any).loaded_at ? formatDateTime(String((row as any).loaded_at)) : t('common.na')}</td>
-                    <td className="py-2 pr-3">{(row as any).refresh_at ? formatDateTime(String((row as any).refresh_at)) : t('common.na')}</td>
-                    <td className="py-2 pr-3">{(row as any).expires_at ? formatDateTime(String((row as any).expires_at)) : t('common.na')}</td>
-                    <td className="py-2 pr-3">{(row as any).last_check_at ? formatDateTime(String((row as any).last_check_at)) : t('common.na')}</td>
-                    {isAdmin ? <td className="py-2 pr-4 text-right"><ActionButton variant="danger" size="sm" onClick={() => setConfirmDelete(row)}>{t('common.delete')}</ActionButton></td> : null}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <KeysetPagination page={pagination.page} pageCount={pagination.stack.length} canPrev={pagination.canPrev} canNext={hasMore} onPrev={pagination.goPrev} onNext={() => pagination.goNext(cursor)} />
-        </Card>
+        <DnsZoneServersList
+          rows={rows}
+          isAdmin={isAdmin}
+          page={pagination.page}
+          pageCount={pagination.stack.length}
+          canPrev={pagination.canPrev}
+          canNext={hasMore}
+          onPrev={pagination.goPrev}
+          onNext={() => pagination.goNext(cursor)}
+          onDelete={setConfirmDelete}
+        />
       )}
 
       <Modal open={createOpen} onClose={() => setCreateOpen(false)} title={t('dns.zone.servers.create.title')}>
@@ -198,7 +161,7 @@ export function DnsZoneServersPage() {
         </div>
       </Modal>
 
-      <ConfirmDialog open={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title={t('dns.zone.servers.delete.title')} description={confirmDelete ? t('dns.zone.servers.delete.description', { server: serverName(confirmDelete as any) }) : ''} confirmLabel={t('common.delete')} confirmVariant="danger" onConfirm={() => deleteM.mutate()} loading={deleteM.isPending} />
+      <ConfirmDialog testId="dns.servers.delete" open={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title={t('dns.zone.servers.delete.title')} description={confirmDelete ? t('dns.zone.servers.delete.description', { server: dnsZoneServerName(confirmDelete) }) : ''} confirmLabel={t('common.delete')} confirmVariant="danger" onConfirm={() => deleteM.mutate()} loading={deleteM.isPending} />
     </div>
   );
 }
