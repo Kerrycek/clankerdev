@@ -16,7 +16,7 @@ function failedResponse(message: string, status = 403) {
 
 test('@pr-smoke environment and location maintenance lock and unlock with exact payloads and readback', async ({
   page,
-}) => {
+}, testInfo) => {
   const environment = {
     id: 4,
     label: 'Production',
@@ -65,7 +65,8 @@ test('@pr-smoke environment and location maintenance lock and unlock with exact 
     },
   });
 
-  const environmentControl = 'admin.cluster.environments.row.4.maintenance';
+  const environmentItem = testInfo.project.name === 'mobile-chrome' ? 'card' : 'row';
+  const environmentControl = `admin.cluster.environments.${environmentItem}.4.maintenance`;
   await page.goto('/admin/cluster/environments');
   await expect(page.getByTestId(`${environmentControl}.lock`)).toBeVisible();
   await page.getByTestId(`${environmentControl}.lock`).click();
@@ -110,7 +111,7 @@ test('@pr-smoke environment and location maintenance lock and unlock with exact 
   await expect(page.getByTestId(`${locationControl}.lock`)).toBeVisible();
 });
 
-test('maintenance errors preserve the environment and location dialogs for a safe retry', async ({ page }) => {
+test('maintenance errors preserve the environment and location dialogs for a safe retry', async ({ page }, testInfo) => {
   const environmentPayloads: unknown[] = [];
   const locationPayloads: unknown[] = [];
 
@@ -149,7 +150,8 @@ test('maintenance errors preserve the environment and location dialogs for a saf
     },
   });
 
-  const environmentControl = 'admin.cluster.environments.row.4.maintenance';
+  const environmentItem = testInfo.project.name === 'mobile-chrome' ? 'card' : 'row';
+  const environmentControl = `admin.cluster.environments.${environmentItem}.4.maintenance`;
   await page.goto('/admin/cluster/environments');
   await page.getByTestId(`${environmentControl}.lock`).click();
   await page.getByTestId(`${environmentControl}.reason`).fill('Keep this environment draft');

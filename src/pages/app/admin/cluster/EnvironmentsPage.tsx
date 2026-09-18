@@ -7,16 +7,14 @@ import { useAuth } from '../../../../app/auth';
 import { useI18n } from '../../../../app/i18n';
 import { useToasts } from '../../../../app/toasts';
 import { formatErrorMessage } from '../../../../lib/errors';
-import { formatDurationSeconds } from '../../../../lib/format';
 import { parseBoolParam, parseNonNegativeInt } from '../../../../lib/parse';
 import { parseNumericToken, splitKeyValueToken, tokenizeSmartInput, unquoteSmartValue } from '../../../../lib/smartFilter';
 import { createEnvironment, fetchEnvironments, setEnvironmentMaintenance, updateEnvironment, type Environment } from '../../../../lib/api/infra';
-import { ClusterResourceActions } from './ClusterResourceActions';
+import { EnvironmentsList, formatEnvironmentLifetime } from './EnvironmentsList';
 
 import { FilterBar } from '../../../../components/layout/FilterBar';
 
 import { Alert } from '../../../../components/ui/Alert';
-import { Badge } from '../../../../components/ui/Badge';
 import { Button } from '../../../../components/ui/Button';
 import { Card, CardBody } from '../../../../components/ui/Card';
 import { CopyButton } from '../../../../components/ui/CopyButton';
@@ -31,25 +29,7 @@ import { Select, type SelectOption } from '../../../../components/ui/Select';
 import { SmartFilterInput, type SmartFilterSuggestion } from '../../../../components/ui/SmartFilterInput';
 import { SmartInputHelp } from '../../../../components/ui/SmartInputHelp';
 import { SwitchRow } from '../../../../components/ui/SwitchRow';
-import { TableCard } from '../../../../components/ui/TableCard';
 import { Textarea } from '../../../../components/ui/Textarea';
-
-function envLabel(env: Environment): string {
-  const label = typeof env.label === 'string' ? env.label.trim() : '';
-  return label || `#${env.id}`;
-}
-
-function fmtUnlimited(n: number | undefined | null): string {
-  if (n === undefined || n === null) return '—';
-  if (n === 0) return '∞';
-  return String(n);
-}
-
-function fmtLifetimeSeconds(s: number | undefined | null): string {
-  if (s === undefined || s === null) return '—';
-  if (s === 0) return '∞';
-  return formatDurationSeconds(s);
-}
 
 type EditorState =
   | null
@@ -575,56 +555,13 @@ export function EnvironmentsPage() {
           testId="admin.cluster.environments.empty"
         />
       ) : (
-        <TableCard testId="admin.cluster.environments.table" minWidth="lg">
-          <thead>
-            <tr>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-muted">{t('common.name')}</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-muted">{t('common.domain')}</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-muted">{t('admin.cluster.environments.col.create_vps')}</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-muted">{t('admin.cluster.environments.col.destroy_vps')}</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-muted">{t('admin.cluster.environments.col.max_vps')}</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-muted">{t('admin.cluster.environments.col.lifetime')}</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-muted">{t('admin.cluster.environments.col.ip_ownership')}</th>
-              <th className="px-3 py-2 text-right text-xs font-semibold text-muted">{t('common.actions')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {environments.map((env) => {
-              const canCreate = Boolean((env as any).can_create_vps);
-              const canDestroy = Boolean((env as any).can_destroy_vps);
-              const ipOwner = (env as any).user_ip_ownership;
-
-              const desc = typeof env.description === 'string' ? env.description.trim() : '';
-
-              return (
-                <tr key={env.id} data-testid={`admin.cluster.environments.row.${env.id}`}>
-                  <td className="px-3 py-2">
-                    <div className="font-medium text-fg">{envLabel(env)}</div>
-                    {desc ? <div className="mt-0.5 text-xs text-muted">{desc}</div> : null}
-                  </td>
-                  <td className="px-3 py-2 text-sm">{(env as any).domain || '—'}</td>
-                  <td className="px-3 py-2">
-                    <Badge variant={canCreate ? 'ok' : 'neutral'}>{canCreate ? t('common.yes') : t('common.no')}</Badge>
-                  </td>
-                  <td className="px-3 py-2">
-                    <Badge variant={canDestroy ? 'warn' : 'neutral'}>{canDestroy ? t('common.yes') : t('common.no')}</Badge>
-                  </td>
-                  <td className="px-3 py-2 text-sm">{fmtUnlimited((env as any).max_vps_count as any)}</td>
-                  <td className="px-3 py-2 text-sm">{fmtLifetimeSeconds((env as any).vps_lifetime as any)}</td>
-                  <td className="px-3 py-2">
-                    <Badge variant={ipOwner === false ? 'warn' : 'ok'}>
-                      {ipOwner === false ? t('common.no') : t('common.yes')}
-                    </Badge>
-                  </td>
-                  <ClusterResourceActions
-                    role={auth.role} maintenance={{ value: env.maintenance_lock, reason: env.maintenance_lock_reason, label: envLabel(env), testId: `admin.cluster.environments.row.${env.id}.maintenance`, setMaintenance: (opts) => setEnvironmentMaintenance(env.id, opts), onChanged: () => qc.invalidateQueries({ queryKey: ['cluster.environments'] }) }}
-                    edit={{ label: t('common.edit'), testId: `admin.cluster.environments.row.${env.id}.edit`, onClick: () => openEdit(env) }}
-                  />
-                </tr>
-              );
-            })}
-          </tbody>
-        </TableCard>
+        <EnvironmentsList
+          environments={environments}
+          role={auth.role}
+          onEdit={openEdit}
+          onSetMaintenance={(environment, change) => setEnvironmentMaintenance(environment.id, change)}
+          onMaintenanceChanged={() => qc.invalidateQueries({ queryKey: ['cluster.environments'] })}
+        />
       )}
 
       <Modal
@@ -728,7 +665,7 @@ export function EnvironmentsPage() {
               />
               <div className="mt-1 text-xs text-muted">
                 {t('admin.cluster.environments.editor.vps_lifetime_help', {
-                  preview: fmtLifetimeSeconds(parseNonNegativeInt(form.vpsLifetime) ?? null),
+                  preview: formatEnvironmentLifetime(parseNonNegativeInt(form.vpsLifetime) ?? null),
                 })}
               </div>
             </div>
