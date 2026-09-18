@@ -546,7 +546,14 @@ export function VpsCreatePage() {
                 }
                 setCreateOutcomeMarker(readLatestVpsCreateOutcomeMarker(acknowledgeUserId));
                 setReviewedOutcomeId(null);
-                navigate(`${effectiveBasePath}/vps/${outcomeCandidateVpsId}`);
+                const markerOwnerId = Number(scopedCreateOutcomeMarker.identity?.ownerId);
+                const recoveredOwnerId = isAdminMode && Number.isInteger(markerOwnerId) && markerOwnerId > 0
+                  ? markerOwnerId
+                  : undefined;
+                const recoveredDetailContextSearch = recoveredOwnerId === undefined
+                  ? ''
+                  : `?user=${encodeURIComponent(String(recoveredOwnerId))}`;
+                navigate(`${effectiveBasePath}/vps/${outcomeCandidateVpsId}${recoveredDetailContextSearch}`);
               }}
               onSubmit={submit}
             />
