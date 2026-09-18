@@ -50,6 +50,8 @@ declare global {
         loginUrl?: string;
         /** Optional override for the logout endpoint URL (e.g. '/logout'). */
         logoutUrl?: string;
+        /** Optional password-recovery entry point supplied by the OAuth provider. */
+        passwordRecoveryUrl?: string;
 
         /** Unix timestamp in milliseconds when the integrated BFF session expires. */
         sessionExpiresAt?: number | null;

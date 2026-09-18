@@ -21,6 +21,7 @@ export const enAuth = {
   'auth.admin_required.body': 'You’re signed in as {login}, but this account does not have permission to use the admin view.',
   'auth.user.fallback': 'user',
   'auth.action.sign_in': 'Sign in',
+  'auth.action.reset_password': 'Reset password',
   'auth.action.try_sign_in': 'Try signing in',
   'auth.action.sign_out': 'Sign out',
   'auth.action.go_to_status': 'Go to status',

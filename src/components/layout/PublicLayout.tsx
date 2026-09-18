@@ -7,6 +7,7 @@ import { useAuth } from '../../app/auth';
 import { useI18n } from '../../app/i18n';
 import { useUiSettings, type UiLanguagePreference } from '../../app/uiSettings';
 import { clsx } from '../ui/clsx';
+import { buildPasswordRecoveryUrl } from '../../lib/auth/passwordRecovery';
 import { withRouterBasename, withSameOriginNextParam } from '../../lib/routerPaths';
 
 type IdleCapableWindow = Window & {
@@ -140,6 +141,9 @@ function PublicLayoutInner() {
   const isLoggedIn = auth.status === 'authenticated';
   const primaryHref = isLoggedIn ? appHref : loginHref;
   const primaryLabel = isLoggedIn ? i18n.t('public.primary.back_to_app') : i18n.t('public.primary.log_in');
+  const passwordRecoveryHref = isLoggedIn
+    ? undefined
+    : buildPasswordRecoveryUrl(cfg.passwordRecoveryUrl, i18n.lang);
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -167,6 +171,16 @@ function PublicLayoutInner() {
             <div className="flex-1" />
 
             <PublicLanguageSwitcher language={ui.settings.language} onSetLanguage={ui.setLanguage} t={i18n.t} />
+
+            {passwordRecoveryHref ? (
+              <a
+                href={passwordRecoveryHref}
+                className="hidden px-2 py-2 text-sm font-medium text-muted hover:text-fg md:inline-flex"
+                data-testid="public.password-recovery.desktop"
+              >
+                {i18n.t('auth.action.reset_password')}
+              </a>
+            ) : null}
 
             <a
               href={primaryHref}
@@ -217,6 +231,15 @@ function PublicLayoutInner() {
                     CS
                   </button>
                 </div>
+                {passwordRecoveryHref ? (
+                  <a
+                    href={passwordRecoveryHref}
+                    className="mt-2 inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium text-muted hover:bg-surface-2 hover:text-fg"
+                    data-testid="public.password-recovery.mobile"
+                  >
+                    {i18n.t('auth.action.reset_password')}
+                  </a>
+                ) : null}
                 <a
                   href={primaryHref}
                   className="mt-2 inline-flex items-center justify-center rounded-md border border-border bg-overlay-surface px-3 py-2 text-sm font-medium shadow-card hover:bg-surface-2"

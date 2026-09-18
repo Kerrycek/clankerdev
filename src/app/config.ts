@@ -45,6 +45,8 @@ export interface RuntimeConfig {
   loginUrl?: string;
   /** Optional absolute/relative URL for the logout endpoint (overrides legacy /?page=logout). */
   logoutUrl?: string;
+  /** Optional absolute/relative password-recovery URL exposed by the OAuth provider. */
+  passwordRecoveryUrl?: string;
   /** Unix timestamp in milliseconds when the integrated BFF session expires. */
   sessionExpiresAt?: number;
   /** React Router basename for sub-path deployments (e.g. '/ui-next'). Empty means root. */
@@ -276,8 +278,11 @@ export function getRuntimeConfig(): RuntimeConfig {
   // Optional explicit auth endpoints.
   const loginUrlCandidate = win?.vpsAdmin?.webuiNext?.loginUrl ?? env('VITE_LOGIN_URL');
   const logoutUrlCandidate = win?.vpsAdmin?.webuiNext?.logoutUrl ?? env('VITE_LOGOUT_URL');
+  const passwordRecoveryUrlCandidate =
+    win?.vpsAdmin?.webuiNext?.passwordRecoveryUrl ?? env('VITE_PASSWORD_RECOVERY_URL');
   const loginUrl = loginUrlCandidate ? loginUrlCandidate.trim() : `${routerBasename}/oauth/login`;
   const logoutUrl = logoutUrlCandidate ? logoutUrlCandidate.trim() : `${routerBasename}/oauth/logout`;
+  const passwordRecoveryUrl = passwordRecoveryUrlCandidate?.trim() || undefined;
   const sessionExpiresAt = readOptionalTimestamp(win?.vpsAdmin?.webuiNext?.sessionExpiresAt);
 
   const haveApiAuthHeader =
@@ -322,6 +327,7 @@ export function getRuntimeConfig(): RuntimeConfig {
     legacyWebuiUrl,
     loginUrl,
     logoutUrl,
+    passwordRecoveryUrl,
     sessionExpiresAt,
     routerBasename,
     auth,
