@@ -50,7 +50,7 @@ export const csBackups = {
   'backups.snapshots.filter': 'Filtrovat datasety podle názvu, VPS nebo ID…',
   'backups.snapshots.open': 'Spravovat snapshoty',
   'backups.snapshots.scope.title': 'Rychlý přehled snapshotů',
-  'backups.snapshots.scope.body': 'Vyber dataset vlevo a spravuj jeho snapshoty přímo tady. Načte se pouze vybraný dataset.',
+  'backups.snapshots.scope.body': 'Vyber dataset a spravuj jeho snapshoty přímo tady. Načte se pouze vybraný dataset.',
   'backups.snapshots.workspace.empty.title': 'Vyber dataset',
   'backups.snapshots.workspace.empty.body': 'Jeho snapshoty a akce se zobrazí tady, bez odchodu z centra záloh.',
   'backups.snapshots.empty.title': 'Žádné odpovídající datasety',
