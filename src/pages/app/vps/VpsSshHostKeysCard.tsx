@@ -26,7 +26,7 @@ export function VpsSshHostKeysCard(props: {
   const hostKeys = props.hostKeys;
 
   return (
-    <Card testId="vps.access.host_keys" className="relative min-w-0 max-w-full overflow-x-hidden">
+    <Card id="vps-access-host-keys" testId="vps.access.host_keys" className="relative min-w-0 max-w-full scroll-mt-24 overflow-x-hidden">
       <CardHeader
         title={t('vps.access.host_keys.title')}
         subtitle={t('vps.access.host_keys.subtitle')}
