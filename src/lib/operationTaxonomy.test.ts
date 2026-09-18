@@ -14,6 +14,7 @@ import {
 const labels: Record<string, string> = {
   'action.vps.create.label': 'Create VPS',
   'action.vps.delete.label': 'Delete VPS',
+  'action.vps.restart.label': 'Restart',
   'action.vps.stop.label': 'Stop',
   'operation.system.storage_maintenance.label': 'Storage maintenance',
 };
@@ -69,5 +70,42 @@ describe('operation taxonomy', () => {
     expect(op.key).toBe('vps.stop');
     expect(op.severity).toBe('risky');
     expect(operationLabel(op, t)).toBe('Stop');
+  });
+
+  it('does not classify Restart as Start through a substring match', () => {
+    const chain: TransactionChain = {
+      id: 22,
+      label: 'Restart',
+      state: 'done',
+      concerns: [{ class_name: 'Vps', id: 33 }],
+    };
+
+    const op = classifyTransactionChain(chain);
+
+    expect(op.key).toBe('vps.restart');
+    expect(op.severity).toBe('risky');
+    expect(operationLabel(op, t)).toBe('Restart');
+  });
+
+  it('does not treat unrelated compound words as lifecycle actions', () => {
+    const chain: TransactionChain = {
+      id: 23,
+      label: 'Autostart',
+      state: 'done',
+      concerns: [{ class_name: 'Vps', id: 33 }],
+    };
+
+    expect(classifyTransactionChain(chain).key).toBe('vps.unknown');
+  });
+
+  it('keeps matching intentional multi-word operation hints', () => {
+    const state: ActionState = {
+      id: 24,
+      label: 'Deploy public key',
+      status: true,
+      concerns: [{ class_name: 'Vps', id: 33 }],
+    };
+
+    expect(classifyActionState(state).key).toBe('vps.ssh_key');
   });
 });

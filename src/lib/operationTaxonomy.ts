@@ -211,12 +211,25 @@ function buildContext(input: OperationInput): OperationMatchContext {
   return { raw, normalized, tokens, classes, categoryHint: input.categoryHint };
 }
 
+function hasTerm(ctx: OperationMatchContext, term: string): boolean {
+  const normalized = normalizeText(term);
+  if (!normalized) return false;
+
+  // Single-word operation names have to match a complete token. A substring
+  // check made "Restart" match the earlier "Start" rule, so the Tasks drawer
+  // labelled real restart chains as Start. Multi-word hints still use a phrase
+  // match for inputs such as "public key" and "auto snapshot".
+  return normalized.includes(' ')
+    ? ctx.normalized.includes(normalized)
+    : ctx.tokens.has(normalized);
+}
+
 function hasAny(ctx: OperationMatchContext, words: string[]): boolean {
-  return words.some((word) => ctx.tokens.has(word) || ctx.normalized.includes(normalizeText(word)));
+  return words.some((word) => hasTerm(ctx, word));
 }
 
 function hasAll(ctx: OperationMatchContext, words: string[]): boolean {
-  return words.every((word) => ctx.tokens.has(word) || ctx.normalized.includes(normalizeText(word)));
+  return words.every((word) => hasTerm(ctx, word));
 }
 
 function classIs(ctx: OperationMatchContext, ...classes: string[]): boolean {
