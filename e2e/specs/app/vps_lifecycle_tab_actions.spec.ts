@@ -459,7 +459,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
         node: 3,
       },
     });
-    await expect(page).toHaveURL(/\/admin\/vps\/456$/);
+    await expect(page).toHaveURL(/\/admin\/vps\/456\?user=8$/);
   });
 
   test('admin swap includes legacy admin-only options', async ({ page }) => {
@@ -656,7 +656,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
         reason: 'staging replacement',
       },
     });
-    await expect(page).toHaveURL(/\/admin\/vps\/789$/);
+    await expect(page).toHaveURL(/\/admin\/vps\/789\?user=7$/);
   });
 
   test('admin migrate posts migration options and schedule payload', async ({ page }) => {
@@ -767,7 +767,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
         lazy: true,
       },
     });
-    await expect(page).toHaveURL(/\/admin\/vps$/);
+    await expect(page).toHaveURL(/\/admin\/vps\?user=7(?:&|$)/);
   });
 
   test('delete without an action-state id stays on the VPS and fails closed', async ({ page }) => {
