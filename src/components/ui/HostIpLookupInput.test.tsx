@@ -41,11 +41,12 @@ describe('HostIpLookupInput', () => {
       data: [{ id: 12, addr: '192.0.2.12' }],
       envelope: { status: true, response: {} },
     });
-    const { onChange } = renderLookup({ filters: { purpose: 'vps', routed: true } });
+    const { onChange } = renderLookup({ filters: { usableFor: 'vps', routed: true } });
     const input = screen.getByRole('combobox', { name: 'Host IP' });
 
     fireEvent.focus(input);
     await waitFor(() => expect(screen.getByRole('listbox')).toBeInTheDocument());
+    expect(fetchHostIpAddresses).toHaveBeenCalledWith(expect.objectContaining({ usableFor: 'vps', routed: true }));
     expect(input).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByRole('option', { name: /192\.0\.2\.12/ })).toHaveAttribute('aria-selected', 'true');
 
@@ -64,7 +65,7 @@ describe('HostIpLookupInput', () => {
       envelope: { status: true, response: {} },
     });
     const { onChange } = renderLookup({
-      filters: { purpose: 'vps', routed: true },
+      filters: { usableFor: 'vps', routed: true },
       invalidSelectionMessage: 'Choose an eligible address.',
     });
     const input = screen.getByRole('combobox', { name: 'Host IP' });
