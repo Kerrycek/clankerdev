@@ -234,8 +234,10 @@ manual certification for the VPS beta path. It may run only against the exact
 origin `https://dev.crucio.cz`; it is not a CI test and has no production mode.
 The runner creates at most one stopped VPS through the real admin UI, requests
 zero public IPv4, private IPv4 and IPv6 addresses, exercises only UI
-start/restart/stop, and then hard-deletes that exact VPS through an independent
-HaveAPI client. It never sets a password, deploys an SSH key or opens a console.
+start/restart/stop, and then moves that exact VPS to `hard_delete` through an
+independent HaveAPI client with an explicit cleanup reason and no expiration.
+This keeps cleanup independent of mutable default-lifetime configuration. It
+never sets a password, deploys an SSH key or opens a console.
 
 The private fixture is an allowlist, not a discovery hint. Every ID and label is
 re-fetched before the first POST, relationships must identify one exact

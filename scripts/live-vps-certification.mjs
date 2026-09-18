@@ -1112,9 +1112,18 @@ async function cleanupOwnedVps() {
 
   beginVpsCleanup(ledger, observation, { hardDelete: true });
   persistLedger();
+  // The dev lab intentionally has no default lifetime for VPS hard deletion.
+  // Use the normal lifetime-aware update action with an explicit reason and
+  // null expiration so cleanup does not depend on mutable server defaults.
   const deleteEnvelope = await apiEnvelope(`/vpses/${createdVpsId}`, {
-    method: 'DELETE',
-    data: { vps: { lazy: false } },
+    method: 'PUT',
+    data: {
+      vps: {
+        object_state: 'hard_delete',
+        change_reason: 'Live VPS certification cleanup',
+        expiration_date: null,
+      },
+    },
   });
   let deleteProofError;
   try {
@@ -1196,7 +1205,7 @@ function writeReport() {
       'start, restart and stop through the real UI',
       'bounded action-state and transaction-chain verification after every operation',
       'strict identity and zero-IP verification before cleanup',
-      'independent HaveAPI hard delete with lazy=false and absence proof',
+      'independent explicit HaveAPI hard-delete transition and absence proof',
     ],
     checks,
     operations: ledger.operations,

@@ -386,7 +386,23 @@ export function discoveryRequirement(spec, scope) {
 }
 
 export function filterRoutesForRole(routes, role) {
-  return routes.filter((item) => item.roles.includes(role));
+  return routes
+    .filter((item) => item.roles.includes(role))
+    .map((item) => {
+      // An administrator opening the user-facing transaction-items index is
+      // deliberately redirected to the scoped transaction-chain list. The
+      // item endpoint cannot be safely queried without a chain in "My view",
+      // so the sweep must certify that guard instead of reporting the intended
+      // redirect and missing item-list test id as regressions.
+      if (role === 'admin' && item.id === 'app.transactions.items') {
+        return Object.freeze({
+          ...item,
+          expectedPath: '/app/transactions',
+          expectedTestId: undefined,
+        });
+      }
+      return item;
+    });
 }
 
 export function assertUniqueManifestRoutes(routes) {
