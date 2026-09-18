@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../app/auth';
@@ -158,6 +158,11 @@ export function VpsLifecyclePage() {
   const requestedActionRaw = routeActionRaw ?? searchParams.get('action');
   const requestedAction = lifecycleActionKinds.has(requestedActionRaw as LifecycleActionKind) ? (requestedActionRaw as LifecycleActionKind) : null;
   const invalidAction = Boolean(routeActionRaw && !requestedAction);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0 });
+  }, [requestedAction]);
+
   const templatesNeeded = canMutateVps && (requestedAction === 'reinstall'
     || (canAdministerVps && (requestedAction === 'template' || requestedAction === 'boot')));
 

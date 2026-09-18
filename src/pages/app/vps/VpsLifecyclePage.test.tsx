@@ -85,6 +85,7 @@ describe('VpsLifecyclePage durable mutation snapshots', () => {
   beforeEach(() => {
     testState.vpsId = 101;
     testState.detailContextSearch = undefined;
+    window.scrollTo = vi.fn();
     vi.clearAllMocks();
     vpsStopMock.mockResolvedValue({ data: {}, meta: {} } as never);
     preflightMock.mockResolvedValue(undefined);
@@ -119,6 +120,7 @@ describe('VpsLifecyclePage durable mutation snapshots', () => {
     await user.click(restartLink);
     expect(router.state.location.pathname).toBe('/admin/vps/101/lifecycle/restart');
     expect(router.state.location.search).toBe('?user=9');
+    expect(window.scrollTo).toHaveBeenLastCalledWith({ top: 0, left: 0 });
     expect(screen.getByRole('link', { name: 'vps.lifecycle.back_to_actions' }))
       .toHaveAttribute('href', '/admin/vps/101/lifecycle?user=9');
   });
