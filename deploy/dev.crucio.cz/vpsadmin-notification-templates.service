@@ -1,0 +1,15 @@
+[Unit]
+Description=Install missing vpsAdmin notification templates
+After=mariadb.service
+Before=vpsadmin-password-recovery.service
+ConditionPathIsDirectory=/srv/vpsadmin-release/current/api/notification_templates/templates
+
+[Service]
+Type=oneshot
+WorkingDirectory=/srv/vpsadmin-release/current/api
+Environment=RACK_ENV=production
+ExecStart=/bin/bash -lc 'exec /nix/var/nix/profiles/default/bin/nix --extra-experimental-features nix-command --extra-experimental-features flakes develop /srv/vpsadmin-release/current#api -c bundle exec rake vpsadmin:notification_templates:install_defaults'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
