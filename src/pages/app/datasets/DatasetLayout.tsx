@@ -32,7 +32,7 @@ function datasetTitle(ds: any, fallbackId: number): string {
 export function DatasetLayout() {
   const { datasetId } = useParams();
   const id = Number(datasetId);
-  const { basePath } = useAppMode();
+  const { basePath, mode } = useAppMode();
   const scope = useObjectScope();
   const { t } = useI18n();
   const chrome = useChrome();
@@ -172,7 +172,7 @@ export function DatasetLayout() {
           kicker={
             <>
               <Link className="text-accent hover:underline" to={listPath}>
-                {section === 'nas' ? t('nav.nas') : t('nav.datasets')}
+                {section === 'nas' ? t('nav.nas') : t(mode === 'user' ? 'nav.vps_disks' : 'nav.datasets')}
               </Link>
               <span className="text-faint"> · </span>
               <span>#{ds.id}</span>

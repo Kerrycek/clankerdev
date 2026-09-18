@@ -9,6 +9,15 @@ export const csStorage = {
     "Procházej storage datasety, snapshoty a downloady.",
   "datasets.list.search.placeholder":
     "Hledat datasety (název, VPS, uživatel, #id)…",
+  "vps_datasets.list.title": "Disky VPS",
+  "vps_datasets.list.description":
+    "Procházej disky připojené k VPS, jejich snapshoty a downloady.",
+  "vps_datasets.list.search.placeholder":
+    "Hledat disky VPS (název, VPS, #id)…",
+  "vps_datasets.list.load_error.title": "Nepodařilo se načíst disky VPS",
+  "vps_datasets.list.empty.title": "Žádné disky VPS",
+  "vps_datasets.list.empty.body":
+    "Disky z hypervisor poolu se zde zobrazí, jakmile budou přiřazené k VPS.",
   "nas.list.title": "NAS",
   "nas.list.description":
     "Procházej datasety uživatelů v primary poolu bez filtrů specifických pro VPS.",

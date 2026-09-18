@@ -62,10 +62,19 @@ export function DashboardPage() {
   });
 
   const datasetsQ = useQuery({
-    queryKey: ["dashboard", "datasets_count", { user: mineUserId ?? null, scope: scope.scope }],
+    queryKey: [
+      "dashboard",
+      "datasets_count",
+      { user: mineUserId ?? null, scope: scope.scope, role: mode === "user" ? "hypervisor" : null },
+    ],
     queryFn: async () => {
       const totalCount = await countDashboardRows(
-        ({ limit, fromId }) => fetchDatasets({ limit, fromId, user: mineUserId }),
+        ({ limit, fromId }) => fetchDatasets({
+          limit,
+          fromId,
+          user: mineUserId,
+          role: mode === "user" ? "hypervisor" : undefined,
+        }),
         { allowFallbackPagination: !isAdminScope },
       );
       return { totalCount };
@@ -191,6 +200,7 @@ export function DashboardPage() {
         <DashboardPreferencesCard />
 
         <DashboardSummaryCards
+          appMode={mode}
           basePath={basePath}
           density={dashboardSettings.density}
           vps={{
