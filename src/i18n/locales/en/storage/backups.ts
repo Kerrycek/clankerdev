@@ -50,7 +50,7 @@ export const enBackups = {
   'backups.snapshots.filter': 'Filter datasets by name, VPS or ID…',
   'backups.snapshots.open': 'Manage snapshots',
   'backups.snapshots.scope.title': 'Fast snapshot inventory',
-  'backups.snapshots.scope.body': 'Choose a dataset on the left and manage its snapshots here. Only the selected dataset is loaded.',
+  'backups.snapshots.scope.body': 'Choose a dataset and manage its snapshots here. Only the selected dataset is loaded.',
   'backups.snapshots.workspace.empty.title': 'Choose a dataset',
   'backups.snapshots.workspace.empty.body': 'Its snapshots and actions will appear here without leaving the backup center.',
   'backups.snapshots.empty.title': 'No matching datasets',
