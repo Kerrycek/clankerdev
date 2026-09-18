@@ -28,10 +28,6 @@ describe('VPS detail navigation context', () => {
         basePath="/admin"
         vpsId={14}
         canMutateVps
-        primaryHeaderAction="access"
-        startAllowed
-        restartAllowed
-        stopAllowed
         passwordAllowed
         showTasks={false}
         showSupportActions
@@ -44,7 +40,12 @@ describe('VPS detail navigation context', () => {
 
     const menu = screen.getByTestId('vps.actions.menu');
     expect(menu.querySelector('option[value="/admin/vps/14/config?user=1"]')).not.toBeNull();
-    expect(menu.querySelector('option[value="/admin/vps/14/lifecycle?user=1"]')).not.toBeNull();
+    expect(menu.querySelector('option[value="/admin/vps/14/lifecycle?user=1"]')).toBeNull();
+    expect(menu.querySelector('option[value="action:start"]')).toBeNull();
+    expect(menu.querySelector('option[value="action:restart"]')).toBeNull();
+    expect(menu.querySelector('option[value="action:stop"]')).toBeNull();
+    expect(menu.querySelector('option[value="/admin/vps/14/lifecycle/template?user=1"]')).not.toBeNull();
+    expect(menu.querySelector('option[value="/admin/vps/14/lifecycle/boot?user=1"]')).not.toBeNull();
     expect(menu.querySelector('option[value="/admin/vps/14/lifecycle/delete?user=1"]')).not.toBeNull();
     expect(menu.querySelector('option[value="/admin/vps/14/lifecycle/migrate?user=1"]')).not.toBeNull();
   });

@@ -46,13 +46,11 @@ test('@smoke Modal traps focus and restores focus on close', async ({ page }) =>
 
   await page.goto('/app/vps/123');
 
-  const actionsMenu = page.getByTestId('vps.actions.menu');
-  await expect(actionsMenu).toBeVisible();
-
-  await actionsMenu.focus();
-  await expect(actionsMenu).toBeFocused();
-
-  await actionsMenu.selectOption('action:stop');
+  const stopButton = page.getByTestId('vps.action.stop.header');
+  await expect(stopButton).toBeVisible();
+  await stopButton.focus();
+  await expect(stopButton).toBeFocused();
+  await stopButton.click();
 
   await expect(page.getByTestId('vps.action.stop_confirm')).toBeVisible();
 
@@ -74,8 +72,8 @@ test('@smoke Modal traps focus and restores focus on close', async ({ page }) =>
   await page.keyboard.press('Shift+Tab');
   await expect(page.getByTestId('vps.action.stop_confirm.confirm')).toBeFocused();
 
-  // Closing via Escape must restore focus back to the More menu opener.
+  // Closing via Escape must restore focus back to the direct Stop opener.
   await page.keyboard.press('Escape');
   await expect(page.getByTestId('vps.action.stop_confirm')).toBeHidden();
-  await expect(actionsMenu).toBeFocused();
+  await expect(stopButton).toBeFocused();
 });
