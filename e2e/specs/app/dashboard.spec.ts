@@ -8,6 +8,7 @@ test.describe("Dashboard", () => {
   }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: "TEST" });
     const vpsRequests: string[] = [];
+    const datasetRequests: string[] = [];
 
     await installHaveApiMock(page, {
       user: { id: 1, login: "test", level: 1 },
@@ -36,10 +37,13 @@ test.describe("Dashboard", () => {
           ];
           return { vpses, _meta: { total_count: vpses.length } };
         },
-        "GET datasets": () => ({
-          datasets: [{ id: 1 }],
-          _meta: { total_count: 7 },
-        }),
+        "GET datasets": (ctx) => {
+          datasetRequests.push(ctx.url.search);
+          return {
+            datasets: [{ id: 1 }],
+            _meta: { total_count: 7 },
+          };
+        },
         "GET dns_zones": () => ({
           dns_zones: [{ id: 1 }],
           _meta: { total_count: 2 },
@@ -151,6 +155,13 @@ test.describe("Dashboard", () => {
     expect(new URLSearchParams(vpsRequests[0]).get("vps[limit]")).toBe("200");
     await expect(page.getByTestId("app.dashboard.kpi.datasets")).toContainText(
       "7",
+    );
+    await expect(page.getByTestId("app.dashboard.kpi.datasets")).toContainText(
+      "VPS disks",
+    );
+    expect(datasetRequests).toHaveLength(1);
+    expect(new URLSearchParams(datasetRequests[0]).get("dataset[role]")).toBe(
+      "hypervisor",
     );
     await expect(page.getByTestId("app.dashboard.kpi.dns")).toContainText("2");
     await expect(page.getByTestId("app.dashboard.kpi.members")).toHaveCount(0);

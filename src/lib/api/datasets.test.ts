@@ -49,13 +49,14 @@ describe('datasets API wrappers', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    await fetchDatasets({ limit: 42, includes: 'vps', count: true });
+    await fetchDatasets({ limit: 42, includes: 'vps', count: true, role: 'hypervisor' });
 
     const [url] = firstFetchCall(fetchMock);
     const u = new URL(String(url));
 
     expect(u.pathname).toBe('/v7.0/datasets');
     expect(u.searchParams.get('dataset[limit]')).toBe('42');
+    expect(u.searchParams.get('dataset[role]')).toBe('hypervisor');
     expect(u.searchParams.get('_meta[includes]')).toBe('vps');
     expect(u.searchParams.get('_meta[count]')).toBe('true');
   });
