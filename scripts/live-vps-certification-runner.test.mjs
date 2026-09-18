@@ -10,6 +10,7 @@ import {
   PINNED_LIVE_VPS_LEAF_DER_SHA256,
   PINNED_LIVE_VPS_SPKI_SHA256_BASE64,
   PINNED_LIVE_VPS_TLS_AUTHORIZATION_ERROR,
+  PINNED_LIVE_VPS_TLS_HOSTNAME_ERROR,
   PinnedLiveVpsHttpsClient,
   assertAuditedLiveVpsTlsTrustState,
   assertPinnedLiveVpsTlsPeer,
@@ -203,6 +204,7 @@ test('TLS exception is code-pinned and a wrong leaf cannot reach token-context c
 
 test('TLS exception accepts only the independently audited self-signed trust state', () => {
   assert.equal(PINNED_LIVE_VPS_TLS_AUTHORIZATION_ERROR, 'DEPTH_ZERO_SELF_SIGNED_CERT');
+  assert.equal(PINNED_LIVE_VPS_TLS_HOSTNAME_ERROR, 'ERR_TLS_CERT_ALTNAME_INVALID');
   assert.equal(
     assertAuditedLiveVpsTlsTrustState({
       authorized: false,
@@ -210,12 +212,28 @@ test('TLS exception accepts only the independently audited self-signed trust sta
     }),
     'DEPTH_ZERO_SELF_SIGNED_CERT'
   );
-  for (const candidate of [undefined, '', 'SELF_SIGNED_CERT_IN_CHAIN', 'ERR_TLS_CERT_ALTNAME_INVALID']) {
+  assert.equal(
+    assertAuditedLiveVpsTlsTrustState({
+      authorized: false,
+      authorizationError: 'ERR_TLS_CERT_ALTNAME_INVALID',
+      selfSigned: true,
+    }),
+    'ERR_TLS_CERT_ALTNAME_INVALID'
+  );
+  for (const candidate of [undefined, '', 'SELF_SIGNED_CERT_IN_CHAIN']) {
     assert.throws(
       () => assertAuditedLiveVpsTlsTrustState({ authorized: false, authorizationError: candidate }),
       /no longer has the audited self-signed trust state/
     );
   }
+  assert.throws(
+    () => assertAuditedLiveVpsTlsTrustState({
+      authorized: false,
+      authorizationError: 'ERR_TLS_CERT_ALTNAME_INVALID',
+      selfSigned: false,
+    }),
+    /no longer has the audited self-signed trust state/
+  );
   assert.throws(
     () => assertAuditedLiveVpsTlsTrustState({
       authorized: true,
