@@ -35,27 +35,40 @@ test.describe('Datasets list keyset pagination', () => {
     });
   });
 
-  test('navigates to next and previous pages via from_id', async ({ page }) => {
+  test('navigates to next and previous pages via from_id', async ({ page }, testInfo) => {
     await page.goto('/app/datasets');
 
-    await expect(page.getByTestId('datasets.list')).toBeVisible();
-    await expect(page.getByTestId('datasets.row.300')).toBeVisible();
-    await expect(page.getByTestId('datasets.row.300')).toHaveAttribute('data-row-variant', 'danger');
-    await expect(page.getByTestId('datasets.row.300.dot')).toBeVisible();
-    await expect(page.getByTestId('datasets.row.299.dot')).toBeVisible();
+    const mobile = testInfo.project.name === 'mobile-chrome';
+    const layout = mobile ? 'card' : 'row';
+    const pager = `datasets.pagination.${mobile ? 'mobile' : 'desktop'}`;
+    const dataset = (id: number) => page.getByTestId(`datasets.${layout}.${id}`);
 
-    await page.getByTestId('datasets.pagination.desktop.next').click();
+    await expect(page.getByTestId('datasets.list')).toBeVisible();
+    await expect(dataset(300)).toBeVisible();
+    if (mobile) {
+      await expect(dataset(300)).toHaveClass(/border-danger-border/);
+    } else {
+      await expect(dataset(300)).toHaveAttribute('data-row-variant', 'danger');
+    }
+    await expect(page.getByTestId(`datasets.${layout}.300.dot`)).toBeVisible();
+    await expect(page.getByTestId(`datasets.${layout}.299.dot`)).toBeVisible();
+
+    await page.getByTestId(`${pager}.next`).click();
     await expect(page).toHaveURL(/from_id=251/);
     await expect(page).toHaveURL(/page=2/);
-    await expect(page.getByTestId('datasets.row.250')).toBeVisible();
+    await expect(dataset(250)).toBeVisible();
 
-    await page.getByTestId('datasets.pagination.desktop.prev').click();
+    await page.getByTestId(`${pager}.prev`).click();
     await expect(page).not.toHaveURL(/from_id=/);
     await expect(page).toHaveURL(/page=1/);
-    await expect(page.getByTestId('datasets.row.300')).toBeVisible();
-    await expect(page.getByTestId('datasets.row.300')).toHaveAttribute('data-row-variant', 'danger');
-    await expect(page.getByTestId('datasets.row.300.dot')).toBeVisible();
-    await expect(page.getByTestId('datasets.row.299.dot')).toBeVisible();
+    await expect(dataset(300)).toBeVisible();
+    if (mobile) {
+      await expect(dataset(300)).toHaveClass(/border-danger-border/);
+    } else {
+      await expect(dataset(300)).toHaveAttribute('data-row-variant', 'danger');
+    }
+    await expect(page.getByTestId(`datasets.${layout}.300.dot`)).toBeVisible();
+    await expect(page.getByTestId(`datasets.${layout}.299.dot`)).toBeVisible();
   });
 });
 
@@ -147,13 +160,21 @@ test.describe('Datasets list optional columns', () => {
     });
   });
 
-  test('hides related object columns when the API does not provide those values', async ({ page }) => {
+  test('hides related object columns when the API does not provide those values', async ({ page }, testInfo) => {
     await page.goto('/app/datasets');
 
+    const mobile = testInfo.project.name === 'mobile-chrome';
+    const entry = page.getByTestId(`datasets.${mobile ? 'card' : 'row'}.8`);
     await expect(page.getByTestId('datasets.list')).toBeVisible();
-    await expect(page.getByTestId('datasets.row.8')).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Snapshoty' })).toHaveCount(0);
-    await expect(page.getByRole('columnheader', { name: 'Mounty' })).toHaveCount(0);
-    await expect(page.getByRole('columnheader', { name: 'Exporty' })).toHaveCount(0);
+    await expect(entry).toBeVisible();
+    if (mobile) {
+      await expect(entry).not.toContainText('Snapshots');
+      await expect(entry).not.toContainText('Mounts');
+      await expect(entry).not.toContainText('Exports');
+    } else {
+      await expect(page.getByRole('columnheader', { name: 'Snapshots' })).toHaveCount(0);
+      await expect(page.getByRole('columnheader', { name: 'Mounts' })).toHaveCount(0);
+      await expect(page.getByRole('columnheader', { name: 'Exports' })).toHaveCount(0);
+    }
   });
 });
