@@ -4,6 +4,32 @@ import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock } from '../..
 import { expectNoDocumentHorizontalOverflow } from '../../helpers/horizontalOverflow';
 
 test.describe('Backup center', () => {
+  test('@pr-smoke @pr-smoke-mobile distinguishes account-empty storage from a filtered no-match', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'backup-user', level: 1 },
+      handlers: {
+        'GET datasets': ({ searchParams }) => {
+          expect(searchParams.get('dataset[q]')).toBeNull();
+          return { datasets: [], _meta: { total_count: 0 } };
+        },
+        'GET snapshot_downloads': () => ({ snapshot_downloads: [], _meta: { total_count: 0 } }),
+      },
+    });
+
+    await page.goto('/app/backups?tab=snapshots');
+    await expect(page.getByText('No storage in the account', { exact: true })).toBeVisible();
+
+    await page.getByTestId('backups.filter').fill('missing');
+    await expect(page.getByText('No matching datasets', { exact: true })).toBeVisible();
+
+    await page.getByTestId('backups.tab.plans').click();
+    await expect(page.getByText('No matching datasets', { exact: true })).toBeVisible();
+    await page.getByTestId('backups.filter').fill('');
+    await expect(page.getByText('No storage in the account', { exact: true })).toBeVisible();
+  });
+
   test('@pr-smoke @pr-smoke-mobile filters the complete loaded backup set without unsupported q params', async ({ page }, testInfo) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     let datasetRequests = 0;
