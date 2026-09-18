@@ -31,6 +31,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Spinner } from '../ui/Spinner';
 import { TransactionInlineDetails } from '../ui/TransactionInlineDetails';
 import { useChrome, type TrackedActionState } from './ChromeContext';
+import { TrackedTaskTargetLink } from './TrackedTaskTargetLink';
 
 type ActionStateRow = {
   s: ActionState;
@@ -321,7 +322,12 @@ function ActionStateInspect(props: {
             <div>{isFailingActionState(s) ? i18n.t('common.no') : isFinishedActionState(s) ? i18n.t('common.yes') : i18n.t('state.running')}</div>
           </div>
           {pLabel ? <div><div className="text-xs text-muted">{i18n.t('common.progress')}</div><div>{pct !== null ? `${pLabel} · ${pct}%` : pLabel}</div></div> : null}
-          {target ? <div><div className="text-xs text-muted">{i18n.t('tasks.meta.object')}</div><div>{target}</div></div> : null}
+          {target ? (
+            <div>
+              <div className="text-xs text-muted">{i18n.t('tasks.meta.object')}</div>
+              <TrackedTaskTargetLink tracked={props.trackedMeta} label={target} testId="tasks.inspect.target" onNavigate={chrome.closeTasks} />
+            </div>
+          ) : null}
           {createdAt ? <div><div className="text-xs text-muted">{i18n.t('common.created')}</div><div>{createdAt}</div></div> : null}
           {updatedAt ? <div><div className="text-xs text-muted">{i18n.t('common.updated')}</div><div>{updatedAt}</div></div> : null}
           {relatedChainId ? (
@@ -602,7 +608,14 @@ export function ActionStatesPanel(props: {
 
     const meta: React.ReactNode[] = [];
     meta.push(<span key="id">#{id}</span>);
-    if (target) meta.push(<span key="target">{i18n.t('tasks.meta.object')}: {target}</span>);
+    if (target) {
+      meta.push(
+        <span key="target">
+          {i18n.t('tasks.meta.object')}:{' '}
+          <TrackedTaskTargetLink tracked={x.trackedMeta} label={target} testId={`tasks.row.target.${id}`} onNavigate={chrome.closeTasks} />
+        </span>,
+      );
+    }
     if (createdAt) meta.push(<span key="created">{i18n.t('tasks.meta.created', { time: createdAt })}</span>);
     if (updatedAt) meta.push(<span key="updated">{i18n.t('tasks.meta.updated', { time: updatedAt })}</span>);
 
