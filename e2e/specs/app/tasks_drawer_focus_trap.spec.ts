@@ -116,7 +116,7 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile Tasks keep the tracked action 
     updated_at: '2026-09-18T06:00:02Z',
   };
   await installHaveApiMock(page, {
-    user: { id: 1, login: 'test', level: 1 },
+    user: { id: 1, login: 'test', level: 99 },
     handlers: {
       'GET vpses': () => ({ vpses: [], _meta: { total_count: 0 } }),
       'GET action_states': () => ({ action_states: [actionState] }),
@@ -129,13 +129,14 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile Tasks keep the tracked action 
   });
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/app/vps');
+  await page.goto('/admin/vps?user=42');
   await page.getByTestId('tasks.open-button').click();
 
   const row = page.getByTestId('tasks.row.91');
   await expect(row.getByRole('button', { name: 'Restart', exact: true })).toBeVisible();
   await expect(row).not.toContainText('State change');
   await expect(row).toContainText('Object: codex-nightly-target #14');
+  await expect(page.getByTestId('tasks.row.target.91')).toHaveAttribute('href', '/admin/vps/14?user=42');
 
   await page.getByTestId('tasks.filter-input').fill('codex-nightly-target');
   await expect(row).toBeVisible();
@@ -148,6 +149,12 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile Tasks keep the tracked action 
   await expect(detail).toContainText('Restart');
   await expect(detail).toContainText('Object');
   await expect(detail).toContainText('codex-nightly-target #14');
+  await expect(page.getByTestId('tasks.inspect.target')).toHaveAttribute('href', '/admin/vps/14?user=42');
+
+  await page.getByTestId('tasks.inspect.back').click();
+  await page.getByTestId('tasks.row.target.91').click();
+  await expect(page).toHaveURL(/\/admin\/vps\/14\?user=42$/);
+  await expect(page.getByTestId('tasks.drawer')).toBeHidden();
 });
 
 test('@workflow-matrix @pr-smoke-mobile Tasks inspection labels running, completed, and failed action IDs accurately', async ({ page }) => {
