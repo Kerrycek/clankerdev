@@ -4,6 +4,7 @@ import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 
 function choicesHandlers() {
   return {
+    'GET users/1': () => ({ user: { id: 1, login: 'admin', full_name: 'Admin Example', level: 99 } }),
     'GET locations': () => ({
       locations: [
         {
@@ -299,6 +300,10 @@ test.describe('@workflow-matrix @pr-smoke VPS create admin flow', () => {
     await expect(page.getByTestId('vps.create')).toBeVisible();
 
     await expect(page.getByTestId('vps.create.user')).toHaveValue('1');
+    await expect(page.getByTestId('vps.create.owner.selection')).toContainText('admin');
+    await expect(page.getByTestId('vps.create.owner.selection')).toContainText('#1');
+    await expect(page.getByTestId('vps.create.review.owner')).toContainText('admin');
+    await expect(page.getByTestId('vps.create.review.owner')).toContainText('#1');
     await page.getByTestId('vps.create.location').selectOption('2');
     await page.getByTestId('vps.create.os_template').selectOption('6');
     await page.getByTestId('vps.create.node').selectOption('101');
@@ -317,5 +322,32 @@ test.describe('@workflow-matrix @pr-smoke VPS create admin flow', () => {
     });
     expect(body.vps).not.toHaveProperty('location');
     expect(body.vps).not.toHaveProperty('environment');
+  });
+
+  test('admin create stays blocked until a numeric owner resolves to an existing user', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_ADMIN' });
+    let createRequests = 0;
+    page.on('request', (request) => {
+      if (request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/vpses')) createRequests += 1;
+    });
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
+      handlers: {
+        ...choicesHandlers(),
+        'GET users/999': () => ({ status: false, message: 'Object not found', response: null }),
+      },
+    });
+
+    await page.goto('/admin/vps/new?user=999');
+    await page.getByTestId('vps.create.location').selectOption('2');
+    await page.getByTestId('vps.create.os_template').selectOption('6');
+    await page.getByTestId('vps.create.node').selectOption('101');
+    await page.getByTestId('vps.create.hostname').fill('invalid-owner.example');
+
+    await expect(page.getByTestId('vps.create.owner.error')).toContainText('#999');
+    await expect(page.getByTestId('vps.create.review.owner')).toContainText('#999');
+    await page.getByTestId('vps.create.submit').click();
+    await expect(page.getByTestId('vps.create.validation')).toContainText('could not be loaded');
+    expect(createRequests).toBe(0);
   });
 });

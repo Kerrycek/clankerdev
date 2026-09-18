@@ -17,6 +17,7 @@ import { getMetaActionStateId, isAmbiguousMutationError, isMissingActionStateErr
 import { fetchLocations } from '../../../lib/api/infra';
 import { fetchNodes } from '../../../lib/api/nodes';
 import { fetchOsTemplates } from '../../../lib/api/osTemplates';
+import { fetchUser } from '../../../lib/api/users';
 import { createVps, type CreateVpsPayload } from '../../../lib/api/vps';
 import { objectRef } from '../../../lib/objectRef';
 import type { LocalMutationGeneration } from '../../../lib/localLocks';
@@ -108,11 +109,21 @@ export function VpsCreatePage() {
   });
   const locations = locationQ.data ?? [];
   const selectedLocationId = optionalResource(form.locationId);
+  const selectedOwnerId = isAdminMode ? optionalResource(form.userId) : undefined;
   const selectedLocation = useMemo(
     () => locations.find((loc) => Number(loc.id) === selectedLocationId),
     [locations, selectedLocationId]
   );
   const selectedEnvironmentId = locationEnvironmentId(selectedLocation);
+
+  const ownerQ = useQuery({
+    queryKey: ['user', selectedOwnerId ?? null],
+    queryFn: async () => (await fetchUser(selectedOwnerId as number)).data,
+    enabled: isAdminMode && selectedOwnerId !== undefined,
+  });
+  const selectedOwner = ownerQ.data && Number(ownerQ.data.id) === selectedOwnerId ? ownerQ.data : undefined;
+  const ownerLookupPending = isAdminMode && selectedOwnerId !== undefined && (ownerQ.isPending || ownerQ.isFetching);
+  const ownerLookupFailed = isAdminMode && selectedOwnerId !== undefined && !ownerLookupPending && !selectedOwner;
 
   const nodesQ = useQuery({
     queryKey: ['nodes', { limit: 500, location: selectedLocationId ?? null, type: 'node', hypervisorType: 'vpsadminos' }],
@@ -184,10 +195,13 @@ export function VpsCreatePage() {
     setForm((prev) => ({ ...prev, ...next }));
   }, [defaultResourcesQ.data]);
 
-  const validationKeys = useMemo(
-    () => validateForm(form, isAdminMode, hiddenAdminTarget),
-    [form, hiddenAdminTarget, isAdminMode]
-  );
+  const validationKeys = useMemo(() => {
+    const keys = validateForm(form, isAdminMode, hiddenAdminTarget);
+    if (!isAdminMode || selectedOwnerId === undefined) return keys;
+    if (ownerLookupPending) return [...keys, 'vps.create.validation.user_verifying'];
+    if (!selectedOwner) return [...keys, 'vps.create.validation.user_not_found'];
+    return keys;
+  }, [form, hiddenAdminTarget, isAdminMode, ownerLookupPending, selectedOwner, selectedOwnerId]);
   const canSubmit = validationKeys.length === 0;
   type CreateMutationVariables = { payload: CreateVpsPayload; identity: { hostname: string; ownerId?: number; locationId?: number };
     userId?: number; ownerContextUserId?: number; pageSessionId: string; effectiveBasePath: string; objectLabel: string; persistenceErrorMessage: string; outcomeUncertainMessage: string };
@@ -431,6 +445,9 @@ export function VpsCreatePage() {
               form={form}
               isAdminMode={isAdminMode}
               isAdminAccount={isAdminAccount}
+              selectedOwner={selectedOwner}
+              ownerLookupPending={ownerLookupPending}
+              ownerLookupFailed={ownerLookupFailed}
               locations={locations}
               nodes={nodes}
               selectedLocation={selectedLocation}
@@ -452,6 +469,7 @@ export function VpsCreatePage() {
               form={form}
               isAdminMode={isAdminMode}
               hiddenAdminTarget={hiddenAdminTarget}
+              ownerVerified={!isAdminMode || Boolean(selectedOwner)}
               selectedTemplate={selectedTemplate}
               validationKeys={validationKeys}
             />
@@ -459,6 +477,9 @@ export function VpsCreatePage() {
               form={form}
               isAdminMode={isAdminMode}
               selectedLocation={selectedLocation}
+              selectedOwner={selectedOwner}
+              ownerLookupPending={ownerLookupPending}
+              ownerLookupFailed={ownerLookupFailed}
               selectedTemplate={selectedTemplate}
               selectedNode={selectedNode}
               validationKeys={validationKeys}
