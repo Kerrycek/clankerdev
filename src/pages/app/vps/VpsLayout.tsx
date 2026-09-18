@@ -478,6 +478,7 @@ export function VpsLayout() {
         ipAddressesLoading: ipsQ.isLoading,
         ipAddressesError: ipsQ.isError,
         sshCommand,
+        detailContextSearch: listContextSearch,
       }}
     >
       <DetailShell>

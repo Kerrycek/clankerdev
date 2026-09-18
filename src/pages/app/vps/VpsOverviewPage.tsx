@@ -31,6 +31,7 @@ export function VpsOverviewPage() {
     transactionChains,
     transactionChainsLoading,
     transactionChainsError,
+    detailContextSearch,
   } = useVps();
   const { basePath, mode } = useAppMode();
   const auth = useAuth();
@@ -61,6 +62,7 @@ export function VpsOverviewPage() {
       <VpsResourcesCard
         vps={vps}
         basePath={basePath}
+        contextSearch={detailContextSearch}
         className={isAdminView ? 'lg:col-span-6' : undefined}
         showRuntimeSummary={isAdminView}
       />
@@ -69,6 +71,7 @@ export function VpsOverviewPage() {
         <VpsAccessCard
           vps={vps}
           basePath={basePath}
+          contextSearch={detailContextSearch}
           sshCommand={sshCommand}
         />
       ) : null}
@@ -76,6 +79,7 @@ export function VpsOverviewPage() {
       <VpsNetworkCard
         vps={vps}
         basePath={basePath}
+        contextSearch={detailContextSearch}
         ipAddresses={ipAddresses}
         loading={ipAddressesLoading}
         error={ipAddressesError}
@@ -84,6 +88,7 @@ export function VpsOverviewPage() {
       <VpsStorageBackupsCard
         vps={vps}
         basePath={basePath}
+        contextSearch={detailContextSearch}
         showUsage={!isAdminView}
         showPool={isAdminView}
       />

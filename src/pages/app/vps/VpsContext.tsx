@@ -25,6 +25,8 @@ export interface VpsContextValue {
   ipAddressesLoading: boolean;
   ipAddressesError: boolean;
   sshCommand?: string | null;
+  /** Validated query string that keeps an administrator inside the originating member's VPS scope. */
+  detailContextSearch?: string;
 }
 
 const VpsContext = createContext<VpsContextValue | null>(null);
