@@ -295,6 +295,7 @@ export const csDns = {
   'dns.zone.servers.table.refresh': 'Obnovení',
   'dns.zone.servers.table.expires': 'Vyprší',
   'dns.zone.servers.table.last_check': 'Poslední kontrola',
+  'dns.zone.servers.copy_address': 'Kopírovat adresu {version}',
   'dns.zone.servers.field.server': 'Jmenný server',
   'dns.zone.servers.field.type': 'Typ zóny',
   'dns.zone.servers.type.primary': 'Primární',
