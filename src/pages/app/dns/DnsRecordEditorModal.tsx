@@ -21,6 +21,7 @@ import {
   type DnsRecordValidationResult,
 } from './DnsRecordModel';
 import type { DnsRecordApiFieldError } from './DnsRecordErrors';
+import { DNS_TTL_MAX, DNS_TTL_MIN } from './dnsTtlContract';
 
 type DnsRecordDraftPatch = Partial<DnsRecordDraft>;
 
@@ -172,7 +173,12 @@ export function DnsRecordEditorModal(props: {
               value={props.draft.ttl}
               onChange={(e) => props.onDraftChange({ ttl: e.target.value })}
               placeholder={props.mode === 'create' ? t('common.default') : '3600'}
+              type="number"
               inputMode="numeric"
+              min={DNS_TTL_MIN}
+              max={DNS_TTL_MAX}
+              step={1}
+              ariaInvalid={props.validation.errors.some((issue) => issue.field === 'ttl')}
               testId={`${testPrefix}.ttl`}
             />
             <FieldFeedback
