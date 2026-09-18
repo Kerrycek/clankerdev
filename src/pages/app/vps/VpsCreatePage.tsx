@@ -190,7 +190,7 @@ export function VpsCreatePage() {
   );
   const canSubmit = validationKeys.length === 0;
   type CreateMutationVariables = { payload: CreateVpsPayload; identity: { hostname: string; ownerId?: number; locationId?: number };
-    userId?: number; pageSessionId: string; effectiveBasePath: string; objectLabel: string; persistenceErrorMessage: string; outcomeUncertainMessage: string };
+    userId?: number; ownerContextUserId?: number; pageSessionId: string; effectiveBasePath: string; objectLabel: string; persistenceErrorMessage: string; outcomeUncertainMessage: string };
   type AcceptedCreateBinding = Readonly<{ userId?: number; actionStateId: number; object: ReturnType<typeof objectRef>; mutationGeneration: LocalMutationGeneration; objectLabel: string }>;
   type CreateMutationContext = { active: { userId?: number; marker: VpsCreateOutcomeMarker }; responseReceived: boolean; acceptedBinding?: AcceptedCreateBinding };
   // audit:ignore missing-local-lock missing-local-lock-release -- create uses its own durable receipt before a VPS id exists.
@@ -251,8 +251,13 @@ export function VpsCreatePage() {
       if (!scopeIsActive(variables.userId)) return;
       setCreateOutcomeMarker(readLatestVpsCreateOutcomeMarker(variables.userId));
       chrome.openTasks();
+      const detailContextSearch = variables.ownerContextUserId === undefined
+        ? ''
+        : `?user=${encodeURIComponent(String(variables.ownerContextUserId))}`;
       navigate(
-        Number.isFinite(vpsId) ? `${variables.effectiveBasePath}/vps/${vpsId}` : `${variables.effectiveBasePath}/vps`,
+        Number.isFinite(vpsId)
+          ? `${variables.effectiveBasePath}/vps/${vpsId}${detailContextSearch}`
+          : `${variables.effectiveBasePath}/vps${detailContextSearch}`,
         Number.isFinite(vpsId)
           ? { state: pendingVpsCreateNavigationState(vpsId, actionStateId) }
           : undefined,
@@ -344,6 +349,9 @@ export function VpsCreatePage() {
         locationId: optionalResource(formSnapshot.locationId),
       }),
       userId: auth.user?.id,
+      ownerContextUserId: isAdminMode && contextualUserId !== undefined
+        ? optionalResource(formSnapshot.userId)
+        : undefined,
       pageSessionId,
       effectiveBasePath,
       objectLabel: hostname,

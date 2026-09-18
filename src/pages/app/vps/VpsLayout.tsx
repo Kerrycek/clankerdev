@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Camera, RotateCw } from 'lucide-react';
 import { Link, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -62,6 +62,29 @@ export function VpsLayout() {
   const navigate = useNavigate();
   const params = useParams();
   const vpsId = Number(params['vpsId']);
+  const requestedListUserId = useMemo(() => {
+    if (mode !== 'admin') return undefined;
+    const raw = new URLSearchParams(location.search).get('user');
+    const parsed = Number(raw);
+    return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
+  }, [location.search, mode]);
+  const listContextRef = useRef<{ vpsId: number; userId?: number }>({ vpsId, userId: requestedListUserId });
+  if (listContextRef.current.vpsId !== vpsId) {
+    listContextRef.current = { vpsId, userId: requestedListUserId };
+  } else if (requestedListUserId !== undefined) {
+    listContextRef.current.userId = requestedListUserId;
+  }
+  const listContextUserId = mode === 'admin' ? listContextRef.current.userId : undefined;
+  const listContextSearch = listContextUserId === undefined ? '' : `?user=${encodeURIComponent(String(listContextUserId))}`;
+  const vpsListHref = `${basePath}/vps${listContextSearch}`;
+
+  useEffect(() => {
+    if (listContextUserId === undefined || requestedListUserId !== undefined) return;
+    navigate(
+      { pathname: location.pathname, search: listContextSearch, hash: location.hash },
+      { replace: true, state: location.state },
+    );
+  }, [listContextSearch, listContextUserId, location.hash, location.pathname, location.state, navigate, requestedListUserId]);
   const vpsRef = useMemo(() => {
     if (!Number.isFinite(vpsId) || vpsId <= 0) return null;
     return objectRef('Vps', vpsId);
@@ -296,7 +319,7 @@ export function VpsLayout() {
         title={t('vps.layout.load_error.title')}
         error={vpsQ.error}
         onRetry={() => void vpsQ.refetch()}
-        backTo={`${basePath}/vps`}
+        backTo={vpsListHref}
         detailsExtra={{ page: 'vps.detail', vpsId, scope: scope.scope }}
       />
     );
@@ -311,7 +334,7 @@ export function VpsLayout() {
         title={t('vps.layout.not_found.title')}
         body={t('vps.layout.not_found.body')}
         onRetry={() => void vpsQ.refetch()}
-        backTo={`${basePath}/vps`}
+        backTo={vpsListHref}
         showStatusLink={false}
         showDetails={false}
         detailsExtra={{ page: 'vps.detail', vpsId, scope: scope.scope }}
@@ -339,7 +362,7 @@ export function VpsLayout() {
         objectLabel={String((vps as any).hostname ?? '')}
         ownerUserId={ownerId}
         adminHref={adminHref}
-        backHref={`${basePath}/vps`}
+        backHref={vpsListHref}
         testId="vps.scope-mismatch"
       />
     );
@@ -452,7 +475,7 @@ export function VpsLayout() {
           horizontalAt="xl"
           kicker={
             <>
-              <Link className="text-accent hover:underline" to={`${basePath}/vps`}>
+              <Link className="text-accent hover:underline" to={vpsListHref}>
                 {t('nav.vps')}
               </Link>
               <span className="text-faint"> · </span>

@@ -18,6 +18,7 @@ import type { VpsListRecord, VpsListTranslator } from './vpsListSemantics';
 interface VpsListTableProps {
   rows: VpsListRecord[];
   basePath: string;
+  detailSearch: string;
   t: VpsListTranslator;
   pagination: KeysetPaginationState;
   canPaginate: boolean;
@@ -33,6 +34,7 @@ interface VpsListTableProps {
 export function VpsListTable({
   rows,
   basePath,
+  detailSearch,
   t,
   pagination,
   canPaginate,
@@ -99,7 +101,7 @@ export function VpsListTable({
             <TableRowLink
               key={vps.id}
               testId={`vps.row.${vps.id}`}
-              to={`${basePath}/vps/${vps.id}`}
+              to={`${basePath}/vps/${vps.id}${detailSearch}`}
               variant={row.rowVariant}
               className="border-b border-border/60 last:border-b-0"
             >
@@ -108,7 +110,7 @@ export function VpsListTable({
               </td>
               <td className="px-3 py-2 align-top">
                 <div className="flex flex-col gap-1">
-                  <Link to={`${basePath}/vps/${vps.id}`} className="font-medium text-fg underline">
+                  <Link to={`${basePath}/vps/${vps.id}${detailSearch}`} className="font-medium text-fg underline">
                     {vps.hostname}
                   </Link>
                   <div className="text-xs text-muted">{t('common.id')} {vps.id}</div>
@@ -161,6 +163,7 @@ export function VpsListTable({
                 <VpsListRowActions
                   row={row}
                   basePath={basePath}
+                  detailSearch={detailSearch}
                   t={t}
                   testIdPrefix={`vps.row.${vps.id}`}
                   showLabels={false}
