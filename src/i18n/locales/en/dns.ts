@@ -140,6 +140,12 @@ export const enDns = {
   'dns.zone.records.modal.create.name.help': 'Record name within the zone.',
   'dns.zone.records.modal.create.type.label': 'Type',
   'dns.zone.records.modal.create.content.label': 'Content',
+  'dns.zone.records.modal.create.content.help.ds':
+    'Format: key tag, algorithm, digest type (1, 2 or 4), then the hexadecimal digest.',
+  'dns.zone.records.modal.create.content.help.sshfp':
+    'Format: algorithm, fingerprint type (1 or 2), then the hexadecimal fingerprint.',
+  'dns.zone.records.modal.create.content.help.tlsa':
+    'Format: usage, selector, matching type (0, 1 or 2), then hexadecimal certificate association data.',
   'dns.zone.records.modal.create.ttl.label': 'TTL',
   'dns.zone.records.modal.create.priority.label': 'Priority',
   'dns.zone.records.modal.create.comment.label': 'Comment',
@@ -175,14 +181,23 @@ export const enDns = {
   'dns.zone.records.validation.content.srv_hint': 'SRV content is usually “weight port target”; verify this value before saving.',
   'dns.zone.records.validation.content.srv': 'SRV content must be a valid target or “weight port target”.',
   'dns.zone.records.validation.content.caa': 'CAA content should look like: 0 issue "letsencrypt.org".',
+  'dns.zone.records.validation.content.ds':
+    'DS content must contain key tag, algorithm, digest type and a hexadecimal digest of the required length.',
+  'dns.zone.records.validation.content.sshfp':
+    'SSHFP content must contain algorithm, fingerprint type and a hexadecimal fingerprint of the required length.',
+  'dns.zone.records.validation.content.tlsa':
+    'TLSA content must contain usage, selector, matching type and hexadecimal association data of the required length.',
   'dns.zone.records.validation.ttl.integer': 'TTL must be a whole number.',
   'dns.zone.records.validation.ttl.range': 'TTL must be between 0 and {max}.',
   'dns.zone.records.validation.priority.required': 'Priority is required for MX and SRV records.',
   'dns.zone.records.validation.priority.integer': 'Priority must be a whole number.',
   'dns.zone.records.validation.priority.range': 'Priority must be between 0 and {max}.',
+  'dns.zone.records.validation.priority.unsupported': 'Priority can only be set for MX and SRV records.',
+  'dns.zone.records.validation.dynamic.unsupported': 'Dynamic updates are only available for A and AAAA records.',
   'dns.zone.records.validation.conflict.cname_existing': 'CNAME {name} cannot coexist with {count} other record(s) at the same name.',
   'dns.zone.records.validation.conflict.cname_blocks': 'This name already has a CNAME record. Add the new value under another name or edit the CNAME first.',
   'dns.zone.records.validation.conflict.cname_apex': 'Apex CNAME records often conflict with required zone records. Verify before saving.',
+  'dns.zone.records.validation.conflict.ds_apex': 'DS records are not allowed at the zone apex.',
   'dns.zone.records.validation.conflict.duplicate': 'A matching record already exists for this name, type and content.',
   'dns.zone.records.row_error.title': 'Last change failed for this record',
   'dns.zone.settings.card.title': 'Zone settings',

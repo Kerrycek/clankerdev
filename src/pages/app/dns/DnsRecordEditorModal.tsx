@@ -14,6 +14,9 @@ import { formatErrorMessage } from '../../../lib/errors';
 
 import {
   DNS_RECORD_TYPES,
+  dnsRecordContentPlaceholder,
+  dnsRecordSupportsDynamicUpdate,
+  dnsRecordSupportsPriority,
   type DnsRecordDraft,
   type DnsRecordFormField,
   type DnsRecordPreviewItem,
@@ -87,6 +90,13 @@ export function DnsRecordEditorModal(props: {
     props.pending;
 
   const title = props.mode === 'create' ? t('dns.zone.records.modal.create.title') : t('dns.zone.records.modal.edit.title');
+  const recordType = props.draft.type.toUpperCase();
+  const supportsPriority = dnsRecordSupportsPriority(recordType);
+  const supportsDynamicUpdate = dnsRecordSupportsDynamicUpdate(recordType);
+  const contentHelpKey =
+    recordType === 'DS' || recordType === 'SSHFP' || recordType === 'TLSA'
+      ? `dns.zone.records.modal.create.content.help.${recordType.toLowerCase()}`
+      : null;
 
   return (
     <Modal open={props.open} onClose={props.onCancel} title={title} size="lg">
@@ -132,7 +142,18 @@ export function DnsRecordEditorModal(props: {
 
             <div>
               <div className="mb-1 text-xs font-medium text-muted">{t('dns.zone.records.modal.create.type.label')}</div>
-              <Select value={props.draft.type} onChange={(e) => props.onDraftChange({ type: e.target.value })} testId="dns.records.create.type">
+              <Select
+                value={props.draft.type}
+                onChange={(e) => {
+                  const type = e.target.value;
+                  props.onDraftChange({
+                    type,
+                    ...(!dnsRecordSupportsPriority(type) ? { priority: '' } : {}),
+                    ...(!dnsRecordSupportsDynamicUpdate(type) ? { dynamicUpdateEnabled: false } : {}),
+                  });
+                }}
+                testId="dns.records.create.type"
+              >
                 {DNS_RECORD_TYPES.map((recordType) => (
                   <option key={recordType} value={recordType}>
                     {recordType}
@@ -154,9 +175,14 @@ export function DnsRecordEditorModal(props: {
           <Input
             value={props.draft.content}
             onChange={(e) => props.onDraftChange({ content: e.target.value })}
-            placeholder={props.draft.type === 'AAAA' ? '2001:db8::1' : props.draft.type === 'CNAME' ? 'target.example.com.' : '1.2.3.4'}
+            placeholder={dnsRecordContentPlaceholder(recordType)}
             testId={`${testPrefix}.content`}
           />
+          {contentHelpKey ? (
+            <div className="mt-1 text-xs text-faint" data-testid={`${testPrefix}.content.help`}>
+              {t(contentHelpKey)}
+            </div>
+          ) : null}
           <FieldFeedback
             field="content"
             issues={props.validation.issues}
@@ -165,7 +191,7 @@ export function DnsRecordEditorModal(props: {
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className={supportsPriority ? 'grid grid-cols-1 gap-3 sm:grid-cols-2' : 'grid grid-cols-1 gap-3'}>
           <div>
             <div className="mb-1 text-xs font-medium text-muted">{t('dns.zone.records.modal.create.ttl.label')}</div>
             <Input
@@ -182,22 +208,24 @@ export function DnsRecordEditorModal(props: {
               testId={`${testPrefix}.ttl.validation`}
             />
           </div>
-          <div>
-            <div className="mb-1 text-xs font-medium text-muted">{t('dns.zone.records.modal.create.priority.label')}</div>
-            <Input
-              value={props.draft.priority}
-              onChange={(e) => props.onDraftChange({ priority: e.target.value })}
-              placeholder="10"
-              inputMode="numeric"
-              testId={`${testPrefix}.priority`}
-            />
-            <FieldFeedback
-              field="priority"
-              issues={props.validation.issues}
-              apiMessages={apiMessages.get('priority') ?? []}
-              testId={`${testPrefix}.priority.validation`}
-            />
-          </div>
+          {supportsPriority ? (
+            <div>
+              <div className="mb-1 text-xs font-medium text-muted">{t('dns.zone.records.modal.create.priority.label')}</div>
+              <Input
+                value={props.draft.priority}
+                onChange={(e) => props.onDraftChange({ priority: e.target.value })}
+                placeholder="10"
+                inputMode="numeric"
+                testId={`${testPrefix}.priority`}
+              />
+              <FieldFeedback
+                field="priority"
+                issues={props.validation.issues}
+                apiMessages={apiMessages.get('priority') ?? []}
+                testId={`${testPrefix}.priority.validation`}
+              />
+            </div>
+          ) : null}
         </div>
 
         <div>
@@ -224,13 +252,15 @@ export function DnsRecordEditorModal(props: {
             disabled={props.pending}
             testId={`${testPrefix}.enabled`}
           />
-          <Checkbox
-            checked={props.draft.dynamicUpdateEnabled}
-            onChange={(dynamicUpdateEnabled) => props.onDraftChange({ dynamicUpdateEnabled })}
-            label={t('dns.zone.records.modal.create.dynamic.label')}
-            disabled={props.pending}
-            testId={`${testPrefix}.dynamic`}
-          />
+          {supportsDynamicUpdate ? (
+            <Checkbox
+              checked={props.draft.dynamicUpdateEnabled}
+              onChange={(dynamicUpdateEnabled) => props.onDraftChange({ dynamicUpdateEnabled })}
+              label={t('dns.zone.records.modal.create.dynamic.label')}
+              disabled={props.pending}
+              testId={`${testPrefix}.dynamic`}
+            />
+          ) : null}
         </div>
 
         {props.mutationError ? (
