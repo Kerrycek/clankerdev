@@ -58,6 +58,14 @@ function stateBadgeVariant(state: string): 'neutral' | 'ok' | 'warn' | 'danger' 
   return 'neutral';
 }
 
+function MobileCellLabel(props: { children: React.ReactNode }) {
+  return (
+    <span className="text-xs font-medium text-faint md:hidden">
+      {props.children}
+    </span>
+  );
+}
+
 function withoutNode(payload: SecurityAdvisoryNodeStatusCreatePayload) {
   const { node: _node, ...update } = payload;
   return update;
@@ -196,11 +204,13 @@ export function SecurityAdvisoryNodesPanel(props: {
   return (
     <Card testId="admin.security_advisories.nodes.panel">
       <CardHeader
+        className="flex-col md:flex-row"
         title={t('admin.security_advisories.nodes.title')}
         subtitle={t('admin.security_advisories.nodes.subtitle')}
         actions={
           <Button
             variant="secondary"
+            className="min-h-11 md:min-h-9"
             onClick={openBulk}
             disabled={props.loading || relevantNodes.length === 0}
             testId="admin.security_advisories.nodes.bulk.open"
@@ -219,8 +229,12 @@ export function SecurityAdvisoryNodesPanel(props: {
           </Alert>
         </CardBody>
       ) : (
-        <TableCard className="rounded-none border-0 shadow-none" minWidth="lg" testId="admin.security_advisories.nodes.table">
-          <thead>
+        <TableCard
+          className="rounded-none border-0 shadow-none"
+          tableClassName="block md:table md:min-w-table-lg"
+          testId="admin.security_advisories.nodes.table"
+        >
+          <thead className="hidden md:table-header-group">
             <tr>
               <th>{t('admin.security_advisories.nodes.table.node')}</th>
               <th>{t('admin.security_advisories.nodes.table.type')}</th>
@@ -231,34 +245,60 @@ export function SecurityAdvisoryNodesPanel(props: {
               <th className="text-right">{t('admin.security_advisories.nodes.table.actions')}</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="block md:table-row-group">
             {relevantNodes.map((node) => {
               const status = statusesByNode.get(node.id) ?? null;
               const state = String(status?.state ?? 'missing');
               return (
-                <tr key={node.id} className="table-row-tone" data-testid={`admin.security_advisories.nodes.row.${node.id}`}>
-                  <td>
-                    <div className="font-semibold">{nodeLabel(node)}</div>
-                    <div className="text-xs text-faint">#{node.id}</div>
+                <tr
+                  key={node.id}
+                  className="table-row-tone block border-b border-border last:border-b-0 md:table-row md:border-0"
+                  data-testid={`admin.security_advisories.nodes.row.${node.id}`}
+                >
+                  <td className="grid min-w-0 grid-cols-[minmax(7rem,0.42fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 md:table-cell md:p-0">
+                    <MobileCellLabel>{t('admin.security_advisories.nodes.table.node')}</MobileCellLabel>
+                    <div className="min-w-0">
+                      <div className="break-words font-semibold">{nodeLabel(node)}</div>
+                      <div className="text-xs text-faint">#{node.id}</div>
+                    </div>
                   </td>
-                  <td>{t(`admin.security_advisories.nodes.type.${String(node.type ?? 'node')}`)}</td>
-                  <td>
-                    <Badge variant={stateBadgeVariant(state)}>
-                      {state === 'missing' ? t('admin.security_advisories.nodes.state.missing') : stateLabel(state)}
-                    </Badge>
+                  <td className="grid min-w-0 grid-cols-[minmax(7rem,0.42fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 md:table-cell md:p-0">
+                    <MobileCellLabel>{t('admin.security_advisories.nodes.table.type')}</MobileCellLabel>
+                    <span className="min-w-0 break-words">
+                      {t(`admin.security_advisories.nodes.type.${String(node.type ?? 'node')}`)}
+                    </span>
                   </td>
-                  <td className="whitespace-nowrap text-sm text-muted">
-                    {status?.vulnerable_until ? formatDateTime(status.vulnerable_until) : '—'}
+                  <td className="grid min-w-0 grid-cols-[minmax(7rem,0.42fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 md:table-cell md:p-0">
+                    <MobileCellLabel>{t('admin.security_advisories.nodes.table.state')}</MobileCellLabel>
+                    <div className="min-w-0">
+                      <Badge variant={stateBadgeVariant(state)}>
+                        {state === 'missing' ? t('admin.security_advisories.nodes.state.missing') : stateLabel(state)}
+                      </Badge>
+                    </div>
                   </td>
-                  <td className="whitespace-nowrap text-sm text-muted">
-                    {status?.mitigated_since ? formatDateTime(status.mitigated_since) : '—'}
+                  <td className="grid min-w-0 grid-cols-[minmax(7rem,0.42fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 text-sm text-muted md:table-cell md:whitespace-nowrap md:p-0">
+                    <MobileCellLabel>{t('admin.security_advisories.nodes.table.vulnerable_until')}</MobileCellLabel>
+                    <span className="min-w-0 break-words">
+                      {status?.vulnerable_until ? formatDateTime(status.vulnerable_until) : '—'}
+                    </span>
                   </td>
-                  <td className="max-w-xs break-words text-sm text-muted">{status?.note || '—'}</td>
-                  <td>
-                    <div className="flex justify-end gap-2">
+                  <td className="grid min-w-0 grid-cols-[minmax(7rem,0.42fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 text-sm text-muted md:table-cell md:whitespace-nowrap md:p-0">
+                    <MobileCellLabel>{t('admin.security_advisories.nodes.table.mitigated_since')}</MobileCellLabel>
+                    <span className="min-w-0 break-words">
+                      {status?.mitigated_since ? formatDateTime(status.mitigated_since) : '—'}
+                    </span>
+                  </td>
+                  <td className="grid min-w-0 grid-cols-[minmax(7rem,0.42fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 text-sm text-muted md:table-cell md:max-w-xs md:p-0">
+                    <MobileCellLabel>{t('admin.security_advisories.nodes.table.note')}</MobileCellLabel>
+                    <span className="min-w-0 break-words">{status?.note || '—'}</span>
+                  </td>
+                  <td className="grid min-w-0 grid-cols-[minmax(7rem,0.42fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 md:table-cell md:p-0">
+                    <MobileCellLabel>{t('admin.security_advisories.nodes.table.actions')}</MobileCellLabel>
+                    <div className="flex min-w-0 flex-wrap justify-end gap-2 md:flex-nowrap">
                       <Button
                         size="sm"
                         variant="secondary"
+                        className="min-h-11 w-full whitespace-nowrap md:min-h-8 md:w-auto md:whitespace-normal"
                         onClick={() => openEditor(node, status)}
                         testId={`admin.security_advisories.nodes.row.${node.id}.edit`}
                       >
@@ -268,6 +308,7 @@ export function SecurityAdvisoryNodesPanel(props: {
                         <Button
                           size="sm"
                           variant="danger"
+                          className="min-h-11 w-full whitespace-nowrap md:min-h-8 md:w-auto md:whitespace-normal"
                           onClick={() => setDeleteTarget({ node, status })}
                           testId={`admin.security_advisories.nodes.row.${node.id}.delete`}
                         >
