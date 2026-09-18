@@ -31,7 +31,7 @@ export interface DnsRecord {
   name?: string;
   type?: string;
   content?: string;
-  ttl?: number;
+  ttl?: number | null;
   priority?: number;
   comment?: string;
   enabled?: boolean;
@@ -178,7 +178,7 @@ export async function createDnsRecord(payload: {
 export async function updateDnsRecord(recordId: number, payload: {
   user?: number;
   content?: string;
-  ttl?: number;
+  ttl?: number | null;
   priority?: number;
   comment?: string;
   enabled?: boolean;

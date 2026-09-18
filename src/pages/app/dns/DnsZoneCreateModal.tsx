@@ -15,6 +15,12 @@ import { Select } from '../../../components/ui/Select';
 import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 
 import { canonicalDnsZoneName, isValidDnsZoneEmail } from './dnsZoneListSemantics';
+import {
+  DNS_TTL_MAX,
+  DNS_TTL_MIN,
+  DNS_ZONE_DEFAULT_TTL,
+  validateDnsTtl,
+} from './dnsTtlContract';
 
 export type DnsZoneCreateKind = 'primary' | 'secondary';
 
@@ -36,7 +42,7 @@ export function DnsZoneCreateModal(props: {
   const [email, setEmail] = useState('');
   const [enabled, setEnabled] = useState(true);
   const [dnssec, setDnssec] = useState(false);
-  const [defaultTtl, setDefaultTtl] = useState('3600');
+  const [defaultTtl, setDefaultTtl] = useState(String(DNS_ZONE_DEFAULT_TTL));
 
   const emailValue = email.trim();
   const defaultTtlValue = Number(defaultTtl);
@@ -46,12 +52,8 @@ export function DnsZoneCreateModal(props: {
     if (kind === 'primary' && !isValidDnsZoneEmail(emailValue)) {
       return t('dns.zones.create.validation.email_invalid');
     }
-    if (
-      kind === 'primary' &&
-      props.mode === 'admin' &&
-      (!Number.isFinite(defaultTtlValue) || defaultTtlValue < 60)
-    ) {
-      return t('dns.zones.create.validation.ttl_invalid');
+    if (kind === 'primary' && props.mode === 'admin' && validateDnsTtl(defaultTtl, { required: true })) {
+      return t('dns.zones.create.validation.ttl_invalid', { min: DNS_TTL_MIN, max: DNS_TTL_MAX });
     }
     return '';
   })();
@@ -92,7 +94,7 @@ export function DnsZoneCreateModal(props: {
       setEmail('');
       setEnabled(true);
       setDnssec(false);
-      setDefaultTtl('3600');
+      setDefaultTtl(String(DNS_ZONE_DEFAULT_TTL));
       props.onClose();
       props.onCreated({ id: createdId, kind: createdKind });
     },
