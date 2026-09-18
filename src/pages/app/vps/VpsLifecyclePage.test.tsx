@@ -17,6 +17,7 @@ const testState = vi.hoisted(() => ({
   openTasks: vi.fn(),
   refreshVps: vi.fn(),
   refreshChains: vi.fn(),
+  detailContextSearch: undefined as string | undefined,
 }));
 
 vi.mock('../../../app/auth', () => ({
@@ -73,6 +74,7 @@ vi.mock('./VpsContext', () => ({
     ipAddresses: [],
     ipAddressesLoading: false,
     ipAddressesError: false,
+    detailContextSearch: testState.detailContextSearch,
   }),
 }));
 
@@ -82,9 +84,43 @@ const preflightMock = vi.mocked(preflightVpsNotBusy);
 describe('VpsLifecyclePage durable mutation snapshots', () => {
   beforeEach(() => {
     testState.vpsId = 101;
+    testState.detailContextSearch = undefined;
     vi.clearAllMocks();
     vpsStopMock.mockResolvedValue({ data: {}, meta: {} } as never);
     preflightMock.mockResolvedValue(undefined);
+  });
+
+  it('exposes lifecycle destinations as links that preserve the member scope', async () => {
+    const user = userEvent.setup();
+    testState.detailContextSearch = '?user=9';
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const router = createMemoryRouter([
+      {
+        path: '/admin/vps/:vpsId/lifecycle',
+        element: <VpsLifecyclePage />,
+      },
+      {
+        path: '/admin/vps/:vpsId/lifecycle/:lifecycleAction',
+        element: <VpsLifecyclePage />,
+      },
+    ], { initialEntries: ['/admin/vps/101/lifecycle?user=9'] });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    );
+
+    const restartLink = await screen.findByTestId('vps.lifecycle.action_link.restart');
+    expect(restartLink).toHaveAttribute('href', '/admin/vps/101/lifecycle/restart?user=9');
+
+    await user.click(restartLink);
+    expect(router.state.location.pathname).toBe('/admin/vps/101/lifecycle/restart');
+    expect(router.state.location.search).toBe('?user=9');
+    expect(screen.getByRole('link', { name: 'vps.lifecycle.back_to_actions' }))
+      .toHaveAttribute('href', '/admin/vps/101/lifecycle?user=9');
   });
 
   it('keeps the submitted VPS and force payload while onMutate awaits across a route/form rerender', async () => {
