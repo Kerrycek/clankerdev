@@ -89,7 +89,7 @@ describe('exports API wrappers', () => {
     await fetchHostIpAddresses({
       limit: 100,
       user: 55,
-      purpose: 'vps',
+      usableFor: 'vps',
       routed: true,
     });
 
@@ -99,7 +99,8 @@ describe('exports API wrappers', () => {
     expect(u.pathname).toBe('/v7.0/host_ip_addresses');
     expect(u.searchParams.get('host_ip_address[limit]')).toBe('100');
     expect(u.searchParams.get('host_ip_address[user]')).toBe('55');
-    expect(u.searchParams.get('host_ip_address[purpose]')).toBe('vps');
+    expect(u.searchParams.get('host_ip_address[usable_for]')).toBe('vps');
+    expect(u.searchParams.has('host_ip_address[purpose]')).toBe(false);
     expect(u.searchParams.get('host_ip_address[routed]')).toBe('true');
     expect(u.searchParams.has('host_ip_address[q]')).toBe(false);
     expect(u.searchParams.has('host_ip_address[assigned]')).toBe(false);

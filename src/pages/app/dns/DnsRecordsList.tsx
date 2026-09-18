@@ -10,7 +10,6 @@ import { Alert } from '../../../components/ui/Alert';
 import { Badge } from '../../../components/ui/Badge';
 import { Card } from '../../../components/ui/Card';
 import { CopyButton } from '../../../components/ui/CopyButton';
-import { KeysetPagination } from '../../../components/ui/KeysetPagination';
 import { StatusDot } from '../../../components/ui/StatusDot';
 import { toneSurfaceClass } from '../../../components/ui/tone';
 
@@ -62,17 +61,6 @@ export function DnsRecordsList(props: {
   rowErrors: ReadonlyMap<number, string>;
   updateGate: GateDecision;
   deleteGate: GateDecision;
-  page: number;
-  pageCount: number;
-  canPrev: boolean;
-  canNext: boolean;
-  pageCursor: number | null;
-  limit: number;
-  allowedLimits: readonly number[];
-  onPrev: () => void;
-  onNext: (cursor: number | null) => void;
-  onGoToPage: (page: number) => void;
-  onLimitChange: (limit: number) => void;
   onEdit: (record: DnsRecord) => void;
   onDelete: (record: DnsRecord) => void;
 }) {
@@ -103,6 +91,11 @@ export function DnsRecordsList(props: {
                         <StatusDot variant={rowVariant} testId={`dns.record.card.${record.id}.dot`} />
                         <div className="truncate text-base font-semibold text-fg">{recordName(record)}</div>
                         <Badge variant="neutral">{String(record.type ?? t('common.na'))}</Badge>
+                        {record.managed ? (
+                          <Badge variant="neutral" testId={`dns.record.card.${record.id}.managed`}>
+                            {t('dns.zone.records.managed.badge')}
+                          </Badge>
+                        ) : null}
                       </div>
                       {record.comment ? <div className="mt-1 text-sm text-muted">{String(record.comment)}</div> : null}
                       <div className="mt-1 text-xs text-faint">#{record.id}</div>
@@ -152,28 +145,34 @@ export function DnsRecordsList(props: {
                     testId={`dns.record.card.${record.id}.validation`}
                   />
 
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <ActionButton
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => props.onEdit(record)}
-                      disabled={!props.updateGate.allowed}
-                      disabledReason={!props.updateGate.allowed ? props.updateGate.reason : undefined}
-                      testId={`dns.record.card.${record.id}.edit`}
-                    >
-                      {t('common.edit')}
-                    </ActionButton>
-                    <ActionButton
-                      size="sm"
-                      variant="danger"
-                      onClick={() => props.onDelete(record)}
-                      disabled={!props.deleteGate.allowed}
-                      disabledReason={!props.deleteGate.allowed ? props.deleteGate.reason : undefined}
-                      testId={`dns.record.card.${record.id}.delete`}
-                    >
-                      {t('common.delete')}
-                    </ActionButton>
-                  </div>
+                  {record.managed ? (
+                    <div className="mt-3 text-xs text-faint" data-testid={`dns.record.card.${record.id}.read_only`}>
+                      {t('dns.zone.records.managed.read_only')}
+                    </div>
+                  ) : (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <ActionButton
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => props.onEdit(record)}
+                        disabled={!props.updateGate.allowed}
+                        disabledReason={!props.updateGate.allowed ? props.updateGate.reason : undefined}
+                        testId={`dns.record.card.${record.id}.edit`}
+                      >
+                        {t('common.edit')}
+                      </ActionButton>
+                      <ActionButton
+                        size="sm"
+                        variant="danger"
+                        onClick={() => props.onDelete(record)}
+                        disabled={!props.deleteGate.allowed}
+                        disabledReason={!props.deleteGate.allowed ? props.deleteGate.reason : undefined}
+                        testId={`dns.record.card.${record.id}.delete`}
+                      >
+                        {t('common.delete')}
+                      </ActionButton>
+                    </div>
+                  )}
                 </div>
               </Card>
             );
@@ -221,6 +220,13 @@ export function DnsRecordsList(props: {
                       </td>
                       <td className="py-2 pr-3">
                         <div className="font-medium text-fg">{recordName(record)}</div>
+                        {record.managed ? (
+                          <div className="mt-1">
+                            <Badge variant="neutral" testId={`dns.record.row.${record.id}.managed`}>
+                              {t('dns.zone.records.managed.badge')}
+                            </Badge>
+                          </div>
+                        ) : null}
                         {record.comment ? <div className="mt-1 text-xs text-muted">{String(record.comment)}</div> : null}
                         <div className="mt-1 text-xs text-faint">#{record.id}</div>
                         {record.dynamic_update_url ? (
@@ -249,28 +255,34 @@ export function DnsRecordsList(props: {
                       <td className="py-2 pr-3"><EnabledBadge value={record.enabled} /></td>
                       <td className="py-2 pr-3"><YesNoBadge value={recordDynamicEnabled(record)} /></td>
                       <td className="py-2 pr-4 text-right">
-                        <div className="flex flex-wrap justify-end gap-2">
-                          <ActionButton
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => props.onEdit(record)}
-                            disabled={!props.updateGate.allowed}
-                            disabledReason={!props.updateGate.allowed ? props.updateGate.reason : undefined}
-                            testId={`dns.record.row.${record.id}.edit`}
-                          >
-                            {t('common.edit')}
-                          </ActionButton>
-                          <ActionButton
-                            size="sm"
-                            variant="danger"
-                            onClick={() => props.onDelete(record)}
-                            disabled={!props.deleteGate.allowed}
-                            disabledReason={!props.deleteGate.allowed ? props.deleteGate.reason : undefined}
-                            testId={`dns.record.row.${record.id}.delete`}
-                          >
-                            {t('common.delete')}
-                          </ActionButton>
-                        </div>
+                        {record.managed ? (
+                          <span className="text-xs text-faint" data-testid={`dns.record.row.${record.id}.read_only`}>
+                            {t('dns.zone.records.managed.read_only')}
+                          </span>
+                        ) : (
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <ActionButton
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => props.onEdit(record)}
+                              disabled={!props.updateGate.allowed}
+                              disabledReason={!props.updateGate.allowed ? props.updateGate.reason : undefined}
+                              testId={`dns.record.row.${record.id}.edit`}
+                            >
+                              {t('common.edit')}
+                            </ActionButton>
+                            <ActionButton
+                              size="sm"
+                              variant="danger"
+                              onClick={() => props.onDelete(record)}
+                              disabled={!props.deleteGate.allowed}
+                              disabledReason={!props.deleteGate.allowed ? props.deleteGate.reason : undefined}
+                              testId={`dns.record.row.${record.id}.delete`}
+                            >
+                              {t('common.delete')}
+                            </ActionButton>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );
@@ -279,40 +291,7 @@ export function DnsRecordsList(props: {
             </tbody>
           </table>
         </div>
-
-        <KeysetPagination
-          page={props.page}
-          pageCount={props.pageCount}
-          canPrev={props.canPrev}
-          canNext={props.canNext}
-          onPrev={props.onPrev}
-          onNext={() => props.onNext(props.pageCursor)}
-          onGoToPage={props.onGoToPage}
-          limit={props.limit}
-          allowedLimits={props.allowedLimits}
-          onLimitChange={props.onLimitChange}
-          testId="dns.records.pagination.desktop"
-        />
       </Card>
-
-      <div className="md:hidden">
-        <Card>
-          <KeysetPagination
-            page={props.page}
-            pageCount={props.pageCount}
-            canPrev={props.canPrev}
-            canNext={props.canNext}
-            onPrev={props.onPrev}
-            onNext={() => props.onNext(props.pageCursor)}
-            onGoToPage={props.onGoToPage}
-            limit={props.limit}
-            allowedLimits={props.allowedLimits}
-            onLimitChange={props.onLimitChange}
-            testId="dns.records.pagination.mobile"
-            className="border-t-0"
-          />
-        </Card>
-      </div>
     </>
   );
 }

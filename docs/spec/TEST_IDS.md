@@ -786,12 +786,15 @@ Zone detail:
 - `dns.record.card.<id>` (mobile cards)
 - `dns.record.row.<id>.edit`
 - `dns.record.row.<id>.delete`
+- `dns.record.row.<id>.managed` (system-managed records)
+- `dns.record.row.<id>.read_only` (system-managed records)
 - `dns.record.row.<id>.ddns_copy` (when DDNS URL is present)
 - `dns.record.card.<id>.edit`
 - `dns.record.card.<id>.delete`
+- `dns.record.card.<id>.managed` (system-managed records)
+- `dns.record.card.<id>.read_only` (system-managed records)
 - `dns.record.card.<id>.ddns_copy` (when DDNS URL is present)
 - `dns.records.delete_confirm` (dialog; buttons: `dns.records.delete_confirm.confirm`, `dns.records.delete_confirm.cancel`)
-- `dns.records.pagination.*` (desktop/mobile: `dns.records.pagination.desktop.*`, `dns.records.pagination.mobile.*`)
 
 Record create modal:
 - `dns.records.create.modal`

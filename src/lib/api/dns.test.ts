@@ -58,18 +58,20 @@ describe('dns API wrappers', () => {
     expect(u.searchParams.get('dns_zone[dnssec_enabled]')).toBe('true');
   });
 
-  test('fetchDnsRecords filters by dns_zone', async () => {
+  test('fetchDnsRecords requests the complete zone without unsupported pagination', async () => {
     const fetchMock = mockFetchOk({ dns_records: [], _meta: { total_count: 0 } });
     vi.stubGlobal('fetch', fetchMock);
 
-    await fetchDnsRecords({ dns_zone: 123, limit: 10 });
+    const optionsWithUnsupportedPagination = { dns_zone: 123, limit: 10, fromId: 456 };
+    await fetchDnsRecords(optionsWithUnsupportedPagination);
 
     const [url] = lastFetchCall(fetchMock);
     const u = new URL(String(url));
 
     expect(u.pathname).toBe('/v7.0/dns_records');
     expect(u.searchParams.get('dns_record[dns_zone]')).toBe('123');
-    expect(u.searchParams.get('dns_record[limit]')).toBe('10');
+    expect(u.searchParams.has('dns_record[limit]')).toBe(false);
+    expect(u.searchParams.has('dns_record[from_id]')).toBe(false);
   });
 
   test('fetchDnsRecords never sends the unsupported q filter', async () => {

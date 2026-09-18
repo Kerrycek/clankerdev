@@ -50,7 +50,8 @@ test('@smoke dns zone advanced tabs render', async ({ page }, testInfo) => {
   await expect(page.getByTestId('dns.transfers.create.host_ip.opt.12')).toBeVisible();
   await expect(hostIpInput).toHaveAttribute('role', 'combobox');
   await expect(hostIpInput).toHaveAttribute('aria-expanded', 'true');
-  expect(hostIpLookupParams?.get('host_ip_address[purpose]')).toBe('vps');
+  expect(hostIpLookupParams?.get('host_ip_address[usable_for]')).toBe('vps');
+  expect(hostIpLookupParams?.has('host_ip_address[purpose]')).toBe(false);
   expect(hostIpLookupParams?.get('host_ip_address[routed]')).toBe('true');
   expect(hostIpLookupParams?.has('host_ip_address[q]')).toBe(false);
   expect(hostIpLookupParams?.has('host_ip_address[assigned]')).toBe(false);
@@ -109,7 +110,8 @@ test('@smoke admin transfer host lookup is scoped to the DNS zone owner', async 
   await expect(page.getByTestId('dns.transfers.create.host_ip.opt.12')).toBeVisible();
 
   expect(hostIpLookupParams?.get('host_ip_address[user]')).toBe('55');
-  expect(hostIpLookupParams?.get('host_ip_address[purpose]')).toBe('vps');
+  expect(hostIpLookupParams?.get('host_ip_address[usable_for]')).toBe('vps');
+  expect(hostIpLookupParams?.has('host_ip_address[purpose]')).toBe(false);
   expect(hostIpLookupParams?.get('host_ip_address[routed]')).toBe('true');
   expect(hostIpLookupParams?.has('host_ip_address[q]')).toBe(false);
   expect(hostIpLookupParams?.has('host_ip_address[assigned]')).toBe(false);

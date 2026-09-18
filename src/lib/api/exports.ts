@@ -178,6 +178,7 @@ export async function fetchHostIpAddresses(opts?: {
   vps?: number;
   assigned?: boolean;
   purpose?: string;
+  usableFor?: string;
   routed?: boolean;
   order?: string;
   includes?: string;
@@ -191,6 +192,7 @@ export async function fetchHostIpAddresses(opts?: {
   if (opts?.vps !== undefined) params['vps'] = opts.vps;
   if (opts?.assigned !== undefined) params['assigned'] = opts.assigned;
   if (opts?.purpose !== undefined) params['purpose'] = opts.purpose;
+  if (opts?.usableFor !== undefined) params['usable_for'] = opts.usableFor;
   if (opts?.routed !== undefined) params['routed'] = opts.routed;
   if (opts?.order !== undefined) params['order'] = opts.order;
 
