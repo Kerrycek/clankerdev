@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 
-import { useAppMode } from '../../../app/appMode';
 import { useI18n } from '../../../app/i18n';
 import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
@@ -110,11 +109,9 @@ export function DatasetSpaceCard(props: { dataset: Dataset }) {
   );
 }
 
-export function DatasetTemporaryExpansionCard(props: { dataset: Dataset }) {
+export function DatasetTemporaryExpansionCard(props: { dataset: Dataset; destination: string }) {
   const { t } = useI18n();
-  const { basePath } = useAppMode();
   const expansionId = objectId(props.dataset['dataset_expansion']);
-  const destination = `${basePath}/datasets/${props.dataset.id}/expansion`;
 
   return (
     <Card testId="dataset.overview.expansion">
@@ -126,7 +123,7 @@ export function DatasetTemporaryExpansionCard(props: { dataset: Dataset }) {
             : t('dataset.overview.expansion.subtitle')
         }
         actions={
-          <Button to={destination} size="sm" testId="dataset.overview.expansion.open">
+          <Button to={props.destination} size="sm" testId="dataset.overview.expansion.open">
             {expansionId ? t('dataset.overview.expansion.open') : t('dataset.overview.expansion.create')}
           </Button>
         }
