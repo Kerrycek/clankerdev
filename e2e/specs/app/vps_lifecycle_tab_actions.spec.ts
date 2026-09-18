@@ -217,6 +217,32 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await expect(page.getByTestId('vps.lifecycle.page')).toBeVisible();
   });
 
+  test('@pr-smoke @pr-smoke-mobile refreshes delayed runtime state after a lifecycle power action', async ({ page }) => {
+    let vpsReads = 0;
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
+      handlers: {
+        'GET vpses/123': () => {
+          vpsReads += 1;
+          return { vps: { ...vps, is_running: vpsReads >= 3 } };
+        },
+        'GET ip_addresses': () => ({ ip_addresses: [] }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'POST vpses/123/start': () => ({ _meta: { action_state_id: 516 } }),
+        'GET action_states/516': () => runningActionState(516, 'Start VPS'),
+      },
+    });
+
+    await page.goto('/admin/vps/123/lifecycle/start');
+    await expect(page.getByTestId('vps.header').getByText('Stopped', { exact: true })).toBeVisible();
+    await page.getByTestId('vps.lifecycle.start.confirm').check();
+    await page.getByTestId('vps.lifecycle.start.submit').click();
+
+    await expect(page.getByTestId('vps.header').getByText('Running', { exact: true })).toBeVisible({ timeout: 15_000 });
+    expect(vpsReads).toBeGreaterThanOrEqual(3);
+  });
+
   test('@workflow-matrix focused lifecycle stop action can send force flag', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installHaveApiMock(page, {

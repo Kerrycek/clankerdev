@@ -257,7 +257,7 @@ test.describe('@workflow-matrix VPS create failure regressions', () => {
     expect(postCount).toBe(1);
   });
 
-  test('waits for the exact accepted create task before requesting the new VPS detail', async ({ page }) => {
+  test('@pr-smoke @pr-smoke-mobile waits for the accepted create task and refreshes an initially incomplete runtime state', async ({ page }) => {
     let createFinished = false;
     let actionStateReads = 0;
     let detailReads = 0;
@@ -288,7 +288,12 @@ test.describe('@workflow-matrix VPS create failure regressions', () => {
       },
       'GET vpses/156': () => {
         detailReads += 1;
-        return { vps: createdVps };
+        return {
+          vps: {
+            ...createdVps,
+            is_running: detailReads > 1 ? false : undefined,
+          },
+        };
       },
     });
 
@@ -304,6 +309,8 @@ test.describe('@workflow-matrix VPS create failure regressions', () => {
     createFinished = true;
     await expect(page.getByTestId('vps.header')).toBeVisible({ timeout: 10_000 });
     expect(detailReads).toBeGreaterThan(0);
+    await expect(page.getByTestId('vps.header').getByText('Stopped', { exact: true })).toBeVisible({ timeout: 10_000 });
+    expect(detailReads).toBeGreaterThan(1);
     await expect(page.getByTestId('vps.detail.error')).toHaveCount(0);
   });
 
