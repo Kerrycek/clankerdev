@@ -40,13 +40,14 @@ function runningActionState(id: number, label: string) {
 
 async function installPowerMock(
   page: Page,
-  options: { action: 'start' | 'stop' | 'restart'; actionStateId: number; isRunning: boolean }
+  options: { action: 'start' | 'stop' | 'restart'; actionStateId: number; isRunning: boolean; admin?: boolean }
 ) {
   const label = `${options.action[0].toUpperCase()}${options.action.slice(1)} VPS`;
 
   await installHaveApiMock(page, {
-    user: { id: 42, login: 'user', level: 1 },
+    user: { id: 42, login: 'user', level: options.admin ? 99 : 1 },
     handlers: {
+      'GET vpses': () => ({ vpses: [vps], _meta: { total_count: 1 } }),
       'GET vpses/123': () => ({ vps: { ...vps, is_running: options.isRunning } }),
       'GET ip_addresses': () => ({
         ip_addresses: [
@@ -143,6 +144,22 @@ test.describe('@workflow-matrix @pr-smoke @smoke VPS detail power actions', () =
     const request = await reqPromise;
     expect(request.postDataJSON()).toEqual({ vps: { force: true } });
     await expectTrackedTask(page, 778, 'Restart');
+  });
+
+  test('keeps a tracked VPS task bound to the member context that started it', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installPowerMock(page, { action: 'restart', actionStateId: 780, isRunning: true, admin: true });
+
+    await page.goto('/admin/vps/123?user=42');
+    await page.getByTestId('vps.actions.menu').selectOption('action:restart');
+    await page.getByTestId('vps.action.restart_confirm.confirm').click();
+    await expect(page.getByTestId('modal.action_progress')).toBeVisible();
+    await page.goto('/admin/vps?user=84');
+    await page.getByTestId('tasks.open-button').click();
+
+    await expect(page.getByTestId('tasks.row.target.780')).toHaveAttribute('href', '/admin/vps/123?user=42');
+    await page.getByTestId('tasks.row.target.780').click();
+    await expect(page).toHaveURL(/\/admin\/vps\/123\?user=42$/);
   });
 
   test('names the VPS before generating a root password from the detail actions', async ({ page }) => {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
 import { useAppMode } from '../../app/appMode';
 import type { TrackedActionState } from './ChromeContext';
@@ -11,11 +11,10 @@ export function TrackedTaskTargetLink(props: {
   onNavigate: () => void;
 }) {
   const { basePath } = useAppMode();
-  const { search } = useLocation();
   const object = props.tracked?.object;
   if (object?.kind !== 'Vps' || !Number.isSafeInteger(object.id) || object.id <= 0) return <>{props.label}</>;
 
-  const memberId = Number(basePath === '/admin' ? new URLSearchParams(search).get('user') : null);
+  const memberId = Number(basePath === '/admin' ? props.tracked?.adminMemberId : null);
   const memberSearch = Number.isSafeInteger(memberId) && memberId > 0 ? `?user=${memberId}` : '';
 
   return (

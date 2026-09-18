@@ -228,6 +228,10 @@ export function AppLayout(props: { children: React.ReactNode }) {
           actionLabelKey: typeof x?.actionLabelKey === 'string' ? x.actionLabelKey : undefined,
           actionLabel: typeof x?.actionLabel === 'string' ? x.actionLabel : undefined,
           objectLabel: typeof x?.objectLabel === 'string' ? x.objectLabel : undefined,
+          adminMemberId:
+            Number.isSafeInteger(Number(x?.adminMemberId)) && Number(x?.adminMemberId) > 0
+              ? Number(x.adminMemberId)
+              : undefined,
           notifyOnInitialFinished:
             typeof x?.notifyOnInitialFinished === 'boolean' ? x.notifyOnInitialFinished : undefined,
           object: normalizeObjectRef(x?.object) ?? undefined,
@@ -421,6 +425,11 @@ export function AppLayout(props: { children: React.ReactNode }) {
         actionLabelKey: meta?.actionLabelKey,
         actionLabel: meta?.actionLabel,
         objectLabel: meta?.objectLabel,
+        adminMemberId: (() => {
+          if (basePath !== '/admin') return undefined;
+          const memberId = Number(new URLSearchParams(location.search).get('user'));
+          return Number.isSafeInteger(memberId) && memberId > 0 ? memberId : undefined;
+        })(),
         notifyOnInitialFinished: meta?.notifyOnInitialFinished,
         object: meta?.object,
         blockUi: meta?.blockUi,
@@ -433,7 +442,7 @@ export function AppLayout(props: { children: React.ReactNode }) {
         return [{ id, addedAt: now, ...safeMeta }, ...filtered].slice(0, 50);
       });
     },
-    [acquireLocalLock]
+    [acquireLocalLock, basePath, location.search]
   );
 
   const dismissActionState = useCallback((actionStateId: number) => {

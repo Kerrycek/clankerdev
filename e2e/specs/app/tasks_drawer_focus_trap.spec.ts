@@ -102,6 +102,7 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile Tasks keep the tracked action 
       actionLabelKey: 'action.vps.restart.label',
       objectLabel: 'codex-nightly-target #14',
       object: { kind: 'Vps', id: 14 },
+      adminMemberId: 42,
     }]));
   });
 
@@ -129,7 +130,7 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile Tasks keep the tracked action 
   });
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/admin/vps?user=42');
+  await page.goto('/admin/vps?user=84');
   await page.getByTestId('tasks.open-button').click();
 
   const row = page.getByTestId('tasks.row.91');
