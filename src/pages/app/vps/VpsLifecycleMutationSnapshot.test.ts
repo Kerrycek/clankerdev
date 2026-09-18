@@ -14,6 +14,7 @@ function snapshotInput() {
     vpsId: 101,
     lockRef: { kind: 'Vps' as const, id: 101 },
     basePath: '/admin',
+    memberContextUserId: 7,
     objectLabel: 'source-vps',
     canMutateVps: true,
     knownBusy: false,
@@ -34,6 +35,7 @@ describe('VPS lifecycle mutation snapshots', () => {
     expect(Object.isFrozen(variables)).toBe(true);
     expect(Object.isFrozen(variables.lockRef)).toBe(true);
     expect(Object.isFrozen(variables.preparedPayload)).toBe(true);
+    expect(variables.memberContextUserId).toBe(7);
     expect(variables.preparedPayload).toEqual({ ok: true, value: { force: true } });
     if (variables.preparedPayload.ok) {
       expect(Object.isFrozen(variables.preparedPayload.value)).toBe(true);

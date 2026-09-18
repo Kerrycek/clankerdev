@@ -118,6 +118,10 @@ function mutationErrorMessage(error: unknown, fallback: string, missingActionSta
   return fallback;
 }
 
+function memberContextSearch(userId: number | undefined): string {
+  return userId === undefined ? '' : `?user=${encodeURIComponent(String(userId))}`;
+}
+
 export function VpsLifecyclePage() {
   const { t } = useI18n();
   const auth = useAuth();
@@ -249,6 +253,9 @@ export function VpsLifecyclePage() {
     vpsId,
     lockRef: vpsRef,
     basePath,
+    memberContextUserId: canAdministerVps && ownerId && Number.isSafeInteger(ownerId) && ownerId > 0
+      ? ownerId
+      : undefined,
     objectLabel,
     canMutateVps,
     knownBusy: busyLocalLock || busyTransaction,
@@ -314,7 +321,15 @@ export function VpsLifecyclePage() {
     onSuccess: (res, variables, context) => {
       track(res.meta, 'action.vps.clone.label', variables, context);
       const newId = Number((res.data as any)?.id);
-      if (Number.isInteger(newId) && newId > 0) navigate(`${variables.basePath}/vps/${newId}`);
+      const clonedOwnerId = variables.preparedPayload.ok
+        ? Number(variables.preparedPayload.value.user)
+        : Number.NaN;
+      const memberContextUserId = Number.isSafeInteger(clonedOwnerId) && clonedOwnerId > 0
+        ? clonedOwnerId
+        : variables.memberContextUserId;
+      if (Number.isInteger(newId) && newId > 0) {
+        navigate(`${variables.basePath}/vps/${newId}${memberContextSearch(memberContextUserId)}`);
+      }
     },
     onError: (e: any) => {
       if (e?.code === 'BUSY') chrome.openTasks();
@@ -343,7 +358,9 @@ export function VpsLifecyclePage() {
     onSuccess: (res, variables, context) => {
       track(res.meta, 'action.vps.replace.label', variables, context);
       const newId = Number((res.data as any)?.id);
-      if (Number.isInteger(newId) && newId > 0 && newId !== variables.vpsId) navigate(`${variables.basePath}/vps/${newId}`);
+      if (Number.isInteger(newId) && newId > 0 && newId !== variables.vpsId) {
+        navigate(`${variables.basePath}/vps/${newId}${memberContextSearch(variables.memberContextUserId)}`);
+      }
     },
     onError: (e: any) => {
       if (e?.code === 'BUSY') chrome.openTasks();
@@ -406,7 +423,7 @@ export function VpsLifecyclePage() {
     onMutate: acquireMutationContext,
     onSuccess: (res, variables, context) => {
       track(res.meta, 'action.vps.delete.label', variables, context);
-      navigate(`${variables.basePath}/vps`);
+      navigate(`${variables.basePath}/vps${memberContextSearch(variables.memberContextUserId)}`);
     },
     onError: (e: any) => {
       if (e?.code === 'BUSY') chrome.openTasks();

@@ -9,6 +9,7 @@ export type LifecycleMutationVariables<TPayload> = Readonly<{
   vpsId: number;
   lockRef: ObjectRef;
   basePath: string;
+  memberContextUserId?: number;
   objectLabel: string;
   canMutateVps: boolean;
   knownBusy: boolean;
