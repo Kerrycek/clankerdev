@@ -73,7 +73,9 @@ async function expectTrackedTask(page: Page, actionStateId: number, label: strin
   await expect(page.getByTestId('modal.action_progress')).toBeVisible();
   await page.getByTestId('modal.action_progress.open_tasks').click();
   await expect(page.getByTestId('tasks.drawer')).toHaveAttribute('aria-modal', 'false');
-  await expect(page.getByTestId(`tasks.row.${actionStateId}`)).toContainText(label);
+  await expect(
+    page.getByTestId(`tasks.row.${actionStateId}`).getByRole('button', { name: label, exact: true }),
+  ).toBeVisible();
   await expect(page.getByTestId('vps.header')).toBeVisible();
 }
 
@@ -91,7 +93,7 @@ test.describe('@workflow-matrix @pr-smoke @smoke VPS detail power actions', () =
 
     const request = await reqPromise;
     expect(request.postDataJSON()).toEqual({});
-    await expectTrackedTask(page, 776, 'Start VPS');
+    await expectTrackedTask(page, 776, 'Start');
   });
 
   test('stops a running VPS with force and tracks the returned action state', async ({ page }) => {
@@ -118,7 +120,7 @@ test.describe('@workflow-matrix @pr-smoke @smoke VPS detail power actions', () =
     const request = await reqPromise;
     expect(request.postDataJSON()).toEqual({ vps: { force: true } });
     await expect(page.getByTestId('vps.action.stop_confirm')).toBeHidden();
-    await expectTrackedTask(page, 777, 'Stop VPS');
+    await expectTrackedTask(page, 777, 'Stop');
   });
 
   test('restarts a running VPS with force and tracks the returned action state', async ({ page }) => {
@@ -140,7 +142,7 @@ test.describe('@workflow-matrix @pr-smoke @smoke VPS detail power actions', () =
 
     const request = await reqPromise;
     expect(request.postDataJSON()).toEqual({ vps: { force: true } });
-    await expectTrackedTask(page, 778, 'Restart VPS');
+    await expectTrackedTask(page, 778, 'Restart');
   });
 
   test('names the VPS before generating a root password from the detail actions', async ({ page }) => {

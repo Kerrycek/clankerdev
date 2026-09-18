@@ -213,7 +213,9 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await expect(page.getByTestId('modal.action_progress')).toBeVisible();
     await page.getByTestId('modal.action_progress.open_tasks').click();
     await expect(page.getByTestId('tasks.drawer')).toHaveAttribute('aria-modal', 'false');
-    await expect(page.getByTestId('tasks.row.503')).toContainText('Start VPS');
+    await expect(
+      page.getByTestId('tasks.row.503').getByRole('button', { name: 'Start', exact: true }),
+    ).toBeVisible();
     await expect(page.getByTestId('vps.lifecycle.page')).toBeVisible();
   });
 
@@ -273,7 +275,9 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await expect(page.getByTestId('modal.action_progress')).toBeVisible();
     await page.getByTestId('modal.action_progress.open_tasks').click();
     await expect(page.getByTestId('tasks.drawer')).toHaveAttribute('aria-modal', 'false');
-    await expect(page.getByTestId('tasks.row.514')).toContainText('Stop VPS');
+    await expect(
+      page.getByTestId('tasks.row.514').getByRole('button', { name: 'Stop', exact: true }),
+    ).toBeVisible();
     await expect(page.getByTestId('vps.lifecycle.page')).toBeVisible();
   });
 
@@ -306,7 +310,9 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await expect(page.getByTestId('modal.action_progress')).toBeVisible();
     await page.getByTestId('modal.action_progress.open_tasks').click();
     await expect(page.getByTestId('tasks.drawer')).toHaveAttribute('aria-modal', 'false');
-    await expect(page.getByTestId('tasks.row.515')).toContainText('Restart VPS');
+    await expect(
+      page.getByTestId('tasks.row.515').getByRole('button', { name: 'Restart', exact: true }),
+    ).toBeVisible();
     await expect(page.getByTestId('vps.lifecycle.page')).toBeVisible();
   });
 
