@@ -54,11 +54,18 @@ test('dev deploy fails when the active BFF working directory differs from the bu
   assert.match(deployScript, /active_bff_exec.*canonical_src\/bff\/server\.js/s);
 });
 
-test('dev deploy validates and can roll back the BFF unit', () => {
+test('dev deploy validates and can roll back the frontend, nginx config and BFF unit', () => {
   assert.match(deployScript, /systemd-analyze verify "\$bff_unit_src"/);
-  assert.match(deployScript, /rollback_bff_unit\(\)/);
-  assert.match(deployScript, /restoring the previous systemd unit/);
-  assert.match(deployScript, /trap rollback_bff_unit ERR/);
+  assert.match(deployScript, /rollback_deploy\(\)/);
+  assert.match(deployScript, /restoring the previous frontend, nginx config and BFF unit/);
+  assert.match(deployScript, /rsync -a --delete "\$deploy_backup\/webroot\/" "\$dst\/"/);
+  assert.match(deployScript, /deploy_backup\/nginx-dev\.crucio\.cz\.conf/);
+  assert.match(deployScript, /deploy_backup\/webui-next-bff\.service/);
+  const trapIndex = deployScript.indexOf('trap rollback_deploy ERR');
+  const publishIndex = deployScript.indexOf('rsync -a --delete dist/ "$dst"/');
+  assert.notEqual(trapIndex, -1, 'rollback trap must be installed');
+  assert.notEqual(publishIndex, -1, 'frontend publish must exist');
+  assert(trapIndex < publishIndex, 'rollback trap must be installed before publishing the frontend');
 });
 
 test('tracked BFF unit runs code from the canonical dev deploy checkout', () => {

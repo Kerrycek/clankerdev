@@ -43,6 +43,52 @@ else
   npm --prefix bff install --omit=dev
 fi
 
+deploy_backup="$(mktemp -d /tmp/dev-crucio-deploy.XXXXXX)"
+install -d -m 0755 "$deploy_backup/webroot"
+if [[ -d "$dst" ]]; then
+  rsync -a "$dst/" "$deploy_backup/webroot/"
+fi
+
+bff_unit_had_previous=0
+if [[ -f "$bff_unit_dst" ]]; then
+  install -m 0644 "$bff_unit_dst" "$deploy_backup/webui-next-bff.service"
+  bff_unit_had_previous=1
+fi
+
+nginx_conf_had_previous=0
+if [[ -f "$nginx_conf_dst" ]]; then
+  install -m 0644 "$nginx_conf_dst" "$deploy_backup/nginx-dev.crucio.cz.conf"
+  nginx_conf_had_previous=1
+fi
+
+rollback_deploy() {
+  local status=$?
+  trap - ERR
+  echo "Deployment failed; restoring the previous frontend, nginx config and BFF unit" >&2
+
+  install -d -m 0755 "$dst"
+  rsync -a --delete "$deploy_backup/webroot/" "$dst/"
+
+  if [[ "$nginx_conf_had_previous" -eq 1 ]]; then
+    install -m 0644 "$deploy_backup/nginx-dev.crucio.cz.conf" "$nginx_conf_dst"
+  else
+    rm -f -- "$nginx_conf_dst" /etc/nginx/sites-enabled/dev.crucio.cz
+  fi
+
+  if [[ "$bff_unit_had_previous" -eq 1 ]]; then
+    install -m 0644 "$deploy_backup/webui-next-bff.service" "$bff_unit_dst"
+  else
+    rm -f -- "$bff_unit_dst"
+  fi
+
+  nginx -t && systemctl reload nginx || true
+  systemctl daemon-reload
+  systemctl restart webui-next-bff.service || true
+  rm -rf -- "$deploy_backup"
+  exit "$status"
+}
+trap rollback_deploy ERR
+
 install -d -m 0755 "$dst"
 rsync -a --delete dist/ "$dst"/
 
@@ -52,29 +98,6 @@ if [[ -f "$nginx_conf_src" ]]; then
   nginx -t
   systemctl reload nginx
 fi
-
-bff_unit_backup="$(mktemp /tmp/webui-next-bff.service.XXXXXX)"
-bff_unit_had_previous=0
-if [[ -f "$bff_unit_dst" ]]; then
-  install -m 0644 "$bff_unit_dst" "$bff_unit_backup"
-  bff_unit_had_previous=1
-fi
-
-rollback_bff_unit() {
-  local status=$?
-  trap - ERR
-  echo "BFF deployment failed; restoring the previous systemd unit" >&2
-  if [[ "$bff_unit_had_previous" -eq 1 ]]; then
-    install -m 0644 "$bff_unit_backup" "$bff_unit_dst"
-  else
-    rm -f -- "$bff_unit_dst"
-  fi
-  systemctl daemon-reload
-  systemctl restart webui-next-bff.service || true
-  rm -f -- "$bff_unit_backup"
-  exit "$status"
-}
-trap rollback_bff_unit ERR
 
 install -m 0644 "$bff_unit_src" "$bff_unit_dst"
 systemctl daemon-reload
@@ -109,4 +132,4 @@ echo "Checking public authentication endpoints..."
 bash deploy/smoke-auth-endpoints.sh https://dev.crucio.cz --insecure
 
 trap - ERR
-rm -f -- "$bff_unit_backup"
+rm -rf -- "$deploy_backup"

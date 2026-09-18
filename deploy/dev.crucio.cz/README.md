@@ -28,7 +28,10 @@ frontend and BFF dependencies, builds the SPA with `npm run build`, syncs
 `dist/` to `/var/www/dev.crucio.cz/current`, installs the tracked BFF systemd
 unit, and restarts the BFF service. The deploy fails if the active unit does
 not use the same source checkout as the frontend build. The wrapper executes
-the helper from that updated checkout instead of a second installed copy.
+the helper from that updated checkout instead of a second installed copy. If
+publishing, nginx validation, BFF restart, or smoke verification fails, the
+helper restores the previous webroot, nginx configuration, and BFF unit before
+returning an error.
 
 Deploy the nginx configuration manually when needed with:
 
