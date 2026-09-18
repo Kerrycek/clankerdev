@@ -69,6 +69,10 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile admin user detail: VPS create 
 
   await expect(page).toHaveURL('/admin/vps/new?user=42');
   await expect(page.getByTestId('vps.create.user')).toHaveValue('42');
+  await expect(page.getByTestId('vps.create.owner.selection')).toContainText('alice');
+  await expect(page.getByTestId('vps.create.owner.selection')).toContainText('#42');
+  await expect(page.getByTestId('vps.create.review.owner')).toContainText('alice');
+  await expect(page.getByTestId('vps.create.review.owner')).toContainText('#42');
   await expect(page.getByTestId('vps.create.back')).toHaveAttribute('href', '/admin/vps?user=42');
 });
 
