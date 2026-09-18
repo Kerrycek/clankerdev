@@ -4,6 +4,76 @@ import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock } from '../..
 import { expectNoDocumentHorizontalOverflow } from '../../helpers/horizontalOverflow';
 
 test.describe('Backup center', () => {
+  test('@pr-smoke @pr-smoke-mobile filters the complete loaded backup set without unsupported q params', async ({ page }, testInfo) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    let datasetRequests = 0;
+    let downloadRequests = 0;
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'backup-user', level: 1 },
+      handlers: {
+        'GET datasets': ({ searchParams }) => {
+          datasetRequests += 1;
+          expect(searchParams.get('dataset[q]')).toBeNull();
+          return {
+            datasets: [
+              { id: 10, name: 'root', full_name: 'mail.example/root', vps: { id: 20, hostname: 'mail.example' } },
+              { id: 11, name: 'archive', full_name: 'nas/archive' },
+            ],
+            _meta: { total_count: 2 },
+          };
+        },
+        'GET snapshot_downloads': ({ searchParams }) => {
+          downloadRequests += 1;
+          expect(searchParams.get('snapshot_download[q]')).toBeNull();
+          return {
+            snapshot_downloads: [
+              {
+                id: 41,
+                state: 'ready',
+                format: 'archive',
+                url: '/download/41',
+                snapshot: { id: 31, name: 'before-upgrade', dataset: { id: 10 } },
+              },
+              {
+                id: 42,
+                state: 'ready',
+                format: 'archive',
+                url: '/download/42',
+                snapshot: { id: 32, name: 'monthly-archive', dataset: { id: 11 } },
+              },
+            ],
+            _meta: { total_count: 2 },
+          };
+        },
+      },
+    });
+
+    await page.goto('/app/backups?tab=snapshots');
+    await expect(page.getByTestId('backups.snapshots.row.10')).toBeVisible();
+    await expect(page.getByTestId('backups.snapshots.row.11')).toBeVisible();
+    await page.getByTestId('backups.filter').fill('archive');
+    await expect(page.getByTestId('backups.snapshots.row.10')).toHaveCount(0);
+    await expect(page.getByTestId('backups.snapshots.row.11')).toBeVisible();
+    expect(datasetRequests).toBe(1);
+    expect(downloadRequests).toBe(0);
+
+    await page.getByTestId('backups.tab.downloads').click();
+    await page.getByTestId('backups.filter').fill('monthly');
+    const resultTestId = testInfo.project.name === 'mobile-chrome'
+      ? 'backups.downloads.card.42'
+      : 'backups.downloads.row.42';
+    await expect(page.getByTestId(resultTestId)).toBeVisible();
+    await expect(page.getByTestId(
+      testInfo.project.name === 'mobile-chrome'
+        ? 'backups.downloads.card.41'
+        : 'backups.downloads.row.41',
+    )).toHaveCount(0);
+    expect(datasetRequests).toBe(1);
+    expect(downloadRequests).toBe(1);
+    await expect(page.getByText(/A limited quick overview is loaded/)).toHaveCount(0);
+  });
+
   test('@pr-smoke @pr-smoke-mobile keeps backup download actions visible without horizontal scrolling', async ({ page }, testInfo) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 

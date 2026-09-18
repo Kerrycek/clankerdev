@@ -8,11 +8,11 @@ export const csStorage = {
   "datasets.list.description":
     "Procházej storage datasety, snapshoty a downloady.",
   "datasets.list.search.placeholder":
-    "Hledat datasety (název, VPS, uživatel, #id)…",
+    "Filtrovat tuto stranu (název, VPS, uživatel, #id)…",
   "nas.list.title": "NAS",
   "nas.list.description":
     "Procházej datasety uživatelů v primary poolu bez filtrů specifických pro VPS.",
-  "nas.list.search.placeholder": "Hledat NAS datasety (název, uživatel, #id)…",
+  "nas.list.search.placeholder": "Filtrovat tuto stranu NAS (název, uživatel, #id)…",
   "nas.list.load_error.title": "Nepodařilo se načíst NAS datasety",
   "nas.list.empty.title": "Žádné NAS datasety",
   "nas.list.empty.body":
@@ -21,25 +21,25 @@ export const csStorage = {
   "datasets.smart.suggest.open_dataset.secondary": "Přejít na detail datasetu",
   "datasets.smart.suggest.vps_id": "Filtrovat podle ID VPS",
   "datasets.smart.suggest.user_id": "Filtrovat podle ID uživatele",
-  "datasets.smart.suggest.search": "Hledat: „{q}“",
-  "datasets.smart.suggest.search.secondary": "Plnotextové vyhledávání",
+  "datasets.smart.suggest.search": "Filtrovat tuto stranu: „{q}“",
+  "datasets.smart.suggest.search.secondary": "Lokální filtr právě načtené strany API",
   "datasets.smart_help.title": "Filtry datasetů",
   "datasets.smart_help.intro":
     "Použij filtry ve tvaru klíč:hodnota nebo prostý text. Stiskni Enter pro použití nejlepšího návrhu.",
   "datasets.smart_help.items.help": "Zobrazit tuto nápovědu",
   "datasets.smart_help.items.open": "Otevřít dataset #123",
   "datasets.smart_help.items.q":
-    "Hledat podle názvu/full name datasetu, hostname VPS nebo uživatele",
+    "Filtrovat aktuální stranu API podle názvu/full name datasetu, hostname VPS nebo uživatele",
   "datasets.smart_help.items.user":
     "Filtrovat podle vlastníka (jen v administraci)",
   "datasets.smart_help.items.vps": "Filtrovat podle ID VPS",
   "datasets.smart_help.items.free":
-    "Prostý text se bere jako vyhledávací dotaz",
+    "Prostý text filtruje jen právě načtenou stranu API",
   "datasets.smart_help.footnote":
     'Tip: hodnoty s mezerami dej do uvozovek, např. q:"foo bar".',
-  "datasets.advanced.q.label": "Hledat",
+  "datasets.advanced.q.label": "Filtrovat aktuální stranu",
   "datasets.advanced.q.placeholder":
-    "Hledat podle datasetu, hostname VPS nebo uživatele",
+    "Filtrovat tuto stranu podle datasetu, hostname VPS nebo uživatele",
   "datasets.advanced.user.label": "Vlastník",
   "datasets.advanced.user.placeholder": "Vyber uživatele…",
   "datasets.advanced.vps.label": "VPS",
@@ -48,6 +48,12 @@ export const csStorage = {
     "Filtry se ukládají do URL, takže je můžeš sdílet nebo uložit do záložek.",
   "datasets.list.load_error.title": "Nepodařilo se načíst datasety",
   "datasets.list.empty": "Žádné datasety nenalezeny.",
+  "datasets.search.page_limited.title": "Hledání je omezené na tuto stranu",
+  "datasets.search.page_limited.body":
+    "API nemá plnotextový filtr datasetů. Tento textový filtr kontroluje jen právě načtenou stranu; další výsledky ověř pomocí stránkování.",
+  "datasets.search.no_matches_page.title": "Na této straně nejsou shody",
+  "datasets.search.no_matches_page.body":
+    "Hledaný text není na právě načtené straně. Filtr zruš nebo pokračuj na další stranu.",
   "datasets.usage.aria_label": "Využití místa datasetu",
   "datasets.usage.no_data": "Žádná data",
   "datasets.usage.used_mib": "{mib} MiB použito",
