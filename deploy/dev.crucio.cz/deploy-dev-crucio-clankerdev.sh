@@ -64,6 +64,7 @@ fi
 rollback_deploy() {
   local status=$?
   trap - ERR
+  set +e
   echo "Deployment failed; restoring the previous frontend, nginx config and BFF unit" >&2
 
   install -d -m 0755 "$dst"
@@ -81,9 +82,9 @@ rollback_deploy() {
     rm -f -- "$bff_unit_dst"
   fi
 
-  nginx -t && systemctl reload nginx || true
+  nginx -t && systemctl reload nginx
   systemctl daemon-reload
-  systemctl restart webui-next-bff.service || true
+  systemctl restart webui-next-bff.service
   rm -rf -- "$deploy_backup"
   exit "$status"
 }
