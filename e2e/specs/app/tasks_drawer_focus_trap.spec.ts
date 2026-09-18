@@ -93,6 +93,63 @@ test('@workflow-matrix @pr-smoke Tasks drawer cards stay readable in the narrow 
   expect(actionsBox!.x + actionsBox!.width).toBeLessThanOrEqual(rowBox!.x + rowBox!.width);
 });
 
+test('@workflow-matrix @pr-smoke @pr-smoke-mobile Tasks keep the tracked action and object identity visible and searchable', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+  await page.addInitScript(() => {
+    sessionStorage.setItem('webui-next.tracked_action_states.user-1', JSON.stringify([{
+      id: 91,
+      addedAt: Date.now(),
+      actionLabelKey: 'action.vps.restart.label',
+      objectLabel: 'codex-nightly-target #14',
+      object: { kind: 'Vps', id: 14 },
+    }]));
+  });
+
+  const actionState = {
+    id: 91,
+    label: 'State change',
+    status: true,
+    finished: true,
+    current: 1,
+    total: 1,
+    created_at: '2026-09-18T06:00:00Z',
+    updated_at: '2026-09-18T06:00:02Z',
+  };
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'test', level: 1 },
+    handlers: {
+      'GET vpses': () => ({ vpses: [], _meta: { total_count: 0 } }),
+      'GET action_states': () => ({ action_states: [actionState] }),
+      'GET action_states/91': () => ({ action_state: actionState }),
+      'GET transaction_chains/91': () => ({
+        transaction_chain: { id: 91, label: 'Restart', state: 'done', progress: 1, size: 1 },
+      }),
+      'GET transactions': () => ({ transactions: [] }),
+    },
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/app/vps');
+  await page.getByTestId('tasks.open-button').click();
+
+  const row = page.getByTestId('tasks.row.91');
+  await expect(row.getByRole('button', { name: 'Restart', exact: true })).toBeVisible();
+  await expect(row).not.toContainText('State change');
+  await expect(row).toContainText('Object: codex-nightly-target #14');
+
+  await page.getByTestId('tasks.filter-input').fill('codex-nightly-target');
+  await expect(row).toBeVisible();
+  await page.getByTestId('tasks.filter-input').fill('another-target');
+  await expect(row).toHaveCount(0);
+  await page.getByTestId('tasks.filter-input').fill('');
+
+  await page.getByTestId('tasks.inspect.open.91').click();
+  const detail = page.getByTestId('tasks.inspect.action_state.91');
+  await expect(detail).toContainText('Restart');
+  await expect(detail).toContainText('Object');
+  await expect(detail).toContainText('codex-nightly-target #14');
+});
+
 test('@workflow-matrix @pr-smoke-mobile Tasks inspection labels running, completed, and failed action IDs accurately', async ({ page }) => {
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
