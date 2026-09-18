@@ -6,6 +6,7 @@ This is a **minimal backend-for-frontend** service used only for OAuth2:
 - Handles OAuth callback & exchanges code for tokens (`/oauth/callback`)
 - Stores access/refresh tokens in a server-side session (keeps `client_secret` secret)
 - Exposes public runtime config from `/config.js`
+- Exposes the OAuth provider's password-recovery entry point to the SPA
 - Exposes the current access token only as same-origin JSON from `/session.json`
 
 It **does not proxy** HaveAPI calls. The SPA still calls `https://api.vpsfree.cz` directly.
@@ -52,6 +53,8 @@ Optional:
 - `SESSION_STORE_PATH`
 - `HAVEAPI_AUTH_HEADER`
 - `HAVEAPI_META_NAMESPACE`
+- `PASSWORD_RECOVERY_URL` (defaults to `/oauth2/password-reset` on the OAuth provider origin;
+  `client_id` is added automatically when omitted)
 
 ## Running locally
 

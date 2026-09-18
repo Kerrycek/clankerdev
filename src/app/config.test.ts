@@ -9,6 +9,7 @@ const ENV_KEYS = [
   'VITE_LEGACY_WEBUI_URL',
   'VITE_LOGIN_URL',
   'VITE_LOGOUT_URL',
+  'VITE_PASSWORD_RECOVERY_URL',
   'VITE_OAUTH2_AUTHORIZE_URL',
   'VITE_OAUTH2_TOKEN_URL',
   'VITE_OAUTH2_CLIENT_ID',
@@ -155,6 +156,25 @@ describe('getRuntimeConfig', () => {
 
     const cfg = getRuntimeConfig();
     expect(cfg.sessionExpiresAt).toBe(1_800_000_000_000);
+  });
+
+  it('reads the password recovery URL from runtime config', () => {
+    window.vpsAdmin = {
+      api: { url: 'https://api.example.test', version: '7.0' },
+      webuiNext: {
+        passwordRecoveryUrl: '/oauth2/password-reset?client_id=webui.test',
+      },
+    };
+
+    expect(getRuntimeConfig().passwordRecoveryUrl).toBe(
+      '/oauth2/password-reset?client_id=webui.test',
+    );
+  });
+
+  it('does not expose an empty password recovery URL', () => {
+    process.env['VITE_PASSWORD_RECOVERY_URL'] = '   ';
+
+    expect(getRuntimeConfig().passwordRecoveryUrl).toBeUndefined();
   });
 
   it('reads server time zone from env', () => {

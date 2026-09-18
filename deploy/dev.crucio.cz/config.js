@@ -13,6 +13,7 @@
   window.vpsAdmin.webuiNext = window.vpsAdmin.webuiNext || {};
   window.vpsAdmin.webuiNext.loginUrl = '/oauth/login';
   window.vpsAdmin.webuiNext.logoutUrl = '/oauth/logout';
+  window.vpsAdmin.webuiNext.passwordRecoveryUrl = '/oauth2/password-reset?client_id=dev.crucio.cz';
   window.vpsAdmin.webuiNext.basePath = '';
   window.vpsAdmin.webuiNext.haveApi = {
     authHeader: 'X-HaveAPI-OAuth2-Token',

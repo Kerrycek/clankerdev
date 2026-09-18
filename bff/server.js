@@ -62,6 +62,18 @@ const OAUTH_CLIENT_SECRET = required('OAUTH_CLIENT_SECRET');
 const OAUTH_SCOPE = process.env.OAUTH_SCOPE || 'all';
 const OAUTH_TYPE = process.env.OAUTH_TYPE || 'web_server';
 
+function passwordRecoveryUrl() {
+  const configured = process.env.PASSWORD_RECOVERY_URL || '/oauth2/password-reset';
+  const url = new URL(configured, OAUTH_AUTHORIZE_URL);
+  if (!['http:', 'https:'].includes(url.protocol)) {
+    throw new Error('PASSWORD_RECOVERY_URL must use HTTP(S)');
+  }
+  if (!url.searchParams.has('client_id')) url.searchParams.set('client_id', OAUTH_CLIENT_ID);
+  return url.toString();
+}
+
+const PASSWORD_RECOVERY_URL = passwordRecoveryUrl();
+
 // Must match the OAuth client registration exactly
 const OAUTH_REDIRECT_URI =
   process.env.OAUTH_REDIRECT_URI || `https://${DOMAIN}/oauth/callback`;
@@ -265,6 +277,7 @@ app.get('/config.js', (_req, res) => {
     webuiNext: {
       loginUrl: '/oauth/login',
       logoutUrl: '/oauth/logout',
+      passwordRecoveryUrl: PASSWORD_RECOVERY_URL,
       basePath: '',
       haveApi: {
         authHeader: HAVEAPI_AUTH_HEADER,
