@@ -18,6 +18,7 @@ import type { VpsListRecord, VpsListTranslator } from './vpsListSemantics';
 interface VpsListMobileProps {
   rows: VpsListRecord[];
   basePath: string;
+  detailSearch: string;
   t: VpsListTranslator;
   pagination: KeysetPaginationState;
   canPaginate: boolean;
@@ -33,6 +34,7 @@ interface VpsListMobileProps {
 export function VpsListMobile({
   rows,
   basePath,
+  detailSearch,
   t,
   pagination,
   canPaginate,
@@ -58,7 +60,7 @@ export function VpsListMobile({
                   <div>
                     <div className="flex items-center gap-2">
                       <StatusDot variant={row.dotVariant} testId={`vps.card.${vps.id}.dot`} ariaLabel={row.runtimeBadge.label} />
-                      <Link to={`${basePath}/vps/${vps.id}`} className="text-base font-semibold text-fg underline">
+                      <Link to={`${basePath}/vps/${vps.id}${detailSearch}`} className="text-base font-semibold text-fg underline">
                         {vps.hostname}
                       </Link>
                     </div>
@@ -129,6 +131,7 @@ export function VpsListMobile({
                   <VpsListRowActions
                     row={row}
                     basePath={basePath}
+                    detailSearch={detailSearch}
                     t={t}
                     testIdPrefix={`vps.card.${vps.id}`}
                     showLabels

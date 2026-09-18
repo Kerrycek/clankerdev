@@ -326,6 +326,9 @@ export function VpsListPage() {
   const createPath = mode === 'admin' && listFilters.userIdNum !== undefined
     ? `${basePath}/vps/new?user=${encodeURIComponent(String(listFilters.userIdNum))}`
     : `${basePath}/vps/new`;
+  const detailSearch = mode === 'admin' && listFilters.userIdNum !== undefined
+    ? `?user=${encodeURIComponent(String(listFilters.userIdNum))}`
+    : '';
 
   const onStart = (row: (typeof displayRows)[number]) =>
     powerM.mutate({
@@ -406,6 +409,7 @@ export function VpsListPage() {
           <VpsListMobile
             rows={visibleRows}
             basePath={basePath}
+            detailSearch={detailSearch}
             t={t}
             pagination={pagination}
             canPaginate={canPaginate}
@@ -421,6 +425,7 @@ export function VpsListPage() {
           <VpsListTable
             rows={visibleRows}
             basePath={basePath}
+            detailSearch={detailSearch}
             t={t}
             pagination={pagination}
             canPaginate={canPaginate}

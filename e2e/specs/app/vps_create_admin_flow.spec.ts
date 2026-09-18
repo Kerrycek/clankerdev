@@ -250,7 +250,7 @@ test.describe('@workflow-matrix @pr-smoke VPS create admin flow', () => {
     expect(body.vps).not.toHaveProperty('node');
   });
 
-  test('admin create payload does not include location and stays in admin scope', async ({ page }) => {
+  test('admin create payload does not include location and keeps the selected member context', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_ADMIN' });
 
     const createBodies: unknown[] = [];
@@ -295,17 +295,17 @@ test.describe('@workflow-matrix @pr-smoke VPS create admin flow', () => {
       },
     });
 
-    await page.goto('/admin/vps/new');
+    await page.goto('/admin/vps/new?user=1');
     await expect(page.getByTestId('vps.create')).toBeVisible();
 
-    await page.getByTestId('vps.create.user').fill('1');
+    await expect(page.getByTestId('vps.create.user')).toHaveValue('1');
     await page.getByTestId('vps.create.location').selectOption('2');
     await page.getByTestId('vps.create.os_template').selectOption('6');
     await page.getByTestId('vps.create.node').selectOption('101');
     await page.getByTestId('vps.create.hostname').fill('admin-created.example');
     await page.getByTestId('vps.create.submit').click();
 
-    await expect(page).toHaveURL(/\/admin\/vps\/150$/);
+    await expect(page).toHaveURL(/\/admin\/vps\/150\?user=1$/);
 
     expect(createBodies).toHaveLength(1);
     const body = createBodies[0] as any;

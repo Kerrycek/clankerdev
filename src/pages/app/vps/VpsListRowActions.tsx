@@ -9,6 +9,7 @@ import type { VpsListRecord, VpsListTranslator } from './vpsListSemantics';
 interface VpsListRowActionsProps {
   row: VpsListRecord;
   basePath: string;
+  detailSearch: string;
   t: VpsListTranslator;
   testIdPrefix: string;
   onStart: (row: VpsListRecord) => void;
@@ -29,6 +30,7 @@ function IconLabel(props: { children: React.ReactNode; visible?: boolean }) {
 export function VpsListRowActions({
   row,
   basePath,
+  detailSearch,
   t,
   testIdPrefix,
   onStart,
@@ -39,7 +41,8 @@ export function VpsListRowActions({
 }: VpsListRowActionsProps) {
   const { vps } = row;
   const detailPath = `${basePath}/vps/${vps.id}`;
-  const consolePath = `${detailPath}/console`;
+  const detailHref = `${detailPath}${detailSearch}`;
+  const consolePath = `${detailPath}/console${detailSearch}`;
   const buttonClass = showLabels ? labeledButtonClass : iconOnlyButtonClass;
 
   return (
@@ -115,7 +118,7 @@ export function VpsListRowActions({
       ) : null}
 
       <Button
-        to={detailPath}
+        to={detailHref}
         variant="secondary"
         size="sm"
         className={buttonClass}
