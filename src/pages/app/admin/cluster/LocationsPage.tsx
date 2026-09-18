@@ -18,7 +18,7 @@ import {
   type Environment,
   type Location,
 } from '../../../../lib/api/infra';
-import { ClusterResourceActions } from './ClusterResourceActions';
+import { canManageClusterMaintenance, MaintenanceControl } from './MaintenanceControl';
 import { FilterBar } from '../../../../components/layout/FilterBar';
 
 import { Alert } from '../../../../components/ui/Alert';
@@ -50,6 +50,10 @@ function locLabel(loc: Location | null | undefined): string {
   const x: any = loc ?? {};
   const label = typeof x.label === 'string' ? x.label.trim() : '';
   return label || (typeof x.id === 'number' ? `#${x.id}` : '—');
+}
+
+function MobileCellLabel(props: { children: React.ReactNode }) {
+  return <div className="mb-1 text-xs font-semibold text-muted md:hidden">{props.children}</div>;
 }
 
 type EditorState =
@@ -801,8 +805,11 @@ export function LocationsPage() {
           testId="admin.cluster.locations.empty"
         />
       ) : (
-        <TableCard testId="admin.cluster.locations.table" minWidth="lg">
-          <thead>
+        <TableCard
+          testId="admin.cluster.locations.table"
+          tableClassName="block md:table md:min-w-table-lg"
+        >
+          <thead className="hidden md:table-header-group">
             <tr>
               <th className="px-3 py-2 text-left text-xs font-semibold text-muted">{t('common.name')}</th>
               <th className="px-3 py-2 text-left text-xs font-semibold text-muted">{t('common.environment')}</th>
@@ -812,24 +819,37 @@ export function LocationsPage() {
               <th className="px-3 py-2 text-right text-xs font-semibold text-muted">{t('common.actions')}</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="block md:table-row-group">
             {locations.map((loc) => {
               const desc = typeof loc.description === 'string' ? loc.description.trim() : '';
               const remote = typeof (loc as any).remote_console_server === 'string' ? String((loc as any).remote_console_server).trim() : '';
               const remoteHref = safeAbsoluteHttpUrl(remote);
               const hasIpv6 = Boolean((loc as any).has_ipv6);
               return (
-                <tr key={loc.id} data-testid={`admin.cluster.locations.row.${loc.id}`}>
-                  <td className="px-3 py-2">
-                    <div className="font-medium text-fg">{locLabel(loc)}</div>
-                    {desc ? <div className="mt-0.5 text-xs text-muted">{desc}</div> : null}
+                <tr
+                  key={loc.id}
+                  data-testid={`admin.cluster.locations.row.${loc.id}`}
+                  className="block border-b border-border last:border-b-0 md:table-row"
+                >
+                  <td className="block px-3 pb-1 pt-3 md:table-cell md:py-2">
+                    <MobileCellLabel>{t('common.name')}</MobileCellLabel>
+                    <div className="break-words font-medium text-fg">{locLabel(loc)}</div>
+                    {desc ? <div className="mt-0.5 break-words text-xs text-muted">{desc}</div> : null}
                   </td>
-                  <td className="px-3 py-2 text-sm">{envLabel((loc as any).environment)}</td>
-                  <td className="px-3 py-2 text-sm">{(loc as any).domain || '—'}</td>
-                  <td className="px-3 py-2">
+                  <td className="block px-3 py-1 text-sm md:table-cell md:py-2">
+                    <MobileCellLabel>{t('common.environment')}</MobileCellLabel>
+                    <span className="break-words">{envLabel((loc as any).environment)}</span>
+                  </td>
+                  <td className="block px-3 py-1 text-sm md:table-cell md:py-2">
+                    <MobileCellLabel>{t('common.domain')}</MobileCellLabel>
+                    <span className="break-words">{(loc as any).domain || '—'}</span>
+                  </td>
+                  <td className="block px-3 py-1 md:table-cell md:py-2">
+                    <MobileCellLabel>{t('admin.cluster.locations.col.ipv6')}</MobileCellLabel>
                     <Badge variant={hasIpv6 ? 'ok' : 'neutral'}>{hasIpv6 ? t('common.yes') : t('common.no')}</Badge>
                   </td>
-                  <td className="px-3 py-2 text-sm">
+                  <td className="block px-3 py-1 text-sm md:table-cell md:py-2">
+                    <MobileCellLabel>{t('admin.cluster.locations.col.remote_console')}</MobileCellLabel>
                     {remoteHref ? (
                       <a className="text-link hover:underline" href={remoteHref} target="_blank" rel="noopener noreferrer">
                         {t('admin.cluster.locations.remote_console_link')}
@@ -838,10 +858,32 @@ export function LocationsPage() {
                       '—'
                     )}
                   </td>
-                  <ClusterResourceActions
-                    role={auth.role} maintenance={{ value: loc.maintenance_lock, reason: loc.maintenance_lock_reason, label: locLabel(loc), testId: `admin.cluster.locations.row.${loc.id}.maintenance`, setMaintenance: (opts) => setLocationMaintenance(loc.id, opts), onChanged: () => Promise.all([qc.invalidateQueries({ queryKey: ['cluster.locations'] }), qc.invalidateQueries({ queryKey: ['cluster.locations.lookup'] })]) }}
-                    edit={{ label: t('common.edit'), testId: `admin.cluster.locations.row.${loc.id}.edit`, onClick: () => openEdit(loc) }}
-                  />
+                  <td className="block px-3 pb-3 pt-1 md:table-cell md:py-2 md:text-right">
+                    <MobileCellLabel>{t('common.actions')}</MobileCellLabel>
+                    <div className="flex flex-wrap items-center gap-2 [&_button]:min-h-11 md:justify-end md:[&_button]:min-h-0">
+                      {canManageClusterMaintenance(auth.role) ? (
+                        <MaintenanceControl
+                          value={loc.maintenance_lock}
+                          reason={loc.maintenance_lock_reason}
+                          label={locLabel(loc)}
+                          testId={`admin.cluster.locations.row.${loc.id}.maintenance`}
+                          setMaintenance={(opts) => setLocationMaintenance(loc.id, opts)}
+                          onChanged={() => Promise.all([
+                            qc.invalidateQueries({ queryKey: ['cluster.locations'] }),
+                            qc.invalidateQueries({ queryKey: ['cluster.locations.lookup'] }),
+                          ])}
+                        />
+                      ) : null}
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => openEdit(loc)}
+                        testId={`admin.cluster.locations.row.${loc.id}.edit`}
+                      >
+                        {t('common.edit')}
+                      </Button>
+                    </div>
+                  </td>
                 </tr>
               );
             })}
