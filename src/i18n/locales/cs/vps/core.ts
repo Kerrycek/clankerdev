@@ -32,6 +32,7 @@ export const csVps_core = {
   'vps.power.aria.start': 'Spustit VPS',
   'vps.power.aria.restart': 'Restartovat VPS',
   'vps.power.aria.stop': 'Zastavit VPS',
+  'vps.power.confirm.target': 'Cílové VPS',
   'vps.power.stop.confirm_title': 'Zastavit VPS',
   'vps.power.stop.confirm_desc_basic': 'Zastavení VPS jej vypne. Pokud si nejsi jistý, zvaž místo toho restart.',
   'vps.power.stop.confirm_desc_advanced': 'Zastavit toto VPS?',

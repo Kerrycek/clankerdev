@@ -106,6 +106,8 @@ test.describe('@workflow-matrix @pr-smoke @smoke VPS detail power actions', () =
     await actionsMenu.selectOption('action:stop');
 
     await expect(page.getByTestId('vps.action.stop_confirm')).toBeVisible();
+    await expect(page.getByTestId('vps.action.stop_confirm.target')).toContainText('vps123.example');
+    await expect(page.getByTestId('vps.action.stop_confirm.target')).toContainText('#123');
     await page.getByTestId('vps.action.stop_confirm.force').click();
 
     const reqPromise = page.waitForRequest(
@@ -127,6 +129,8 @@ test.describe('@workflow-matrix @pr-smoke @smoke VPS detail power actions', () =
     await page.getByTestId('vps.actions.menu').selectOption('action:restart');
 
     await expect(page.getByTestId('vps.action.restart_confirm')).toBeVisible();
+    await expect(page.getByTestId('vps.action.restart_confirm.target')).toContainText('vps123.example');
+    await expect(page.getByTestId('vps.action.restart_confirm.target')).toContainText('#123');
     await page.getByTestId('vps.action.restart_confirm.force').click();
 
     const reqPromise = page.waitForRequest(
@@ -137,5 +141,19 @@ test.describe('@workflow-matrix @pr-smoke @smoke VPS detail power actions', () =
     const request = await reqPromise;
     expect(request.postDataJSON()).toEqual({ vps: { force: true } });
     await expectTrackedTask(page, 778, 'Restart VPS');
+  });
+
+  test('names the VPS before generating a root password from the detail actions', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installPowerMock(page, { action: 'restart', actionStateId: 779, isRunning: true });
+
+    await page.goto('/app/vps/123');
+    await page.getByTestId('vps.actions.menu').selectOption('action:root_password');
+
+    await expect(page.getByTestId('vps.action.root_password_confirm')).toBeVisible();
+    await expect(page.getByTestId('vps.action.root_password_confirm.target')).toContainText('vps123.example');
+    await expect(page.getByTestId('vps.action.root_password_confirm.target')).toContainText('#123');
+    await page.getByTestId('vps.action.root_password_confirm.cancel').click();
+    await expect(page.getByTestId('vps.action.root_password_confirm')).toBeHidden();
   });
 });
