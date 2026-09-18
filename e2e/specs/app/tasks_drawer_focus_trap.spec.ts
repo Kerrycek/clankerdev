@@ -93,6 +93,41 @@ test('@workflow-matrix @pr-smoke Tasks drawer cards stay readable in the narrow 
   expect(actionsBox!.x + actionsBox!.width).toBeLessThanOrEqual(rowBox!.x + rowBox!.width);
 });
 
+test('@workflow-matrix @pr-smoke-mobile Tasks inspection labels running, completed, and failed action IDs accurately', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+  const actionStates = [
+    { id: 81, label: 'Start', status: null, finished: false, current: 0, total: 1 },
+    { id: 82, label: 'Restart', status: true, finished: true, current: 1, total: 1 },
+    { id: 83, label: 'Stop', status: false, finished: true, current: 1, total: 1 },
+  ];
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'test', level: 1 },
+    handlers: {
+      'GET vpses': () => ({ vpses: [], _meta: { total_count: 0 } }),
+      'GET action_states': () => ({ action_states: actionStates }),
+      'GET action_states/81': () => ({ action_state: actionStates[0] }),
+      'GET action_states/82': () => ({ action_state: actionStates[1] }),
+      'GET action_states/83': () => ({ action_state: actionStates[2] }),
+    },
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/app/vps');
+  await page.getByTestId('tasks.open-button').click();
+
+  for (const [id, expectedLabel] of [
+    [81, 'Running action ID'],
+    [82, 'Completed action ID'],
+    [83, 'Failed action ID'],
+  ] as const) {
+    await page.getByTestId(`tasks.inspect.open.${id}`).click();
+    await expect(page.getByTestId(`tasks.inspect.action_state.${id}`)).toContainText(expectedLabel);
+    await page.getByTestId('tasks.inspect.back').click();
+  }
+});
+
 test('@workflow-matrix @pr-smoke Tasks drawer can inspect action state transactions without leaving the page', async ({ page }) => {
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
