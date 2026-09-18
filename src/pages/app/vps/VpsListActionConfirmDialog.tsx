@@ -6,6 +6,7 @@ import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import type { Vps } from '../../../lib/api/vps';
 import { vpsDeleteObjectLabel } from './VpsDeleteModel';
 import { VpsDeleteConfirmDialog, type VpsListDeleteConfirm } from './VpsDeleteConfirmation';
+import { VpsPowerConfirmTarget } from './VpsPowerConfirmation';
 
 export type VpsListPowerConfirm = {
   vpsId: number;
@@ -69,12 +70,19 @@ export function VpsListActionConfirmDialog(props: {
         objectLabel,
       })}
     >
-      <Checkbox
-        checked={confirm.force}
-        onChange={(checked) => props.onChange((prev) => (prev && prev.kind !== 'delete' ? { ...prev, force: checked } : prev))}
-        label={t('common.force')}
-        testId="vps.list.power_confirm.force"
-      />
+      <div className="space-y-3">
+        <VpsPowerConfirmTarget
+          vpsId={confirm.vpsId}
+          objectLabel={objectLabel}
+          testId="vps.list.power_confirm.target"
+        />
+        <Checkbox
+          checked={confirm.force}
+          onChange={(checked) => props.onChange((prev) => (prev && prev.kind !== 'delete' ? { ...prev, force: checked } : prev))}
+          label={t('common.force')}
+          testId="vps.list.power_confirm.force"
+        />
+      </div>
     </ConfirmDialog>
   );
 }

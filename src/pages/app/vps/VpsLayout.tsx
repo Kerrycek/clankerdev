@@ -49,6 +49,7 @@ import {
   shouldDeferVpsDetailQuery,
 } from './VpsDetailVisibility';
 import { VpsActionsMenu, VpsTabsNav } from './VpsNavigation';
+import { VpsPowerConfirmTarget } from './VpsPowerConfirmation';
 export function VpsLayout() {
   const { basePath, mode } = useAppMode();
   const auth = useAuth();
@@ -690,7 +691,13 @@ export function VpsLayout() {
             setConfirm(null);
           }}
         >
-          <Checkbox
+          <div className="space-y-3">
+            <VpsPowerConfirmTarget
+              vpsId={vps.id}
+              objectLabel={String(vps.hostname ?? t('common.vps_ref', { id: vps.id }))}
+              testId="vps.action.stop_confirm.target"
+            />
+            <Checkbox
               checked={confirm?.kind === 'stop' ? confirm.force : false}
               onChange={(checked) =>
                 setConfirm((prev) => (prev && prev.kind === 'stop' ? { ...prev, force: checked } : prev))
@@ -699,6 +706,7 @@ export function VpsLayout() {
               description={t('vps.power.stop.force.help')}
               testId="vps.action.stop_confirm.force"
             />
+          </div>
         </ConfirmDialog>
 
         <ConfirmDialog
@@ -714,7 +722,13 @@ export function VpsLayout() {
             setConfirm(null);
           }}
         >
-          <Checkbox
+          <div className="space-y-3">
+            <VpsPowerConfirmTarget
+              vpsId={vps.id}
+              objectLabel={String(vps.hostname ?? t('common.vps_ref', { id: vps.id }))}
+              testId="vps.action.restart_confirm.target"
+            />
+            <Checkbox
               checked={confirm?.kind === 'restart' ? confirm.force : false}
               onChange={(checked) =>
                 setConfirm((prev) => (prev && prev.kind === 'restart' ? { ...prev, force: checked } : prev))
@@ -723,6 +737,7 @@ export function VpsLayout() {
               description={t('vps.power.restart.force.help')}
               testId="vps.action.restart_confirm.force"
             />
+          </div>
         </ConfirmDialog>
 
         <ConfirmDialog
@@ -738,24 +753,33 @@ export function VpsLayout() {
             setConfirm(null);
           }}
         >
-          <label className="mt-3 flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="passwdType"
-              checked={confirm?.kind === 'passwd' ? confirm.type === 'secure' : true}
-              onChange={() => setConfirm({ kind: 'passwd', type: 'secure' })}
+          <div className="space-y-3">
+            <VpsPowerConfirmTarget
+              vpsId={vps.id}
+              objectLabel={String(vps.hostname ?? t('common.vps_ref', { id: vps.id }))}
+              testId="vps.action.root_password_confirm.target"
             />
-            <span>{t('vps.power.root_password.type.secure')}</span>
-          </label>
-          <label className="mt-2 flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="passwdType"
-              checked={confirm?.kind === 'passwd' ? confirm.type === 'simple' : false}
-              onChange={() => setConfirm({ kind: 'passwd', type: 'simple' })}
-            />
-            <span>{t('vps.power.root_password.type.simple')}</span>
-          </label>
+            <div>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  name="passwdType"
+                  checked={confirm?.kind === 'passwd' ? confirm.type === 'secure' : true}
+                  onChange={() => setConfirm({ kind: 'passwd', type: 'secure' })}
+                />
+                <span>{t('vps.power.root_password.type.secure')}</span>
+              </label>
+              <label className="mt-2 flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  name="passwdType"
+                  checked={confirm?.kind === 'passwd' ? confirm.type === 'simple' : false}
+                  onChange={() => setConfirm({ kind: 'passwd', type: 'simple' })}
+                />
+                <span>{t('vps.power.root_password.type.simple')}</span>
+              </label>
+            </div>
+          </div>
         </ConfirmDialog>
 
         <Modal

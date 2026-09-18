@@ -116,6 +116,8 @@ test.describe('@workflow-matrix @smoke VPS list row navigation', () => {
 
     await expect(page).toHaveURL(/\/app\/vps(?:\?|$)/);
     await expect(page.getByTestId('vps.list.power_confirm')).toBeVisible();
+    await expect(page.getByTestId('vps.list.power_confirm.target')).toContainText('vps300.example');
+    await expect(page.getByTestId('vps.list.power_confirm.target')).toContainText('#300');
   });
 
   test('clicking user delete action opens confirmation without row navigation and sends empty delete payload', async ({ page }) => {

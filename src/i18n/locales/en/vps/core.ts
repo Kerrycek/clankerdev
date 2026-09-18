@@ -32,6 +32,7 @@ export const enVps_core = {
   'vps.power.aria.start': 'Start VPS',
   'vps.power.aria.restart': 'Restart VPS',
   'vps.power.aria.stop': 'Stop VPS',
+  'vps.power.confirm.target': 'Target VPS',
   'vps.power.stop.confirm_title': 'Stop VPS',
   'vps.power.stop.confirm_desc_basic': 'Stopping a VPS powers it off. If you are unsure, consider using Restart instead.',
   'vps.power.stop.confirm_desc_advanced': 'Stop this VPS?',
