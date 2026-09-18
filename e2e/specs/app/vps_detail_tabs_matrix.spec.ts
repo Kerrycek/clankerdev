@@ -286,9 +286,17 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile VPS admin overview keeps each 
     },
   });
 
-  await page.goto('/admin/vps/123');
+  await page.goto('/admin/vps/123?user=10');
 
   await expect(page.getByTestId('vps.header')).toBeVisible();
+  await expect(page.getByTestId('vps.header').getByRole('link', { name: /^Access$/ })).toHaveAttribute(
+    'href',
+    '/admin/vps/123/access?user=10',
+  );
+  await expect(page.getByTestId('vps.action.primary_console')).toHaveAttribute(
+    'href',
+    '/admin/vps/123/console?user=10',
+  );
   const overview = page.getByTestId('vps.overview.control_center');
   const resources = page.getByTestId('vps.overview.resources_usage.card');
   const network = page.getByTestId('vps.overview.network.card');
@@ -301,10 +309,22 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile VPS admin overview keeps each 
   await expect(page.getByTestId('vps.header.owner')).toContainText('#10');
   await expect(page.getByTestId('vps.header.owner').getByRole('link')).toHaveAttribute('href', '/admin/users/10');
   await expect(resources).toBeVisible();
+  await expect(resources.getByRole('link', { name: 'Edit resources' })).toHaveAttribute(
+    'href',
+    '/admin/vps/123/config?user=10',
+  );
   await expect(page.getByTestId('vps.overview.resources_usage.runtime')).toBeVisible();
   await expect(page.getByTestId('vps.overview.status_access.card')).toHaveCount(0);
   await expect(network).toBeVisible();
+  await expect(network.getByRole('link', { name: 'Manage network' })).toHaveAttribute(
+    'href',
+    '/admin/vps/123/network?user=10',
+  );
   await expect(storage).toBeVisible();
+  await expect(storage.getByRole('link', { name: 'Open storage' })).toHaveAttribute(
+    'href',
+    '/admin/vps/123/storage?user=10',
+  );
   await expect(storage).toContainText('Pool: tank');
   await expect(storage).toContainText('Root dataset, pool and VPS backups.');
   await expect(page.getByTestId('vps.overview.admin_ops.card')).toHaveCount(0);
@@ -381,13 +401,13 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile VPS admin overview keeps each 
   }
 
   const moreActions = page.getByTestId('vps.actions.menu');
-  await expect(moreActions.locator('option[value="/admin/vps/123/config"]')).toHaveCount(1);
-  await expect(moreActions.locator('option[value="/admin/vps/123/lifecycle"]')).toHaveCount(1);
+  await expect(moreActions.locator('option[value="/admin/vps/123/config?user=10"]')).toHaveCount(1);
+  await expect(moreActions.locator('option[value="/admin/vps/123/lifecycle?user=10"]')).toHaveCount(1);
   await expect(moreActions.locator('option[value="/admin/oom-reports?vps=123"]')).toHaveCount(1);
   await expect(moreActions.locator('option[value="/admin/oom-reports/rules/123"]')).toHaveCount(1);
   await expect(moreActions.locator('option[value="/admin/incidents?vps=123"]')).toHaveCount(1);
   await expect(moreActions.locator('option[value="/admin/incidents/new?vps=123"]')).toHaveCount(1);
-  await expect(moreActions.locator('option[value="/admin/vps/123/lifecycle/migrate"]')).toHaveCount(1);
+  await expect(moreActions.locator('option[value="/admin/vps/123/lifecycle/migrate?user=10"]')).toHaveCount(1);
   await expect(moreActions.locator('option[value="/admin/transactions?class_name=Vps&row_id=123"]')).toHaveCount(1);
   const actionValues = (await moreActions.locator('option').evaluateAll((options) => (
     options.map((option) => (option as HTMLOptionElement).value).filter(Boolean)
@@ -396,8 +416,8 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile VPS admin overview keeps each 
 
   await captureOptInScreenshot(page, 'E2E_VPS_ADMIN_OVERVIEW_SCREENSHOT');
 
-  await moreActions.selectOption('/admin/vps/123/config');
-  await expect(page).toHaveURL(/\/admin\/vps\/123\/config$/);
+  await moreActions.selectOption('/admin/vps/123/config?user=10');
+  await expect(page).toHaveURL(/\/admin\/vps\/123\/config\?user=10$/);
   await expect(page.getByText('Start menu timeout', { exact: true })).toBeVisible();
   await expect(page.getByText('Owner', { exact: true })).toBeVisible();
   await expect(page.getByText('CPU limit', { exact: true })).toBeVisible();

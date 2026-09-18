@@ -478,6 +478,7 @@ export function VpsLayout() {
         ipAddressesLoading: ipsQ.isLoading,
         ipAddressesError: ipsQ.isError,
         sshCommand,
+        detailContextSearch: listContextSearch,
       }}
     >
       <DetailShell>
@@ -587,7 +588,7 @@ export function VpsLayout() {
                 </ActionButton>
               ) : primaryHeaderAction === 'console' ? (
                 <LinkButton
-                  to={`${basePath}/vps/${vps.id}/console`}
+                  to={`${basePath}/vps/${vps.id}/console${listContextSearch}`}
                   variant="primary"
                   testId="vps.action.primary_console"
                 >
@@ -595,7 +596,7 @@ export function VpsLayout() {
                 </LinkButton>
               ) : (
                 <LinkButton
-                  to={`${basePath}/vps/${vps.id}/access`}
+                  to={`${basePath}/vps/${vps.id}/access${listContextSearch}`}
                   variant="primary"
                   testId="vps.action.primary_access"
                 >
@@ -642,11 +643,12 @@ export function VpsLayout() {
                 showSupportActions={mode === 'admin'}
                 showAdminActions={mode === 'admin' && auth.role === 'admin'}
                 ownerUserId={ownerId}
+                contextSearch={listContextSearch}
                 onSelect={handleHeaderMoreAction}
               />
             </>
           }
-          tabs={<VpsTabsNav basePath={basePath} vpsId={vps.id} />}
+          tabs={<VpsTabsNav basePath={basePath} vpsId={vps.id} contextSearch={listContextSearch} />}
         />
 
         {chainsStale ? (

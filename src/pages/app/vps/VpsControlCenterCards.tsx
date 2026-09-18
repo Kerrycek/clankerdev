@@ -151,6 +151,7 @@ function ResourceUsage(props: {
 export function VpsResourcesCard(props: {
   vps: Vps;
   basePath: string;
+  contextSearch?: string;
   className?: string;
   showRuntimeSummary?: boolean;
 }) {
@@ -164,7 +165,7 @@ export function VpsResourcesCard(props: {
         title={<SectionTitle icon={<Server className={iconClass} />}>{t('vps.control.resources.title')}</SectionTitle>}
         subtitle={t('vps.control.resources.subtitle')}
         actions={(
-          <ChipLink to={`${props.basePath}/vps/${props.vps.id}/config`}>
+          <ChipLink to={`${props.basePath}/vps/${props.vps.id}/config${props.contextSearch ?? ''}`}>
             {t('vps.control.resources.edit')}
           </ChipLink>
         )}
@@ -213,7 +214,7 @@ export function VpsResourcesCard(props: {
   );
 }
 
-export function VpsAccessCard(props: { vps: Vps; basePath: string; sshCommand?: string | null }) {
+export function VpsAccessCard(props: { vps: Vps; basePath: string; contextSearch?: string; sshCommand?: string | null }) {
   const { t } = useI18n();
   const consoleAvailable = isRemoteConsoleAvailable(props.vps);
 
@@ -222,7 +223,7 @@ export function VpsAccessCard(props: { vps: Vps; basePath: string; sshCommand?: 
       <CardHeader
         title={<SectionTitle icon={<KeyRound className={iconClass} />}>{t('vps.control.access.title')}</SectionTitle>}
         subtitle={t('vps.control.access.subtitle')}
-        actions={<ChipLink to={`${props.basePath}/vps/${props.vps.id}/access`}>{t('vps.control.access.open')}</ChipLink>}
+        actions={<ChipLink to={`${props.basePath}/vps/${props.vps.id}/access${props.contextSearch ?? ''}`}>{t('vps.control.access.open')}</ChipLink>}
       />
       <CardBody className="space-y-3">
         <div data-testid="vps.overview.status_access.ssh">
@@ -244,7 +245,7 @@ export function VpsAccessCard(props: { vps: Vps; basePath: string; sshCommand?: 
         </div>
         {consoleAvailable ? (
           <Link
-            to={`${props.basePath}/vps/${props.vps.id}/console`}
+            to={`${props.basePath}/vps/${props.vps.id}/console${props.contextSearch ?? ''}`}
             className="inline-flex items-center gap-2 text-sm font-medium text-link hover:underline"
             data-testid="vps.overview.access.console"
           >
@@ -264,6 +265,7 @@ export function VpsAccessCard(props: { vps: Vps; basePath: string; sshCommand?: 
 export function VpsNetworkCard(props: {
   vps: Vps;
   basePath: string;
+  contextSearch?: string;
   ipAddresses: IpAddress[];
   loading: boolean;
   error: boolean;
@@ -276,7 +278,7 @@ export function VpsNetworkCard(props: {
       <CardHeader
         title={<SectionTitle icon={<Network className={iconClass} />}>{t('vps.control.network.title')}</SectionTitle>}
         subtitle={t('vps.control.network.subtitle')}
-        actions={<ChipLink to={`${props.basePath}/vps/${props.vps.id}/network`}>{t('vps.control.network.open')}</ChipLink>}
+        actions={<ChipLink to={`${props.basePath}/vps/${props.vps.id}/network${props.contextSearch ?? ''}`}>{t('vps.control.network.open')}</ChipLink>}
       />
       <CardBody>
         {props.loading ? (
@@ -320,6 +322,7 @@ export function VpsNetworkCard(props: {
 export function VpsStorageBackupsCard(props: {
   vps: Vps;
   basePath: string;
+  contextSearch?: string;
   showUsage?: boolean;
   showPool?: boolean;
 }) {
@@ -336,7 +339,7 @@ export function VpsStorageBackupsCard(props: {
         subtitle={props.showUsage === false
           ? t('vps.control.storage.subtitle_admin')
           : t('vps.control.storage.subtitle')}
-        actions={<ChipLink to={`${props.basePath}/vps/${props.vps.id}/storage`}>{t('vps.control.storage.open')}</ChipLink>}
+        actions={<ChipLink to={`${props.basePath}/vps/${props.vps.id}/storage${props.contextSearch ?? ''}`}>{t('vps.control.storage.open')}</ChipLink>}
       />
       <CardBody className="space-y-4">
         <MiniStat
