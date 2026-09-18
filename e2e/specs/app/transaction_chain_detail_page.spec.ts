@@ -253,6 +253,46 @@ test.describe('@pr-smoke TransactionChainDetailPage', () => {
     await expectNoDocumentHorizontalOverflow(page);
   });
 
+  test('stops chain and transaction polling after a failed chain loads', async ({ page }) => {
+    let chainRequests = 0;
+    let transactionRequests = 0;
+
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_TOKEN' });
+    await installHaveApiMock(page, {
+      handlers: {
+        ...handlers,
+        'GET transaction_chains/126': () => {
+          chainRequests += 1;
+          return {
+            id: 126,
+            state: 'failed',
+            label: 'Failed scheduled backup',
+            created_at: '2026-02-02T11:00:00Z',
+            updated_at: '2026-02-02T11:02:00Z',
+          };
+        },
+        'GET transactions': (args: { searchParams: URLSearchParams }) => {
+          if (args.searchParams.get('transaction[transaction_chain]') === '126') {
+            transactionRequests += 1;
+            return [];
+          }
+          return handlers['GET transactions'](args);
+        },
+      },
+    });
+
+    await page.goto('/app/transactions/126');
+    await expect(page.getByTestId('transactions.chain.detail')).toBeVisible();
+    await expect(page.getByTestId('transactions.chain.detail.transactions')).toBeVisible();
+    await expect.poll(() => chainRequests).toBe(1);
+    await expect.poll(() => transactionRequests).toBe(1);
+
+    await page.waitForTimeout(5_500);
+
+    expect(chainRequests).toBe(1);
+    expect(transactionRequests).toBe(1);
+  });
+
   test('@pr-smoke-mobile renders admin route with admin-scoped links', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_TOKEN' });
     await installHaveApiMock(page, {

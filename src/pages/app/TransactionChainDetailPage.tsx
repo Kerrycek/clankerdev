@@ -8,7 +8,7 @@ import { useI18n } from '../../app/i18n';
 import { useChrome } from '../../components/layout/ChromeContext';
 import { DetailShell } from '../../components/layout/DetailShell';
 
-import { chainBadgeFromState, transactionBadge } from '../../lib/taskStatus';
+import { chainBadgeFromState, isFinishedChainState, transactionBadge } from '../../lib/taskStatus';
 import { useTierAIntervalMs } from '../../lib/refreshTiers';
 import { formatDateTime } from '../../lib/format';
 import { formatErrorMessage } from '../../lib/errors';
@@ -28,6 +28,7 @@ import { StatusDot } from '../../components/ui/StatusDot';
 import { Table } from '../../components/ui/Table';
 import { TableRowLink } from '../../components/ui/TableRowLink';
 import { TransactionInlineDetails } from '../../components/ui/TransactionInlineDetails';
+import { transactionChainRefetchInterval } from './transactions/transactionChainPolling';
 
 import { ChevronDown, ChevronUp, Pin, PinOff } from 'lucide-react';
 
@@ -79,19 +80,16 @@ export function TransactionChainDetailPage() {
     queryKey: ['transaction_chain', chainIdNum],
     enabled: chainIdValid,
     queryFn: async () => (await fetchTransactionChain(chainIdNum)).data,
-    refetchInterval: (data) => {
-      const done = String((data as any)?.state ?? '') === 'done';
-      return done ? false : tierARefetchMs;
-    },
+    refetchInterval: (query) => transactionChainRefetchInterval(query, tierARefetchMs),
   });
 
-  const chainDone = chainQ.data ? String((chainQ.data as any).state ?? '') === 'done' : false;
+  const chainFinished = chainQ.data ? isFinishedChainState(chainQ.data.state) : false;
 
   const txQ = useQuery({
     queryKey: ['transactions_for_chain', chainIdNum],
     enabled: chainIdValid && chainQ.isSuccess,
     queryFn: async () => (await fetchTransactions({ transactionChainId: chainIdNum, limit: 500 })).data,
-    refetchInterval: chainDone ? false : tierARefetchMs,
+    refetchInterval: chainFinished ? false : tierARefetchMs,
   });
 
   const isPinned = chainIdValid && chrome.pinnedTransactionChains.includes(chainIdNum);
@@ -308,7 +306,7 @@ export function TransactionChainDetailPage() {
             <CardHeader
               title={t('transactions.chain.detail.section.transactions')}
               subtitle={
-                chainDone
+                chainFinished
                   ? t('transactions.chain.detail.section.transactions_subtitle_done')
                   : t('transactions.chain.detail.section.transactions_subtitle_live')
               }
