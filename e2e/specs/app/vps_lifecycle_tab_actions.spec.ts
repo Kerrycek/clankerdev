@@ -125,7 +125,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.goto('/admin/vps/123/config');
     await page.getByRole('textbox', { name: /^Hostname / }).fill('draft-for-vps-a.example');
-    await page.getByRole('button', { name: 'Save (1)' }).click();
+    await page.getByTestId('vps.config.header.save').click();
     await expect(page.getByText('Review and apply VPS configuration changes?')).toBeVisible();
     await navigate('/admin/vps/321/config');
     await expect(page.getByText('Review and apply VPS configuration changes?')).toHaveCount(0);
@@ -378,6 +378,8 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     );
 
     await page.getByTestId('vps.lifecycle.reinstall.submit').click();
+    await expect(page.getByTestId('vps.lifecycle.reinstall.submit.confirm_dialog.target')).toContainText('vps123.example');
+    await expect(page.getByTestId('vps.lifecycle.reinstall.submit.confirm_dialog.target')).toContainText('#123');
     const proofScreenshot = process.env.E2E_VPS_PROOF_SCREENSHOT?.trim();
     if (proofScreenshot) {
       await page.screenshot({ path: proofScreenshot, fullPage: true });

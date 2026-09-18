@@ -89,6 +89,8 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile VPS access page generates root
   await page.getByTestId('vps.access.password.generate').click();
 
   await expect(page.getByTestId('vps.access.password.confirm')).toBeVisible();
+  await expect(page.getByTestId('vps.access.password.confirm.target')).toContainText('vps123.example');
+  await expect(page.getByTestId('vps.access.password.confirm.target')).toContainText('#123');
   const passwdReqPromise = page.waitForRequest(
     (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/vpses/123/passwd')
   );
@@ -119,6 +121,8 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile VPS access page generates root
   await page.getByTestId('vps.access.ssh.deploy').click();
 
   await expect(page.getByTestId('vps.access.ssh.confirm')).toBeVisible();
+  await expect(page.getByTestId('vps.access.ssh.confirm.target')).toContainText('vps123.example');
+  await expect(page.getByTestId('vps.access.ssh.confirm.target')).toContainText('#123');
   const keyReqPromise = page.waitForRequest(
     (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/vpses/123/deploy_public_key')
   );

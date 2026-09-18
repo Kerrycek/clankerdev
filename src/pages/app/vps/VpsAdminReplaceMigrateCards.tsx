@@ -108,6 +108,10 @@ export function VpsAdminReplaceCard(props: {
           confirmation={{
             title: t('vps.lifecycle.replace.submit'),
             description: t('vps.lifecycle.replace.warning_body'),
+            target: {
+              vpsId: props.vps.id,
+              objectLabel: String(props.vps.hostname ?? '') || `#${props.vps.id}`,
+            },
           }}
         >
           {t('vps.lifecycle.replace.submit')}

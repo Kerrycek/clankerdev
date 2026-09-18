@@ -41,6 +41,7 @@ import {
   type VpsConfigReviewKey,
 } from './VpsConfigurationModel';
 import { parseVpsConfigFieldErrors, type VpsConfigFieldError } from './VpsConfigurationErrors';
+import { VpsConfirmTarget } from './VpsPowerConfirmation';
 import { buildChangeSummaries, getReviewRequestOptionKeys } from './VpsConfigurationReviewModel';
 import {
   Field,
@@ -504,7 +505,10 @@ export function VpsConfigurationPage() {
           knownBusy: busyTransaction || busyLocalLock, objectLabel,
         }))}
       >
-        <VpsConfigChangesList changes={changes} compact />
+        <div className="space-y-3">
+          <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.config.confirm.target" />
+          <VpsConfigChangesList changes={changes} compact />
+        </div>
       </ConfirmDialog>
       </div>
       </fieldset>

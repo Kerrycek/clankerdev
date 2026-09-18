@@ -117,6 +117,8 @@ test.describe('@smoke VPS console page', () => {
     // Recreate session (opens a confirm dialog when a session exists).
     await page.getByTestId('vps.console.new_session').click();
     await expect(page.getByTestId('vps.console.new_session_dialog')).toBeVisible();
+    await expect(page.getByTestId('vps.console.new_session_dialog.target')).toContainText('vps123.example');
+    await expect(page.getByTestId('vps.console.new_session_dialog.target')).toContainText('#123');
     await page.getByTestId('vps.console.new_session_dialog.confirm').click();
 
     await expect

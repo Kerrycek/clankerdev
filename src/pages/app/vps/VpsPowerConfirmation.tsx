@@ -1,6 +1,6 @@
 import { useI18n } from '../../../app/i18n';
 
-export function VpsPowerConfirmTarget(props: {
+export function VpsConfirmTarget(props: {
   vpsId: number;
   objectLabel: string;
   testId: string;
@@ -21,3 +21,5 @@ export function VpsPowerConfirmTarget(props: {
     </div>
   );
 }
+
+export const VpsPowerConfirmTarget = VpsConfirmTarget;

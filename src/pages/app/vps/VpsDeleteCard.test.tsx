@@ -78,6 +78,8 @@ describe('VpsDeleteCard', () => {
 
     await user.click(submit);
     expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByTestId('vps.lifecycle.delete.submit.confirm_dialog.target')).toHaveTextContent('vps123.example');
+    expect(screen.getByTestId('vps.lifecycle.delete.submit.confirm_dialog.target')).toHaveTextContent('#123');
 
     await user.click(screen.getByTestId('vps.lifecycle.delete.submit.confirm_dialog.confirm'));
     expect(onSubmit).toHaveBeenCalledTimes(1);

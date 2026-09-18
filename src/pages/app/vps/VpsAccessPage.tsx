@@ -47,6 +47,7 @@ import {
 } from './VpsAccessPrimitives';
 import { buildVpsAccessChecklist, findDuplicatePublicKeyGroups } from './VpsAccessModel';
 import { VpsAccessMutationGuardAlerts } from './VpsAccessMutationGuardAlerts';
+import { VpsConfirmTarget } from './VpsPowerConfirmation';
 import { VpsAccessChecklistCard, VpsAccessStatusCard } from './VpsAccessSummary';
 import { VpsSshHostKeysCard } from './VpsSshHostKeysCard';
 export function VpsAccessPage() {
@@ -477,7 +478,9 @@ export function VpsAccessPage() {
         confirmDisabled={!currentPendingPasswordType || currentPasswdMutationPending}
         onCancel={() => setPendingPasswordType(null)}
         onConfirm={() => currentPendingPasswordType && passwdM.mutate(freezeVpsMutationSnapshot({ ...snapshotAccessTarget(), type: currentPendingPasswordType.type }))}
-      /> : null}
+      >
+        <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.access.password.confirm.target" />
+      </ConfirmDialog> : null}
 
       {canMutateVps ? <ConfirmDialog
         open={pendingPublicKeyId !== null}
@@ -491,7 +494,9 @@ export function VpsAccessPage() {
         onConfirm={() => pendingPublicKeyId && deployKeyM.mutate(freezeVpsMutationSnapshot({
           ...snapshotAccessTarget(), publicKeyId: pendingPublicKeyId, keyLabel: pendingKeyLabel,
         }))}
-      /> : null}
+      >
+        <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.access.ssh.confirm.target" />
+      </ConfirmDialog> : null}
     </div>
   );
 }

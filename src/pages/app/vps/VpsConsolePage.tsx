@@ -28,6 +28,7 @@ import {
   markConsoleSessionStateUncertain,
 } from './VpsConsoleModel';
 import { useVps } from './VpsContext';
+import { VpsConfirmTarget } from './VpsPowerConfirmation';
 
 export function VpsConsolePage() {
   const { canMutateVps } = useVps();
@@ -54,6 +55,7 @@ function MutableVpsConsolePage() {
   const { vps, sshCommand } = useVps();
   const { t } = useI18n();
   const qc = useQueryClient();
+  const objectLabel = String(vps.hostname ?? '') || `#${vps.id}`;
 
   const [newSessionConfirmOpen, setNewSessionConfirmOpen] = useState(false);
   const [revokeSessionConfirmOpen, setRevokeSessionConfirmOpen] = useState(false);
@@ -517,7 +519,9 @@ function MutableVpsConsolePage() {
             onSettled: () => setNewSessionConfirmOpen(false),
           });
         }}
-      />
+      >
+        <VpsConfirmTarget vpsId={vps.id} objectLabel={objectLabel} testId="vps.console.new_session_dialog.target" />
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={revokeSessionConfirmOpen}
@@ -537,7 +541,9 @@ function MutableVpsConsolePage() {
             onSettled: () => setRevokeSessionConfirmOpen(false),
           });
         }}
-      />
+      >
+        <VpsConfirmTarget vpsId={vps.id} objectLabel={objectLabel} testId="vps.console.revoke_session_dialog.target" />
+      </ConfirmDialog>
     </div>
   );
 }
