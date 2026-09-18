@@ -81,9 +81,31 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile VPS access page generates root
   await expect(page.getByTestId('vps.access.host_keys.table')).toBeVisible();
   await expect(page.getByTestId('vps.access.host_keys.row.1')).toContainText('SHA256:host-ed25519');
   await expect(page.getByTestId('vps.access.host_keys.row.1')).toContainText('ssh-ed25519');
+  await expect(page.getByTestId('vps.access.checklist.public-key.action')).toHaveText('Deploy saved key');
+  await expect(page.getByTestId('vps.access.checklist.host-key.action')).toHaveText('View host fingerprints');
+  await expect(page.getByTestId('vps.access.checklist.root-password.action')).toHaveText('Open password fallback');
+
+  const sectionOrder = await page
+    .locator('[data-testid="vps.access.ssh.card"], [data-testid="vps.access.host_keys"], [data-testid="vps.access.password.card"]')
+    .evaluateAll((sections) => sections.map((section) => section.getAttribute('data-testid')));
+  expect(sectionOrder).toEqual([
+    'vps.access.ssh.card',
+    'vps.access.host_keys',
+    'vps.access.password.card',
+  ]);
+
   await page.setViewportSize({ width: 390, height: 844 });
   await expectNoDocumentHorizontalOverflow(page);
   await expectTableHorizontalScrollUsable(page, 'vps.access.host_keys.table');
+  await page.getByTestId('vps.access.checklist.public-key.action').click();
+  await expect(page).toHaveURL(/#vps-access-ssh-key$/);
+  await expect(page.getByTestId('vps.access.ssh.deploy')).toBeInViewport();
+  await page.getByTestId('vps.access.checklist.host-key.action').click();
+  await expect(page).toHaveURL(/#vps-access-host-keys$/);
+  await expect(page.getByTestId('vps.access.host_keys')).toBeInViewport();
+  await page.getByTestId('vps.access.checklist.root-password.action').click();
+  await expect(page).toHaveURL(/#vps-access-root-password$/);
+  await expect(page.getByTestId('vps.access.password.generate')).toBeInViewport();
   await page.setViewportSize({ width: 1280, height: 844 });
   await page.getByTestId('vps.access.password_type').selectOption('simple');
   await page.getByTestId('vps.access.password.generate').click();
