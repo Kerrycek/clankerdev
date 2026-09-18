@@ -15,7 +15,6 @@ import { formatDateTime } from '../../lib/time';
 import { formatErrorMessage } from '../../lib/errors';
 
 import { Alert } from '../ui/Alert';
-import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { Card, CardBody, CardHeader } from '../ui/Card';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
@@ -23,52 +22,17 @@ import { Input } from '../ui/Input';
 import { Modal } from '../ui/Modal';
 import { SecretField } from '../ui/SecretField';
 import { Spinner } from '../ui/Spinner';
-import { Table } from '../ui/Table';
 
+import { UserMetricsTokensList } from './UserMetricsTokensList';
 import { UserSecurityMetricGrid } from './UserSecurityMetricGrid';
 import {
   buildMetricPrefixReview,
   buildMetricsTokenSummary,
-  hasMetricsAccessTokenSecret,
   metricsAccessTokenDisplayName,
   metricsAccessTokenStateDescriptor,
   metricsUrlForAccessToken,
   sortMetricsAccessTokens,
 } from './UserMetricsTokensModel';
-
-function MetricsTokenStateBadge(props: { token: MetricsAccessToken; testId?: string }) {
-  const { t } = useI18n();
-  const descriptor = metricsAccessTokenStateDescriptor(props.token);
-
-  return (
-    <Badge variant={descriptor.badgeTone} title={t(descriptor.descriptionKey)} testId={props.testId}>
-      {t(descriptor.labelKey)}
-    </Badge>
-  );
-}
-
-function MetricsTokenSecretCell(props: { token: MetricsAccessToken; testIdPrefix: string }) {
-  const { t } = useI18n();
-  const tokenValue = String(props.token.access_token ?? '');
-  const testId = `${props.testIdPrefix}.row.${props.token.id}.token`;
-
-  if (!hasMetricsAccessTokenSecret(props.token)) {
-    return (
-      <div className="rounded-md border border-border bg-surface-2 px-3 py-2 text-xs text-muted" data-testid={`${testId}.unavailable`}>
-        {t('profile.metrics.field.token_unavailable')}
-      </div>
-    );
-  }
-
-  return (
-    <SecretField
-      value={tokenValue}
-      testId={testId}
-      description={t('profile.metrics.field.token_hint')}
-      showFragment
-    />
-  );
-}
 
 export function UserMetricsTokensPanel(props: {
   /** Admin-only: list tokens for specific user. */
@@ -170,63 +134,11 @@ export function UserMetricsTokensPanel(props: {
                 <div className="mt-1 text-sm text-muted">{t('profile.metrics.empty_hint')}</div>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <Table minWidth="lg" testId={`${prefix}.table`}>
-                  <thead>
-                    <tr className="border-b border-border text-left text-xs text-muted">
-                      <th className="px-4 py-2">{t('common.id')}</th>
-                      <th className="px-4 py-2">{t('profile.metrics.table.prefix')}</th>
-                      <th className="px-4 py-2">{t('profile.metrics.table.state')}</th>
-                      <th className="px-4 py-2">{t('profile.metrics.table.token')}</th>
-                      <th className="px-4 py-2">{t('profile.metrics.table.use_count')}</th>
-                      <th className="px-4 py-2">{t('profile.metrics.table.last_use')}</th>
-                      <th className="px-4 py-2">{t('profile.metrics.table.created')}</th>
-                      <th className="px-4 py-2 text-right">{t('common.actions')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tokensSorted.map((tok) => (
-                      <tr
-                        key={tok.id}
-                        className="border-b border-border/60 last:border-b-0"
-                        data-testid={`${prefix}.row.${tok.id}`}
-                      >
-                        <td className="px-4 py-2 text-xs text-muted tabular-nums">#{tok.id}</td>
-                        <td className="px-4 py-2 text-sm text-fg">
-                          <span className="font-mono">{String(tok.metric_prefix ?? '') || '—'}</span>
-                        </td>
-                        <td className="px-4 py-2">
-                          <MetricsTokenStateBadge token={tok} testId={`${prefix}.row.${tok.id}.state`} />
-                        </td>
-                        <td className="px-4 py-2">
-                          <div className="max-w-md">
-                            <MetricsTokenSecretCell token={tok} testIdPrefix={prefix} />
-                          </div>
-                        </td>
-                        <td className="px-4 py-2 text-xs text-muted tabular-nums">{tok.use_count ?? 0}</td>
-                        <td className="px-4 py-2 text-xs text-muted tabular-nums">
-                          {tok.last_use ? formatDateTime(tok.last_use) : '—'}
-                        </td>
-                        <td className="px-4 py-2 text-xs text-muted tabular-nums">
-                          {tok.created_at ? formatDateTime(tok.created_at) : '—'}
-                        </td>
-                        <td className="px-4 py-2 text-right">
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={() => {
-                              setDeleteToken(tok);
-                            }}
-                            testId={`${prefix}.row.${tok.id}.delete`}
-                          >
-                            {t('common.revoke')}
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </div>
+              <UserMetricsTokensList
+                tokens={tokensSorted}
+                testIdPrefix={prefix}
+                onRevoke={setDeleteToken}
+              />
             )}
           </div>
         </CardBody>
