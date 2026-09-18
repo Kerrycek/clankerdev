@@ -25,17 +25,20 @@ deploy-dev
 
 `deploy-dev` updates `/srv/clankerdev-deploy/repo` from GitHub, installs
 frontend and BFF dependencies, builds the SPA with `npm run build`, syncs
-`dist/` to `/var/www/dev.crucio.cz/current`, and restarts the BFF service.
+`dist/` to `/var/www/dev.crucio.cz/current`, installs the tracked BFF systemd
+unit, and restarts the BFF service. The deploy fails if the active unit does
+not use the same source checkout as the frontend build. The wrapper executes
+the helper from that updated checkout instead of a second installed copy.
 
-Deploy nginx and BFF units with:
+Deploy the nginx configuration manually when needed with:
 
 ```sh
-rsync -az deploy/dev.crucio.cz/webui-next-bff.service \
-  root@admin.crucio.cz:/etc/systemd/system/webui-next-bff.service
-
 rsync -az deploy/dev.crucio.cz/nginx-dev.crucio.cz.conf \
   root@admin.crucio.cz:/etc/nginx/sites-available/dev.crucio.cz
 ```
+
+The BFF unit is installed automatically by every `deploy-dev` run so its
+`WorkingDirectory` and `ExecStart` cannot silently remain on an older checkout.
 
 The `/v7.0` proxy strips `WWW-Authenticate` from unauthenticated API responses.
 The API still returns `401`, but browsers do not show a native Basic Auth prompt.
