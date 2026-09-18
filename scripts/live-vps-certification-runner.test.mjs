@@ -143,13 +143,17 @@ test('failed running VPS cleanup proves identity before stop and gates delete on
   const safetyStop = cleanupSource.indexOf("apiEnvelope(`/vpses/${createdVpsId}/stop`");
   const stoppedObservation = cleanupSource.indexOf('currentState.resource.is_running !== false');
   const hardDeleteGate = cleanupSource.lastIndexOf('assertHardDeleteAllowed(ledger, observation);');
-  const deleteRequest = cleanupSource.indexOf("method: 'DELETE'");
+  const deleteRequest = cleanupSource.indexOf("method: 'PUT'");
 
   assert.ok(identityGate >= 0 && identityGate < runningBranch);
   assert.ok(runningBranch < safetyStop);
   assert.ok(safetyStop < stoppedObservation);
   assert.ok(stoppedObservation < hardDeleteGate);
   assert.ok(hardDeleteGate < deleteRequest);
+  assert.match(
+    cleanupSource.slice(deleteRequest, deleteRequest + 400),
+    /object_state:\s*'hard_delete'[\s\S]*change_reason:\s*'Live VPS certification cleanup'[\s\S]*expiration_date:\s*null/
+  );
   assert.doesNotMatch(
     cleanupSource.slice(0, runningBranch),
     /assertHardDeleteAllowed\(ledger, observation\)/,
