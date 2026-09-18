@@ -17,6 +17,8 @@ export const enBackups = {
   'backups.kind.nas': 'NAS',
   'backups.vps': 'VPS',
   'backups.scope_limited': 'A limited quick overview is loaded ({datasets} datasets, {downloads} downloads). Filtering only searches this set; open a dataset for complete data.',
+  'backups.storage.empty.title': 'No storage in the account',
+  'backups.storage.empty.body': 'VPS disks and NAS storage will appear here after they are created.',
   'backups.stats.datasets': 'Storage in the account',
   'backups.stats.datasets.help': 'VPS disks and NAS storage',
   'backups.stats.downloads': 'Generated downloads',

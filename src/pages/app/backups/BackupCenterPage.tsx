@@ -104,6 +104,7 @@ export function BackupCenterPage() {
   const tab = parseBackupCenterTab(searchParams.get('tab'));
   const intent = parseBackupCenterIntent(searchParams.get('intent'));
   const query = searchParams.get('q') ?? '';
+  const hasDatasetFilter = query.trim().length > 0;
   const selectedDatasetParam = searchParams.get('dataset');
   const needsDatasetScopedDownloads = scope.mineUserId !== undefined;
   const shouldLoadDownloads = tab === 'overview' || tab === 'downloads';
@@ -391,10 +392,14 @@ export function BackupCenterPage() {
               <EmptyState
                 title={t(tab === 'snapshots' && intent === 'restore'
                   ? 'backups.restore.workspace.empty.title'
-                  : `backups.${tab}.empty.title`)}
+                  : hasDatasetFilter
+                    ? `backups.${tab}.empty.title`
+                    : 'backups.storage.empty.title')}
                 body={t(tab === 'snapshots' && intent === 'restore'
                   ? 'backups.restore.workspace.empty.body'
-                  : `backups.${tab}.empty.body`)}
+                  : hasDatasetFilter
+                    ? `backups.${tab}.empty.body`
+                    : 'backups.storage.empty.body')}
               />
             )}
           </div>
