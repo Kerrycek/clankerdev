@@ -131,9 +131,17 @@ test('@workflow-matrix @smoke VPS detail tabs expose storage and backups, access
   );
   const moreActions = page.getByTestId('vps.actions.menu');
   await expect(moreActions).toBeVisible();
+  await expect(page.getByTestId('vps.action.restart.header')).toBeVisible();
+  await expect(page.getByTestId('vps.action.stop.header')).toBeVisible();
+  await expect(moreActions.locator('option[value="action:start"]')).toHaveCount(0);
+  await expect(moreActions.locator('option[value="action:restart"]')).toHaveCount(0);
+  await expect(moreActions.locator('option[value="action:stop"]')).toHaveCount(0);
+  await expect(moreActions.locator('option[value="/app/vps/123/lifecycle"]')).toHaveCount(0);
   await expect(moreActions.locator('option[value="/app/vps/123/lifecycle/reinstall"]')).toHaveCount(1);
   await expect(moreActions.locator('option[value="/app/vps/123/lifecycle/clone"]')).toHaveCount(1);
   await expect(moreActions.locator('option[value="/app/vps/123/lifecycle/swap"]')).toHaveCount(1);
+  await expect(moreActions.locator('option[value="/app/vps/123/lifecycle/template"]')).toHaveCount(1);
+  await expect(moreActions.locator('option[value="/app/vps/123/lifecycle/boot"]')).toHaveCount(1);
   await expect(moreActions.locator('option[value="/app/vps/123/lifecycle/delete"]')).toHaveCount(1);
   await expect(moreActions.locator('option[value="/app/vps/123/lifecycle/migrate"]')).toHaveCount(0);
   await expect(moreActions.locator('option[value="/app/vps/123/storage"]')).toHaveCount(1);
@@ -402,7 +410,7 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile VPS admin overview keeps each 
 
   const moreActions = page.getByTestId('vps.actions.menu');
   await expect(moreActions.locator('option[value="/admin/vps/123/config?user=10"]')).toHaveCount(1);
-  await expect(moreActions.locator('option[value="/admin/vps/123/lifecycle?user=10"]')).toHaveCount(1);
+  await expect(moreActions.locator('option[value="/admin/vps/123/lifecycle?user=10"]')).toHaveCount(0);
   await expect(moreActions.locator('option[value="/admin/oom-reports?vps=123"]')).toHaveCount(1);
   await expect(moreActions.locator('option[value="/admin/oom-reports/rules/123"]')).toHaveCount(1);
   await expect(moreActions.locator('option[value="/admin/incidents?vps=123"]')).toHaveCount(1);

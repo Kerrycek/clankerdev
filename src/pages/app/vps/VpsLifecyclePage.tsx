@@ -163,8 +163,8 @@ export function VpsLifecyclePage() {
     window.scrollTo({ top: 0, left: 0 });
   }, [requestedAction]);
 
-  const templatesNeeded = canMutateVps && (requestedAction === 'reinstall'
-    || (canAdministerVps && (requestedAction === 'template' || requestedAction === 'boot')));
+  const templatesNeeded = canMutateVps
+    && (requestedAction === 'reinstall' || requestedAction === 'template' || requestedAction === 'boot');
 
   const templatesQ = useQuery({
     queryKey: ['os_templates', 'vps-lifecycle', { limit: 500, enabled: true, hypervisorType: 'vpsadminos' }],
@@ -679,8 +679,8 @@ export function VpsLifecyclePage() {
     { kind: 'swap', title: t('vps.lifecycle.swap.title'), description: canAdministerVps ? t('vps.lifecycle.swap.subtitle') : t('vps.lifecycle.swap.subtitle_user'), danger: true },
     { kind: 'delete', title: t('vps.lifecycle.delete.title'), description: t('vps.lifecycle.delete.subtitle'), danger: true },
     { kind: 'lifetime', title: t('vps.lifecycle.lifetime.title'), description: canAdministerVps ? t('vps.lifecycle.lifetime.subtitle_admin') : t('vps.lifecycle.lifetime.subtitle_user'), adminOnly: true },
-    { kind: 'template', title: t('vps.lifecycle.template.title'), description: t('vps.lifecycle.template.subtitle'), adminOnly: true },
-    { kind: 'boot', title: t('vps.lifecycle.boot.title'), description: t('vps.lifecycle.boot.subtitle'), danger: true, adminOnly: true },
+    { kind: 'template', title: t('vps.lifecycle.template.title'), description: t('vps.lifecycle.template.subtitle') },
+    { kind: 'boot', title: t('vps.lifecycle.boot.title'), description: t('vps.lifecycle.boot.subtitle'), danger: true },
     { kind: 'replace', title: t('vps.lifecycle.replace.title'), description: t('vps.lifecycle.replace.subtitle'), danger: true, adminOnly: true },
     { kind: 'migrate', title: t('vps.lifecycle.migrate.title'), description: t('vps.lifecycle.migrate.subtitle'), adminOnly: true },
   ];
@@ -780,6 +780,10 @@ export function VpsLifecyclePage() {
         {requestedAction === 'start' ? renderPowerCard('start') : null}
         {requestedAction === 'stop' ? renderPowerCard('stop') : null}
         {requestedAction === 'restart' ? renderPowerCard('restart') : null}
+
+        {requestedAction === 'template' ? templateCard : null}
+
+        {requestedAction === 'boot' ? bootCard : null}
 
         {requestedAction === 'lifetime' ? (
           <LifecyclePanel

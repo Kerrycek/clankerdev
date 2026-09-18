@@ -46,10 +46,13 @@ function runningActionState(id: number, label: string) {
   };
 }
 
-async function installLifecycleMock(page: Page, options?: { updateVps?: () => unknown }) {
+async function installLifecycleMock(page: Page, options?: {
+  updateVps?: () => unknown;
+  user?: { id: number; login: string; level: number };
+}) {
   let ipAddressRequests = 0;
   await installHaveApiMock(page, {
-    user: { id: 1, login: 'admin', level: 99 },
+    user: options?.user ?? { id: 1, login: 'admin', level: 99 },
     handlers: {
       'GET vpses': () => ({
         vpses: [
@@ -326,7 +329,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await expect(page.getByTestId('vps.header.owner')).toBeVisible();
     await expect(
       page.getByTestId('vps.actions.menu').locator('option[value="/admin/vps/123/lifecycle"]'),
-    ).toHaveCount(1);
+    ).toHaveCount(0);
 
     await page.goto('/admin/vps/123/lifecycle');
     await expect(page.getByTestId('vps.lifecycle.action_link.reinstall')).toBeVisible();
@@ -341,6 +344,48 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.getByTestId('vps.lifecycle.action_link.reinstall').click();
     await expect(page).toHaveURL(/\/admin\/vps\/123\/lifecycle\/reinstall$/);
+  });
+
+  test('offers direct lifecycle actions and lets the VPS owner update the OS template', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installLifecycleMock(page, { user: { id: 7, login: 'owner', level: 1 } });
+
+    await page.goto('/app/vps/123');
+    const menu = page.getByTestId('vps.actions.menu');
+    await expect(menu.locator('option[value="/app/vps/123/lifecycle"]')).toHaveCount(0);
+    await expect(menu.locator('option[value="/app/vps/123/lifecycle/template"]')).toHaveCount(1);
+    await expect(menu.locator('option[value="/app/vps/123/lifecycle/boot"]')).toHaveCount(1);
+    await expect(menu.locator('option[value="/app/vps/123/lifecycle/migrate"]')).toHaveCount(0);
+
+    await page.goto('/app/vps/123/lifecycle/template');
+    await expect(page.getByTestId('vps.lifecycle.template')).toBeVisible();
+    await page.getByTestId('vps.lifecycle.template.os_template').selectOption('7');
+    const templateRequest = page.waitForRequest(
+      (request) => request.method() === 'PUT' && request.url().includes('/api/v7.0/vpses/123'),
+    );
+    await page.getByTestId('vps.lifecycle.template.submit').click();
+    await page.getByTestId('vps.lifecycle.template.submit.confirm_dialog.confirm').click();
+    expect((await templateRequest).postDataJSON()).toEqual({
+      vps: { os_template: 7, enable_os_template_auto_update: false },
+    });
+  });
+
+  test('lets the VPS owner submit a rescue boot', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installLifecycleMock(page, { user: { id: 7, login: 'owner', level: 1 } });
+
+    await page.goto('/app/vps/123/lifecycle/boot');
+    await expect(page.getByTestId('vps.lifecycle.boot')).toBeVisible();
+    await page.getByTestId('vps.lifecycle.boot.os_template').selectOption('7');
+    await page.getByTestId('vps.lifecycle.boot.mountpoint').fill('/mnt/owner-rescue');
+    const bootRequest = page.waitForRequest(
+      (request) => request.method() === 'POST' && request.url().includes('/api/v7.0/vpses/123/boot'),
+    );
+    await page.getByTestId('vps.lifecycle.boot.submit').click();
+    await page.getByTestId('vps.lifecycle.boot.submit.confirm_dialog.confirm').click();
+    expect((await bootRequest).postDataJSON()).toEqual({
+      vps: { os_template: 7, mount_root_dataset: '/mnt/owner-rescue' },
+    });
   });
 
   test('can boot rescue template without mounting the original root dataset', async ({ page }) => {
