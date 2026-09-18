@@ -1,8 +1,9 @@
 import React from 'react';
-import { Link, Outlet, useLocation, useParams } from 'react-router-dom';
+import { Link, Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
 import { useAppMode } from '../../../app/appMode';
+import { useAuth } from '../../../app/auth';
 import { useObjectScope } from '../../../app/objectScope';
 import { useI18n } from '../../../app/i18n';
 import { useChrome } from '../../../components/layout/ChromeContext';
@@ -14,6 +15,7 @@ import { objectRef } from '../../../lib/objectRef';
 import { useTierAIntervalMs } from '../../../lib/refreshTiers';
 import { deriveChainLockState } from '../../../lib/lockState';
 import { useNetworkStatus } from '../../../lib/useNetworkStatus';
+import { resourceId } from '../../../lib/resources';
 
 import { ErrorState } from '../../../components/ui/ErrorState';
 import { LoadingState } from '../../../components/ui/LoadingState';
@@ -24,6 +26,7 @@ import { TabsNav } from '../../../components/ui/TabsNav';
 
 import { DatasetContextProvider } from './DatasetContext';
 import { ScopeMismatchCard } from '../../../components/layout/ScopeMismatchCard';
+import { datasetExpansionCapabilities } from './DatasetExpansionCapabilities';
 
 function datasetTitle(ds: any, fallbackId: number): string {
   return String(ds?.full_name ?? ds?.name ?? `#${fallbackId}`);
@@ -33,6 +36,7 @@ export function DatasetLayout() {
   const { datasetId } = useParams();
   const id = Number(datasetId);
   const { basePath, mode } = useAppMode();
+  const auth = useAuth();
   const scope = useObjectScope();
   const { t } = useI18n();
   const chrome = useChrome();
@@ -133,10 +137,17 @@ export function DatasetLayout() {
     );
   }
 
-  const vpsId = ds.vps && typeof ds.vps === 'object' && 'id' in ds.vps ? Number((ds.vps as any).id) : undefined;
+  const vpsId = resourceId(ds.vps);
   const vpsHostname = ds.vps && typeof ds.vps === 'object' ? String((ds.vps as any).hostname ?? '') : '';
 
   const detailPath = `${listPath}/${ds.id}`;
+  const hasExpansion = resourceId((ds as any).dataset_expansion) !== undefined;
+  const expansionCapabilities = datasetExpansionCapabilities({
+    mode,
+    role: auth.role,
+    hasExpansion,
+    isVpsDataset: vpsId !== undefined,
+  });
 
   const tabs = [
     { label: t('dataset.tabs.overview'), to: detailPath, end: true },
@@ -144,8 +155,14 @@ export function DatasetLayout() {
     { label: t('dataset.tabs.downloads'), to: `${detailPath}/downloads` },
     { label: t('dataset.tabs.exports'), to: `${detailPath}/exports` },
     { label: t('dataset.tabs.plans'), to: `${detailPath}/plans` },
-    { label: t('dataset.tabs.expansion'), to: `${detailPath}/expansion` },
+    ...(expansionCapabilities.showEntry
+      ? [{ label: t('dataset.tabs.expansion'), to: `${detailPath}/expansion` }]
+      : []),
   ];
+
+  if (!expansionCapabilities.showEntry && location.pathname === `${detailPath}/expansion`) {
+    return <Navigate replace to={detailPath} />;
+  }
 
   return (
     <DatasetContextProvider
