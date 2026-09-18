@@ -40,6 +40,17 @@ rsync -az deploy/dev.crucio.cz/nginx-dev.crucio.cz.conf \
 The BFF unit is installed automatically by every `deploy-dev` run so its
 `WorkingDirectory` and `ExecStart` cannot silently remain on an older checkout.
 
+When introducing this wrapper change on a host that still has the previous
+installed wrapper, bootstrap it once after the reviewed commit has been pulled:
+
+```sh
+install -m 0755 deploy/dev.crucio.cz/deploy-dev.sh /usr/local/bin/deploy-dev
+deploy-dev
+```
+
+Subsequent deploys execute the versioned helper from the updated checkout and
+do not depend on an installed helper copy.
+
 The `/v7.0` proxy strips `WWW-Authenticate` from unauthenticated API responses.
 The API still returns `401`, but browsers do not show a native Basic Auth prompt.
 
