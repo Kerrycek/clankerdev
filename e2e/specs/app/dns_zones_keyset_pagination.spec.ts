@@ -1,6 +1,22 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page, type TestInfo } from '@playwright/test';
 
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
+
+function isMobileProject(testInfo: TestInfo) {
+  return testInfo.project.name === 'mobile-chrome';
+}
+
+function zoneSurface(page: Page, testInfo: TestInfo, id: number) {
+  return page.getByTestId(`dns.zones.${isMobileProject(testInfo) ? 'card' : 'row'}.${id}`);
+}
+
+function zoneDot(page: Page, testInfo: TestInfo, id: number) {
+  return page.getByTestId(`dns.zones.${isMobileProject(testInfo) ? 'card' : 'row'}.${id}.dot`);
+}
+
+function paginationPrefix(testInfo: TestInfo) {
+  return `dns.zones.pagination.${isMobileProject(testInfo) ? 'mobile' : 'desktop'}`;
+}
 
 test.describe('DNS zones keyset pagination', () => {
   let zoneRequestQueries: string[];
@@ -36,40 +52,55 @@ test.describe('DNS zones keyset pagination', () => {
     });
   });
 
-  test('user search is client-side and strips the admin-only DNSSEC filter', async ({ page }) => {
-    await page.goto('/app/dns?q=zone300&dnssec=1');
+  test(
+    '@pr-smoke @pr-smoke-mobile @smoke @smoke-mobile user search is client-side and strips the admin-only DNSSEC filter',
+    async ({ page }, testInfo) => {
+      await page.goto('/app/dns?q=zone300&dnssec=1');
 
-    await expect(page.getByTestId('dns.zones.row.300')).toBeVisible();
-    await expect(page.getByTestId('dns.zones.row.299')).toHaveCount(0);
-    await expect.poll(() => new URL(page.url()).searchParams.has('dnssec')).toBe(false);
-    expect(zoneRequestQueries.every((query) => !query.includes('dns_zone%5Bq%5D'))).toBe(true);
-    expect(zoneRequestQueries.every((query) => !query.includes('dns_zone%5Bdnssec_enabled%5D'))).toBe(true);
-  });
+      await expect(zoneSurface(page, testInfo, 300)).toBeVisible();
+      await expect(zoneSurface(page, testInfo, 299)).toHaveCount(0);
+      await expect.poll(() => new URL(page.url()).searchParams.has('dnssec')).toBe(false);
+      expect(zoneRequestQueries.every((query) => !query.includes('dns_zone%5Bq%5D'))).toBe(true);
+      expect(zoneRequestQueries.every((query) => !query.includes('dns_zone%5Bdnssec_enabled%5D'))).toBe(true);
+    }
+  );
 
-  test('navigates to next and previous pages via from_id', async ({ page }) => {
-    await page.goto('/app/dns');
+  test(
+    '@pr-smoke @pr-smoke-mobile @smoke @smoke-mobile navigates to next and previous pages via from_id',
+    async ({ page }, testInfo) => {
+      const pagination = paginationPrefix(testInfo);
+      await page.goto('/app/dns');
 
-    await expect(page.getByTestId('dns.zones.list')).toBeVisible();
-    await expect(page.getByTestId('dns.zones.row.300')).toBeVisible();
-    await expect(page.getByTestId('dns.zones.row.300.dot')).toBeVisible();
-    await expect(page.getByTestId('dns.zones.row.299')).toHaveAttribute('data-row-variant', 'warn');
-    await expect(page.getByTestId('dns.zones.row.299.dot')).toBeVisible();
+      await expect(page.getByTestId('dns.zones.list')).toBeVisible();
+      await expect(zoneSurface(page, testInfo, 300)).toBeVisible();
+      await expect(zoneDot(page, testInfo, 300)).toHaveClass(/\bbg-ok\b/);
+      if (isMobileProject(testInfo)) {
+        await expect(zoneSurface(page, testInfo, 299)).toHaveClass(/\bbg-warn-row\b/);
+      } else {
+        await expect(zoneSurface(page, testInfo, 299)).toHaveAttribute('data-row-variant', 'warn');
+      }
+      await expect(zoneDot(page, testInfo, 299)).toHaveClass(/\bbg-warn\b/);
 
-    await page.getByTestId('dns.zones.pagination.desktop.next').click();
-    await expect(page).toHaveURL(/from_id=251/);
-    await expect(page).toHaveURL(/page=2/);
-    await expect(page.getByTestId('dns.zones.row.250')).toBeVisible();
+      await page.getByTestId(`${pagination}.next`).click();
+      await expect(page).toHaveURL(/from_id=251/);
+      await expect(page).toHaveURL(/page=2/);
+      await expect(zoneSurface(page, testInfo, 250)).toBeVisible();
 
-    const prev = page.getByTestId('dns.zones.pagination.desktop.prev');
-    await expect(prev).toBeEnabled();
-    await prev.click({ force: true });
-    await expect(page).not.toHaveURL(/from_id=/, { timeout: 30_000 });
-    await expect(page).toHaveURL(/page=1/);
-    await expect(page.getByTestId('dns.zones.row.300')).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByTestId('dns.zones.row.300.dot')).toBeVisible();
-    await expect(page.getByTestId('dns.zones.row.299')).toHaveAttribute('data-row-variant', 'warn');
-    await expect(page.getByTestId('dns.zones.row.299.dot')).toBeVisible();
-  });
+      const prev = page.getByTestId(`${pagination}.prev`);
+      await expect(prev).toBeEnabled();
+      await prev.click();
+      await expect(page).not.toHaveURL(/from_id=/, { timeout: 30_000 });
+      await expect(page).toHaveURL(/page=1/);
+      await expect(zoneSurface(page, testInfo, 300)).toBeVisible({ timeout: 30_000 });
+      await expect(zoneDot(page, testInfo, 300)).toHaveClass(/\bbg-ok\b/);
+      if (isMobileProject(testInfo)) {
+        await expect(zoneSurface(page, testInfo, 299)).toHaveClass(/\bbg-warn-row\b/);
+      } else {
+        await expect(zoneSurface(page, testInfo, 299)).toHaveAttribute('data-row-variant', 'warn');
+      }
+      await expect(zoneDot(page, testInfo, 299)).toHaveClass(/\bbg-warn\b/);
+    }
+  );
 
   test('canonicalizes zone name when creating a DNS zone', async ({ page }) => {
     let createPayload: any;
