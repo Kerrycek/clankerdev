@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 
+import { useAccountTimeZone } from '../../../../app/accountTimeZone';
 import { useAppMode } from '../../../../app/appMode';
 import { useI18n } from '../../../../app/i18n';
 import { useToasts } from '../../../../app/toasts';
@@ -24,7 +25,7 @@ import { objectRef } from '../../../../lib/objectRef';
 import type { ObjectRef } from '../../../../lib/objectRef';
 
 import { formatErrorMessage } from '../../../../lib/errors';
-import { formatDate } from '../../../../lib/format';
+import { formatDate, formatDateInTimeZone } from '../../../../lib/format';
 import { cursorFromDescendingPage } from '../../../../lib/lockIndex';
 import { getPaidUntilStatus, paidUntilBadgeVariant, paidUntilStatusLabelKey } from '../../../../lib/paymentsBadges';
 import { formatMoneyLike, safeInt } from '../../../../lib/paymentsFormat';
@@ -49,6 +50,7 @@ function isoToDateInput(value: unknown): string {
 }
 
 export function AdminUserPaymentsPage() {
+  const accountTimeZone = useAccountTimeZone();
   const { basePath } = useAppMode();
   const { t, tc } = useI18n();
   const toasts = useToasts();
@@ -360,9 +362,13 @@ export function AdminUserPaymentsPage() {
                           <td className="px-3 py-2 font-medium tabular-nums">{formatDate(p.created_at)}</td>
                           <td className="px-3 py-2 text-right tabular-nums">{formatMoneyLike(safeInt(p.amount))}</td>
                           <td className="px-3 py-2">
-                            <span className="text-sm font-medium tabular-nums text-fg">{formatDate(p.from_date)}</span>
+                            <span className="text-sm font-medium tabular-nums text-fg">
+                              {formatDateInTimeZone(p.from_date, accountTimeZone)}
+                            </span>
                             <span className="mx-2 text-muted">→</span>
-                            <span className="text-sm font-medium tabular-nums text-fg">{formatDate(p.to_date)}</span>
+                            <span className="text-sm font-medium tabular-nums text-fg">
+                              {formatDateInTimeZone(p.to_date, accountTimeZone)}
+                            </span>
                           </td>
                           <td className="px-3 py-2 text-xs text-muted">
                             {p.incoming_payment?.id ? (

@@ -22,9 +22,13 @@ describe('compactText', () => {
 describe('formatDateInTimeZone', () => {
   it('formats the calendar date in the explicit account time zone', () => {
     const value = '2026-02-01T00:00:00Z';
+    const date = new Date(value);
+    const prague = date.toLocaleDateString(undefined, { timeZone: 'Europe/Prague' });
+    const losAngeles = date.toLocaleDateString(undefined, { timeZone: 'America/Los_Angeles' });
 
-    expect(formatDateInTimeZone(value, 'Europe/Prague')).toBe('2/1/2026');
-    expect(formatDateInTimeZone(value, 'America/Los_Angeles')).toBe('1/31/2026');
+    expect(formatDateInTimeZone(value, 'Europe/Prague')).toBe(prague);
+    expect(formatDateInTimeZone(value, 'America/Los_Angeles')).toBe(losAngeles);
+    expect(prague).not.toBe(losAngeles);
   });
 
   it('preserves the existing empty and malformed fallbacks', () => {

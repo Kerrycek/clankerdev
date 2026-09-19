@@ -17,6 +17,7 @@ type PaymentPeriodScenario = {
   createdAt: string;
   expectedPeriod: string;
   expectedCreatedTime: string;
+  expectedAdminHistoryCreatedDate: string;
   viewport: { width: number; height: number };
 };
 
@@ -97,6 +98,18 @@ async function assertDateOnlyPaymentPeriods(page: Page, scenario: PaymentPeriodS
   await expect(adminCreatedAt).toContainText(scenario.expectedCreatedTime);
   if (scenario.viewport.width <= 390) await expectNoDocumentHorizontalOverflow(page);
 
+  await page.goto('/admin/users/42/payments');
+
+  const adminHistoryRow = page.getByTestId('admin.user.payments.history.row.9001');
+  const adminHistoryCreatedAt = adminHistoryRow.locator('td').nth(0);
+  const adminHistoryPeriod = adminHistoryRow.locator('td').nth(2);
+  const [expectedFromDate, expectedToDate] = scenario.expectedPeriod.split(' → ');
+  await expect(adminHistoryCreatedAt).toHaveText(scenario.expectedAdminHistoryCreatedDate);
+  await expect(adminHistoryPeriod.locator('span').nth(0)).toHaveText(expectedFromDate);
+  await expect(adminHistoryPeriod.locator('span').nth(2)).toHaveText(expectedToDate);
+  expect(await adminHistoryPeriod.innerText()).not.toMatch(/\d{1,2}:\d{2}|\b(?:AM|PM)\b/i);
+  if (scenario.viewport.width <= 390) await expectNoDocumentHorizontalOverflow(page);
+
   expect(mutations).toEqual([]);
 }
 
@@ -115,6 +128,7 @@ test.describe('payment period account time-zone parity', () => {
         createdAt: '2026-06-15T10:30:00Z',
         expectedPeriod: '6/1/2026 → 7/1/2026',
         expectedCreatedTime: '3:30',
+        expectedAdminHistoryCreatedDate: '6/15/2026',
         viewport: { width: 1440, height: 1000 },
       });
     });
@@ -130,6 +144,7 @@ test.describe('payment period account time-zone parity', () => {
         createdAt: '2026-02-14T17:30:00Z',
         expectedPeriod: '2/1/2026 → 3/1/2026',
         expectedCreatedTime: '9:30',
+        expectedAdminHistoryCreatedDate: '2/14/2026',
         viewport: { width: 1440, height: 1000 },
       });
     });
@@ -149,6 +164,7 @@ test.describe('payment period account time-zone parity', () => {
         createdAt: '2026-06-15T10:30:00Z',
         expectedPeriod: '1. 6. 2026 → 1. 7. 2026',
         expectedCreatedTime: '3:30',
+        expectedAdminHistoryCreatedDate: '15. 6. 2026',
         viewport: { width: 390, height: 844 },
       });
     });
@@ -169,6 +185,7 @@ test.describe('payment period signed-in account override', () => {
       createdAt: '2026-02-14T17:30:00Z',
       expectedPeriod: '1/31/2026 → 2/28/2026',
       expectedCreatedTime: '2:30',
+      expectedAdminHistoryCreatedDate: '2/15/2026',
       viewport: { width: 1440, height: 1000 },
     });
   });
