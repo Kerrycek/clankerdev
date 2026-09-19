@@ -45,6 +45,7 @@ import { UserNetworkLiveCard } from './UserNetworkLiveCard';
 
 type KindFilter = 'all' | AssignableIpKind;
 const NETWORK_TABS = ['addresses', 'traffic', 'live'] as const;
+const HISTORY_FOCUS_GRACE_MS = 250;
 type NetworkTab = (typeof NETWORK_TABS)[number];
 
 function networkTabId(tab: NetworkTab): string {
@@ -182,9 +183,12 @@ export function UserNetworkPage() {
     : 'addresses';
   const currentSearch = searchParams.toString();
   const latestSearchRef = useRef(currentSearch);
+  const pageRootRef = useRef<HTMLDivElement>(null);
   const tablistRef = useRef<HTMLDivElement>(null);
   const previousActiveTabRef = useRef(activeTab);
-  const lastFocusWasWithinNetworkSurfaceRef = useRef(false);
+  const recentPageFocusRef = useRef(false);
+  const restoreFocusAfterHistoryRef = useRef(false);
+  const recentFocusResetTimerRef = useRef<number | null>(null);
   const [kindFilter, setKindFilter] = useState<KindFilter>('all');
   const [assignOpen, setAssignOpen] = useState(false);
   const [initialIp, setInitialIp] = useState<IpAddress | null>(null);
@@ -300,37 +304,100 @@ export function UserNetworkPage() {
   }, [currentSearch]);
 
   useEffect(() => {
-    const isWithinNetworkSurface = (target: EventTarget | null) => (
+    const isWithinPage = (target: EventTarget | null) => (
       target instanceof Node
-      && Boolean(
-        tablistRef.current?.contains(target)
-        || NETWORK_TABS.some((tab) => document.getElementById(networkPanelId(tab))?.contains(target))
-      )
+      && Boolean(pageRootRef.current?.contains(target))
     );
 
-    const trackFocus = (event: FocusEvent) => {
-      // History traversal briefly focuses the document body before React hides
-      // the outgoing panel. Keep the last concrete destination so that blur
-      // does not erase ownership; focusing a persistent outside control does.
-      lastFocusWasWithinNetworkSurfaceRef.current = isWithinNetworkSurface(event.target);
+    const clearRecentPageFocus = () => {
+      recentPageFocusRef.current = false;
+      if (recentFocusResetTimerRef.current !== null) {
+        window.clearTimeout(recentFocusResetTimerRef.current);
+        recentFocusResetTimerRef.current = null;
+      }
     };
 
-    document.addEventListener('focusin', trackFocus, true);
-    return () => document.removeEventListener('focusin', trackFocus, true);
+    const handleFocusIn = (event: FocusEvent) => {
+      clearRecentPageFocus();
+      recentPageFocusRef.current = isWithinPage(event.target);
+    };
+
+    const handleFocusOut = (event: FocusEvent) => {
+      if (!isWithinPage(event.target)) return;
+
+      const nextTarget = event.relatedTarget;
+      const nextIsDocumentFallback = nextTarget === document.body || nextTarget === document.documentElement;
+      if (!document.hasFocus()) {
+        clearRecentPageFocus();
+        return;
+      }
+
+      if (nextTarget instanceof Node && !nextIsDocumentFallback) {
+        clearRecentPageFocus();
+        recentPageFocusRef.current = isWithinPage(nextTarget);
+        return;
+      }
+
+      // Chromium can move focus to body immediately before dispatching
+      // popstate. Keep that otherwise ownerless blur only briefly;
+      // ordinary blur is cleared before a later history traversal can use it.
+      if (recentFocusResetTimerRef.current !== null) {
+        window.clearTimeout(recentFocusResetTimerRef.current);
+      }
+      recentFocusResetTimerRef.current = window.setTimeout(
+        clearRecentPageFocus,
+        HISTORY_FOCUS_GRACE_MS
+      );
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!isWithinPage(event.target)) clearRecentPageFocus();
+    };
+
+    const captureHistoryFocus = () => {
+      restoreFocusAfterHistoryRef.current = Boolean(
+        document.hasFocus()
+        && (isWithinPage(document.activeElement) || recentPageFocusRef.current)
+      );
+      clearRecentPageFocus();
+    };
+
+    document.addEventListener('focusin', handleFocusIn, true);
+    document.addEventListener('focusout', handleFocusOut, true);
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    window.addEventListener('blur', clearRecentPageFocus);
+    window.addEventListener('popstate', captureHistoryFocus, true);
+
+    return () => {
+      document.removeEventListener('focusin', handleFocusIn, true);
+      document.removeEventListener('focusout', handleFocusOut, true);
+      document.removeEventListener('pointerdown', handlePointerDown, true);
+      window.removeEventListener('blur', clearRecentPageFocus);
+      window.removeEventListener('popstate', captureHistoryFocus, true);
+      clearRecentPageFocus();
+    };
   }, []);
 
   useEffect(() => {
     const tabChanged = previousActiveTabRef.current !== activeTab;
     previousActiveTabRef.current = activeTab;
-    if (!tabChanged) return;
 
-    const tablist = tablistRef.current;
-    if (
-      !lastFocusWasWithinNetworkSurfaceRef.current
-      && (!tablist || !tablist.contains(document.activeElement))
-    ) return;
-    document.getElementById(networkTabId(activeTab))?.focus();
-  }, [activeTab]);
+    // React Router may commit the URL change from its popstate listener before
+    // this page captures focus ownership, so consume the snapshot next task.
+    const focusTimer = window.setTimeout(() => {
+      const tablist = tablistRef.current;
+      const restoreAfterHistory = restoreFocusAfterHistoryRef.current;
+      restoreFocusAfterHistoryRef.current = false;
+      if (!tabChanged) return;
+      if (
+        !restoreAfterHistory
+        && (!tablist || !tablist.contains(document.activeElement))
+      ) return;
+      document.getElementById(networkTabId(activeTab))?.focus();
+    }, 0);
+
+    return () => window.clearTimeout(focusTimer);
+  }, [activeTab, currentSearch]);
 
   const refresh = () => {
     void vpsesQ.refetch();
@@ -374,82 +441,83 @@ export function UserNetworkPage() {
   };
 
   return (
-    <ListShell
-      testId="network.user.page"
-      header={
-        <PageHeader
-          title={t('network.user.title')}
-          description={t('network.user.subtitle')}
-          testId="network.user.header"
-          actions={activeTab === 'addresses' ? (
-            <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={refresh}>{t('common.refresh')}</Button>
-              <Button variant="primary" testId="network.user.add" onClick={() => openAssignment()}>
-                {t('network.user.action.add')}
-              </Button>
-            </div>
-          ) : undefined}
-        />
-      }
-      filters={
-        <div className="space-y-4">
-          <div
-            id="network-user-tabs"
-            ref={tablistRef}
-            className="flex flex-wrap gap-2"
-            role="tablist"
-            aria-label={t('network.user.tabs.aria')}
-            data-testid="network.user.tabs"
-            onKeyDown={handleTabKeyDown}
-          >
-            <NetworkTabButton
-              active={activeTab === 'addresses'}
-              onClick={() => selectTab('addresses')}
-              tab="addresses"
-              testId="network.user.tab.addresses"
-            >
-              {t('network.user.tab.addresses')}
-            </NetworkTabButton>
-            <NetworkTabButton
-              active={activeTab === 'traffic'}
-              onClick={() => selectTab('traffic')}
-              tab="traffic"
-              testId="network.user.tab.traffic"
-            >
-              {t('network.user.tab.traffic')}
-            </NetworkTabButton>
-            <NetworkTabButton
-              active={activeTab === 'live'}
-              onClick={() => selectTab('live')}
-              tab="live"
-              testId="network.user.tab.live"
-            >
-              {t('network.user.tab.live')}
-            </NetworkTabButton>
-          </div>
-
-          {activeTab === 'addresses' ? (
-            <Card>
-              <div className="grid gap-3 p-4 sm:grid-cols-[minmax(0,240px)_1fr] sm:items-end">
-                <Select
-                  label={t('network.user.filter.kind')}
-                  testId="network.user.filter.kind"
-                  value={kindFilter}
-                  onChange={(event) => setKindFilter(event.target.value as KindFilter)}
-                  options={[
-                    { value: 'all', label: t('network.user.filter.kind.all') },
-                    { value: 'ipv4_public', label: t('network.user.kind.ipv4_public') },
-                    { value: 'ipv4_private', label: t('network.user.kind.ipv4_private') },
-                    { value: 'ipv6', label: t('network.user.kind.ipv6') },
-                  ]}
-                />
-                <div className="text-sm text-muted">{t('network.user.scope_hint')}</div>
+    <div ref={pageRootRef}>
+      <ListShell
+        testId="network.user.page"
+        header={
+          <PageHeader
+            title={t('network.user.title')}
+            description={t('network.user.subtitle')}
+            testId="network.user.header"
+            actions={activeTab === 'addresses' ? (
+              <div className="flex flex-wrap gap-2">
+                <Button variant="secondary" onClick={refresh}>{t('common.refresh')}</Button>
+                <Button variant="primary" testId="network.user.add" onClick={() => openAssignment()}>
+                  {t('network.user.action.add')}
+                </Button>
               </div>
-            </Card>
-          ) : null}
-        </div>
-      }
-    >
+            ) : undefined}
+          />
+        }
+        filters={
+          <div className="space-y-4">
+            <div
+              id="network-user-tabs"
+              ref={tablistRef}
+              className="flex flex-wrap gap-2"
+              role="tablist"
+              aria-label={t('network.user.tabs.aria')}
+              data-testid="network.user.tabs"
+              onKeyDown={handleTabKeyDown}
+            >
+              <NetworkTabButton
+                active={activeTab === 'addresses'}
+                onClick={() => selectTab('addresses')}
+                tab="addresses"
+                testId="network.user.tab.addresses"
+              >
+                {t('network.user.tab.addresses')}
+              </NetworkTabButton>
+              <NetworkTabButton
+                active={activeTab === 'traffic'}
+                onClick={() => selectTab('traffic')}
+                tab="traffic"
+                testId="network.user.tab.traffic"
+              >
+                {t('network.user.tab.traffic')}
+              </NetworkTabButton>
+              <NetworkTabButton
+                active={activeTab === 'live'}
+                onClick={() => selectTab('live')}
+                tab="live"
+                testId="network.user.tab.live"
+              >
+                {t('network.user.tab.live')}
+              </NetworkTabButton>
+            </div>
+
+            {activeTab === 'addresses' ? (
+              <Card>
+                <div className="grid gap-3 p-4 sm:grid-cols-[minmax(0,240px)_1fr] sm:items-end">
+                  <Select
+                    label={t('network.user.filter.kind')}
+                    testId="network.user.filter.kind"
+                    value={kindFilter}
+                    onChange={(event) => setKindFilter(event.target.value as KindFilter)}
+                    options={[
+                      { value: 'all', label: t('network.user.filter.kind.all') },
+                      { value: 'ipv4_public', label: t('network.user.kind.ipv4_public') },
+                      { value: 'ipv4_private', label: t('network.user.kind.ipv4_private') },
+                      { value: 'ipv6', label: t('network.user.kind.ipv6') },
+                    ]}
+                  />
+                  <div className="text-sm text-muted">{t('network.user.scope_hint')}</div>
+                </div>
+              </Card>
+            ) : null}
+          </div>
+        }
+      >
       <div
         id={networkPanelId('addresses')}
         role="tabpanel"
@@ -600,6 +668,7 @@ export function UserNetworkPage() {
           <UserNetworkLiveCard userId={userId} isAdmin={scopedUserId !== undefined} />
         ) : null}
       </div>
-    </ListShell>
+      </ListShell>
+    </div>
   );
 }

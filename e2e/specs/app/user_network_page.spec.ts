@@ -397,6 +397,19 @@ test('@pr-smoke @pr-smoke-mobile user network tabs expose complete keyboard, his
   await expect(addressesTab).toHaveAttribute('aria-selected', 'true');
   await expect(addressesTab).toBeFocused();
   await expect(page.getByTestId('network.user.panel.addresses')).toBeVisible();
+
+  const kindFilter = page.getByTestId('network.user.filter.kind');
+  await kindFilter.focus();
+  await expect(kindFilter).toBeFocused();
+  await page.goForward();
+  await expect(page).toHaveURL(/\/app\/networking\?tab=traffic$/);
+  await expect(trafficTab).toHaveAttribute('aria-selected', 'true');
+  await expect(trafficTab).toBeFocused();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/app\/networking$/);
+  await expect(addressesTab).toHaveAttribute('aria-selected', 'true');
+  await expect(addressesTab).toBeFocused();
+
   await page.goBack();
   await expect(page).toHaveURL(/\/app\/networking\?tab=live$/);
   await expect(liveTab).toHaveAttribute('aria-selected', 'true');
@@ -420,6 +433,22 @@ test('@pr-smoke @pr-smoke-mobile user network tabs expose complete keyboard, his
   await page.goForward();
   await expect(page).toHaveURL(/\/app\/networking\?tab=traffic$/);
   await expect(shellMain).toBeFocused();
+
+  const body = page.locator('body');
+  await body.evaluate((element) => {
+    element.tabIndex = -1;
+    element.focus();
+  });
+  await expect(body).toBeFocused();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/app\/networking$/);
+  await expect(body).toBeFocused();
+  await expect(addressesTab).not.toBeFocused();
+  await page.goForward();
+  await expect(page).toHaveURL(/\/app\/networking\?tab=traffic$/);
+  await expect(body).toBeFocused();
+  await expect(trafficTab).not.toBeFocused();
+  await body.evaluate((element) => element.removeAttribute('tabindex'));
   await trafficTab.focus();
 
   const trafficTablist = page.getByTestId('network.user.traffic.tabs');
