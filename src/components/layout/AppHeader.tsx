@@ -38,6 +38,7 @@ interface InlineSearchResult {
 }
 
 const INLINE_SEARCH_LISTBOX_ID = 'global-search-inline-listbox';
+const INLINE_SEARCH_STATUS_ID = 'global-search-inline-status';
 
 function inlineSearchOptionId(index: number): string {
   return `${INLINE_SEARCH_LISTBOX_ID}-option-${index}`;
@@ -207,7 +208,8 @@ export function AppHeader(props: AppHeaderProps) {
     return null;
   }, [search, searchError, searchLoading, searchResults.length, t]);
 
-  const inlineSearchExpanded = searchOpen && Boolean(search.trim() || searchResults.length > 0);
+  const inlineSearchPopupOpen = searchOpen && Boolean(search.trim() || searchResults.length > 0);
+  const inlineSearchExpanded = inlineSearchPopupOpen && searchResults.length > 0;
   const inlineSearchActiveOptionId =
     inlineSearchExpanded && searchResults[selectedSearchResult]
       ? inlineSearchOptionId(selectedSearchResult)
@@ -294,6 +296,8 @@ export function AppHeader(props: AppHeaderProps) {
             aria-expanded={inlineSearchExpanded}
             aria-autocomplete="list"
             aria-activedescendant={inlineSearchActiveOptionId}
+            aria-busy={searchLoading || undefined}
+            aria-describedby={inlineSearchPopupOpen && !inlineSearchExpanded ? INLINE_SEARCH_STATUS_ID : undefined}
             role="combobox"
             data-testid="shell.inline-search.input"
           />
@@ -301,24 +305,27 @@ export function AppHeader(props: AppHeaderProps) {
             {shortcutHint}
           </span>
 
-          {inlineSearchExpanded ? (
+          {inlineSearchPopupOpen ? (
             <div
-              id={INLINE_SEARCH_LISTBOX_ID}
-              role="listbox"
-              aria-label={t('search.inline.aria')}
               className="absolute left-0 top-[calc(100%+0.5rem)] z-50 w-drawer-md overflow-hidden rounded-md border border-border bg-overlay-surface shadow-panel"
               data-testid="shell.inline-search.results"
               data-overlay="popover"
               data-overlay-surface="overlay"
             >
               {searchResults.length > 0 ? (
-                <div className="py-1">
+                <div
+                  id={INLINE_SEARCH_LISTBOX_ID}
+                  role="listbox"
+                  aria-label={t('search.inline.aria')}
+                  aria-busy={searchLoading || undefined}
+                  className="py-1"
+                >
                   {searchResults.map((result, index) => {
                     const showGroup = !canUseClusterSearch && result.group && (
                       index === 0 || searchResults[index - 1]?.group !== result.group
                     );
                     return (
-                      <React.Fragment key={result.key}>
+                      <React.Fragment key={`${result.key}:${index}`}>
                         {showGroup && result.group ? (
                           <div
                             className="border-t border-border px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted first:border-t-0"
@@ -350,7 +357,14 @@ export function AppHeader(props: AppHeaderProps) {
                   })}
                 </div>
               ) : (
-                <div className="px-3 py-2 text-sm text-muted" data-testid="shell.inline-search.status">
+                <div
+                  id={INLINE_SEARCH_STATUS_ID}
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                  className={clsx('px-3 py-2 text-sm', searchError ? 'text-danger' : 'text-muted')}
+                  data-testid="shell.inline-search.status"
+                >
                   {searchStatus}
                 </div>
               )}

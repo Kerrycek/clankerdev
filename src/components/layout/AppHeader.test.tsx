@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -33,6 +33,10 @@ function t(key: any, vars?: Record<string, unknown>): string {
     'nav.open': 'Open navigation',
     'palette.placeholder.user': 'Search VPS',
     'palette.group.vps': 'VPS',
+    'palette.loading': 'Loading…',
+    'palette.error_prefix': 'Search failed',
+    'palette.empty.no_results': 'No results',
+    'palette.empty.type_to_search': 'Type to search',
     'palette.shortcut_title': 'Shortcut',
     'search.inline.aria': 'Search objects',
     'settings.language.cs': 'CS',
@@ -197,5 +201,47 @@ describe('AppHeader', () => {
     expect(input).toHaveAttribute('aria-expanded', 'false');
     expect(input).not.toHaveAttribute('aria-activedescendant');
     expect(screen.queryByRole('listbox', { name: 'Search objects' })).not.toBeInTheDocument();
+  });
+
+  it('announces loading, empty, and error states without exposing an empty listbox', async () => {
+    let resolveSearch!: (value: Awaited<ReturnType<typeof searchUserObjects>>) => void;
+    vi.mocked(searchUserObjects)
+      .mockImplementationOnce(() => new Promise((resolve) => {
+        resolveSearch = resolve;
+      }))
+      .mockRejectedValueOnce(new Error('offline'));
+    render(<HeaderHarness />);
+
+    const input = screen.getByRole('combobox', { name: 'Search objects' });
+    input.focus();
+    fireEvent.change(input, { target: { value: 'pending' } });
+
+    const loadingStatus = await screen.findByTestId('shell.inline-search.status');
+    await waitFor(() => expect(loadingStatus).toHaveTextContent('Loading…'));
+    expect(loadingStatus).toHaveAttribute('id', 'global-search-inline-status');
+    expect(loadingStatus).toHaveAttribute('role', 'status');
+    expect(loadingStatus).toHaveAttribute('aria-live', 'polite');
+    expect(loadingStatus).not.toHaveAttribute('aria-busy');
+    expect(input).toHaveAttribute('aria-busy', 'true');
+    expect(input).toHaveAttribute('aria-describedby', 'global-search-inline-status');
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+
+    await act(async () => resolveSearch([]));
+
+    await waitFor(() => expect(loadingStatus).toHaveTextContent('No results'));
+    expect(loadingStatus).not.toHaveAttribute('aria-busy');
+    expect(input).not.toHaveAttribute('aria-busy');
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: 'failure' } });
+
+    await waitFor(() => expect(loadingStatus).toHaveTextContent('Search failed: offline'));
+    expect(loadingStatus).toHaveAttribute('role', 'status');
+    expect(loadingStatus).toHaveAttribute('aria-live', 'polite');
+    expect(input).toHaveAttribute('aria-describedby', 'global-search-inline-status');
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 });

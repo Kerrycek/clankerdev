@@ -45,6 +45,7 @@ type PaletteResult = {
 };
 
 const COMMAND_PALETTE_LISTBOX_ID = 'command-palette-listbox';
+const COMMAND_PALETTE_STATUS_ID = 'command-palette-status';
 
 function commandPaletteOptionId(index: number): string {
   return `${COMMAND_PALETTE_LISTBOX_ID}-option-${index}`;
@@ -237,6 +238,29 @@ function userKindsForQualifier(key: QualifierKey | null): UserGlobalSearchGroup[
   return [];
 }
 
+function coarsePointerQueries(): MediaQueryList[] {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return [];
+  return [window.matchMedia('(pointer: coarse)'), window.matchMedia('(any-pointer: coarse)')];
+}
+
+function useHasCoarsePointer(): boolean {
+  const [hasCoarsePointer, setHasCoarsePointer] = useState(() => (
+    coarsePointerQueries().some((query) => query.matches)
+  ));
+
+  useEffect(() => {
+    const queries = coarsePointerQueries();
+    const update = () => setHasCoarsePointer(queries.some((query) => query.matches));
+    update();
+    for (const query of queries) query.addEventListener('change', update);
+    return () => {
+      for (const query of queries) query.removeEventListener('change', update);
+    };
+  }, []);
+
+  return hasCoarsePointer;
+}
+
 export function CommandPalette(props: { open: boolean; onClose: () => void }) {
   const auth = useAuth();
   const { basePath, mode } = useAppMode();
@@ -244,6 +268,7 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
   const { t } = useI18n();
   const toasts = useToasts();
   const navigate = useNavigate();
+  const hasCoarsePointer = useHasCoarsePointer();
 
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -377,12 +402,17 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
     });
   }, [visibleResults.length]);
 
+  const indexedResults = useMemo(
+    () => visibleResults.map((result, index) => ({ result, index })),
+    [visibleResults]
+  );
+
   const grouped = useMemo(() => {
-    const map = new Map<PaletteResult['group'], PaletteResult[]>();
-    for (const r of visibleResults) {
-      const g = r.group;
+    const map = new Map<PaletteResult['group'], typeof indexedResults>();
+    for (const row of indexedResults) {
+      const g = row.result.group;
       const arr = map.get(g) ?? [];
-      arr.push(r);
+      arr.push(row);
       map.set(g, arr);
     }
 
@@ -390,22 +420,19 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
     return order
       .map((g) => ({ group: g, rows: map.get(g) ?? [] }))
       .filter((x) => x.rows.length > 0);
-  }, [visibleResults]);
+  }, [indexedResults]);
 
   const flattened = visibleResults;
-  const indexByKey = useMemo(() => {
-    const m = new Map<string, number>();
-    for (let i = 0; i < flattened.length; i++) {
-      const r = flattened[i];
-      if (r) m.set(r.key, i);
-    }
-    return m;
-  }, [flattened]);
 
   const resultsExpanded =
     props.open && !helpOpen && Boolean(query.trim()) && !loading && !error && flattened.length > 0;
   const activeOptionId =
     resultsExpanded && flattened[selected] ? commandPaletteOptionId(selected) : undefined;
+
+  useEffect(() => {
+    if (!resultsExpanded) return;
+    document.getElementById(commandPaletteOptionId(selected))?.scrollIntoView?.({ block: 'nearest' });
+  }, [resultsExpanded, selected]);
 
   const openResult = (r: PaletteResult, opts?: { newTab?: boolean }) => {
     if (opts?.newTab) {
@@ -571,6 +598,8 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
               ariaExpanded={resultsExpanded}
               ariaAutocomplete="list"
               ariaActiveDescendant={activeOptionId}
+              ariaBusy={loading || undefined}
+              ariaDescribedBy={!helpOpen && !resultsExpanded ? COMMAND_PALETTE_STATUS_ID : undefined}
               role="combobox"
               value={query}
               onChange={(e) => {
@@ -578,14 +607,17 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
                 if (helpOpenManual) setHelpOpenManual(false);
               }}
               placeholder={canUseClusterSearch ? t('palette.placeholder.admin') : t('palette.placeholder.user')}
-              className="h-11 pr-12 sm:pr-11"
+              className={clsx('h-11', hasCoarsePointer ? 'pr-12' : 'pr-11')}
             />
 
             <div className="absolute inset-y-0 right-0 flex items-center pr-1">
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 min-h-11 min-w-11 px-0 sm:min-h-0 sm:min-w-0"
+                className={clsx(
+                  'h-8 w-8 px-0',
+                  hasCoarsePointer && 'min-h-11 min-w-11'
+                )}
                 onClick={() => setHelpOpenManual(true)}
                 ariaLabel={t('filters.help.open')}
                 title={t('filters.help.open')}
@@ -601,7 +633,7 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
           </Button>
         </div>
 
-        <div className="mt-4 flex-1 overflow-y-auto">
+        <div className="mt-4 flex-1 overflow-y-auto" data-testid="palette.results-scroll">
           {helpOpen ? (
             <div data-testid="palette.help">
               <div className="text-sm font-semibold">{t('palette.help.title')}</div>
@@ -628,20 +660,48 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
               </div>
             </div>
           ) : !query.trim() ? (
-            <div className="text-sm text-muted" data-testid="palette.empty">
+            <div
+              id={COMMAND_PALETTE_STATUS_ID}
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              className="text-sm text-muted"
+              data-testid="palette.empty"
+            >
               {t('palette.empty.type_to_search')}
             </div>
           ) : loading ? (
-            <div className="flex items-center gap-2 text-sm text-muted" data-testid="palette.loading">
+            <div
+              id={COMMAND_PALETTE_STATUS_ID}
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              className="flex items-center gap-2 text-sm text-muted"
+              data-testid="palette.loading"
+            >
               <Spinner />
               {t('palette.loading')}
             </div>
           ) : error ? (
-            <div className="text-sm text-danger" data-testid="palette.error">
+            <div
+              id={COMMAND_PALETTE_STATUS_ID}
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              className="text-sm text-danger"
+              data-testid="palette.error"
+            >
               {t('palette.error_prefix')}: {error}
             </div>
           ) : flattened.length === 0 ? (
-            <div className="text-sm text-muted" data-testid="palette.no_results">
+            <div
+              id={COMMAND_PALETTE_STATUS_ID}
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              className="text-sm text-muted"
+              data-testid="palette.no_results"
+            >
               {t('palette.empty.no_results')}
             </div>
           ) : (
@@ -656,13 +716,11 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
                 <div key={g.group}>
                   <div className="text-xs font-semibold text-muted">{groupLabel(g.group, t)}</div>
                   <div className="mt-2 rounded-md border border-border">
-                    {g.rows.map((r) => {
-                      const idx = indexByKey.get(r.key);
-                      if (idx === undefined) return null;
+                    {g.rows.map(({ result: r, index: idx }) => {
                       const isSel = idx === selected;
                       return (
                         <button
-                          key={r.key}
+                          key={commandPaletteOptionId(idx)}
                           type="button"
                           id={commandPaletteOptionId(idx)}
                           role="option"

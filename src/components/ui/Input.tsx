@@ -9,6 +9,7 @@ export interface InputProps {
   ariaExpanded?: boolean;
   ariaAutocomplete?: React.AriaAttributes['aria-autocomplete'];
   ariaActiveDescendant?: string;
+  ariaBusy?: boolean;
   ariaInvalid?: boolean;
   ariaDescribedBy?: string;
   role?: React.AriaRole;
@@ -43,6 +44,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Inp
       aria-expanded={props.ariaExpanded}
       aria-autocomplete={props.ariaAutocomplete}
       aria-activedescendant={props.ariaActiveDescendant}
+      aria-busy={props.ariaBusy}
       aria-invalid={props.ariaInvalid}
       aria-describedby={props.ariaDescribedBy}
       role={props.role}
