@@ -274,6 +274,7 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<PaletteResult[]>([]);
+  const [settledQuery, setSettledQuery] = useState('');
   const [selected, setSelected] = useState(0);
   const [manualSelection, setManualSelection] = useState(false);
   const [helpOpenManual, setHelpOpenManual] = useState(false);
@@ -288,8 +289,10 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
   useEffect(() => {
     if (!props.open) return;
     setQuery('');
+    setLoading(false);
     setError(null);
     setResults([]);
+    setSettledQuery('');
     setSelected(0);
     setManualSelection(false);
     setHelpOpenManual(false);
@@ -309,6 +312,7 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
       setLoading(false);
       setError(null);
       setResults([]);
+      setSettledQuery('');
       return;
     }
 
@@ -317,6 +321,7 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
       setLoading(false);
       setError(null);
       setResults([]);
+      setSettledQuery('');
       return;
     }
 
@@ -329,6 +334,7 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
       setLoading(false);
       setError(null);
       setResults([]);
+      setSettledQuery(q);
       return;
     }
 
@@ -375,6 +381,7 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
       } finally {
         if (!alive || ac.signal.aborted) return;
         setLoading(false);
+        setSettledQuery(q);
       }
     };
 
@@ -423,9 +430,15 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
   }, [indexedResults]);
 
   const flattened = visibleResults;
+  const normalizedQuery = query.trim();
+  const debouncePending = normalizedQuery !== debouncedQuery;
+  const requestPending = normalizedQuery !== settledQuery;
+  const searchBusy = Boolean(normalizedQuery)
+    && !helpOpen
+    && (debouncePending || requestPending || loading);
 
   const resultsExpanded =
-    props.open && !helpOpen && Boolean(query.trim()) && !loading && !error && flattened.length > 0;
+    props.open && !helpOpen && Boolean(normalizedQuery) && !searchBusy && !error && flattened.length > 0;
   const activeOptionId =
     resultsExpanded && flattened[selected] ? commandPaletteOptionId(selected) : undefined;
 
@@ -598,7 +611,7 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
               ariaExpanded={resultsExpanded}
               ariaAutocomplete="list"
               ariaActiveDescendant={activeOptionId}
-              ariaBusy={loading || undefined}
+              ariaBusy={searchBusy || undefined}
               ariaDescribedBy={!helpOpen && !resultsExpanded ? COMMAND_PALETTE_STATUS_ID : undefined}
               role="combobox"
               value={query}
@@ -659,7 +672,7 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
                 />
               </div>
             </div>
-          ) : !query.trim() ? (
+          ) : !normalizedQuery ? (
             <div
               id={COMMAND_PALETTE_STATUS_ID}
               role="status"
@@ -670,7 +683,7 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
             >
               {t('palette.empty.type_to_search')}
             </div>
-          ) : loading ? (
+          ) : searchBusy ? (
             <div
               id={COMMAND_PALETTE_STATUS_ID}
               role="status"

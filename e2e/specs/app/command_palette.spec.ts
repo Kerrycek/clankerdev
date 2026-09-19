@@ -387,6 +387,23 @@ test.describe('Command palette', () => {
     await openCommandPalette(page);
 
     const input = page.getByTestId('palette.input');
+    await page.getByTestId('palette.results-scroll').evaluate((container) => {
+      const stateWindow = window as typeof window & {
+        __paletteStatusObserver?: MutationObserver;
+        __paletteStatusTransitions?: string[];
+      };
+      const transitions: string[] = [];
+      const record = () => {
+        const status = container.querySelector<HTMLElement>('[role="status"]');
+        const next = status?.dataset.testid;
+        if (next && transitions.at(-1) !== next) transitions.push(next);
+      };
+      record();
+      const observer = new MutationObserver(record);
+      observer.observe(container, { childList: true, subtree: true, characterData: true });
+      stateWindow.__paletteStatusObserver = observer;
+      stateWindow.__paletteStatusTransitions = transitions;
+    });
     await input.fill('slow');
 
     const loading = page.getByTestId('palette.loading');
@@ -408,6 +425,18 @@ test.describe('Command palette', () => {
     await expect(input).toHaveAttribute('aria-expanded', 'false');
     await expect(page.getByRole('listbox')).toHaveCount(0);
 
+    const statusTransitions = await page.evaluate(() => {
+      const stateWindow = window as typeof window & {
+        __paletteStatusTransitions?: string[];
+      };
+      return stateWindow.__paletteStatusTransitions ?? [];
+    });
+    expect(statusTransitions).toEqual([
+      'palette.empty',
+      'palette.loading',
+      'palette.no_results',
+    ]);
+
     await input.fill('failure');
     const error = page.getByTestId('palette.error');
     await expect(error).toBeVisible();
@@ -417,6 +446,12 @@ test.describe('Command palette', () => {
     await expect(input).toHaveAttribute('aria-describedby', 'command-palette-status');
     await expect(input).toHaveAttribute('aria-expanded', 'false');
     await expect(page.getByRole('listbox')).toHaveCount(0);
+    await page.evaluate(() => {
+      const stateWindow = window as typeof window & {
+        __paletteStatusObserver?: MutationObserver;
+      };
+      stateWindow.__paletteStatusObserver?.disconnect();
+    });
   });
 
   test('scrolls the keyboard-active option into view for long result sets', async ({ page }) => {

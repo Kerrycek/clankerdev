@@ -89,6 +89,23 @@ test.describe('User global search', () => {
     await expect(searchInput).toHaveAttribute('aria-expanded', 'false');
     await expect(searchInput).not.toHaveAttribute('aria-activedescendant');
 
+    await page.getByTestId('shell.inline-search').evaluate((container) => {
+      const stateWindow = window as typeof window & {
+        __inlineSearchStatusObserver?: MutationObserver;
+        __inlineSearchStatusTransitions?: string[];
+      };
+      const transitions: string[] = [];
+      const record = () => {
+        const status = container.querySelector<HTMLElement>('[role="status"]');
+        const next = status ? String(status.textContent ?? '').trim() : '';
+        if (next && transitions.at(-1) !== next) transitions.push(next);
+      };
+      const observer = new MutationObserver(record);
+      observer.observe(container, { childList: true, subtree: true, characterData: true });
+      stateWindow.__inlineSearchStatusObserver = observer;
+      stateWindow.__inlineSearchStatusTransitions = transitions;
+    });
+
     await searchInput.fill('203.0.113.20');
 
     await expect(page.getByTestId('shell.inline-search.group.vps')).toBeVisible();
@@ -100,6 +117,16 @@ test.describe('User global search', () => {
     await expect(page.getByText('203.0.113.20/29', { exact: true })).toHaveCount(0);
     await expect(page.getByText('203.0.113.20/28', { exact: true })).toHaveCount(0);
     await expect(page.getByText('203.0.113.20/27', { exact: true })).toHaveCount(0);
+    const statusTransitions = await page.evaluate(() => {
+      const stateWindow = window as typeof window & {
+        __inlineSearchStatusObserver?: MutationObserver;
+        __inlineSearchStatusTransitions?: string[];
+      };
+      stateWindow.__inlineSearchStatusObserver?.disconnect();
+      return stateWindow.__inlineSearchStatusTransitions ?? [];
+    });
+    expect(statusTransitions[0]).toBe('Searching…');
+    expect(statusTransitions).not.toContain('No results');
     expect(searched).toEqual(expect.arrayContaining([
       'vps:203.0.113.20',
       'ip:203.0.113.20',

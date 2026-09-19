@@ -129,6 +129,7 @@ export function AppHeader(props: AppHeaderProps) {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<InlineSearchResult[]>([]);
+  const [settledSearch, setSettledSearch] = useState('');
   const [selectedSearchResult, setSelectedSearchResult] = useState(0);
   const debouncedSearch = useDebouncedValue(search.trim(), 180);
   const sessionIdleLimitSeconds = readSessionIdleLimitSeconds(auth.user?.preferred_session_length);
@@ -136,7 +137,10 @@ export function AppHeader(props: AppHeaderProps) {
   useEffect(() => {
     setSearch('');
     setSearchOpen(false);
+    setSearchLoading(false);
+    setSearchError(null);
     setSearchResults([]);
+    setSettledSearch('');
   }, [location.pathname]);
 
   const canUseClusterSearch = auth.canUseAdminUi && mode === 'admin';
@@ -147,6 +151,7 @@ export function AppHeader(props: AppHeaderProps) {
       setSearchLoading(false);
       setSearchError(null);
       setSearchResults([]);
+      setSettledSearch(q);
       return undefined;
     }
 
@@ -185,6 +190,7 @@ export function AppHeader(props: AppHeaderProps) {
       } finally {
         if (!alive || ac.signal.aborted) return;
         setSearchLoading(false);
+        setSettledSearch(q);
       }
     };
 
@@ -200,16 +206,25 @@ export function AppHeader(props: AppHeaderProps) {
     setSelectedSearchResult(0);
   }, [debouncedSearch, searchResults.length]);
 
+  const normalizedSearch = search.trim();
+  const searchDebouncePending = normalizedSearch !== debouncedSearch;
+  const searchRequestPending = normalizedSearch !== settledSearch;
+  const searchBusy = Boolean(normalizedSearch)
+    && (searchDebouncePending || searchRequestPending || searchLoading);
+
   const searchStatus = useMemo(() => {
-    if (!search.trim()) return t('palette.empty.type_to_search');
-    if (searchLoading) return t('palette.loading');
+    if (!normalizedSearch) return t('palette.empty.type_to_search');
+    if (searchBusy) return t('palette.loading');
     if (searchError) return `${t('palette.error_prefix')}: ${searchError}`;
     if (searchResults.length === 0) return t('palette.empty.no_results');
     return null;
-  }, [search, searchError, searchLoading, searchResults.length, t]);
+  }, [normalizedSearch, searchBusy, searchError, searchResults.length, t]);
 
-  const inlineSearchPopupOpen = searchOpen && Boolean(search.trim() || searchResults.length > 0);
-  const inlineSearchExpanded = inlineSearchPopupOpen && searchResults.length > 0;
+  const inlineSearchPopupOpen = searchOpen && Boolean(normalizedSearch);
+  const inlineSearchExpanded = inlineSearchPopupOpen
+    && !searchBusy
+    && !searchError
+    && searchResults.length > 0;
   const inlineSearchActiveOptionId =
     inlineSearchExpanded && searchResults[selectedSearchResult]
       ? inlineSearchOptionId(selectedSearchResult)
@@ -296,7 +311,7 @@ export function AppHeader(props: AppHeaderProps) {
             aria-expanded={inlineSearchExpanded}
             aria-autocomplete="list"
             aria-activedescendant={inlineSearchActiveOptionId}
-            aria-busy={searchLoading || undefined}
+            aria-busy={searchBusy || undefined}
             aria-describedby={inlineSearchPopupOpen && !inlineSearchExpanded ? INLINE_SEARCH_STATUS_ID : undefined}
             role="combobox"
             data-testid="shell.inline-search.input"
@@ -312,12 +327,11 @@ export function AppHeader(props: AppHeaderProps) {
               data-overlay="popover"
               data-overlay-surface="overlay"
             >
-              {searchResults.length > 0 ? (
+              {inlineSearchExpanded ? (
                 <div
                   id={INLINE_SEARCH_LISTBOX_ID}
                   role="listbox"
                   aria-label={t('search.inline.aria')}
-                  aria-busy={searchLoading || undefined}
                   className="py-1"
                 >
                   {searchResults.map((result, index) => {

@@ -176,6 +176,11 @@ describe('AppHeader', () => {
     input.focus();
     fireEvent.change(input, { target: { value: 'example' } });
 
+    const pendingStatus = screen.getByTestId('shell.inline-search.status');
+    expect(pendingStatus).toHaveTextContent('Loading…');
+    expect(pendingStatus).not.toHaveTextContent('No results');
+    expect(input).toHaveAttribute('aria-busy', 'true');
+
     const listbox = await screen.findByRole('listbox', { name: 'Search objects' });
     expect(listbox).toHaveAttribute('id', 'global-search-inline-listbox');
 
@@ -216,8 +221,10 @@ describe('AppHeader', () => {
     input.focus();
     fireEvent.change(input, { target: { value: 'pending' } });
 
-    const loadingStatus = await screen.findByTestId('shell.inline-search.status');
-    await waitFor(() => expect(loadingStatus).toHaveTextContent('Loading…'));
+    const loadingStatus = screen.getByTestId('shell.inline-search.status');
+    expect(loadingStatus).toHaveTextContent('Loading…');
+    expect(loadingStatus).not.toHaveTextContent('No results');
+    expect(searchUserObjects).not.toHaveBeenCalled();
     expect(loadingStatus).toHaveAttribute('id', 'global-search-inline-status');
     expect(loadingStatus).toHaveAttribute('role', 'status');
     expect(loadingStatus).toHaveAttribute('aria-live', 'polite');
@@ -226,6 +233,10 @@ describe('AppHeader', () => {
     expect(input).toHaveAttribute('aria-describedby', 'global-search-inline-status');
     expect(input).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+
+    await waitFor(() => expect(searchUserObjects).toHaveBeenCalledTimes(1));
+    expect(loadingStatus).toHaveTextContent('Loading…');
+    expect(input).toHaveAttribute('aria-busy', 'true');
 
     await act(async () => resolveSearch([]));
 
@@ -236,6 +247,12 @@ describe('AppHeader', () => {
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: 'failure' } });
+
+    expect(loadingStatus).toHaveTextContent('Loading…');
+    expect(loadingStatus).not.toHaveTextContent('No results');
+    expect(loadingStatus).not.toHaveTextContent('Search failed');
+    expect(input).toHaveAttribute('aria-busy', 'true');
+    expect(searchUserObjects).toHaveBeenCalledTimes(1);
 
     await waitFor(() => expect(loadingStatus).toHaveTextContent('Search failed: offline'));
     expect(loadingStatus).toHaveAttribute('role', 'status');
