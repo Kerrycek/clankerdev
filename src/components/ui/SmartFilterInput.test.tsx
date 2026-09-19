@@ -117,6 +117,7 @@ describe('SmartFilterInput', () => {
     expect(firstControls).toBeTruthy();
     expect(secondControls).toBeTruthy();
     expect(firstControls).not.toBe(secondControls);
+    expect(document.getElementById(firstControls!)).toHaveAttribute('hidden');
     expect(first).toHaveAttribute('aria-autocomplete', 'list');
     expect(first).toHaveAttribute('aria-expanded', 'false');
     expect(first).toHaveClass('h-11', 'min-h-11');
