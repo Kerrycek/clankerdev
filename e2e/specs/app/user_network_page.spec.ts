@@ -29,8 +29,10 @@ async function expectAccessibleTabSet(page: Page, tablist: Locator, expectedCoun
     await expect(panel).toHaveAttribute('aria-labelledby', tabId!);
     if (await tab.getAttribute('aria-selected') === 'true') {
       await expect(panel).toBeVisible();
+      await expect(panel).toHaveAttribute('tabindex', '0');
     } else {
       await expect(panel).toBeHidden();
+      await expect(panel).toHaveAttribute('tabindex', '-1');
     }
   }
 }
@@ -348,6 +350,20 @@ test('@pr-smoke @pr-smoke-mobile user network tabs expose complete keyboard, his
   await expectTouchTargets(mainTablist.getByRole('tab'));
 
   await addressesTab.focus();
+  const altArrowLeftWasNotCanceled = await addressesTab.evaluate((element) => {
+    const event = new KeyboardEvent('keydown', {
+      key: 'ArrowLeft',
+      altKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    return element.dispatchEvent(event);
+  });
+  expect(altArrowLeftWasNotCanceled).toBe(true);
+  await expect(addressesTab).toBeFocused();
+  await expect(addressesTab).toHaveAttribute('aria-selected', 'true');
+  await expect(page).toHaveURL(/\/app\/networking$/);
+
   await addressesTab.press('ArrowLeft');
   await expect(liveTab).toBeFocused();
   await expect(liveTab).toHaveAttribute('aria-selected', 'true');
@@ -364,18 +380,48 @@ test('@pr-smoke @pr-smoke-mobile user network tabs expose complete keyboard, his
   await expect(addressesTab).toBeFocused();
   await expect(page).toHaveURL(/\/app\/networking$/);
 
+  await addressesTab.click();
+  await addressesTab.press('Home');
+  await expect(addressesTab).toBeFocused();
+  await expect(page).toHaveURL(/\/app\/networking$/);
+
   await addressesTab.press('ArrowRight');
   await expect(trafficTab).toBeFocused();
   await expect(page).toHaveURL(/\/app\/networking\?tab=traffic$/);
   await expectAccessibleTabSet(page, mainTablist, 3);
+  await trafficTab.press('Tab');
+  await expect(page.getByTestId('network.user.panel.traffic')).toBeFocused();
+  await trafficTab.focus();
 
   await page.goBack();
   await expect(page).toHaveURL(/\/app\/networking$/);
   await expect(addressesTab).toHaveAttribute('aria-selected', 'true');
+  await expect(addressesTab).toBeFocused();
   await expect(page.getByTestId('network.user.panel.addresses')).toBeVisible();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/app\/networking\?tab=live$/);
+  await expect(liveTab).toHaveAttribute('aria-selected', 'true');
+  await expect(liveTab).toBeFocused();
+  await page.goForward();
+  await expect(page).toHaveURL(/\/app\/networking$/);
+  await expect(addressesTab).toHaveAttribute('aria-selected', 'true');
+  await expect(addressesTab).toBeFocused();
   await page.goForward();
   await expect(page).toHaveURL(/\/app\/networking\?tab=traffic$/);
   await expect(trafficTab).toHaveAttribute('aria-selected', 'true');
+  await expect(trafficTab).toBeFocused();
+
+  const shellMain = page.getByTestId('shell.main');
+  await shellMain.evaluate((element) => element.setAttribute('tabindex', '-1'));
+  await shellMain.focus();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/app\/networking$/);
+  await expect(shellMain).toBeFocused();
+  await expect(addressesTab).not.toBeFocused();
+  await page.goForward();
+  await expect(page).toHaveURL(/\/app\/networking\?tab=traffic$/);
+  await expect(shellMain).toBeFocused();
+  await trafficTab.focus();
 
   const trafficTablist = page.getByTestId('network.user.traffic.tabs');
   const overviewTab = page.getByTestId('network.user.traffic.tab.overview');
@@ -394,6 +440,9 @@ test('@pr-smoke @pr-smoke-mobile user network tabs expose complete keyboard, his
   await expect(breakdownTab).toBeFocused();
   await expect(page.getByTestId('network.user.traffic.panel.breakdown')).toBeVisible();
   await expectAccessibleTabSet(page, trafficTablist, 2);
+  await breakdownTab.press('Tab');
+  await expect(page.getByTestId('network.user.traffic.panel.breakdown')).toBeFocused();
+  await breakdownTab.focus();
 
   await breakdownTab.press('ArrowRight');
   await expect(overviewTab).toBeFocused();

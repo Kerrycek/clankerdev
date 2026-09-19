@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
@@ -180,6 +180,9 @@ export function UserNetworkPage() {
   const activeTab: NetworkTab = requestedTab === 'traffic' || requestedTab === 'live'
     ? requestedTab
     : 'addresses';
+  const currentSearch = searchParams.toString();
+  const latestSearchRef = useRef(currentSearch);
+  const tablistRef = useRef<HTMLDivElement>(null);
   const [kindFilter, setKindFilter] = useState<KindFilter>('all');
   const [assignOpen, setAssignOpen] = useState(false);
   const [initialIp, setInitialIp] = useState<IpAddress | null>(null);
@@ -258,13 +261,18 @@ export function UserNetworkPage() {
   };
 
   const selectTab = (tab: NetworkTab) => {
-    const next = new URLSearchParams(searchParams);
+    const next = new URLSearchParams(latestSearchRef.current);
     if (tab === 'addresses') next.delete('tab');
     else next.set('tab', tab);
+    const nextSearch = next.toString();
+    if (nextSearch === latestSearchRef.current) return;
+    latestSearchRef.current = nextSearch;
     setSearchParams(next);
   };
 
   const handleTabKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+
     const focusedId = event.target instanceof HTMLElement ? event.target.id : '';
     const focusedIndex = NETWORK_TABS.findIndex((tab) => networkTabId(tab) === focusedId);
     const currentIndex = focusedIndex >= 0 ? focusedIndex : NETWORK_TABS.indexOf(activeTab);
@@ -284,6 +292,16 @@ export function UserNetworkPage() {
     selectTab(nextTab);
     document.getElementById(networkTabId(nextTab))?.focus();
   };
+
+  useEffect(() => {
+    latestSearchRef.current = currentSearch;
+  }, [currentSearch]);
+
+  useEffect(() => {
+    const tablist = tablistRef.current;
+    if (!tablist || !tablist.contains(document.activeElement)) return;
+    document.getElementById(networkTabId(activeTab))?.focus();
+  }, [activeTab]);
 
   const refresh = () => {
     void vpsesQ.refetch();
@@ -348,6 +366,7 @@ export function UserNetworkPage() {
         <div className="space-y-4">
           <div
             id="network-user-tabs"
+            ref={tablistRef}
             className="flex flex-wrap gap-2"
             role="tablist"
             aria-label={t('network.user.tabs.aria')}
@@ -407,6 +426,7 @@ export function UserNetworkPage() {
         role="tabpanel"
         aria-labelledby={networkTabId('addresses')}
         hidden={activeTab !== 'addresses'}
+        tabIndex={activeTab === 'addresses' ? 0 : -1}
         className="space-y-6"
         data-testid="network.user.panel.addresses"
       >
@@ -531,6 +551,7 @@ export function UserNetworkPage() {
         role="tabpanel"
         aria-labelledby={networkTabId('traffic')}
         hidden={activeTab !== 'traffic'}
+        tabIndex={activeTab === 'traffic' ? 0 : -1}
         data-testid="network.user.panel.traffic"
       >
         {activeTab === 'traffic' ? (
@@ -543,6 +564,7 @@ export function UserNetworkPage() {
         role="tabpanel"
         aria-labelledby={networkTabId('live')}
         hidden={activeTab !== 'live'}
+        tabIndex={activeTab === 'live' ? 0 : -1}
         data-testid="network.user.panel.live"
       >
         {activeTab === 'live' ? (

@@ -249,6 +249,8 @@ export function UserNetworkTrafficCard(props: { userId: number | null; isAdmin: 
   const chartMax = maxTotal(monthly);
 
   const handleTabKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+
     const focusedId = event.target instanceof HTMLElement ? event.target.id : '';
     const focusedIndex = TRAFFIC_TABS.findIndex((nextTab) => trafficTabId(nextTab) === focusedId);
     const currentIndex = focusedIndex >= 0 ? focusedIndex : TRAFFIC_TABS.indexOf(tab);
@@ -357,6 +359,7 @@ export function UserNetworkTrafficCard(props: { userId: number | null; isAdmin: 
               role="tabpanel"
               aria-labelledby={trafficTabId('overview')}
               hidden={tab !== 'overview'}
+              tabIndex={tab === 'overview' ? 0 : -1}
               data-testid="network.user.traffic.panel.overview"
             >
               <div className="rounded-lg border border-border bg-surface-2/60 p-4">
@@ -408,6 +411,7 @@ export function UserNetworkTrafficCard(props: { userId: number | null; isAdmin: 
               role="tabpanel"
               aria-labelledby={trafficTabId('breakdown')}
               hidden={tab !== 'breakdown'}
+              tabIndex={tab === 'breakdown' ? 0 : -1}
               data-testid="network.user.traffic.panel.breakdown"
             >
               {interfaceRows.length > 0 ? (
