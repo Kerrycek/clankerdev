@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useId, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { useI18n } from '../../app/i18n';
@@ -56,6 +56,12 @@ function SourceBadge(props: { source: EffectiveToSource }) {
   return <Badge variant="neutral">{t('mail.prefs.effective.source.primary')}</Badge>;
 }
 
+function recipientIdentity(recipient: { id: string; label?: string }): string {
+  const id = String(recipient.id);
+  const label = recipient.label?.trim();
+  return label && label !== id ? `${label} (${id})` : id;
+}
+
 function RoleRecipientRow(props: {
   userId: number;
   userEmail?: string;
@@ -64,6 +70,8 @@ function RoleRecipientRow(props: {
   const { t } = useI18n();
   const toasts = useToasts();
   const qc = useQueryClient();
+  const descriptionId = useId();
+  const recipient = recipientIdentity(props.recp);
 
   const [value, setValue] = useState<string>(formatEmailsForTextarea(props.recp.to));
 
@@ -104,14 +112,15 @@ function RoleRecipientRow(props: {
       <td className="block px-4 pb-2 pt-4 align-top md:table-cell md:py-3">
         <MobileCellLabel>{t('mail.prefs.roles.col.role')}</MobileCellLabel>
         <div className="text-sm font-medium text-fg">{props.recp.label ?? props.recp.id}</div>
-        {props.recp.description ? <div className="mt-1 text-xs text-muted">{props.recp.description}</div> : null}
+        {props.recp.description ? <div id={descriptionId} className="mt-1 text-xs text-muted">{props.recp.description}</div> : null}
       </td>
 
       <td className="block px-4 py-2 align-top md:table-cell md:py-3">
         <MobileCellLabel>{t('mail.prefs.roles.col.to')}</MobileCellLabel>
         <Textarea
           testId={`mail.roles.to.${props.recp.id}`}
-          ariaLabel={t('mail.prefs.roles.col.to')}
+          ariaLabel={t('mail.prefs.roles.to_aria', { recipient })}
+          ariaDescribedBy={props.recp.description ? descriptionId : undefined}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           rows={3}
@@ -123,6 +132,8 @@ function RoleRecipientRow(props: {
             disabled={!dirty || mut.isPending}
             onClick={() => mut.mutate()}
             testId={`mail.roles.save.${props.recp.id}`}
+            ariaLabel={t('mail.prefs.roles.save_aria', { recipient })}
+            className="min-h-11 md:min-h-0"
           >
             {mut.isPending ? t('common.saving') : t('common.save')}
           </Button>
@@ -133,6 +144,8 @@ function RoleRecipientRow(props: {
               variant="secondary"
               onClick={() => setValue(formatEmailsForTextarea(props.recp.to))}
               testId={`mail.roles.reset.${props.recp.id}`}
+              ariaLabel={t('mail.prefs.roles.reset_aria', { recipient })}
+              className="min-h-11 md:min-h-0"
             >
               {t('common.reset')}
             </Button>
@@ -145,7 +158,14 @@ function RoleRecipientRow(props: {
         {effective.length > 0 ? (
           <div className="flex flex-col gap-2">
             <div className="break-all text-sm text-fg">{effective.join(', ')}</div>
-            <CopyButton text={effective.join(',')} size="sm" variant="ghost" testId={`mail.roles.copy.${props.recp.id}`} />
+            <CopyButton
+              text={effective.join(',')}
+              size="sm"
+              variant="ghost"
+              testId={`mail.roles.copy.${props.recp.id}`}
+              ariaLabel={t('mail.prefs.roles.copy_aria', { recipient })}
+              className="min-h-11 md:min-h-0"
+            />
           </div>
         ) : (
           <div className="text-sm text-muted">{t('common.na')}</div>
@@ -164,6 +184,8 @@ function TemplateRecipientRow(props: {
   const { t } = useI18n();
   const toasts = useToasts();
   const qc = useQueryClient();
+  const descriptionId = useId();
+  const recipient = recipientIdentity(props.recp);
 
   const [toValue, setToValue] = useState<string>(formatEmailsForTextarea(props.recp.to));
   const [enabled, setEnabled] = useState<boolean>(props.recp.enabled !== false);
@@ -218,7 +240,7 @@ function TemplateRecipientRow(props: {
           <div className="text-sm font-medium text-fg">{props.recp.label ?? props.recp.id}</div>
         </div>
         <div className="mt-1 break-all text-xs text-faint">{props.recp.id}</div>
-        {props.recp.description ? <div className="mt-2 text-xs text-muted">{props.recp.description}</div> : null}
+        {props.recp.description ? <div id={descriptionId} className="mt-2 text-xs text-muted">{props.recp.description}</div> : null}
       </td>
 
       <td className="block px-4 py-2 align-top md:table-cell md:py-3">
@@ -236,7 +258,8 @@ function TemplateRecipientRow(props: {
         <MobileCellLabel>{t('mail.prefs.templates.col.to')}</MobileCellLabel>
         <Textarea
           testId={`mail.templates.to.${props.recp.id}`}
-          ariaLabel={t('mail.prefs.templates.col.to')}
+          ariaLabel={t('mail.prefs.templates.to_aria', { recipient })}
+          ariaDescribedBy={props.recp.description ? descriptionId : undefined}
           value={toValue}
           onChange={(e) => setToValue(e.target.value)}
           rows={3}
@@ -257,7 +280,14 @@ function TemplateRecipientRow(props: {
             <div className="text-sm text-muted">{t('common.na')}</div>
           )}
           {effective.source !== 'disabled' && effective.to.length > 0 ? (
-            <CopyButton text={effective.to.join(',')} size="sm" variant="ghost" testId={`mail.templates.copy.${props.recp.id}`} />
+            <CopyButton
+              text={effective.to.join(',')}
+              size="sm"
+              variant="ghost"
+              testId={`mail.templates.copy.${props.recp.id}`}
+              ariaLabel={t('mail.prefs.templates.copy_aria', { recipient })}
+              className="min-h-11 md:min-h-0"
+            />
           ) : null}
         </div>
       </td>
@@ -270,6 +300,8 @@ function TemplateRecipientRow(props: {
             disabled={!dirty || mut.isPending}
             onClick={() => mut.mutate()}
             testId={`mail.templates.save.${props.recp.id}`}
+            ariaLabel={t('mail.prefs.templates.save_aria', { recipient })}
+            className="min-h-11 md:min-h-0"
           >
             {mut.isPending ? t('common.saving') : t('common.save')}
           </Button>
@@ -283,6 +315,8 @@ function TemplateRecipientRow(props: {
                 setEnabled(props.recp.enabled !== false);
               }}
               testId={`mail.templates.reset.${props.recp.id}`}
+              ariaLabel={t('mail.prefs.templates.reset_aria', { recipient })}
+              className="min-h-11 md:min-h-0"
             >
               {t('common.reset')}
             </Button>
@@ -377,28 +411,34 @@ export function MailTemplateRecipientsCard(props: {
             <div className="text-sm font-semibold text-fg">{t('mail.prefs.templates.title')}</div>
             <div className="mt-1 text-sm text-muted">{t('mail.prefs.templates.subtitle')}</div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="w-56">
+          <div className="flex w-full flex-wrap items-end gap-2 sm:w-auto">
+            <div className="w-full sm:w-56">
               <Input
+                label={t('mail.prefs.templates.search.label')}
                 value={props.needle}
                 onChange={(e) => props.onNeedleChange(e.target.value)}
                 placeholder={t('mail.prefs.templates.search.placeholder')}
                 testId="mail.templates.search"
+                className="min-h-11 md:min-h-0"
               />
             </div>
-            <Select
-              testId="mail.templates.view"
-              value={props.view}
-              onChange={(e) => {
-                const next = e.target.value;
-                if (isMailTemplateView(next)) props.onViewChange(next);
-              }}
-              options={[
-                { value: 'all', label: t('mail.prefs.templates.view.all') },
-                { value: 'changed', label: t('mail.prefs.templates.view.changed') },
-                { value: 'disabled', label: t('mail.prefs.templates.view.disabled') },
-              ]}
-            />
+            <div className="w-full sm:w-40">
+              <Select
+                label={t('mail.prefs.templates.view.label')}
+                testId="mail.templates.view"
+                value={props.view}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  if (isMailTemplateView(next)) props.onViewChange(next);
+                }}
+                options={[
+                  { value: 'all', label: t('mail.prefs.templates.view.all') },
+                  { value: 'changed', label: t('mail.prefs.templates.view.changed') },
+                  { value: 'disabled', label: t('mail.prefs.templates.view.disabled') },
+                ]}
+                className="min-h-11 md:min-h-0"
+              />
+            </div>
           </div>
         </div>
 
