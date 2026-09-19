@@ -22,6 +22,7 @@ type BaseProps = {
   role?: React.AriaRole;
   'aria-selected'?: boolean;
   'aria-pressed'?: boolean;
+  'aria-expanded'?: boolean;
   'aria-controls'?: string;
   tabIndex?: number;
   autoFocus?: boolean;
@@ -86,6 +87,7 @@ export function Button(props: ButtonProps | AnchorProps | RouterLinkProps) {
         role={props.role ?? 'link'}
         aria-selected={props['aria-selected']}
         aria-pressed={props['aria-pressed']}
+        aria-expanded={props['aria-expanded']}
         aria-controls={props['aria-controls']}
         aria-disabled="true"
         tabIndex={-1}
@@ -117,6 +119,7 @@ export function Button(props: ButtonProps | AnchorProps | RouterLinkProps) {
         role={props.role}
         aria-selected={props['aria-selected']}
         aria-pressed={props['aria-pressed']}
+        aria-expanded={props['aria-expanded']}
         aria-controls={props['aria-controls']}
         tabIndex={props.tabIndex}
         aria-disabled={false}
@@ -141,6 +144,7 @@ export function Button(props: ButtonProps | AnchorProps | RouterLinkProps) {
         role={props.role}
         aria-selected={props['aria-selected']}
         aria-pressed={props['aria-pressed']}
+        aria-expanded={props['aria-expanded']}
         aria-controls={props['aria-controls']}
         tabIndex={props.tabIndex}
         aria-disabled={false}
@@ -164,6 +168,7 @@ export function Button(props: ButtonProps | AnchorProps | RouterLinkProps) {
       role={props.role}
       aria-selected={props['aria-selected']}
       aria-pressed={props['aria-pressed']}
+      aria-expanded={props['aria-expanded']}
       aria-controls={props['aria-controls']}
       tabIndex={props.tabIndex}
       autoFocus={props.autoFocus}
