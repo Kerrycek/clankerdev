@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 
@@ -7,6 +7,42 @@ function visibleAddressItem(page: Page, id: number) {
     `[data-testid="network.user.ip.row.${id}"]:visible, ` +
     `[data-testid="network.user.ip.card.${id}"]:visible`
   );
+}
+
+async function expectAccessibleTabSet(page: Page, tablist: Locator, expectedCount: number) {
+  const tabs = tablist.getByRole('tab');
+  await expect(tabs).toHaveCount(expectedCount);
+  expect(await tabs.evaluateAll((nodes) => (
+    nodes.filter((node) => (node as HTMLElement).tabIndex === 0).length
+  ))).toBe(1);
+
+  for (let index = 0; index < expectedCount; index += 1) {
+    const tab = tabs.nth(index);
+    const tabId = await tab.getAttribute('id');
+    const panelId = await tab.getAttribute('aria-controls');
+    expect(tabId).toBeTruthy();
+    expect(panelId).toBeTruthy();
+
+    const panel = page.locator(`[id="${panelId}"]`);
+    await expect(panel).toHaveCount(1);
+    await expect(panel).toHaveAttribute('role', 'tabpanel');
+    await expect(panel).toHaveAttribute('aria-labelledby', tabId!);
+    if (await tab.getAttribute('aria-selected') === 'true') {
+      await expect(panel).toBeVisible();
+    } else {
+      await expect(panel).toBeHidden();
+    }
+  }
+}
+
+async function expectTouchTargets(tabs: Locator) {
+  const count = await tabs.count();
+  for (let index = 0; index < count; index += 1) {
+    const box = await tabs.nth(index).boundingBox();
+    expect(box, `tab ${index + 1} should have measurable geometry`).not.toBeNull();
+    expect(box!.width).toBeGreaterThanOrEqual(44);
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+  }
 }
 
 test('@pr-smoke @pr-smoke-mobile user network page lists only own addresses and assigns all supported address types', async ({ page }) => {
@@ -257,6 +293,116 @@ test('@pr-smoke @pr-smoke-mobile user network page lists only own addresses and 
     ip_address: { network_interface: 501 },
   });
   await expect(page.getByTestId('network.user.assign')).toBeHidden();
+});
+
+test('@pr-smoke @pr-smoke-mobile user network tabs expose complete keyboard, history and touch contracts', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+  const now = new Date();
+  const vps = {
+    id: 123,
+    hostname: 'keyboard-vps.example',
+    user: { id: 7, login: 'member' },
+  };
+
+  await installHaveApiMock(page, {
+    user: { id: 7, login: 'member', level: 1 },
+    handlers: {
+      'GET vpses': () => ({ vpses: [] }),
+      'GET ip_address_assignments': () => ({ ip_address_assignments: [] }),
+      'GET ip_addresses': () => ({ ip_addresses: [] }),
+      'GET network_interface_monitors': () => ({ network_interface_monitors: [] }),
+      'GET network_interface_accountings': (ctx) => {
+        const year = Number(ctx.searchParams.get('network_interface_accounting[year]'));
+        const month = Number(ctx.searchParams.get('network_interface_accounting[month]'));
+        if (year !== now.getFullYear() || month !== now.getMonth() + 1) {
+          return { network_interface_accountings: [] };
+        }
+        return {
+          network_interface_accountings: [{
+            id: 1,
+            year,
+            month,
+            bytes_in: 1024,
+            bytes_out: 2048,
+            network_interface: { id: 501, name: 'eth0', vps },
+          }],
+        };
+      },
+    },
+  });
+
+  await page.goto('/app/networking');
+
+  const mainTablist = page.getByTestId('network.user.tabs');
+  const addressesTab = page.getByTestId('network.user.tab.addresses');
+  const trafficTab = page.getByTestId('network.user.tab.traffic');
+  const liveTab = page.getByTestId('network.user.tab.live');
+  await expect(mainTablist).toHaveAttribute('id', 'network-user-tabs');
+  for (const name of ['addresses', 'traffic', 'live']) {
+    const tab = page.getByTestId(`network.user.tab.${name}`);
+    await expect(tab).toHaveAttribute('id', `network-user-tab-${name}`);
+    await expect(tab).toHaveAttribute('aria-controls', `network-user-panel-${name}`);
+  }
+  await expectAccessibleTabSet(page, mainTablist, 3);
+  await expectTouchTargets(mainTablist.getByRole('tab'));
+
+  await addressesTab.focus();
+  await addressesTab.press('ArrowLeft');
+  await expect(liveTab).toBeFocused();
+  await expect(liveTab).toHaveAttribute('aria-selected', 'true');
+  await expect(page).toHaveURL(/\/app\/networking\?tab=live$/);
+
+  await liveTab.press('ArrowRight');
+  await expect(addressesTab).toBeFocused();
+  await expect(page).toHaveURL(/\/app\/networking$/);
+
+  await addressesTab.press('End');
+  await expect(liveTab).toBeFocused();
+  await expect(page).toHaveURL(/tab=live/);
+  await liveTab.press('Home');
+  await expect(addressesTab).toBeFocused();
+  await expect(page).toHaveURL(/\/app\/networking$/);
+
+  await addressesTab.press('ArrowRight');
+  await expect(trafficTab).toBeFocused();
+  await expect(page).toHaveURL(/\/app\/networking\?tab=traffic$/);
+  await expectAccessibleTabSet(page, mainTablist, 3);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/app\/networking$/);
+  await expect(addressesTab).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByTestId('network.user.panel.addresses')).toBeVisible();
+  await page.goForward();
+  await expect(page).toHaveURL(/\/app\/networking\?tab=traffic$/);
+  await expect(trafficTab).toHaveAttribute('aria-selected', 'true');
+
+  const trafficTablist = page.getByTestId('network.user.traffic.tabs');
+  const overviewTab = page.getByTestId('network.user.traffic.tab.overview');
+  const breakdownTab = page.getByTestId('network.user.traffic.tab.breakdown');
+  await expect(trafficTablist).toHaveAttribute('id', 'network-user-traffic-tabs');
+  for (const name of ['overview', 'breakdown']) {
+    const tab = page.getByTestId(`network.user.traffic.tab.${name}`);
+    await expect(tab).toHaveAttribute('id', `network-user-traffic-tab-${name}`);
+    await expect(tab).toHaveAttribute('aria-controls', `network-user-traffic-panel-${name}`);
+  }
+  await expectAccessibleTabSet(page, trafficTablist, 2);
+  await expectTouchTargets(trafficTablist.getByRole('tab'));
+
+  await overviewTab.focus();
+  await overviewTab.press('ArrowLeft');
+  await expect(breakdownTab).toBeFocused();
+  await expect(page.getByTestId('network.user.traffic.panel.breakdown')).toBeVisible();
+  await expectAccessibleTabSet(page, trafficTablist, 2);
+
+  await breakdownTab.press('ArrowRight');
+  await expect(overviewTab).toBeFocused();
+  await overviewTab.press('End');
+  await expect(breakdownTab).toBeFocused();
+  await breakdownTab.press('Home');
+  await expect(overviewTab).toBeFocused();
+  await expect(page.getByTestId('network.user.traffic.panel.overview')).toBeVisible();
+  await expect(page).toHaveURL(/\/app\/networking\?tab=traffic$/);
 });
 
 test('user network assignment offers only VPS compatible with the selected detached IP location', async ({ page }) => {

@@ -41,7 +41,16 @@ type InterfaceTraffic = {
   total: number;
 };
 
-type TrafficTab = 'overview' | 'breakdown';
+const TRAFFIC_TABS = ['overview', 'breakdown'] as const;
+type TrafficTab = (typeof TRAFFIC_TABS)[number];
+
+function trafficTabId(tab: TrafficTab): string {
+  return `network-user-traffic-tab-${tab}`;
+}
+
+function trafficPanelId(tab: TrafficTab): string {
+  return `network-user-traffic-panel-${tab}`;
+}
 
 function currentYearMonth(): MonthRef {
   const d = new Date();
@@ -180,15 +189,20 @@ function TrafficTabButton(props: {
   active: boolean;
   children: React.ReactNode;
   onClick: () => void;
+  tab: TrafficTab;
   testId: string;
 }) {
   return (
     <button
+      id={trafficTabId(props.tab)}
       type="button"
       role="tab"
       aria-selected={props.active}
+      aria-controls={trafficPanelId(props.tab)}
+      tabIndex={props.active ? 0 : -1}
       className={clsx(
-        'inline-flex items-center rounded-md px-3 py-2 text-sm font-medium transition',
+        'inline-flex min-h-11 min-w-11 items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition',
+        'focus:outline-none focus:ring-2 focus:ring-focus/35 focus:ring-offset-2 focus:ring-offset-bg',
         props.active
           ? 'bg-surface-2 text-fg ring-1 ring-border'
           : 'text-muted hover:bg-surface-2 hover:text-fg'
@@ -233,6 +247,27 @@ export function UserNetworkTrafficCard(props: { userId: number | null; isAdmin: 
   const currentTraffic = monthly[monthly.length - 1] ?? null;
   const interfaceRows = useMemo(() => aggregateCurrentInterfaces(rows, current), [rows, current]);
   const chartMax = maxTotal(monthly);
+
+  const handleTabKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const focusedId = event.target instanceof HTMLElement ? event.target.id : '';
+    const focusedIndex = TRAFFIC_TABS.findIndex((nextTab) => trafficTabId(nextTab) === focusedId);
+    const currentIndex = focusedIndex >= 0 ? focusedIndex : TRAFFIC_TABS.indexOf(tab);
+    let nextIndex: number | undefined;
+
+    if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % TRAFFIC_TABS.length;
+    if (event.key === 'ArrowLeft') {
+      nextIndex = (currentIndex - 1 + TRAFFIC_TABS.length) % TRAFFIC_TABS.length;
+    }
+    if (event.key === 'Home') nextIndex = 0;
+    if (event.key === 'End') nextIndex = TRAFFIC_TABS.length - 1;
+    if (nextIndex === undefined) return;
+
+    event.preventDefault();
+    const nextTab = TRAFFIC_TABS[nextIndex];
+    if (!nextTab) return;
+    setTab(nextTab);
+    document.getElementById(trafficTabId(nextTab))?.focus();
+  };
 
   return (
     <Card testId="network.user.traffic">
@@ -290,10 +325,18 @@ export function UserNetworkTrafficCard(props: { userId: number | null; isAdmin: 
               />
             </div>
 
-            <div className="flex flex-wrap gap-2" role="tablist" aria-label={t('network.user.traffic.tabs.aria')}>
+            <div
+              id="network-user-traffic-tabs"
+              className="flex flex-wrap gap-2"
+              role="tablist"
+              aria-label={t('network.user.traffic.tabs.aria')}
+              data-testid="network.user.traffic.tabs"
+              onKeyDown={handleTabKeyDown}
+            >
               <TrafficTabButton
                 active={tab === 'overview'}
                 onClick={() => setTab('overview')}
+                tab="overview"
                 testId="network.user.traffic.tab.overview"
               >
                 {t('network.user.traffic.tab.overview')}
@@ -301,91 +344,103 @@ export function UserNetworkTrafficCard(props: { userId: number | null; isAdmin: 
               <TrafficTabButton
                 active={tab === 'breakdown'}
                 onClick={() => setTab('breakdown')}
+                tab="breakdown"
                 testId="network.user.traffic.tab.breakdown"
               >
                 {t('network.user.traffic.tab.breakdown')}
               </TrafficTabButton>
             </div>
 
-            {tab === 'overview' ? (
-              <div className="space-y-4" role="tabpanel" data-testid="network.user.traffic.panel.overview">
-                <div className="rounded-lg border border-border bg-surface-2/60 p-4">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <div>
-                      <div className="font-medium">{t('network.user.traffic.chart.title')}</div>
-                      <div className="text-xs text-muted">{t('network.user.traffic.chart.subtitle')}</div>
-                    </div>
+            <div
+              id={trafficPanelId('overview')}
+              className="space-y-4"
+              role="tabpanel"
+              aria-labelledby={trafficTabId('overview')}
+              hidden={tab !== 'overview'}
+              data-testid="network.user.traffic.panel.overview"
+            >
+              <div className="rounded-lg border border-border bg-surface-2/60 p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <div className="font-medium">{t('network.user.traffic.chart.title')}</div>
+                    <div className="text-xs text-muted">{t('network.user.traffic.chart.subtitle')}</div>
                   </div>
-                  <TimeSeriesChart
-                    testId="network.user.traffic.chart"
-                    ariaLabel={t('network.user.traffic.chart.aria')}
-                    points={monthly.map((row) => ({ x: row.timestamp, y: row.total }))}
-                    yMin={0}
-                    yMax={chartMax}
-                    variant="netIn"
-                    className="h-52 sm:h-64"
-                    formatValue={(value) => formatBytesIec(value)}
-                    formatTime={(unixSeconds) => {
-                      const d = new Date(unixSeconds * 1000);
-                      return `${d.getFullYear()}/${d.getMonth() + 1}`;
-                    }}
-                  />
                 </div>
+                <TimeSeriesChart
+                  testId="network.user.traffic.chart"
+                  ariaLabel={t('network.user.traffic.chart.aria')}
+                  points={monthly.map((row) => ({ x: row.timestamp, y: row.total }))}
+                  yMin={0}
+                  yMax={chartMax}
+                  variant="netIn"
+                  className="h-52 sm:h-64"
+                  formatValue={(value) => formatBytesIec(value)}
+                  formatTime={(unixSeconds) => {
+                    const d = new Date(unixSeconds * 1000);
+                    return `${d.getFullYear()}/${d.getMonth() + 1}`;
+                  }}
+                />
+              </div>
 
-                <div className="rounded-lg border border-border bg-surface-2/60 p-4">
-                  <div className="mb-3 font-medium">{t('network.user.traffic.months.title')}</div>
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {monthly.map((row) => {
-                      const pct = Math.max(2, Math.round((row.total / chartMax) * 100));
-                      return (
-                        <div key={row.key} className="space-y-1" data-testid={`network.user.traffic.month.${row.key}`}>
-                          <div className="flex items-center justify-between gap-3 text-xs">
-                            <span className="font-medium tabular-nums">{row.year}/{row.month}</span>
-                            <span className="text-muted tabular-nums">{formatBytesIec(row.total)}</span>
-                          </div>
-                          <div className="h-2 rounded-full bg-border/70">
-                            <div className="h-2 rounded-full bg-chart-green" style={{ width: `${pct}%` }} />
-                          </div>
+              <div className="rounded-lg border border-border bg-surface-2/60 p-4">
+                <div className="mb-3 font-medium">{t('network.user.traffic.months.title')}</div>
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {monthly.map((row) => {
+                    const pct = Math.max(2, Math.round((row.total / chartMax) * 100));
+                    return (
+                      <div key={row.key} className="space-y-1" data-testid={`network.user.traffic.month.${row.key}`}>
+                        <div className="flex items-center justify-between gap-3 text-xs">
+                          <span className="font-medium tabular-nums">{row.year}/{row.month}</span>
+                          <span className="text-muted tabular-nums">{formatBytesIec(row.total)}</span>
                         </div>
-                      );
-                    })}
-                  </div>
+                        <div className="h-2 rounded-full bg-border/70">
+                          <div className="h-2 rounded-full bg-chart-green" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-            ) : (
-              <div role="tabpanel" data-testid="network.user.traffic.panel.breakdown">
-                {interfaceRows.length > 0 ? (
-                  <TableCard minWidth="md" tableTestId="network.user.traffic.table">
-                    <thead>
-                      <tr className="border-b border-border text-left text-xs text-muted">
-                        <th className="px-4 py-2">{t('network.user.traffic.field.vps')}</th>
-                        <th className="px-4 py-2">{t('network.user.traffic.field.interface')}</th>
-                        <th className="px-4 py-2 text-right">{t('network.user.traffic.in')}</th>
-                        <th className="px-4 py-2 text-right">{t('network.user.traffic.out')}</th>
-                        <th className="px-4 py-2 text-right">{t('network.user.traffic.total')}</th>
+            </div>
+
+            <div
+              id={trafficPanelId('breakdown')}
+              role="tabpanel"
+              aria-labelledby={trafficTabId('breakdown')}
+              hidden={tab !== 'breakdown'}
+              data-testid="network.user.traffic.panel.breakdown"
+            >
+              {interfaceRows.length > 0 ? (
+                <TableCard minWidth="md" tableTestId="network.user.traffic.table">
+                  <thead>
+                    <tr className="border-b border-border text-left text-xs text-muted">
+                      <th className="px-4 py-2">{t('network.user.traffic.field.vps')}</th>
+                      <th className="px-4 py-2">{t('network.user.traffic.field.interface')}</th>
+                      <th className="px-4 py-2 text-right">{t('network.user.traffic.in')}</th>
+                      <th className="px-4 py-2 text-right">{t('network.user.traffic.out')}</th>
+                      <th className="px-4 py-2 text-right">{t('network.user.traffic.total')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {interfaceRows.map((row) => (
+                      <tr key={row.key} className="border-b border-border/60 last:border-0" data-testid={`network.user.traffic.row.${row.key}`}>
+                        <td className="px-4 py-3 text-sm font-medium">{row.vpsLabel}</td>
+                        <td className="px-4 py-3 font-mono text-sm text-muted">{row.interfaceLabel}</td>
+                        <td className="px-4 py-3 text-right text-sm tabular-nums">{formatBytesIec(row.bytesIn)}</td>
+                        <td className="px-4 py-3 text-right text-sm tabular-nums">{formatBytesIec(row.bytesOut)}</td>
+                        <td className="px-4 py-3 text-right text-sm font-medium tabular-nums">{formatBytesIec(row.total)}</td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {interfaceRows.map((row) => (
-                        <tr key={row.key} className="border-b border-border/60 last:border-0" data-testid={`network.user.traffic.row.${row.key}`}>
-                          <td className="px-4 py-3 text-sm font-medium">{row.vpsLabel}</td>
-                          <td className="px-4 py-3 font-mono text-sm text-muted">{row.interfaceLabel}</td>
-                          <td className="px-4 py-3 text-right text-sm tabular-nums">{formatBytesIec(row.bytesIn)}</td>
-                          <td className="px-4 py-3 text-right text-sm tabular-nums">{formatBytesIec(row.bytesOut)}</td>
-                          <td className="px-4 py-3 text-right text-sm font-medium tabular-nums">{formatBytesIec(row.total)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </TableCard>
-                ) : (
-                  <EmptyState
-                    testId="network.user.traffic.breakdown.empty"
-                    title={t('network.user.traffic.breakdown.empty')}
-                    body={t('network.user.traffic.breakdown.empty_body')}
-                  />
-                )}
-              </div>
-            )}
+                    ))}
+                  </tbody>
+                </TableCard>
+              ) : (
+                <EmptyState
+                  testId="network.user.traffic.breakdown.empty"
+                  title={t('network.user.traffic.breakdown.empty')}
+                  body={t('network.user.traffic.breakdown.empty_body')}
+                />
+              )}
+            </div>
           </div>
         )}
       </CardBody>
