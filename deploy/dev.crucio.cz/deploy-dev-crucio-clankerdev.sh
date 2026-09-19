@@ -191,6 +191,56 @@ verify_existing_bff_dependencies() {
   npm --prefix "$release/bff" ls --omit=dev --depth=0 >/dev/null
 }
 
+verify_service_access_tooling() {
+  [[ -n "$test_root" ]] && return 0
+  if [[ ! -x /usr/bin/setpriv || ! -x /usr/bin/node || ! -x /usr/bin/id ]]; then
+    echo "BFF release access verification requires /usr/bin/setpriv, /usr/bin/node and /usr/bin/id" >&2
+    return 69
+  fi
+  if ! /usr/bin/id -u webui-bff >/dev/null 2>&1; then
+    echo "BFF service user does not exist: webui-bff" >&2
+    return 69
+  fi
+}
+
+verify_release_service_access() {
+  local release="$1"
+  local -a access_command=(node)
+  if [[ -z "$test_root" ]]; then
+    access_command=(
+      /usr/bin/setpriv
+      --reuid=webui-bff
+      --regid=webui-bff
+      --init-groups
+      /usr/bin/node
+    )
+  fi
+
+  if ! "${access_command[@]}" -e '
+    const fs = require("node:fs");
+    const path = require("node:path");
+    const release = fs.realpathSync(process.argv[1]);
+    const releaseMode = fs.statSync(release).mode & 0o777;
+    if ((releaseMode & 0o005) !== 0o005) {
+      throw new Error(`release root must be world-readable/traversable, got ${releaseMode.toString(8)}`);
+    }
+    const bff = path.join(release, "bff");
+    const server = path.join(bff, "server.js");
+    const packageFile = path.join(bff, "package.json");
+    fs.accessSync(release, fs.constants.R_OK | fs.constants.X_OK);
+    fs.accessSync(bff, fs.constants.R_OK | fs.constants.X_OK);
+    fs.accessSync(server, fs.constants.R_OK);
+    fs.accessSync(packageFile, fs.constants.R_OK);
+    const packageJson = JSON.parse(fs.readFileSync(packageFile, "utf8"));
+    for (const dependency of Object.keys(packageJson.dependencies ?? {})) {
+      require.resolve(dependency, { paths: [bff] });
+    }
+  ' "$release"; then
+    echo "BFF release is not readable/traversable by webui-bff: $release" >&2
+    return 1
+  fi
+}
+
 reload_nginx() {
   if [[ -n "$test_root" ]]; then
     record_event "reload-nginx"
@@ -320,6 +370,7 @@ done
 
 cd "$canonical_src"
 verify_unit_file
+verify_service_access_tooling
 
 if acquire_deploy_lock; then
   trap cleanup_on_exit EXIT
@@ -348,15 +399,19 @@ if [[ -d "$release_dir" ]]; then
   verify_provenance "$release_dir/dist/build-info.json" "$release_dir" --skip-runtime
 else
   release_stage="$(mktemp -d "$release_root/.staging-$expected_commit.XXXXXX")"
-  git clone --quiet --no-hardlinks --no-checkout "$canonical_src" "$release_stage"
-  git -C "$release_stage" checkout --quiet --detach "$expected_commit"
-  build_frontend "$release_stage"
+  (
+    umask 022
+    git clone --quiet --no-hardlinks --no-checkout "$canonical_src" "$release_stage"
+    git -C "$release_stage" checkout --quiet --detach "$expected_commit"
+    build_frontend "$release_stage"
+    install_staged_bff_dependencies "$release_stage"
+  )
   if [[ ! -f "$release_stage/dist/build-info.json" ]]; then
     echo "Frontend build did not produce $release_stage/dist/build-info.json" >&2
     exit 1
   fi
-  install_staged_bff_dependencies "$release_stage"
   verify_provenance "$release_stage/dist/build-info.json" "$release_stage" --skip-runtime
+  chmod 0755 "$release_stage"
   if [[ -e "$release_dir" || -L "$release_dir" ]]; then
     echo "Immutable release appeared while staging: $release_dir" >&2
     exit 1
@@ -365,6 +420,7 @@ else
   release_stage=""
 fi
 assert_release_target "$release_dir" "Immutable release"
+verify_release_service_access "$release_dir"
 nginx_conf_release="$release_dir/$nginx_conf_src"
 bff_unit_release="$release_dir/$bff_unit_src"
 provenance_script="$release_dir/$provenance_script"

@@ -42,7 +42,10 @@ fully verified stage is atomically renamed to:
 The frontend is published from that release, and the BFF unit resolves through
 the atomically replaced `/srv/clankerdev-release/current` symlink. Nothing runs
 `npm ci` in the active release or mutable source checkout. Releases are not
-deleted by this helper.
+deleted by this helper. Before any active-state change, the helper also runs a
+read/traverse/dependency-resolution check as the real `webui-bff` identity via
+`/usr/bin/setpriv`; a new stage is published with a traversable `0755` top-level
+directory and an unreadable reused release is rejected.
 
 Before activation, the provenance gate requires the input checkout, frontend
 `build-info.json`, and staged release to have the expected SHA. The input must

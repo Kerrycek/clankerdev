@@ -30,6 +30,7 @@ function createFixture() {
   fs.writeFileSync(path.join(source, '.gitignore'), 'dist/\nnode_modules/\noutput/\n');
   fs.mkdirSync(path.join(source, 'bff'));
   fs.writeFileSync(path.join(source, 'bff', 'server.js'), 'console.log("old bff");\n');
+  fs.writeFileSync(path.join(source, 'bff', 'package.json'), '{"dependencies":{}}\n');
   copy(
     path.join(repoRoot, 'deploy', 'dev.crucio.cz', 'nginx-dev.crucio.cz.conf'),
     path.join(source, 'deploy', 'dev.crucio.cz', 'nginx-dev.crucio.cz.conf'),
@@ -99,8 +100,11 @@ function createFixture() {
   };
 }
 
-function runInjectedFailure(fixture, failure) {
-  return spawnSync('bash', [helper, fixture.source], {
+function runInjectedFailure(fixture, failure, options = {}) {
+  const args = options.restrictiveUmask
+    ? ['-c', 'umask 077; exec bash "$1" "$2"', 'dev-deploy-test', helper, fixture.source]
+    : [helper, fixture.source];
+  return spawnSync('bash', args, {
     cwd: fixture.source,
     encoding: 'utf8',
     env: {
@@ -189,7 +193,7 @@ test('successful deploy aligns frontend, current BFF release and unit despite so
   const fixture = createFixture();
   try {
     fs.writeFileSync(path.join(fixture.source, 'password-recovery-live-audit.txt'), 'do not deploy\n');
-    const result = runInjectedFailure(fixture, '');
+    const result = runInjectedFailure(fixture, '', { restrictiveUmask: true });
     assert.equal(result.status, 0, result.stderr);
     const release = path.join(fixture.releaseRoot, 'releases', fixture.newCommit);
     assert.equal(fs.realpathSync(fixture.current), fs.realpathSync(release));
@@ -199,6 +203,9 @@ test('successful deploy aligns frontend, current BFF release and unit despite so
     assert.equal(buildInfo.commit, fixture.newCommit);
     assert.equal(buildInfo.dirty, false);
     assert.match(fs.readFileSync(fixture.unit, 'utf8'), /clankerdev-release\/current\/bff/);
+    assert.equal(fs.statSync(release).mode & 0o777, 0o755);
+    assert.equal(fs.statSync(path.join(release, 'bff')).mode & 0o005, 0o005);
+    assert.equal(fs.statSync(path.join(release, 'bff', 'server.js')).mode & 0o004, 0o004);
     assert.equal(fs.existsSync(path.join(release, 'password-recovery-live-audit.txt')), false);
     assert.equal(fs.existsSync(path.join(fixture.root, 'dev-deploy.lock')), false);
     assert.deepEqual(
@@ -206,6 +213,34 @@ test('successful deploy aligns frontend, current BFF release and unit despite so
       [],
     );
   } finally {
+    fs.rmSync(fixture.root, { recursive: true, force: true });
+  }
+});
+
+test('an unreadable reused release is rejected before active state changes', () => {
+  const fixture = createFixture();
+  try {
+    const release = path.join(fixture.releaseRoot, 'releases', fixture.newCommit);
+    execFileSync('git', ['clone', '--quiet', '--no-hardlinks', fixture.source, release]);
+    git(release, ['checkout', '--quiet', '--detach', fixture.newCommit]);
+    fs.mkdirSync(path.join(release, 'dist'));
+    fs.writeFileSync(path.join(release, 'dist', 'build-info.json'), `${JSON.stringify({
+      schemaVersion: 1,
+      commit: fixture.newCommit,
+      shortCommit: fixture.newCommit.slice(0, 12),
+      dirty: false,
+      source: 'git',
+    })}\n`);
+    fs.chmodSync(release, 0o700);
+
+    const result = runInjectedFailure(fixture, '');
+    assert.equal(result.status, 1, result.stderr);
+    assert.match(result.stderr, /BFF release is not readable\/traversable/);
+    assert.equal(fs.realpathSync(fixture.current), fs.realpathSync(fixture.oldRelease));
+    assert.equal(fs.readFileSync(path.join(fixture.webroot, 'index.html'), 'utf8'), 'old frontend\n');
+    assert.equal(fs.existsSync(path.join(fixture.root, 'dev-deploy.lock')), false);
+  } finally {
+    fs.chmodSync(path.join(fixture.releaseRoot, 'releases', fixture.newCommit), 0o755);
     fs.rmSync(fixture.root, { recursive: true, force: true });
   }
 });

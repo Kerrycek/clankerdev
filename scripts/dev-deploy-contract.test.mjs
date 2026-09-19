@@ -28,11 +28,25 @@ test('dev wrapper executes the helper from the checkout it just updated', () => 
 
 test('dev deploy builds frontend and BFF dependencies only in an immutable staged checkout', () => {
   assert.match(deployScript, /git clone --quiet --no-hardlinks --no-checkout "\$canonical_src" "\$release_stage"/);
+  assert.match(deployScript, /umask 022/);
   assert.match(deployScript, /build_frontend "\$release_stage"/);
   assert.match(deployScript, /install_staged_bff_dependencies "\$release_stage"/);
+  assert.match(deployScript, /chmod 0755 "\$release_stage"/);
   assert.match(deployScript, /mv "\$release_stage" "\$release_dir"/);
   assert.match(deployScript, /rsync -a --delete "\$release_dir\/dist\/" "\$dst\/"/);
   assert.doesNotMatch(deployScript, /npm --prefix "\$release_dir\/bff" ci/);
+});
+
+test('dev deploy proves the immutable release is accessible to the BFF service identity', () => {
+  assert.match(deployScript, /verify_service_access_tooling/);
+  assert.match(deployScript, /\/usr\/bin\/setpriv/);
+  assert.match(deployScript, /--reuid=webui-bff/);
+  assert.match(deployScript, /--regid=webui-bff/);
+  assert.match(deployScript, /verify_release_service_access "\$release_dir"/);
+  const accessIndex = deployScript.indexOf('verify_release_service_access "$release_dir"');
+  const backupIndex = deployScript.indexOf('deploy_backup="$(mktemp');
+  const publishIndex = deployScript.indexOf('rsync -a --delete "$release_dir/dist/" "$dst/"');
+  assert(accessIndex >= 0 && accessIndex < backupIndex && backupIndex < publishIndex);
 });
 
 test('dev deploy uses a guarded atomic current link below the fixed release root', () => {
