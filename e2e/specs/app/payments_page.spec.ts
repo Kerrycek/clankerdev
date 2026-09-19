@@ -231,3 +231,108 @@ test('user payments page: localizes and constrains legacy payment instruction HT
   expect(qrBox?.width).toBeLessThanOrEqual(160);
   expect(qrBox?.height).toBeLessThanOrEqual(160);
 });
+
+test('@pr-smoke @pr-smoke-mobile user payments copy sanitized localized text with a touch-safe mobile target', async ({ page, isMobile }) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize(isMobile ? { width: 390, height: 844 } : { width: 1440, height: 1000 });
+
+  await page.addInitScript(({ storageKey }) => {
+    window.localStorage.setItem(
+      storageKey,
+      JSON.stringify({
+        sidebarCollapsed: false,
+        theme: 'system',
+        language: 'cs',
+        tips: { sidebarTimeZone: 'visible' },
+      })
+    );
+  }, { storageKey: UI_SETTINGS_STORAGE_KEY });
+  await bootstrapVpsAdminWindow(page);
+  await page.addInitScript(() => {
+    const writes: string[] = [];
+    Object.assign(window, { __paymentInstructionsClipboardWrites: writes });
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (text: string) => {
+          writes.push(text);
+        },
+      },
+    });
+  });
+
+  const haveApiMock = await installHaveApiMock(page);
+  const mutationRequests: Array<{ method: string; url: string }> = [];
+  page.on('request', (request) => {
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method())) {
+      mutationRequests.push({ method: request.method(), url: request.url() });
+    }
+  });
+  haveApiMock.addHandler('GET users/current', () => ({
+    user: {
+      id: 53,
+      login: 'kerry',
+      level: 1,
+      monthly_payment: 300,
+      paid_until: '2099-01-01T00:00:00Z',
+    },
+  }));
+  haveApiMock.addHandler('GET users/53/get_payment_instructions', () => ({
+    instructions: `
+      <h3 onclick="bad()">Payment in CZK</h3>
+      <p>Payments can be made either in CZK or EUR, see below for bank account numbers.</p>
+      <table>
+        <tr><td>Variable symbol:</td><td><strong>53</strong></td></tr>
+        <tr><td>Sum:</td><td>300 CZK per month</td></tr>
+      </table>
+      <script>window.PWNED = true</script>
+    `,
+  }));
+  haveApiMock.addHandler('GET user_payments', () => ({ user_payments: [] }));
+
+  await page.goto(withAppUrl('/app/payments'));
+
+  const instructions = page.getByTestId('payments.my.instructions.text');
+  await expect(instructions.getByRole('heading', { name: 'Platba v CZK' })).toBeVisible();
+  await expect(instructions).not.toContainText('PWNED');
+  expect(await page.evaluate(() => (window as Window & { PWNED?: boolean }).PWNED)).toBeUndefined();
+
+  const copy = page.getByTestId('payments.my.instructions.copy');
+  await expect(copy).toBeVisible();
+  const copyBox = await copy.boundingBox();
+  expect(copyBox).not.toBeNull();
+  if (isMobile) {
+    expect(copyBox!.height).toBeGreaterThanOrEqual(44);
+    expect(copyBox!.width).toBeGreaterThanOrEqual(44);
+  } else {
+    expect(copyBox!.height).toBeGreaterThanOrEqual(30);
+    expect(copyBox!.height).toBeLessThanOrEqual(40);
+  }
+  await copy.click();
+
+  const clipboardWrites = await page.evaluate(() => (
+    window as Window & { __paymentInstructionsClipboardWrites?: string[] }
+  ).__paymentInstructionsClipboardWrites ?? []);
+  expect(clipboardWrites).toEqual([[
+    'Platba v CZK',
+    'Platbu můžeš provést v CZK nebo EUR. Čísla účtů najdeš níže.',
+    'Variabilní symbol: 53',
+    'Částka: 300 CZK měsíčně',
+  ].join('\n')]);
+  expect(clipboardWrites[0]).not.toContain('<');
+  expect(clipboardWrites[0]).not.toContain('PWNED');
+  expect(clipboardWrites[0]).not.toContain('Payment in CZK');
+  // The app shell may persist UI settings while the route opens. Any other
+  // same-origin or external write would make this read-only scenario fail.
+  const appOrigin = new URL(page.url()).origin;
+  expect(mutationRequests.filter(({ method, url }) => {
+    const target = new URL(url);
+    return !(
+      method === 'PUT'
+      && target.origin === appOrigin
+      && target.pathname === '/api/v7.0/webui_user_settings'
+      && target.search === ''
+      && target.hash === ''
+    );
+  })).toEqual([]);
+});

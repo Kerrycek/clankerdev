@@ -5,6 +5,7 @@ import {
   buildPaymentSettingsReview,
   normalizePaymentInstructions,
   paidUntilSubtitleToken,
+  paymentInstructionsPlainText,
   parsePositiveInt,
   resourceRefLabel,
   sanitizePaymentInstructionsHtml,
@@ -109,6 +110,73 @@ describe('PaymentsModel', () => {
     expect(html).not.toContain('Payment in CZK');
     expect(html).not.toContain('Payments for at least three months');
     expect(html).not.toContain('Back account');
+  });
+
+  test('builds clipboard text from sanitized and localized payment instructions', () => {
+    const text = paymentInstructionsPlainText(`
+      <h3 onclick="bad()">Payment in CZK</h3>
+      <table>
+        <tr><td>Variable symbol:</td><td><strong>53</strong></td></tr>
+        <tr><td>Sum:</td><td>300 CZK per month</td></tr>
+        <tr><td>QR:</td><td><img src="/qr.php?vs=53" onerror="bad()" alt="QR code"></td></tr>
+      </table>
+      <script>window.PWNED = true</script>
+    `, 'cs');
+
+    expect(text).toBe([
+      'Platba v CZK',
+      'Variabilní symbol: 53',
+      'Částka: 300 CZK měsíčně',
+      'QR: QR code',
+    ].join('\n'));
+    expect(text).not.toContain('<');
+    expect(text).not.toContain('PWNED');
+    expect(text).not.toContain('Payment in CZK');
+  });
+
+  test('collapses source whitespace without changing visual text flow', () => {
+    const text = paymentInstructionsPlainText(`
+      <p>Pay by
+        bank transfer.</p>
+      <table>
+        <tr><td>Account
+          number:</td><td>2200 041594 / 2010</td></tr>
+      </table>
+    `);
+
+    expect(text).toBe([
+      'Pay by bank transfer.',
+      'Account number: 2200 041594 / 2010',
+    ].join('\n'));
+  });
+
+  test('preserves spaces between inline siblings and explicit line breaks', () => {
+    const text = paymentInstructionsPlainText(`
+      <p><strong>Account:</strong> <a href="/account">2200 041594 / 2010</a><br>Use your member ID.</p>
+    `);
+
+    expect(text).toBe([
+      'Account: 2200 041594 / 2010',
+      'Use your member ID.',
+    ].join('\n'));
+  });
+
+  test('preserves ordered and nested payment steps', () => {
+    const text = paymentInstructionsPlainText(`
+      <ol>
+        <li>Open your bank</li>
+        <li>Enter payment details<ul><li>Use your member ID</li><li>Check the amount</li></ul></li>
+        <li>Submit</li>
+      </ol>
+    `);
+
+    expect(text).toBe([
+      '1. Open your bank',
+      '2. Enter payment details',
+      '  - Use your member ID',
+      '  - Check the amount',
+      '3. Submit',
+    ].join('\n'));
   });
 
   test('rewrites Czech payment instructions to informal address', () => {

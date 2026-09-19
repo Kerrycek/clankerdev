@@ -272,6 +272,100 @@ export function sanitizePaymentInstructionsHtml(
   return sanitizeHtml(rawHtml, paymentInstructionsSanitizerPolicy(lang));
 }
 
+const PAYMENT_INSTRUCTIONS_TEXT_BLOCK_TAGS = new Set([
+  'caption',
+  'div',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'p',
+]);
+const PAYMENT_INSTRUCTIONS_LIST_INDENT = '\u0001';
+
+function paymentInstructionListText(list: Element, depth: number): string {
+  const ordered = list.tagName.toLowerCase() === 'ol';
+  const items = Array.from(list.children).filter((child) => child.matches('li'));
+
+  return items.map((item, index) => {
+    const content: string[] = [];
+    const nestedLists: string[] = [];
+
+    for (const child of Array.from(item.childNodes)) {
+      if (child instanceof Element && child.matches('ol, ul')) {
+        nestedLists.push(paymentInstructionListText(child, depth + 1));
+      } else {
+        content.push(paymentInstructionNodeText(child));
+      }
+    }
+
+    const marker = ordered ? `${index + 1}.` : '-';
+    const itemText = content.join('').replace(/\s+/g, ' ').trim();
+    const line = itemText
+      ? `${PAYMENT_INSTRUCTIONS_LIST_INDENT.repeat(depth)}${marker} ${itemText}\n`
+      : '';
+
+    return `${line}${nestedLists.join('')}`;
+  }).join('');
+}
+
+function paymentInstructionNodeText(node: Node): string {
+  if (node.nodeType === Node.TEXT_NODE) return (node.nodeValue ?? '').replace(/\s+/g, ' ');
+  if (!(node instanceof Element)) return '';
+
+  const tagName = node.tagName.toLowerCase();
+  if (tagName === 'br') return '\n';
+  if (tagName === 'img') return node.getAttribute('alt') ?? '';
+  if (tagName === 'ol' || tagName === 'ul') return paymentInstructionListText(node, 0);
+
+  if (tagName === 'tr') {
+    return `${Array.from(node.children)
+      .filter((child) => child.matches('td, th'))
+      .map((cell) => paymentInstructionNodeText(cell).replace(/\s+/g, ' ').trim())
+      .filter(Boolean)
+      .join(' ')}\n`;
+  }
+
+  const childText = Array.from(node.childNodes, paymentInstructionNodeText).join('');
+  if (tagName === 'li') return `- ${childText.replace(/\s+/g, ' ').trim()}\n`;
+  if (PAYMENT_INSTRUCTIONS_TEXT_BLOCK_TAGS.has(tagName)) return `${childText}\n`;
+  return childText;
+}
+
+/**
+ * Build clipboard text from the exact sanitized and localized representation
+ * rendered by PaymentInstructionsHtml. This keeps removed markup, unsafe
+ * content and source-language labels out of the clipboard.
+ */
+export function paymentInstructionsPlainText(
+  rawHtml: string,
+  lang: PaymentInstructionsLanguage = 'en',
+): string {
+  const sanitizedHtml = sanitizePaymentInstructionsHtml(rawHtml, lang);
+  if (!sanitizedHtml || typeof document === 'undefined') return '';
+
+  const template = document.createElement('template');
+  template.innerHTML = sanitizedHtml;
+
+  return Array.from(template.content.childNodes, paymentInstructionNodeText)
+    .join('')
+    .replace(/\u00a0/g, ' ')
+    .split(/\r?\n/)
+    .map((line) => {
+      const withoutSourceIndent = line.trimStart();
+      const indent = withoutSourceIndent.match(new RegExp(`^${PAYMENT_INSTRUCTIONS_LIST_INDENT}+`))?.[0].length ?? 0;
+      const content = withoutSourceIndent
+        .slice(indent)
+        .replace(/[^\S\r\n]+/g, ' ')
+        .trim();
+      return content ? `${'  '.repeat(indent)}${content}` : '';
+    })
+    .filter(Boolean)
+    .join('\n');
+}
+
 function timestampOrNull(value: unknown): number | null {
   if (!value || typeof value !== 'string') return null;
   const d = new Date(value);
