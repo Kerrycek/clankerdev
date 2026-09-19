@@ -9,20 +9,28 @@ export const PINNED_LIVE_VPS_LEAF_DER_SHA256 =
   '6eded8338f574cb7169bc66a51dca334338b2cca8e68650bf31a2aa36783658f';
 export const PINNED_LIVE_VPS_SPKI_SHA256_BASE64 = 'KuTsL27vrsGaAUVeUdq8XAHdQnYbvdmNOLMpZRe9ZEI=';
 export const PINNED_LIVE_VPS_TLS_AUTHORIZATION_ERROR = 'DEPTH_ZERO_SELF_SIGNED_CERT';
+export const PINNED_LIVE_VPS_TLS_HOSTNAME_ERROR = 'ERR_TLS_CERT_ALTNAME_INVALID';
 
 function fail(message) {
   throw new Error(message);
 }
 
-export function assertAuditedLiveVpsTlsTrustState({ authorized, authorizationError }) {
-  if (authorized !== false || authorizationError !== PINNED_LIVE_VPS_TLS_AUTHORIZATION_ERROR) {
+export function assertAuditedLiveVpsTlsTrustState({ authorized, authorizationError, selfSigned = false }) {
+  const isDirectSelfSignedError = authorizationError === PINNED_LIVE_VPS_TLS_AUTHORIZATION_ERROR;
+  // Newer Node/OpenSSL combinations can report the hostname mismatch before
+  // the self-signed-chain failure for this exact legacy dev certificate. Only
+  // accept that ordering after the certificate has independently proved its
+  // own signature; the leaf and SPKI pins are checked before this helper is
+  // used by the live transport.
+  const isPinnedHostnameError =
+    authorizationError === PINNED_LIVE_VPS_TLS_HOSTNAME_ERROR && selfSigned === true;
+  if (authorized !== false || (!isDirectSelfSignedError && !isPinnedHostnameError)) {
     fail('The dev TLS certificate no longer has the audited self-signed trust state; rotate the pin deliberately.');
   }
-  return PINNED_LIVE_VPS_TLS_AUTHORIZATION_ERROR;
+  return authorizationError;
 }
 
 export function assertPinnedLiveVpsTlsPeer({ certificate, authorized, authorizationError, now = new Date() }) {
-  const trustState = assertAuditedLiveVpsTlsTrustState({ authorized, authorizationError });
   if (!certificate || !Buffer.isBuffer(certificate.raw) || certificate.raw.length === 0) {
     fail('The dev TLS peer did not expose a leaf certificate in DER form.');
   }
@@ -32,16 +40,23 @@ export function assertPinnedLiveVpsTlsPeer({ certificate, authorized, authorizat
     fail('The dev TLS leaf certificate does not match the code-owned certification pin.');
   }
   let spkiSha256Base64;
+  let selfSigned;
   try {
     const x509 = new X509Certificate(certificate.raw);
     const spkiDer = x509.publicKey.export({ type: 'spki', format: 'der' });
     spkiSha256Base64 = crypto.createHash('sha256').update(spkiDer).digest('base64');
+    selfSigned = x509.checkIssued(x509) && x509.verify(x509.publicKey);
   } catch {
     fail('The pinned dev TLS certificate does not expose a valid SPKI key.');
   }
   if (spkiSha256Base64 !== PINNED_LIVE_VPS_SPKI_SHA256_BASE64) {
     fail('The dev TLS certificate does not match the code-owned SPKI pin.');
   }
+  const trustState = assertAuditedLiveVpsTlsTrustState({
+    authorized,
+    authorizationError,
+    selfSigned,
+  });
 
   const validFromMs = Date.parse(certificate.valid_from);
   const validToMs = Date.parse(certificate.valid_to);

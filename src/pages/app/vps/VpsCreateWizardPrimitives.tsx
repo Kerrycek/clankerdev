@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertCircle, CheckCircle2, Circle, HardDrive, KeyRound, Network, Plus, Server, SlidersHorizontal } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Circle, HardDrive, KeyRound, ListChecks, Network, Plus, Server, SlidersHorizontal } from 'lucide-react';
 import { useI18n } from '../../../app/i18n';
 import { Alert } from '../../../components/ui/Alert';
 import { Badge } from '../../../components/ui/Badge';
@@ -13,6 +13,7 @@ import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 import type { Location } from '../../../lib/api/infra';
 import type { Node } from '../../../lib/api/nodes';
 import type { OsTemplate } from '../../../lib/api/osTemplates';
+import type { User } from '../../../lib/api/users';
 import { isMissingActionStateError } from '../../../lib/api/haveapi';
 import { formatErrorMessage } from '../../../lib/errors';
 import {
@@ -75,13 +76,14 @@ export function CreateStepRail(props: {
   form: FormState;
   isAdminMode: boolean;
   hiddenAdminTarget?: HiddenAdminTarget;
+  ownerVerified?: boolean;
   selectedTemplate?: OsTemplate;
   validationKeys: string[];
 }) {
   const { t } = useI18n();
   const targetDone = Boolean(
     props.form.locationId &&
-      (!props.isAdminMode || (props.form.userId && props.form.nodeId)) &&
+      (!props.isAdminMode || (props.form.userId && props.form.nodeId && props.ownerVerified)) &&
       (!props.hiddenAdminTarget || (props.hiddenAdminTarget.userId && props.hiddenAdminTarget.nodeId))
   );
   const steps = [
@@ -122,6 +124,9 @@ export function CreateTargetCard(props: {
   form: FormState;
   isAdminMode: boolean;
   isAdminAccount: boolean;
+  selectedOwner?: User;
+  ownerLookupPending?: boolean;
+  ownerLookupFailed?: boolean;
   locations: Location[];
   nodes: Node[];
   selectedLocation?: Location;
@@ -147,6 +152,29 @@ export function CreateTargetCard(props: {
               loadingLabel={t('common.loading')}
               noResultsLabel={t('palette.empty.no_results')}
             />
+            {props.ownerLookupPending ? (
+              <p className="mt-2 text-xs text-muted" data-testid="vps.create.owner.loading">
+                {t('vps.create.owner.loading')}
+              </p>
+            ) : props.selectedOwner ? (
+              <div
+                className="mt-2 rounded-md border border-border bg-surface-2 px-3 py-2"
+                data-testid="vps.create.owner.selection"
+              >
+                <div className="text-xs font-medium uppercase tracking-wide text-muted">
+                  {t('vps.create.owner.selected')}
+                </div>
+                <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm">
+                  <span className="font-medium text-fg">{props.selectedOwner.login || `#${props.selectedOwner.id}`}</span>
+                  <span className="tabular-nums text-muted">#{props.selectedOwner.id}</span>
+                  {props.selectedOwner.full_name ? <span className="text-muted">{props.selectedOwner.full_name}</span> : null}
+                </div>
+              </div>
+            ) : props.ownerLookupFailed ? (
+              <p className="mt-2 text-xs text-danger" data-testid="vps.create.owner.error">
+                {t('vps.create.owner.not_found', { id: props.form.userId })}
+              </p>
+            ) : null}
           </div>
         ) : null}
         {!props.isAdminMode && props.isAdminAccount ? (
@@ -348,6 +376,9 @@ export function CreateAccessHintCard() {
 export function CreateReviewCard(props: {
   form: FormState;
   isAdminMode: boolean;
+  selectedOwner?: User;
+  ownerLookupPending?: boolean;
+  ownerLookupFailed?: boolean;
   selectedLocation?: Location;
   selectedTemplate?: OsTemplate;
   selectedNode?: Node;
@@ -390,7 +421,19 @@ export function CreateReviewCard(props: {
       />
       <CardBody className="space-y-4">
         <dl className="rounded-md border border-border bg-surface-2 px-3" data-testid="vps.create.review">
-          {props.isAdminMode ? <SummaryRow label={t('vps.create.review.owner')} value={props.form.userId || missing} /> : null}
+          {props.isAdminMode ? (
+            <SummaryRow
+              label={t('vps.create.review.owner')}
+              testId="vps.create.review.owner"
+              value={props.ownerLookupPending
+                ? t('vps.create.owner.loading')
+                : props.selectedOwner
+                  ? <><span className="font-medium">{props.selectedOwner.login || `#${props.selectedOwner.id}`}</span>{' '}<span className="text-muted">#{props.selectedOwner.id}</span></>
+                  : props.ownerLookupFailed
+                    ? t('vps.create.owner.not_found', { id: props.form.userId })
+                    : props.form.userId || missing}
+            />
+          ) : null}
           <SummaryRow label={t('vps.create.review.hostname')} value={props.form.hostname.trim() || missing} testId="vps.create.review.hostname" />
           <SummaryRow label={t('vps.create.review.location')} value={props.selectedLocation ? labelOf(props.selectedLocation) : missing} />
           {props.isAdminMode ? <SummaryRow label={t('vps.create.review.node')} value={props.selectedNode ? nodeLabel(props.selectedNode) : missing} /> : null}
@@ -445,8 +488,12 @@ export function CreateReviewCard(props: {
           testId="vps.create.submit"
           className="w-full justify-center"
         >
-          <Plus className="h-4 w-4" />
-          {props.isPending ? t('common.creating') : t('vps.create.submit')}
+          {props.validationKeys.length > 0 ? <ListChecks className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+          {props.isPending
+            ? t('common.creating')
+            : props.validationKeys.length > 0
+              ? t('vps.create.review_missing')
+              : t('vps.create.submit')}
         </Button>
       </CardBody>
     </Card>

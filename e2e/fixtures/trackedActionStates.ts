@@ -10,7 +10,9 @@ export interface TrackedActionStateSeed {
   actionLabelKey?: string;
   actionLabel?: string;
   objectLabel?: string;
+  adminMemberId?: number;
   blockUi?: boolean;
+  notifyOnInitialFinished?: boolean;
   progressTitleKey?: string;
 }
 

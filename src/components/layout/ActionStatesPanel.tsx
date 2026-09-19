@@ -30,7 +30,15 @@ import { Button } from '../ui/Button';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { Spinner } from '../ui/Spinner';
 import { TransactionInlineDetails } from '../ui/TransactionInlineDetails';
-import { useChrome } from './ChromeContext';
+import { useChrome, type TrackedActionState } from './ChromeContext';
+import { TrackedTaskTargetLink } from './TrackedTaskTargetLink';
+
+type ActionStateRow = {
+  s: ActionState;
+  tracked: boolean;
+  trackedMeta?: TrackedActionState;
+  pinned: boolean;
+};
 
 function parseIds(input: unknown, limit: number): number[] {
   if (!Array.isArray(input)) return [];
@@ -79,9 +87,28 @@ function compactFailureSummary(value: unknown, maxLength = 180): string | null {
   return `${singleLine.slice(0, maxLength - 1)}…`;
 }
 
+function trackedActionLabel(
+  tracked: TrackedActionState | undefined,
+  fallback: string,
+  t: (key: any, vars?: Record<string, unknown>) => string,
+): string {
+  if (tracked?.actionLabelKey) {
+    const translated = t(tracked.actionLabelKey);
+    if (translated) return translated;
+  }
+  const explicit = tracked?.actionLabel?.trim();
+  return explicit || fallback;
+}
+
+function trackedTargetLabel(tracked: TrackedActionState | undefined, actionState: ActionState): string | null {
+  const explicit = tracked?.objectLabel?.trim();
+  return explicit || compactActionTarget(actionState);
+}
+
 function ActionStateInspect(props: {
   actionStateId: number;
   fallback?: ActionState;
+  trackedMeta?: TrackedActionState;
   pinned: boolean;
   onBack: () => void;
   onTogglePin?: (actionStateId: number) => void;
@@ -157,7 +184,8 @@ function ActionStateInspect(props: {
   }
 
   const id = Number((s as any).id ?? props.actionStateId);
-  const label = (s as any).label ? String((s as any).label) : i18n.t('action_state.title_fallback', { id });
+  const backendLabel = (s as any).label ? String((s as any).label) : i18n.t('action_state.title_fallback', { id });
+  const label = trackedActionLabel(props.trackedMeta, backendLabel, i18n.t);
   const badge = actionStateBadge(s);
   const pct = actionStateProgressPercent(s);
   const pLabel = actionStateProgressLabel(s);
@@ -165,8 +193,13 @@ function ActionStateInspect(props: {
   const updatedAt = (s as any).updated_at ? formatDateTime(String((s as any).updated_at)) : null;
   const tracked = chrome.trackedActionStates.some((x) => x.id === id);
   const chain = chainQ.data;
-  const target = compactActionTarget(s);
+  const target = trackedTargetLabel(props.trackedMeta, s);
   const failureSummary = compactFailureSummary(s);
+  const actionStateIdLabelKey = isFailingActionState(s)
+    ? 'tasks.inspect.action_state_id.failed'
+    : isFinishedActionState(s)
+      ? 'tasks.inspect.action_state_id.completed'
+      : 'tasks.inspect.action_state_id.running';
 
   const renderTxCard = (tx: Transaction) => {
     const b = transactionBadge(tx);
@@ -275,7 +308,7 @@ function ActionStateInspect(props: {
       <div className="mt-3 rounded-md border border-border bg-surface p-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-xs text-muted">{i18n.t('tasks.inspect.action_state_id')}</div>
+            <div className="text-xs text-muted">{i18n.t(actionStateIdLabelKey)}</div>
             <h3 className="mt-1 text-base font-semibold">#{id}</h3>
             <div className="mt-1 break-words text-sm">{label}</div>
           </div>
@@ -289,7 +322,12 @@ function ActionStateInspect(props: {
             <div>{isFailingActionState(s) ? i18n.t('common.no') : isFinishedActionState(s) ? i18n.t('common.yes') : i18n.t('state.running')}</div>
           </div>
           {pLabel ? <div><div className="text-xs text-muted">{i18n.t('common.progress')}</div><div>{pct !== null ? `${pLabel} · ${pct}%` : pLabel}</div></div> : null}
-          {target ? <div><div className="text-xs text-muted">{i18n.t('tasks.meta.object')}</div><div>{target}</div></div> : null}
+          {target ? (
+            <div>
+              <div className="text-xs text-muted">{i18n.t('tasks.meta.object')}</div>
+              <TrackedTaskTargetLink tracked={props.trackedMeta} label={target} testId="tasks.inspect.target" onNavigate={chrome.closeTasks} />
+            </div>
+          ) : null}
           {createdAt ? <div><div className="text-xs text-muted">{i18n.t('common.created')}</div><div>{createdAt}</div></div> : null}
           {updatedAt ? <div><div className="text-xs text-muted">{i18n.t('common.updated')}</div><div>{updatedAt}</div></div> : null}
           {relatedChainId ? (
@@ -325,7 +363,11 @@ function ActionStateInspect(props: {
               {i18n.t('tasks.action.dismiss')}
             </Button>
           ) : (
-            <Button size="sm" variant="secondary" onClick={() => chrome.trackActionState(id)}>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => chrome.trackActionState(id, { notifyOnInitialFinished: false })}
+            >
               {i18n.t('tasks.action.track')}
             </Button>
           )}
@@ -406,6 +448,10 @@ export function ActionStatesPanel(props: {
     [chrome.trackedActionStates]
   );
   const trackedSet = useMemo(() => new Set<number>(trackedIds), [trackedIds]);
+  const trackedById = useMemo(
+    () => new Map(chrome.trackedActionStates.map((tracked) => [tracked.id, tracked])),
+    [chrome.trackedActionStates],
+  );
 
   const pinnedIds = useMemo(() => parseIds(props.pinnedIds, 50), [props.pinnedIds]);
   const pinnedSet = useMemo(() => new Set<number>(pinnedIds), [pinnedIds]);
@@ -436,7 +482,7 @@ export function ActionStatesPanel(props: {
   });
 
   const merged = useMemo(() => {
-    const map = new Map<number, { s: ActionState; tracked: boolean; pinned: boolean }>();
+    const map = new Map<number, ActionStateRow>();
 
     for (let i = 0; i < explicitIds.length; i++) {
       const requestedId = explicitIds[i];
@@ -447,6 +493,7 @@ export function ActionStatesPanel(props: {
         map.set(id, {
           s: q.data as any,
           tracked: trackedSet.has(id),
+          trackedMeta: trackedById.get(id),
           pinned: pinnedSet.has(id),
         });
       }
@@ -457,7 +504,12 @@ export function ActionStatesPanel(props: {
       const id = Number(s?.id);
       if (!Number.isFinite(id) || id <= 0) continue;
       if (map.has(id)) continue;
-      map.set(id, { s: s as any, tracked: trackedSet.has(id), pinned: pinnedSet.has(id) });
+      map.set(id, {
+        s: s as any,
+        tracked: trackedSet.has(id),
+        trackedMeta: trackedById.get(id),
+        pinned: pinnedSet.has(id),
+      });
     }
 
     const arr = Array.from(map.values());
@@ -471,7 +523,7 @@ export function ActionStatesPanel(props: {
     });
 
     return arr;
-  }, [explicitIds, explicitQs, indexQ.data, pinnedSet, trackedSet]);
+  }, [explicitIds, explicitQs, indexQ.data, pinnedSet, trackedById, trackedSet]);
 
   const needle = (props.filterText ?? '').trim().toLowerCase();
 
@@ -479,10 +531,12 @@ export function ActionStatesPanel(props: {
     if (!needle) return merged;
     return merged.filter((x) => {
       const id = Number((x.s as any).id);
-      const label = (x.s as any).label ? String((x.s as any).label) : `#${id}`;
-      return String(id).includes(needle) || label.toLowerCase().includes(needle);
+      const backendLabel = (x.s as any).label ? String((x.s as any).label) : `#${id}`;
+      const label = trackedActionLabel(x.trackedMeta, backendLabel, i18n.t);
+      const target = trackedTargetLabel(x.trackedMeta, x.s);
+      return `${id} ${label} ${backendLabel} ${target ?? ''}`.toLowerCase().includes(needle);
     });
-  }, [merged, needle]);
+  }, [i18n.t, merged, needle]);
 
   const pinned = filtered.filter((x) => x.pinned);
   const rest = filtered.filter((x) => !x.pinned);
@@ -518,6 +572,7 @@ export function ActionStatesPanel(props: {
       <ActionStateInspect
         actionStateId={selectedActionStateId}
         fallback={selectedRow?.s}
+        trackedMeta={selectedRow?.trackedMeta}
         pinned={pinnedSet.has(selectedActionStateId)}
         onTogglePin={props.onTogglePin}
         onBack={() => setSelectedActionStateId(null)}
@@ -525,10 +580,11 @@ export function ActionStatesPanel(props: {
     );
   }
 
-  const renderRow = (x: { s: ActionState; tracked: boolean; pinned: boolean }) => {
+  const renderRow = (x: ActionStateRow) => {
     const s = x.s;
     const id = Number((s as any).id);
-    const label = (s as any).label ? String((s as any).label) : `#${id}`;
+    const backendLabel = (s as any).label ? String((s as any).label) : `#${id}`;
+    const label = trackedActionLabel(x.trackedMeta, backendLabel, i18n.t);
     const badge = actionStateBadge(s);
     const toneVariant: ToneVariant | undefined = ((): ToneVariant | undefined => {
       const v = badge.variant;
@@ -547,12 +603,19 @@ export function ActionStatesPanel(props: {
 
     const createdAt = (s as any).created_at ? formatDateTime(String((s as any).created_at)) : null;
     const updatedAt = (s as any).updated_at ? formatDateTime(String((s as any).updated_at)) : null;
-    const target = compactActionTarget(s);
+    const target = trackedTargetLabel(x.trackedMeta, s);
     const failureSummary = compactFailureSummary(s);
 
     const meta: React.ReactNode[] = [];
     meta.push(<span key="id">#{id}</span>);
-    if (target) meta.push(<span key="target">{i18n.t('tasks.meta.object')}: {target}</span>);
+    if (target) {
+      meta.push(
+        <span key="target">
+          {i18n.t('tasks.meta.object')}:{' '}
+          <TrackedTaskTargetLink tracked={x.trackedMeta} label={target} testId={`tasks.row.target.${id}`} onNavigate={chrome.closeTasks} />
+        </span>,
+      );
+    }
     if (createdAt) meta.push(<span key="created">{i18n.t('tasks.meta.created', { time: createdAt })}</span>);
     if (updatedAt) meta.push(<span key="updated">{i18n.t('tasks.meta.updated', { time: updatedAt })}</span>);
 

@@ -624,7 +624,7 @@ export function ActionStatesPage() {
         highlighted={highlight}
         cancelPending={cancelM.isPending}
         onTogglePinned={(targetId) => chrome.togglePinnedActionState(targetId)}
-        onTrack={(targetId) => chrome.trackActionState(targetId)}
+        onTrack={(targetId) => chrome.trackActionState(targetId, { notifyOnInitialFinished: false })}
         onDismiss={(targetId) => chrome.dismissActionState(targetId)}
         onCancel={(state) => {
           setCancelError(null);

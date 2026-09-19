@@ -23,6 +23,36 @@ function assertPositiveInteger(value, label) {
   return value;
 }
 
+export function isHaveApiResourceMissing(status, envelope) {
+  if (status === 404) return true;
+
+  const message = String(envelope?.message ?? '').toLowerCase();
+  if (
+    message.includes('not found') ||
+    message.includes('does not exist') ||
+    message.includes('unable to find') ||
+    message.includes('no such')
+  ) {
+    return true;
+  }
+
+  // HaveAPI show actions currently encode an unresolved path parameter as an
+  // otherwise empty failure envelope while keeping HTTP 200. Keep this check
+  // deliberately exact so authorization and backend failures still fail closed.
+  return (
+    status === 200 &&
+    envelope?.status === false &&
+    envelope?.response === null &&
+    envelope?.message == null &&
+    envelope?.errors == null
+  );
+}
+
+export function dnsZoneNamesMatch(expected, actual) {
+  const normalize = (value) => String(value ?? '').replace(/\.$/, '');
+  return normalize(expected) !== '' && normalize(expected) === normalize(actual);
+}
+
 function pathComponents(absolutePath) {
   const parsed = path.parse(absolutePath);
   const relative = absolutePath.slice(parsed.root.length);
@@ -255,7 +285,10 @@ export function assertCleanupResourceIdentity(ledger, object, { namespace, resou
   if (!expectedName.startsWith(ledger.prefix) && owned.kind === 'dns_zone') {
     throw new Error(`Refusing cleanup for ${owned.kind} #${owned.id}: expected name is outside run prefix.`);
   }
-  if (String(resource.name ?? '') !== expectedName) {
+  const resourceNameMatches = owned.kind === 'dns_zone'
+    ? dnsZoneNamesMatch(expectedName, resource.name)
+    : String(resource.name ?? '') === expectedName;
+  if (!resourceNameMatches) {
     throw new Error(`Refusing cleanup for ${owned.kind} #${owned.id}: resource name changed.`);
   }
 

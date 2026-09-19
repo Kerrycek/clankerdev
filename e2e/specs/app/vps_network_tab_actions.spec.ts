@@ -219,6 +219,8 @@ test.describe('@pr-smoke VPS network tab', () => {
     await page.getByTestId('vps.network.disable').click();
 
     await expect(page.getByTestId('vps.network.disable_confirm')).toBeVisible();
+    await expect(page.getByTestId('vps.network.disable_confirm.target')).toContainText('vps123.example');
+    await expect(page.getByTestId('vps.network.disable_confirm.target')).toContainText('#123');
 
     await page.getByTestId('vps.network.disable.reason').fill('Testing');
 

@@ -262,7 +262,11 @@ export function ActionStateDetailPage() {
                 {t('tasks.action.dismiss')}
               </Button>
             ) : (
-              <Button variant="secondary" onClick={() => chrome.trackActionState(id)} testId="action_state.detail.track">
+              <Button
+                variant="secondary"
+                onClick={() => chrome.trackActionState(id, { notifyOnInitialFinished: false })}
+                testId="action_state.detail.track"
+              >
                 {t('tasks.action.track')}
               </Button>
             )}

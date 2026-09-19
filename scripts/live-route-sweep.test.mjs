@@ -130,6 +130,21 @@ test('route roles deny support-only access to administrator security advisories'
   );
 });
 
+test('administrator route sweep expects the safe My-view transaction redirect', () => {
+  const adminRoutes = filterRoutesForRole(USER_STATIC_ROUTES, 'admin');
+  const transactionItems = adminRoutes.find((item) => item.id === 'app.transactions.items');
+  assert.ok(transactionItems);
+  assert.equal(transactionItems.path, '/app/transactions/items');
+  assert.equal(transactionItems.expectedPath, '/app/transactions');
+  assert.equal(transactionItems.expectedTestId, undefined);
+
+  const userRoutes = filterRoutesForRole(USER_STATIC_ROUTES, 'user');
+  const userTransactionItems = userRoutes.find((item) => item.id === 'app.transactions.items');
+  assert.ok(userTransactionItems);
+  assert.equal(userTransactionItems.expectedPath, '/app/transactions/items');
+  assert.equal(userTransactionItems.expectedTestId, 'transactions.items.list');
+});
+
 test('detail discovery has explicit required and optional semantics', () => {
   const spec = DETAIL_ROUTE_SPECS.find((item) => item.key === 'security-advisory');
   assert.equal(discoveryRequirement(spec, 'public'), 'optional');

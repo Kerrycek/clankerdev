@@ -18,6 +18,7 @@ function useLockBodyScroll(locked: boolean) {
 export function Modal(props: {
   open: boolean;
   title?: string;
+  ariaLabel?: string;
   onClose: () => void;
   children: React.ReactNode;
   footer?: React.ReactNode;
@@ -81,6 +82,7 @@ export function Modal(props: {
       <div
         role="dialog"
         aria-modal="true"
+        aria-label={props.title ? undefined : props.ariaLabel}
         aria-labelledby={props.title ? titleId : undefined}
         data-testid={props.testId}
         data-overlay="modal"

@@ -99,6 +99,38 @@ describe('VPS create outcome guard', () => {
     expect(accepted).toMatchObject({ phase: 'accepted', candidateVpsId: 123, actionStateId: 987 });
   });
 
+  it('retires an accepted receipt from an older form session before a new create starts', async () => {
+    const pending = await beginVpsCreateOutcomeGuard({ ...guardArgs, pageSessionId: 'old-tab:old-entry' });
+    await markVpsCreateOutcomeAccepted({
+      userId: 42,
+      marker: pending,
+      candidateVpsId: 123,
+      actionStateId: 987,
+      persistenceErrorMessage: guardArgs.persistenceErrorMessage,
+    });
+
+    const next = await beginVpsCreateOutcomeGuard({ ...guardArgs, pageSessionId: 'current-tab:new-entry' });
+
+    expect(next).toMatchObject({ phase: 'pending', pageSessionId: 'current-tab:new-entry' });
+    expect(readLatestVpsCreateOutcomeMarker(42)).toEqual(next);
+  });
+
+  it('keeps an accepted receipt visible and blocking in its originating form session', async () => {
+    const pending = await beginVpsCreateOutcomeGuard({ ...guardArgs, pageSessionId: 'same-tab:same-entry' });
+    await markVpsCreateOutcomeAccepted({
+      userId: 42,
+      marker: pending,
+      candidateVpsId: 123,
+      actionStateId: 987,
+      persistenceErrorMessage: guardArgs.persistenceErrorMessage,
+    });
+
+    await expect(beginVpsCreateOutcomeGuard({
+      ...guardArgs,
+      pageSessionId: 'same-tab:same-entry',
+    })).rejects.toSatisfy(isLocalLockPersistenceError);
+  });
+
   it('treats a corrupt persisted generation as a non-acknowledgeable pending guard', async () => {
     window.localStorage.setItem(`${vpsCreateOutcomeEntryPrefix(42)}broken-generation`, '{not-json');
 

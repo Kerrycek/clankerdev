@@ -76,10 +76,10 @@ export function AdminUserResourcesPage() {
     staleTime: 60_000,
   });
   // Shared packages are represented by a null owner. `is_personal` is derived
-  // and is not a reliable index filter on older vpsAdmin API versions.
+  // by the model and is not an input of the package index action.
   const packagesQ = useQuery({
-    queryKey: ['cluster_resource_packages', { isPersonal: false, userId: null, limit: 500 }],
-    queryFn: async () => (await fetchClusterResourcePackages({ isPersonal: false, userId: null, limit: 500 })).data,
+    queryKey: ['cluster_resource_packages', { userId: null, limit: 500 }],
+    queryFn: async () => (await fetchClusterResourcePackages({ userId: null, limit: 500 })).data,
     staleTime: 30_000,
   });
   const assignments = assignmentsQ.data ?? [];

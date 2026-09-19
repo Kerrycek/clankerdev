@@ -34,16 +34,18 @@ import { RequestsListContent } from './RequestsListContent';
 import { RequestsListStatus } from './RequestsListStatus';
 import { requestMatchesReviewTarget } from './RequestDetailModel';
 import { fetchAwaitingReviewTarget, RequestReviewPreconditionError } from './RequestResolveMutation';
-import { requestActionNeedsReason, requestMissingRequiredUser, requestReviewActions } from './RequestReviewModel';
+import {
+  requestActionNeedsReason,
+  requestBulkReviewActions,
+  requestCanEnterBulkReview,
+} from './RequestReviewModel';
 import {
   ALL_ADMIN_REQUEST_STATES,
   DEFAULT_ADMIN_REQUEST_STATE,
   adminRequestApiState,
   adminRequestStateFilterFromUrl,
-  changeRows,
+  buildRequestPage,
   defaultStateOptions,
-  mergeByIdDesc,
-  registrationRows,
   resetAdminRequestPaginationOnFilterChange,
   requestId,
   requestKey,
@@ -53,33 +55,16 @@ import {
   type RequestRowType,
   type RequestTypeFilter,
   type UnifiedRequestRow,
-  visibleRequestRows,
 } from './RequestsModel';
-
-const KNOWN_REQUEST_STATES = new Set([
-  'awaiting',
-  'pending_correction',
-  'approved',
-  'denied',
-  'ignored',
-]);
-
-function actionsForBulkRow(row: UnifiedRequestRow, canResolve: boolean): ResolveUserRequestAction[] {
-  if (!canResolve) return [];
-  const state = String(row.state ?? '').trim();
-  if (!KNOWN_REQUEST_STATES.has(state)) return [];
-
-  return requestReviewActions(requestType(row), row, true).filter(
-    (action) => !(requestType(row) === 'registration' && action === 'approve'),
-  );
-}
 
 function commonBulkActions(rows: UnifiedRequestRow[], canResolve: boolean): ResolveUserRequestAction[] {
   if (rows.length === 0) return [];
   const [first, ...rest] = rows;
   if (!first) return [];
-  const firstActions = actionsForBulkRow(first, canResolve);
-  return firstActions.filter((action) => rest.every((row) => actionsForBulkRow(row, canResolve).includes(action)));
+  const firstActions = requestBulkReviewActions(requestType(first), first, canResolve);
+  return firstActions.filter((action) => rest.every((row) => (
+    requestBulkReviewActions(requestType(row), row, canResolve).includes(action)
+  )));
 }
 
 function isRequestNotFoundError(error: unknown): boolean {
@@ -225,6 +210,7 @@ export function RequestsPage() {
 
   const needRegs = isAdmin && (type === 'all' || type === 'registration');
   const needChanges = isAdmin && (type === 'all' || type === 'change');
+  const apiPageLimit = pagination.limit + 1;
 
   const regQ = useQuery({
     queryKey: [
@@ -233,7 +219,7 @@ export function RequestsPage() {
       'index',
       {
         enabled: needRegs,
-        limit: pagination.limit,
+        limit: apiPageLimit,
         fromId: pagination.fromId,
         state: apiState,
         userId: userIdNum,
@@ -246,7 +232,7 @@ export function RequestsPage() {
     enabled: needRegs,
     queryFn: async () =>
       await fetchRegistrationRequests({
-        limit: pagination.limit,
+        limit: apiPageLimit,
         fromId: pagination.fromId,
         state: apiState,
         userId: userIdNum,
@@ -266,7 +252,7 @@ export function RequestsPage() {
       'index',
       {
         enabled: needChanges,
-        limit: pagination.limit,
+        limit: apiPageLimit,
         fromId: pagination.fromId,
         state: apiState,
         userId: userIdNum,
@@ -279,7 +265,7 @@ export function RequestsPage() {
     enabled: needChanges,
     queryFn: async () =>
       await fetchChangeRequests({
-        limit: pagination.limit,
+        limit: apiPageLimit,
         fromId: pagination.fromId,
         state: apiState,
         userId: userIdNum,
@@ -294,31 +280,30 @@ export function RequestsPage() {
 
   const reg = regQ.data?.data ?? [];
   const ch = changeQ.data?.data ?? [];
-  const rows = useMemo(() => {
-    const raw =
-      type === 'registration'
-        ? registrationRows(reg)
-        : type === 'change'
-          ? changeRows(ch)
-          : mergeByIdDesc(reg, ch, pagination.limit);
-    return visibleRequestRows(raw, stateFilter);
-  }, [ch, pagination.limit, reg, stateFilter, type]);
+  const requestPage = useMemo(
+    () => buildRequestPage(reg, ch, type, pagination.limit, stateFilter),
+    [ch, pagination.limit, reg, stateFilter, type],
+  );
+  const rows = requestPage.rows;
 
   const lockedRequestIds = useMemo(
     () => new Set(chrome.localLocks.filter((lock) => lock.kind === 'UserRequest').map((lock) => lock.id)),
     [chrome.localLocks],
   );
-  const ownerEligibleKeys = useMemo(() => new Set(rows.filter((row) =>
-    !requestMissingRequiredUser(requestType(row), row)).map(requestKey)), [rows]);
+  const bulkSelectableKeys = useMemo(() => new Set(rows.filter((row) => requestCanEnterBulkReview(
+    requestType(row),
+    row,
+    canResolve,
+    lockedRequestIds.has(requestId(row)),
+  )).map(requestKey)), [canResolve, lockedRequestIds, rows]);
   useEffect(() => {
     setSelectedKeys((previous) => {
-      const next = new Set([...previous].filter((key) => ownerEligibleKeys.has(key)));
+      const next = new Set([...previous].filter((key) => bulkSelectableKeys.has(key)));
       return next.size === previous.size ? previous : next;
     });
-  }, [ownerEligibleKeys]);
+  }, [bulkSelectableKeys]);
   function toggleSelected(key: string, selected: boolean) {
-    const target = rows.find((row) => requestKey(row) === key);
-    if (selected && (!ownerEligibleKeys.has(key) || (target && lockedRequestIds.has(requestId(target))))) return;
+    if (selected && !bulkSelectableKeys.has(key)) return;
     setSelectedKeys((previous) => {
       const next = new Set(previous);
       if (selected) next.add(key);
@@ -332,7 +317,7 @@ export function RequestsPage() {
       const next = new Set(previous);
       for (const row of rows) {
         const key = requestKey(row);
-        if (selected && ownerEligibleKeys.has(key) && !lockedRequestIds.has(requestId(row))) next.add(key);
+        if (selected && bulkSelectableKeys.has(key)) next.add(key);
         else next.delete(key);
       }
       return next;
@@ -340,15 +325,12 @@ export function RequestsPage() {
   }
 
   const selectedRows = useMemo(
-    () => rows.filter((row) => selectedKeys.has(requestKey(row))),
-    [rows, selectedKeys],
+    () => rows.filter((row) => selectedKeys.has(requestKey(row)) && bulkSelectableKeys.has(requestKey(row))),
+    [bulkSelectableKeys, rows, selectedKeys],
   );
   const allowedBulkActions = useMemo(
-    () => commonBulkActions(
-      selectedRows.filter((row) => !lockedRequestIds.has(requestId(row))),
-      canResolve,
-    ),
-    [canResolve, lockedRequestIds, selectedRows],
+    () => commonBulkActions(selectedRows, canResolve),
+    [canResolve, selectedRows],
   );
   const containsSelectedRegistration = selectedRows.some((row) => requestType(row) === 'registration');
   const bulkNeedsReason = bulkAction === 'deny' || bulkAction === 'request_correction';
@@ -471,13 +453,7 @@ export function RequestsPage() {
   }
 
   const pageCursor = useMemo(() => cursorFromDescendingPage(rows, requestId) ?? undefined, [rows]);
-  const fetchedCount = reg.length + ch.length;
-  const canNext = useMemo(() => {
-    if (type === 'registration') return reg.length === pagination.limit;
-    if (type === 'change') return ch.length === pagination.limit;
-    if (fetchedCount > rows.length) return true;
-    return reg.length === pagination.limit || ch.length === pagination.limit;
-  }, [ch.length, fetchedCount, pagination.limit, reg.length, rows.length, type]);
+  const canNext = pagination.hasForward || (requestPage.hasMore && pageCursor !== undefined);
 
   const isLoading = (needRegs && regQ.isLoading) || (needChanges && changeQ.isLoading);
   const error = (needRegs && regQ.isError ? regQ.error : null) || (needChanges && changeQ.isError ? changeQ.error : null);
@@ -658,7 +634,7 @@ export function RequestsPage() {
           filtersActive={filtersActive}
           shareUrl={shareUrl}
           selectionMode={selectionMode}
-          canSelect={canResolve}
+          canSelect={canResolve && (selectionMode || bulkSelectableKeys.size > 0)}
           smartInputRef={smartInputRef}
           setType={setType}
           setState={setState}
@@ -677,7 +653,7 @@ export function RequestsPage() {
     >
       {canResolve && selectionMode && selectedRows.length > 0 ? (
         <RequestsBulkActions
-          rowsLength={rows.length}
+          rowsLength={bulkSelectableKeys.size}
           selectedRowsLength={selectedRows.length}
           action={bulkAction}
           allowedActions={allowedBulkActions}
@@ -714,6 +690,7 @@ export function RequestsPage() {
           returnTo={listReturnTo}
           selectionMode={selectionMode}
           selectedKeys={selectedKeys}
+          bulkSelectableKeys={bulkSelectableKeys}
           lockedRequestIds={lockedRequestIds}
           canNext={canNext}
           pageCursor={pageCursor}

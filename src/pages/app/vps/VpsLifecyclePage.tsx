@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../app/auth';
 import { useAppMode } from '../../../app/appMode';
 import { useI18n, type TranslationKey } from '../../../app/i18n';
@@ -118,6 +118,10 @@ function mutationErrorMessage(error: unknown, fallback: string, missingActionSta
   return fallback;
 }
 
+function memberContextSearch(userId: number | undefined): string {
+  return userId === undefined ? '' : `?user=${encodeURIComponent(String(userId))}`;
+}
+
 export function VpsLifecyclePage() {
   const { t } = useI18n();
   const auth = useAuth();
@@ -137,6 +141,7 @@ export function VpsLifecyclePage() {
     ipAddresses,
     ipAddressesLoading,
     ipAddressesError,
+    detailContextSearch,
   } = useVps();
 
   const vpsId = Number(vps.id);
@@ -153,6 +158,11 @@ export function VpsLifecyclePage() {
   const requestedActionRaw = routeActionRaw ?? searchParams.get('action');
   const requestedAction = lifecycleActionKinds.has(requestedActionRaw as LifecycleActionKind) ? (requestedActionRaw as LifecycleActionKind) : null;
   const invalidAction = Boolean(routeActionRaw && !requestedAction);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0 });
+  }, [requestedAction]);
+
   const templatesNeeded = canMutateVps && (requestedAction === 'reinstall'
     || (canAdministerVps && (requestedAction === 'template' || requestedAction === 'boot')));
 
@@ -249,6 +259,9 @@ export function VpsLifecyclePage() {
     vpsId,
     lockRef: vpsRef,
     basePath,
+    memberContextUserId: canAdministerVps && ownerId && Number.isSafeInteger(ownerId) && ownerId > 0
+      ? ownerId
+      : undefined,
     objectLabel,
     canMutateVps,
     knownBusy: busyLocalLock || busyTransaction,
@@ -314,7 +327,15 @@ export function VpsLifecyclePage() {
     onSuccess: (res, variables, context) => {
       track(res.meta, 'action.vps.clone.label', variables, context);
       const newId = Number((res.data as any)?.id);
-      if (Number.isInteger(newId) && newId > 0) navigate(`${variables.basePath}/vps/${newId}`);
+      const clonedOwnerId = variables.preparedPayload.ok
+        ? Number(variables.preparedPayload.value.user)
+        : Number.NaN;
+      const memberContextUserId = Number.isSafeInteger(clonedOwnerId) && clonedOwnerId > 0
+        ? clonedOwnerId
+        : variables.memberContextUserId;
+      if (Number.isInteger(newId) && newId > 0) {
+        navigate(`${variables.basePath}/vps/${newId}${memberContextSearch(memberContextUserId)}`);
+      }
     },
     onError: (e: any) => {
       if (e?.code === 'BUSY') chrome.openTasks();
@@ -343,7 +364,9 @@ export function VpsLifecyclePage() {
     onSuccess: (res, variables, context) => {
       track(res.meta, 'action.vps.replace.label', variables, context);
       const newId = Number((res.data as any)?.id);
-      if (Number.isInteger(newId) && newId > 0 && newId !== variables.vpsId) navigate(`${variables.basePath}/vps/${newId}`);
+      if (Number.isInteger(newId) && newId > 0 && newId !== variables.vpsId) {
+        navigate(`${variables.basePath}/vps/${newId}${memberContextSearch(variables.memberContextUserId)}`);
+      }
     },
     onError: (e: any) => {
       if (e?.code === 'BUSY') chrome.openTasks();
@@ -406,7 +429,7 @@ export function VpsLifecyclePage() {
     onMutate: acquireMutationContext,
     onSuccess: (res, variables, context) => {
       track(res.meta, 'action.vps.delete.label', variables, context);
-      navigate(`${variables.basePath}/vps`);
+      navigate(`${variables.basePath}/vps${memberContextSearch(variables.memberContextUserId)}`);
     },
     onError: (e: any) => {
       if (e?.code === 'BUSY') chrome.openTasks();
@@ -639,7 +662,8 @@ export function VpsLifecyclePage() {
   );
 
   const lifecycleBasePath = `${basePath}/vps/${vpsId}/lifecycle`;
-  const goToAction = (kind: LifecycleActionKind) => navigate(`${lifecycleBasePath}/${kind}`);
+  const lifecycleIndexPath = `${lifecycleBasePath}${detailContextSearch ?? ''}`;
+  const lifecycleActionPath = (kind: LifecycleActionKind) => `${lifecycleBasePath}/${kind}${detailContextSearch ?? ''}`;
   const allActionChoices: Array<{
     kind: LifecycleActionKind;
     title: string;
@@ -664,22 +688,21 @@ export function VpsLifecyclePage() {
   const dailyActionChoices = allActionChoices.filter((choice) => !choice.adminOnly);
   const adminActionChoices = canAdministerVps ? allActionChoices.filter((choice) => choice.adminOnly) : [];
   const activeChoice = requestedAction ? actionChoices.find((choice) => choice.kind === requestedAction) : undefined;
-  const renderActionButton = (choice: (typeof allActionChoices)[number]) => (
-    <button
+  const renderActionLink = (choice: (typeof allActionChoices)[number]) => (
+    <Link
       key={choice.kind}
-      type="button"
+      to={lifecycleActionPath(choice.kind)}
       className={[
         'rounded-lg border bg-surface p-4 text-left shadow-card transition hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-focus',
         choice.danger ? 'border-danger-border' : 'border-border',
       ].join(' ')}
-      onClick={() => goToAction(choice.kind)}
       data-testid={`vps.lifecycle.action_link.${choice.kind}`}
     >
       <span className={choice.danger ? 'block text-sm font-semibold text-danger' : 'block text-sm font-semibold text-fg'}>
         {choice.title}
       </span>
       <span className="mt-1 block text-xs text-muted">{choice.description}</span>
-    </button>
+    </Link>
   );
 
   if (!canMutateVps || invalidAction || (requestedAction && !actionChoices.some((choice) => choice.kind === requestedAction))) {
@@ -690,7 +713,7 @@ export function VpsLifecyclePage() {
           <CardHeader title={t('vps.lifecycle.title')} subtitle={t(noPermission ? 'gate.blocked.permission.title' : 'vps.lifecycle.invalid_action')} />
           <CardBody>
             {noPermission ? <Alert variant="neutral">{t('gate.blocked.permission.body')}</Alert> : (
-              <Button variant="primary" onClick={() => navigate(lifecycleBasePath)}>{t('vps.lifecycle.back_to_actions')}</Button>
+              <Button variant="primary" to={lifecycleIndexPath}>{t('vps.lifecycle.back_to_actions')}</Button>
             )}
           </CardBody>
         </Card>
@@ -714,7 +737,7 @@ export function VpsLifecyclePage() {
                   <p className="text-xs text-muted">{t('vps.lifecycle.action_index.daily_subtitle')}</p>
                 </div>
                 <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {dailyActionChoices.map(renderActionButton)}
+                  {dailyActionChoices.map(renderActionLink)}
                 </div>
               </section>
 
@@ -725,7 +748,7 @@ export function VpsLifecyclePage() {
                     <p className="text-xs text-muted">{t('vps.lifecycle.action_index.admin_subtitle')}</p>
                   </div>
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {adminActionChoices.map(renderActionButton)}
+                    {adminActionChoices.map(renderActionLink)}
                   </div>
                 </section>
               ) : null}
@@ -744,7 +767,7 @@ export function VpsLifecyclePage() {
             title={activeChoice?.title ?? t('vps.lifecycle.title')}
             subtitle={activeChoice?.description ?? t('vps.lifecycle.subtitle_user')}
             actions={
-              <Button variant="secondary" onClick={() => navigate(lifecycleBasePath)}>
+              <Button variant="secondary" to={lifecycleIndexPath}>
                 {t('vps.lifecycle.back_to_actions')}
               </Button>
             }
@@ -789,7 +812,7 @@ export function VpsLifecyclePage() {
           title={activeChoice?.title ?? t('vps.lifecycle.title')}
           subtitle={activeChoice?.description ?? t('vps.lifecycle.subtitle_admin')}
           actions={
-            <Button variant="secondary" onClick={() => navigate(lifecycleBasePath)}>
+            <Button variant="secondary" to={lifecycleIndexPath}>
               {t('vps.lifecycle.back_to_actions')}
             </Button>
           }

@@ -55,7 +55,14 @@ export function OomReportOverviewPage() {
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant={ruleVariant(action)}>{t(ruleLabelKey(action))}</Badge>
         {ruleId ? <span className="font-mono text-xs">#{ruleId}</span> : null}
-        {pat ? <span className="font-mono text-xs">{pat}</span> : null}
+        {pat ? (
+          <span
+            className="min-w-0 max-w-full break-all font-mono text-xs"
+            data-testid="oom.detail.overview.rule_cgroup"
+          >
+            {pat}
+          </span>
+        ) : null}
       </div>
     );
   }, [action, report.oom_report_rule, t]);
@@ -66,9 +73,14 @@ export function OomReportOverviewPage() {
         <CardHeader title={t('oom.detail.overview.summary_title')} />
         <CardBody>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div>
+            <div className="min-w-0">
               <div className="text-xs text-muted">{t('oom.field.cgroup')}</div>
-              <div className="mt-0.5 font-mono text-xs">{report.cgroup ? String(report.cgroup) : '—'}</div>
+              <div
+                className="mt-0.5 min-w-0 max-w-full break-all font-mono text-xs"
+                data-testid="oom.detail.overview.cgroup"
+              >
+                {report.cgroup ? String(report.cgroup) : '—'}
+              </div>
             </div>
 
             <div>

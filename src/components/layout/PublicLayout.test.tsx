@@ -16,6 +16,7 @@ vi.mock('../../app/config', () => ({
   getRuntimeConfig: () => ({
     routerBasename: '',
     loginUrl: undefined,
+    passwordRecoveryUrl: '/oauth2/password-reset?client_id=webui.test',
   }),
 }));
 
@@ -27,6 +28,7 @@ vi.mock('../../app/auth', () => ({
 
 vi.mock('../../app/i18n', () => ({
   useI18n: () => ({
+    lang: 'cs',
     t: (key: string) => key,
   }),
 }));
@@ -112,6 +114,30 @@ describe('PublicLayout', () => {
     fireEvent.click(screen.getByTestId('public.language.cs'));
 
     expect(uiSettingsState.setLanguage).toHaveBeenCalledWith('cs');
+  });
+
+  it('offers localized password recovery to anonymous visitors', () => {
+    renderAt('/');
+
+    expect(screen.getByTestId('public.password-recovery.desktop')).toHaveAttribute(
+      'href',
+      '/oauth2/password-reset?client_id=webui.test&ui_locales=cs',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'public.menu.open' }));
+    expect(screen.getByTestId('public.password-recovery.mobile')).toHaveAttribute(
+      'href',
+      '/oauth2/password-reset?client_id=webui.test&ui_locales=cs',
+    );
+  });
+
+  it('hides password recovery from authenticated visitors', () => {
+    authState.status = 'authenticated';
+
+    renderAt('/outages');
+
+    expect(screen.queryByTestId('public.password-recovery.desktop')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'public.menu.open' }));
+    expect(screen.queryByTestId('public.password-recovery.mobile')).not.toBeInTheDocument();
   });
 
   it('does not redirect the expired-session public notice URL', () => {

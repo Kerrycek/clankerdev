@@ -24,13 +24,15 @@ export function CardHeader(props: {
   const actions = props.actions ?? props.right;
 
   return (
-    <div className={clsx('flex items-start gap-3 border-b border-border p-4', props.className)}>
-      <div className="min-w-0 flex-1">
+    <div className={clsx('flex flex-col items-start gap-3 border-b border-border p-4 sm:flex-row', props.className)}>
+      <div className="w-full min-w-0 sm:w-auto sm:flex-1">
         <div className="font-semibold">{props.title}</div>
         {props.subtitle ? <div className="mt-0.5 text-sm text-muted">{props.subtitle}</div> : null}
       </div>
 
-      {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+      {actions ? (
+        <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">{actions}</div>
+      ) : null}
     </div>
   );
 }

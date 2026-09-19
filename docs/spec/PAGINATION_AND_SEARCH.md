@@ -5,7 +5,7 @@ This spec captures two cross-cutting UX requirements:
 1) **Pagination** for all list pages (using HaveAPI `from_id`).
 2) **Global search / quick-jump** (admin via `Cluster.Search`, non-admin limited unless backend adds support).
 
-Last updated: 2026-02-28
+Last updated: 2026-09-15
 
 ## Pagination
 
@@ -84,6 +84,21 @@ Pages already migrated to the shared implementation:
 
 - VPS list: `src/pages/app/VpsListPage.tsx`
 - Transaction chains: `src/pages/app/TransactionChainsPage.tsx`
+  - `TransactionChain.Index` is descending: the next request uses the last
+    visible chain ID as `from_id`.
+  - The UI requests `limit + 1`, renders at most `limit`, and enables Next only
+    when the hidden look-ahead row exists. This distinguishes an exact-size
+    terminal page from a page with more results.
+  - `errors=1` reads the `failed` and `fatal` streams with the same look-ahead,
+    deduplicates and orders their union, then applies the visible limit. The
+    cursor and Next state are derived from that merged page, not either stream
+    in isolation.
+  - Pinned chains are supplemental rows and never affect the page cursor or
+    look-ahead decision.
+  - This look-ahead fixes the exact-terminal-page signal; it does not establish
+    lossless traversal while the API filters its cursor by ID but orders first
+    by `created_at`. That upstream ordering limitation remains tracked by issue
+    #189.
 - Action states: `src/pages/app/ActionStatesPage.tsx`
 - Datasets list: `src/pages/app/datasets/DatasetsListPage.tsx`
 - NAS list alias: `src/pages/app/datasets/NasDatasetsPage.tsx` (same list implementation, fixed `role=primary`, no VPS filter)
@@ -98,11 +113,32 @@ Pages already migrated to the shared implementation:
 - Monitoring events list: `src/pages/app/MonitoringEventsPage.tsx`
 - Admin requests list: `src/pages/app/admin/RequestsPage.tsx`
 - Admin incoming payments list: `src/pages/app/admin/IncomingPaymentsPage.tsx`
+- Member payment history: `src/pages/app/payments/PaymentsPage.tsx`
+- Admin member payment history: `src/pages/app/admin/user/AdminUserPaymentsPage.tsx`
 - Incident reports list: `src/pages/app/incidents/IncidentsPage.tsx`
 - OOM reports list: `src/pages/app/oom/OomReportsPage.tsx`
 - Profile / Admin user data templates: `src/components/user/UserDataTemplatesPanel.tsx` (server-side `q`, SFI)
 - User namespaces list: `src/components/userNamespaces/UserNamespaceList.tsx` (SFI; numeric ID opens detail; exact `size` plus admin-only `user`/`block_count` filters)
 - User namespace maps list: `src/components/userNamespaces/UserNamespaceMapList.tsx` (SFI; numeric ID opens detail; exact `user_namespace` plus admin-only `user` filter; no server-side `q`)
+
+### Exact terminal pages
+
+An API response containing exactly the visible limit is not evidence that a
+next page exists. Where the endpoint maximum permits it, request one additional
+row, render only the selected limit, and derive the next cursor from the last
+visible row rather than from the hidden sentinel. Keep **Next** available when
+the local cursor stack already contains a forward-visited page.
+
+Both member and administrator user-payment histories follow this pattern.
+`UserPayment.Index` uses descending pagination and explicitly orders by
+`created_at DESC, id DESC`; the current frontend cursor is the smallest visible
+payment ID, matching the endpoint's descending-ID cursor direction. Visible
+limits are 25/50/100 for members and
+25/50/100/200 for administrators, so look-ahead requests remain at or below
+201 rows. This makes the exact-terminal **Next** signal reliable. Complete
+traversal of historical rows whose IDs are not monotonic with `created_at`
+still requires the deterministic upstream cursor/order contract tracked in
+#189; an ID-only `from_id` predicate cannot prove that stronger guarantee.
 
 ### Smart Filter Input pages
 
@@ -169,12 +205,31 @@ The search surface should not overwhelm:
 Admin pages follow the same keyset pagination rules (`from_id`, `limit`, numeric `page` stack in the URL). The page UI may apply additional client-side filtering/sorting **within the loaded page**.
 
 - **Nodes** (`/admin/nodes`)
-  - Primary index: `Node.Index` (`GET /api/v7.0/nodes`) with namespaced params:
+  - Primary index: `Node.Index` (`GET /api/v7.0/nodes`) with namespaced
+    params:
     - `node[from_id]`, `node[limit]` (keyset pagination)
-    - `node[q]` (server-side search by id/name/domain/fqdn)
-    - `node[state]` (`active`/`inactive`/`all`)
-  - Health augmentation: `Node.PublicStatus` (`GET /api/v7.0/nodes/public_status`) (not paginated).
+    - exact filters `node[location]`, `node[environment]`, `node[type]`, and
+      `node[hypervisor_type]`
+    - admin-only `node[state]` (`active`/`inactive`/`all`)
+  - `Node.Index` has no `q` or other full-text input. A single numeric value or
+    `id:<number>` navigates to node detail; arbitrary text and legacy
+    `q`/`search` aliases are reported as unsupported without issuing another
+    list request.
+  - Support accounts cannot send or select `state`: the backend blacklists that
+    input for non-admins and restricts their index to active nodes.
+  - Health augmentation: `Node.PublicStatus`
+    (`GET /api/v7.0/nodes/public_status`) is not paginated. `issues` is a
+    page-local UI filter, derived from public-status health for the current
+    authenticated index page; it is never sent as `node[issues]`.
   - When the authenticated index is unavailable, the page falls back to the public status list (unpaginated).
+  - Legacy `q` URLs are canonicalized before either node query: `q` and the
+    stale `from_id` are removed and `page` is reset to 1, while valid `issues`,
+    `limit`, and (for administrators) `state` survive. Support URLs receive the
+    same pre-query cursor reset and also lose the unauthorized `state` value.
+  - The filter and role contract is separate from the unresolved `from_id`
+    direction/deterministic-ordering problem tracked by issue #189. Until that
+    upstream pagination contract is guaranteed, complete multi-page traversal
+    is not claimed here.
 
 - **Migration plans** (`/admin/migration-plans`)
   - Index: `MigrationPlan.Index` (`GET /api/v7.0/migration_plans`) with `migration_plan[from_id]`, `migration_plan[limit]`.
@@ -211,11 +266,8 @@ Admin pages follow the same keyset pagination rules (`from_id`, `limit`, numeric
 
 - **Mailer log** (`/admin/mailer/log`)
   - Index: `MailLog.Index` (`GET /api/v7.0/mail_logs`) with `mail_log[from_id]`, `mail_log[limit]`.
-  - Filters:
-    - `q` (`mail_log[q]`)
-    - `mail_template` (`mail_log[mail_template]`)
-    - `user` (`mail_log[user]`)
-    - `created_after`, `created_before`
+  - The current API exposes no list filters. The UI offers keyset browsing and exact detail navigation by mail-log ID only.
+  - Legacy `q`, `user`, template and date-filter URLs are normalized before the list request; stale cursor/page state is reset while a supported `limit` is preserved.
 
 - **Mailer templates** (`/admin/mailer/templates`)
   - Index: `MailTemplate.Index` (`GET /api/v7.0/mail_templates`) with `mail_template[from_id]`, `mail_template[limit]`.
@@ -258,12 +310,9 @@ Admin pages follow the same keyset pagination rules (`from_id`, `limit`, numeric
   - UI uses Smart Filter Input (SFI) + an advanced drawer; shareable links preserve filter state.
 
 - **Cluster DNS resolvers** (`/admin/cluster/dns-resolvers`)
-  - Index: `DnsResolver.Index` (`GET /api/v7.0/dns_resolvers`) with `dns_resolver[from_id]`, `dns_resolver[limit]`.
-  - Search + filters: **server-side**.
-    - `q` (`dns_resolver[q]`) – label / IP / `#id`
-    - `is_universal` (`dns_resolver[is_universal]`)
-    - `location` (`dns_resolver[location]`)
-  - UI now uses Smart Filter Input (SFI) + an advanced drawer; shareable links preserve filter state.
+  - Index: `DnsResolver.Index` (`GET /api/v7.0/dns_resolvers`) with `dns_resolver[from_id]`, `dns_resolver[limit]`, and the optional `dns_resolver[vps]` selector used outside the admin catalogue.
+  - The current API does **not** declare `q`, `is_universal`, or `location` list filters. The admin UI therefore presents a paginated catalogue without search/filter controls and removes those stale parameters from old shared URLs.
+  - This matches the legacy cluster UI, which also loads the resolver catalogue without filters. Filtering only the currently loaded page would be incomplete and is intentionally avoided.
 
 - **Cluster OS templates** (`/admin/cluster/os-templates`)
   - Index: `OsTemplate.Index` (`GET /api/v7.0/os_templates`) with server-side filtering.
@@ -292,23 +341,26 @@ Admin pages follow the same keyset pagination rules (`from_id`, `limit`, numeric
 
 - **Cluster networks** (`/admin/cluster/networks`)
   - Index: `Network.Index` (`GET /api/v7.0/networks`) with `network[from_id]`, `network[limit]`.
-  - Filters mapped to API inputs:
-    - `q` (`network[q]`) (label/address search)
+  - Exact filters mapped to API inputs:
     - `location` (`network[location]`)
-    - `ip_version` (`network[ip_version]`)
-    - `role` (`network[role]`)
-    - `managed` (`network[managed]`)
     - `purpose` (`network[purpose]`)
-  - UI now uses Smart Filter Input (SFI) + an advanced drawer; shareable links preserve filter state.
+  - `Network.Index` does **not** declare free-text, `ip_version`, `role`, or
+    `managed` filters. The UI does not offer or send them; legacy URLs carrying
+    them are canonicalized with their stale cursor before the first list GET.
+  - A numeric Smart Filter Input value opens network detail. The advanced
+    drawer and shareable URL expose only `location` and `purpose`.
+  - The shared network lookup uses the supported exact filters to load a
+    bounded candidate set and matches labels/addresses locally; it never sends
+    a fictitious `network[q]` parameter.
 
 - **Cluster resource packages** (`/admin/cluster/resource-packages`)
   - Index: `ClusterResourcePackage.Index` (`GET /api/v7.0/cluster_resource_packages`) with `cluster_resource_package[from_id]`, `cluster_resource_package[limit]`.
-  - Search + filters: **server-side**.
-    - `q` (`cluster_resource_package[q]`) – label / `#id`
-    - `is_personal` (`cluster_resource_package[is_personal]`)
-    - `environment` (`cluster_resource_package[environment]`)
-    - `user` (`cluster_resource_package[user]`)
-  - UI now uses Smart Filter Input (SFI) + an advanced drawer; shareable links preserve filter state.
+  - Exact server-side filters: `environment` and nullable `user` only.
+    - Global/shared scope sends `cluster_resource_package[user]` with a null value.
+    - Personal scope requires a concrete user ID; this avoids pretending that an incomplete client-side page is the complete personal catalogue.
+    - All scope omits the user filter.
+  - The API does not support `q` or `is_personal`; the UI never sends either parameter and normalizes legacy `?q=` links.
+  - A bare numeric smart-filter value opens the package detail. The advanced drawer exposes the supported scope, environment, and user filters, and shareable links preserve them.
 
 - **System config** (`/admin/cluster/system-config`)
   - List is currently loaded in full from `SystemConfig.Index` and filtered client-side.
@@ -332,6 +384,14 @@ Admin pages follow the same keyset pagination rules (`from_id`, `limit`, numeric
 - DNS zone servers status: keyset pagination by `from_id` inside zone detail; admin add/remove actions.
 - Admin DNS servers: server-side `q`, `hidden`, `enable_user_dns_zones`, keyset pagination.
 - Admin DNS TSIG keys: server-side `q`, `user`, `algorithm`, keyset pagination.
+- User DNS TSIG keys (`/app/dns/tsig-keys`): the index request is scoped by
+  the exact authenticated `user` and optional exact `algorithm` filters. The
+  HaveAPI action applies the ascending, exclusive cursor predicate
+  `id > from_id`. The UI requests the visible limit plus one, hides
+  the look-ahead row, and uses the greatest visible ID as the next cursor. An
+  exactly full terminal page therefore disables **Next** without issuing an
+  empty follow-up request. Explicit backend ordering is tracked separately in
+  issue #189.
 
 
 - **Admin networking / Host IP addresses** (`/admin/networking/host-ip-addresses`)

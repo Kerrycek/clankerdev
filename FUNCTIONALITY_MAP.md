@@ -52,6 +52,98 @@ not silently restore historical documents as current requirements.
 
 ---
 
+## Transaction-chain audit pagination
+
+**Status:** `mapped / partial`
+
+The transaction-chain audit at `/app/transactions` and
+`/admin/transactions` preserves the legacy capability to inspect asynchronous
+work by exact chain, state, operation name, concern class/object, user, and user
+session. Arbitrary user scope is admin-only; My view keeps exact filtering by
+the current user's own session. Transaction-item diagnostics and the broader
+task workflows are separate capability slices outside this section.
+
+`TransactionChain.Index` uses descending keyset pagination. WebUI Next asks for
+one more record than the selected visible page size, renders only the selected
+25/50/100 rows, and derives the next cursor from the last visible chain. Next
+is enabled only when the hidden look-ahead record proves another page exists;
+an exact-size final page therefore no longer opens an empty page. A previously
+visited forward cursor remains usable through the shared local cursor stack.
+
+The combined `errors=1` view performs the same look-ahead independently for
+the backend's `failed` and `fatal` states, deduplicates their union, orders it
+by descending chain ID, and only then trims the visible page. Pinned chains are
+supplemental status rows: they do not consume the page size or influence its
+cursor and Next state.
+
+Evidence:
+
+- Backend contract and authorization:
+  `api/lib/vpsadmin/api/resources/transaction_chain.rb` and
+  `api/spec/api/resources/transaction_chain_read_spec.rb` in the read-only
+  upstream vpsAdmin checkout.
+- Legacy audit and filter workflow: `webui/pages/page_transactions.php` in the
+  read-only upstream checkout.
+- WebUI Next page and cursor stack:
+  `src/pages/app/TransactionChainsPage.tsx` and
+  `src/lib/hooks/useKeysetPagination.ts`.
+- Mocked desktop/mobile browser contract:
+  `e2e/specs/app/transaction_chains_keyset_pagination.spec.ts`.
+
+The Playwright contract covers user/admin routes, exact terminal pages, a real
+look-ahead boundary, Prev/Next cursor continuity, and the merged error-state
+stream. It does not mutate or certify live transaction data. This fix makes
+the final-page signal exact, but it does not claim lossless traversal while the
+API applies an ID cursor to a query ordered first by `created_at`; that upstream
+ordering limitation remains tracked by issue #189.
+
+---
+
+## Global object discovery
+
+**Status:** `mapped / implemented`
+
+Authenticated users need a search entry point that stays usable from every
+application route. Administrators use the admin-only `Cluster.Search` action to
+jump across supported cluster objects. Members cannot call that action; WebUI
+Next instead searches only their permitted VPS, IP-address, and DNS-zone
+surfaces, with the backend remaining authoritative for ownership.
+
+The legacy administrator UI kept a small `jumpto` field in its global chrome,
+submitted it to `Cluster.Search`, and either opened a unique result or rendered
+the returned object list. WebUI Next preserves that global discovery capability
+while using two viewport-specific entry points in `src/components/layout`:
+
+- desktop keeps the inline header search and the `Ctrl/Cmd+K` or `/` command
+  palette shortcut;
+- below the `sm` breakpoint, a dedicated search button opens the existing
+  full-screen command palette and focuses its input;
+- public, OAuth, login-required, and forbidden-admin screens do not mount the
+  authenticated application header.
+
+The mobile button and desktop inline form are mutually exclusive, so a compact
+touch target never masquerades as a text field with no writable width. Both
+entry points use the same member/admin search implementations; changing the
+responsive launcher does not change API filters or authorization.
+
+Evidence:
+
+- legacy workflow: read-only upstream `webui/pages/page_jumpto.php` and
+  `webui/template/template.html`;
+- backend authorization and response contract: read-only upstream
+  `api/lib/vpsadmin/api/resources/cluster.rb`;
+- current header, palette, and full-screen modal:
+  `src/components/layout/AppHeader.tsx`, `AppLayout.tsx`,
+  `CommandPalette.tsx`, and `src/components/ui/Modal.tsx`;
+- mocked browser coverage: `e2e/specs/app/header_mobile_controls.spec.ts`,
+  `command_palette.spec.ts`, and `user_global_search.spec.ts`.
+
+The browser tests prove responsive containment, focus, and deterministic search
+behavior against mocks. They do not grant or verify a deployed account's live
+search permissions.
+
+---
+
 ## Incident report listing and exact filters
 
 **Status:** `mapped / implemented`
@@ -105,6 +197,88 @@ desktop/mobile containment. It does not prove a deployed backend's data or
 authorization configuration; that still requires read-only live smoke checks
 with separate admin and non-admin sessions. No create or other mutation is
 part of that live verification.
+
+### Safe admin incident creation
+
+**Status:** `mapped / implemented`
+
+The backend `incident_report#create` action is administrator-only and blocking.
+It requires a VPS, subject, and text, creates the incident, and starts the
+related transaction chain. The legacy WebUI submitted the form synchronously
+and redirected to the affected VPS after success. WebUI Next preserves that
+outcome while showing an explicit pending state and retaining its local VPS
+lock until the request settles.
+
+Submit and Cancel are both unavailable while creation is pending. Cancel is a
+router-link styled as a button, so visual pointer blocking alone is not a safe
+disabled state: keyboard or programmatic activation must not leave the form
+while the blocking request can still succeed. Shared disabled/loading link
+buttons now leave sequential focus order and suppress navigation, propagation,
+and consumer click callbacks. Enabled router-link and anchor behavior is
+unchanged. The compatibility `LinkButton` delegates to the same contract.
+
+Evidence:
+
+- Backend authorization, required inputs, blocking declaration, and transaction
+  side effect: `api/lib/vpsadmin/api/resources/incident_report.rb` in the
+  read-only upstream vpsAdmin checkout.
+- Legacy form and successful redirect:
+  `webui/forms/incidents.forms.php` and `webui/pages/page_incidents.php` in the
+  read-only upstream checkout.
+- WebUI Next workflow and shared control:
+  `src/pages/app/admin/IncidentReportNewPage.tsx`,
+  `src/components/ui/Button.tsx`, and `src/components/ui/LinkButton.tsx`.
+- Unit and mocked browser coverage:
+  `src/components/ui/Button.test.tsx` and
+  `e2e/specs/app/vps_report_incident_action.spec.ts`.
+
+The Playwright scenario deliberately delays a mocked create response to prove
+that keyboard and programmatic Cancel activation stay on the form, then lets
+the request complete and verifies the existing VPS redirect. It is not live
+mutation certification and does not validate a deployed API or permission
+configuration.
+---
+
+## Core VPS inventory pagination
+
+**Status:** `mapped / partial`
+
+The shared VPS inventory at `/app/vps` and `/admin/vps` follows the deployed
+HaveAPI `from_id` contract: the endpoint advances with the exclusive predicate
+`id > from_id`. WebUI Next requests one bounded lookahead row, renders only the
+selected 25, 50, or 100 rows, and uses the greatest visible VPS ID as the next
+cursor. The hidden row distinguishes a full page with more data from an
+exactly full terminal page. Previously visited forward cursors remain
+available after returning to an earlier page, and a stale cursor that produces
+an empty page offers Previous instead of trapping the user in the empty state.
+Browser Back and Forward restore the URL's filter set and its deep cursor
+without a page-one request using stale local filter drafts.
+
+Administrator filters for owner, node, location, namespace map, and hostname
+remain server-side and reset pagination before the filtered request. In the
+member workspace, privileged users in My view send their own owner ID while
+regular users rely on the backend's mandatory owner restriction. Runtime-state
+and IP-shaped searches remain client-side filters of the fetched page; they are
+not full-inventory searches.
+
+Evidence:
+
+- Backend resource: `api/lib/vpsadmin/api/resources/vps.rb` in the read-only
+  upstream vpsAdmin checkout, which applies HaveAPI `with_pagination`.
+- WebUI Next request and page-window logic:
+  `src/pages/app/VpsListPage.tsx` and
+  `src/pages/app/vps/vpsListSemantics.ts`.
+- Unit and strict mocked-browser coverage:
+  `src/pages/app/vps/vpsListSemantics.test.ts`,
+  `e2e/specs/app/vps_list_keyset_pagination.spec.ts`, and
+  `e2e/specs/app/admin_scope_filters_requests.spec.ts`.
+
+The upstream VPS index does not yet declare an explicit deterministic order,
+so this UI follows the deployed ascending ID behavior but cannot itself
+guarantee ordering if the backend changes it. That upstream hardening remains
+tracked separately.
+
+---
 
 ## Identity lifecycle and requests
 
@@ -190,11 +364,15 @@ Current implementation:
 | Show change request | `GET /v7.0/user_request/changes/:id` |
 | Resolve change request | `POST /v7.0/user_request/changes/:id/resolve` |
 
-The UI merges the two independently paginated lists by descending ID. Its
-default admin queue requests only `awaiting`; `pending_correction` is a separate
-queue and `state=all` is explicit. Filter state and keyset position are kept in
-the URL. The list sends only structured filters declared by the Requests API;
-it does not send the unsupported `q` parameter.
+The UI merges the two independently paginated lists by descending ID. Both are
+STI views of the same globally numbered request table, so they safely share one
+exclusive `from_id` cursor. Each endpoint fetches one lookahead row beyond the
+visible page size; the merged lookahead decides whether **Next** is available,
+while the cursor always comes from the last visible row. Its default admin queue
+requests only `awaiting`; `pending_correction` is a separate queue and
+`state=all` is explicit. Filter state and keyset position are kept in the URL.
+The list sends only structured filters declared by the Requests API; it does not
+send the unsupported `q` parameter.
 
 #### Registration review data and side effects
 
@@ -642,6 +820,51 @@ end-to-end password recovery is currently enabled or deployed.
 
 ---
 
+## Transaction-item diagnostics and reliable page boundaries
+
+**Status:** `mapped / implemented`
+
+The shared transaction-item list at `/app/transactions/items` and
+`/admin/transactions/items` is the drill-down for asynchronous operational
+work. It exposes the backend's exact `transaction_chain`, `node`, `type`,
+`done`, and `success` filters; a numeric transaction ID opens its detail rather
+than pretending to be a full-text search. Regular users remain restricted by
+the backend to their own transactions, while the administrator response also
+contains operational fields such as user, type, urgency, priority, input, and
+output.
+
+`Transaction::Index` applies descending keyset pagination and explicitly orders
+by `transactions.id DESC`; `from_id` is an exclusive boundary. WebUI Next asks
+for the selected visible limit plus one, renders only the visible rows, and
+uses the extra row only as proof that another page exists. The next cursor is
+always the last visible transaction ID. This intentionally improves on the
+legacy `Pagination\System` count-equals-limit heuristic, which offered a false
+Next action whenever the final page happened to be exactly full. The largest
+UI page requests 501 records, within the API maximum of 1000.
+
+Evidence:
+
+- backend contract and authorization:
+  `api/lib/vpsadmin/api/resources/transaction.rb` and
+  `api/spec/api/resources/transaction_read_spec.rb` in the read-only upstream
+  checkout;
+- legacy chain/item workflow and paginator:
+  `webui/pages/page_transactions.php` and `webui/lib/pagination.lib.php` in the
+  read-only upstream checkout;
+- WebUI Next request and list implementation:
+  `src/lib/api/transactions.ts`, `src/pages/app/TransactionsListPage.tsx`, and
+  `src/pages/app/transactions/TransactionItemsRouteGuard.tsx`;
+- deterministic desktop/mobile contract coverage:
+  `e2e/specs/app/transactions_items_keyset_pagination.spec.ts`.
+
+The Playwright test proves the lookahead request, hidden sentinel, exclusive
+cursor continuity, exact-terminal Next state, previous-page history, and both
+user/admin route variants against a strict mock. It performs no live mutation.
+A read-only live smoke check can confirm deployed rendering and authorization,
+but real data cannot deterministically guarantee an exact page boundary.
+
+---
+
 ## Dataset backup-plan automation
 
 ### Capability: understand, assign, and remove automatic dataset plans
@@ -727,6 +950,393 @@ These tests validate the browser/API contract without mutating a real dataset.
 A live assignment would create scheduled work and therefore requires a
 disposable dataset and an agreed cleanup plan; it is not implied by the mocked
 evidence.
+
+## User payment history traversal
+
+**Status:** `mapped / partial`
+
+Authenticated members can inspect their accepted-payment history on
+`/app/payments`; administrators can inspect the same history for a selected
+member on `/admin/users/:userId/payments`. The administrator surface keeps the
+related account settings and manual-payment controls, but browsing history is
+read-only and does not invoke those mutations.
+
+`UserPayment::Index` owner-restricts ordinary members, accepts an exact `user`
+scope for administrators, applies descending keyset pagination, and orders by
+`created_at DESC, id DESC`. Both WebUI Next surfaces use the endpoint's existing
+descending ID cursor, ask for one additional row, render only the selected
+limit, and expose **Next** only when that hidden look-ahead row exists (or a
+forward page was already visited). This avoids an empty page when the final
+result contains exactly 25, 50, 100, or the administrator-only 200 rows. The
+largest request is 201 rows, below the HaveAPI maximum of 1,000.
+
+The current backend cursor predicate is ID-only even though time is the primary
+sort key. Historical rows whose IDs are not monotonic with `created_at` can
+therefore still be skipped by complete multi-page traversal. Issue #189 tracks
+the required deterministic upstream order/cursor contract; this frontend fix
+claims only truthful exact-terminal detection under the current API.
+
+The legacy administrator-wide payment history uses `from_id`, but its shared
+paginator infers another page from `count == limit`; it therefore has the same
+exact-terminal false positive. The legacy per-user payment panel lists a
+single bounded result without pagination controls. WebUI Next intentionally
+provides consistent traversable history in both member and administrator
+contexts while preserving the API's role boundary.
+
+Evidence:
+
+- Backend ordering, filtering, and authorization:
+  `plugins/payments/api/resources/user_payment.rb` in the read-only upstream
+  checkout.
+- Legacy administrator and per-user presentations:
+  `webui/forms/users.forms.php` and `webui/lib/pagination.lib.php` in the
+  read-only upstream checkout.
+- WebUI Next API wrapper and surfaces: `src/lib/api/payments.ts`,
+  `src/pages/app/payments/PaymentsPage.tsx`, and
+  `src/pages/app/admin/user/AdminUserPaymentsPage.tsx`.
+- Deterministic desktop/mobile contract coverage:
+  `e2e/specs/app/payments_page.spec.ts` and
+  `e2e/specs/admin/user_payments_smoke.spec.ts`.
+
+The browser tests use strict HaveAPI mocks with monotonic IDs/timestamps to
+prove the look-ahead boundary, current ID-cursor continuity, owner/admin request
+shapes, and visible row limit. Authorization and owner restriction are evidenced
+by the cited upstream resource rather than emulated by the browser mock. The
+tests do not prove traversal of non-monotonic live history, certify live payment
+data, or perform a real payment/account mutation.
+
+---
+
+## DNS record change history
+
+**Status:** `mapped / implemented`
+
+The authenticated zone log at `/app/dns/zones/:zoneId/logs` lists record
+changes for one mandatory `dns_zone` scope. Its optional server-side filters
+match the HaveAPI contract exactly: record `name`, record `type`, and
+`change_type`. All three are exact-match filters. The backend does not declare
+a general `q` input, so WebUI Next neither advertises nor sends one.
+
+The controls keep an editable draft and send a request only after **Apply
+filters**. Applied state is stored in the URL. Before the first list request,
+the page removes a stale `q`, blank names, unsupported type/change values, and
+their stale cursor. Applying or clearing valid filters likewise resets
+`from_id` and page to the first keyset page, while the selected page size
+remains intact. Change badges translate the real enum values `create_record`,
+`update_record`, and `delete_record`; an unknown future value remains visible
+as neutral raw text.
+
+Contract and implementation evidence:
+
+- backend: `api/lib/vpsadmin/api/resources/dns_record_log.rb` and
+  `api/models/dns_record_log.rb` in the read-only upstream repository;
+- legacy structured filters: `webui/forms/dns.forms.php` in the read-only
+  upstream repository;
+- WebUI Next: `src/pages/app/dns/DnsZoneLogsPage.tsx` and
+  `src/lib/api/dns.ts`;
+- focused checks: `src/lib/api/dns.test.ts` and
+  `e2e/specs/app/dns_zone_logs_keyset_pagination.spec.ts`.
+
+The Playwright check uses a strict deterministic HaveAPI mock and covers exact
+query serialization, URL/apply/clear behavior, keyset reset, enum badges, and
+desktop/mobile containment. It does not prove that a deployed API accepts the
+filters, returns production-shaped history, or enforces zone ownership. A
+read-only live smoke check should inspect the three filtered GET requests with
+an owned test zone; no DNS mutation is needed for that verification.
+
+---
+## Pending mutation confirmation safety
+
+**Status:** `mapped / implemented`
+
+Administrators and users must retain visible context while a confirmed write is
+still awaiting its API result. The shared confirmation dialog therefore treats
+`confirmLoading` and `cancelDisabled` as one cancellation contract: the Cancel
+button, Escape key, and backdrop click are all inert until cancellation is
+allowed again. This prevents a slow write from being hidden while its outcome
+is still unknown. When a confirmation is opened from a drawer, Escape ownership
+also stays with the foreground overlay: a newer modal can close without taking
+the drawer and its pending confirmation with it.
+
+Node maintenance is the concrete admin workflow used for browser verification.
+The backend exposes the admin-only
+`POST /v7.0/nodes/:node_id/set_maintenance` action with required `lock` and an
+optional reason. The legacy WebUI submits the maintenance form and waits for
+that API action before redirecting or showing the failure. WebUI Next keeps its
+responsive confirmation visible during the same in-flight interval and closes
+it after the successful result.
+
+Evidence:
+
+- Backend contract: `api/lib/vpsadmin/api/maintainable.rb` in the read-only
+  upstream checkout.
+- Legacy workflow: `webui/pages/page_cluster.php` in the read-only upstream
+  checkout.
+- Shared UI contract: `src/components/ui/ConfirmDialog.tsx`,
+  `src/components/ui/Drawer.tsx`, and `src/components/ui/ConfirmDialog.test.tsx`.
+- Delayed admin mutation coverage:
+  `e2e/specs/admin/node_detail_control_center.spec.ts`.
+
+The component test exercises every dismissal path directly from pending props.
+The Playwright test uses a delayed mocked maintenance endpoint to prove that
+keyboard, pointer, and visible button dismissal remain blocked without sending
+a duplicate write. Neither test performs or certifies a live maintenance
+mutation.
+
+---
+
+### MFA known-device history and pagination
+
+Status: `mapped / implemented` for the active-device list, responsive review,
+local page filter, pagination, and explicit Forget action in both the account
+and administrator user views.
+
+#### Purpose and backend contract
+
+The legacy administrator UI presents known login devices so an operator can
+review browser, operating-system, address, last-seen, and temporary MFA-trust
+information and explicitly forget a device. It accepts a bounded limit but does
+not expose cursor navigation. WebUI Next keeps that security-review purpose,
+adds the same panel to the owner's MFA page, and retains an explicit confirmed
+Forget action.
+
+The API resource is nested at `users/:userId/known_devices`. It returns only
+active `UserDevice` rows for the path owner and authorizes either an
+administrator or that exact owner. Its HaveAPI pagination cursor is exclusive
+and ascending (`id > from_id`); there is no arbitrary-user query filter to
+invent or widen.
+
+#### Current WebUI Next workflow
+
+- `/app/profile/mfa` reviews the signed-in owner's devices, while
+  `/admin/users/:userId/mfa` uses the same panel for the exact path user.
+- Each page requests one bounded lookahead row (26, 51, or 101), renders and
+  summarizes only the selected 25, 50, or 100 visible rows, and never exposes
+  the sentinel through the local filter.
+- Next uses the greatest valid visible ID. An exact terminal page disables
+  forward navigation instead of opening an empty page.
+- A previously visited forward edge is replaced from the current successful
+  response and later remembered edges are hidden. If removal empties the
+  current cursor page, the URL is replaced with the closest previous page, so
+  neither page controls nor browser history can reopen the obsolete edge.
+- Background refresh keeps the current page structure mounted while disabling
+  navigation, so periodic polling cannot drop a focused page control.
+- Changing the local page filter removes `from_id` and returns to page 1 before
+  the replacement page request; browser Back and Forward hydrate the input and
+  restore only the cursor belonging to that historical filter state.
+
+Current sources:
+
+- `src/components/user/UserKnownDevicesPanel.tsx`;
+- `src/components/user/UserKnownDevicesModel.ts`;
+- `src/components/user/UserKnownDevicesList.tsx`;
+- `src/lib/api/userDossier.ts`.
+
+#### Test evidence and limits
+
+- `src/components/user/UserKnownDevicesModel.test.ts` verifies hidden
+  lookahead rows, maximum visible cursors, exact terminal pages, and fail-closed
+  invalid IDs.
+- `e2e/specs/app/known_devices_keyset_pagination.spec.ts` uses a finite mock
+  that enforces `id > from_id` and the requested limit. Desktop and mobile runs
+  cover owner and administrator paths, non-overlapping pages, terminal state,
+  local-filter reset, responsive containment, and forward-edge rebuilding after
+  a confirmed in-memory Forget.
+
+The browser tests do not forget a real device or mutate a live account. The
+upstream index does not declare an explicit deterministic order; that broader
+backend contract risk remains tracked separately in issue #189.
+
+---
+
+## Cluster network list and exact filters
+
+**Status:** `mapped / implemented`
+
+The administrator network list at `/admin/cluster/networks` follows the
+declared `Network.Index` contract. Its only server-side selection inputs are
+`location` and `purpose`; `limit` and ascending-ID `from_id` provide keyset
+pagination. IP version, role, managed state, labels, and addresses remain
+network object fields, but the index action does not declare them as filters.
+
+The list therefore exposes only `location:` and `purpose:` exact filters.
+Entering a numeric ID opens network detail. Plain text and the historical
+`q`, `ip_version`, `role`, and `managed` forms produce an explicit validation
+message without issuing another list request. Bookmarks containing those
+unsupported parameters are replaced with a canonical URL and reset to page 1
+before the list component mounts, so an unfiltered response is never presented
+as filtered. The shared network picker similarly loads a bounded result set
+using only supported exact API inputs and performs its label/address matching
+locally.
+
+Evidence:
+
+- Backend contract: `api/lib/vpsadmin/api/resources/network.rb` in the
+  read-only upstream checkout.
+- Legacy list behavior: `webui/forms/cluster.forms.php` in the read-only
+  upstream checkout; it requests the network list without the invented
+  filters.
+- WebUI Next implementation: `src/lib/api/networks.ts`,
+  `src/pages/app/admin/cluster/NetworksPage.tsx`, and
+  `src/components/ui/NetworkLookupInput.tsx`.
+- Automated contract evidence: `src/lib/api/networks.test.ts`,
+  `src/pages/app/admin/cluster/networkFilterSemantics.test.ts`,
+  `src/components/ui/NetworkLookupInput.test.ts`, and
+  `e2e/specs/admin/cluster_networks_filter_contract.spec.ts`.
+
+The Playwright test uses deterministic HaveAPI mocks to prove request
+serialization, URL normalization, validation, and desktop/mobile controls. It
+does not claim that a deployed API contains particular network records.
+
+---
+
+## Cluster resource packages
+
+**Status:** `mapped / implemented`
+
+Resource packages group cluster-resource adjustments that administrators can
+assign to users. A shared package has no owner or environment and can be
+created, edited, assigned, and removed independently. A personal package is
+owned by one user in one environment and cannot be deleted independently.
+
+`ClusterResourcePackage.Index` supports keyset pagination plus exact
+`environment` and nullable `user` filters. It has no full-text or
+`is_personal` input. WebUI Next therefore defaults the catalogue to shared
+packages with `user: null`, requires a concrete user before loading the
+personal scope, and omits the user filter only for the explicit all scope.
+Label search was removed because applying it to one paginated page would claim
+incomplete results; an ID still opens the detail directly.
+
+The legacy cluster page also lists shared packages with `user: null`; personal
+packages are normally reached through a user's resource view. WebUI Next keeps
+that reliable default while retaining exact user/environment inspection in the
+advanced filters.
+
+Implementation and evidence:
+
+- `src/pages/app/admin/cluster/ResourcePackagesPage.tsx`
+- `src/lib/api/clusterResourcePackages.ts`
+- `src/lib/api/clusterResourcePackages.test.ts`
+- `e2e/specs/admin/cluster_resource_packages_filter_contract.spec.ts`
+
+The browser coverage uses a contract-sensitive mock on desktop and mobile. The
+filter contract was also checked read-only against the deployed API source;
+no live resource package was mutated.
+
+---
+
+## Admin node index filtering and health view
+
+**Status:** `mapped / partial`
+
+### Purpose and actors
+
+The node list at `/admin/nodes` lets administrators and support staff inspect
+the cluster inventory and current health, then open an exact node detail.
+Administrators may include inactive nodes; support accounts are intentionally
+active-only, matching the backend restriction rather than presenting a state
+control that the API would ignore.
+
+### Index, filter, and status contract
+
+| Concern | Current contract |
+| --- | --- |
+| Authenticated inventory | `Node.Index` (`GET /v7.0/nodes`) accepts `from_id` and `limit` plus exact `location`, `environment`, `type`, and `hypervisor_type` filters. |
+| State | `state` accepts `active`, `inactive`, or `all` for administrators only. `Node.Index` blacklists it for non-admins and restricts support output to active nodes, so the support UI neither displays nor sends it. |
+| Text search | The action has no `q` or other full-text input. The UI does not claim name, domain, or FQDN search and never sends `node[q]`. |
+| Exact navigation | A single numeric value or `id:<number>` opens `/admin/nodes/:id`; it is navigation, not an index filter. |
+| Health and issues | Unpaginated `Node.PublicStatus` (`GET /v7.0/nodes/public_status`) augments the authenticated rows. `issues` is computed from public-status health after the current index page is loaded, so it is explicitly page-local and is never sent as `node[issues]`. |
+| Degraded read path | If the authenticated index fails, the page can still show the unpaginated public-status list; if public status fails, it can show authenticated metadata without health. |
+
+The smart input retains useful page-local `issues` filtering and exact numeric
+navigation. Arbitrary text, including `q:` and `search:` aliases, produces
+actionable unsupported-search feedback without changing the canonical URL or
+issuing a replacement list request.
+
+Direct-entry URLs are normalized before either the inventory or public-status
+query mounts. A legacy `q` value is removed, the stale `from_id` is removed,
+and presentational `page` is reset to 1 while valid `issues`, `limit`, and an
+administrator's `state` survive. For support accounts, a stale or forged
+`state` is also removed before the first request. This prevents the page from
+showing an active filter whose corresponding API input was ignored.
+
+### Evidence and remaining gap
+
+- Backend input and authorization contract:
+  `api/lib/vpsadmin/api/resources/node.rb` in the read-only upstream vpsAdmin
+  checkout.
+- Legacy cluster overview without a full-text-search claim:
+  `webui/forms/cluster.forms.php` in the read-only upstream checkout.
+- WebUI Next request and list behavior: `src/lib/api/nodes.ts`,
+  `src/pages/app/admin/NodesPage.tsx`,
+  `src/pages/app/admin/NodesFilters.tsx`, and
+  `src/pages/app/admin/NodesModel.ts`.
+- Contract tests: `src/lib/api/nodes.test.ts`,
+  `src/pages/app/admin/NodesModel.test.ts`, and
+  `e2e/specs/admin/nodes_filter_contract.spec.ts`.
+
+The deterministic tests cover serialization, direct-entry URL hygiene, the
+admin/support role boundary, unsupported text, page-local issues, and numeric
+navigation against HaveAPI mocks. They do not establish a deployed server's
+multi-page behavior. The remaining partial status is specifically the separate
+`from_id` cursor-direction and deterministic-ordering contract in issue #189;
+issue #227 corrects filter/search semantics but does not resolve or mask that
+pagination risk.
+
+---
+
+## OOM report list traversal
+
+**Status:** `mapped / partial`
+
+OOM reports are troubleshooting records for memory-pressure kills. Members and
+support users can browse reports for their own VPSes on `/app/oom-reports`;
+administrators can use the same owner-oriented view or inspect the global list
+on `/admin/oom-reports`. Browsing the list is read-only and does not create,
+change, or remove the separate OOM notification rules.
+
+`OomReport::Index` owner-restricts non-administrators and blacklists their
+`user` filter. Administrators may filter the global list by user. The resource
+also accepts exact VPS, node, location, environment, rule, and cgroup filters,
+plus inclusive since/until time bounds. It applies HaveAPI descending ID
+pagination and then orders the result by `oom_reports.created_at DESC`.
+
+WebUI Next offers visible limits of 25, 50, or 100 reports. It requests one
+additional row, renders only the selected limit, derives `from_id` from the
+last visible report, and enables **Next** only when the hidden look-ahead row
+exists or the local cursor stack already contains a visited forward page. The
+largest request is therefore 101 rows, below HaveAPI's maximum of 1,000. This
+removes the empty next page at an exact terminal boundary and preserves forward
+navigation after returning to an earlier page.
+
+The legacy report form requests exactly its visible limit. Its shared paginator
+also assumes another page whenever the response count equals that limit, so it
+has the same exact-terminal false positive. Following that false signal to an
+empty WebUI Next result also removed its paginator, leaving browser Back as the
+only recovery. Legacy does preserve known forward history; the inverted
+`!pagination.hasForward` gate was specific to the former WebUI Next
+implementation and disabled **Next** despite an already visited forward page.
+
+Backend evidence comes from the read-only upstream
+`api/lib/vpsadmin/api/resources/oom_report.rb`,
+`api/lib/vpsadmin/supervisor/node/oom_reports.rb`, and the pinned HaveAPI
+pagination implementation. Legacy evidence comes from
+`webui/forms/oom_reports.forms.php` and `webui/lib/pagination.lib.php`. Current
+implementation and deterministic desktop/mobile coverage are in
+`src/pages/app/oom/OomReportsPage.tsx` and
+`e2e/specs/app/oom_reports_smart_filter.spec.ts`.
+
+The browser test proves the 26-row request and hidden sentinel, a two-page
+50-report boundary, visible-row cursor continuity, the exact terminal state,
+and Prev → reload → Next behavior using strict HaveAPI mocks. It does not claim
+a live OOM report or rule mutation.
+
+Complete traversal remains an upstream limitation: `from_id` filters by ID,
+while the primary order is `created_at`, and node ingestion sets that timestamp
+from the reported event time. IDs that are non-monotonic with event time, or
+reports sharing the same timestamp, can still be skipped or repeated. Issue
+#189 tracks the required deterministic aligned order/cursor contract; this
+frontend change claims only the narrower UI guarantees above.
 
 ---
 
@@ -821,12 +1431,12 @@ current UX, and end-to-end evidence.
 | Dataset backup-plan automation | backup-center workspace and dataset/NAS plan details; see the mapped capability above | `mapped / implemented` |
 | Backup Center | cross-dataset overview, snapshots, generated downloads, and restore guidance; plan assignment is mapped separately above | `inventory only` |
 | Exports | list and detail | `inventory only` |
-| DNS | zones; records, transfers, DNSSEC, servers, settings, logs; user TSIG keys | `inventory only` |
+| DNS | zones; records, transfers, DNSSEC, servers, settings, logs; user TSIG keys (pagination mapped below) | `mapped / partial` |
 | Networking | user addresses/traffic/live networking surface | `inventory only` |
-| Operations | transaction chains/items, action states, monitoring events | `inventory only` |
-| Support events | incidents including report creation; OOM reports, details, and rules | `inventory only` |
-| Payments | user payment/billing surface | `inventory only` |
-| Account | profile, resources, security, MFA, mail, keys, sessions, metrics tokens, and user data | `inventory only` |
+| Operations | transaction-chain audit pagination is mapped above; transaction-item diagnostics, action states, monitoring events, and broader task behavior are tracked as separate slices | `mapped / partial` |
+| Support events | incidents including report creation; OOM reports, details, and rules; OOM list traversal is mapped above | `inventory only` |
+| Payments | user payment/billing surface; history traversal is mapped above | `inventory only` |
+| Account | profile, resources, security, MFA, mail, keys, sessions, metrics tokens, user data | `inventory only` |
 | User namespaces | owner namespace/map browsing and VPS map selection; see the mapped capability above | `mapped / implemented` |
 
 ### Administrator surfaces
@@ -836,7 +1446,7 @@ current UX, and end-to-end evidence.
 | Admin dashboard | global operational overview | `inventory only` |
 | VPS, datasets, NAS, exports, DNS | admin-scoped versions of the core service surfaces | `inventory only` |
 | Networking | IP addresses/detail, host IPs, assignments, live view, traffic by user | `inventory only` |
-| Users | list/detail; resources/usage, payments, environment config, security, MFA, sessions, keys, metrics, mail, user data, history | `inventory only` |
+| Users | list/detail; resources/usage with distinct loading, empty, and retryable error states; payments, environment config, security, MFA, sessions, keys, metrics, mail, user data, history | `inventory only` |
 | User namespaces | namespace and map lists/details; see the mapped capability above | `mapped / implemented` |
 | Finance | global overview, income forecast, incoming-payment list/detail/assignment and reconciliation | `inventory only` |
 | Audit | history list and event detail | `inventory only` |
@@ -844,8 +1454,9 @@ current UX, and end-to-end evidence.
 | Security advisories | admin lifecycle and affected-object workflow | `inventory only` |
 | Mailer | templates/translations, mailboxes, recipients, logs | `inventory only` |
 | Content | news and contextual help-box administration | `inventory only` |
-| Cluster | summary, environments, locations, OS templates, networks, resource packages, system config, DNS resolvers/servers/TSIG keys | `inventory only` |
-| Nodes | list/detail, lifecycle and pool maintenance controls | `inventory only` |
+| Cluster | summary, environments, locations, OS templates, networks, resource packages, system config, DNS resolvers/servers/TSIG keys; the resolver catalogue/CRUD follows the real pagination-only API and legacy unfiltered list | `inventory only` |
+| Cluster resource packages | shared/personal catalogue, exact scope filters, detail items and assignments | `mapped / implemented` |
+| Nodes | list/detail, lifecycle and pool maintenance controls; index filtering and health are mapped above | `mapped / partial` — multi-page ordering remains issue #189 |
 | Migration plans | plan list/detail and migration scheduling/control | `inventory only` |
 | Admin diagnostics | `/admin/admin-info` | `inventory only` |
 
@@ -862,3 +1473,47 @@ current UX, and end-to-end evidence.
 | Responsive/accessibility behavior | desktop/mobile list variants, drawers, focus-trap tests, localized labels | `inventory only` |
 | Localization/preferences | Czech/English resources, UI preferences, theme and time-zone handling | `inventory only` |
 | Deployment/live parity | build metadata, dev deployment scripts, live route sweep and optional parity suite | `inventory only` |
+
+---
+
+## User DNS TSIG key pagination
+
+### Capability: browse an owner-scoped TSIG key list without repeating pages
+
+The authenticated user route `/app/dns/tsig-keys` lists the current user's
+TSIG keys, optionally filtered by algorithm. Every index request includes the
+authenticated user ID, and the client rejects the complete raw response if any
+row belongs to another user. This keeps the page fail-closed if the backend's
+owner scoping ever regresses.
+
+The backend `DnsTsigKey.Index` action uses HaveAPI keyset pagination with the
+ascending, exclusive cursor predicate `id > from_id`. The page therefore
+requests one more row than the selected visible limit, renders only the visible
+rows, and uses the greatest visible ID as the next cursor. The hidden look-ahead
+row is the sole evidence that another page exists. Previously, this user route
+used a descending-page cursor and treated an exactly full response as proof of
+another page; that could repeat already visible rows and expose an empty
+terminal page.
+
+Current sources:
+
+- `src/pages/app/dns/DnsTsigKeysPage.tsx`;
+- `src/pages/app/dns/dnsTsigKeyPagination.ts`;
+- `src/lib/api/dns.ts`;
+- upstream `api/lib/vpsadmin/api/resources/dns_tsig_key.rb` (read-only contract
+  reference).
+
+### Test evidence and limits
+
+- `src/pages/app/dns/dnsTsigKeyPagination.test.ts` verifies the ascending
+  cursor, hidden look-ahead row, exact terminal page, and empty-page behavior.
+- `e2e/specs/app/dns_tsig_keys.spec.ts` covers the two-page browser workflow on
+  desktop and mobile: owner filter, `limit + 1`, cursor URL, non-overlapping
+  rows, terminal **Next**, and backward navigation.
+- Existing end-to-end coverage verifies owner scoping, one-time secret display,
+  creation, and fail-closed handling of a foreign-owner response.
+
+The deterministic tests prove the client/API contract without creating or
+deleting a real TSIG key. The upstream action does not currently declare an
+explicit order; issue #189 remains the broader hardening task for stable
+ordering across DNS indexes.

@@ -19,6 +19,10 @@ import {
   resolveOrderValue,
   resolveVersionValue,
 } from './ipAddressListSemantics';
+import {
+  isIpAddressSmartFeedbackCurrent,
+  shouldCancelIpAddressLookup,
+} from './ipAddressSmartSearchGuard';
 
 interface UseIpAddressSmartSearchOptions {
   searchParams: URLSearchParams;
@@ -30,6 +34,11 @@ interface UseIpAddressSmartSearchOptions {
   openIp: (ipId: number) => void;
   setAddressFilter: (addr: string, prefix?: string) => void;
   clearUrlFilters: () => void;
+}
+
+function readCurrentSearchParamsSignature(fallback: string): string {
+  if (typeof window === 'undefined') return fallback;
+  return new URLSearchParams(window.location.search).toString();
 }
 
 export function useIpAddressSmartSearch({
@@ -51,6 +60,9 @@ export function useIpAddressSmartSearch({
   const [smartSearchBlocked, setSmartSearchBlocked] = useState(false);
   const lookupGenerationRef = useRef(0);
   const lookupAbortRef = useRef<AbortController | null>(null);
+  const lookupSearchParamsSignatureRef = useRef<string | null>(null);
+  // A late Router effect for the same URL must not erase feedback from a lookup that already finished.
+  const smartFeedbackSearchParamsSignatureRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (smartNeedle === '?') setHelpOpen(true);
@@ -60,36 +72,52 @@ export function useIpAddressSmartSearch({
     lookupGenerationRef.current += 1;
     lookupAbortRef.current?.abort();
     lookupAbortRef.current = null;
+    lookupSearchParamsSignatureRef.current = null;
     setSmartResolving(false);
   }, []);
 
   const searchParamsSignature = searchParams.toString();
-  const latestSearchParamsSignatureRef = useRef(searchParamsSignature);
   const previousSearchParamsSignatureRef = useRef(searchParamsSignature);
-  latestSearchParamsSignatureRef.current = searchParamsSignature;
 
   useEffect(() => {
     if (previousSearchParamsSignatureRef.current === searchParamsSignature) return;
 
     previousSearchParamsSignatureRef.current = searchParamsSignature;
-    if (lookupAbortRef.current) cancelLookup();
-    setSmartErrors([]);
-    setSmartSearchBlocked(false);
+    if (
+      lookupAbortRef.current &&
+      shouldCancelIpAddressLookup(
+        lookupSearchParamsSignatureRef.current,
+        searchParamsSignature
+      )
+    ) cancelLookup();
+    if (
+      !isIpAddressSmartFeedbackCurrent(
+        smartFeedbackSearchParamsSignatureRef.current,
+        searchParamsSignature
+      )
+    ) {
+      smartFeedbackSearchParamsSignatureRef.current = null;
+      setSmartErrors([]);
+      setSmartSearchBlocked(false);
+    }
   }, [cancelLookup, searchParamsSignature]);
 
   useEffect(() => () => {
     lookupGenerationRef.current += 1;
     lookupAbortRef.current?.abort();
     lookupAbortRef.current = null;
+    lookupSearchParamsSignatureRef.current = null;
   }, []);
 
   const clearSmartErrors = () => {
+    smartFeedbackSearchParamsSignatureRef.current = null;
     setSmartErrors([]);
     setSmartSearchBlocked(false);
   };
 
   const dismissSmartErrors = useCallback(() => {
     cancelLookup();
+    smartFeedbackSearchParamsSignatureRef.current = null;
     setSmartValue('');
     setSmartErrors([]);
     setSmartSearchBlocked(false);
@@ -111,6 +139,7 @@ export function useIpAddressSmartSearch({
 
   const clearFilters = () => {
     cancelLookup();
+    smartFeedbackSearchParamsSignatureRef.current = null;
     setSmartValue('');
     setSmartErrors([]);
     setSmartSearchBlocked(false);
@@ -128,16 +157,21 @@ export function useIpAddressSmartSearch({
 
     lookupAbortRef.current?.abort();
     lookupAbortRef.current = null;
+    lookupSearchParamsSignatureRef.current = null;
     setSmartResolving(false);
     const generation = lookupGenerationRef.current + 1;
     lookupGenerationRef.current = generation;
 
-    const initialSearchParamsSignature = searchParamsSignature;
+    // React Router can expose the new browser URL before this hook has rendered
+    // its matching searchParams object. Read the URL at submit time so a fast
+    // follow-up lookup is not mistaken for a stale request by a late effect.
+    const initialSearchParamsSignature = readCurrentSearchParamsSignature(searchParamsSignature);
     const tokens = tokenizeSmartInput(input);
 
     if (tokens.length === 1) {
       const num = parseNumericToken(tokens[0] ?? '');
       if (num) {
+        smartFeedbackSearchParamsSignatureRef.current = null;
         openIp(num);
         setSmartValue('');
         setSmartErrors([]);
@@ -146,7 +180,7 @@ export function useIpAddressSmartSearch({
       }
     }
 
-    const next = new URLSearchParams(searchParams);
+    const next = new URLSearchParams(initialSearchParamsSignature);
     const plain: string[] = [];
     const errors: string[] = [];
     const userLogins: string[] = [];
@@ -194,6 +228,7 @@ export function useIpAddressSmartSearch({
           const id = parseNumericToken(valueRaw);
           if (!id) errors.push(t('admin.ip_addresses.smart.error.id', { value: valueRaw }));
           else {
+            smartFeedbackSearchParamsSignatureRef.current = null;
             setSmartValue('');
             setSmartErrors([]);
             setSmartSearchBlocked(false);
@@ -289,6 +324,7 @@ export function useIpAddressSmartSearch({
       usedUserLookup = true;
       const controller = new AbortController();
       lookupAbortRef.current = controller;
+      lookupSearchParamsSignatureRef.current = initialSearchParamsSignature;
       setSmartResolving(true);
 
       let resolvedUserId: number | null = null;
@@ -303,7 +339,7 @@ export function useIpAddressSmartSearch({
       if (
         controller.signal.aborted ||
         lookupGenerationRef.current !== generation ||
-        latestSearchParamsSignatureRef.current !== initialSearchParamsSignature
+        readCurrentSearchParamsSignature(searchParamsSignature) !== initialSearchParamsSignature
       ) return;
 
       if (resolvedUserId === null) {
@@ -315,18 +351,21 @@ export function useIpAddressSmartSearch({
 
     if (
       lookupGenerationRef.current !== generation ||
-      latestSearchParamsSignatureRef.current !== initialSearchParamsSignature
+      readCurrentSearchParamsSignature(searchParamsSignature) !== initialSearchParamsSignature
     ) return;
 
     lookupAbortRef.current = null;
+    lookupSearchParamsSignatureRef.current = null;
     setSmartResolving(false);
     setSmartErrors(errors);
     if (errors.length > 0) {
+      smartFeedbackSearchParamsSignatureRef.current = initialSearchParamsSignature;
       setSmartSearchBlocked(usedUserLookup);
       toasts.pushToast({ variant: 'danger', title: errors[0] ?? t('common.unknown_error') });
       return;
     }
 
+    smartFeedbackSearchParamsSignatureRef.current = null;
     setSmartValue('');
     next.delete('q');
     next.delete('from_id');
@@ -372,6 +411,7 @@ export function useIpAddressSmartSearch({
         primary: t('admin.ip_addresses.smart.suggest.open', { id: num }),
         secondary: t('admin.ip_addresses.smart.suggest.open.secondary'),
         onPick: () => {
+          smartFeedbackSearchParamsSignatureRef.current = null;
           openIp(num);
           setSmartValue('');
           setSmartErrors([]);
@@ -391,6 +431,7 @@ export function useIpAddressSmartSearch({
           : t('admin.ip_addresses.smart.suggest.addr', { addr }),
         secondary: t('admin.ip_addresses.smart.suggest.addr.secondary'),
         onPick: () => {
+          smartFeedbackSearchParamsSignatureRef.current = null;
           setAddressFilter(addr, prefix);
           setSmartValue('');
           setSmartErrors([]);

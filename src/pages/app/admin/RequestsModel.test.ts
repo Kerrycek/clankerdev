@@ -6,6 +6,7 @@ import {
   DEFAULT_ADMIN_REQUEST_STATE,
   adminRequestApiState,
   adminRequestStateFilterFromUrl,
+  buildRequestPage,
   canonicalKey,
   mergeByIdDesc,
   parseTypeValue,
@@ -90,5 +91,69 @@ describe('RequestsModel', () => {
 
     const corrected = merged.map((row) => requestKey(row) === 'change-299' ? { ...row, state: 'awaiting' } : row);
     expect(visibleRequestRows(corrected, undefined).map((row) => requestKey(row))).toEqual(['registration-300', 'change-299']);
+  });
+
+  it('uses a merged lookahead row without rendering or skipping it', () => {
+    const registrations: RegistrationRequest[] = [
+      { id: 10, state: 'awaiting' },
+      { id: 8, state: 'awaiting' },
+    ];
+    const changes: ChangeRequest[] = [
+      { id: 9, state: 'awaiting' },
+      { id: 7, state: 'awaiting' },
+    ];
+
+    const page = buildRequestPage(registrations, changes, 'all', 3, 'awaiting');
+    expect(page.rows.map((row) => requestKey(row))).toEqual([
+      'registration-10',
+      'change-9',
+      'registration-8',
+    ]);
+    expect(page.hasMore).toBe(true);
+
+    const terminal = buildRequestPage(registrations, changes.slice(0, 1), 'all', 3, 'awaiting');
+    expect(terminal.rows.map((row) => requestKey(row))).toEqual([
+      'registration-10',
+      'change-9',
+      'registration-8',
+    ]);
+    expect(terminal.hasMore).toBe(false);
+  });
+
+  it('distinguishes exact and over-limit pages for either request type', () => {
+    const registrations: RegistrationRequest[] = [
+      { id: 5, state: 'awaiting' },
+      { id: 4, state: 'awaiting' },
+      { id: 3, state: 'awaiting' },
+      { id: 2, state: 'awaiting' },
+    ];
+
+    const terminal = buildRequestPage(registrations.slice(0, 3), [], 'registration', 3, 'awaiting');
+    expect(terminal.rows.map((row) => requestKey(row))).toEqual([
+      'registration-5',
+      'registration-4',
+      'registration-3',
+    ]);
+    expect(terminal.hasMore).toBe(false);
+
+    expect(buildRequestPage(registrations.slice(0, 3), [], 'all', 3, 'awaiting').hasMore).toBe(false);
+
+    const continued = buildRequestPage(registrations, [], 'registration', 3, 'awaiting');
+    expect(continued.rows.map((row) => requestKey(row))).toEqual(terminal.rows.map((row) => requestKey(row)));
+    expect(continued.hasMore).toBe(true);
+    expect(buildRequestPage(registrations, [], 'all', 3, 'awaiting').hasMore).toBe(true);
+
+    const changes: ChangeRequest[] = registrations.map((request) => ({
+      id: request.id,
+      state: request.state,
+    }));
+    const terminalChanges = buildRequestPage([], changes.slice(0, 3), 'change', 3, 'awaiting');
+    expect(terminalChanges.rows.map((row) => requestKey(row))).toEqual([
+      'change-5',
+      'change-4',
+      'change-3',
+    ]);
+    expect(terminalChanges.hasMore).toBe(false);
+    expect(buildRequestPage([], changes, 'change', 3, 'awaiting').hasMore).toBe(true);
   });
 });

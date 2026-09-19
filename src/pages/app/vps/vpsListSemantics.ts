@@ -11,6 +11,26 @@ import type { StatusDotVariant } from '../../../components/ui/StatusDot';
 export type RiskVariant = 'warn' | 'danger' | undefined;
 export type VpsListTranslator = (key: string, params?: Record<string, unknown>) => string;
 export type VpsListStateFilter = 'all' | 'running' | 'stopped' | 'busy' | 'failed';
+
+export function buildVpsListPageWindow<T extends { id: number }>(
+  data: T[] | undefined,
+  limit: number
+): { rows: T[]; cursor: number | null; hasMore: boolean } {
+  const rows = (data ?? []).slice(0, limit);
+  let cursor: number | null = null;
+
+  for (const row of rows) {
+    if (!Number.isSafeInteger(row.id) || row.id <= 0) continue;
+    if (cursor === null || row.id > cursor) cursor = row.id;
+  }
+
+  return {
+    rows,
+    cursor,
+    hasMore: (data?.length ?? 0) > limit && cursor !== null,
+  };
+}
+
 export type VpsListPrimaryAction = 'start' | 'console' | 'details';
 
 export interface VpsListRecord {

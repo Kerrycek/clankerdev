@@ -167,6 +167,11 @@ export function RequestReviewActions(props: {
   }, [approveNode, resources.nodes]);
 
   function openAction(action: ResolveUserRequestAction) {
+    const nextOverrides =
+      action === 'approve' || action === 'request_correction'
+        ? requestOverrides(props.reqType, props.request)
+        : emptyRequestOverrides();
+
     setResolveAction(action);
     setResolveReason('');
     setOverridesOpen(false);
@@ -174,11 +179,19 @@ export function RequestReviewActions(props: {
     setApproveActivate(true);
     setApproveNode('');
     setTouchedOverrides(new Set());
-    setOverrides(
-      action === 'approve' || action === 'request_correction'
-        ? requestOverrides(props.reqType, props.request)
-        : emptyRequestOverrides(),
-    );
+    setOverrides(nextOverrides);
+
+    if (action === 'ignore') {
+      void submitResolveAction(action, {
+        reason: undefined,
+        overrides: nextOverrides,
+        touchedOverrides: new Set(),
+        approveCreateVps: false,
+        approveActivate: false,
+        approveNode: '',
+      });
+      return;
+    }
 
     setResolveOpen(true);
   }
@@ -328,6 +341,7 @@ export function RequestReviewActions(props: {
             size={props.compact ? 'sm' : undefined}
             onClick={() => openAction(action)}
             disabled={submitting}
+            loading={submitting && resolveAction === action}
             testId={`${props.testIdPrefix}.action.${action}`}
           >
             {t(`requests.resolve.action.${action}`)}

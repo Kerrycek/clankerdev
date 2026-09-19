@@ -81,14 +81,38 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile VPS access page generates root
   await expect(page.getByTestId('vps.access.host_keys.table')).toBeVisible();
   await expect(page.getByTestId('vps.access.host_keys.row.1')).toContainText('SHA256:host-ed25519');
   await expect(page.getByTestId('vps.access.host_keys.row.1')).toContainText('ssh-ed25519');
+  await expect(page.getByTestId('vps.access.checklist.public-key.action')).toHaveText('Deploy saved key');
+  await expect(page.getByTestId('vps.access.checklist.host-key.action')).toHaveText('View host fingerprints');
+  await expect(page.getByTestId('vps.access.checklist.root-password.action')).toHaveText('Open password fallback');
+
+  const sectionOrder = await page
+    .locator('[data-testid="vps.access.ssh.card"], [data-testid="vps.access.host_keys"], [data-testid="vps.access.password.card"]')
+    .evaluateAll((sections) => sections.map((section) => section.getAttribute('data-testid')));
+  expect(sectionOrder).toEqual([
+    'vps.access.ssh.card',
+    'vps.access.host_keys',
+    'vps.access.password.card',
+  ]);
+
   await page.setViewportSize({ width: 390, height: 844 });
   await expectNoDocumentHorizontalOverflow(page);
   await expectTableHorizontalScrollUsable(page, 'vps.access.host_keys.table');
+  await page.getByTestId('vps.access.checklist.public-key.action').click();
+  await expect(page).toHaveURL(/#vps-access-ssh-key$/);
+  await expect(page.getByTestId('vps.access.ssh.deploy')).toBeInViewport();
+  await page.getByTestId('vps.access.checklist.host-key.action').click();
+  await expect(page).toHaveURL(/#vps-access-host-keys$/);
+  await expect(page.getByTestId('vps.access.host_keys')).toBeInViewport();
+  await page.getByTestId('vps.access.checklist.root-password.action').click();
+  await expect(page).toHaveURL(/#vps-access-root-password$/);
+  await expect(page.getByTestId('vps.access.password.generate')).toBeInViewport();
   await page.setViewportSize({ width: 1280, height: 844 });
   await page.getByTestId('vps.access.password_type').selectOption('simple');
   await page.getByTestId('vps.access.password.generate').click();
 
   await expect(page.getByTestId('vps.access.password.confirm')).toBeVisible();
+  await expect(page.getByTestId('vps.access.password.confirm.target')).toContainText('vps123.example');
+  await expect(page.getByTestId('vps.access.password.confirm.target')).toContainText('#123');
   const passwdReqPromise = page.waitForRequest(
     (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/vpses/123/passwd')
   );
@@ -107,7 +131,9 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile VPS access page generates root
 
   await page.getByTestId('tasks.open-button').click();
   await expect(page.getByTestId('tasks.drawer')).toHaveAttribute('aria-modal', 'false');
-  await expect(page.getByTestId('tasks.row.700')).toContainText('Passwd');
+  await expect(
+    page.getByTestId('tasks.row.700').getByRole('button', { name: 'Generate root password', exact: true }),
+  ).toBeVisible();
   await expect(page.getByTestId('vps.access.page')).toBeVisible();
   await page.getByTestId('tasks.close-button').click();
 
@@ -119,6 +145,8 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile VPS access page generates root
   await page.getByTestId('vps.access.ssh.deploy').click();
 
   await expect(page.getByTestId('vps.access.ssh.confirm')).toBeVisible();
+  await expect(page.getByTestId('vps.access.ssh.confirm.target')).toContainText('vps123.example');
+  await expect(page.getByTestId('vps.access.ssh.confirm.target')).toContainText('#123');
   const keyReqPromise = page.waitForRequest(
     (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/vpses/123/deploy_public_key')
   );
@@ -129,7 +157,9 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile VPS access page generates root
   await expect(page.getByText(/Public key deployed: workstation/)).toBeVisible();
 
   await page.getByTestId('tasks.open-button').click();
-  await expect(page.getByTestId('tasks.row.701')).toContainText('Deploy public key');
+  await expect(
+    page.getByTestId('tasks.row.701').getByRole('button', { name: 'Deploy SSH public key', exact: true }),
+  ).toBeVisible();
   await expect(page.getByTestId('vps.access.page')).toBeVisible();
 });
 
@@ -185,6 +215,8 @@ test('@workflow-matrix @pr-smoke VPS access reports failed SSH key deployment an
   await expect(page.getByText('SSH key deployment failed')).toBeVisible();
   await page.getByTestId('vps.access.ssh.failure.open_tasks').click();
   await expect(page.getByTestId('tasks.drawer')).toHaveAttribute('aria-modal', 'false');
-  await expect(page.getByTestId('tasks.row.702')).toContainText('Deploy public key');
+  await expect(
+    page.getByTestId('tasks.row.702').getByRole('button', { name: 'Deploy SSH public key', exact: true }),
+  ).toBeVisible();
   await expect(page.getByTestId('vps.access.page')).toBeVisible();
 });

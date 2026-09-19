@@ -65,73 +65,92 @@ export async function fetchFinanceUsersSnapshot(
 ): Promise<FinanceScanResult<User>> {
   const scanLimit = normalizeScanLimit(options.scanLimit);
   const batchSize = normalizeBatchSize(options.batchSize);
-  const rows: User[] = [];
   const seenIds = new Set<number>();
   const seenCursors = new Set<string>();
   const objectStates = ['active', 'suspended'] as const;
-  let objectStateIndex = 0;
-  let cursor: number | undefined;
+  const scans = objectStates.map((objectState) => ({
+    objectState,
+    cursor: undefined as number | undefined,
+    complete: false,
+    rows: [] as User[],
+  }));
   let scannedRows = 0;
   let batches = 0;
 
+  const snapshotRows = () => scans.flatMap((scan) => scan.rows);
+
   while (scannedRows < scanLimit) {
-    const requestLimit = Math.min(batchSize, scanLimit - scannedRows);
-    const objectState = objectStates[objectStateIndex];
-    const result = await fetchUsers({
-      limit: requestLimit,
-      fromId: cursor,
-      objectState,
-      signal: options.signal,
-    });
-    batches += 1;
-
-    if (result.data.length === 0) {
-      objectStateIndex += 1;
-      if (objectStateIndex >= objectStates.length) {
-        return { rows, complete: true, scannedRows, batches };
-      }
-      cursor = undefined;
-      continue;
+    const remainingRows = scanLimit - scannedRows;
+    const pendingScans = scans.filter((scan) => !scan.complete);
+    if (pendingScans.length === 0) {
+      return { rows: snapshotRows(), complete: true, scannedRows, batches };
     }
 
-    let lastInspectedId: number | undefined;
-    for (const user of result.data) {
-      if (scannedRows >= scanLimit) break;
-      scannedRows += 1;
-      if (Number.isSafeInteger(user.id)) lastInspectedId = user.id;
-      if (seenIds.has(user.id)) continue;
-      seenIds.add(user.id);
-      rows.push(user);
-    }
-
-    if (result.data.length < requestLimit) {
-      objectStateIndex += 1;
-      if (objectStateIndex >= objectStates.length) {
-        return { rows, complete: true, scannedRows, batches };
-      }
-      cursor = undefined;
-      continue;
-    }
-
-    const nextCursor = validNextCursor(lastInspectedId, cursor);
-    const cursorKey = `${objectState}:${nextCursor}`;
-    if (nextCursor === undefined || seenCursors.has(cursorKey)) {
+    // Reserve at least one row of the shared safety budget for every state in
+    // this round. The sum of concurrent request limits can therefore never
+    // exceed the remaining global scan allowance.
+    const roundScans = pendingScans.slice(0, remainingRows);
+    let allocatableRows = remainingRows;
+    const requests = roundScans.map((scan, index) => {
+      const reservedForLaterScans = roundScans.length - index - 1;
+      const requestLimit = Math.min(batchSize, allocatableRows - reservedForLaterScans);
+      allocatableRows -= requestLimit;
       return {
-        rows,
-        complete: false,
-        scannedRows,
-        batches,
-        incompleteReason: 'cursor_stalled',
+        scan,
+        requestLimit,
+        result: fetchUsers({
+          limit: requestLimit,
+          fromId: scan.cursor,
+          objectState: scan.objectState,
+          signal: options.signal,
+        }),
       };
-    }
+    });
 
-    seenCursors.add(cursorKey);
-    cursor = nextCursor;
+    const results = await Promise.all(requests.map(async (request) => ({
+      ...request,
+      result: await request.result,
+    })));
+    batches += results.length;
+
+    for (const { scan, requestLimit, result } of results) {
+      if (scannedRows >= scanLimit) break;
+
+      let lastInspectedId: number | undefined;
+      for (const user of result.data) {
+        if (scannedRows >= scanLimit) break;
+        scannedRows += 1;
+        if (Number.isSafeInteger(user.id)) lastInspectedId = user.id;
+        if (seenIds.has(user.id)) continue;
+        seenIds.add(user.id);
+        scan.rows.push(user);
+      }
+
+      if (result.data.length < requestLimit) {
+        scan.complete = true;
+        continue;
+      }
+
+      const nextCursor = validNextCursor(lastInspectedId, scan.cursor);
+      const cursorKey = `${scan.objectState}:${nextCursor}`;
+      if (nextCursor === undefined || seenCursors.has(cursorKey)) {
+        return {
+          rows: snapshotRows(),
+          complete: false,
+          scannedRows,
+          batches,
+          incompleteReason: 'cursor_stalled',
+        };
+      }
+
+      seenCursors.add(cursorKey);
+      scan.cursor = nextCursor;
+    }
   }
 
   return {
-    rows,
-    nextFromId: cursor,
+    rows: snapshotRows(),
+    nextFromId: scans.find((scan) => !scan.complete)?.cursor,
     complete: false,
     scannedRows,
     batches,

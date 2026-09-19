@@ -64,6 +64,40 @@ test.describe('@workflow-matrix @smoke VPS list row navigation', () => {
     await expect(page.getByTestId('vps.header')).toBeVisible();
   });
 
+  test('@pr-smoke @pr-smoke-mobile admin member filter survives detail navigation and tabs', async ({ page }) => {
+    const vps = makeVps(300);
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
+      handlers: {
+        'GET vpses': () => ({ vpses: [vps] }),
+        'GET vpses/300': () => ({ vps }),
+        'GET ip_addresses': () => ({ ip_addresses: [] }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'GET users/42/public_keys': () => ({ public_keys: [], _meta: { total_count: 0 } }),
+      },
+    });
+
+    await bootstrapVpsAdminWindow(page);
+    await page.goto('/admin/vps?user=42');
+    const { item, actionPrefix } = await visibleVpsItem(page, 300);
+
+    await expect(item.getByRole('link', { name: 'vps300.example' })).toHaveAttribute('href', '/admin/vps/300?user=42');
+    await expect(page.getByTestId(`${actionPrefix}.action.details`)).toHaveAttribute('href', '/admin/vps/300?user=42');
+    await item.getByRole('link', { name: 'vps300.example' }).click();
+
+    await expect(page).toHaveURL(/\/admin\/vps\/300\?user=42$/);
+    const header = page.getByTestId('vps.header');
+    await expect(header.getByRole('link', { name: 'VPS', exact: true })).toHaveAttribute('href', '/admin/vps?user=42');
+
+    await page.getByTestId('vps.action.primary_access').click();
+    await expect(page).toHaveURL(/\/admin\/vps\/300\/access\?user=42$/);
+    await expect(header.getByRole('link', { name: 'VPS', exact: true })).toHaveAttribute('href', '/admin/vps?user=42');
+
+    await header.getByRole('link', { name: 'VPS', exact: true }).click();
+    await expect(page).toHaveURL(/\/admin\/vps\?user=42$/);
+  });
+
   test('using the row stop icon does not trigger row navigation', async ({ page }) => {
     const vps = makeVps(300);
 
@@ -82,6 +116,8 @@ test.describe('@workflow-matrix @smoke VPS list row navigation', () => {
 
     await expect(page).toHaveURL(/\/app\/vps(?:\?|$)/);
     await expect(page.getByTestId('vps.list.power_confirm')).toBeVisible();
+    await expect(page.getByTestId('vps.list.power_confirm.target')).toContainText('vps300.example');
+    await expect(page.getByTestId('vps.list.power_confirm.target')).toContainText('#300');
   });
 
   test('clicking user delete action opens confirmation without row navigation and sends empty delete payload', async ({ page }) => {
@@ -239,7 +275,10 @@ test.describe('@workflow-matrix @smoke VPS list row navigation', () => {
 
     await page.goto('/app/vps');
     const action = page.getByTestId('vps.card.300.action.console');
+    const detailsAction = page.getByTestId('vps.card.300.action.details');
     await expect(action).toBeVisible();
+    await expect(detailsAction).toHaveAccessibleName('Details');
+    await expect(detailsAction).toContainText('Details');
 
     const box = await action.boundingBox();
     expect(box?.width).toBeGreaterThanOrEqual(44);

@@ -41,11 +41,13 @@ import {
   type VpsConfigReviewKey,
 } from './VpsConfigurationModel';
 import { parseVpsConfigFieldErrors, type VpsConfigFieldError } from './VpsConfigurationErrors';
+import { VpsConfirmTarget } from './VpsPowerConfirmation';
 import { buildChangeSummaries, getReviewRequestOptionKeys } from './VpsConfigurationReviewModel';
 import {
   Field,
   VpsConfigChangesList,
   VpsConfigFieldErrorsAlert,
+  VpsConfigMobileActionBar,
   VpsConfigReviewPanel,
   VpsConfigSectionCard,
 } from './VpsConfigurationPrimitives';
@@ -226,6 +228,13 @@ export function VpsConfigurationPage() {
     setConfirmOpen(true);
   };
 
+  const resetDraft = () => {
+    setDraft(null);
+    saveM.reset();
+    void dnsResolversQ.refetch();
+    void userNamespaceMapsQ.refetch();
+  };
+
   return (
     <div className="space-y-4">
       {!canMutateVps ? (
@@ -244,13 +253,9 @@ export function VpsConfigurationPage() {
             <div className="flex flex-wrap gap-2">
               <Button
                 variant="secondary"
-                onClick={() => {
-                  setDraft(null);
-                  saveM.reset();
-                  void dnsResolversQ.refetch();
-                  void userNamespaceMapsQ.refetch();
-                }}
+                onClick={resetDraft}
                 disabled={saveM.isPending}
+                testId="vps.config.header.reset"
               >
                 {t('common.reset')}
               </Button>
@@ -259,6 +264,7 @@ export function VpsConfigurationPage() {
                 loading={saveM.isPending}
                 disabled={saveDisabled}
                 disabledReason={!gate.allowed ? gate.reason : undefined}
+                testId="vps.config.header.save"
               >
                 {dirty ? t('vps.config.save_changes', { n: result.changedKeys.length }) : t('vps.config.save_changes_empty')}
               </ActionButton>
@@ -266,6 +272,15 @@ export function VpsConfigurationPage() {
           }
         />
       </Card>
+
+      <VpsConfigMobileActionBar
+        changeCount={result.changedKeys.length}
+        pending={saveM.isPending}
+        saveDisabled={saveDisabled}
+        disabledReason={!gate.allowed ? gate.reason : undefined}
+        onReset={resetDraft}
+        onSave={applySave}
+      />
 
       {!gate.allowed ? (
         <Alert variant="warn" title={t(gate.reason.titleKey)}>
@@ -490,7 +505,10 @@ export function VpsConfigurationPage() {
           knownBusy: busyTransaction || busyLocalLock, objectLabel,
         }))}
       >
-        <VpsConfigChangesList changes={changes} compact />
+        <div className="space-y-3">
+          <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.config.confirm.target" />
+          <VpsConfigChangesList changes={changes} compact />
+        </div>
       </ConfirmDialog>
       </div>
       </fieldset>

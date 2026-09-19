@@ -34,6 +34,10 @@ import {
   type MailTemplateView,
 } from './UserMailPreferencesModel';
 
+function MobileCellLabel(props: { children: React.ReactNode }) {
+  return <div className="mb-1 text-xs font-semibold text-muted md:hidden">{props.children}</div>;
+}
+
 function SourceBadge(props: { source: EffectiveToSource }) {
   const { t } = useI18n();
 
@@ -96,13 +100,15 @@ function RoleRecipientRow(props: {
   });
 
   return (
-    <tr className="border-b border-border">
-      <td className="px-4 py-3 align-top">
+    <tr className="block border-b border-border md:table-row">
+      <td className="block px-4 pb-2 pt-4 align-top md:table-cell md:py-3">
+        <MobileCellLabel>{t('mail.prefs.roles.col.role')}</MobileCellLabel>
         <div className="text-sm font-medium text-fg">{props.recp.label ?? props.recp.id}</div>
         {props.recp.description ? <div className="mt-1 text-xs text-muted">{props.recp.description}</div> : null}
       </td>
 
-      <td className="px-4 py-3 align-top">
+      <td className="block px-4 py-2 align-top md:table-cell md:py-3">
+        <MobileCellLabel>{t('mail.prefs.roles.col.to')}</MobileCellLabel>
         <Textarea
           testId={`mail.roles.to.${props.recp.id}`}
           ariaLabel={t('mail.prefs.roles.col.to')}
@@ -134,10 +140,11 @@ function RoleRecipientRow(props: {
         </div>
       </td>
 
-      <td className="px-4 py-3 align-top">
+      <td className="block px-4 pb-4 pt-2 align-top md:table-cell md:py-3">
+        <MobileCellLabel>{t('mail.prefs.roles.col.effective')}</MobileCellLabel>
         {effective.length > 0 ? (
           <div className="flex flex-col gap-2">
-            <div className="text-sm text-fg">{effective.join(', ')}</div>
+            <div className="break-all text-sm text-fg">{effective.join(', ')}</div>
             <CopyButton text={effective.join(',')} size="sm" variant="ghost" testId={`mail.roles.copy.${props.recp.id}`} />
           </div>
         ) : (
@@ -203,17 +210,19 @@ function TemplateRecipientRow(props: {
   const rowVariant = enabled ? '' : 'bg-danger-row';
 
   return (
-    <tr className={`border-b border-border ${rowVariant}`}>
-      <td className="px-4 py-3 align-top">
+    <tr className={`block border-b border-border md:table-row ${rowVariant}`}>
+      <td className="block px-4 pb-2 pt-4 align-top md:table-cell md:py-3">
+        <MobileCellLabel>{t('mail.prefs.templates.col.template')}</MobileCellLabel>
         <div className="flex items-center gap-2">
           <StatusDot variant={enabled ? 'neutral' : 'danger'} />
           <div className="text-sm font-medium text-fg">{props.recp.label ?? props.recp.id}</div>
         </div>
-        <div className="mt-1 text-xs text-faint">{props.recp.id}</div>
+        <div className="mt-1 break-all text-xs text-faint">{props.recp.id}</div>
         {props.recp.description ? <div className="mt-2 text-xs text-muted">{props.recp.description}</div> : null}
       </td>
 
-      <td className="px-4 py-3 align-top">
+      <td className="block px-4 py-2 align-top md:table-cell md:py-3">
+        <MobileCellLabel>{t('mail.prefs.templates.col.enabled')}</MobileCellLabel>
         <Checkbox
           checked={!enabled}
           onChange={(checked) => setEnabled(!checked)}
@@ -223,7 +232,8 @@ function TemplateRecipientRow(props: {
         />
       </td>
 
-      <td className="px-4 py-3 align-top">
+      <td className="block px-4 py-2 align-top md:table-cell md:py-3">
+        <MobileCellLabel>{t('mail.prefs.templates.col.to')}</MobileCellLabel>
         <Textarea
           testId={`mail.templates.to.${props.recp.id}`}
           ariaLabel={t('mail.prefs.templates.col.to')}
@@ -235,13 +245,14 @@ function TemplateRecipientRow(props: {
         />
       </td>
 
-      <td className="px-4 py-3 align-top">
+      <td className="block px-4 py-2 align-top md:table-cell md:py-3">
+        <MobileCellLabel>{t('mail.prefs.templates.col.effective')}</MobileCellLabel>
         <div className="flex flex-col gap-2">
           <SourceBadge source={effective.source} />
           {effective.source === 'disabled' ? (
             <div className="text-sm text-muted">{t('mail.prefs.templates.disabled_hint')}</div>
           ) : effective.to.length > 0 ? (
-            <div className="text-sm text-fg">{effective.to.join(', ')}</div>
+            <div className="break-all text-sm text-fg">{effective.to.join(', ')}</div>
           ) : (
             <div className="text-sm text-muted">{t('common.na')}</div>
           )}
@@ -251,8 +262,9 @@ function TemplateRecipientRow(props: {
         </div>
       </td>
 
-      <td className="px-4 py-3 align-top">
-        <div className="flex flex-col items-start gap-2">
+      <td className="block px-4 pb-4 pt-2 align-top md:table-cell md:py-3">
+        <MobileCellLabel>{t('mail.prefs.templates.col.actions')}</MobileCellLabel>
+        <div className="flex flex-wrap items-start gap-2 md:flex-col">
           <Button
             size="sm"
             disabled={!dirty || mut.isPending}
@@ -293,24 +305,24 @@ export function MailRoleRecipientsTable(props: {
   const { t } = useI18n();
 
   return (
-    <TableCard tableClassName="min-w-full" testId="mail.roles">
-      <thead>
+    <TableCard tableClassName="block min-w-full md:table" testId="mail.roles">
+      <thead className="hidden md:table-header-group">
         <tr className="text-left text-xs text-muted">
           <th className="px-4 py-3">{t('mail.prefs.roles.col.role')}</th>
           <th className="px-4 py-3">{t('mail.prefs.roles.col.to')}</th>
           <th className="px-4 py-3">{t('mail.prefs.roles.col.effective')}</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody className="block md:table-row-group">
         {props.isLoading ? (
-          <tr>
-            <td colSpan={3} className="px-4 py-6">
+          <tr className="block md:table-row">
+            <td colSpan={3} className="block px-4 py-6 md:table-cell">
               <LoadingState kind="inline" />
             </td>
           </tr>
         ) : props.isError ? (
-          <tr>
-            <td colSpan={3} className="px-4 py-6">
+          <tr className="block md:table-row">
+            <td colSpan={3} className="block px-4 py-6 md:table-cell">
               <ErrorState
                 error={props.error}
                 title={t('mail.prefs.roles.load_failed.title')}
@@ -321,8 +333,8 @@ export function MailRoleRecipientsTable(props: {
             </td>
           </tr>
         ) : props.roleRecipients.length === 0 ? (
-          <tr>
-            <td colSpan={3} className="px-4 py-6 text-sm text-muted">
+          <tr className="block md:table-row">
+            <td colSpan={3} className="block px-4 py-6 text-sm text-muted md:table-cell">
               {t('mail.prefs.roles.empty')}
             </td>
           </tr>
@@ -330,9 +342,9 @@ export function MailRoleRecipientsTable(props: {
           props.roleRecipients.map((r) => <RoleRecipientRow key={String(r.id)} userId={props.userId} userEmail={props.userEmail} recp={r} />)
         )}
       </tbody>
-      <tfoot>
-        <tr>
-          <td colSpan={3} className="px-4 py-3 text-xs text-muted">
+      <tfoot className="block md:table-footer-group">
+        <tr className="block md:table-row">
+          <td colSpan={3} className="block px-4 py-3 text-xs text-muted md:table-cell">
             {t('mail.prefs.roles.help')}
           </td>
         </tr>
@@ -394,8 +406,8 @@ export function MailTemplateRecipientsCard(props: {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-table-lg text-sm tabular-nums">
-          <thead>
+        <table className="block w-full min-w-0 text-sm tabular-nums md:table md:min-w-table-lg">
+          <thead className="hidden md:table-header-group">
             <tr className="border-y border-border bg-surface-2 text-left text-xs text-muted">
               <th className="px-4 py-3">{t('mail.prefs.templates.col.template')}</th>
               <th className="px-4 py-3">{t('mail.prefs.templates.col.enabled')}</th>
@@ -404,16 +416,16 @@ export function MailTemplateRecipientsCard(props: {
               <th className="px-4 py-3">{t('mail.prefs.templates.col.actions')}</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="block md:table-row-group">
             {props.isLoading ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-6">
+              <tr className="block md:table-row">
+                <td colSpan={5} className="block px-4 py-6 md:table-cell">
                   <LoadingState kind="inline" />
                 </td>
               </tr>
             ) : props.isError ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-6">
+              <tr className="block md:table-row">
+                <td colSpan={5} className="block px-4 py-6 md:table-cell">
                   <ErrorState
                     error={props.error}
                     title={t('mail.prefs.templates.load_failed.title')}
@@ -424,8 +436,8 @@ export function MailTemplateRecipientsCard(props: {
                 </td>
               </tr>
             ) : props.templates.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-6 text-sm text-muted">
+              <tr className="block md:table-row">
+                <td colSpan={5} className="block px-4 py-6 text-sm text-muted md:table-cell">
                   {props.needle || props.view !== 'all' ? t('mail.prefs.templates.empty_filtered') : t('mail.prefs.templates.empty')}
                 </td>
               </tr>

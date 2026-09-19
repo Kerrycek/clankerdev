@@ -1,8 +1,6 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 
-import { clsx } from './clsx';
-import { buttonClassName, type ButtonSize, type ButtonVariant } from './buttonStyles';
+import { Button, type ButtonSize, type ButtonVariant } from './Button';
 
 export function LinkButton(props: {
   to: string;
@@ -14,20 +12,17 @@ export function LinkButton(props: {
   title?: string;
   testId?: string;
 }) {
-  const cls = buttonClassName({ variant: props.variant, size: props.size, className: props.className });
-
   return (
-    <Link
+    <Button
       to={props.to}
       title={props.title}
-      aria-disabled={props.disabled}
-      data-testid={props.testId}
-      className={clsx(
-        cls,
-        props.disabled ? 'pointer-events-none cursor-not-allowed opacity-50' : undefined
-      )}
+      disabled={props.disabled}
+      testId={props.testId}
+      variant={props.variant}
+      size={props.size}
+      className={props.className}
     >
       {props.children}
-    </Link>
+    </Button>
   );
 }

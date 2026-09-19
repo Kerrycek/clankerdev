@@ -1,9 +1,10 @@
 import React from 'react';
 
 import { useI18n } from '../../../app/i18n';
+import { Button } from '../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
 import { clsx } from '../../../components/ui/clsx';
-import type { VpsAccessChecklistItem, VpsAccessChecklistState } from './VpsAccessModel';
+import type { VpsAccessChecklistItem, VpsAccessChecklistItemId, VpsAccessChecklistState } from './VpsAccessModel';
 
 function translate(t: (key: string, vars?: Record<string, unknown>) => string, key: string, values?: Record<string, string | number>): string {
   return values ? t(key, values) : t(key);
@@ -57,22 +58,47 @@ export function VpsAccessStatusCard(props: {
   );
 }
 
-export function VpsAccessChecklistCard(props: { items: VpsAccessChecklistItem[] }) {
+export type VpsAccessChecklistAction = {
+  href?: string;
+  to?: string;
+  label: string;
+  testId: string;
+};
+
+export function VpsAccessChecklistCard(props: {
+  items: VpsAccessChecklistItem[];
+  actions?: Partial<Record<VpsAccessChecklistItemId, VpsAccessChecklistAction>>;
+}) {
   const { t } = useI18n();
 
   return (
     <Card testId="vps.access.checklist">
       <CardHeader title={t('vps.access.checklist.title')} subtitle={t('vps.access.checklist.subtitle')} />
-      <CardBody className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        {props.items.map((item) => (
-          <div key={item.id} className={clsx('rounded-lg border p-3', checklistStateClass(item.state))} data-testid={`vps.access.checklist.${item.id}`}>
-            <div className="flex items-start gap-2">
-              <div className="min-w-0 flex-1 font-medium text-fg">{t(item.titleKey, item.values)}</div>
-              <span className="rounded-full border border-border bg-surface px-2 py-0.5 text-xs text-muted">{t(checklistStateLabelKey(item.state))}</span>
+      <CardBody className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {props.items.map((item) => {
+          const action = props.actions?.[item.id];
+
+          return (
+            <div key={item.id} className={clsx('flex min-h-full flex-col rounded-lg border p-3', checklistStateClass(item.state))} data-testid={`vps.access.checklist.${item.id}`}>
+              <div className="flex items-start gap-2">
+                <div className="min-w-0 flex-1 font-medium text-fg">{t(item.titleKey, item.values)}</div>
+                <span className="rounded-full border border-border bg-surface px-2 py-0.5 text-xs text-muted">{t(checklistStateLabelKey(item.state))}</span>
+              </div>
+              <p className="mt-2 flex-1 text-sm text-muted">{translate(t, item.descriptionKey, item.values)}</p>
+              {action ? (
+                action.href ? (
+                  <Button as="a" href={action.href} variant="secondary" size="sm" className="mt-3 w-full sm:w-auto" testId={action.testId}>
+                    {action.label}
+                  </Button>
+                ) : action.to ? (
+                  <Button to={action.to} variant="secondary" size="sm" className="mt-3 w-full sm:w-auto" testId={action.testId}>
+                    {action.label}
+                  </Button>
+                ) : null
+              ) : null}
             </div>
-            <p className="mt-2 text-sm text-muted">{translate(t, item.descriptionKey, item.values)}</p>
-          </div>
-        ))}
+          );
+        })}
       </CardBody>
     </Card>
   );

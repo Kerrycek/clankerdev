@@ -140,6 +140,18 @@ test.after(async () => {
   if (sessionDirectory) rmSync(sessionDirectory, { force: true, recursive: true });
 });
 
+test('runtime config exposes the OAuth provider password recovery entry point', async () => {
+  const response = await request('/config.js');
+  const body = await response.text();
+
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('cache-control') || '', /no-store/);
+  assert.match(
+    body,
+    /"passwordRecoveryUrl":"https:\/\/identity\.test\/oauth2\/password-reset\?client_id=test-client"/,
+  );
+});
+
 test('provider callback errors redirect without reflecting details and clear the pending attempt', async () => {
   const { cookie, state } = await startLogin('/app/vps/42');
   const error = 'access_denied_private';

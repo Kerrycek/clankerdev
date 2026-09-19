@@ -86,20 +86,25 @@ export function AdminUserPaymentsPage() {
   });
 
   const historyQ = useQuery({
-    queryKey: ['user_payments', 'list', { userId, limit: pagination.limit, fromId: pagination.fromId }],
+    queryKey: ['user_payments', 'list', { userId, limit: pagination.limit + 1, fromId: pagination.fromId }],
     queryFn: async () =>
       (
         await fetchUserPayments({
           userId,
-          limit: pagination.limit,
+          limit: pagination.limit + 1,
           fromId: pagination.fromId ?? undefined,
         })
       ).data,
     staleTime: 15_000,
   });
 
-  const canNext = (historyQ.data?.length ?? 0) >= pagination.limit;
-  const cursor = useMemo(() => cursorFromDescendingPage(historyQ.data), [historyQ.data]);
+  const historyPage = historyQ.data ?? [];
+  const visibleHistory = useMemo(
+    () => historyPage.slice(0, pagination.limit),
+    [historyPage, pagination.limit]
+  );
+  const cursor = useMemo(() => cursorFromDescendingPage(visibleHistory), [visibleHistory]);
+  const canNext = pagination.hasForward || (historyPage.length > pagination.limit && cursor !== null);
 
   const [quickPaidUntil, setQuickPaidUntil] = useState('');
   const [quickMonthlyPayment, setQuickMonthlyPayment] = useState('');
@@ -337,7 +342,7 @@ export function AdminUserPaymentsPage() {
             {historyQ.isError ? <ErrorState title={t('payments.my.history.load_error.title')} error={historyQ.error} /> : null}
 
             {!historyQ.isLoading && !historyQ.isError ? (
-              historyQ.data && historyQ.data.length > 0 ? (
+              visibleHistory.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm table-list" data-testid="admin.user.payments.history.table">
                     <thead className="bg-surface-2">
@@ -350,7 +355,7 @@ export function AdminUserPaymentsPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
-                      {historyQ.data.map((p) => (
+                      {visibleHistory.map((p) => (
                         <tr key={p.id} data-testid={`admin.user.payments.history.row.${p.id}`}>
                           <td className="px-3 py-2 font-medium tabular-nums">{formatDate(p.created_at)}</td>
                           <td className="px-3 py-2 text-right tabular-nums">{formatMoneyLike(safeInt(p.amount))}</td>

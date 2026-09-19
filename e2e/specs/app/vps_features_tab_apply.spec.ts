@@ -54,6 +54,8 @@ test.describe('VPS features tab', () => {
     await page.getByTestId('vps.features.save').click();
 
     await expect(page.getByTestId('vps.features.confirm')).toBeVisible();
+    await expect(page.getByTestId('vps.features.confirm.target')).toContainText('vps123.example');
+    await expect(page.getByTestId('vps.features.confirm.target')).toContainText('#123');
 
     const reqPromise = page.waitForRequest(
       (r) => r.method() === 'POST' && r.url().includes('/api/v7.0/vpses/123/features/update_all')

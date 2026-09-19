@@ -4,6 +4,7 @@ import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 
 function choicesHandlers() {
   return {
+    'GET users/1': () => ({ user: { id: 1, login: 'admin', full_name: 'Admin Example', level: 99 } }),
     'GET locations': () => ({
       locations: [
         {
@@ -60,9 +61,31 @@ function choicesHandlers() {
 }
 
 test.describe('@workflow-matrix @pr-smoke VPS create admin flow', () => {
-  test('keeps guard identity, payload and callback scope on the submitted form snapshot across rerender', async ({ page }) => {
+  test('incomplete create points to the first missing field before offering creation', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_ADMIN' });
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
+      handlers: choicesHandlers(),
+    });
+
+    await page.goto('/admin/vps/new?user=1');
+    await expect(page.getByTestId('vps.create.submit')).toHaveText('Review missing fields');
+    await page.getByTestId('vps.create.submit').click();
+
+    await expect(page.getByTestId('vps.create.validation')).toBeVisible();
+    await expect(page.getByTestId('vps.create.location')).toBeFocused();
+
+    await page.getByTestId('vps.create.location').selectOption('2');
+    await page.getByTestId('vps.create.node').selectOption('101');
+    await page.getByTestId('vps.create.os_template').selectOption('6');
+    await page.getByTestId('vps.create.hostname').fill('ready.example');
+    await expect(page.getByTestId('vps.create.submit')).toHaveText('Create VPS');
+  });
+
+  test('keeps guard identity and payload on the submitted snapshot, then clears the receipt', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_USER' });
     const createBodies: any[] = [];
+    let receiptAtRequest: unknown = null;
     page.on('request', (request) => {
       if (request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/vpses')) {
         createBodies.push(request.postDataJSON());
@@ -71,6 +94,17 @@ test.describe('@workflow-matrix @pr-smoke VPS create admin flow', () => {
     await installHaveApiMock(page, {
       user: { id: 2, login: 'member', level: 1 },
       handlers: choicesHandlers(),
+    });
+    await page.route(/\/api\/v7\.0\/vpses$/, async (route) => {
+      if (route.request().method() === 'POST') {
+        receiptAtRequest = await page.evaluate(() => {
+          const key = Object.keys(localStorage).find((item) => (
+            item.startsWith('webui-next.vps-create-outcome-uncertain')
+          ));
+          return key ? JSON.parse(localStorage.getItem(key) ?? 'null') : null;
+        });
+      }
+      await route.fallback();
     });
     await page.goto('/app/vps/new');
     await page.getByTestId('vps.create.location').selectOption('2');
@@ -94,13 +128,13 @@ test.describe('@workflow-matrix @pr-smoke VPS create admin flow', () => {
 
     expect(createBodies).toHaveLength(1);
     expect(createBodies[0].vps.hostname).toBe('snapshot-a.example');
-    const receipts = await page.evaluate(() => Object.values(window.localStorage)
-      .map((value) => { try { return JSON.parse(value); } catch { return null; } })
-      .filter(Boolean));
-    expect(receipts).toContainEqual(expect.objectContaining({
-      phase: 'accepted',
+    expect(receiptAtRequest).toEqual(expect.objectContaining({
+      phase: 'pending',
       identity: expect.objectContaining({ hostname: 'snapshot-a.example', ownerId: 2, locationId: 2 }),
     }));
+    await expect.poll(() => page.evaluate(() => Object.keys(localStorage).filter((key) => (
+      key.startsWith('webui-next.vps-create-outcome-uncertain')
+    )))).toEqual([]);
   });
 
   test('keeps an admin in user-scope create flow on app route', async ({ page }) => {
@@ -238,7 +272,7 @@ test.describe('@workflow-matrix @pr-smoke VPS create admin flow', () => {
     expect(body.vps).not.toHaveProperty('node');
   });
 
-  test('admin create payload does not include location and stays in admin scope', async ({ page }) => {
+  test('admin create payload does not include location and keeps the selected member context', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_ADMIN' });
 
     const createBodies: unknown[] = [];
@@ -283,17 +317,21 @@ test.describe('@workflow-matrix @pr-smoke VPS create admin flow', () => {
       },
     });
 
-    await page.goto('/admin/vps/new');
+    await page.goto('/admin/vps/new?user=1');
     await expect(page.getByTestId('vps.create')).toBeVisible();
 
-    await page.getByTestId('vps.create.user').fill('1');
+    await expect(page.getByTestId('vps.create.user')).toHaveValue('1');
+    await expect(page.getByTestId('vps.create.owner.selection')).toContainText('admin');
+    await expect(page.getByTestId('vps.create.owner.selection')).toContainText('#1');
+    await expect(page.getByTestId('vps.create.review.owner')).toContainText('admin');
+    await expect(page.getByTestId('vps.create.review.owner')).toContainText('#1');
     await page.getByTestId('vps.create.location').selectOption('2');
     await page.getByTestId('vps.create.os_template').selectOption('6');
     await page.getByTestId('vps.create.node').selectOption('101');
     await page.getByTestId('vps.create.hostname').fill('admin-created.example');
     await page.getByTestId('vps.create.submit').click();
 
-    await expect(page).toHaveURL(/\/admin\/vps\/150$/);
+    await expect(page).toHaveURL(/\/admin\/vps\/150\?user=1$/);
 
     expect(createBodies).toHaveLength(1);
     const body = createBodies[0] as any;
@@ -305,5 +343,82 @@ test.describe('@workflow-matrix @pr-smoke VPS create admin flow', () => {
     });
     expect(body.vps).not.toHaveProperty('location');
     expect(body.vps).not.toHaveProperty('environment');
+  });
+
+  test('@pr-smoke-mobile keeps a recovered VPS bound to its verified owner context', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_ADMIN' });
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
+      handlers: {
+        ...choicesHandlers(),
+        'GET users/84': () => ({ user: { id: 84, login: 'other-member', level: 1 } }),
+        'GET vpses/150': () => ({
+          vps: {
+            id: 150,
+            hostname: 'recovered.example',
+            user: { id: 1, login: 'admin' },
+            node: { id: 101, location: { id: 2, label: 'Praha' } },
+          },
+        }),
+      },
+    });
+
+    await page.goto('/admin/vps/new?user=84');
+    await expect(page.getByTestId('vps.create')).toBeVisible();
+    await page.evaluate(() => {
+      const tabSessionId = sessionStorage.getItem('webui-next.vps-create-tab-session');
+      if (!tabSessionId) throw new Error('Missing VPS create tab session');
+      const marker = {
+        id: 'recovered-admin-receipt',
+        createdAt: Date.now(),
+        phase: 'accepted',
+        pageSessionId: `${tabSessionId}:${history.state?.key ?? 'default'}`,
+        identity: { hostname: 'recovered.example', ownerId: 1, locationId: 2 },
+        candidateVpsId: 150,
+        actionStateId: 42,
+      };
+      localStorage.setItem(
+        'webui-next.vps-create-outcome-uncertain.user-1.generation-recovered-admin-receipt',
+        JSON.stringify(marker),
+      );
+    });
+    await page.reload();
+
+    await expect(page.getByTestId('vps.create.accepted')).toBeVisible();
+    await page.getByTestId('vps.create.uncertain.open_tasks').click();
+    await page.getByTestId('tasks.close-button').click();
+    await expect(page.getByTestId('vps.create.uncertain.acknowledge')).toBeEnabled();
+    await page.getByTestId('vps.create.uncertain.acknowledge').click();
+
+    await expect(page).toHaveURL(/\/admin\/vps\/150\?user=1$/);
+  });
+
+  test('admin create stays blocked until a numeric owner resolves to an existing user', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_ADMIN' });
+    let createRequests = 0;
+    page.on('request', (request) => {
+      if (request.method() === 'POST' && new URL(request.url()).pathname.endsWith('/vpses')) createRequests += 1;
+    });
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
+      handlers: {
+        ...choicesHandlers(),
+        'GET users/999': () => ({ status: false, message: 'Object not found', response: null }),
+      },
+    });
+
+    await page.goto('/admin/vps/new?user=999');
+    await page.getByTestId('vps.create.location').selectOption('2');
+    await page.getByTestId('vps.create.os_template').selectOption('6');
+    await page.getByTestId('vps.create.node').selectOption('101');
+    await page.getByTestId('vps.create.hostname').fill('invalid-owner.example');
+
+    await expect(page.getByTestId('vps.create.owner.error')).toContainText('#999');
+    await expect(page.getByTestId('vps.create.review.owner')).toContainText('#999');
+    await expect(page.getByTestId('vps.create.submit')).toHaveText('Review missing fields');
+    await page.getByTestId('vps.create.submit').click();
+    await expect(page.getByTestId('vps.create.validation')).toContainText('could not be loaded');
+    await expect(page.getByTestId('vps.create.user')).toBeFocused();
+    expect(createRequests).toBe(0);
   });
 });

@@ -65,6 +65,22 @@ function rewriteUserPathForAdminScope(rest: string): string {
   return rest;
 }
 
+function resetScopeDependentListPagination(rest: string, search: string): string {
+  // Keyset cursors and page numbers describe a result set in the current
+  // object scope. Reusing them after switching between "Mine" and "All"
+  // can land on a missing or unrelated page, while the other filters and
+  // the selected page size are still safe to preserve.
+  if (rest !== '/vps' || !search) return search;
+
+  const params = new URLSearchParams(search);
+  if (!params.has('from_id') && !params.has('page')) return search;
+
+  params.delete('from_id');
+  params.set('page', '1');
+  const normalized = params.toString();
+  return normalized ? `?${normalized}` : '';
+}
+
 /**
  * Compute the URL to the "other" app scope while preserving the route suffix.
  *
@@ -88,10 +104,11 @@ export function computeOtherModeUrl(opts: {
 
   if (opts.mode === 'admin') {
     const targetRest = rewriteAdminPathForUserScope(rest);
-    const safeSearch = targetRest ? search : '';
+    const safeSearch = targetRest ? resetScopeDependentListPagination(targetRest, search) : '';
     return `/app${targetRest}${safeSearch}${hash}`;
   }
 
   const targetRest = rewriteUserPathForAdminScope(rest);
-  return `/admin${targetRest}${search}${hash}`;
+  const safeSearch = resetScopeDependentListPagination(targetRest, search);
+  return `/admin${targetRest}${safeSearch}${hash}`;
 }

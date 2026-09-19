@@ -68,8 +68,8 @@ export function IpAddressesFilters({
             ariaLabel={t('admin.ip_addresses.search.placeholder')}
             testId="admin.ip_addresses.smart_filter.input"
             suggestions={smartSuggestions}
-            onSubmit={() => {
-              void applySmartText(smart);
+            onSubmit={(value) => {
+              void applySmartText(value);
             }}
             suffix={
               <Button

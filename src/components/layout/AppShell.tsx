@@ -12,6 +12,7 @@ import { LinkButton } from '../ui/LinkButton';
 import { Spinner } from '../ui/Spinner';
 
 import { formatErrorMessage } from '../../lib/errors';
+import { buildPasswordRecoveryUrl } from '../../lib/auth/passwordRecovery';
 import { withRouterBasename, withSameOriginNextParam } from '../../lib/routerPaths';
 
 import { AppLayout, taskStorageScopeForUser } from './AppLayout';
@@ -20,9 +21,10 @@ import { SessionTokenKeepalive } from './SessionTokenKeepalive';
 function LoginRequired() {
   const auth = useAuth();
   const cfg = getRuntimeConfig();
-  const { t } = useI18n();
+  const { lang, t } = useI18n();
 
   const loginHref = auth.loginUrl || `${cfg.routerBasename}/oauth/login`;
+  const passwordRecoveryHref = buildPasswordRecoveryUrl(cfg.passwordRecoveryUrl, lang);
   const title = auth.status === 'expired' ? t('auth.session_expired.title') : t('auth.login_required.title');
   const body = auth.status === 'expired' ? t('auth.session_expired.body') : t('auth.login_required.body');
 
@@ -41,6 +43,11 @@ function LoginRequired() {
             <Button as="a" href={loginHref} variant="primary">
               {t('auth.action.sign_in')}
             </Button>
+            {passwordRecoveryHref ? (
+              <Button as="a" href={passwordRecoveryHref} variant="secondary">
+                {t('auth.action.reset_password')}
+              </Button>
+            ) : null}
             <LinkButton to="/" variant="secondary">
               {t('auth.action.go_to_status')}
             </LinkButton>

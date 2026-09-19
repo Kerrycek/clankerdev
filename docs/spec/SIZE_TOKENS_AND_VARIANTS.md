@@ -26,11 +26,12 @@ We standardize drawer widths to three variants:
 | Variant | CSS var | Value | Tailwind class |
 |---|---|---:|---|
 | sm | `--drawer-w-sm` | `18rem` | `w-drawer-sm` |
-| md | `--drawer-w-md` | `22rem` | `w-drawer-md` |
+| md | `--drawer-w-md` | `min(22rem, calc(100vw - 2rem))` | `w-drawer-md` |
 | lg | `--drawer-w-lg` | `28rem` | `w-drawer-lg` |
 
 Responsive rule:
 - On mobile, drawers should normally be full width: `w-full md:w-drawer-md` (or sm/lg).
+- The `md` token also keeps popovers that reuse it inside a one-rem viewport gutter.
 
 Implementation:
 - The shared `Drawer` component applies `w-full` on mobile and token widths on `md+`.

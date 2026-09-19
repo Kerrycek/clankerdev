@@ -84,6 +84,7 @@ export function AppHeader(props: AppHeaderProps) {
     canSwitchMode,
     shortcutHint,
     onOpenMobileNav,
+    onOpenPalette,
     showSyncIndicator,
     syncRef,
     syncOpen,
@@ -218,11 +219,23 @@ export function AppHeader(props: AppHeaderProps) {
           <Menu size={20} />
         </button>
 
+        <button
+          type="button"
+          className="order-6 inline-flex h-11 w-12 items-center justify-center rounded-md border border-border bg-overlay-surface shadow-card hover:bg-surface-2 sm:hidden"
+          onClick={onOpenPalette}
+          aria-label={t('palette.open')}
+          aria-haspopup="dialog"
+          title={t('palette.open')}
+          data-testid="palette.open"
+        >
+          <Search size={18} aria-hidden="true" />
+        </button>
+
         <form
           className={clsx(
-            'relative order-6 flex h-11 w-12 items-center gap-2 rounded-md border border-border bg-overlay-surface px-3 text-sm shadow-card',
+            'relative order-6 hidden h-11 items-center gap-2 rounded-md border border-border bg-overlay-surface px-3 text-sm shadow-card sm:flex sm:w-56',
             'focus-within:ring-2 focus-within:ring-accent/40',
-            'sm:w-56 md:order-3 md:h-10 md:w-72 lg:w-80'
+            'md:order-3 md:h-10 md:w-72 lg:w-80'
           )}
           role="search"
           onSubmit={(e) => {

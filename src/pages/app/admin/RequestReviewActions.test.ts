@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import { requestReviewActions } from './RequestReviewActions';
-import { requestMissingRequiredUser, requestNodeSupportsTemplate, safePositiveInteger } from './RequestReviewModel';
+import {
+  requestBulkReviewActions,
+  requestCanEnterBulkReview,
+  requestMissingRequiredUser,
+  requestNodeSupportsTemplate,
+  safePositiveInteger,
+} from './RequestReviewModel';
 
 describe('requestReviewActions', () => {
   it('fails closed once a request is no longer awaiting review', () => {
@@ -45,6 +51,27 @@ describe('requestReviewActions', () => {
       'ignore',
       'request_correction',
     ]);
+  });
+
+  it('admits only awaiting requests with a safe action into bulk review', () => {
+    expect(requestBulkReviewActions('registration', { id: 6, state: 'awaiting' }, true)).toEqual([
+      'deny',
+      'ignore',
+      'request_correction',
+    ]);
+    expect(requestBulkReviewActions('change', { id: 7, state: 'awaiting', user: { id: 42 } }, true)).toEqual([
+      'approve',
+      'deny',
+      'ignore',
+    ]);
+
+    for (const state of ['approved', 'denied', 'ignored', 'pending_correction']) {
+      expect(requestBulkReviewActions('registration', { id: 8, state }, true)).toEqual([]);
+    }
+    expect(requestBulkReviewActions('change', { id: 9, state: 'awaiting', user: null, raw_user_id: 42 }, true)).toEqual([]);
+    expect(requestBulkReviewActions('change', { id: 10, state: 'awaiting', user: { id: 42 } }, false)).toEqual([]);
+    expect(requestCanEnterBulkReview('change', { id: 11, state: 'awaiting', user: { id: 42 } }, true, false)).toBe(true);
+    expect(requestCanEnterBulkReview('change', { id: 11, state: 'awaiting', user: { id: 42 } }, true, true)).toBe(false);
   });
 
   it('does not expose review actions outside admin mode', () => {

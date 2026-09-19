@@ -13,9 +13,6 @@ export interface DnsResolver {
 export async function fetchDnsResolvers(opts?: {
   limit?: number;
   fromId?: number;
-  q?: string;
-  isUniversal?: boolean;
-  locationId?: number;
   vpsId?: number;
 }) {
   const params: Record<string, unknown> = {};
@@ -23,9 +20,6 @@ export async function fetchDnsResolvers(opts?: {
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
 
-  if (opts?.q) params['q'] = opts.q;
-  if (opts?.isUniversal !== undefined) params['is_universal'] = opts.isUniversal;
-  if (opts?.locationId !== undefined) params['location'] = opts.locationId;
   if (opts?.vpsId !== undefined) params['vps'] = opts.vpsId;
 
   const res = await haveApiCall<DnsResolver[]>({

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useI18n } from '../../app/i18n';
 import { Card, CardBody, CardHeader } from '../ui/Card';
 import { EmptyState } from '../ui/EmptyState';
+import { ErrorState } from '../ui/ErrorState';
 import { UsageBar } from '../ui/UsageBar';
 import { fetchUserClusterResources, type ClusterResource } from '../../lib/api/clusterResources';
 
@@ -53,8 +54,23 @@ export function UserResourceUsagePanel(props: { userId: number; testIdPrefix: st
   return (
     <div className="space-y-4" data-testid={props.testIdPrefix}>
       {resourcesQ.isLoading ? <div className="text-sm text-muted">{t('common.loading')}</div> : null}
-      {!resourcesQ.isLoading && groups.length === 0 ? <EmptyState title={t('admin.user.resource_usage.empty.title')} body={t('admin.user.resource_usage.empty.body')} /> : null}
-      {groups.map((group) => (
+      {resourcesQ.isError ? (
+        <ErrorState
+          error={resourcesQ.error}
+          onRetry={() => void resourcesQ.refetch()}
+          showBack={false}
+          showStatusLink={false}
+          testId={`${props.testIdPrefix}.error`}
+        />
+      ) : null}
+      {resourcesQ.isSuccess && groups.length === 0 ? (
+        <EmptyState
+          title={t('admin.user.resource_usage.empty.title')}
+          body={t('admin.user.resource_usage.empty.body')}
+          testId={`${props.testIdPrefix}.empty`}
+        />
+      ) : null}
+      {resourcesQ.isSuccess ? groups.map((group) => (
         <Card key={group.key} testId={`${props.testIdPrefix}.environment.${group.key}`}>
           <CardHeader title={group.label} />
           <CardBody>
@@ -92,7 +108,7 @@ export function UserResourceUsagePanel(props: { userId: number; testIdPrefix: st
             </div>
           </CardBody>
         </Card>
-      ))}
+      )) : null}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
+import { expectNoDocumentHorizontalOverflow } from '../../helpers/horizontalOverflow';
 
 const vps = {
   id: 123,
@@ -119,7 +120,9 @@ test('@workflow-matrix @smoke VPS detail tabs expose storage and backups, access
   await expect(page.getByTestId('vps.overview.network.card')).toBeVisible();
   await expect(page.getByTestId('vps.overview.storage.card')).toBeVisible();
   await expect(page.getByTestId('vps.overview.diagnostics.card')).toBeVisible();
-  await expect(page.getByTestId('vps.overview.lifecycle')).toBeVisible();
+  await expect(page.getByTestId('vps.overview.metrics.toggle')).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByTestId('vps.overview.tx.card')).toHaveCount(0);
+  await expect(page.getByTestId('vps.overview.lifecycle')).toHaveCount(0);
   await expect(page.getByTestId('vps.overview.config.owner')).toHaveCount(0);
   await expect(page.getByTestId('vps.overview.admin_ops.card')).toHaveCount(0);
   await expect(page.getByTestId('vps.action.snapshot')).toHaveAttribute(
@@ -219,8 +222,11 @@ test('@workflow-matrix admin account in user VPS view keeps storage admin contro
 });
 
 
-test('@workflow-matrix VPS detail shows admin operational metadata in admin mode', async ({ page }) => {
+test('@workflow-matrix @pr-smoke @pr-smoke-mobile VPS admin overview keeps each fact in one compact place', async ({
+  page,
+}, testInfo) => {
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_ADMIN_SESSION' });
+  let statusesCalls = 0;
 
   await installHaveApiMock(page, {
     user: { id: 1, login: 'admin', level: 99 },
@@ -228,6 +234,7 @@ test('@workflow-matrix VPS detail shows admin operational metadata in admin mode
       'GET vpses/123': () => ({
         vps: {
           ...vps,
+          user: { id: 10, login: 'alice-with-an-exceptionally-long-owner-login-that-must-wrap' },
           pool: { id: 9, name: 'tank' },
           dataset: { id: 10, full_name: 'tank/data', name: 'tank/data' },
           expiration_date: '2027-01-31T00:00:00Z',
@@ -241,8 +248,20 @@ test('@workflow-matrix VPS detail shows admin operational metadata in admin mode
             addr: '198.51.100.10',
             prefix: 32,
             routed: true,
-            network: { id: 55, label: 'public 198.51.100.0/24', role: 'public' },
+            network: { id: 55, label: 'public 198.51.100.0/24', ip_version: 4, role: 'public_access' },
             user: { id: 10, login: 'alice' },
+          },
+          {
+            id: 502,
+            addr: '10.0.0.15',
+            prefix: 32,
+            network: { id: 56, label: 'private 10.0.0.0/24', ip_version: 4, role: 'private_access' },
+          },
+          {
+            id: 503,
+            addr: '2001:db8:1234:5678:90ab:cdef:1234:5678',
+            prefix: 64,
+            network: { id: 57, label: 'public IPv6', ip_version: 6, role: 'public_access' },
           },
         ],
       }),
@@ -257,41 +276,148 @@ test('@workflow-matrix VPS detail shows admin operational metadata in admin mode
           },
         ],
       }),
-      'GET vpses/123/statuses': () => ({ statuses: [] }),
+      'GET vpses/123/statuses': () => {
+        statusesCalls += 1;
+        return { statuses: [] };
+      },
       'GET vpses/123/state_logs': () => ({ state_logs: [] }),
       'GET dns_resolvers': () => ({ dns_resolvers: [] }),
       'GET user_namespace_maps': () => ({ user_namespace_maps: [] }),
     },
   });
 
-  await page.goto('/admin/vps/123');
+  await page.goto('/admin/vps/123?user=10');
 
   await expect(page.getByTestId('vps.header')).toBeVisible();
-  await expect(page.getByTestId('vps.overview.control_center')).toBeVisible();
-  await expect(page.getByTestId('vps.overview.health')).toBeVisible();
-  await expect(page.getByTestId('vps.overview.resources_usage.card')).toBeVisible();
-  await expect(page.getByTestId('vps.overview.status_access.card')).toBeVisible();
-  await expect(page.getByTestId('vps.overview.network.card')).toBeVisible();
-  await expect(page.getByTestId('vps.overview.storage.card')).toBeVisible();
-  await expect(page.getByTestId('vps.overview.admin_ops.card')).toBeVisible();
-  await expect(page.getByTestId('vps.overview.admin_ops.owner')).toContainText('alice');
-  await expect(page.getByTestId('vps.overview.admin_ops.user_id')).toContainText('#10');
-  await expect(page.getByTestId('vps.overview.admin_ops.node')).toContainText('node1.example');
-  await expect(page.getByTestId('vps.overview.admin_ops.location_environment')).toContainText('prod');
-  await expect(page.getByTestId('vps.overview.admin_ops.dataset')).toContainText('tank/data');
-  await expect(page.getByTestId('vps.overview.admin_ops.ips')).toContainText('198.51.100.10/32');
-  await expect(page.getByTestId('vps.overview.admin_ops.ips')).toContainText('Owner: alice');
-  await expect(page.getByTestId('vps.overview.tx.card')).toBeVisible();
-  await expect(page.getByTestId('vps.overview.management.admin_context')).toBeVisible();
+  await expect(page.getByTestId('vps.header').getByRole('link', { name: /^Access$/ })).toHaveAttribute(
+    'href',
+    '/admin/vps/123/access?user=10',
+  );
+  await expect(page.getByTestId('vps.action.primary_console')).toHaveAttribute(
+    'href',
+    '/admin/vps/123/console?user=10',
+  );
+  const overview = page.getByTestId('vps.overview.control_center');
+  const resources = page.getByTestId('vps.overview.resources_usage.card');
+  const network = page.getByTestId('vps.overview.network.card');
+  const storage = page.getByTestId('vps.overview.storage.card');
+  const activity = page.getByTestId('vps.overview.tx.card');
+  const metrics = page.getByTestId('vps.overview.metrics.card');
+  await expect(overview).toBeVisible();
+  await expect(page.getByTestId('vps.overview.health')).toHaveCount(0);
+  await expect(page.getByTestId('vps.header.owner')).toContainText('alice');
+  await expect(page.getByTestId('vps.header.owner')).toContainText('#10');
+  await expect(page.getByTestId('vps.header.owner').getByRole('link')).toHaveAttribute('href', '/admin/users/10');
+  await expect(resources).toBeVisible();
+  await expect(resources.getByRole('link', { name: 'Edit resources' })).toHaveAttribute(
+    'href',
+    '/admin/vps/123/config?user=10',
+  );
+  await expect(page.getByTestId('vps.overview.resources_usage.runtime')).toBeVisible();
+  await expect(page.getByTestId('vps.overview.status_access.card')).toHaveCount(0);
+  await expect(network).toBeVisible();
+  await expect(network.getByRole('link', { name: 'Manage network' })).toHaveAttribute(
+    'href',
+    '/admin/vps/123/network?user=10',
+  );
+  await expect(storage).toBeVisible();
+  await expect(storage.getByRole('link', { name: 'Open storage' })).toHaveAttribute(
+    'href',
+    '/admin/vps/123/storage?user=10',
+  );
+  await expect(storage).toContainText('Pool: tank');
+  await expect(storage).toContainText('Root dataset, pool and VPS backups.');
+  await expect(page.getByTestId('vps.overview.admin_ops.card')).toHaveCount(0);
+  await expect(overview).not.toContainText('alice');
+  await expect(page.getByTestId('vps.overview.admin_ops.user_id')).toHaveCount(0);
+  await expect(page.getByTestId('vps.overview.admin_ops.node')).toHaveCount(0);
+  await expect(page.getByTestId('vps.overview.admin_ops.dataset')).toHaveCount(0);
+  await expect(page.getByTestId('vps.overview.admin_ops.ips')).toHaveCount(0);
+  await expect(network).not.toContainText('alice');
+
+  for (const address of [
+    '198.51.100.10/32',
+    '10.0.0.15/32',
+    '2001:db8:1234:5678:90ab:cdef:1234:5678/64',
+  ]) {
+    await expect(overview.getByText(address, { exact: true })).toHaveCount(1);
+  }
+
+  await expect(activity).toBeVisible();
+  await expect(page.getByTestId('vps.overview.lifecycle')).toHaveCount(0);
+  await expect(page.getByTestId('vps.overview.management.admin_context')).toHaveCount(0);
+
+  await expect(metrics).toBeVisible();
+  const metricsToggle = page.getByTestId('vps.overview.metrics.toggle');
+  await expect(metricsToggle).toHaveAttribute('aria-expanded', 'false');
+  expect(statusesCalls).toBe(0);
+  await metricsToggle.click();
+  await expect(metricsToggle).toHaveAttribute('aria-expanded', 'true');
+  await expect.poll(() => statusesCalls).toBeGreaterThan(0);
+  await expect(metrics).toContainText('No metrics samples.');
+  await metricsToggle.click();
+  await expect(metricsToggle).toHaveAttribute('aria-expanded', 'false');
+
+  const widths = testInfo.project.name === 'mobile-chrome' ? [320, 390] : [];
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 900 });
+    await expectNoDocumentHorizontalOverflow(page);
+
+    const viewport = page.viewportSize();
+    const networkBox = await network.boundingBox();
+    const ownerBox = await page.getByTestId('vps.header.owner').boundingBox();
+    const ipv6Copy = network
+      .locator('li')
+      .filter({ hasText: '2001:db8:1234:5678:90ab:cdef:1234:5678' })
+      .getByRole('button');
+    const copyBox = await ipv6Copy.boundingBox();
+    expect(networkBox).not.toBeNull();
+    expect(ownerBox).not.toBeNull();
+    expect(copyBox).not.toBeNull();
+    expect(networkBox!.x).toBeGreaterThanOrEqual(0);
+    expect(networkBox!.x + networkBox!.width).toBeLessThanOrEqual(viewport!.width + 1);
+    expect(ownerBox!.x + ownerBox!.width).toBeLessThanOrEqual(viewport!.width + 1);
+    expect(copyBox!.x + copyBox!.width).toBeLessThanOrEqual(networkBox!.x + networkBox!.width + 1);
+    expect(copyBox!.x + copyBox!.width).toBeLessThanOrEqual(viewport!.width + 1);
+    expect(copyBox!.height).toBeGreaterThanOrEqual(44);
+    await expect(ipv6Copy).toBeVisible();
+  }
+  if (widths.length === 0) {
+    await expectNoDocumentHorizontalOverflow(page);
+    const overviewBox = await overview.boundingBox();
+    const resourcesBox = await resources.boundingBox();
+    const networkBox = await network.boundingBox();
+    const storageBox = await storage.boundingBox();
+    const activityBox = await activity.boundingBox();
+    expect(overviewBox).not.toBeNull();
+    expect(resourcesBox).not.toBeNull();
+    expect(networkBox).not.toBeNull();
+    expect(storageBox).not.toBeNull();
+    expect(activityBox).not.toBeNull();
+    expect(Math.abs(resourcesBox!.y - networkBox!.y)).toBeLessThanOrEqual(2);
+    expect(Math.abs(storageBox!.y - activityBox!.y)).toBeLessThanOrEqual(2);
+    expect(resourcesBox!.width).toBeLessThan(overviewBox!.width * 0.6);
+    expect(networkBox!.width).toBeLessThan(overviewBox!.width * 0.6);
+  }
 
   const moreActions = page.getByTestId('vps.actions.menu');
-  await expect(moreActions.locator('option[value="/admin/vps/123/lifecycle/migrate"]')).toHaveCount(1);
+  await expect(moreActions.locator('option[value="/admin/vps/123/config?user=10"]')).toHaveCount(1);
+  await expect(moreActions.locator('option[value="/admin/vps/123/lifecycle?user=10"]')).toHaveCount(1);
+  await expect(moreActions.locator('option[value="/admin/oom-reports?vps=123"]')).toHaveCount(1);
+  await expect(moreActions.locator('option[value="/admin/oom-reports/rules/123"]')).toHaveCount(1);
+  await expect(moreActions.locator('option[value="/admin/incidents?vps=123"]')).toHaveCount(1);
+  await expect(moreActions.locator('option[value="/admin/incidents/new?vps=123"]')).toHaveCount(1);
+  await expect(moreActions.locator('option[value="/admin/vps/123/lifecycle/migrate?user=10"]')).toHaveCount(1);
   await expect(moreActions.locator('option[value="/admin/transactions?class_name=Vps&row_id=123"]')).toHaveCount(1);
+  const actionValues = (await moreActions.locator('option').evaluateAll((options) => (
+    options.map((option) => (option as HTMLOptionElement).value).filter(Boolean)
+  )));
+  expect(actionValues).toEqual([...new Set(actionValues)]);
 
   await captureOptInScreenshot(page, 'E2E_VPS_ADMIN_OVERVIEW_SCREENSHOT');
 
-  await moreActions.selectOption('/admin/vps/123/config');
-  await expect(page).toHaveURL(/\/admin\/vps\/123\/config$/);
+  await moreActions.selectOption('/admin/vps/123/config?user=10');
+  await expect(page).toHaveURL(/\/admin\/vps\/123\/config\?user=10$/);
   await expect(page.getByText('Start menu timeout', { exact: true })).toBeVisible();
   await expect(page.getByText('Owner', { exact: true })).toBeVisible();
   await expect(page.getByText('CPU limit', { exact: true })).toBeVisible();

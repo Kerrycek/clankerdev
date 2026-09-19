@@ -21,6 +21,7 @@ export const csAuth = {
   'auth.admin_required.body': 'Jsi přihlášen(a) jako {login}, ale tento účet nemá oprávnění používat administrátorské zobrazení.',
   'auth.user.fallback': 'uživatel',
   'auth.action.sign_in': 'Přihlásit se',
+  'auth.action.reset_password': 'Obnovit heslo',
   'auth.action.try_sign_in': 'Zkusit přihlášení',
   'auth.action.sign_out': 'Odhlásit se',
   'auth.action.go_to_status': 'Přejít na status',

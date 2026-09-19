@@ -79,6 +79,7 @@ function TransactionsListContent() {
     defaultLimit: 50,
     allowedLimits: [25, 50, 100, 200, 500],
   });
+  const apiPageLimit = pagination.limit + 1;
 
   const txQuery = useQuery({
     queryKey: [
@@ -90,14 +91,14 @@ function TransactionsListContent() {
         type: typeNum,
         done,
         success,
-        limit: pagination.limit,
+        limit: apiPageLimit,
         fromId: pagination.fromId,
       },
     ],
     queryFn: async () =>
       (
         await fetchTransactions({
-          limit: pagination.limit,
+          limit: apiPageLimit,
           fromId: pagination.fromId,
           transactionChainId: chainIdNum,
           nodeId: nodeIdNum,
@@ -109,13 +110,13 @@ function TransactionsListContent() {
     refetchInterval: done === 'done' ? false : tierARefetchMs,
   });
 
-  const pageData = txQuery.data ?? [];
+  const pageData = useMemo(() => (txQuery.data ?? []).slice(0, pagination.limit), [txQuery.data, pagination.limit]);
   const pageCursor = useMemo(() => cursorFromDescendingPage(pageData), [pageData]);
-  const hasMore = pageData.length >= pagination.limit;
+  const hasMore = (txQuery.data?.length ?? 0) > pagination.limit;
   const canNext = pagination.hasForward || (hasMore && pageCursor !== null);
   const filtersActive = Boolean(chainIdNum || nodeIdNum || typeNum || done || success !== '');
 
-  const rows = useMemo(() => (txQuery.data ?? []).map((tx) => buildTransactionItemRow(tx, t)), [txQuery.data, t]);
+  const rows = useMemo(() => pageData.map((tx) => buildTransactionItemRow(tx, t)), [pageData, t]);
   const primaryLoading = txQuery.isLoading;
   const primaryError = txQuery.isError;
   const primaryErrorObj = txQuery.error;

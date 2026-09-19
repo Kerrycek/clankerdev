@@ -27,8 +27,8 @@ import { Select, type SelectOption } from '../../../../components/ui/Select';
 import { SecretField } from '../../../../components/ui/SecretField';
 import { SmartFilterInput, type SmartFilterSuggestion } from '../../../../components/ui/SmartFilterInput';
 import { SmartInputHelp } from '../../../../components/ui/SmartInputHelp';
-import { TableCard } from '../../../../components/ui/TableCard';
 import { Textarea } from '../../../../components/ui/Textarea';
+import { SystemConfigList } from './SystemConfigList';
 
 function norm(s: unknown): string {
   return typeof s === 'string' ? s : s == null ? '' : String(s);
@@ -155,7 +155,7 @@ export function SystemConfigPage() {
   const categories = useMemo(() => {
     const set = new Set<string>();
     for (const c of configs) {
-      const k = norm((c as any).category).trim();
+      const k = norm(c.category).trim();
       if (k) set.add(k);
     }
     return [...set].sort((a, b) => a.localeCompare(b));
@@ -378,50 +378,12 @@ export function SystemConfigPage() {
           testId="admin.cluster.system_config.empty"
         />
       ) : (
-        <TableCard testId="admin.cluster.system_config.table" minWidth="lg">
-          <thead>
-            <tr>
-              {!catTrim ? <th className="px-3 py-2 text-left text-xs font-semibold text-muted">{t('admin.cluster.system_config.col.category')}</th> : null}
-              <th className="px-3 py-2 text-left text-xs font-semibold text-muted">{t('admin.cluster.system_config.col.name')}</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-muted">{t('admin.cluster.system_config.col.label')}</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-muted">{t('admin.cluster.system_config.col.value')}</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-muted">{t('common.type')}</th>
-              <th className="px-3 py-2 text-right text-xs font-semibold text-muted">{t('common.actions')}</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {filtered.map((cfg) => {
-              const rowId = `${norm(cfg.category)}.${norm(cfg.name)}`.replace(/[^a-zA-Z0-9_.-]/g, '_');
-              return (
-                <tr key={rowId} data-testid={`admin.cluster.system_config.row.${rowId}`}>
-                  {!catTrim ? <td className="whitespace-nowrap px-3 py-2 text-muted">{norm(cfg.category) || '—'}</td> : null}
-
-                  <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-fg">{norm(cfg.name) || '—'}</td>
-
-                  <td className="px-3 py-2 text-fg">{norm(cfg.label) || '—'}</td>
-
-                  <td className="px-3 py-2 font-mono text-xs text-muted">{valuePreview(cfg)}</td>
-
-                  <td className="whitespace-nowrap px-3 py-2">
-                    <Badge variant="neutral">{norm((cfg as any).type) || '—'}</Badge>
-                  </td>
-
-                  <td className="whitespace-nowrap px-3 py-2 text-right">
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => openEditor(cfg)}
-                      testId={`admin.cluster.system_config.row.${rowId}.edit`}
-                    >
-                      {t('common.edit')}
-                    </Button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </TableCard>
+        <SystemConfigList
+          configs={filtered}
+          showCategory={!catTrim}
+          valuePreview={valuePreview}
+          onEdit={openEditor}
+        />
       )}
 
       <Modal
@@ -441,7 +403,7 @@ export function SystemConfigPage() {
               disabled={!editor || !canSave}
               onClick={() => {
                 if (!editor) return;
-                const tp = norm((editor.cfg as any).type);
+                const tp = norm(editor.cfg.type);
                 const raw = editor.value;
 
                 // Most sysconfig values are stored as String/Text/YAML. For numeric types, try to coerce.
@@ -482,7 +444,7 @@ export function SystemConfigPage() {
                 {editor.cfg.description ? <p className="text-sm text-muted">{norm(editor.cfg.description)}</p> : null}
 
                 <div className="mt-3 flex flex-wrap gap-2">
-                  <Badge variant="neutral">{t('common.type')}: {norm((editor.cfg as any).type) || '—'}</Badge>
+                  <Badge variant="neutral">{t('common.type')}: {norm(editor.cfg.type) || '—'}</Badge>
                   {typeof editor.cfg.min_user_level === 'number' ? (
                     <Badge variant="neutral">{t('admin.cluster.system_config.badge.min_level', { level: editor.cfg.min_user_level })}</Badge>
                   ) : null}
@@ -545,7 +507,7 @@ export function SystemConfigPage() {
               <Card>
                 <CardHeader title={t('admin.cluster.system_config.edit.value.title')} subtitle={t('admin.cluster.system_config.edit.value.subtitle')} />
                 <CardBody>
-                  {norm((editor.cfg as any).type) === 'Text' || norm((editor.cfg as any).type) === 'Array' || norm((editor.cfg as any).type) === 'Hash' ? (
+                  {norm(editor.cfg.type) === 'Text' || norm(editor.cfg.type) === 'Array' || norm(editor.cfg.type) === 'Hash' ? (
                     <Textarea
                       testId="admin.cluster.system_config.edit.value"
                       value={editor.value}

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Camera, RotateCw } from 'lucide-react';
 import { Link, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -39,16 +39,17 @@ import {
 import { VpsContextProvider } from './VpsContext';
 import { preflightVpsNotBusy } from './vpsPreflight';
 import { ScopeMismatchCard } from '../../../components/layout/ScopeMismatchCard';
-import { useFastPollIntervalMs, useTierAIntervalMs } from '../../../lib/refreshTiers';
+import { useFastPollIntervalMs, useTierAIntervalMs, useTierBIntervalMs } from '../../../lib/refreshTiers';
 import { useNetworkStatus } from '../../../lib/useNetworkStatus';
 import { deriveChainLockState } from '../../../lib/lockState';
-import { primarySshIpAddress } from './VpsOverviewModel';
+import { isRemoteConsoleAvailable, ownerLabel, primarySshIpAddress } from './VpsOverviewModel';
 import { freezeVpsMutationSnapshot, type VpsMutationSnapshot } from './VpsMutationSnapshot';
 import {
   resolvePendingVpsCreateActionStateId,
   shouldDeferVpsDetailQuery,
 } from './VpsDetailVisibility';
 import { VpsActionsMenu, VpsTabsNav } from './VpsNavigation';
+import { VpsPowerConfirmTarget } from './VpsPowerConfirmation';
 export function VpsLayout() {
   const { basePath, mode } = useAppMode();
   const auth = useAuth();
@@ -62,13 +63,38 @@ export function VpsLayout() {
   const navigate = useNavigate();
   const params = useParams();
   const vpsId = Number(params['vpsId']);
+  const requestedListUserId = useMemo(() => {
+    if (mode !== 'admin') return undefined;
+    const raw = new URLSearchParams(location.search).get('user');
+    const parsed = Number(raw);
+    return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
+  }, [location.search, mode]);
+  const listContextRef = useRef<{ vpsId: number; userId?: number }>({ vpsId, userId: requestedListUserId });
+  if (listContextRef.current.vpsId !== vpsId) {
+    listContextRef.current = { vpsId, userId: requestedListUserId };
+  } else if (requestedListUserId !== undefined) {
+    listContextRef.current.userId = requestedListUserId;
+  }
+  const listContextUserId = mode === 'admin' ? listContextRef.current.userId : undefined;
+  const listContextSearch = listContextUserId === undefined ? '' : `?user=${encodeURIComponent(String(listContextUserId))}`;
+  const vpsListHref = `${basePath}/vps${listContextSearch}`;
+
+  useEffect(() => {
+    if (listContextUserId === undefined || requestedListUserId !== undefined) return;
+    navigate(
+      { pathname: location.pathname, search: listContextSearch, hash: location.hash },
+      { replace: true, state: location.state },
+    );
+  }, [listContextSearch, listContextUserId, location.hash, location.pathname, location.state, navigate, requestedListUserId]);
   const vpsRef = useMemo(() => {
     if (!Number.isFinite(vpsId) || vpsId <= 0) return null;
     return objectRef('Vps', vpsId);
   }, [vpsId]);
 
   const tierARefetchMs = useTierAIntervalMs();
+  const tierBRefetchMs = useTierBIntervalMs();
   const fastPollMs = useFastPollIntervalMs();
+  const vpsLocallyLocked = vpsRef ? chrome.isLocallyLocked(vpsRef) : false;
 
   const pendingCreateActionStateId = useMemo(
     () => resolvePendingVpsCreateActionStateId(location.state, chrome.trackedActionStates, vpsId),
@@ -93,6 +119,14 @@ export function VpsLayout() {
     queryKey: ['vps', 'show', { id: vpsId }],
     queryFn: async () => (await fetchVps(vpsId, { includes: 'node__location__environment,user,dns_resolver,user_namespace_map,os_template,dataset' })).data,
     enabled: Number.isFinite(vpsId) && vpsId > 0 && !deferVpsDetailQuery,
+    refetchInterval: (query) => {
+      const data = query.state.data as { is_running?: boolean } | undefined;
+      return pendingCreateActionStateId !== undefined && typeof data?.is_running !== 'boolean'
+        ? fastPollMs
+        : vpsLocallyLocked
+          ? tierARefetchMs
+          : tierBRefetchMs;
+    },
   });
 
   const ipsQ = useQuery({
@@ -296,7 +330,7 @@ export function VpsLayout() {
         title={t('vps.layout.load_error.title')}
         error={vpsQ.error}
         onRetry={() => void vpsQ.refetch()}
-        backTo={`${basePath}/vps`}
+        backTo={vpsListHref}
         detailsExtra={{ page: 'vps.detail', vpsId, scope: scope.scope }}
       />
     );
@@ -311,7 +345,7 @@ export function VpsLayout() {
         title={t('vps.layout.not_found.title')}
         body={t('vps.layout.not_found.body')}
         onRetry={() => void vpsQ.refetch()}
-        backTo={`${basePath}/vps`}
+        backTo={vpsListHref}
         showStatusLink={false}
         showDetails={false}
         detailsExtra={{ page: 'vps.detail', vpsId, scope: scope.scope }}
@@ -339,7 +373,7 @@ export function VpsLayout() {
         objectLabel={String((vps as any).hostname ?? '')}
         ownerUserId={ownerId}
         adminHref={adminHref}
-        backHref={`${basePath}/vps`}
+        backHref={vpsListHref}
         testId="vps.scope-mismatch"
       />
     );
@@ -347,6 +381,7 @@ export function VpsLayout() {
 
   const locationLabel = (vps as any).node?.location?.label ?? t('common.na');
   const nodeLabel = (vps as any).node?.domain_name ?? (vps as any).node?.name ?? t('common.na');
+  const ownerName = ownerLabel(vps);
 
   const sshIp = primarySshIpAddress(ipsQ.data);
   const sshCommand = sshIp ? `ssh root@${sshIp}` : null;
@@ -381,7 +416,11 @@ export function VpsLayout() {
   const lc = objectStateBadge(vps.object_state, t);
 
   const showAsyncError = currentPasswdAsyncError !== null;
-  const primaryHeaderAction = vps.is_running !== true ? 'start' : 'console';
+  const primaryHeaderAction = canMutateVps && vps.is_running !== true
+    ? 'start'
+    : vps.is_running === true && isRemoteConsoleAvailable(vps)
+      ? 'console'
+      : 'access';
 
   const handleHeaderMoreAction = (value: string) => {
     if (!value) return;
@@ -439,14 +478,16 @@ export function VpsLayout() {
         ipAddressesLoading: ipsQ.isLoading,
         ipAddressesError: ipsQ.isError,
         sshCommand,
+        detailContextSearch: listContextSearch,
       }}
     >
       <DetailShell>
         <ObjectHeader
           testId="vps.header"
+          horizontalAt="xl"
           kicker={
             <>
-              <Link className="text-accent hover:underline" to={`${basePath}/vps`}>
+              <Link className="text-accent hover:underline" to={vpsListHref}>
                 {t('nav.vps')}
               </Link>
               <span className="text-faint"> · </span>
@@ -472,6 +513,21 @@ export function VpsLayout() {
           }
           meta={
             <>
+              {mode === 'admin' && ownerName ? (
+                <>
+                  <span className="min-w-0 [overflow-wrap:anywhere]" data-testid="vps.header.owner">
+                    {t('vps.control.admin.owner')}{' '}
+                    {ownerId ? (
+                      <Link className="font-medium text-link hover:underline [overflow-wrap:anywhere]" to={`${basePath}/users/${ownerId}`}>
+                        {ownerName} <span className="font-normal text-muted">#{ownerId}</span>
+                      </Link>
+                    ) : (
+                      <span className="font-medium text-fg">{ownerName}</span>
+                    )}
+                  </span>
+                  <span className="text-faint"> · </span>
+                </>
+              ) : null}
               {t('common.node')} <span className="font-medium text-fg">{nodeLabel}</span>
               <span className="text-faint"> · </span>
               {t('common.location')} <span className="font-medium text-fg">{locationLabel}</span>
@@ -479,14 +535,24 @@ export function VpsLayout() {
           }
           extra={
             <div className="space-y-2">
-              <div className="text-sm text-muted" data-testid="vps.header.ssh">
-                {t('vps.header.ssh.label')}: {sshCommand ? (
-                  <span className="inline-flex items-center gap-2">
-                    <code className="rounded bg-surface-2 px-2 py-1 font-mono text-xs text-fg">{sshCommand}</code>
-                    <CopyButton text={sshCommand} label={t('common.copy')} />
+              <div
+                className="min-w-0 text-sm text-muted xl:flex xl:items-center xl:gap-1"
+                data-testid="vps.header.ssh"
+              >
+                <span className="shrink-0">{t('vps.header.ssh.label')}:</span>
+                {sshCommand ? (
+                  <span className="mt-1 flex min-w-0 max-w-full items-center gap-2 xl:mt-0">
+                    <code className="min-w-0 flex-1 truncate rounded bg-surface-2 px-2 py-1 font-mono text-xs text-fg">
+                      {sshCommand}
+                    </code>
+                    <CopyButton
+                      className="min-h-11 shrink-0 xl:min-h-8"
+                      text={sshCommand}
+                      label={t('common.copy')}
+                    />
                   </span>
                 ) : (
-                  <span className="text-faint">{t('vps.header.ssh.no_address')}</span>
+                  <span className="ml-1 text-faint xl:ml-0">{t('vps.header.ssh.no_address')}</span>
                 )}
               </div>
 
@@ -520,13 +586,21 @@ export function VpsLayout() {
                 >
                   {t('action.vps.start.label')}
                 </ActionButton>
-              ) : (
+              ) : primaryHeaderAction === 'console' ? (
                 <LinkButton
-                  to={`${basePath}/vps/${vps.id}/console`}
+                  to={`${basePath}/vps/${vps.id}/console${listContextSearch}`}
                   variant="primary"
                   testId="vps.action.primary_console"
                 >
                   {t('vps.tabs.console')}
+                </LinkButton>
+              ) : (
+                <LinkButton
+                  to={`${basePath}/vps/${vps.id}/access${listContextSearch}`}
+                  variant="primary"
+                  testId="vps.action.primary_access"
+                >
+                  {t('vps.tabs.access')}
                 </LinkButton>
               )}
 
@@ -566,12 +640,15 @@ export function VpsLayout() {
                 stopAllowed={stopGate.allowed}
                 passwordAllowed={passwdGate.allowed}
                 showTasks={busyTransaction || busyLocal}
+                showSupportActions={mode === 'admin'}
                 showAdminActions={mode === 'admin' && auth.role === 'admin'}
+                ownerUserId={ownerId}
+                contextSearch={listContextSearch}
                 onSelect={handleHeaderMoreAction}
               />
             </>
           }
-          tabs={<VpsTabsNav basePath={basePath} vpsId={vps.id} />}
+          tabs={<VpsTabsNav basePath={basePath} vpsId={vps.id} contextSearch={listContextSearch} />}
         />
 
         {chainsStale ? (
@@ -626,7 +703,13 @@ export function VpsLayout() {
             setConfirm(null);
           }}
         >
-          <Checkbox
+          <div className="space-y-3">
+            <VpsPowerConfirmTarget
+              vpsId={vps.id}
+              objectLabel={String(vps.hostname ?? t('common.vps_ref', { id: vps.id }))}
+              testId="vps.action.stop_confirm.target"
+            />
+            <Checkbox
               checked={confirm?.kind === 'stop' ? confirm.force : false}
               onChange={(checked) =>
                 setConfirm((prev) => (prev && prev.kind === 'stop' ? { ...prev, force: checked } : prev))
@@ -635,6 +718,7 @@ export function VpsLayout() {
               description={t('vps.power.stop.force.help')}
               testId="vps.action.stop_confirm.force"
             />
+          </div>
         </ConfirmDialog>
 
         <ConfirmDialog
@@ -650,7 +734,13 @@ export function VpsLayout() {
             setConfirm(null);
           }}
         >
-          <Checkbox
+          <div className="space-y-3">
+            <VpsPowerConfirmTarget
+              vpsId={vps.id}
+              objectLabel={String(vps.hostname ?? t('common.vps_ref', { id: vps.id }))}
+              testId="vps.action.restart_confirm.target"
+            />
+            <Checkbox
               checked={confirm?.kind === 'restart' ? confirm.force : false}
               onChange={(checked) =>
                 setConfirm((prev) => (prev && prev.kind === 'restart' ? { ...prev, force: checked } : prev))
@@ -659,6 +749,7 @@ export function VpsLayout() {
               description={t('vps.power.restart.force.help')}
               testId="vps.action.restart_confirm.force"
             />
+          </div>
         </ConfirmDialog>
 
         <ConfirmDialog
@@ -674,24 +765,33 @@ export function VpsLayout() {
             setConfirm(null);
           }}
         >
-          <label className="mt-3 flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="passwdType"
-              checked={confirm?.kind === 'passwd' ? confirm.type === 'secure' : true}
-              onChange={() => setConfirm({ kind: 'passwd', type: 'secure' })}
+          <div className="space-y-3">
+            <VpsPowerConfirmTarget
+              vpsId={vps.id}
+              objectLabel={String(vps.hostname ?? t('common.vps_ref', { id: vps.id }))}
+              testId="vps.action.root_password_confirm.target"
             />
-            <span>{t('vps.power.root_password.type.secure')}</span>
-          </label>
-          <label className="mt-2 flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="passwdType"
-              checked={confirm?.kind === 'passwd' ? confirm.type === 'simple' : false}
-              onChange={() => setConfirm({ kind: 'passwd', type: 'simple' })}
-            />
-            <span>{t('vps.power.root_password.type.simple')}</span>
-          </label>
+            <div>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  name="passwdType"
+                  checked={confirm?.kind === 'passwd' ? confirm.type === 'secure' : true}
+                  onChange={() => setConfirm({ kind: 'passwd', type: 'secure' })}
+                />
+                <span>{t('vps.power.root_password.type.secure')}</span>
+              </label>
+              <label className="mt-2 flex items-center gap-2 text-sm">
+                <input
+                  type="radio"
+                  name="passwdType"
+                  checked={confirm?.kind === 'passwd' ? confirm.type === 'simple' : false}
+                  onChange={() => setConfirm({ kind: 'passwd', type: 'simple' })}
+                />
+                <span>{t('vps.power.root_password.type.simple')}</span>
+              </label>
+            </div>
+          </div>
         </ConfirmDialog>
 
         <Modal

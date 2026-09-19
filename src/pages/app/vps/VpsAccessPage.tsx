@@ -47,6 +47,7 @@ import {
 } from './VpsAccessPrimitives';
 import { buildVpsAccessChecklist, findDuplicatePublicKeyGroups } from './VpsAccessModel';
 import { VpsAccessMutationGuardAlerts } from './VpsAccessMutationGuardAlerts';
+import { VpsConfirmTarget } from './VpsPowerConfirmation';
 import { VpsAccessChecklistCard, VpsAccessStatusCard } from './VpsAccessSummary';
 import { VpsSshHostKeysCard } from './VpsSshHostKeysCard';
 export function VpsAccessPage() {
@@ -296,7 +297,36 @@ export function VpsAccessPage() {
         runningLabel={isRunning ? t('vps.access.status.running_yes') : t('vps.access.status.running_no')}
         passwordTypeLabel={selectedTypeLabel}
       />
-      <VpsAccessChecklistCard items={checklistItems} />
+      <VpsAccessChecklistCard
+        items={checklistItems}
+        actions={{
+          'public-key': publicKeysLoaded && (publicKeys.length === 0 || duplicatePublicKeyGroups.length > 0)
+            ? {
+                to: publicKeysHref,
+                label: t('vps.access.checklist.action.manage_keys'),
+                testId: 'vps.access.checklist.public-key.action',
+              }
+            : publicKeysLoaded && canMutateVps
+              ? {
+                  href: '#vps-access-ssh-key',
+                  label: t('vps.access.checklist.action.deploy_key'),
+                  testId: 'vps.access.checklist.public-key.action',
+                }
+              : undefined,
+          'host-key': {
+            href: '#vps-access-host-keys',
+            label: t('vps.access.checklist.action.view_host_keys'),
+            testId: 'vps.access.checklist.host-key.action',
+          },
+          'root-password': canMutateVps
+            ? {
+                href: '#vps-access-root-password',
+                label: t('vps.access.checklist.action.open_password'),
+                testId: 'vps.access.checklist.root-password.action',
+              }
+            : undefined,
+        }}
+      />
 
       <VpsAccessMutationGuardAlerts canMutateVps={canMutateVps} gate={gate} onOpenTasks={() => chrome.openTasks()} />
 
@@ -332,54 +362,7 @@ export function VpsAccessPage() {
       ) : null}
       {keyDeployMessage ? <Alert variant="info">{t('vps.access.ssh.deployed', { key: keyDeployMessage })}</Alert> : null}
 
-      {canMutateVps ? <Card>
-        <CardHeader title={t('vps.access.reset.title')} subtitle={t('vps.access.reset.subtitle')} />
-        <CardBody className="space-y-4">
-          <div className="space-y-2">
-            <label className="block">
-              <span className="text-sm font-medium text-fg">{t('vps.access.form.type.label')}</span>
-            </label>
-            <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-              <select
-                value={passwordType}
-                onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setPasswordType(event.target.value as VpsPasswordType)}
-                disabled={currentPasswdMutationPending}
-                className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-fg"
-                data-testid="vps.access.password_type"
-              >
-                <option value="secure">{t('vps.access.password_type.secure')}</option>
-                <option value="simple">{t('vps.access.password_type.simple')}</option>
-              </select>
-              <ActionButton loading={currentPasswdMutationPending} disabled={!canGenerate} onClick={() => setPendingPasswordType({ vpsId, type: passwordType })} testId="vps.access.password.generate">
-                {t('vps.access.reset.button')}
-              </ActionButton>
-            </div>
-            <span className="block text-xs text-muted">{t('vps.access.form.type.description')}</span>
-          </div>
-
-          <Alert variant="info" title={t('vps.access.safety.title')}>
-            {t('vps.access.safety.description')}
-          </Alert>
-        </CardBody>
-      </Card> : null}
-
-      {currentGenerated ? (
-        <Card>
-          <CardHeader
-            title={t('vps.access.generated.title')}
-            subtitle={t('vps.access.generated.subtitle', {
-              type: t(currentGenerated.passwordType === 'secure' ? 'vps.access.password_type.secure' : 'vps.access.password_type.simple'),
-            })}
-          />
-          <CardBody>
-            <PasswordBox password={currentGenerated.password} onClear={() => setGenerated(null)} testId="vps.access.generated_password" />
-          </CardBody>
-        </Card>
-      ) : null}
-
-      <VpsSshHostKeysCard hostKeys={hostKeys} loading={hostKeysQ.isPending} error={hostKeysQ.error} onRefresh={() => void hostKeysQ.refetch()} />
-
-      {canMutateVps ? <Card>
+      {canMutateVps ? <Card id="vps-access-ssh-key" testId="vps.access.ssh.card" className="scroll-mt-24">
         <CardHeader title={t('vps.access.ssh.title')} subtitle={t('vps.access.ssh.subtitle')} />
         <CardBody className="space-y-4">
           {publicKeyUserId === null && currentUserQ.isPending ? <Alert variant="info">{t('vps.access.ssh.loading_user')}</Alert> : null}
@@ -467,6 +450,53 @@ export function VpsAccessPage() {
         </CardBody>
       </Card> : null}
 
+      <VpsSshHostKeysCard hostKeys={hostKeys} loading={hostKeysQ.isPending} error={hostKeysQ.error} onRefresh={() => void hostKeysQ.refetch()} />
+
+      {canMutateVps ? <Card id="vps-access-root-password" testId="vps.access.password.card" className="scroll-mt-24">
+        <CardHeader title={t('vps.access.reset.title')} subtitle={t('vps.access.reset.subtitle')} />
+        <CardBody className="space-y-4">
+          <div className="space-y-2">
+            <label className="block">
+              <span className="text-sm font-medium text-fg">{t('vps.access.form.type.label')}</span>
+            </label>
+            <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+              <select
+                value={passwordType}
+                onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setPasswordType(event.target.value as VpsPasswordType)}
+                disabled={currentPasswdMutationPending}
+                className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-fg"
+                data-testid="vps.access.password_type"
+              >
+                <option value="secure">{t('vps.access.password_type.secure')}</option>
+                <option value="simple">{t('vps.access.password_type.simple')}</option>
+              </select>
+              <ActionButton loading={currentPasswdMutationPending} disabled={!canGenerate} onClick={() => setPendingPasswordType({ vpsId, type: passwordType })} testId="vps.access.password.generate">
+                {t('vps.access.reset.button')}
+              </ActionButton>
+            </div>
+            <span className="block text-xs text-muted">{t('vps.access.form.type.description')}</span>
+          </div>
+
+          <Alert variant="info" title={t('vps.access.safety.title')}>
+            {t('vps.access.safety.description')}
+          </Alert>
+        </CardBody>
+      </Card> : null}
+
+      {currentGenerated ? (
+        <Card>
+          <CardHeader
+            title={t('vps.access.generated.title')}
+            subtitle={t('vps.access.generated.subtitle', {
+              type: t(currentGenerated.passwordType === 'secure' ? 'vps.access.password_type.secure' : 'vps.access.password_type.simple'),
+            })}
+          />
+          <CardBody>
+            <PasswordBox password={currentGenerated.password} onClear={() => setGenerated(null)} testId="vps.access.generated_password" />
+          </CardBody>
+        </Card>
+      ) : null}
+
       {canMutateVps ? <ConfirmDialog
         open={currentPendingPasswordType !== null}
         testId="vps.access.password.confirm"
@@ -477,7 +507,9 @@ export function VpsAccessPage() {
         confirmDisabled={!currentPendingPasswordType || currentPasswdMutationPending}
         onCancel={() => setPendingPasswordType(null)}
         onConfirm={() => currentPendingPasswordType && passwdM.mutate(freezeVpsMutationSnapshot({ ...snapshotAccessTarget(), type: currentPendingPasswordType.type }))}
-      /> : null}
+      >
+        <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.access.password.confirm.target" />
+      </ConfirmDialog> : null}
 
       {canMutateVps ? <ConfirmDialog
         open={pendingPublicKeyId !== null}
@@ -491,7 +523,9 @@ export function VpsAccessPage() {
         onConfirm={() => pendingPublicKeyId && deployKeyM.mutate(freezeVpsMutationSnapshot({
           ...snapshotAccessTarget(), publicKeyId: pendingPublicKeyId, keyLabel: pendingKeyLabel,
         }))}
-      /> : null}
+      >
+        <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.access.ssh.confirm.target" />
+      </ConfirmDialog> : null}
     </div>
   );
 }

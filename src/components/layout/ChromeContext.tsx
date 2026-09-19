@@ -20,6 +20,15 @@ export interface TrackedActionState {
   /** Optional label of the affected object (e.g. hostname). */
   objectLabel?: string;
 
+  /** Administrator member context active when the task was started. */
+  adminMemberId?: number;
+
+  /**
+   * Whether a terminal state observed on the first poll should produce a
+   * completion toast. Manual tracking of historical actions disables this.
+   */
+  notifyOnInitialFinished?: boolean;
+
   /** Optional object reference for live refresh (best-effort). */
   object?: ObjectRef;
 
@@ -73,6 +82,9 @@ export interface ChromeContextValue {
       actionLabelKey?: string;
       actionLabel?: string;
       objectLabel?: string;
+
+      /** Disable when manually tracking a historical action. Default: true. */
+      notifyOnInitialFinished?: boolean;
 
       /** When provided, binds a local transition lock to this action state. */
       object?: ObjectRef;

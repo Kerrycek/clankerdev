@@ -6,6 +6,8 @@ export interface VpsCreateOutcomeMarker {
   id: string;
   createdAt: number;
   phase: 'pending' | 'uncertain' | 'accepted';
+  /** Exact browser-tab/history entry that started this create attempt. */
+  pageSessionId?: string;
   identity?: {
     hostname: string;
     ownerId?: number;
@@ -33,12 +35,19 @@ function mutexName(userId: number | undefined): string {
 
 function newMarker(
   nowMs: number,
-  identity?: VpsCreateOutcomeMarker['identity']
+  identity?: VpsCreateOutcomeMarker['identity'],
+  pageSessionId?: string
 ): VpsCreateOutcomeMarker {
   const random = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2);
-  return { id: `${Math.floor(nowMs)}-${random}`, createdAt: Math.floor(nowMs), phase: 'pending', identity };
+  return {
+    id: `${Math.floor(nowMs)}-${random}`,
+    createdAt: Math.floor(nowMs),
+    phase: 'pending',
+    identity,
+    ...(pageSessionId ? { pageSessionId } : {}),
+  };
 }
 
 function parseMarker(raw: string | null): VpsCreateOutcomeMarker | null {
@@ -48,6 +57,7 @@ function parseMarker(raw: string | null): VpsCreateOutcomeMarker | null {
       id?: unknown;
       createdAt?: unknown;
       phase?: unknown;
+      pageSessionId?: unknown;
       identity?: unknown;
       candidateVpsId?: unknown;
       actionStateId?: unknown;
@@ -63,10 +73,12 @@ function parseMarker(raw: string | null): VpsCreateOutcomeMarker | null {
     const locationId = Number(identityValue?.locationId);
     const candidateVpsId = Number(value.candidateVpsId);
     const actionStateId = Number(value.actionStateId);
+    const pageSessionId = typeof value.pageSessionId === 'string' ? value.pageSessionId.trim() : '';
     return {
       id: value.id,
       createdAt: Math.floor(createdAt),
       phase: value.phase,
+      ...(pageSessionId ? { pageSessionId } : {}),
       identity: hostname ? {
         hostname,
         ...(Number.isInteger(ownerId) && ownerId > 0 ? { ownerId } : {}),
@@ -140,14 +152,25 @@ async function withCreateMutex<T>(
 export async function beginVpsCreateOutcomeGuard(args: {
   userId?: number;
   identity?: VpsCreateOutcomeMarker['identity'];
+  pageSessionId?: string;
   persistenceErrorMessage: string;
   outcomeUncertainMessage: string;
 }): Promise<VpsCreateOutcomeMarker> {
   return withCreateMutex(args.userId, args.persistenceErrorMessage, () => {
-    if (readLatestVpsCreateOutcomeMarker(args.userId)) {
+    let existing = readLatestVpsCreateOutcomeMarker(args.userId);
+    while (existing?.phase === 'accepted' && existing.pageSessionId !== args.pageSessionId) {
+      // An accepted receipt is no longer an ambiguous create. Retire receipts
+      // owned by an older form entry so they cannot be projected into a new
+      // member's form or block an intentional subsequent create.
+      if (!verifiedRemoveMarker(args.userId, existing)) {
+        throw new LocalLockPersistenceError(args.persistenceErrorMessage);
+      }
+      existing = readLatestVpsCreateOutcomeMarker(args.userId);
+    }
+    if (existing) {
       throw new LocalLockPersistenceError(args.outcomeUncertainMessage);
     }
-    const marker = newMarker(Date.now(), args.identity);
+    const marker = newMarker(Date.now(), args.identity, args.pageSessionId);
     if (!verifiedSetMarker(args.userId, marker)) {
       throw new LocalLockPersistenceError(args.persistenceErrorMessage);
     }

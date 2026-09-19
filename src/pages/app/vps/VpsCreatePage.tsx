@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAppMode } from '../../../app/appMode';
 import { useAuth } from '../../../app/auth';
 import { useI18n } from '../../../app/i18n';
@@ -17,16 +17,17 @@ import { getMetaActionStateId, isAmbiguousMutationError, isMissingActionStateErr
 import { fetchLocations } from '../../../lib/api/infra';
 import { fetchNodes } from '../../../lib/api/nodes';
 import { fetchOsTemplates } from '../../../lib/api/osTemplates';
+import { fetchUser } from '../../../lib/api/users';
 import { createVps, type CreateVpsPayload } from '../../../lib/api/vps';
 import { objectRef } from '../../../lib/objectRef';
 import type { LocalMutationGeneration } from '../../../lib/localLocks';
+import { vpsCreatePageSessionId } from '../../../lib/vpsCreatePageSession';
 import {
   beginVpsCreateOutcomeGuard,
   clearVpsCreateOutcomeMarker,
   markVpsCreateOutcomeAccepted,
   markVpsCreateOutcomeUncertain,
   readLatestVpsCreateOutcomeMarker,
-  vpsCreateOutcomeEntryPrefix,
   type VpsCreateOutcomeMarker,
 } from '../../../lib/vpsCreateOutcomeGuard';
 import { reconcileVpsCreateOutcome } from '../../../lib/vpsCreateOutcomeReconcile';
@@ -56,13 +57,53 @@ import {
   CreateSystemCard,
   CreateTargetCard,
 } from './VpsCreateWizardPrimitives';
+import { useVpsCreateOutcomeState } from './useVpsCreateOutcomeState';
 export { buildVpsCreatePayload, defaultForm, validateForm, type FormState } from './VpsCreateModel';
+
+const VALIDATION_FIELD_TARGETS: ReadonlyArray<readonly [readonly string[], string]> = [
+  [[
+    'vps.create.validation.user_required',
+    'vps.create.validation.user_invalid',
+    'vps.create.validation.user_verifying',
+    'vps.create.validation.user_not_found',
+  ], 'vps.create.user'],
+  [['vps.create.validation.target_required'], 'vps.create.location'],
+  [['vps.create.validation.node_required'], 'vps.create.node'],
+  [['vps.create.validation.auto_node_required'], 'vps.create.location'],
+  [['vps.create.validation.os_template_required'], 'vps.create.os_template'],
+  [['vps.create.validation.hostname_required', 'vps.create.validation.hostname_format'], 'vps.create.hostname'],
+  [['vps.create.validation.cpu'], 'vps.create.cpu'],
+  [['vps.create.validation.memory'], 'vps.create.memory'],
+  [['vps.create.validation.diskspace'], 'vps.create.diskspace'],
+  [['vps.create.validation.swap'], 'vps.create.swap'],
+  [['vps.create.validation.ipv4'], 'vps.create.ipv4'],
+  [['vps.create.validation.ipv6'], 'vps.create.ipv6'],
+  [['vps.create.validation.ipv4_private'], 'vps.create.ipv4_private'],
+];
+
+function focusFirstInvalidField(validationKeys: string[]) {
+  const keys = new Set(validationKeys);
+  const targetTestId = VALIDATION_FIELD_TARGETS.find(([candidateKeys]) => candidateKeys.some((key) => keys.has(key)))?.[1];
+  if (!targetTestId) return;
+
+  const target = document.querySelector<HTMLElement>(`[data-testid="${targetTestId}"]`);
+  target?.focus({ preventScroll: true });
+  target?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+}
 
 export function VpsCreatePage() {
   const { basePath, mode } = useAppMode();
   const isAdminMode = mode === 'admin';
   const effectiveBasePath = isAdminMode ? '/admin' : basePath;
+  const [searchParams] = useSearchParams();
+  const contextualUserId = isAdminMode ? optionalResource(searchParams.get('user') ?? '') : undefined;
+  const contextualUserValue = contextualUserId === undefined ? '' : String(contextualUserId);
+  const vpsListPath = contextualUserId === undefined
+    ? `${effectiveBasePath}/vps`
+    : `${effectiveBasePath}/vps?user=${contextualUserId}`;
   const auth = useAuth();
+  const location = useLocation();
+  const pageSessionId = useMemo(() => vpsCreatePageSessionId(location.key), [location.key]);
   const activeUserIdRef = useRef<number | null | undefined>(auth.user?.id); activeUserIdRef.current = auth.user?.id;
   useEffect(() => { activeUserIdRef.current = auth.user?.id; return () => { activeUserIdRef.current = null; }; }, [auth.user?.id]);
   const scopeIsActive = (userId?: number) => activeUserIdRef.current === userId;
@@ -72,39 +113,19 @@ export function VpsCreatePage() {
   const navigate = useNavigate();
   const chrome = useChrome();
   const qc = useQueryClient();
-  const createOutcomeEntryPrefix = vpsCreateOutcomeEntryPrefix(auth.user?.id);
-  const [form, setForm] = useState<FormState>(() => defaultForm());
+  const [form, setForm] = useState<FormState>(() => ({ ...defaultForm(), userId: contextualUserValue }));
+  const contextualUserValueRef = useRef(contextualUserValue);
   const [submitted, setSubmitted] = useState(false);
-  const outcomeUserIdRef = useRef(auth.user?.id);
-  const [createOutcomeMarker, setCreateOutcomeMarker] = useState<VpsCreateOutcomeMarker | null>(
-    () => readLatestVpsCreateOutcomeMarker(auth.user?.id)
-  );
-  const scopedCreateOutcomeMarker = outcomeUserIdRef.current === auth.user?.id ? createOutcomeMarker : null;
-  const [reviewedOutcomeId, setReviewedOutcomeId] = useState<string | null>(null);
-  const [outcomeReviewPending, setOutcomeReviewPending] = useState(false);
-  const [outcomeReviewError, setOutcomeReviewError] = useState<string | null>(null);
-  const [outcomeCandidateVpsId, setOutcomeCandidateVpsId] = useState<number | null>(null);
+  const {
+    marker: scopedCreateOutcomeMarker, setMarker: setCreateOutcomeMarker,
+    reviewedOutcomeId, setReviewedOutcomeId, outcomeReviewPending, setOutcomeReviewPending,
+    outcomeReviewError, setOutcomeReviewError, outcomeCandidateVpsId, setOutcomeCandidateVpsId,
+  } = useVpsCreateOutcomeState(auth.user?.id, pageSessionId);
   useEffect(() => {
-    outcomeUserIdRef.current = auth.user?.id;
-    setCreateOutcomeMarker(readLatestVpsCreateOutcomeMarker(auth.user?.id));
-    setReviewedOutcomeId(null);
-    setOutcomeReviewPending(false);
-    setOutcomeReviewError(null);
-    setOutcomeCandidateVpsId(null);
-  }, [auth.user?.id]);
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const onStorage = (event: StorageEvent) => {
-      if (event.storageArea !== window.localStorage || !event.key?.startsWith(createOutcomeEntryPrefix)) return;
-      const marker = readLatestVpsCreateOutcomeMarker(auth.user?.id);
-      setCreateOutcomeMarker(marker);
-      setReviewedOutcomeId((current) => current === marker?.id ? current : null);
-      setOutcomeCandidateVpsId(null);
-      setOutcomeReviewError(null);
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, [auth.user?.id, createOutcomeEntryPrefix]);
+    if (contextualUserValueRef.current === contextualUserValue) return;
+    contextualUserValueRef.current = contextualUserValue;
+    setForm((current) => ({ ...current, userId: contextualUserValue }));
+  }, [contextualUserValue]);
 
   const locationQ = useQuery({
     queryKey: ['locations', { limit: 500, hasHypervisor: true, includes: 'environment' }],
@@ -119,11 +140,21 @@ export function VpsCreatePage() {
   });
   const locations = locationQ.data ?? [];
   const selectedLocationId = optionalResource(form.locationId);
+  const selectedOwnerId = isAdminMode ? optionalResource(form.userId) : undefined;
   const selectedLocation = useMemo(
     () => locations.find((loc) => Number(loc.id) === selectedLocationId),
     [locations, selectedLocationId]
   );
   const selectedEnvironmentId = locationEnvironmentId(selectedLocation);
+
+  const ownerQ = useQuery({
+    queryKey: ['user', selectedOwnerId ?? null],
+    queryFn: async () => (await fetchUser(selectedOwnerId as number)).data,
+    enabled: isAdminMode && selectedOwnerId !== undefined,
+  });
+  const selectedOwner = ownerQ.data && Number(ownerQ.data.id) === selectedOwnerId ? ownerQ.data : undefined;
+  const ownerLookupPending = isAdminMode && selectedOwnerId !== undefined && (ownerQ.isPending || ownerQ.isFetching);
+  const ownerLookupFailed = isAdminMode && selectedOwnerId !== undefined && !ownerLookupPending && !selectedOwner;
 
   const nodesQ = useQuery({
     queryKey: ['nodes', { limit: 500, location: selectedLocationId ?? null, type: 'node', hypervisorType: 'vpsadminos' }],
@@ -195,13 +226,16 @@ export function VpsCreatePage() {
     setForm((prev) => ({ ...prev, ...next }));
   }, [defaultResourcesQ.data]);
 
-  const validationKeys = useMemo(
-    () => validateForm(form, isAdminMode, hiddenAdminTarget),
-    [form, hiddenAdminTarget, isAdminMode]
-  );
+  const validationKeys = useMemo(() => {
+    const keys = validateForm(form, isAdminMode, hiddenAdminTarget);
+    if (!isAdminMode || selectedOwnerId === undefined) return keys;
+    if (ownerLookupPending) return [...keys, 'vps.create.validation.user_verifying'];
+    if (!selectedOwner) return [...keys, 'vps.create.validation.user_not_found'];
+    return keys;
+  }, [form, hiddenAdminTarget, isAdminMode, ownerLookupPending, selectedOwner, selectedOwnerId]);
   const canSubmit = validationKeys.length === 0;
   type CreateMutationVariables = { payload: CreateVpsPayload; identity: { hostname: string; ownerId?: number; locationId?: number };
-    userId?: number; effectiveBasePath: string; objectLabel: string; persistenceErrorMessage: string; outcomeUncertainMessage: string };
+    userId?: number; ownerContextUserId?: number; pageSessionId: string; effectiveBasePath: string; objectLabel: string; persistenceErrorMessage: string; outcomeUncertainMessage: string };
   type AcceptedCreateBinding = Readonly<{ userId?: number; actionStateId: number; object: ReturnType<typeof objectRef>; mutationGeneration: LocalMutationGeneration; objectLabel: string }>;
   type CreateMutationContext = { active: { userId?: number; marker: VpsCreateOutcomeMarker }; responseReceived: boolean; acceptedBinding?: AcceptedCreateBinding };
   // audit:ignore missing-local-lock missing-local-lock-release -- create uses its own durable receipt before a VPS id exists.
@@ -212,6 +246,7 @@ export function VpsCreatePage() {
         const marker = await beginVpsCreateOutcomeGuard({
           userId: variables.userId,
           identity: variables.identity,
+          pageSessionId: variables.pageSessionId,
           persistenceErrorMessage: variables.persistenceErrorMessage,
           outcomeUncertainMessage: variables.outcomeUncertainMessage,
         });
@@ -252,9 +287,22 @@ export function VpsCreatePage() {
       void qc.invalidateQueries({ queryKey: ['transaction_chain', 'active'] });
       chrome.trackActionState(actionStateId, { actionLabelKey: 'action.vps.create.label', objectLabel: variables.objectLabel,
         object: context.acceptedBinding?.object, mutationGeneration: context.acceptedBinding?.mutationGeneration });
+      const receiptCleared = await clearVpsCreateOutcomeMarker({
+        userId: active.userId,
+        marker: receipt,
+        persistenceErrorMessage: variables.persistenceErrorMessage,
+      });
+      if (!receiptCleared) throw new Error(variables.persistenceErrorMessage);
+      if (!scopeIsActive(variables.userId)) return;
+      setCreateOutcomeMarker(readLatestVpsCreateOutcomeMarker(variables.userId));
       chrome.openTasks();
+      const detailContextSearch = variables.ownerContextUserId === undefined
+        ? ''
+        : `?user=${encodeURIComponent(String(variables.ownerContextUserId))}`;
       navigate(
-        Number.isFinite(vpsId) ? `${variables.effectiveBasePath}/vps/${vpsId}` : `${variables.effectiveBasePath}/vps`,
+        Number.isFinite(vpsId)
+          ? `${variables.effectiveBasePath}/vps/${vpsId}${detailContextSearch}`
+          : `${variables.effectiveBasePath}/vps${detailContextSearch}`,
         Number.isFinite(vpsId)
           ? { state: pendingVpsCreateNavigationState(vpsId, actionStateId) }
           : undefined,
@@ -334,7 +382,10 @@ export function VpsCreatePage() {
   function submit() {
     if (scopedCreateOutcomeMarker) return;
     setSubmitted(true);
-    if (!canSubmit) return;
+    if (!canSubmit) {
+      focusFirstInvalidField(validationKeys);
+      return;
+    }
     const formSnapshot = Object.freeze({ ...form });
     const payload = Object.freeze(buildVpsCreatePayload(formSnapshot, { isAdminMode, needsAdminPayload, hiddenAdminTarget }));
     const hostname = formSnapshot.hostname.trim();
@@ -346,6 +397,10 @@ export function VpsCreatePage() {
         locationId: optionalResource(formSnapshot.locationId),
       }),
       userId: auth.user?.id,
+      ownerContextUserId: isAdminMode && contextualUserId !== undefined
+        ? optionalResource(formSnapshot.userId)
+        : undefined,
+      pageSessionId,
       effectiveBasePath,
       objectLabel: hostname,
       persistenceErrorMessage: t('vps.mutation.error.guard_storage'),
@@ -393,7 +448,7 @@ export function VpsCreatePage() {
           title={t('vps.create.title')}
           description={t('vps.create.description')}
           actions={
-            <Button variant="secondary" to={`${effectiveBasePath}/vps`} testId="vps.create.back">
+            <Button variant="secondary" to={vpsListPath} testId="vps.create.back">
               <ArrowLeft className="h-4 w-4" />
               {t('common.back')}
             </Button>
@@ -424,6 +479,9 @@ export function VpsCreatePage() {
               form={form}
               isAdminMode={isAdminMode}
               isAdminAccount={isAdminAccount}
+              selectedOwner={selectedOwner}
+              ownerLookupPending={ownerLookupPending}
+              ownerLookupFailed={ownerLookupFailed}
               locations={locations}
               nodes={nodes}
               selectedLocation={selectedLocation}
@@ -445,6 +503,7 @@ export function VpsCreatePage() {
               form={form}
               isAdminMode={isAdminMode}
               hiddenAdminTarget={hiddenAdminTarget}
+              ownerVerified={!isAdminMode || Boolean(selectedOwner)}
               selectedTemplate={selectedTemplate}
               validationKeys={validationKeys}
             />
@@ -452,6 +511,9 @@ export function VpsCreatePage() {
               form={form}
               isAdminMode={isAdminMode}
               selectedLocation={selectedLocation}
+              selectedOwner={selectedOwner}
+              ownerLookupPending={ownerLookupPending}
+              ownerLookupFailed={ownerLookupFailed}
               selectedTemplate={selectedTemplate}
               selectedNode={selectedNode}
               validationKeys={validationKeys}
@@ -484,7 +546,14 @@ export function VpsCreatePage() {
                 }
                 setCreateOutcomeMarker(readLatestVpsCreateOutcomeMarker(acknowledgeUserId));
                 setReviewedOutcomeId(null);
-                navigate(`${effectiveBasePath}/vps/${outcomeCandidateVpsId}`);
+                const markerOwnerId = Number(scopedCreateOutcomeMarker.identity?.ownerId);
+                const recoveredOwnerId = isAdminMode && Number.isInteger(markerOwnerId) && markerOwnerId > 0
+                  ? markerOwnerId
+                  : undefined;
+                const recoveredDetailContextSearch = recoveredOwnerId === undefined
+                  ? ''
+                  : `?user=${encodeURIComponent(String(recoveredOwnerId))}`;
+                navigate(`${effectiveBasePath}/vps/${outcomeCandidateVpsId}${recoveredDetailContextSearch}`);
               }}
               onSubmit={submit}
             />

@@ -125,7 +125,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.goto('/admin/vps/123/config');
     await page.getByRole('textbox', { name: /^Hostname / }).fill('draft-for-vps-a.example');
-    await page.getByRole('button', { name: 'Save (1)' }).click();
+    await page.getByTestId('vps.config.header.save').click();
     await expect(page.getByText('Review and apply VPS configuration changes?')).toBeVisible();
     await navigate('/admin/vps/321/config');
     await expect(page.getByText('Review and apply VPS configuration changes?')).toHaveCount(0);
@@ -213,8 +213,36 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await expect(page.getByTestId('modal.action_progress')).toBeVisible();
     await page.getByTestId('modal.action_progress.open_tasks').click();
     await expect(page.getByTestId('tasks.drawer')).toHaveAttribute('aria-modal', 'false');
-    await expect(page.getByTestId('tasks.row.503')).toContainText('Start VPS');
+    await expect(
+      page.getByTestId('tasks.row.503').getByRole('button', { name: 'Start', exact: true }),
+    ).toBeVisible();
     await expect(page.getByTestId('vps.lifecycle.page')).toBeVisible();
+  });
+
+  test('@pr-smoke @pr-smoke-mobile refreshes delayed runtime state after a lifecycle power action', async ({ page }) => {
+    let vpsReads = 0;
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
+      handlers: {
+        'GET vpses/123': () => {
+          vpsReads += 1;
+          return { vps: { ...vps, is_running: vpsReads >= 3 } };
+        },
+        'GET ip_addresses': () => ({ ip_addresses: [] }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'POST vpses/123/start': () => ({ _meta: { action_state_id: 516 } }),
+        'GET action_states/516': () => runningActionState(516, 'Start VPS'),
+      },
+    });
+
+    await page.goto('/admin/vps/123/lifecycle/start');
+    await expect(page.getByTestId('vps.header').getByText('Stopped', { exact: true })).toBeVisible();
+    await page.getByTestId('vps.lifecycle.start.confirm').check();
+    await page.getByTestId('vps.lifecycle.start.submit').click();
+
+    await expect(page.getByTestId('vps.header').getByText('Running', { exact: true })).toBeVisible({ timeout: 15_000 });
+    expect(vpsReads).toBeGreaterThanOrEqual(3);
   });
 
   test('@workflow-matrix focused lifecycle stop action can send force flag', async ({ page }) => {
@@ -247,7 +275,9 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await expect(page.getByTestId('modal.action_progress')).toBeVisible();
     await page.getByTestId('modal.action_progress.open_tasks').click();
     await expect(page.getByTestId('tasks.drawer')).toHaveAttribute('aria-modal', 'false');
-    await expect(page.getByTestId('tasks.row.514')).toContainText('Stop VPS');
+    await expect(
+      page.getByTestId('tasks.row.514').getByRole('button', { name: 'Stop', exact: true }),
+    ).toBeVisible();
     await expect(page.getByTestId('vps.lifecycle.page')).toBeVisible();
   });
 
@@ -280,7 +310,9 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await expect(page.getByTestId('modal.action_progress')).toBeVisible();
     await page.getByTestId('modal.action_progress.open_tasks').click();
     await expect(page.getByTestId('tasks.drawer')).toHaveAttribute('aria-modal', 'false');
-    await expect(page.getByTestId('tasks.row.515')).toContainText('Restart VPS');
+    await expect(
+      page.getByTestId('tasks.row.515').getByRole('button', { name: 'Restart', exact: true }),
+    ).toBeVisible();
     await expect(page.getByTestId('vps.lifecycle.page')).toBeVisible();
   });
 
@@ -290,8 +322,11 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.goto('/admin/vps/123');
 
-    await expect(page.getByTestId('vps.overview.lifecycle')).toBeVisible();
-    await expect(page.getByTestId('vps.overview.management.admin_context')).toBeVisible();
+    await expect(page.getByTestId('vps.overview.lifecycle')).toHaveCount(0);
+    await expect(page.getByTestId('vps.header.owner')).toBeVisible();
+    await expect(
+      page.getByTestId('vps.actions.menu').locator('option[value="/admin/vps/123/lifecycle"]'),
+    ).toHaveCount(1);
 
     await page.goto('/admin/vps/123/lifecycle');
     await expect(page.getByTestId('vps.lifecycle.action_link.reinstall')).toBeVisible();
@@ -349,6 +384,8 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     );
 
     await page.getByTestId('vps.lifecycle.reinstall.submit').click();
+    await expect(page.getByTestId('vps.lifecycle.reinstall.submit.confirm_dialog.target')).toContainText('vps123.example');
+    await expect(page.getByTestId('vps.lifecycle.reinstall.submit.confirm_dialog.target')).toContainText('#123');
     const proofScreenshot = process.env.E2E_VPS_PROOF_SCREENSHOT?.trim();
     if (proofScreenshot) {
       await page.screenshot({ path: proofScreenshot, fullPage: true });
@@ -422,7 +459,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
         node: 3,
       },
     });
-    await expect(page).toHaveURL(/\/admin\/vps\/456$/);
+    await expect(page).toHaveURL(/\/admin\/vps\/456\?user=8$/);
   });
 
   test('admin swap includes legacy admin-only options', async ({ page }) => {
@@ -619,7 +656,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
         reason: 'staging replacement',
       },
     });
-    await expect(page).toHaveURL(/\/admin\/vps\/789$/);
+    await expect(page).toHaveURL(/\/admin\/vps\/789\?user=7$/);
   });
 
   test('admin migrate posts migration options and schedule payload', async ({ page }) => {
@@ -730,7 +767,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
         lazy: true,
       },
     });
-    await expect(page).toHaveURL(/\/admin\/vps$/);
+    await expect(page).toHaveURL(/\/admin\/vps\?user=7(?:&|$)/);
   });
 
   test('delete without an action-state id stays on the VPS and fails closed', async ({ page }) => {

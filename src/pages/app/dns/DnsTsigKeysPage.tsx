@@ -31,7 +31,7 @@ import {
 import { formatErrorMessage } from '../../../lib/errors';
 import { formatDateTime } from '../../../lib/format';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
-import { cursorFromDescendingPage } from '../../../lib/lockIndex';
+import { dnsTsigKeyPage } from './dnsTsigKeyPagination';
 
 interface CreatedKeySecret {
   name: string;
@@ -73,7 +73,7 @@ export function DnsTsigKeysPage() {
       const result = await fetchDnsTsigKeys({
         user: userId,
         algorithm: algorithm || undefined,
-        limit: pagination.limit,
+        limit: pagination.limit + 1,
         fromId: pagination.fromId,
       });
 
@@ -87,9 +87,32 @@ export function DnsTsigKeysPage() {
     enabled: auth.status === 'authenticated',
   });
 
-  const rows = listQ.data?.data ?? [];
-  const cursor = useMemo(() => cursorFromDescendingPage(rows), [rows]);
-  const hasMore = rows.length >= pagination.limit;
+  const pageData = useMemo(
+    () => dnsTsigKeyPage(listQ.data?.data, pagination.limit),
+    [listQ.data?.data, pagination.limit]
+  );
+  const { rows, cursor, hasMore } = pageData;
+  const canNext = hasMore && cursor !== null;
+
+  const goNext = () => {
+    if (!canNext) return;
+
+    // Rebuild the forward edge from the page currently on screen. TSIG keys
+    // are mutable, so a previously visited cursor may be stale after a
+    // refetch; useKeysetPagination.goNext() intentionally reuses it.
+    pagination.goToPageWithStack(
+      pagination.page + 1,
+      [...pagination.stack.slice(0, pagination.index + 1), cursor]
+    );
+  };
+
+  const goToPage = (pageNumber: number) => {
+    if (pageNumber === pagination.page + 1) {
+      goNext();
+      return;
+    }
+    if (pageNumber <= pagination.page) pagination.goToPage(pageNumber);
+  };
 
   const createM = useMutation({
     mutationFn: async () => {
@@ -165,7 +188,11 @@ export function DnsTsigKeysPage() {
         }
         right={
           <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => void listQ.refetch()}>
+            <Button
+              variant="secondary"
+              onClick={() => void listQ.refetch()}
+              testId="dns.tsig.refresh"
+            >
               {t('common.refresh')}
             </Button>
             <Button onClick={() => setCreateOpen(true)} testId="dns.tsig.create.open">
@@ -176,7 +203,13 @@ export function DnsTsigKeysPage() {
       />
 
       {rows.length === 0 ? (
-        <EmptyState testId="dns.tsig.empty" title={t('dns.tsig.empty')} body={t('dns.tsig.empty_body')} />
+        <EmptyState
+          testId="dns.tsig.empty"
+          title={t('dns.tsig.empty')}
+          body={t('dns.tsig.empty_body')}
+          actionLabel={pagination.canPrev ? t('pagination.prev') : undefined}
+          onAction={pagination.canPrev ? pagination.goPrev : undefined}
+        />
       ) : (
         <Card>
           <div className="overflow-x-auto">
@@ -210,12 +243,18 @@ export function DnsTsigKeysPage() {
             </table>
           </div>
           <KeysetPagination
+            testId="dns.tsig.pagination"
             page={pagination.page}
             pageCount={pagination.stack.length}
             canPrev={pagination.canPrev}
-            canNext={hasMore}
+            canNext={canNext}
             onPrev={pagination.goPrev}
-            onNext={() => pagination.goNext(cursor)}
+            onNext={goNext}
+            onGoToPage={goToPage}
+            maxDirectPage={canNext ? pagination.page + 1 : pagination.page}
+            limit={pagination.limit}
+            allowedLimits={pagination.allowedLimits}
+            onLimitChange={pagination.setLimit}
           />
         </Card>
       )}

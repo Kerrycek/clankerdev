@@ -13,8 +13,9 @@
 `127.0.0.1:3001`.
 
 Unlike the original production deployment, `dev.crucio.cz` keeps API and OAuth
-traffic on the test stack. nginx proxies `/v7.0` and `/_auth` directly to the
-same local API process used by `admin.crucio.cz`, on `127.0.0.1:9292`.
+traffic on the test stack. nginx proxies `/v7.0`, `/_auth`, and the
+`/oauth2/password-reset` recovery flow directly to the same local API process
+used by `admin.crucio.cz`, on `127.0.0.1:9292`.
 
 Deploy the source checkout to `dev.crucio.cz` with:
 

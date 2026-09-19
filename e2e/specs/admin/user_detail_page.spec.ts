@@ -37,6 +37,45 @@ test('admin user detail: shows header and shortcut links', async ({ page }) => {
   await expect(page.getByTestId('admin.user.refresh')).toBeVisible();
 });
 
+test('@workflow-matrix @pr-smoke @pr-smoke-mobile admin user detail: VPS create keeps the selected member context', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100 },
+    handlers: {
+      'GET users/42': () => ({
+        user: { id: 42, login: 'alice', level: 1, full_name: 'Alice Example' },
+      }),
+      'GET vpses': () => ({ vpses: [] }),
+      'GET locations': () => ({
+        locations: [{ id: 2, label: 'Praha', environment: { id: 1, label: 'Test' } }],
+      }),
+      'GET nodes': () => ({
+        nodes: [{ id: 101, name: 'node101', type: 'node', hypervisor_type: 'vpsadminos', location: { id: 2 } }],
+      }),
+      'GET os_templates': () => ({
+        os_templates: [{ id: 6, label: 'Debian 12', os_family: { id: 1, label: 'Linux' } }],
+      }),
+      'GET default_object_cluster_resources': () => ({ default_object_cluster_resources: [] }),
+    },
+  });
+
+  await page.goto('/admin/users/42');
+  await page.getByTestId('admin.user.action.vps').click();
+
+  await expect(page).toHaveURL('/admin/vps?user=42');
+  await expect(page.getByTestId('vps.list.create')).toHaveAttribute('href', '/admin/vps/new?user=42');
+  await page.getByTestId('vps.list.create').click();
+
+  await expect(page).toHaveURL('/admin/vps/new?user=42');
+  await expect(page.getByTestId('vps.create.user')).toHaveValue('42');
+  await expect(page.getByTestId('vps.create.owner.selection')).toContainText('alice');
+  await expect(page.getByTestId('vps.create.owner.selection')).toContainText('#42');
+  await expect(page.getByTestId('vps.create.review.owner')).toContainText('alice');
+  await expect(page.getByTestId('vps.create.review.owner')).toContainText('#42');
+  await expect(page.getByTestId('vps.create.back')).toHaveAttribute('href', '/admin/vps?user=42');
+});
+
 test('admin user detail: edit drawer saves safe account fields', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
 
