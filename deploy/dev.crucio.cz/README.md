@@ -40,6 +40,13 @@ rsync -az deploy/dev.crucio.cz/nginx-dev.crucio.cz.conf \
 The `/v7.0` proxy strips `WWW-Authenticate` from unauthenticated API responses.
 The API still returns `401`, but browsers do not show a native Basic Auth prompt.
 
+The API-rendered OAuth page under `/_auth` contains an inline script whose
+contents change with the selected language, MFA step and one-time auth token.
+The dev nginx vhost injects a fresh `$request_id` nonce into its script tags and
+uses the same nonce in the route-scoped CSP header. Static inline form handlers
+remain hash-pinned. Keep the nonce injection and CSP declaration together;
+`npm run test:scripts` checks that contract and all three known handlers.
+
 The BFF environment lives on the server in:
 
 ```sh

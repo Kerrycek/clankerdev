@@ -35,7 +35,9 @@ if (inlineScripts.length !== 1) {
     }
 
     for (const policy of policies) {
-      for (const error of validateScriptSource(policy, hash)) {
+      const isDevOAuthNoncePolicy = path === 'deploy/dev.crucio.cz/nginx-dev.crucio.cz.conf'
+        && policy.includes("'nonce-$request_id'");
+      for (const error of validateScriptSource(policy, hash, { allowNonce: isDevOAuthNoncePolicy })) {
         fail(`${path} ${error}`);
       }
     }

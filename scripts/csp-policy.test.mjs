@@ -33,6 +33,15 @@ describe('CSP policy validation', () => {
     assert.deepEqual(validateScriptSource(source, hash), []);
   });
 
+  it('accepts an explicit nonce alternative only when the caller allows it', () => {
+    const source = "script-src 'self' 'nonce-$request_id'";
+
+    assert.deepEqual(validateScriptSource(source, hash), [
+      'script-src does not include the current inline-script hash',
+    ]);
+    assert.deepEqual(validateScriptSource(source, hash, { allowNonce: true }), []);
+  });
+
   it('reports missing script requirements', () => {
     assert.deepEqual(validateScriptSource("script-src https:", hash), [
       "script-src does not allow 'self'",
