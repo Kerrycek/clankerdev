@@ -317,9 +317,16 @@ export function UserNetworkPage() {
       }
     };
 
+    const clearPageFocusOwnership = () => {
+      clearRecentPageFocus();
+      restoreFocusAfterHistoryRef.current = false;
+    };
+
     const handleFocusIn = (event: FocusEvent) => {
       clearRecentPageFocus();
-      recentPageFocusRef.current = isWithinPage(event.target);
+      const focusIsWithinPage = isWithinPage(event.target);
+      recentPageFocusRef.current = focusIsWithinPage;
+      if (!focusIsWithinPage) restoreFocusAfterHistoryRef.current = false;
     };
 
     const handleFocusOut = (event: FocusEvent) => {
@@ -328,13 +335,15 @@ export function UserNetworkPage() {
       const nextTarget = event.relatedTarget;
       const nextIsDocumentFallback = nextTarget === document.body || nextTarget === document.documentElement;
       if (!document.hasFocus()) {
-        clearRecentPageFocus();
+        clearPageFocusOwnership();
         return;
       }
 
       if (nextTarget instanceof Node && !nextIsDocumentFallback) {
         clearRecentPageFocus();
-        recentPageFocusRef.current = isWithinPage(nextTarget);
+        const nextFocusIsWithinPage = isWithinPage(nextTarget);
+        recentPageFocusRef.current = nextFocusIsWithinPage;
+        if (!nextFocusIsWithinPage) restoreFocusAfterHistoryRef.current = false;
         return;
       }
 
@@ -351,7 +360,7 @@ export function UserNetworkPage() {
     };
 
     const handlePointerDown = (event: PointerEvent) => {
-      if (!isWithinPage(event.target)) clearRecentPageFocus();
+      if (!isWithinPage(event.target)) clearPageFocusOwnership();
     };
 
     const captureHistoryFocus = () => {
@@ -365,14 +374,14 @@ export function UserNetworkPage() {
     document.addEventListener('focusin', handleFocusIn, true);
     document.addEventListener('focusout', handleFocusOut, true);
     document.addEventListener('pointerdown', handlePointerDown, true);
-    window.addEventListener('blur', clearRecentPageFocus);
+    window.addEventListener('blur', clearPageFocusOwnership);
     window.addEventListener('popstate', captureHistoryFocus, true);
 
     return () => {
       document.removeEventListener('focusin', handleFocusIn, true);
       document.removeEventListener('focusout', handleFocusOut, true);
       document.removeEventListener('pointerdown', handlePointerDown, true);
-      window.removeEventListener('blur', clearRecentPageFocus);
+      window.removeEventListener('blur', clearPageFocusOwnership);
       window.removeEventListener('popstate', captureHistoryFocus, true);
       clearRecentPageFocus();
     };

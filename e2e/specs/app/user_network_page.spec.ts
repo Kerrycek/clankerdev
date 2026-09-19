@@ -477,6 +477,25 @@ test('@pr-smoke @pr-smoke-mobile user network tabs expose complete keyboard, his
   await expect(page).toHaveURL(/\/app\/networking\?tab=traffic$/);
   await expect(shellMain).toBeFocused();
 
+  await trafficTab.focus();
+  await page.evaluate(() => {
+    const focusShellAfterHistorySnapshot = () => {
+      document.querySelector<HTMLElement>('[data-testid="shell.main"]')?.focus();
+    };
+    window.addEventListener('popstate', focusShellAfterHistorySnapshot, {
+      capture: true,
+      once: true,
+    });
+  });
+  await page.goBack();
+  await expect(page).toHaveURL(/\/app\/networking$/);
+  await expect(addressesTab).toHaveAttribute('aria-selected', 'true');
+  await expect(shellMain).toBeFocused();
+  await expect(addressesTab).not.toBeFocused();
+  await page.goForward();
+  await expect(page).toHaveURL(/\/app\/networking\?tab=traffic$/);
+  await expect(shellMain).toBeFocused();
+
   const body = page.locator('body');
   await body.evaluate((element) => {
     element.tabIndex = -1;
