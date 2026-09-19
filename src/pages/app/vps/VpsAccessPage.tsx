@@ -370,14 +370,16 @@ export function VpsAccessPage() {
           {publicKeysQ.error ? <Alert variant="danger">{errorMessage(publicKeysQ.error)}</Alert> : null}
 
           <div className="space-y-2">
-            <label className="block">
+            <label htmlFor="vps-access-ssh-key-select" className="block">
               <span className="text-sm font-medium text-fg">{t('vps.access.ssh.key.label')}</span>
             </label>
             <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center">
               <select
+                id="vps-access-ssh-key-select"
                 value={selectedPublicKeyId ?? ''}
                 onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setSelectedPublicKeyId(event.target.value ? Number(event.target.value) : null)}
                 disabled={publicKeysQ.isPending || publicKeys.length === 0 || deployKeyM.isPending}
+                aria-describedby="vps-access-ssh-key-description"
                 className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-fg"
                 data-testid="vps.access.ssh.key"
               >
@@ -402,7 +404,7 @@ export function VpsAccessPage() {
                 {t('vps.access.ssh.deploy.button')}
               </ActionButton>
             </div>
-            <span className="block text-xs text-muted">
+            <span id="vps-access-ssh-key-description" className="block text-xs text-muted">
               {publicKeyUserId !== null
                 ? t('vps.access.ssh.key.description', { owner: ownerLabel || `#${publicKeyUserId}` })
                 : t('vps.access.ssh.key.description_unknown_owner')}
@@ -456,14 +458,16 @@ export function VpsAccessPage() {
         <CardHeader title={t('vps.access.reset.title')} subtitle={t('vps.access.reset.subtitle')} />
         <CardBody className="space-y-4">
           <div className="space-y-2">
-            <label className="block">
+            <label htmlFor="vps-access-password-type-select" className="block">
               <span className="text-sm font-medium text-fg">{t('vps.access.form.type.label')}</span>
             </label>
             <div className="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
               <select
+                id="vps-access-password-type-select"
                 value={passwordType}
                 onChange={(event: React.ChangeEvent<HTMLSelectElement>) => setPasswordType(event.target.value as VpsPasswordType)}
                 disabled={currentPasswdMutationPending}
+                aria-describedby="vps-access-password-type-description"
                 className="w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-fg"
                 data-testid="vps.access.password_type"
               >
@@ -474,7 +478,9 @@ export function VpsAccessPage() {
                 {t('vps.access.reset.button')}
               </ActionButton>
             </div>
-            <span className="block text-xs text-muted">{t('vps.access.form.type.description')}</span>
+            <span id="vps-access-password-type-description" className="block text-xs text-muted">
+              {t('vps.access.form.type.description')}
+            </span>
           </div>
 
           <Alert variant="info" title={t('vps.access.safety.title')}>
