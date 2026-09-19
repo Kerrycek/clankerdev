@@ -228,51 +228,50 @@ export const SmartFilterInput = React.forwardRef<HTMLInputElement, SmartFilterIn
         ) : null}
       </div>
 
-      {showDropdown ? (
-        <div
-          id={listboxId}
-          role="listbox"
-          aria-label={props.ariaLabel ?? props.placeholder}
-          className={clsx(
-            'absolute left-0 right-0 z-50 mt-1 overflow-hidden rounded-md border border-border bg-overlay-surface shadow-panel',
-            'max-h-72 overflow-y-auto'
-          )}
-          data-testid={props.testId ? `${props.testId}.dropdown` : undefined}
-          data-overlay="popover"
-          data-overlay-surface="overlay"
-        >
-          <ul className="py-1" role="presentation">
-            {suggestions.map((s, idx) => {
-              const active = idx === activeIdx;
-              return (
-                <li key={`${s.id}.${idx}`} role="presentation">
-                  <button
-                    type="button"
-                    id={`${listboxId}-option-${idx}`}
-                    role="option"
-                    aria-selected={active}
-                    tabIndex={-1}
-                    className={clsx(
-                      'flex min-h-11 w-full items-start justify-between gap-3 px-3 py-2 text-left',
-                      active ? 'bg-surface-2' : 'hover:bg-surface-2',
-                      'focus:bg-surface-2 focus:outline-none'
-                    )}
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => pick(idx)}
-                    onMouseEnter={() => setActiveIdx(idx)}
-                    data-testid={s.testId}
-                  >
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-medium text-fg">{s.primary}</div>
-                      {s.secondary ? <div className="mt-0.5 truncate text-xs text-muted">{s.secondary}</div> : null}
-                    </div>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ) : null}
+      <div
+        id={listboxId}
+        role="listbox"
+        aria-label={props.ariaLabel ?? props.placeholder}
+        hidden={!showDropdown}
+        className={clsx(
+          'absolute left-0 right-0 z-50 mt-1 overflow-hidden rounded-md border border-border bg-overlay-surface shadow-panel',
+          'max-h-72 overflow-y-auto'
+        )}
+        data-testid={props.testId ? `${props.testId}.dropdown` : undefined}
+        data-overlay="popover"
+        data-overlay-surface="overlay"
+      >
+        <ul className="py-1" role="presentation">
+          {suggestions.map((s, idx) => {
+            const active = idx === activeIdx;
+            return (
+              <li key={`${s.id}.${idx}`} role="presentation">
+                <button
+                  type="button"
+                  id={`${listboxId}-option-${idx}`}
+                  role="option"
+                  aria-selected={active}
+                  tabIndex={-1}
+                  className={clsx(
+                    'flex min-h-11 w-full items-start justify-between gap-3 px-3 py-2 text-left',
+                    active ? 'bg-surface-2' : 'hover:bg-surface-2',
+                    'focus:bg-surface-2 focus:outline-none'
+                  )}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => pick(idx)}
+                  onMouseEnter={() => setActiveIdx(idx)}
+                  data-testid={s.testId}
+                >
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium text-fg">{s.primary}</div>
+                    {s.secondary ? <div className="mt-0.5 truncate text-xs text-muted">{s.secondary}</div> : null}
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
 
       <div id={statusId} role="status" aria-live="polite" aria-atomic="true" className="sr-only">
         {showDropdown

@@ -57,7 +57,7 @@ test.describe('Smart filter accessibility contract', () => {
     await input.press('Escape');
     await expect(input).toHaveAttribute('aria-expanded', 'false');
     await expect(input).not.toHaveAttribute('aria-activedescendant');
-    await expect(listbox).toHaveCount(0);
+    await expect(listbox).toBeHidden();
 
     await input.press('ArrowUp');
     const reopenedListbox = page.getByRole('listbox', {
