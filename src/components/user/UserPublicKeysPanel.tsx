@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useId, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useI18n } from '../../app/i18n';
@@ -46,12 +46,20 @@ export function UserPublicKeysPanel(props: {
   const [formLabel, setFormLabel] = useState('');
   const [formKey, setFormKey] = useState('');
   const [formAutoAdd, setFormAutoAdd] = useState(true);
+  const [saveAttempted, setSaveAttempted] = useState(false);
+  const labelErrorId = useId();
+  const keyInputId = useId();
+  const keyHelpId = useId();
+  const keyErrorId = useId();
+  const labelInputRef = useRef<HTMLInputElement>(null);
+  const keyInputRef = useRef<HTMLTextAreaElement>(null);
 
   const openCreate = () => {
     setEditingKey(null);
     setFormLabel('');
     setFormKey('');
     setFormAutoAdd(true);
+    setSaveAttempted(false);
     setModalOpen(true);
   };
 
@@ -60,6 +68,7 @@ export function UserPublicKeysPanel(props: {
     setFormLabel(String(k.label ?? ''));
     setFormKey('');
     setFormAutoAdd(Boolean(k.auto_add));
+    setSaveAttempted(false);
     setModalOpen(true);
   };
 
@@ -69,6 +78,7 @@ export function UserPublicKeysPanel(props: {
     setFormLabel('');
     setFormKey('');
     setFormAutoAdd(true);
+    setSaveAttempted(false);
   };
 
   const keysQ = useQuery({
@@ -121,6 +131,20 @@ export function UserPublicKeysPanel(props: {
   });
 
   const prefix = props.testIdPrefix;
+  const labelError = saveAttempted && !formLabel.trim() ? t('profile.keys.validation.label_required') : null;
+  const keyError = saveAttempted && !editingKey && !formKey.trim() ? t('profile.keys.validation.key_required') : null;
+  const submitForm = () => {
+    setSaveAttempted(true);
+    if (!formLabel.trim()) {
+      labelInputRef.current?.focus();
+      return;
+    }
+    if (!editingKey && !formKey.trim()) {
+      keyInputRef.current?.focus();
+      return;
+    }
+    saveM.mutate();
+  };
 
   return (
     <>
@@ -129,7 +153,7 @@ export function UserPublicKeysPanel(props: {
           title={t('profile.keys.title')}
           subtitle={t('profile.keys.subtitle')}
           actions={
-            <Button onClick={openCreate} testId={`${prefix}.add`}>
+            <Button className="min-h-11 sm:min-h-9" onClick={openCreate} testId={`${prefix}.add`}>
               {t('profile.keys.add')}
             </Button>
           }
@@ -180,6 +204,7 @@ export function UserPublicKeysPanel(props: {
                       <Button
                         variant="secondary"
                         size="sm"
+                        className="min-h-11"
                         onClick={() => openEdit(k)}
                         testId={`${prefix}.row.${k.id}.edit`}
                       >
@@ -188,6 +213,7 @@ export function UserPublicKeysPanel(props: {
                       <Button
                         variant="danger"
                         size="sm"
+                        className="min-h-11"
                         onClick={() => setDeleteKeyId(k.id)}
                         testId={`${prefix}.row.${k.id}.delete`}
                       >
@@ -280,6 +306,7 @@ export function UserPublicKeysPanel(props: {
           <div className="flex justify-end gap-2">
             <Button
               variant="secondary"
+              className="min-h-11 sm:min-h-9"
               onClick={() => {
                 if (saveM.isPending) return;
                 closeModal();
@@ -289,7 +316,8 @@ export function UserPublicKeysPanel(props: {
               {t('common.cancel')}
             </Button>
             <Button
-              onClick={() => saveM.mutate()}
+              className="min-h-11 sm:min-h-9"
+              onClick={submitForm}
               loading={saveM.isPending}
               testId={`${prefix}.modal.save`}
             >
@@ -306,33 +334,49 @@ export function UserPublicKeysPanel(props: {
 
         <div className="space-y-4">
           <div>
-            <div className="text-sm font-medium">{t('profile.keys.field.label')}</div>
-            <div className="mt-1">
-              <Input
-                value={formLabel}
-                onChange={(e) => setFormLabel(e.target.value)}
-                placeholder={t('profile.keys.field.label.placeholder')}
-                testId={`${prefix}.modal.label`}
-              />
-            </div>
+            <Input
+              ref={labelInputRef}
+              value={formLabel}
+              onChange={(e) => setFormLabel(e.target.value)}
+              placeholder={t('profile.keys.field.label.placeholder')}
+              label={t('profile.keys.field.label')}
+              ariaInvalid={Boolean(labelError)}
+              ariaDescribedBy={labelError ? labelErrorId : undefined}
+              className="min-h-11 sm:min-h-9"
+              testId={`${prefix}.modal.label`}
+            />
+            {labelError ? (
+              <div id={labelErrorId} role="alert" className="mt-1 text-xs text-danger">
+                {labelError}
+              </div>
+            ) : null}
           </div>
 
           <div>
-            <div className="text-sm font-medium">{t('profile.keys.field.key')}</div>
-            <div className="mt-1 text-xs text-muted">
+            <label htmlFor={keyInputId} className="mb-1 block text-xs font-semibold text-muted">
+              {t('profile.keys.field.key')}
+            </label>
+            <div id={keyHelpId} className="mb-2 text-xs text-muted">
               {t('profile.keys.field.key.help')}
               {editingKey ? ` ${t('profile.keys.field.key.keep_existing')}` : null}
             </div>
-            <div className="mt-2">
-              <Textarea
-                value={formKey}
-                onChange={(e) => setFormKey(e.target.value)}
-                placeholder={t('profile.keys.field.key.placeholder')}
-                rows={4}
-                testId={`${prefix}.modal.key`}
-                className="font-mono text-xs"
-              />
-            </div>
+            <Textarea
+              ref={keyInputRef}
+              textareaId={keyInputId}
+              value={formKey}
+              onChange={(e) => setFormKey(e.target.value)}
+              placeholder={t('profile.keys.field.key.placeholder')}
+              rows={4}
+              ariaInvalid={Boolean(keyError)}
+              ariaDescribedBy={[keyHelpId, keyError ? keyErrorId : null].filter(Boolean).join(' ')}
+              testId={`${prefix}.modal.key`}
+              className="font-mono text-xs"
+            />
+            {keyError ? (
+              <div id={keyErrorId} role="alert" className="mt-1 text-xs text-danger">
+                {keyError}
+              </div>
+            ) : null}
           </div>
 
           <SwitchRow
