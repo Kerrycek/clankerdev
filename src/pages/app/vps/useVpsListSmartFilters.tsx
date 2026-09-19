@@ -5,6 +5,7 @@ import type { ObjectScopeValue } from '../../../app/objectScope';
 import type { ToastsContextValue } from '../../../app/toasts';
 import { searchUsers } from '../../../lib/api/users';
 import { useDebouncedValue } from '../../../lib/hooks/useDebouncedValue';
+import { currentSuggestionRows } from '../../../lib/currentSuggestionRows';
 import {
   parseNumericToken,
   splitKeyValueToken,
@@ -364,7 +365,7 @@ export function useVpsListSmartFilters(args: UseVpsListSmartFiltersArgs) {
         mode,
         t,
         navigate,
-        users: userSuggestQuery.data ?? [],
+        users: currentSuggestionRows(smartNeedle, debouncedSmartNeedle, userSuggestQuery.data),
         nodes: nodesSuggestQuery.data ?? [],
         setHelpOpen,
         setSmart,
@@ -377,7 +378,7 @@ export function useVpsListSmartFilters(args: UseVpsListSmartFiltersArgs) {
         setStateFilter,
         applySmartText: (value) => void applySmartText(value),
       }),
-    [basePath, mode, navigate, nodesSuggestQuery.data, smartNeedle, t, userSuggestQuery.data]
+    [basePath, debouncedSmartNeedle, mode, navigate, nodesSuggestQuery.data, smartNeedle, t, userSuggestQuery.data]
   );
 
   const activeFilterChips = useMemo(() => {

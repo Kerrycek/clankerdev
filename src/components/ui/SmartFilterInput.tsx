@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 
+import { useI18n } from '../../app/i18n';
 import { Input } from './Input';
 import { clsx } from './clsx';
 
@@ -55,24 +56,54 @@ export const SmartFilterInput = React.forwardRef<HTMLInputElement, SmartFilterIn
   props,
   ref
 ) {
+  const { t, tc } = useI18n();
   const [open, setOpen] = useState(false);
   const [activeIdx, setActiveIdx] = useState(-1);
   const blurTimer = useRef<number | null>(null);
+  const generatedId = useId();
+  const listboxId = `${generatedId}-smart-filter-options`;
+  const statusId = `${generatedId}-smart-filter-status`;
+  const errorId = `${generatedId}-smart-filter-error`;
 
   const suggestions = props.suggestions ?? [];
+  const inputValue = useMemo(() => String(props.value ?? ''), [props.value]);
+  const suggestionIdSequence = suggestions.map((suggestion) => suggestion.id).join('\u001f');
+  const hasErrors = Boolean(props.errors?.length);
 
-  // When suggestions change, select the first one by default.
+  // A changed input or result identity is a new suggestion session, even when
+  // the number of rows happens to stay the same.
   useEffect(() => {
-    if (!open) return;
     setActiveIdx(suggestions.length > 0 ? 0 : -1);
-  }, [open, suggestions.length]);
+  }, [inputValue, suggestionIdSequence, suggestions.length]);
+
+  useEffect(() => {
+    return () => {
+      if (blurTimer.current !== null) window.clearTimeout(blurTimer.current);
+    };
+  }, []);
 
   const hasSuffix = Boolean(props.suffix);
   const showDropdown = open && suggestions.length > 0;
+  const activeOptionId =
+    showDropdown && activeIdx >= 0 && suggestions[activeIdx]
+      ? `${listboxId}-option-${activeIdx}`
+      : undefined;
+
+  useEffect(() => {
+    if (!activeOptionId) return;
+    document.getElementById(activeOptionId)?.scrollIntoView?.({ block: 'nearest' });
+  }, [activeOptionId]);
+
+  function cancelClose() {
+    if (blurTimer.current === null) return;
+    window.clearTimeout(blurTimer.current);
+    blurTimer.current = null;
+  }
 
   function closeSoon() {
-    if (blurTimer.current) window.clearTimeout(blurTimer.current);
+    cancelClose();
     blurTimer.current = window.setTimeout(() => {
+      blurTimer.current = null;
       setOpen(false);
       setActiveIdx(-1);
     }, 120);
@@ -81,13 +112,30 @@ export const SmartFilterInput = React.forwardRef<HTMLInputElement, SmartFilterIn
   function pick(idx: number) {
     const s = suggestions[idx];
     if (!s) return;
+    cancelClose();
     s.onPick();
     setOpen(false);
     setActiveIdx(-1);
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (
+      e.nativeEvent.isComposing ||
+      e.key === 'Process' ||
+      e.altKey ||
+      e.ctrlKey ||
+      e.metaKey ||
+      e.shiftKey
+    ) {
+      return;
+    }
+
     if (e.key === 'Escape') {
+      // The first Escape belongs to the visible popup. Once it is closed,
+      // leave Escape untouched so an enclosing Drawer or Modal can handle it.
+      if (!showDropdown) return;
+      e.preventDefault();
+      e.stopPropagation();
       setOpen(false);
       setActiveIdx(-1);
       return;
@@ -101,16 +149,28 @@ export const SmartFilterInput = React.forwardRef<HTMLInputElement, SmartFilterIn
         return;
       }
 
-      if (suggestions.length === 0) return;
-      setActiveIdx((i) => Math.min(suggestions.length - 1, Math.max(0, i + 1)));
+      if (suggestions.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      setActiveIdx((i) => (i < 0 || i >= suggestions.length - 1 ? 0 : i + 1));
       e.preventDefault();
       return;
     }
 
     if (e.key === 'ArrowUp') {
-      if (!open) return;
-      if (suggestions.length === 0) return;
-      setActiveIdx((i) => Math.max(0, i - 1));
+      if (!open) {
+        setOpen(true);
+        setActiveIdx(suggestions.length > 0 ? suggestions.length - 1 : -1);
+        e.preventDefault();
+        return;
+      }
+
+      if (suggestions.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      setActiveIdx((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
       e.preventDefault();
       return;
     }
@@ -127,9 +187,6 @@ export const SmartFilterInput = React.forwardRef<HTMLInputElement, SmartFilterIn
     }
   }
 
-  // Keep dropdown open while user types.
-  const inputValue = useMemo(() => String(props.value ?? ''), [props.value]);
-
   return (
     <div className={clsx('relative', props.className)}>
       <div className="relative">
@@ -145,8 +202,9 @@ export const SmartFilterInput = React.forwardRef<HTMLInputElement, SmartFilterIn
             setActiveIdx(-1);
           }}
           onFocus={() => {
-            if (blurTimer.current) window.clearTimeout(blurTimer.current);
+            cancelClose();
             setOpen(true);
+            setActiveIdx(suggestions.length > 0 ? 0 : -1);
           }}
           onBlur={() => closeSoon()}
           onKeyDown={onKeyDown}
@@ -154,7 +212,14 @@ export const SmartFilterInput = React.forwardRef<HTMLInputElement, SmartFilterIn
           disabled={props.disabled}
           testId={props.testId}
           ariaLabel={props.ariaLabel}
-          className={clsx(hasSuffix ? 'pr-11' : undefined)}
+          ariaControls={listboxId}
+          ariaExpanded={showDropdown}
+          ariaAutocomplete="list"
+          ariaActiveDescendant={activeOptionId}
+          ariaInvalid={hasErrors || undefined}
+          ariaDescribedBy={hasErrors ? errorId : undefined}
+          role="combobox"
+          className={clsx('h-11 min-h-11', hasSuffix ? 'pr-11' : undefined)}
           autoComplete="off"
         />
 
@@ -165,6 +230,9 @@ export const SmartFilterInput = React.forwardRef<HTMLInputElement, SmartFilterIn
 
       {showDropdown ? (
         <div
+          id={listboxId}
+          role="listbox"
+          aria-label={props.ariaLabel ?? props.placeholder}
           className={clsx(
             'absolute left-0 right-0 z-50 mt-1 overflow-hidden rounded-md border border-border bg-overlay-surface shadow-panel',
             'max-h-72 overflow-y-auto'
@@ -173,21 +241,24 @@ export const SmartFilterInput = React.forwardRef<HTMLInputElement, SmartFilterIn
           data-overlay="popover"
           data-overlay-surface="overlay"
         >
-          <ul className="py-1">
+          <ul className="py-1" role="presentation">
             {suggestions.map((s, idx) => {
               const active = idx === activeIdx;
               return (
-                <li key={s.id}>
+                <li key={`${s.id}.${idx}`} role="presentation">
                   <button
                     type="button"
+                    id={`${listboxId}-option-${idx}`}
+                    role="option"
+                    aria-selected={active}
+                    tabIndex={-1}
                     className={clsx(
-                      'flex w-full items-start justify-between gap-3 px-3 py-2 text-left',
-                      active ? 'bg-surface-2' : 'hover:bg-surface-2'
+                      'flex min-h-11 w-full items-start justify-between gap-3 px-3 py-2 text-left',
+                      active ? 'bg-surface-2' : 'hover:bg-surface-2',
+                      'focus:bg-surface-2 focus:outline-none'
                     )}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      pick(idx);
-                    }}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => pick(idx)}
                     onMouseEnter={() => setActiveIdx(idx)}
                     data-testid={s.testId}
                   >
@@ -200,6 +271,20 @@ export const SmartFilterInput = React.forwardRef<HTMLInputElement, SmartFilterIn
               );
             })}
           </ul>
+        </div>
+      ) : null}
+
+      <div id={statusId} role="status" aria-live="polite" aria-atomic="true" className="sr-only">
+        {showDropdown
+          ? tc('filters.smart.suggestions_available', suggestions.length)
+          : open && inputValue.trim()
+            ? t('filters.smart.no_suggestions')
+            : ''}
+      </div>
+
+      {hasErrors ? (
+        <div id={errorId} role="alert" aria-live="assertive" aria-atomic="true" className="sr-only">
+          {props.errors?.join(' ')}
         </div>
       ) : null}
     </div>
