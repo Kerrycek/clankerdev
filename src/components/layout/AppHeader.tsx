@@ -269,6 +269,7 @@ export function AppHeader(props: AppHeaderProps) {
           role="search"
           onSubmit={(e) => {
             e.preventDefault();
+            if (!inlineSearchExpanded) return;
             const selected = searchResults[selectedSearchResult] ?? searchResults[0];
             if (selected) openInlineResult(selected);
           }}
@@ -295,12 +296,14 @@ export function AppHeader(props: AppHeaderProps) {
               if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 setSearchOpen(true);
+                if (!inlineSearchExpanded) return;
                 setSelectedSearchResult((prev) => Math.min(prev + 1, Math.max(0, searchResults.length - 1)));
                 return;
               }
               if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 setSearchOpen(true);
+                if (!inlineSearchExpanded) return;
                 setSelectedSearchResult((prev) => Math.max(prev - 1, 0));
               }
             }}

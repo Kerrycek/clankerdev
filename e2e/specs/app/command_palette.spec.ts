@@ -2,6 +2,31 @@ import { expect, test, type Page } from '@playwright/test';
 
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 
+type ClipboardProbe = { writes: string[] };
+
+async function installClipboardProbe(page: Page) {
+  await page.addInitScript(() => {
+    const probe: ClipboardProbe = { writes: [] };
+    const stateWindow = window as typeof window & { __paletteClipboardProbe?: ClipboardProbe };
+    stateWindow.__paletteClipboardProbe = probe;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (text: string) => {
+          probe.writes.push(text);
+        },
+      },
+    });
+  });
+}
+
+async function readClipboardProbe(page: Page): Promise<ClipboardProbe> {
+  return page.evaluate(() => {
+    const stateWindow = window as typeof window & { __paletteClipboardProbe?: ClipboardProbe };
+    return stateWindow.__paletteClipboardProbe ?? { writes: [] };
+  });
+}
+
 async function openCommandPalette(page: Page) {
   await page.evaluate(() => {
     window.dispatchEvent(
@@ -198,6 +223,49 @@ test.describe('Command palette', () => {
     await expect(returnTarget).toBeFocused();
   });
 
+  test('keeps palette action buttons keyboard-operable while results are present', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    await installHaveApiMock(page, {
+      user: { id: 99, login: 'admin', level: 100 },
+      handlers: {
+        'GET vpses': () => ({ vpses: [] }),
+        'POST cluster/search': () => ({
+          cluster_search: [{ resource: 'User', id: 5, value: 'alice', attribute: 'login' }],
+        }),
+        'GET users/5': () => ({
+          user: { id: 5, login: 'alice', full_name: 'Alice A.', email: 'alice@example', level: 1 },
+        }),
+      },
+    });
+
+    await page.goto('/admin/vps');
+    await expect(page.getByTestId('vps.list')).toBeVisible();
+    const startUrl = page.url();
+    await openCommandPalette(page);
+
+    const input = page.getByTestId('palette.input');
+    await input.fill('alice');
+    await expect(page.getByTestId('palette.result.0')).toBeVisible();
+
+    const helpButton = page.getByTestId('palette.help.open');
+    await helpButton.focus();
+    await helpButton.press('Enter');
+    await expect(page.getByTestId('palette.help')).toBeVisible();
+    await expect(page).toHaveURL(startUrl);
+
+    const backButton = page.getByRole('button', { name: 'Back to search' });
+    await backButton.focus();
+    await backButton.press('Enter');
+    await expect(page.getByTestId('palette.help')).toHaveCount(0);
+
+    const closeButton = page.getByTestId('palette.modal').getByRole('button', { name: 'Close', exact: true });
+    await closeButton.focus();
+    await closeButton.press('Enter');
+    await expect(page.getByTestId('palette.modal')).toHaveCount(0);
+    await expect(page).toHaveURL(startUrl);
+  });
+
   test('keeps the help target touch-sized for wide coarse and hybrid pointers', async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 1024, height: 600 });
     if (testInfo.project.name === 'chromium') {
@@ -355,6 +423,245 @@ test.describe('Command palette', () => {
 
     await expect(page).toHaveURL(/\/admin\/users\/5$/);
     await expect(page.getByTestId('admin.user.page')).toBeVisible();
+  });
+
+  test('keeps keyboard selection aligned with group-sorted result order', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    await installHaveApiMock(page, {
+      user: { id: 99, login: 'admin', level: 100 },
+      handlers: {
+        'GET vpses': () => ({ vpses: [] }),
+        'POST cluster/search': () => ({
+          cluster_search: [
+            { resource: 'User', id: 5, value: 'alice', attribute: 'login' },
+            { resource: 'Vps', id: 6, value: 'vps6.example', attribute: 'hostname' },
+          ],
+        }),
+        'GET users/5': () => ({
+          user: { id: 5, login: 'alice', full_name: 'Alice A.', email: 'alice@example', level: 1 },
+        }),
+      },
+    });
+
+    await page.goto('/admin/vps');
+    await expect(page.getByTestId('vps.list')).toBeVisible();
+    await openCommandPalette(page);
+
+    const input = page.getByTestId('palette.input');
+    const firstOption = page.getByTestId('palette.result.0');
+    const secondOption = page.getByTestId('palette.result.1');
+    await input.fill('mixed');
+
+    await expect(firstOption).toContainText('vps6.example');
+    await expect(secondOption).toContainText('Alice A.');
+    await expect(firstOption).toHaveAttribute('aria-selected', 'true');
+    await expect(secondOption).toHaveAttribute('aria-selected', 'false');
+    await expect(input).toHaveAttribute('aria-activedescendant', 'command-palette-listbox-option-0');
+
+    await input.press('ArrowDown');
+    await expect(firstOption).toHaveAttribute('aria-selected', 'false');
+    await expect(secondOption).toHaveAttribute('aria-selected', 'true');
+    await expect(input).toHaveAttribute('aria-activedescendant', 'command-palette-listbox-option-1');
+
+    await input.press('Enter');
+    await expect(page).toHaveURL(/\/admin\/users\/5$/);
+    await expect(page.getByTestId('admin.user.page')).toBeVisible();
+  });
+
+  test('exposes the numeric direct-open candidate as the active option', async ({ page }) => {
+    await installClipboardProbe(page);
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    await installHaveApiMock(page, {
+      user: { id: 99, login: 'admin', level: 100 },
+      handlers: {
+        'GET vpses': () => ({ vpses: [] }),
+        'POST cluster/search': () => ({
+          cluster_search: [
+            { resource: 'User', id: 5, value: 'alice', attribute: 'id' },
+            { resource: 'TransactionChain', id: 5, value: 'chain-five', attribute: 'id' },
+          ],
+        }),
+        'GET users/5': () => ({
+          user: { id: 5, login: 'alice', full_name: 'Alice A.', email: 'alice@example', level: 1 },
+        }),
+      },
+    });
+
+    await page.goto('/admin/vps');
+    await expect(page.getByTestId('vps.list')).toBeVisible();
+    const origin = new URL(page.url()).origin;
+    await openCommandPalette(page);
+
+    const input = page.getByTestId('palette.input');
+    const userOption = page.getByTestId('palette.result.0');
+    const chainOption = page.getByTestId('palette.result.1');
+    await input.fill('5');
+
+    await expect(userOption).toContainText('Alice A.');
+    await expect(chainOption).toContainText('chain-five');
+    await expect(userOption).toHaveAttribute('aria-selected', 'false');
+    await expect(chainOption).toHaveAttribute('aria-selected', 'true');
+    await expect(input).toHaveAttribute('aria-activedescendant', 'command-palette-listbox-option-1');
+
+    await input.press('Control+Shift+C');
+    await input.press('Control+Shift+I');
+    await expect.poll(() => readClipboardProbe(page)).toEqual({
+      writes: [`${origin}/admin/transactions/5`, '#5'],
+    });
+
+    await input.press('Enter');
+    await expect(page).toHaveURL(/\/admin\/transactions\/5$/);
+  });
+
+  test('does not activate or copy stale results while a replacement query is pending', async ({ page }) => {
+    await installClipboardProbe(page);
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    const searchQueries: string[] = [];
+    let releaseReplacement!: () => void;
+    await installHaveApiMock(page, {
+      user: { id: 99, login: 'admin', level: 100 },
+      handlers: {
+        'GET vpses': () => ({ vpses: [] }),
+        'POST cluster/search': async (ctx) => {
+          const query = String((ctx.reqJson as any)?.cluster?.value ?? '');
+          searchQueries.push(query);
+          if (query === '6') {
+            await new Promise<void>((resolve) => {
+              releaseReplacement = resolve;
+            });
+            return {
+              cluster_search: [
+                { resource: 'Vps', id: 6, value: 'vps6.example', attribute: 'id' },
+                { resource: 'User', id: 6, value: 'user-six', attribute: 'id' },
+              ],
+            };
+          }
+          return {
+            cluster_search: query === '5'
+              ? [
+                  { resource: 'Vps', id: 5, value: 'vps5.example', attribute: 'id' },
+                  { resource: 'User', id: 5, value: 'user-five', attribute: 'id' },
+                ]
+              : [],
+          };
+        },
+        'GET users/5': () => ({
+          user: { id: 5, login: 'alice', full_name: 'Alice A.', email: 'alice@example', level: 1 },
+        }),
+        'GET users/6': () => ({
+          user: { id: 6, login: 'bob', full_name: 'Bob B.', email: 'bob@example', level: 1 },
+        }),
+        'GET vpses/6': () => ({
+          vps: {
+            id: 6,
+            hostname: 'vps6.example',
+            object_state: 'active',
+            is_running: true,
+            cpus: 2,
+            memory: 2048,
+            diskspace: 20480,
+            node: { id: 1, domain_name: 'node1' },
+            user: { id: 6, login: 'bob' },
+          },
+        }),
+      },
+    });
+
+    await page.goto('/admin/vps');
+    await expect(page.getByTestId('vps.list')).toBeVisible();
+    const startUrl = page.url();
+    await openCommandPalette(page);
+
+    const input = page.getByTestId('palette.input');
+    await input.fill('5');
+    await expect(page.getByTestId('palette.result.0')).toBeVisible();
+
+    await input.fill('6');
+    await expect(input).toHaveAttribute('aria-busy', 'true');
+    await expect(input).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.getByRole('option')).toHaveCount(0);
+    await expect.poll(() => searchQueries).toEqual(['5', '6']);
+
+    await input.press('ArrowDown');
+
+    await input.press('Control+Shift+C');
+    await input.press('Control+Shift+I');
+    expect(await readClipboardProbe(page)).toEqual({ writes: [] });
+
+    await input.press('Enter');
+    await expect(page).toHaveURL(startUrl);
+    await expect(page.getByTestId('palette.modal')).toBeVisible();
+
+    releaseReplacement();
+    const firstReplacement = page.getByTestId('palette.result.0');
+    const secondReplacement = page.getByTestId('palette.result.1');
+    await expect(firstReplacement).toBeVisible();
+    await expect(secondReplacement).toBeVisible();
+    await expect(firstReplacement).toHaveAttribute('aria-selected', 'true');
+    await expect(secondReplacement).toHaveAttribute('aria-selected', 'false');
+
+    await input.press('Enter');
+    await expect(page).toHaveURL(/\/admin\/vps\/6$/);
+    expect(searchQueries).toEqual(['5', '6']);
+  });
+
+  test('clears an in-flight search across close, late completion, and reopen', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    const searchQueries: string[] = [];
+    let slowResponseCompleted = false;
+    let releaseSlowSearch!: () => void;
+    await installHaveApiMock(page, {
+      user: { id: 99, login: 'admin', level: 100 },
+      handlers: {
+        'GET vpses': () => ({ vpses: [] }),
+        'POST cluster/search': async (ctx) => {
+          const query = String((ctx.reqJson as any)?.cluster?.value ?? '');
+          searchQueries.push(query);
+          if (query === 'slow') {
+            await new Promise<void>((resolve) => {
+              releaseSlowSearch = resolve;
+            });
+            slowResponseCompleted = true;
+            return {
+              cluster_search: [{ resource: 'Vps', id: 7, value: 'late.example', attribute: 'hostname' }],
+            };
+          }
+          return { cluster_search: [] };
+        },
+      },
+    });
+
+    await page.goto('/admin/vps');
+    await expect(page.getByTestId('vps.list')).toBeVisible();
+    await openCommandPalette(page);
+
+    const input = page.getByTestId('palette.input');
+    await input.fill('slow');
+    await expect.poll(() => searchQueries).toEqual(['slow']);
+    await expect(input).toHaveAttribute('aria-busy', 'true');
+
+    await page.getByTestId('palette.modal').getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(page.getByTestId('palette.modal')).toHaveCount(0);
+
+    await openCommandPalette(page);
+    const reopenedInput = page.getByTestId('palette.input');
+    await expect(reopenedInput).toHaveValue('');
+    await expect(reopenedInput).not.toHaveAttribute('aria-busy');
+    await expect(page.getByTestId('palette.empty')).toBeVisible();
+    await expect(page.getByRole('option')).toHaveCount(0);
+
+    releaseSlowSearch();
+    await expect.poll(() => slowResponseCompleted).toBe(true);
+    await page.waitForTimeout(250);
+    await expect(reopenedInput).toHaveValue('');
+    await expect(reopenedInput).not.toHaveAttribute('aria-busy');
+    await expect(page.getByTestId('palette.empty')).toBeVisible();
+    await expect(page.getByRole('option')).toHaveCount(0);
+    expect(searchQueries).toEqual(['slow']);
   });
 
   test('announces command-palette loading, no-results, and error states outside the listbox', async ({ page }) => {
@@ -568,17 +875,17 @@ test.describe('Command palette', () => {
     await expect(page.getByTestId('admin.ip_address.page')).toBeVisible();
   });
 
-  test('shows help when query is "?" and does not issue search requests', async ({ page }) => {
+  test('does not request stale help text after closing query-driven help', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
-    let called = false;
+    const searchQueries: string[] = [];
 
     await installHaveApiMock(page, {
       user: { id: 99, login: 'admin', level: 100 },
       handlers: {
         'GET vpses': () => ({ vpses: [] }),
-        'POST cluster/search': () => {
-          called = true;
+        'POST cluster/search': (ctx) => {
+          searchQueries.push(String((ctx.reqJson as any)?.cluster?.value ?? ''));
           return { cluster_search: [] };
         },
       },
@@ -590,7 +897,55 @@ test.describe('Command palette', () => {
 
     await page.getByTestId('palette.input').fill('?');
     await expect(page.getByTestId('palette.help')).toBeVisible();
+    await page.waitForTimeout(250);
 
-    expect(called).toBeFalsy();
+    await page.getByRole('button', { name: 'Back to search' }).click();
+    await expect(page.getByTestId('palette.empty')).toBeVisible();
+    await page.waitForTimeout(250);
+
+    expect(searchQueries).toEqual([]);
+
+    await page.getByTestId('palette.modal').getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(page.getByTestId('palette.modal')).toHaveCount(0);
+    await openCommandPalette(page);
+    await expect(page.getByTestId('palette.input')).toHaveValue('');
+    await page.waitForTimeout(250);
+    expect(searchQueries).toEqual([]);
+  });
+
+  test('does not rerun an earlier query when inserting a help key', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    const searchQueries: string[] = [];
+    await installHaveApiMock(page, {
+      user: { id: 99, login: 'admin', level: 100 },
+      handlers: {
+        'GET vpses': () => ({ vpses: [] }),
+        'POST cluster/search': (ctx) => {
+          searchQueries.push(String((ctx.reqJson as any)?.cluster?.value ?? ''));
+          return { cluster_search: [] };
+        },
+      },
+    });
+
+    await page.goto('/admin/vps');
+    await expect(page.getByTestId('vps.list')).toBeVisible();
+    await openCommandPalette(page);
+
+    const input = page.getByTestId('palette.input');
+    await input.fill('alice');
+    await expect(page.getByTestId('palette.no_results')).toBeVisible();
+    expect(searchQueries).toEqual(['alice']);
+
+    await page.getByTestId('palette.help.open').click();
+    await expect(page.getByTestId('palette.help')).toBeVisible();
+    await page.getByTestId('palette.help.key.vps').click();
+
+    await expect(input).toHaveValue('vps:');
+    await expect(input).toHaveAttribute('aria-busy', 'true');
+    await expect(page.getByTestId('palette.no_results')).toBeVisible();
+    await page.waitForTimeout(250);
+
+    expect(searchQueries).toEqual(['alice']);
   });
 });
