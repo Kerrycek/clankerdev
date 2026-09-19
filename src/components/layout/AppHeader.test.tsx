@@ -1,8 +1,9 @@
 import React, { useRef, useState } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { searchUserObjects } from '../../lib/search/userGlobalSearch';
 import { AppHeader } from './AppHeader';
 
 vi.mock('../../app/auth', () => ({
@@ -20,6 +21,10 @@ vi.mock('../../app/objectScope', () => ({
   useObjectScope: () => ({ mineUserId: 53 }),
 }));
 
+vi.mock('../../lib/search/userGlobalSearch', () => ({
+  searchUserObjects: vi.fn(),
+}));
+
 function t(key: any, vars?: Record<string, unknown>): string {
   const translations: Record<string, string> = {
     'auth.session_idle.menu_label': 'Inactivity limit',
@@ -27,7 +32,9 @@ function t(key: any, vars?: Record<string, unknown>): string {
     'common.open_tasks': 'Open tasks',
     'nav.open': 'Open navigation',
     'palette.placeholder.user': 'Search VPS',
+    'palette.group.vps': 'VPS',
     'palette.shortcut_title': 'Shortcut',
+    'search.inline.aria': 'Search objects',
     'settings.language.cs': 'CS',
     'settings.language.en': 'EN',
     'settings.language.label': 'Language',
@@ -95,6 +102,10 @@ function HeaderHarness(props: { onOpenPalette?: () => void } = {}) {
 }
 
 describe('AppHeader', () => {
+  beforeEach(() => {
+    vi.mocked(searchUserObjects).mockReset();
+  });
+
   it('opens the command palette from the mobile search trigger', () => {
     const onOpenPalette = vi.fn();
     render(<HeaderHarness onOpenPalette={onOpenPalette} />);
@@ -125,5 +136,66 @@ describe('AppHeader', () => {
     fireEvent.click(screen.getByTestId('shell.user-menu-button'));
     expect(screen.getByTestId('shell.user-menu')).toBeInTheDocument();
     expect(screen.queryByTestId('shell.user-menu.session-remaining')).not.toBeInTheDocument();
+  });
+
+  it('exposes inline results as a keyboard-controlled combobox and collapses cleanly on Escape', async () => {
+    vi.mocked(searchUserObjects).mockResolvedValue([
+      {
+        key: 'vps:11',
+        group: 'vps',
+        primary: 'mail.example',
+        secondary: 'VPS #11',
+        href: '/app/vps/11',
+        id: 11,
+        resource: 'Vps',
+        raw: {},
+      },
+      {
+        key: 'vps:12',
+        group: 'vps',
+        primary: 'web.example',
+        secondary: 'VPS #12',
+        href: '/app/vps/12',
+        id: 12,
+        resource: 'Vps',
+        raw: {},
+      },
+    ]);
+    render(<HeaderHarness />);
+
+    const input = screen.getByRole('combobox', { name: 'Search objects' });
+    expect(input).toHaveAttribute('aria-autocomplete', 'list');
+    expect(input).toHaveAttribute('aria-controls', 'global-search-inline-listbox');
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+    expect(input).not.toHaveAttribute('aria-activedescendant');
+
+    input.focus();
+    fireEvent.change(input, { target: { value: 'example' } });
+
+    const listbox = await screen.findByRole('listbox', { name: 'Search objects' });
+    expect(listbox).toHaveAttribute('id', 'global-search-inline-listbox');
+
+    const options = await screen.findAllByRole('option');
+    expect(options).toHaveLength(2);
+    expect(options[0]).toHaveAttribute('id', 'global-search-inline-listbox-option-0');
+    expect(options[1]).toHaveAttribute('id', 'global-search-inline-listbox-option-1');
+    await waitFor(() => {
+      expect(input).toHaveAttribute('aria-expanded', 'true');
+      expect(input).toHaveAttribute('aria-activedescendant', options[0]?.id);
+      expect(options[0]).toHaveAttribute('aria-selected', 'true');
+    });
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    expect(input).toHaveFocus();
+    expect(input).toHaveAttribute('aria-activedescendant', options[1]?.id);
+    expect(options[0]).toHaveAttribute('aria-selected', 'false');
+    expect(options[1]).toHaveAttribute('aria-selected', 'true');
+
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(input).toHaveFocus();
+    expect(input).toHaveValue('example');
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+    expect(input).not.toHaveAttribute('aria-activedescendant');
+    expect(screen.queryByRole('listbox', { name: 'Search objects' })).not.toBeInTheDocument();
   });
 });

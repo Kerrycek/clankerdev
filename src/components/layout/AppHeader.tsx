@@ -37,6 +37,12 @@ interface InlineSearchResult {
   group?: UserGlobalSearchGroup;
 }
 
+const INLINE_SEARCH_LISTBOX_ID = 'global-search-inline-listbox';
+
+function inlineSearchOptionId(index: number): string {
+  return `${INLINE_SEARCH_LISTBOX_ID}-option-${index}`;
+}
+
 function userSearchGroupLabel(group: UserGlobalSearchGroup, t: AppHeaderProps['t']): string {
   if (group === 'vps') return t('palette.group.vps');
   if (group === 'ips') return t('palette.group.ip_addresses');
@@ -201,6 +207,12 @@ export function AppHeader(props: AppHeaderProps) {
     return null;
   }, [search, searchError, searchLoading, searchResults.length, t]);
 
+  const inlineSearchExpanded = searchOpen && Boolean(search.trim() || searchResults.length > 0);
+  const inlineSearchActiveOptionId =
+    inlineSearchExpanded && searchResults[selectedSearchResult]
+      ? inlineSearchOptionId(selectedSearchResult)
+      : undefined;
+
   const openInlineResult = (result: InlineSearchResult) => {
     navigate(result.href);
     setSearch('');
@@ -260,6 +272,7 @@ export function AppHeader(props: AppHeaderProps) {
               if (e.key === 'Escape') {
                 e.preventDefault();
                 setSearchOpen(false);
+                setSelectedSearchResult(0);
                 return;
               }
               if (e.key === 'ArrowDown') {
@@ -277,14 +290,22 @@ export function AppHeader(props: AppHeaderProps) {
             className="min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-muted"
             placeholder={mode === 'admin' ? t('palette.placeholder.admin') : t('palette.placeholder.user')}
             aria-label={t('search.inline.aria')}
+            aria-controls={INLINE_SEARCH_LISTBOX_ID}
+            aria-expanded={inlineSearchExpanded}
+            aria-autocomplete="list"
+            aria-activedescendant={inlineSearchActiveOptionId}
+            role="combobox"
             data-testid="shell.inline-search.input"
           />
           <span className="hidden shrink-0 rounded border border-border bg-surface-2 px-2 py-0.5 text-xs text-faint lg:inline" title={t('palette.shortcut_title')}>
             {shortcutHint}
           </span>
 
-          {searchOpen && (search.trim() || searchResults.length > 0) ? (
+          {inlineSearchExpanded ? (
             <div
+              id={INLINE_SEARCH_LISTBOX_ID}
+              role="listbox"
+              aria-label={t('search.inline.aria')}
               className="absolute left-0 top-[calc(100%+0.5rem)] z-50 w-drawer-md overflow-hidden rounded-md border border-border bg-overlay-surface shadow-panel"
               data-testid="shell.inline-search.results"
               data-overlay="popover"
@@ -308,6 +329,10 @@ export function AppHeader(props: AppHeaderProps) {
                         ) : null}
                         <button
                           type="button"
+                          id={inlineSearchOptionId(index)}
+                          role="option"
+                          aria-selected={index === selectedSearchResult}
+                          tabIndex={-1}
                           className={clsx(
                             'flex w-full flex-col items-start px-3 py-2 text-left text-sm',
                             index === selectedSearchResult ? 'bg-surface-2' : 'hover:bg-surface-2'

@@ -103,6 +103,99 @@ test.describe('Command palette', () => {
     await expect(page.getByTestId('vps.header')).toBeVisible();
   });
 
+  test('exposes combobox selection state, retains input focus, and sizes help for the viewport', async ({ page }, testInfo) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'user', level: 1 },
+      handlers: {
+        'GET vpses': () => ({
+          vpses: [
+            {
+              id: 3,
+              hostname: 'vps3.example',
+              object_state: 'active',
+              is_running: true,
+              cpus: 2,
+              memory: 2048,
+              diskspace: 20480,
+              used_memory: 512,
+              used_diskspace: 4096,
+              node: { id: 1, domain_name: 'node1' },
+            },
+            {
+              id: 4,
+              hostname: 'vps4.example',
+              object_state: 'active',
+              is_running: true,
+              cpus: 2,
+              memory: 2048,
+              diskspace: 20480,
+              used_memory: 768,
+              used_diskspace: 5120,
+              node: { id: 1, domain_name: 'node1' },
+            },
+          ],
+        }),
+      },
+    });
+
+    await page.goto('/app/vps');
+    await expect(page.getByTestId('vps.list')).toBeVisible();
+
+    const returnTarget = testInfo.project.name === 'mobile-chrome'
+      ? page.getByTestId('palette.open')
+      : page.getByTestId('shell.inline-search.input');
+    await returnTarget.focus();
+    await openCommandPalette(page);
+
+    const input = page.getByTestId('palette.input');
+    const helpButton = page.getByTestId('palette.help.open');
+    await expect(input).toBeFocused();
+    await expect(input).toHaveAttribute('role', 'combobox');
+    await expect(input).toHaveAttribute('aria-autocomplete', 'list');
+    await expect(input).toHaveAttribute('aria-controls', 'command-palette-listbox');
+    await expect(input).toHaveAttribute('aria-expanded', 'false');
+    await expect(input).not.toHaveAttribute('aria-activedescendant');
+
+    const helpBox = await helpButton.boundingBox();
+    expect(helpBox).not.toBeNull();
+    if (testInfo.project.name === 'mobile-chrome') {
+      expect(helpBox!.width).toBeGreaterThanOrEqual(44);
+      expect(helpBox!.height).toBeGreaterThanOrEqual(44);
+    } else {
+      expect(helpBox!.width).toBeLessThanOrEqual(40);
+      expect(helpBox!.height).toBeLessThanOrEqual(36);
+    }
+
+    await input.fill('vps');
+    const listbox = page.getByRole('listbox', { name: 'Quickly search objects' });
+    const firstOption = page.getByTestId('palette.result.0');
+    const secondOption = page.getByTestId('palette.result.1');
+    await expect(listbox).toHaveAttribute('id', 'command-palette-listbox');
+    await expect(firstOption).toHaveAttribute('role', 'option');
+    await expect(firstOption).toHaveAttribute('id', 'command-palette-listbox-option-0');
+    await expect(secondOption).toHaveAttribute('id', 'command-palette-listbox-option-1');
+    await expect(input).toHaveAttribute('aria-expanded', 'true');
+    await expect(input).toHaveAttribute('aria-activedescendant', 'command-palette-listbox-option-0');
+    await expect(firstOption).toHaveAttribute('aria-selected', 'true');
+
+    await input.press('ArrowDown');
+    await expect(input).toBeFocused();
+    await expect(input).toHaveAttribute('aria-activedescendant', 'command-palette-listbox-option-1');
+    await expect(firstOption).toHaveAttribute('aria-selected', 'false');
+    await expect(secondOption).toHaveAttribute('aria-selected', 'true');
+
+    await input.press('ArrowUp');
+    await expect(input).toBeFocused();
+    await expect(input).toHaveAttribute('aria-activedescendant', 'command-palette-listbox-option-0');
+    await expect(firstOption).toHaveAttribute('aria-selected', 'true');
+
+    await input.press('Escape');
+    await expect(page.getByTestId('palette.modal')).toHaveCount(0);
+    await expect(returnTarget).toBeFocused();
+  });
+
   test('supports quick-jump by VPS numeric ID in user view', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 

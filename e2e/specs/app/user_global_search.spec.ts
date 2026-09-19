@@ -82,7 +82,14 @@ test.describe('User global search', () => {
     });
 
     await page.goto('/app/vps');
-    await page.getByTestId('shell.inline-search.input').fill('203.0.113.20');
+    const searchInput = page.getByTestId('shell.inline-search.input');
+    await expect(searchInput).toHaveAttribute('role', 'combobox');
+    await expect(searchInput).toHaveAttribute('aria-autocomplete', 'list');
+    await expect(searchInput).toHaveAttribute('aria-controls', 'global-search-inline-listbox');
+    await expect(searchInput).toHaveAttribute('aria-expanded', 'false');
+    await expect(searchInput).not.toHaveAttribute('aria-activedescendant');
+
+    await searchInput.fill('203.0.113.20');
 
     await expect(page.getByTestId('shell.inline-search.group.vps')).toBeVisible();
     await expect(page.getByTestId('shell.inline-search.group.ips')).toBeVisible();
@@ -100,7 +107,35 @@ test.describe('User global search', () => {
     expect(ipRequests).toContainEqual({ addr: '203.0.113.20', q: null });
     expect(dnsRequests).toContainEqual({ limit: '100', fromId: null, q: null });
 
-    await page.getByTestId('shell.inline-search.result.0').click();
+    const listbox = page.getByRole('listbox', { name: 'Quickly search objects' });
+    const firstOption = page.getByTestId('shell.inline-search.result.0');
+    const secondOption = page.getByTestId('shell.inline-search.result.1');
+    await expect(listbox).toHaveAttribute('id', 'global-search-inline-listbox');
+    await expect(firstOption).toHaveAttribute('role', 'option');
+    await expect(firstOption).toHaveAttribute('id', 'global-search-inline-listbox-option-0');
+    await expect(secondOption).toHaveAttribute('id', 'global-search-inline-listbox-option-1');
+    await expect(searchInput).toHaveAttribute('aria-expanded', 'true');
+    await expect(searchInput).toHaveAttribute('aria-activedescendant', 'global-search-inline-listbox-option-0');
+    await expect(firstOption).toHaveAttribute('aria-selected', 'true');
+
+    await searchInput.press('ArrowDown');
+    await expect(searchInput).toBeFocused();
+    await expect(searchInput).toHaveAttribute('aria-activedescendant', 'global-search-inline-listbox-option-1');
+    await expect(firstOption).toHaveAttribute('aria-selected', 'false');
+    await expect(secondOption).toHaveAttribute('aria-selected', 'true');
+
+    await searchInput.press('Escape');
+    await expect(searchInput).toBeFocused();
+    await expect(searchInput).toHaveValue('203.0.113.20');
+    await expect(searchInput).toHaveAttribute('aria-expanded', 'false');
+    await expect(searchInput).not.toHaveAttribute('aria-activedescendant');
+    await expect(listbox).toHaveCount(0);
+
+    await searchInput.press('ArrowUp');
+    await expect(searchInput).toHaveAttribute('aria-expanded', 'true');
+    await expect(searchInput).toHaveAttribute('aria-activedescendant', 'global-search-inline-listbox-option-0');
+
+    await firstOption.click();
     await expect(page).toHaveURL(/\/app\/vps\/11$/);
   });
 

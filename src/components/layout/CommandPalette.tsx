@@ -44,6 +44,12 @@ type PaletteResult = {
   raw: unknown;
 };
 
+const COMMAND_PALETTE_LISTBOX_ID = 'command-palette-listbox';
+
+function commandPaletteOptionId(index: number): string {
+  return `${COMMAND_PALETTE_LISTBOX_ID}-option-${index}`;
+}
+
 type QualifierKey =
   | 'vps'
   | 'user'
@@ -396,6 +402,11 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
     return m;
   }, [flattened]);
 
+  const resultsExpanded =
+    props.open && !helpOpen && Boolean(query.trim()) && !loading && !error && flattened.length > 0;
+  const activeOptionId =
+    resultsExpanded && flattened[selected] ? commandPaletteOptionId(selected) : undefined;
+
   const openResult = (r: PaletteResult, opts?: { newTab?: boolean }) => {
     if (opts?.newTab) {
       window.open(buildHrefWithBasename(r.href), '_blank', 'noopener');
@@ -556,20 +567,25 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
               ref={inputRef}
               testId="palette.input"
               ariaLabel={t('search.inline.aria')}
+              ariaControls={COMMAND_PALETTE_LISTBOX_ID}
+              ariaExpanded={resultsExpanded}
+              ariaAutocomplete="list"
+              ariaActiveDescendant={activeOptionId}
+              role="combobox"
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
                 if (helpOpenManual) setHelpOpenManual(false);
               }}
               placeholder={canUseClusterSearch ? t('palette.placeholder.admin') : t('palette.placeholder.user')}
-              className="h-11 pr-11"
+              className="h-11 pr-12 sm:pr-11"
             />
 
             <div className="absolute inset-y-0 right-0 flex items-center pr-1">
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 px-0"
+                className="h-8 w-8 min-h-11 min-w-11 px-0 sm:min-h-0 sm:min-w-0"
                 onClick={() => setHelpOpenManual(true)}
                 ariaLabel={t('filters.help.open')}
                 title={t('filters.help.open')}
@@ -629,7 +645,13 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
               {t('palette.empty.no_results')}
             </div>
           ) : (
-            <div className="space-y-4" data-testid="palette.results">
+            <div
+              id={COMMAND_PALETTE_LISTBOX_ID}
+              role="listbox"
+              aria-label={t('search.inline.aria')}
+              className="space-y-4"
+              data-testid="palette.results"
+            >
               {grouped.map((g) => (
                 <div key={g.group}>
                   <div className="text-xs font-semibold text-muted">{groupLabel(g.group, t)}</div>
@@ -642,6 +664,10 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
                         <button
                           key={r.key}
                           type="button"
+                          id={commandPaletteOptionId(idx)}
+                          role="option"
+                          aria-selected={isSel}
+                          tabIndex={-1}
                           className={clsx(
                             'flex w-full items-start justify-between gap-3 px-3 py-2 text-left text-sm',
                             'hover:bg-surface-2',
@@ -652,6 +678,7 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
                             setSelected(idx);
                             setManualSelection(true);
                           }}
+                          onMouseDown={(e) => e.preventDefault()}
                           onClick={() => openResult(r)}
                           data-testid={`palette.result.${idx}`}
                         >
