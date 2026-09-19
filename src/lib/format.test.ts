@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { compactText } from './format';
+import { compactText, formatDateInTimeZone } from './format';
 
 describe('compactText', () => {
   it('keeps short values intact', () => {
@@ -16,5 +16,31 @@ describe('compactText', () => {
   it('uses an empty dash for missing values', () => {
     expect(compactText('')).toBe('—');
     expect(compactText(null)).toBe('—');
+  });
+});
+
+describe('formatDateInTimeZone', () => {
+  it('formats the calendar date in the explicit account time zone', () => {
+    const value = '2026-02-01T00:00:00Z';
+    const date = new Date(value);
+    const prague = date.toLocaleDateString(undefined, { timeZone: 'Europe/Prague' });
+    const losAngeles = date.toLocaleDateString(undefined, { timeZone: 'America/Los_Angeles' });
+
+    expect(formatDateInTimeZone(value, 'Europe/Prague')).toBe(prague);
+    expect(formatDateInTimeZone(value, 'America/Los_Angeles')).toBe(losAngeles);
+    expect(prague).not.toBe(losAngeles);
+  });
+
+  it('preserves the existing empty and malformed fallbacks', () => {
+    expect(formatDateInTimeZone(null, 'UTC')).toBe('—');
+    expect(formatDateInTimeZone('2026-02-01-invalid', 'UTC')).toBe('2026-02-01');
+    expect(formatDateInTimeZone('invalid', 'UTC')).toBe('invalid');
+  });
+
+  it('falls back safely when a direct caller provides an invalid zone', () => {
+    const value = '2026-02-01T00:00:00Z';
+    expect(formatDateInTimeZone(value, 'not-a-zone')).toBe(
+      new Date(value).toLocaleDateString(undefined, { timeZone: 'UTC' })
+    );
   });
 });
