@@ -434,6 +434,49 @@ test('@pr-smoke @pr-smoke-mobile user network tabs expose complete keyboard, his
   await expect(page).toHaveURL(/\/app\/networking\?tab=traffic$/);
   await expect(shellMain).toBeFocused();
 
+  await trafficTab.focus();
+  await page.evaluate(() => {
+    type NetworkFocusHarness = Window & {
+      __networkOriginalHasFocus?: () => boolean;
+      __networkKeepStaleTabFocused?: () => void;
+    };
+    const harness = window as unknown as NetworkFocusHarness;
+    const keepStaleTabFocused = () => document.getElementById('network-user-tab-traffic')?.focus();
+    harness.__networkOriginalHasFocus = document.hasFocus.bind(document);
+    harness.__networkKeepStaleTabFocused = keepStaleTabFocused;
+    Object.defineProperty(document, 'hasFocus', { configurable: true, value: () => false });
+    window.addEventListener('popstate', keepStaleTabFocused, true);
+  });
+  expect(await page.evaluate(() => document.hasFocus())).toBe(false);
+  await page.goBack();
+  await expect(page).toHaveURL(/\/app\/networking$/);
+  await expect(addressesTab).toHaveAttribute('aria-selected', 'true');
+  await expect(trafficTab).toHaveAttribute('aria-selected', 'false');
+  await expect(trafficTab).toBeFocused();
+  await expect(addressesTab).not.toBeFocused();
+  await page.evaluate(() => {
+    type NetworkFocusHarness = Window & {
+      __networkOriginalHasFocus?: () => boolean;
+      __networkKeepStaleTabFocused?: () => void;
+    };
+    const harness = window as unknown as NetworkFocusHarness;
+    if (harness.__networkKeepStaleTabFocused) {
+      window.removeEventListener('popstate', harness.__networkKeepStaleTabFocused, true);
+    }
+    if (harness.__networkOriginalHasFocus) {
+      Object.defineProperty(document, 'hasFocus', {
+        configurable: true,
+        value: harness.__networkOriginalHasFocus,
+      });
+    }
+    delete harness.__networkKeepStaleTabFocused;
+    delete harness.__networkOriginalHasFocus;
+  });
+  await shellMain.focus();
+  await page.goForward();
+  await expect(page).toHaveURL(/\/app\/networking\?tab=traffic$/);
+  await expect(shellMain).toBeFocused();
+
   const body = page.locator('body');
   await body.evaluate((element) => {
     element.tabIndex = -1;

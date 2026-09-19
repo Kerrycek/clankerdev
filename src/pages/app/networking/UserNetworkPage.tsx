@@ -388,7 +388,7 @@ export function UserNetworkPage() {
       const tablist = tablistRef.current;
       const restoreAfterHistory = restoreFocusAfterHistoryRef.current;
       restoreFocusAfterHistoryRef.current = false;
-      if (!tabChanged) return;
+      if (!tabChanged || !document.hasFocus()) return;
       if (
         !restoreAfterHistory
         && (!tablist || !tablist.contains(document.activeElement))
