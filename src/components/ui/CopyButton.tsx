@@ -9,6 +9,8 @@ import { Button } from './Button';
 export function CopyButton(props: {
   text: string;
   label?: string;
+  /** Accessible action name when the visible copy label needs extra context. */
+  ariaLabel?: string;
   variant?: React.ComponentProps<typeof Button>['variant'];
   size?: React.ComponentProps<typeof Button>['size'];
   className?: string;
@@ -39,7 +41,7 @@ export function CopyButton(props: {
         size={props.size ?? 'sm'}
         className={props.className}
         title={props.iconOnly ? label : undefined}
-        ariaLabel={props.iconOnly ? label : undefined}
+        ariaLabel={props.ariaLabel ?? (props.iconOnly ? label : undefined)}
         onClick={async () => {
           const ok = await copyTextToClipboard(props.text);
           setStatus(ok ? 'copied' : 'failed');
@@ -57,7 +59,7 @@ export function CopyButton(props: {
           label
         )}
       </Button>
-      {props.iconOnly && status !== 'idle' ? (
+      {(props.iconOnly || props.ariaLabel) && status !== 'idle' ? (
         <span className="sr-only" role="status" aria-live="polite">
           {label}
         </span>
