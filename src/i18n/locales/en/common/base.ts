@@ -10,6 +10,7 @@ export const enCommon_base = {
   'common.confirm': 'Confirm',
   'confirm.type_to_confirm': 'Type “{value}” to confirm.',
   'common.continue': 'Continue',
+  'common.skip_to_main': 'Skip to main content',
   'common.back': 'Back',
   'common.retry': 'Retry',
   'common.refresh': 'Refresh',
