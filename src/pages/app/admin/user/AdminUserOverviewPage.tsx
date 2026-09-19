@@ -17,7 +17,7 @@ import { updateUser } from '../../../../lib/api/users';
 import { getMetaActionStateId } from '../../../../lib/api/haveapi';
 import { fetchUserPayments } from '../../../../lib/api/payments';
 import { adminDateTimeInputToIso } from '../../../../lib/datetimeLocal';
-import { formatDateTime } from '../../../../lib/format';
+import { formatDate, formatDateTime } from '../../../../lib/format';
 import { getPaidUntilStatus, paidUntilBadgeVariant, paidUntilStatusLabelKey } from '../../../../lib/paymentsBadges';
 import { formatMoneyLike } from '../../../../lib/paymentsFormat';
 import { roleFromLevel } from '../../../../lib/roles';
@@ -293,7 +293,7 @@ export function AdminUserOverviewPage() {
                       <div className="min-w-0 text-muted">
                         <div className="truncate">
                           {payment.from_date && payment.to_date
-                            ? `${formatDateTime(payment.from_date)} → ${formatDateTime(payment.to_date)}`
+                            ? `${formatDate(payment.from_date)} → ${formatDate(payment.to_date)}`
                             : t('common.na')}
                         </div>
                         <div className="text-xs text-faint">

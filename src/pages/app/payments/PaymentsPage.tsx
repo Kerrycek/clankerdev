@@ -9,7 +9,7 @@ import { useTierBIntervalMs } from '../../../lib/refreshTiers';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 
 import { fetchPaymentInstructions, fetchUserPayments } from '../../../lib/api/payments';
-import { formatDateTime } from '../../../lib/format';
+import { formatDate, formatDateTime } from '../../../lib/format';
 import { cursorFromDescendingPage } from '../../../lib/lockIndex';
 import { getPaidUntilStatus, paidUntilBadgeVariant, paidUntilStatusLabelKey } from '../../../lib/paymentsBadges';
 import { formatMoneyLike, safeInt } from '../../../lib/paymentsFormat';
@@ -160,8 +160,8 @@ export function PaymentsPage() {
                           <td className="px-3 py-2 font-medium tabular-nums">{formatDateTime(p.created_at)}</td>
                           <td className="px-3 py-2 text-right tabular-nums">{formatMoneyLike(safeInt(p.amount))}</td>
                           <td className="px-3 py-2 text-xs text-muted">
-                            <span className="tabular-nums">{formatDateTime(p.from_date)}</span> →{' '}
-                            <span className="tabular-nums">{formatDateTime(p.to_date)}</span>
+                            <span className="tabular-nums">{formatDate(p.from_date)}</span> →{' '}
+                            <span className="tabular-nums">{formatDate(p.to_date)}</span>
                           </td>
                         </tr>
                       ))}
