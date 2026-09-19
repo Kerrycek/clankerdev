@@ -106,10 +106,13 @@ test('@pr-smoke @pr-smoke-mobile admin user password: generates, copies and save
 
   await page.goto('/admin/users/42/security');
 
-  const newPassword = page.getByTestId('admin.user.security.password.new');
-  const repeatedPassword = page.getByTestId('admin.user.security.password.new2');
+  const newPassword = page.getByLabel('New password', { exact: true });
+  const repeatedPassword = page.getByLabel('Repeat new password', { exact: true });
   const save = page.getByTestId('admin.user.security.password.save');
 
+  await expect(page.getByLabel('Current password', { exact: true })).toHaveCount(0);
+  await expect(newPassword).toHaveAttribute('autocomplete', 'new-password');
+  await expect(repeatedPassword).toHaveAttribute('autocomplete', 'new-password');
   await expect(page.getByTestId('admin.user.security.password.generate')).toBeVisible();
   await expect(save).toBeDisabled();
   await page.getByTestId('admin.user.security.password.generate').click();

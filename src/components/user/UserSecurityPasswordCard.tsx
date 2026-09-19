@@ -109,43 +109,37 @@ export function UserSecurityPasswordCard(props: {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {props.variant === 'profile' ? (
             <div className="md:col-span-2">
-              <div className="text-xs font-medium text-muted">{t('security.password.current')}</div>
-              <div className="mt-1">
-                <Input
-                  type="password"
-                  autoComplete="current-password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  testId={`${prefix}.password.current`}
-                />
-              </div>
+              <Input
+                label={t('security.password.current')}
+                type="password"
+                autoComplete="current-password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                testId={`${prefix}.password.current`}
+              />
             </div>
           ) : null}
 
           <div>
-            <div className="text-xs font-medium text-muted">{t('security.password.new')}</div>
-            <div className="mt-1">
-              <Input
-                type="password"
-                autoComplete="new-password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                testId={`${prefix}.password.new`}
-              />
-            </div>
+            <Input
+              label={t('security.password.new')}
+              type="password"
+              autoComplete="new-password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              testId={`${prefix}.password.new`}
+            />
           </div>
 
           <div>
-            <div className="text-xs font-medium text-muted">{t('security.password.new_repeat')}</div>
-            <div className="mt-1">
-              <Input
-                type="password"
-                autoComplete="new-password"
-                value={newPassword2}
-                onChange={(e) => setNewPassword2(e.target.value)}
-                testId={`${prefix}.password.new2`}
-              />
-            </div>
+            <Input
+              label={t('security.password.new_repeat')}
+              type="password"
+              autoComplete="new-password"
+              value={newPassword2}
+              onChange={(e) => setNewPassword2(e.target.value)}
+              testId={`${prefix}.password.new2`}
+            />
           </div>
 
           <div className="md:col-span-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
