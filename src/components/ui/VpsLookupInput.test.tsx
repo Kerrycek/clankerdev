@@ -74,6 +74,7 @@ describe('VpsLookupInput', () => {
     expect(input).toHaveAttribute('aria-autocomplete', 'list');
     expect(input).toHaveAttribute('aria-expanded', 'false');
     expect(input).toHaveAttribute('autocomplete', 'off');
+    expect(input).not.toHaveAttribute('aria-controls');
     expect(input).not.toHaveAttribute('aria-activedescendant');
 
     fireEvent.focus(input);
@@ -84,7 +85,7 @@ describe('VpsLookupInput', () => {
     expect(input).toHaveAttribute('aria-controls', listbox.id);
     expect(input).toHaveAttribute('aria-expanded', 'true');
     expect(input).toHaveAttribute('aria-describedby', screen.getByRole('status').id);
-    expect(screen.getByRole('status')).toHaveTextContent('3 Target VPS');
+    expect(screen.getByRole('status')).toHaveTextContent('Target VPS: 3');
     await waitFor(() => expect(input).toHaveAttribute('aria-activedescendant', options[0]?.id));
     expect(options[0]).toHaveAttribute('aria-selected', 'true');
     expect(options[0]).toHaveClass('min-h-11');
@@ -107,6 +108,7 @@ describe('VpsLookupInput', () => {
     expect(onChange).toHaveBeenLastCalledWith(12);
     expect(input).toHaveValue('#12');
     expect(input).toHaveAttribute('aria-expanded', 'false');
+    expect(input).not.toHaveAttribute('aria-controls');
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 
@@ -182,6 +184,7 @@ describe('VpsLookupInput', () => {
     act(() => input.focus());
     fireEvent.change(input, { target: { value: 'slow' } });
     expect(screen.getByRole('status')).toHaveTextContent('Searching…');
+    expect(input).not.toHaveAttribute('aria-controls');
     await waitFor(() => expect(fetchVpsList).toHaveBeenCalledTimes(1));
     fireEvent.keyDown(input, { key: 'Escape' });
     expect(parentEscape).not.toHaveBeenCalled();
@@ -190,6 +193,7 @@ describe('VpsLookupInput', () => {
     pendingRequest.resolve(reply([{ id: 22, hostname: 'late.example' }]));
     fireEvent.change(input, { target: { value: 'empty' } });
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('No VPS found'));
+    expect(input).not.toHaveAttribute('aria-controls');
     expect(screen.queryByRole('option')).not.toBeInTheDocument();
     fireEvent.keyDown(input, { key: 'Escape' });
     expect(parentEscape).not.toHaveBeenCalled();
@@ -209,6 +213,7 @@ describe('VpsLookupInput', () => {
 
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Search failed'));
     expect(input).toHaveAttribute('aria-expanded', 'false');
+    expect(input).not.toHaveAttribute('aria-controls');
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
     expect(screen.queryByRole('option')).not.toBeInTheDocument();
     expect(fireEvent.keyDown(input, { key: 'Enter' })).toBe(false);
@@ -253,18 +258,22 @@ describe('VpsLookupInput', () => {
     const option = await screen.findByRole('option', { name: /touch\.example/ });
 
     fireEvent.pointerDown(option, { pointerType: 'touch', button: 0 });
+    act(() => option.focus());
     fireEvent.blur(input);
     fireEvent.click(option);
 
     expect(onChange).toHaveBeenLastCalledWith(41);
     expect(input).toHaveValue('#41');
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(input).toHaveFocus();
 
     fireEvent.change(input, { target: { value: 'touch' } });
     const reopenedOption = await screen.findByRole('option', { name: /touch\.example/ });
+    act(() => reopenedOption.focus());
     fireEvent.click(reopenedOption);
     expect(onChange).toHaveBeenLastCalledWith(41);
     expect(input).toHaveValue('#41');
+    expect(input).toHaveFocus();
   });
 
   test('honors external reset while preserving multi-digit controlled typing', () => {

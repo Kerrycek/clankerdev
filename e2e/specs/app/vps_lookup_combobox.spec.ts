@@ -80,5 +80,6 @@ test.describe('VPS lookup combobox', () => {
     await options.nth(0).click();
     await expect(input).toHaveValue('#701');
     await expect(listbox).toBeHidden();
+    await expect(input).toBeFocused();
   });
 });

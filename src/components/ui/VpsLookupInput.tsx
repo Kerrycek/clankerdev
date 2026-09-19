@@ -180,7 +180,7 @@ export function VpsLookupInput(props: {
         ? t('common.error')
         : options.length === 0
           ? t('common.no_results')
-          : `${options.length} ${accessibleName}`;
+          : `${accessibleName}: ${options.length}`;
 
   useEffect(() => {
     if (!expanded) {
@@ -240,6 +240,10 @@ export function VpsLookupInput(props: {
     clearDeferredBlur();
     clearPointerRelease();
     pointerSelectingRef.current = false;
+    // DOM focus stays on the combobox for every activation path, including a
+    // touch-focused option or an assistive-technology generated click. Focus
+    // before closing so this nested focus event cannot reopen the popup.
+    inputRef.current?.focus({ preventScroll: true });
     emitChange(option.id);
     setRawValue(formatLookupId(option.id));
     closeSuggestions();
@@ -316,7 +320,7 @@ export function VpsLookupInput(props: {
         ref={inputRef}
         testId={props.testId}
         ariaLabel={accessibleName}
-        ariaControls={listboxId}
+        ariaControls={expanded ? listboxId : undefined}
         ariaExpanded={expanded}
         ariaAutocomplete="list"
         ariaActiveDescendant={activeOptionId}
