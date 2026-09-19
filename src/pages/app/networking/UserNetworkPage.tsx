@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigationType, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
 import { useAuth } from '../../../app/auth';
@@ -174,6 +174,7 @@ export function UserNetworkPage() {
   const { t } = useI18n();
   const chrome = useChrome();
   const scope = useObjectScope();
+  const navigationType = useNavigationType();
   const [searchParams, setSearchParams] = useSearchParams();
   const userId = resourceId(auth.user?.id as number | string | undefined);
   const scopedUserId = scope.mineUserId;
@@ -188,6 +189,7 @@ export function UserNetworkPage() {
   const previousActiveTabRef = useRef(activeTab);
   const recentPageFocusRef = useRef(false);
   const restoreFocusAfterHistoryRef = useRef(false);
+  const pageFocusInvalidatedRef = useRef(false);
   const recentFocusResetTimerRef = useRef<number | null>(null);
   const [kindFilter, setKindFilter] = useState<KindFilter>('all');
   const [assignOpen, setAssignOpen] = useState(false);
@@ -320,13 +322,15 @@ export function UserNetworkPage() {
     const clearPageFocusOwnership = () => {
       clearRecentPageFocus();
       restoreFocusAfterHistoryRef.current = false;
+      pageFocusInvalidatedRef.current = true;
     };
 
     const handleFocusIn = (event: FocusEvent) => {
       clearRecentPageFocus();
       const focusIsWithinPage = isWithinPage(event.target);
       recentPageFocusRef.current = focusIsWithinPage;
-      if (!focusIsWithinPage) restoreFocusAfterHistoryRef.current = false;
+      if (focusIsWithinPage) pageFocusInvalidatedRef.current = false;
+      else clearPageFocusOwnership();
     };
 
     const handleFocusOut = (event: FocusEvent) => {
@@ -343,7 +347,7 @@ export function UserNetworkPage() {
         clearRecentPageFocus();
         const nextFocusIsWithinPage = isWithinPage(nextTarget);
         recentPageFocusRef.current = nextFocusIsWithinPage;
-        if (!nextFocusIsWithinPage) restoreFocusAfterHistoryRef.current = false;
+        if (!nextFocusIsWithinPage) clearPageFocusOwnership();
         return;
       }
 
@@ -365,7 +369,8 @@ export function UserNetworkPage() {
 
     const captureHistoryFocus = () => {
       restoreFocusAfterHistoryRef.current = Boolean(
-        document.hasFocus()
+        !pageFocusInvalidatedRef.current
+        && document.hasFocus()
         && (isWithinPage(document.activeElement) || recentPageFocusRef.current)
       );
       clearRecentPageFocus();
@@ -398,15 +403,17 @@ export function UserNetworkPage() {
       const restoreAfterHistory = restoreFocusAfterHistoryRef.current;
       restoreFocusAfterHistoryRef.current = false;
       if (!tabChanged || !document.hasFocus()) return;
-      if (
-        !restoreAfterHistory
-        && (!tablist || !tablist.contains(document.activeElement))
-      ) return;
+      if (!restoreAfterHistory) {
+        // A POP may leave focus on the outgoing tab after an outside pointer's
+        // default was canceled; only an explicit ownership snapshot may restore it.
+        if (navigationType === 'POP') return;
+        if (!tablist || !tablist.contains(document.activeElement)) return;
+      }
       document.getElementById(networkTabId(activeTab))?.focus();
     }, 0);
 
     return () => window.clearTimeout(focusTimer);
-  }, [activeTab, currentSearch]);
+  }, [activeTab, currentSearch, navigationType]);
 
   const refresh = () => {
     void vpsesQ.refetch();

@@ -496,6 +496,60 @@ test('@pr-smoke @pr-smoke-mobile user network tabs expose complete keyboard, his
   await expect(page).toHaveURL(/\/app\/networking\?tab=traffic$/);
   await expect(shellMain).toBeFocused();
 
+  await trafficTab.focus();
+  const pointerBeforeHistoryWasCanceled = await shellMain.evaluate((element) => {
+    element.addEventListener('pointerdown', (event) => event.preventDefault(), { once: true });
+    return !element.dispatchEvent(new PointerEvent('pointerdown', {
+      bubbles: true,
+      cancelable: true,
+    }));
+  });
+  expect(pointerBeforeHistoryWasCanceled).toBe(true);
+  await expect(trafficTab).toBeFocused();
+  await page.goBack();
+  await expect(page).toHaveURL(/\/app\/networking$/);
+  await expect(addressesTab).toHaveAttribute('aria-selected', 'true');
+  await expect(trafficTab).toBeFocused();
+  await expect(addressesTab).not.toBeFocused();
+
+  await addressesTab.focus();
+  await page.goForward();
+  await expect(page).toHaveURL(/\/app\/networking\?tab=traffic$/);
+  await expect(trafficTab).toBeFocused();
+
+  await page.evaluate(() => {
+    type NetworkPointerHarness = Window & {
+      __networkPointerAfterSnapshotCanceled?: boolean;
+    };
+    window.addEventListener('popstate', () => {
+      const shell = document.querySelector<HTMLElement>('[data-testid="shell.main"]');
+      if (!shell) return;
+      shell.addEventListener('pointerdown', (event) => event.preventDefault(), { once: true });
+      const pointerWasCanceled = !shell.dispatchEvent(new PointerEvent('pointerdown', {
+        bubbles: true,
+        cancelable: true,
+      }));
+      (window as unknown as NetworkPointerHarness).__networkPointerAfterSnapshotCanceled = pointerWasCanceled;
+    }, { capture: true, once: true });
+  });
+  await page.goBack();
+  await expect(page).toHaveURL(/\/app\/networking$/);
+  await expect(addressesTab).toHaveAttribute('aria-selected', 'true');
+  expect(await page.evaluate(() => (
+    window as unknown as { __networkPointerAfterSnapshotCanceled?: boolean }
+  ).__networkPointerAfterSnapshotCanceled)).toBe(true);
+  await expect(trafficTab).toBeFocused();
+  await expect(addressesTab).not.toBeFocused();
+  await page.evaluate(() => {
+    delete (window as unknown as { __networkPointerAfterSnapshotCanceled?: boolean })
+      .__networkPointerAfterSnapshotCanceled;
+  });
+
+  await addressesTab.focus();
+  await page.goForward();
+  await expect(page).toHaveURL(/\/app\/networking\?tab=traffic$/);
+  await expect(trafficTab).toBeFocused();
+
   const body = page.locator('body');
   await body.evaluate((element) => {
     element.tabIndex = -1;
@@ -511,7 +565,13 @@ test('@pr-smoke @pr-smoke-mobile user network tabs expose complete keyboard, his
   await expect(body).toBeFocused();
   await expect(trafficTab).not.toBeFocused();
   await body.evaluate((element) => element.removeAttribute('tabindex'));
-  await trafficTab.focus();
+
+  await addressesTab.click();
+  await expect(page).toHaveURL(/\/app\/networking$/);
+  await expect(addressesTab).toBeFocused();
+  await trafficTab.click();
+  await expect(page).toHaveURL(/\/app\/networking\?tab=traffic$/);
+  await expect(trafficTab).toBeFocused();
 
   const trafficTablist = page.getByTestId('network.user.traffic.tabs');
   const overviewTab = page.getByTestId('network.user.traffic.tab.overview');
