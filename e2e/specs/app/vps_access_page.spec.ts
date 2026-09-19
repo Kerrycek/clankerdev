@@ -85,6 +85,16 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile VPS access page generates root
   await expect(page.getByTestId('vps.access.checklist.host-key.action')).toHaveText('View host fingerprints');
   await expect(page.getByTestId('vps.access.checklist.root-password.action')).toHaveText('Open password fallback');
 
+  const savedKeySelect = page.getByRole('combobox', { name: 'Saved public key', exact: true });
+  await expect(savedKeySelect).toBeVisible();
+  await expect(savedKeySelect).toHaveAccessibleDescription('Keys are loaded from the saved public keys of owner.');
+
+  const passwordTypeSelect = page.getByRole('combobox', { name: 'Generated password type', exact: true });
+  await expect(passwordTypeSelect).toBeVisible();
+  await expect(passwordTypeSelect).toHaveAccessibleDescription(
+    'Secure is the default. Simple is available only for cases where the platform explicitly allows it.',
+  );
+
   const sectionOrder = await page
     .locator('[data-testid="vps.access.ssh.card"], [data-testid="vps.access.host_keys"], [data-testid="vps.access.password.card"]')
     .evaluateAll((sections) => sections.map((section) => section.getAttribute('data-testid')));
@@ -122,10 +132,14 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile VPS access page generates root
   expect(passwdReq.postDataJSON()).toEqual({ vps: { type: 'simple' } });
 
   await expect(page.getByTestId('vps.access.generated_password')).toBeVisible();
-  await expect(page.getByTestId('vps.access.generated_password.field')).toHaveValue('Root-123!');
-  await expect(page.getByTestId('vps.access.generated_password.field')).toHaveAttribute('type', 'password');
+  const generatedPassword = page.getByLabel('Generated root password', { exact: true });
+  await expect(generatedPassword).toHaveValue('Root-123!');
+  await expect(generatedPassword).toHaveAttribute('type', 'password');
+  await expect(generatedPassword).toHaveAccessibleDescription(
+    'The generated password is shown only in this browser state. It is not persisted by this page.',
+  );
   await page.getByTestId('vps.access.generated_password.toggle').click();
-  await expect(page.getByTestId('vps.access.generated_password.field')).toHaveAttribute('type', 'text');
+  await expect(page.getByRole('textbox', { name: 'Generated root password', exact: true })).toHaveAttribute('type', 'text');
   await page.getByTestId('vps.access.generated_password.clear').click();
   await expect(page.getByTestId('vps.access.generated_password')).toHaveCount(0);
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 
 import { useI18n } from '../../../app/i18n';
 import { Button } from '../../../components/ui/Button';
@@ -119,6 +119,8 @@ export function StatusItem(props: { label: string; value: string }) {
 
 export function PasswordBox(props: { password: string; onClear: () => void; testId?: string }) {
   const { t } = useI18n();
+  const passwordId = useId();
+  const descriptionId = useId();
   const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -134,12 +136,17 @@ export function PasswordBox(props: { password: string; onClear: () => void; test
   return (
     <div className="space-y-3 rounded-lg border border-border bg-surface p-4" data-testid={prefix}>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <label className="sr-only" htmlFor={passwordId}>
+          {t('vps.access.generated.title')}
+        </label>
         <input
+          id={passwordId}
           readOnly
           value={props.password}
           type={revealed ? 'text' : 'password'}
           autoComplete="off"
           spellCheck={false}
+          aria-describedby={descriptionId}
           className="min-w-0 flex-1 rounded-md border border-border bg-bg px-3 py-2 font-mono text-sm text-fg"
           data-testid={prefix ? `${prefix}.field` : undefined}
         />
@@ -155,7 +162,7 @@ export function PasswordBox(props: { password: string; onClear: () => void; test
           </Button>
         </div>
       </div>
-      <p className="text-xs text-muted">{t('vps.access.secret.once')}</p>
+      <p id={descriptionId} className="text-xs text-muted">{t('vps.access.secret.once')}</p>
     </div>
   );
 }
