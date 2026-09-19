@@ -13,7 +13,6 @@ import {
 import { useI18n } from '../../app/i18n';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
-import { Card, CardBody, CardHeader } from '../../components/ui/Card';
 import { Select } from '../../components/ui/Select';
 import { SwitchRow } from '../../components/ui/SwitchRow';
 
@@ -26,6 +25,9 @@ function widgetLabelKey(id: DashboardWidgetId): string {
 function widgetDescriptionKey(id: DashboardWidgetId): string {
   return `dashboard.preferences.widget.${id}.description`;
 }
+
+const PREFERENCES_PANEL_ID = 'app-dashboard-preferences-panel';
+const touchControlClassName = 'dashboard-preferences-touch-control';
 
 export function DashboardPreferencesCard() {
   const { t } = useI18n();
@@ -46,41 +48,51 @@ export function DashboardPreferencesCard() {
     collapsed: collapsedCount,
   });
 
-  if (!open) {
-    return (
-      <div
-        data-testid="app.dashboard.preferences.card"
-        className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface/70 px-3 py-2 text-sm"
-      >
-        <div className="min-w-0 text-muted">
-          <span className="font-semibold text-fg">{t('dashboard.preferences.title')}</span>
-          <span className="ml-2">{summary}</span>
-        </div>
-        <Button variant="secondary" size="sm" onClick={() => setOpen(true)} testId="app.dashboard.preferences.toggle">
-          {t('dashboard.preferences.open')}
-        </Button>
-      </div>
-    );
-  }
-
   return (
-    <Card testId="app.dashboard.preferences.card">
-      <CardHeader
-        title={t('dashboard.preferences.title')}
-        subtitle={summary}
-        actions={
+    <section
+      data-testid="app.dashboard.preferences.card"
+      aria-labelledby="app-dashboard-preferences-title"
+      className={
+        open
+          ? 'min-w-0 rounded-lg border border-border bg-surface shadow-card'
+          : 'rounded-lg border border-border bg-surface/70 text-sm'
+      }
+    >
+      <div
+        className={
+          open
+            ? 'flex flex-col items-start gap-3 border-b border-border p-4 sm:flex-row'
+            : 'flex flex-wrap items-center justify-between gap-3 px-3 py-2'
+        }
+      >
+        <div className={open ? 'w-full min-w-0 sm:w-auto sm:flex-1' : 'min-w-0 text-muted'}>
+          <span id="app-dashboard-preferences-title" className={open ? 'font-semibold' : 'font-semibold text-fg'}>
+            {t('dashboard.preferences.title')}
+          </span>
+          <span className={open ? 'mt-0.5 block text-sm text-muted' : 'ml-2'}>{summary}</span>
+        </div>
+        <div
+          className={
+            open
+              ? 'flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:shrink-0'
+              : 'flex shrink-0 items-center'
+          }
+        >
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => setOpen(false)}
+            className={touchControlClassName}
+            aria-expanded={open}
+            aria-controls={PREFERENCES_PANEL_ID}
+            onClick={() => setOpen((value) => !value)}
             testId="app.dashboard.preferences.toggle"
           >
-            {t('dashboard.preferences.close')}
+            {open ? t('dashboard.preferences.close') : t('dashboard.preferences.open')}
           </Button>
-        }
-      />
+        </div>
+      </div>
 
-      <CardBody>
+      <div id={PREFERENCES_PANEL_ID} className="p-4" hidden={!open}>
         <div className="grid gap-4 lg:grid-cols-[minmax(12rem,18rem)_1fr]">
           <div className="space-y-2">
             <label className="block">
@@ -90,6 +102,7 @@ export function DashboardPreferencesCard() {
                 onChange={(event) => updateDensity(event.target.value === 'compact' ? 'compact' : 'comfortable')}
                 testId="app.dashboard.preferences.density"
                 ariaLabel={t('dashboard.preferences.density.label')}
+                className="dashboard-preferences-touch-select"
                 options={[
                   { value: 'comfortable', label: t('dashboard.preferences.density.comfortable') },
                   { value: 'compact', label: t('dashboard.preferences.density.compact') },
@@ -97,7 +110,13 @@ export function DashboardPreferencesCard() {
               />
             </label>
             <div className="text-xs text-muted">{t('dashboard.preferences.density.help')}</div>
-            <Button variant="secondary" size="sm" onClick={reset} testId="app.dashboard.preferences.reset">
+            <Button
+              variant="secondary"
+              size="sm"
+              className={touchControlClassName}
+              onClick={reset}
+              testId="app.dashboard.preferences.reset"
+            >
               {t('dashboard.preferences.reset')}
             </Button>
           </div>
@@ -146,6 +165,7 @@ export function DashboardPreferencesCard() {
                       <Button
                         variant="secondary"
                         size="sm"
+                        className={touchControlClassName}
                         disabled={index === 0}
                         onClick={() => setDashboardSettings(moveDashboardWidget(dashboardSettings, id, 'up'))}
                         testId={`app.dashboard.preferences.widget.${id}.up`}
@@ -155,6 +175,7 @@ export function DashboardPreferencesCard() {
                       <Button
                         variant="secondary"
                         size="sm"
+                        className={touchControlClassName}
                         disabled={index === dashboardSettings.widgetOrder.length - 1}
                         onClick={() => setDashboardSettings(moveDashboardWidget(dashboardSettings, id, 'down'))}
                         testId={`app.dashboard.preferences.widget.${id}.down`}
@@ -164,6 +185,7 @@ export function DashboardPreferencesCard() {
                       <Button
                         variant="secondary"
                         size="sm"
+                        className={touchControlClassName}
                         onClick={() => setDashboardSettings(toggleDashboardWidgetCollapsed(dashboardSettings, id, !collapsed))}
                         testId={`app.dashboard.preferences.widget.${id}.collapse`}
                       >
@@ -176,7 +198,7 @@ export function DashboardPreferencesCard() {
             </div>
           </div>
         </div>
-      </CardBody>
-    </Card>
+      </div>
+    </section>
   );
 }
