@@ -1,4 +1,5 @@
 import { expectArray, haveApiCall } from './haveapi';
+import type { UserRole } from '../roles';
 import type { ResourceRef } from './app';
 
 export interface UserNamespace {
@@ -19,6 +20,23 @@ export interface UserNamespaceMap {
 
 export type UserNamespaceEntryKind = 'uid' | 'gid';
 
+/** Administrators bypass the backend owner restriction and need exact scope. */
+export function explicitUserNamespaceOwnerId(input: {
+  viewerRole: UserRole;
+  fixedOwnerId?: number;
+  requestedOwnerId?: number;
+  allowRequestedOwner?: boolean;
+}): number | undefined {
+  if (input.viewerRole !== 'admin') return undefined;
+  if (validResourceId(input.fixedOwnerId)) return input.fixedOwnerId;
+  if (input.allowRequestedOwner && validResourceId(input.requestedOwnerId)) return input.requestedOwnerId;
+  return undefined;
+}
+
+function validResourceId(value: number | undefined): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0;
+}
+
 export interface UserNamespaceMapEntry {
   id: number;
   kind?: UserNamespaceEntryKind | string;
@@ -31,7 +49,6 @@ export interface UserNamespaceMapEntry {
 export async function fetchUserNamespaces(opts?: {
   limit?: number;
   fromId?: number;
-  q?: string;
   size?: number;
   userId?: number;
   blockCount?: number;
@@ -39,9 +56,6 @@ export async function fetchUserNamespaces(opts?: {
   const params: Record<string, unknown> = {};
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
-
-  const q = opts?.q ? String(opts.q).trim() : '';
-  if (q) params['q'] = q;
 
   if (opts?.size !== undefined) params['size'] = opts.size;
   if (opts?.userId !== undefined) params['user'] = opts.userId;
@@ -67,16 +81,13 @@ export async function fetchUserNamespace(id: number) {
 export async function fetchUserNamespaceMaps(opts?: {
   limit?: number;
   fromId?: number;
-  q?: string;
   userId?: number;
   userNamespaceId?: number;
+  includeUserNamespace?: boolean;
 }) {
   const params: Record<string, unknown> = {};
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
-
-  const q = opts?.q ? String(opts.q).trim() : '';
-  if (q) params['q'] = q;
 
   if (opts?.userId !== undefined) params['user'] = opts.userId;
   if (opts?.userNamespaceId !== undefined) params['user_namespace'] = opts.userNamespaceId;
@@ -86,6 +97,7 @@ export async function fetchUserNamespaceMaps(opts?: {
     path: '/user_namespace_maps',
     namespace: 'user_namespace_map',
     params,
+    meta: opts?.includeUserNamespace ? { includes: 'user_namespace' } : undefined,
   });
 
   return { ...res, data: expectArray<UserNamespaceMap>(res.data, 'user_namespace_maps#index') };
