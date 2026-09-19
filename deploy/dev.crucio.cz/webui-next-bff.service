@@ -8,8 +8,8 @@ Type=simple
 User=webui-bff
 Group=webui-bff
 EnvironmentFile=/etc/webui-next/oauth.env
-WorkingDirectory=/srv/clankerdev-deploy/repo/bff
-ExecStart=/usr/bin/node /srv/clankerdev-deploy/repo/bff/server.js
+WorkingDirectory=/srv/clankerdev-release/current/bff
+ExecStart=/usr/bin/node /srv/clankerdev-release/current/bff/server.js
 Restart=on-failure
 RestartSec=3
 

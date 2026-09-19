@@ -26,50 +26,73 @@ test('dev wrapper executes the helper from the checkout it just updated', () => 
   assert.doesNotMatch(deployWrapper, /\/usr\/local\/bin\/deploy-dev-crucio-clankerdev/);
 });
 
-test('dev deploy installs the tracked BFF unit before restarting it', () => {
-  const installIndex = deployScript.indexOf('install -m 0644 "$bff_unit_src" "$bff_unit_dst"');
-  const reloadIndex = deployScript.indexOf('systemctl daemon-reload', installIndex);
-  const restartIndex = deployScript.indexOf('systemctl restart webui-next-bff.service', reloadIndex);
-
-  assert.notEqual(installIndex, -1, 'tracked BFF unit must be installed');
-  assert(installIndex < reloadIndex, 'unit must be installed before daemon-reload');
-  assert(reloadIndex < restartIndex, 'daemon-reload must happen before restart');
+test('dev deploy builds frontend and BFF dependencies only in an immutable staged checkout', () => {
+  assert.match(deployScript, /git clone --quiet --no-hardlinks --no-checkout "\$canonical_src" "\$release_stage"/);
+  assert.match(deployScript, /build_frontend "\$release_stage"/);
+  assert.match(deployScript, /install_staged_bff_dependencies "\$release_stage"/);
+  assert.match(deployScript, /mv "\$release_stage" "\$release_dir"/);
+  assert.match(deployScript, /rsync -a --delete "\$release_dir\/dist\/" "\$dst\/"/);
+  assert.doesNotMatch(deployScript, /npm --prefix "\$release_dir\/bff" ci/);
 });
 
-test('dev deploy refuses a source checkout that the tracked BFF unit would not use', () => {
-  assert.match(deployScript, /expected_src="\/srv\/clankerdev-deploy\/repo"/);
-  assert.match(deployScript, /canonical_src=.*readlink -f/);
-  assert.match(deployScript, /Refusing BFF\/frontend source mismatch/);
+test('dev deploy uses a guarded atomic current link below the fixed release root', () => {
+  assert.match(deployScript, /release_root="\/srv\/clankerdev-release"/);
+  assert.match(deployScript, /assert_release_target "\$target" "Release switch target"/);
+  assert.match(deployScript, /node "\$release_link_script" switch/);
+  assert.match(deployScript, /previous_current_target="\$\(readlink -f "\$release_current"\)"/);
 });
 
-test('dev deploy fails when the active BFF working directory differs from the build checkout', () => {
-  assert.match(
-    deployScript,
-    /systemctl show webui-next-bff\.service --property=WorkingDirectory --value/,
+test('dev deploy serializes staging and publication with a nonblocking root-owned lock', () => {
+  assert.match(deployScript, /deploy_lock_file="\/run\/lock\/clankerdev-dev-deploy\.lock"/);
+  assert.match(deployScript, /flock -n 9/);
+  assert.match(deployScript, /Dev deploy lock must be root-owned/);
+  assert.match(deployScript, /test_lock_dir="\$test_root\/dev-deploy\.lock"/);
+  assert.match(deployScript, /exit "\$lock_status"/);
+});
+
+test('all post-publish failures enter the explicit idempotent rollback path', () => {
+  assert.match(deployScript, /rollback_in_progress=0/);
+  assert.match(deployScript, /Rollback re-entry suppressed/);
+  assert.match(deployScript, /run_or_abort "BFF restart failed after release switch" restart_bff/);
+  assert.match(deployScript, /abort_deploy 73 "injected runtime provenance validation failure"/);
+  assert.match(deployScript, /run_or_abort "active frontend\/BFF provenance mismatch" verify_provenance/);
+  assert.match(deployScript, /run_or_abort "public authentication smoke verification failed" smoke_auth_endpoints/);
+  assert.match(deployScript, /nginx -t \|\| return/);
+  assert.doesNotMatch(
+    deployScript.slice(deployScript.indexOf("trap 'handle_unexpected_error")),
+    /\n\s*exit 1\s*\n/,
   );
-  assert.match(deployScript, /active_bff_workdir.*expected_bff_workdir/s);
-  assert.match(deployScript, /BFF source mismatch/);
-  assert.match(deployScript, /active_bff_process_cwd.*expected_bff_workdir/s);
-  assert.match(deployScript, /BFF process source mismatch/);
-  assert.match(deployScript, /active_bff_exec.*canonical_src\/bff\/server\.js/s);
 });
 
-test('dev deploy validates and can roll back the frontend, nginx config and BFF unit', () => {
-  assert.match(deployScript, /systemd-analyze verify "\$bff_unit_src"/);
-  assert.match(deployScript, /rollback_deploy\(\)/);
-  assert.match(deployScript, /restoring the previous frontend, nginx config and BFF unit/);
-  assert.match(deployScript, /rsync -a --delete "\$deploy_backup\/webroot\/" "\$dst\/"/);
-  assert.match(deployScript, /deploy_backup\/nginx-dev\.crucio\.cz\.conf/);
-  assert.match(deployScript, /deploy_backup\/webui-next-bff\.service/);
-  const trapIndex = deployScript.indexOf('trap rollback_deploy ERR');
-  const publishIndex = deployScript.indexOf('rsync -a --delete dist/ "$dst"/');
-  assert.notEqual(trapIndex, -1, 'rollback trap must be installed');
-  assert.notEqual(publishIndex, -1, 'frontend publish must exist');
-  assert(trapIndex < publishIndex, 'rollback trap must be installed before publishing the frontend');
+test('rollback restores release link and files before restarting and validating health', () => {
+  const rollbackStart = deployScript.indexOf('rollback_deploy()');
+  const rollback = deployScript.slice(rollbackStart, deployScript.indexOf('abort_deploy()', rollbackStart));
+  const linkIndex = rollback.indexOf('restore previous release link');
+  const unitIndex = rollback.indexOf('restore BFF unit');
+  const frontendIndex = rollback.indexOf('restore frontend contents');
+  const nginxIndex = rollback.indexOf('restore nginx config');
+  const restartIndex = rollback.indexOf('restart previous BFF');
+  const healthIndex = rollback.indexOf('validate restored health');
+  for (const value of [linkIndex, unitIndex, frontendIndex, nginxIndex, restartIndex, healthIndex]) {
+    assert.notEqual(value, -1);
+  }
+  assert(linkIndex < restartIndex);
+  assert(unitIndex < restartIndex);
+  assert(frontendIndex < restartIndex);
+  assert(nginxIndex < restartIndex);
+  assert(restartIndex < healthIndex);
 });
 
-test('tracked BFF unit runs code from the canonical dev deploy checkout', () => {
-  assert.match(serviceUnit, /^WorkingDirectory=\/srv\/clankerdev-deploy\/repo\/bff$/m);
-  assert.match(serviceUnit, /^ExecStart=\/usr\/bin\/node \/srv\/clankerdev-deploy\/repo\/bff\/server\.js$/m);
-  assert.doesNotMatch(serviceUnit, /clankerdev-release/);
+test('dev deploy verifies source, frontend, release and live runtime provenance', () => {
+  assert.match(deployScript, /--source-repo "\$canonical_src"/);
+  assert.match(deployScript, /--build-info "\$build_info"/);
+  assert.match(deployScript, /--release-repo "\$release"/);
+  assert.match(deployScript, /published frontend provenance mismatch/);
+  assert.match(deployScript, /active frontend\/BFF provenance mismatch/);
+});
+
+test('tracked BFF unit resolves through the immutable release current link', () => {
+  assert.match(serviceUnit, /^WorkingDirectory=\/srv\/clankerdev-release\/current\/bff$/m);
+  assert.match(serviceUnit, /^ExecStart=\/usr\/bin\/node \/srv\/clankerdev-release\/current\/bff\/server\.js$/m);
+  assert.doesNotMatch(serviceUnit, /clankerdev-deploy\/repo\/bff/);
 });
