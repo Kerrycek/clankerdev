@@ -41,4 +41,8 @@ export const enCommon_filters = {
   'filters.search': 'Search',
   'filters.help.examples.help': 'Show help and available filter keys',
   'filters.smart.suggest.apply': 'Apply filter',
+  'filters.smart.suggestions_available.one': '{count} suggestion available.',
+  'filters.smart.suggestions_available.few': '{count} suggestions available.',
+  'filters.smart.suggestions_available.other': '{count} suggestions available.',
+  'filters.smart.no_suggestions': 'No filter suggestions.',
 } as const;

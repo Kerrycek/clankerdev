@@ -10,6 +10,7 @@ import {
 } from '../../lib/api/monitoring';
 import { searchUsers } from '../../lib/api/users';
 import { useDebouncedValue } from '../../lib/hooks/useDebouncedValue';
+import { currentSuggestionRows } from '../../lib/currentSuggestionRows';
 import { useAppMode } from '../../app/appMode';
 import { useI18n } from '../../app/i18n';
 import { useObjectScope } from '../../app/objectScope';
@@ -587,7 +588,7 @@ export function MonitoringEventsPage() {
     }
 
     if (mode === 'admin') {
-      const users = userSuggestQuery.data ?? [];
+      const users = currentSuggestionRows(smartNeedle, debouncedSmartNeedle, userSuggestQuery.data);
       for (const u of users.slice(0, 5)) {
         suggestions.push({
           id: `user.${u.id}`,
@@ -604,7 +605,7 @@ export function MonitoringEventsPage() {
     }
 
     return suggestions;
-  }, [basePath, mode, navigate, smartNeedle, t, userSuggestQuery.data]);
+  }, [basePath, debouncedSmartNeedle, mode, navigate, smartNeedle, t, userSuggestQuery.data]);
 
   const activeFilterChips = useMemo(() => {
     const chips: React.ReactNode[] = [];
