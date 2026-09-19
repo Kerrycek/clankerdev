@@ -391,7 +391,6 @@ test('@pr-smoke @pr-smoke-mobile user network tabs expose complete keyboard, his
   await expectAccessibleTabSet(page, mainTablist, 3);
   await trafficTab.press('Tab');
   await expect(page.getByTestId('network.user.panel.traffic')).toBeFocused();
-  await trafficTab.focus();
 
   await page.goBack();
   await expect(page).toHaveURL(/\/app\/networking$/);
@@ -452,6 +451,15 @@ test('@pr-smoke @pr-smoke-mobile user network tabs expose complete keyboard, his
   await expect(overviewTab).toBeFocused();
   await expect(page.getByTestId('network.user.traffic.panel.overview')).toBeVisible();
   await expect(page).toHaveURL(/\/app\/networking\?tab=traffic$/);
+
+  await page.goBack();
+  await expect(page).toHaveURL(/\/app\/networking$/);
+  await expect(addressesTab).toHaveAttribute('aria-selected', 'true');
+  await expect(addressesTab).toBeFocused();
+  await page.goForward();
+  await expect(page).toHaveURL(/\/app\/networking\?tab=traffic$/);
+  await expect(trafficTab).toHaveAttribute('aria-selected', 'true');
+  await expect(trafficTab).toBeFocused();
 });
 
 test('user network assignment offers only VPS compatible with the selected detached IP location', async ({ page }) => {

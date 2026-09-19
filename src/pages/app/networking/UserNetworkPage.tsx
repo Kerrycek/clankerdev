@@ -183,6 +183,8 @@ export function UserNetworkPage() {
   const currentSearch = searchParams.toString();
   const latestSearchRef = useRef(currentSearch);
   const tablistRef = useRef<HTMLDivElement>(null);
+  const previousActiveTabRef = useRef(activeTab);
+  const lastFocusWasWithinNetworkSurfaceRef = useRef(false);
   const [kindFilter, setKindFilter] = useState<KindFilter>('all');
   const [assignOpen, setAssignOpen] = useState(false);
   const [initialIp, setInitialIp] = useState<IpAddress | null>(null);
@@ -298,8 +300,35 @@ export function UserNetworkPage() {
   }, [currentSearch]);
 
   useEffect(() => {
+    const isWithinNetworkSurface = (target: EventTarget | null) => (
+      target instanceof Node
+      && Boolean(
+        tablistRef.current?.contains(target)
+        || NETWORK_TABS.some((tab) => document.getElementById(networkPanelId(tab))?.contains(target))
+      )
+    );
+
+    const trackFocus = (event: FocusEvent) => {
+      // History traversal briefly focuses the document body before React hides
+      // the outgoing panel. Keep the last concrete destination so that blur
+      // does not erase ownership; focusing a persistent outside control does.
+      lastFocusWasWithinNetworkSurfaceRef.current = isWithinNetworkSurface(event.target);
+    };
+
+    document.addEventListener('focusin', trackFocus, true);
+    return () => document.removeEventListener('focusin', trackFocus, true);
+  }, []);
+
+  useEffect(() => {
+    const tabChanged = previousActiveTabRef.current !== activeTab;
+    previousActiveTabRef.current = activeTab;
+    if (!tabChanged) return;
+
     const tablist = tablistRef.current;
-    if (!tablist || !tablist.contains(document.activeElement)) return;
+    if (
+      !lastFocusWasWithinNetworkSurfaceRef.current
+      && (!tablist || !tablist.contains(document.activeElement))
+    ) return;
     document.getElementById(networkTabId(activeTab))?.focus();
   }, [activeTab]);
 
