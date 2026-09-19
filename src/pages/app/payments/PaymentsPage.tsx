@@ -3,13 +3,14 @@ import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 
 import { useAuth } from '../../../app/auth';
+import { useAccountTimeZone } from '../../../app/accountTimeZone';
 import { useAppMode } from '../../../app/appMode';
 import { useI18n } from '../../../app/i18n';
 import { useTierBIntervalMs } from '../../../lib/refreshTiers';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 
 import { fetchPaymentInstructions, fetchUserPayments } from '../../../lib/api/payments';
-import { formatDate, formatDateTime } from '../../../lib/format';
+import { formatDateInTimeZone, formatDateTime } from '../../../lib/format';
 import { cursorFromDescendingPage } from '../../../lib/lockIndex';
 import { getPaidUntilStatus, paidUntilBadgeVariant, paidUntilStatusLabelKey } from '../../../lib/paymentsBadges';
 import { formatMoneyLike, safeInt } from '../../../lib/paymentsFormat';
@@ -30,6 +31,7 @@ import { StatCard } from '../../../components/ui/StatCard';
 
 export function PaymentsPage() {
   const auth = useAuth();
+  const accountTimeZone = useAccountTimeZone();
   const { basePath } = useAppMode();
   const { t, tc } = useI18n();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -160,8 +162,13 @@ export function PaymentsPage() {
                           <td className="px-3 py-2 font-medium tabular-nums">{formatDateTime(p.created_at)}</td>
                           <td className="px-3 py-2 text-right tabular-nums">{formatMoneyLike(safeInt(p.amount))}</td>
                           <td className="px-3 py-2 text-xs text-muted">
-                            <span className="tabular-nums">{formatDate(p.from_date)}</span> →{' '}
-                            <span className="tabular-nums">{formatDate(p.to_date)}</span>
+                            <span className="tabular-nums">
+                              {formatDateInTimeZone(p.from_date, accountTimeZone)}
+                            </span>{' '}
+                            →{' '}
+                            <span className="tabular-nums">
+                              {formatDateInTimeZone(p.to_date, accountTimeZone)}
+                            </span>
                           </td>
                         </tr>
                       ))}

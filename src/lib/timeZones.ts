@@ -8,6 +8,7 @@ const FALLBACK_TIME_ZONES = [
   'America/Los_Angeles',
   'Asia/Tokyo',
 ];
+export const SAFE_TIME_ZONE = 'UTC';
 let cachedSupportedTimeZones: string[] | null = null;
 
 export function browserTimeZone(): string | null {

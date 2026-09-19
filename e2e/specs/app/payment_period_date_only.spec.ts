@@ -9,6 +9,9 @@ import { expectNoDocumentHorizontalOverflow } from '../../helpers/horizontalOver
 
 type PaymentPeriodScenario = {
   language: 'en' | 'cs';
+  accountTimeZone: string | null;
+  serverTimeZone: string;
+  targetUserTimeZone: string;
   fromDate: string;
   toDate: string;
   createdAt: string;
@@ -21,7 +24,10 @@ async function assertDateOnlyPaymentPeriods(page: Page, scenario: PaymentPeriodS
   expect(page.viewportSize()).toEqual(scenario.viewport);
 
   await bootstrapVpsAdminWindow(page, {
-    webuiNext: { uiSettings: { persistence: 'local' } },
+    webuiNext: {
+      serverTimeZone: scenario.serverTimeZone,
+      uiSettings: { persistence: 'local' },
+    },
   });
   await setUiSettingsLocalStorage(page, { language: scenario.language });
 
@@ -39,6 +45,7 @@ async function assertDateOnlyPaymentPeriods(page: Page, scenario: PaymentPeriodS
       level: 100,
       monthly_payment: 300,
       paid_until: '2099-01-01T00:00:00Z',
+      time_zone: scenario.accountTimeZone,
     },
     handlers: {
       'GET users/1/get_payment_instructions': () => ({ instructions: 'Payment instructions' }),
@@ -50,6 +57,7 @@ async function assertDateOnlyPaymentPeriods(page: Page, scenario: PaymentPeriodS
           object_state: 'active',
           monthly_payment: 300,
           paid_until: '2099-01-01T00:00:00Z',
+          time_zone: scenario.targetUserTimeZone,
           created_at: '2026-01-15T10:00:00Z',
           last_activity_at: '2026-01-16T10:00:00Z',
         },
@@ -92,51 +100,75 @@ async function assertDateOnlyPaymentPeriods(page: Page, scenario: PaymentPeriodS
   expect(mutations).toEqual([]);
 }
 
-test.describe('payment period date-only parity in Prague', () => {
+test.describe('payment period account time-zone parity', () => {
   test.describe('English desktop', () => {
-    test.use({ locale: 'en-US', timezoneId: 'Europe/Prague', viewport: { width: 1440, height: 1000 } });
+    test.use({ locale: 'en-US', timezoneId: 'America/Los_Angeles', viewport: { width: 1440, height: 1000 } });
 
-    test('@pr-smoke renders local dates without the summer UTC offset on user and admin surfaces', async ({ page }) => {
+    test('@pr-smoke renders Prague summer dates from the signed-in account zone', async ({ page }) => {
       await assertDateOnlyPaymentPeriods(page, {
         language: 'en',
+        accountTimeZone: 'Europe/Prague',
+        serverTimeZone: 'UTC',
+        targetUserTimeZone: 'Pacific/Auckland',
         fromDate: '2026-06-01T00:00:00Z',
         toDate: '2026-07-01T00:00:00Z',
         createdAt: '2026-06-15T10:30:00Z',
         expectedPeriod: '6/1/2026 → 7/1/2026',
-        expectedCreatedTime: '12:30',
+        expectedCreatedTime: '3:30',
+        viewport: { width: 1440, height: 1000 },
+      });
+    });
+
+    test('@pr-smoke uses the Prague server zone instead of the Los Angeles browser zone', async ({ page }) => {
+      await assertDateOnlyPaymentPeriods(page, {
+        language: 'en',
+        accountTimeZone: null,
+        serverTimeZone: 'Europe/Prague',
+        targetUserTimeZone: 'Pacific/Auckland',
+        fromDate: '2026-02-01T00:00:00Z',
+        toDate: '2026-03-01T00:00:00Z',
+        createdAt: '2026-02-14T17:30:00Z',
+        expectedPeriod: '2/1/2026 → 3/1/2026',
+        expectedCreatedTime: '9:30',
         viewport: { width: 1440, height: 1000 },
       });
     });
   });
 
   test.describe('Czech mobile', () => {
-    test.use({ locale: 'cs-CZ', timezoneId: 'Europe/Prague', viewport: { width: 390, height: 844 } });
+    test.use({ locale: 'cs-CZ', timezoneId: 'America/Los_Angeles', viewport: { width: 390, height: 844 } });
 
-    test('@pr-smoke-mobile renders Czech local dates without the summer UTC offset on user and admin surfaces', async ({ page }) => {
+    test('@pr-smoke-mobile renders Czech summer dates in the configured Prague server zone', async ({ page }) => {
       await assertDateOnlyPaymentPeriods(page, {
         language: 'cs',
+        accountTimeZone: null,
+        serverTimeZone: 'Europe/Prague',
+        targetUserTimeZone: 'Pacific/Auckland',
         fromDate: '2026-06-01T00:00:00Z',
         toDate: '2026-07-01T00:00:00Z',
         createdAt: '2026-06-15T10:30:00Z',
         expectedPeriod: '1. 6. 2026 → 1. 7. 2026',
-        expectedCreatedTime: '12:30',
+        expectedCreatedTime: '3:30',
         viewport: { width: 390, height: 844 },
       });
     });
   });
 });
 
-test.describe('payment period local calendar boundary', () => {
-  test.use({ locale: 'en-US', timezoneId: 'America/Los_Angeles', viewport: { width: 1440, height: 1000 } });
+test.describe('payment period signed-in account override', () => {
+  test.use({ locale: 'en-US', timezoneId: 'Asia/Tokyo', viewport: { width: 1440, height: 1000 } });
 
-  test('@pr-smoke converts the instant before choosing its date instead of slicing the UTC value', async ({ page }) => {
+  test('@pr-smoke uses the signed-in Los Angeles zone instead of the server, browser, or target-user zone', async ({ page }) => {
     await assertDateOnlyPaymentPeriods(page, {
       language: 'en',
+      accountTimeZone: 'America/Los_Angeles',
+      serverTimeZone: 'Europe/Prague',
+      targetUserTimeZone: 'Europe/Prague',
       fromDate: '2026-02-01T00:00:00Z',
       toDate: '2026-03-01T00:00:00Z',
       createdAt: '2026-02-14T17:30:00Z',
       expectedPeriod: '1/31/2026 → 2/28/2026',
-      expectedCreatedTime: '9:30',
+      expectedCreatedTime: '2:30',
       viewport: { width: 1440, height: 1000 },
     });
   });

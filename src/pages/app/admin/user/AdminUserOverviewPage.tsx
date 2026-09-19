@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useI18n } from '../../../../app/i18n';
+import { useAccountTimeZone } from '../../../../app/accountTimeZone';
 import { useToasts } from '../../../../app/toasts';
 
 import { Alert } from '../../../../components/ui/Alert';
@@ -17,7 +18,7 @@ import { updateUser } from '../../../../lib/api/users';
 import { getMetaActionStateId } from '../../../../lib/api/haveapi';
 import { fetchUserPayments } from '../../../../lib/api/payments';
 import { adminDateTimeInputToIso } from '../../../../lib/datetimeLocal';
-import { formatDate, formatDateTime } from '../../../../lib/format';
+import { formatDateInTimeZone, formatDateTime } from '../../../../lib/format';
 import { getPaidUntilStatus, paidUntilBadgeVariant, paidUntilStatusLabelKey } from '../../../../lib/paymentsBadges';
 import { formatMoneyLike } from '../../../../lib/paymentsFormat';
 import { roleFromLevel } from '../../../../lib/roles';
@@ -39,6 +40,7 @@ import {
 
 export function AdminUserOverviewPage() {
   const { t } = useI18n();
+  const accountTimeZone = useAccountTimeZone();
   const toasts = useToasts();
   const { user: u, refetch } = useAdminUserContext();
   const [editOpen, setEditOpen] = useState(false);
@@ -293,7 +295,10 @@ export function AdminUserOverviewPage() {
                       <div className="min-w-0 text-muted">
                         <div className="truncate">
                           {payment.from_date && payment.to_date
-                            ? `${formatDate(payment.from_date)} → ${formatDate(payment.to_date)}`
+                            ? `${formatDateInTimeZone(payment.from_date, accountTimeZone)} → ${formatDateInTimeZone(
+                                payment.to_date,
+                                accountTimeZone
+                              )}`
                             : t('common.na')}
                         </div>
                         <div className="text-xs text-faint">

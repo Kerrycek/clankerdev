@@ -1,3 +1,5 @@
+import { isValidTimeZone, SAFE_TIME_ZONE } from './timeZones';
+
 export function formatMiB(mib: number | undefined | null): string {
   if (mib === undefined || mib === null) return '—';
 
@@ -29,6 +31,21 @@ export function formatDate(value: string | undefined | null): string {
     return /^\d{4}-\d{2}-\d{2}/.test(trimmed) ? trimmed.slice(0, 10) : value;
   }
   return d.toLocaleDateString();
+}
+
+export function formatDateInTimeZone(
+  value: string | undefined | null,
+  timeZone: string
+): string {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) {
+    const trimmed = value.trim();
+    return /^\d{4}-\d{2}-\d{2}/.test(trimmed) ? trimmed.slice(0, 10) : value;
+  }
+  return d.toLocaleDateString(undefined, {
+    timeZone: isValidTimeZone(timeZone) ? timeZone : SAFE_TIME_ZONE,
+  });
 }
 
 export function compactText(value: string | undefined | null, max = 72): string {

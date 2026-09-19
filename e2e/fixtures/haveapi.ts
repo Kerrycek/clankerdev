@@ -48,6 +48,7 @@ export interface HaveApiMockUser {
    */
   level: number;
   preferred_session_length?: number | string | null;
+  time_zone?: string | null;
 }
 
 export interface HaveApiRequestCtx {
