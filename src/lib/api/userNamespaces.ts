@@ -83,6 +83,7 @@ export async function fetchUserNamespaceMaps(opts?: {
   fromId?: number;
   userId?: number;
   userNamespaceId?: number;
+  includeUserNamespace?: boolean;
 }) {
   const params: Record<string, unknown> = {};
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
@@ -96,6 +97,7 @@ export async function fetchUserNamespaceMaps(opts?: {
     path: '/user_namespace_maps',
     namespace: 'user_namespace_map',
     params,
+    meta: opts?.includeUserNamespace ? { includes: 'user_namespace' } : undefined,
   });
 
   return { ...res, data: expectArray<UserNamespaceMap>(res.data, 'user_namespace_maps#index') };

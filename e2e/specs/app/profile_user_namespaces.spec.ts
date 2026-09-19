@@ -56,6 +56,7 @@ test('profile: user namespaces - create map and edit entries', async ({ page }) 
 
       'PUT user_namespace_maps/501': async (ctx) => {
         const b = await ctx.request.postDataJSON();
+        expect(b.user_namespace_map.user_namespace).toBe(101);
         const m = maps.find((x) => x.id === 501);
         m.label = b.user_namespace_map.label;
         return { user_namespace_map: m };

@@ -24,7 +24,6 @@ import { SmartInputHelp } from '../ui/SmartInputHelp';
 import { TableCard } from '../ui/TableCard';
 import { TableRowLink } from '../ui/TableRowLink';
 
-import { cursorFromDescendingPage } from '../../lib/lockIndex';
 import { useKeysetPagination } from '../../lib/hooks/useKeysetPagination';
 import { parseNumericToken, splitKeyValueToken, tokenizeSmartInput, unquoteSmartValue } from '../../lib/smartFilter';
 
@@ -41,6 +40,7 @@ import type { UserRole } from '../../lib/roles';
 import { UserNamespaceContractGuard } from './UserNamespaceContractGuard';
 import { canFilterUserNamespaceOwners } from './userNamespaceFilterSemantics';
 import type { UserNamespaceMapListProps } from './userNamespaceListProps';
+import { buildUserNamespacePageWindow } from './userNamespacePagination';
 
 function parseIntParam(v: string | null): number | undefined {
   if (!v) return undefined;
@@ -120,20 +120,38 @@ function UserNamespaceMapListContent(props: UserNamespaceMapListProps & { viewer
   });
 
   const qList = useQuery({
-    queryKey: ['user_namespace_map', 'list', { cursor: pagination.cursor, limit: pagination.limit, userId, userNamespaceId }],
+    queryKey: [
+      'user_namespace_map',
+      'list',
+      { cursor: pagination.cursor, limit: pagination.limit, userId, userNamespaceId, includeUserNamespace: true },
+    ],
     queryFn: async () =>
       (await fetchUserNamespaceMaps({
-        limit: pagination.limit,
+        limit: pagination.limit + 1,
         fromId: pagination.cursor,
         userId,
         userNamespaceId,
+        includeUserNamespace: true,
       })).data,
     refetchOnWindowFocus: false,
   });
 
-  const rows: UserNamespaceMap[] = qList.data ?? [];
-  const pageCursor = cursorFromDescendingPage(rows);
-  const canNext = rows.length >= pagination.limit && pageCursor !== null;
+  const pageWindow = useMemo(
+    () => buildUserNamespacePageWindow(qList.data, pagination.limit, pagination.fromId),
+    [pagination.fromId, pagination.limit, qList.data]
+  );
+  const rows: UserNamespaceMap[] = pageWindow.rows;
+  const pageCursor = pageWindow.cursor;
+  const hasNextFromData = pageWindow.hasMore && pageCursor !== null;
+  const canNext = pagination.hasForward || hasNextFromData;
+
+  const goNext = () => {
+    if (pagination.hasForward) {
+      pagination.goNext(undefined);
+      return;
+    }
+    if (hasNextFromData) pagination.goNext(pageCursor);
+  };
 
   const filtersActive = Boolean(userNamespaceId !== undefined || (adminFiltersEnabled && userId !== undefined) || smartErrors.length > 0);
   const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
@@ -411,6 +429,7 @@ function UserNamespaceMapListContent(props: UserNamespaceMapListProps & { viewer
             <div className="mt-1">
               <Input
                 testId={`${props.testIdPrefix}.namespace.input`}
+                ariaLabel={t('userns.map.namespace')}
                 placeholder="#123"
                 value={userNamespaceId !== undefined ? String(userNamespaceId) : ''}
                 onChange={(e) => {
@@ -427,6 +446,7 @@ function UserNamespaceMapListContent(props: UserNamespaceMapListProps & { viewer
               <div className="mt-1">
                 <Input
                   testId={`${props.testIdPrefix}.user.input`}
+                  ariaLabel={t('common.user')}
                   placeholder="#123"
                   value={userId !== undefined ? String(userId) : ''}
                   onChange={(e) => {
@@ -501,8 +521,9 @@ function UserNamespaceMapListContent(props: UserNamespaceMapListProps & { viewer
               canPrev={pagination.canPrev}
               canNext={canNext}
               onPrev={pagination.goPrev}
-              onNext={() => pagination.goNext(pageCursor)}
+              onNext={goNext}
               onGoToPage={pagination.goToPage}
+              maxDirectPage={pagination.stack.length}
               limit={pagination.limit}
               allowedLimits={pagination.allowedLimits}
               onLimitChange={pagination.setLimit}
@@ -521,8 +542,9 @@ function UserNamespaceMapListContent(props: UserNamespaceMapListProps & { viewer
               canPrev={pagination.canPrev}
               canNext={canNext}
               onPrev={pagination.goPrev}
-              onNext={() => pagination.goNext(pageCursor)}
+              onNext={goNext}
               onGoToPage={pagination.goToPage}
+              maxDirectPage={pagination.stack.length}
               limit={pagination.limit}
               allowedLimits={pagination.allowedLimits}
               onLimitChange={pagination.setLimit}
@@ -535,7 +557,7 @@ function UserNamespaceMapListContent(props: UserNamespaceMapListProps & { viewer
               <th className="px-4 py-2">{t('common.id')}</th>
               <th className="px-4 py-2">{t('common.label')}</th>
               <th className="px-4 py-2">{t('userns.map.namespace')}</th>
-              {props.showAdminFields ? <th className="px-4 py-2">{t('common.user')}</th> : null}
+              {adminFiltersEnabled ? <th className="px-4 py-2">{t('common.user')}</th> : null}
               <th className="px-4 py-2">{t('common.actions')}</th>
             </tr>
           </thead>
@@ -550,7 +572,7 @@ function UserNamespaceMapListContent(props: UserNamespaceMapListProps & { viewer
                   <td className="px-4 py-2 text-sm font-medium">#{r.id}</td>
                   <td className="px-4 py-2 text-sm">{String(r.label ?? '')}</td>
                   <td className="px-4 py-2 text-sm">{namespaceRefLabel(ns, t('userns.namespace.size'))}</td>
-                  {props.showAdminFields ? <td className="px-4 py-2 text-sm">{userLabel(owner)}</td> : null}
+                  {adminFiltersEnabled ? <td className="px-4 py-2 text-sm">{userLabel(owner)}</td> : null}
                   <td className="px-4 py-2 text-sm">
                     <div className="flex items-center gap-2">
                       <Link to={to} data-row-no-nav className="text-link underline">
@@ -588,6 +610,7 @@ function UserNamespaceMapListContent(props: UserNamespaceMapListProps & { viewer
             <div className="text-xs text-muted">{t('common.label')}</div>
             <Input
               testId={`${props.testIdPrefix}.create.label`}
+              ariaLabel={t('common.label')}
               value={createLabel}
               onChange={(e) => setCreateLabel(e.target.value)}
               placeholder={t('userns.map.create.label_placeholder')}
@@ -605,6 +628,7 @@ function UserNamespaceMapListContent(props: UserNamespaceMapListProps & { viewer
                 <div className="text-xs text-muted">{t('userns.map.namespace')}</div>
                 <Select
                   testId={`${props.testIdPrefix}.create.namespace`}
+                  ariaLabel={t('userns.map.namespace')}
                   value={createNsId}
                   onChange={(e) => setCreateNsId(e.target.value)}
                 >
@@ -622,6 +646,7 @@ function UserNamespaceMapListContent(props: UserNamespaceMapListProps & { viewer
               <div className="text-xs text-muted">{t('userns.map.namespace')}</div>
               <Input
                 testId={`${props.testIdPrefix}.create.namespace`}
+                ariaLabel={t('userns.map.namespace')}
                 value={createNsId}
                 onChange={(e) => setCreateNsId(e.target.value)}
                 placeholder="#123"

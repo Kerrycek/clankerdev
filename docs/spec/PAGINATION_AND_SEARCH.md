@@ -118,8 +118,8 @@ Pages already migrated to the shared implementation:
 - Incident reports list: `src/pages/app/incidents/IncidentsPage.tsx`
 - OOM reports list: `src/pages/app/oom/OomReportsPage.tsx`
 - Profile / Admin user data templates: `src/components/user/UserDataTemplatesPanel.tsx` (server-side `q`, SFI)
-- User namespaces list: `src/components/userNamespaces/UserNamespaceList.tsx` (SFI; numeric ID opens detail; exact `size` plus admin-only `user`/`block_count` filters)
-- User namespace maps list: `src/components/userNamespaces/UserNamespaceMapList.tsx` (SFI; numeric ID opens detail; exact `user_namespace` plus admin-only `user` filter; no server-side `q`)
+- User namespaces list: `src/components/userNamespaces/UserNamespaceList.tsx` (SFI; numeric ID opens detail; exact `size` plus admin-only `user`/`block_count` filters; ascending exclusive `id > from_id`, with a hidden look-ahead row)
+- User namespace maps list: `src/components/userNamespaces/UserNamespaceMapList.tsx` (SFI; numeric ID opens detail; exact `user_namespace` plus admin-only `user` filter; no server-side `q`; ascending exclusive `id > from_id`, with a hidden look-ahead row)
 
 ### Exact terminal pages
 
@@ -139,6 +139,14 @@ limits are 25/50/100 for members and
 traversal of historical rows whose IDs are not monotonic with `created_at`
 still requires the deterministic upstream cursor/order contract tracked in
 #189; an ID-only `from_id` predicate cannot prove that stronger guarantee.
+
+User namespace and namespace-map indexes also use this pattern, with the
+backend's default ascending order and exclusive `id > from_id` predicate. They
+request `limit + 1`, hide the sentinel, and use the greatest visible ID as the
+next cursor. Exact-size and below-limit terminal pages disable **Next** unless
+the local cursor stack already contains a forward-visited page; that known
+cursor remains navigable. A malformed response that does not advance beyond
+the current cursor fails closed instead of creating a pagination loop.
 
 ### Smart Filter Input pages
 

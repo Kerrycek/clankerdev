@@ -1367,6 +1367,16 @@ mounted. The guard resets stale cursor/page state while preserving real
 `size`, `block_count`, or `user_namespace` filters applicable to that view, so
 there is no broad pre-normalization request that merely looks filtered.
 
+Both indexes use the backend's default ascending, exclusive
+`id > from_id` contract. The list requests one look-ahead row, renders only the
+selected limit, and derives the next cursor from the greatest visible ID. A
+hidden sentinel is never rendered; exact-size and below-limit terminal pages
+disable **Next** unless the local stack already contains a forward-visited
+cursor, and a non-advancing response fails closed to avoid loops.
+Namespace-map lists explicitly request the `user_namespace` expansion so the
+displayed namespace size and owner come from the resolved resource; the VPS
+configuration selector remains a lightweight reference-only consumer.
+
 The profile landing count, profile lists and map-creation namespace selector
 all use the same role rule. VPS configuration relies on backend owner scope for
 ordinary owners and sends the VPS owner explicitly for an administrator,
@@ -1396,9 +1406,13 @@ Evidence:
   mutation workflow in `e2e/specs/app/profile_user_namespaces.spec.ts`.
 
 The browser tests use deterministic HaveAPI mocks. They prove the exact first
-request, URL hygiene, role distinctions, profile/admin/VPS consumers, and that
-existing map mutations still use their prior contract; they do not claim a
-live authorization audit or perform live mutations.
+request, URL hygiene, role distinctions, profile/admin/VPS consumers,
+ascending two-page navigation, browser Back/Forward restoration, hidden
+look-ahead rows, exact and below-limit terminal states, expansion parameters,
+programmatic drawer labels, mobile overflow safety, and that existing map
+mutations still use their prior contract. Read-only contract tests reject any
+unexpected write; they do not claim a live authorization audit or perform live
+mutations.
 
 ---
 

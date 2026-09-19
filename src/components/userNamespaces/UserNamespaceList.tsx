@@ -22,7 +22,6 @@ import { SmartInputHelp } from '../ui/SmartInputHelp';
 import { TableCard } from '../ui/TableCard';
 import { TableRowLink } from '../ui/TableRowLink';
 
-import { cursorFromDescendingPage } from '../../lib/lockIndex';
 import { useKeysetPagination } from '../../lib/hooks/useKeysetPagination';
 import { parseNumericToken, splitKeyValueToken, tokenizeSmartInput, unquoteSmartValue } from '../../lib/smartFilter';
 
@@ -31,6 +30,7 @@ import type { UserRole } from '../../lib/roles';
 import { UserNamespaceContractGuard } from './UserNamespaceContractGuard';
 import { canFilterUserNamespaceOwners } from './userNamespaceFilterSemantics';
 import type { UserNamespaceListProps } from './userNamespaceListProps';
+import { buildUserNamespacePageWindow } from './userNamespacePagination';
 
 function parseIntParam(v: string | null): number | undefined {
   if (!v) return undefined;
@@ -103,7 +103,7 @@ function UserNamespaceListContent(props: UserNamespaceListProps & { viewerRole: 
     queryKey: ['user_namespace', 'list', { cursor: pagination.cursor, limit: pagination.limit, size, userId, blockCount }],
     queryFn: async () =>
       (await fetchUserNamespaces({
-        limit: pagination.limit,
+        limit: pagination.limit + 1,
         fromId: pagination.cursor,
         size,
         userId,
@@ -112,9 +112,22 @@ function UserNamespaceListContent(props: UserNamespaceListProps & { viewerRole: 
     refetchOnWindowFocus: false,
   });
 
-  const rows: UserNamespace[] = qList.data ?? [];
-  const pageCursor = cursorFromDescendingPage(rows);
-  const canNext = rows.length >= pagination.limit && pageCursor !== null;
+  const pageWindow = useMemo(
+    () => buildUserNamespacePageWindow(qList.data, pagination.limit, pagination.fromId),
+    [pagination.fromId, pagination.limit, qList.data]
+  );
+  const rows: UserNamespace[] = pageWindow.rows;
+  const pageCursor = pageWindow.cursor;
+  const hasNextFromData = pageWindow.hasMore && pageCursor !== null;
+  const canNext = pagination.hasForward || hasNextFromData;
+
+  const goNext = () => {
+    if (pagination.hasForward) {
+      pagination.goNext(undefined);
+      return;
+    }
+    if (hasNextFromData) pagination.goNext(pageCursor);
+  };
 
   const filtersActive = Boolean(size !== undefined || (adminFiltersEnabled && (userId !== undefined || blockCount !== undefined)) || smartErrors.length > 0);
   const shareUrl = typeof window !== 'undefined' ? window.location.href : '';
@@ -367,8 +380,9 @@ function UserNamespaceListContent(props: UserNamespaceListProps & { viewerRole: 
               canPrev={pagination.canPrev}
               canNext={canNext}
               onPrev={pagination.goPrev}
-              onNext={() => pagination.goNext(pageCursor)}
+              onNext={goNext}
               onGoToPage={pagination.goToPage}
+              maxDirectPage={pagination.stack.length}
               limit={pagination.limit}
               allowedLimits={pagination.allowedLimits}
               onLimitChange={pagination.setLimit}
@@ -387,8 +401,9 @@ function UserNamespaceListContent(props: UserNamespaceListProps & { viewerRole: 
               canPrev={pagination.canPrev}
               canNext={canNext}
               onPrev={pagination.goPrev}
-              onNext={() => pagination.goNext(pageCursor)}
+              onNext={goNext}
               onGoToPage={pagination.goToPage}
+              maxDirectPage={pagination.stack.length}
               limit={pagination.limit}
               allowedLimits={pagination.allowedLimits}
               onLimitChange={pagination.setLimit}
@@ -400,8 +415,8 @@ function UserNamespaceListContent(props: UserNamespaceListProps & { viewerRole: 
             <tr className="border-b border-border text-left text-xs text-muted">
               <th className="px-4 py-2">{t('common.id')}</th>
               <th className="px-4 py-2">{t('userns.namespace.size')}</th>
-              {props.showAdminFields ? <th className="px-4 py-2">{t('common.user')}</th> : null}
-              {props.showAdminFields ? <th className="px-4 py-2">{t('userns.namespace.blocks')}</th> : null}
+              {adminFiltersEnabled ? <th className="px-4 py-2">{t('common.user')}</th> : null}
+              {adminFiltersEnabled ? <th className="px-4 py-2">{t('userns.namespace.blocks')}</th> : null}
               <th className="px-4 py-2">{t('common.actions')}</th>
             </tr>
           </thead>
@@ -413,10 +428,10 @@ function UserNamespaceListContent(props: UserNamespaceListProps & { viewerRole: 
                 <TableRowLink key={r.id} to={to} testId={`${props.testIdPrefix}.row.${r.id}`} className="border-b border-border">
                   <td className="px-4 py-2 text-sm font-medium">#{r.id}</td>
                   <td className="px-4 py-2 text-sm tabular-nums">{typeof r.size === 'number' ? r.size : '—'}</td>
-                  {props.showAdminFields ? (
+                  {adminFiltersEnabled ? (
                     <td className="px-4 py-2 text-sm">{userLabel((r as any).user)}</td>
                   ) : null}
-                  {props.showAdminFields ? (
+                  {adminFiltersEnabled ? (
                     <td className="px-4 py-2 text-sm tabular-nums">{(r as any).block_count ?? '—'}</td>
                   ) : null}
                   <td className="px-4 py-2 text-sm">
@@ -444,6 +459,7 @@ function UserNamespaceListContent(props: UserNamespaceListProps & { viewerRole: 
             <div className="mt-1">
               <Input
                 testId={`${props.testIdPrefix}.size.input`}
+                ariaLabel={t('userns.namespace.size')}
                 placeholder={t('common.optional')}
                 value={size !== undefined ? String(size) : ''}
                 onChange={(e) => {
@@ -460,6 +476,7 @@ function UserNamespaceListContent(props: UserNamespaceListProps & { viewerRole: 
                 <div className="mt-1">
                   <Input
                     testId={`${props.testIdPrefix}.user.input`}
+                    ariaLabel={t('common.user')}
                     placeholder="#123"
                     value={userId !== undefined ? String(userId) : ''}
                     onChange={(e) => {
@@ -474,6 +491,7 @@ function UserNamespaceListContent(props: UserNamespaceListProps & { viewerRole: 
                 <div className="mt-1">
                   <Input
                     testId={`${props.testIdPrefix}.blocks.input`}
+                    ariaLabel={t('userns.namespace.blocks')}
                     placeholder={t('common.optional')}
                     value={blockCount !== undefined ? String(blockCount) : ''}
                     onChange={(e) => {

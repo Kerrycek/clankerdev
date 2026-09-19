@@ -63,6 +63,7 @@ describe('user namespace API wrappers', () => {
       fromId: 800,
       userId: 84,
       userNamespaceId: 101,
+      includeUserNamespace: true,
       q: 'default',
     } as Parameters<typeof fetchUserNamespaceMaps>[0] & { q: string });
 
@@ -71,11 +72,25 @@ describe('user namespace API wrappers', () => {
 
     expect(parsed.pathname).toBe('/v7.0/user_namespace_maps');
     expect(Object.fromEntries(parsed.searchParams.entries())).toEqual({
+      '_meta[includes]': 'user_namespace',
       'user_namespace_map[limit]': '50',
       'user_namespace_map[from_id]': '800',
       'user_namespace_map[user]': '84',
       'user_namespace_map[user_namespace]': '101',
     });
     expect(parsed.searchParams.has('user_namespace_map[q]')).toBe(false);
+    expect(parsed.searchParams.get('_meta[includes]')).toBe('user_namespace');
+  });
+
+  test('map index does not force expansion on consumers that only need references', async () => {
+    setMockRuntime();
+    const fetchMock = mockFetchOk({ user_namespace_maps: [{ id: 501, label: 'default' }] });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await fetchUserNamespaceMaps({ limit: 250, userId: 84 });
+
+    const [url] = fetchMock.mock.calls[0]!;
+    const parsed = new URL(String(url));
+    expect(parsed.searchParams.get('_meta[includes]')).toBeNull();
   });
 });
