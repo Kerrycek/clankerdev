@@ -8,6 +8,7 @@ import { ThemeProvider } from '../app/theme';
 import { I18nProvider } from '../app/i18n';
 import { ToastsProvider } from '../app/toasts';
 import { DocumentTitleManager } from '../components/layout/DocumentTitleManager';
+import { RouteFocusManager } from '../components/layout/RouteFocusManager';
 import { sanitizePostLoginPath, withRouterBasename } from '../lib/routerPaths';
 
 function currentRouterPath(location: ReturnType<typeof useLocation>): string {
@@ -41,6 +42,7 @@ export function RouteProvidersLayout() {
         <ThemeProvider>
           <I18nProvider>
             <DocumentTitleManager />
+            <RouteFocusManager />
             <ToastsProvider>
               <Outlet />
             </ToastsProvider>
