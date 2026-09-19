@@ -1,6 +1,6 @@
 // i18n-ignore-file
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 
 import { Drawer } from './Drawer';
 
@@ -25,6 +25,7 @@ describe('Drawer', () => {
     );
 
     const drawer = screen.getByTestId('drawer');
+    expect(screen.getByRole('dialog', { name: 'Filters' })).toBe(drawer);
     expect(drawer).toHaveAttribute('aria-modal', 'true');
     expect(drawer).toHaveClass('z-10', 'h-dvh', 'overflow-hidden');
     expect(screen.getByTestId('tall-content').parentElement).toHaveClass(
@@ -41,6 +42,32 @@ describe('Drawer', () => {
     expect(document.querySelector('[data-overlay-backdrop="true"]')).toHaveClass(
       'bg-backdrop/45'
     );
+
+    expect(screen.getByRole('button', { name: 'common.close' })).toHaveClass(
+      'min-h-11',
+      'min-w-11',
+      'sm:min-h-8',
+      'sm:min-w-8',
+      '[@media(any-pointer:coarse)]:min-h-11',
+      '[@media(any-pointer:coarse)]:min-w-11'
+    );
+  });
+
+  it('requests close from Escape and the modal backdrop', () => {
+    const onClose = vi.fn();
+    render(
+      <Drawer open title="Filters" onClose={onClose} testId="drawer">
+        Content
+      </Drawer>
+    );
+
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    const backdrop = document.querySelector('[data-overlay-backdrop="true"]');
+    expect(backdrop).not.toBeNull();
+    fireEvent.click(backdrop!);
+    expect(onClose).toHaveBeenCalledTimes(2);
   });
 
   it('renders non-modal drawers without hiding or blocking the page', () => {
