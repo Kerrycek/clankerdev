@@ -2,8 +2,10 @@ import { describe, expect, test, vi } from 'vitest';
 
 import type { ChangeRequest, RegistrationRequest } from '../../../lib/api/requests';
 import {
+  clearMyRequestFilters,
   EMPTY_MY_REQUESTS_CURSOR,
   fetchMyRequestsPage,
+  hasActiveMyRequestFilters,
   type MyRequestsPageFetchers,
 } from './MyRequestsModel';
 
@@ -26,6 +28,32 @@ function fetchers(
 }
 
 describe('MyRequestsModel', () => {
+  test('distinguishes filtered results and clears only filter pagination state', () => {
+    expect(hasActiveMyRequestFilters('all', '')).toBe(false);
+    expect(hasActiveMyRequestFilters('change', '')).toBe(true);
+    expect(hasActiveMyRequestFilters('all', 'approved')).toBe(true);
+
+    const original = new URLSearchParams([
+      ['returnTo', '/app/profile'],
+      ['type', 'change'],
+      ['state', 'approved'],
+      ['page', '3'],
+      ['from_id', '7'],
+      ['registration_from_id', '8'],
+      ['change_from_id', '9'],
+      ['limit', '50'],
+    ]);
+    const cleared = clearMyRequestFilters(original);
+
+    expect(cleared.get('returnTo')).toBe('/app/profile');
+    expect(cleared.get('limit')).toBe('50');
+    for (const key of ['type', 'state', 'page', 'from_id', 'registration_from_id', 'change_from_id']) {
+      expect(cleared.has(key)).toBe(false);
+    }
+    expect(original.get('type')).toBe('change');
+    expect(original.get('state')).toBe('approved');
+  });
+
   test('merges one bounded request per source and advances independent cursors', async () => {
     const api = fetchers(
       (fromId) => (fromId

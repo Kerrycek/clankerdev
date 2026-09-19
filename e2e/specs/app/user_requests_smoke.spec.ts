@@ -5,6 +5,7 @@ import {
   installHaveApiMock,
   setUiSettingsLocalStorage,
 } from '../../fixtures';
+import { expectNoDocumentHorizontalOverflow } from '../../helpers/horizontalOverflow';
 
 test('@workflow-matrix @smoke user requests: lists and opens only the signed-in owner data', async ({ page, isMobile }) => {
   const indexUrls: URL[] = [];
@@ -184,6 +185,101 @@ test('@smoke user requests: admin self view explicitly scopes both indexes and r
   const changesUrl = indexUrls.find((url) => url.pathname.endsWith('/changes'));
   expect(registrationsUrl?.searchParams.get('registration[user]')).toBe('1');
   expect(changesUrl?.searchParams.get('change[user]')).toBe('1');
+});
+
+test('@pr-smoke @pr-smoke-mobile user requests: filtered empty state clears filters without losing URL context or owner scope', async ({ page, isMobile }) => {
+  const indexUrls: URL[] = [];
+  const writes: Array<{ method: string; origin: string; pathname: string }> = [];
+
+  await page.setViewportSize(isMobile
+    ? { width: 390, height: 844 }
+    : { width: 1440, height: 1000 });
+  await setUiSettingsLocalStorage(page, { language: 'en' });
+  await bootstrapVpsAdminWindow(page);
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method())) return;
+    writes.push({ method: request.method(), origin: url.origin, pathname: url.pathname });
+  });
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'KerryCZE', level: 90 },
+    handlers: {
+      'GET user_request/registrations': ({ url }) => {
+        const requestUrl = new URL(url);
+        indexUrls.push(requestUrl);
+        return requestUrl.searchParams.get('registration[user]') === '1'
+          ? {
+              registrations: [{
+                id: 54,
+                user: { id: 1, login: 'KerryCZE' },
+                state: 'approved',
+                login: 'KerryCZE',
+                created_at: '2026-08-20T10:00:00Z',
+              }],
+              _meta: { total_count: 1 },
+            }
+          : { registrations: [], _meta: { total_count: 0 } };
+      },
+      'GET user_request/changes': ({ url }) => {
+        const requestUrl = new URL(url);
+        indexUrls.push(requestUrl);
+        return { changes: [], _meta: { total_count: 0 } };
+      },
+    },
+  });
+
+  await page.goto('/app/requests?type=change&state=approved&returnTo=%2Fapp%2Fprofile');
+  expect(page.viewportSize()).toEqual(isMobile
+    ? { width: 390, height: 844 }
+    : { width: 1440, height: 1000 });
+  const empty = page.getByTestId('app.requests.empty');
+  await expect(empty).toContainText('No requests match these filters');
+  await expect(empty.getByRole('link', { name: 'Open account settings' })).toHaveCount(0);
+  const clearFilters = page.getByTestId('app.requests.clear_filters');
+  if (isMobile) {
+    const clearFiltersBox = await clearFilters.boundingBox();
+    expect(clearFiltersBox).not.toBeNull();
+    expect(clearFiltersBox!.width).toBeGreaterThanOrEqual(44);
+    expect(clearFiltersBox!.height).toBeGreaterThanOrEqual(44);
+    await expectNoDocumentHorizontalOverflow(page);
+  }
+  await clearFilters.click();
+
+  const currentUrl = new URL(page.url());
+  expect(currentUrl.pathname).toBe('/app/requests');
+  expect(currentUrl.searchParams.get('returnTo')).toBe('/app/profile');
+  expect(currentUrl.searchParams.has('type')).toBe(false);
+  expect(currentUrl.searchParams.has('state')).toBe(false);
+  expect(currentUrl.searchParams.get('page') ?? '1').toBe('1');
+  expect(currentUrl.searchParams.has('registration_from_id')).toBe(false);
+  expect(currentUrl.searchParams.has('change_from_id')).toBe(false);
+
+  const rowPrefix = isMobile ? 'app.requests.mobile.row' : 'app.requests.row';
+  const row = page.getByTestId(`${rowPrefix}.registration.54`);
+  await expect(row).toBeVisible();
+  expect(indexUrls.some((url) => (
+    url.pathname.endsWith('/changes')
+    && url.searchParams.get('change[user]') === '1'
+    && url.searchParams.get('change[state]') === 'approved'
+  ))).toBe(true);
+  expect(indexUrls.some((url) => url.searchParams.get('registration[user]') === '1')).toBe(true);
+  const appOrigin = new URL(page.url()).origin;
+  expect(writes.filter((write) => !(
+    write.method === 'PUT'
+    && write.origin === appOrigin
+    && write.pathname === '/api/v7.0/webui_user_settings'
+  ))).toEqual([]);
+
+  if (!isMobile) {
+    await expect(row).not.toHaveAttribute('tabindex');
+    const openLink = row.getByRole('link', { name: 'Open' });
+    await expect(openLink).toBeVisible();
+    await expect(row.locator('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')).toHaveCount(1);
+    await openLink.press('Enter');
+    await expect(page).toHaveURL('/app/requests/registration/54');
+  } else {
+    await expectNoDocumentHorizontalOverflow(page);
+  }
 });
 
 test('@workflow-matrix user requests: foreign or ownerless API data fails closed without leaking fields', async ({ page }) => {

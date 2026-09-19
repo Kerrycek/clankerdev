@@ -18,6 +18,25 @@ import {
 
 export type MyRequestsType = 'all' | 'registration' | 'change';
 
+const MY_REQUEST_FILTER_RESET_KEYS = [
+  'type',
+  'state',
+  'from_id',
+  'registration_from_id',
+  'change_from_id',
+  'page',
+] as const;
+
+export function hasActiveMyRequestFilters(type: MyRequestsType, state: string): boolean {
+  return type !== 'all' || state.length > 0;
+}
+
+export function clearMyRequestFilters(searchParams: URLSearchParams): URLSearchParams {
+  const next = new URLSearchParams(searchParams);
+  for (const key of MY_REQUEST_FILTER_RESET_KEYS) next.delete(key);
+  return next;
+}
+
 export interface MyRequestsCursor {
   registration: number | null;
   change: number | null;

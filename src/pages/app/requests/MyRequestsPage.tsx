@@ -35,7 +35,11 @@ import {
   requestTypeFilterFromUrl,
   type UnifiedRequestRow,
 } from '../admin/RequestsModel';
-import { fetchMyRequestsPage } from './MyRequestsModel';
+import {
+  clearMyRequestFilters,
+  fetchMyRequestsPage,
+  hasActiveMyRequestFilters,
+} from './MyRequestsModel';
 import { useMyRequestsPagination } from './useMyRequestsPagination';
 
 const ALLOWED_LIMITS = [25, 50, 100] as const;
@@ -58,6 +62,7 @@ export function MyRequestsPage() {
   const type = requestTypeFilterFromUrl(sp.get('type'));
   const requestedState = String(sp.get('state') ?? '').trim();
   const state = defaultStateOptions().includes(requestedState) ? requestedState : '';
+  const hasActiveFilters = hasActiveMyRequestFilters(type, state);
   const pagination = useMyRequestsPagination({
     filterKey: JSON.stringify({ type, state }),
     searchParams: sp,
@@ -75,6 +80,10 @@ export function MyRequestsPage() {
     next.delete('change_from_id');
     next.delete('page');
     setSp(next, { replace: true });
+  };
+
+  const clearFilters = () => {
+    setSp(clearMyRequestFilters(sp), { replace: true });
   };
 
   const pageQ = useQuery({
@@ -196,13 +205,17 @@ export function MyRequestsPage() {
       {!loading && !error && rows.length === 0 ? (
         <EmptyState
           testId="app.requests.empty"
-          title={t('requests.my.empty.title')}
-          body={t('requests.my.empty.body')}
-          action={
+          title={t(hasActiveFilters ? 'requests.my.filtered_empty.title' : 'requests.my.empty.title')}
+          body={t(hasActiveFilters ? 'requests.my.filtered_empty.body' : 'requests.my.empty.body')}
+          action={hasActiveFilters ? (
+            <Button size="lg" variant="secondary" onClick={clearFilters} testId="app.requests.clear_filters">
+              {t('requests.my.filtered_empty.clear')}
+            </Button>
+          ) : (
             <LinkButton to="/app/profile" variant="secondary">
               {t('requests.my.empty.profile')}
             </LinkButton>
-          }
+          )}
         />
       ) : null}
       {!loading && !error && rows.length > 0 ? (
@@ -261,6 +274,7 @@ export function MyRequestsPage() {
                   <TableRowLink
                     key={`${rowType}-${id}`}
                     to={`/app/requests/${rowType}/${id}`}
+                    keyboardNavigation={false}
                     variant={requestRowVariant(currentState)}
                     className="border-b border-border/60 last:border-b-0"
                     testId={`app.requests.row.${rowType}.${id}`}
