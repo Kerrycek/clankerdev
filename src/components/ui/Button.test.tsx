@@ -133,6 +133,18 @@ describe('Button link variants', () => {
     expect(onClick).not.toHaveBeenCalled();
   });
 
+  it('forwards disclosure state and the controlled region', () => {
+    render(
+      <Button aria-expanded={false} aria-controls="preferences-panel">
+        Preferences
+      </Button>
+    );
+
+    const button = screen.getByRole('button', { name: 'Preferences' });
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+    expect(button).toHaveAttribute('aria-controls', 'preferences-panel');
+  });
+
   it('keeps router-link semantics for an empty destination', async () => {
     const user = userEvent.setup();
     const onClick = vi.fn();
