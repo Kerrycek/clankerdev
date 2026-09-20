@@ -7,6 +7,8 @@ export const csFinance = {
   'finance.overview.description': 'Globální platební stav členů, měsíční výhled a účty vyžadující pozornost.',
   'finance.overview.refresh': 'Obnovit přehled',
   'finance.overview.load_error': 'Finanční přehled nelze načíst',
+  'finance.overview.stale.title': 'Zobrazuje se poslední úplný finanční snapshot',
+  'finance.overview.stale.body': 'Nejnovější obnovení selhalo. Součty níže zůstávají dostupné z posledního úplného načtení; před časově citlivým rozhodnutím načtení zopakuj.',
   'finance.overview.incomplete.title': 'Globální součet nebyl dokončen',
   'finance.overview.incomplete.body': 'API vrátilo příliš velký nebo nestabilní výpis. Prošlo se {count} účtů; dílčí součty záměrně nezobrazujeme jako globální.',
   'finance.overview.scope.title': 'Dokončené vícerequestové načtení účtů',
