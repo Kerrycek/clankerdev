@@ -7,6 +7,7 @@ function isoDaysFromNow(days: number): string {
 }
 
 test('@pr-smoke @pr-smoke-mobile admin Finance overview uses a complete account snapshot', async ({ page }, testInfo) => {
+  const systemConfigRequests: URL[] = [];
   await bootstrapVpsAdminWindow(page, {
     sessionToken: 'TEST',
     webuiNext: { serverTimeZone: 'Europe/Prague' },
@@ -28,9 +29,12 @@ test('@pr-smoke @pr-smoke-mobile admin Finance overview uses a complete account 
         ].filter((user) => user.id > fromId && user.object_state === objectState);
         return { users: rows };
       },
-      'GET system_configs': () => ({
-        system_configs: [{ category: 'plugin_payments', name: 'default_currency', value: 'CZK' }],
-      }),
+      'GET system_configs': ({ url }) => {
+        systemConfigRequests.push(new URL(url.href));
+        return {
+          system_configs: [{ category: 'plugin_payments', name: 'default_currency', value: 'CZK' }],
+        };
+      },
     },
   });
 
@@ -40,6 +44,8 @@ test('@pr-smoke @pr-smoke-mobile admin Finance overview uses a complete account 
   await expect(page.getByTestId('admin.finance.tabs').getByRole('link')).toHaveCount(3);
   await expect(page.getByTestId('admin.finance.overview.summary.monthly_payment')).toContainText(/2[\s,.]?500/);
   await expect(page.getByTestId('admin.finance.overview.summary.monthly_payment')).toContainText('CZK');
+  await expect.poll(() => systemConfigRequests.length).toBe(1);
+  expect(systemConfigRequests[0]?.searchParams.get('system_config[category]')).toBe('plugin_payments');
   await expect(page.getByTestId('admin.finance.overview.summary.current_month')).toContainText('Europe/Prague');
   await expect(page.getByTestId('admin.finance.overview.summary.paid')).toContainText('1');
   await expect(page.getByTestId('admin.finance.overview.summary.due_soon')).toContainText('1');
