@@ -95,7 +95,14 @@ test.describe('@workflow-matrix @smoke VPS list row navigation', () => {
     await expect(header.getByRole('link', { name: 'VPS', exact: true })).toHaveAttribute('href', '/admin/vps?user=42');
 
     await header.getByRole('link', { name: 'VPS', exact: true }).click();
-    await expect(page).toHaveURL(/\/admin\/vps\?user=42$/);
+    await visibleVpsItem(page, 300);
+    await expect(page).toHaveURL((url) => (
+      url.pathname === '/admin/vps'
+      && url.searchParams.get('user') === '42'
+      && url.searchParams.get('limit') === '50'
+      && url.searchParams.get('page') === '1'
+      && !url.searchParams.has('from_id')
+    ));
   });
 
   test('using the row stop icon does not trigger row navigation', async ({ page }) => {

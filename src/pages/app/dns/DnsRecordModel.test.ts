@@ -3,9 +3,12 @@ import { describe, expect, it } from 'vitest';
 import { HaveApiError } from '../../../lib/api/haveapi';
 import type { DnsRecord } from '../../../lib/api/dns';
 import {
+  DNS_RECORD_TYPES,
   buildDnsRecordCreatePayload,
   buildDnsRecordUpdatePayload,
   defaultDnsRecordDraft,
+  dnsRecordSupportsDynamicUpdate,
+  dnsRecordSupportsPriority,
   dnsRecordUpdatePreview,
   draftFromRecord,
   validateDnsRecordDraft,
@@ -83,6 +86,92 @@ describe('DnsRecordModel', () => {
 
     const okMx = validateDnsRecordDraft(draft({ name: 'mail', type: 'MX', content: 'mail.example.test.', priority: '10' }), []);
     expect(okMx.hasErrors).toBe(false);
+  });
+
+  it('matches the complete live API record type capability set', () => {
+    expect(DNS_RECORD_TYPES).toEqual(['A', 'AAAA', 'CAA', 'CNAME', 'DS', 'MX', 'NS', 'PTR', 'SRV', 'SSHFP', 'TLSA', 'TXT']);
+    expect(dnsRecordSupportsPriority('MX')).toBe(true);
+    expect(dnsRecordSupportsPriority('TLSA')).toBe(false);
+    expect(dnsRecordSupportsDynamicUpdate('AAAA')).toBe(true);
+    expect(dnsRecordSupportsDynamicUpdate('SSHFP')).toBe(false);
+  });
+
+  it('validates DS, SSHFP and TLSA content like the live API', () => {
+    const validCases = [
+      draft({ name: 'child-sha1', type: 'DS', content: `60485 13 1 ${'A'.repeat(40)}` }),
+      draft({ name: 'child', type: 'DS', content: `60485 13 2 ${'A'.repeat(64)}` }),
+      draft({ name: 'child-sha384', type: 'DS', content: `60485 13 4 ${'A'.repeat(96)}` }),
+      draft({ name: 'ssh-sha1', type: 'SSHFP', content: `4 1 ${'B'.repeat(40)}` }),
+      draft({ name: 'ssh', type: 'SSHFP', content: `4 2 ${'B'.repeat(64)}` }),
+      draft({ name: '_443._tcp.www', type: 'TLSA', content: `3 1 1 ${'C'.repeat(64)}` }),
+      draft({ name: '_443._tcp.sha512', type: 'TLSA', content: `3 1 2 ${'C'.repeat(128)}` }),
+      draft({ name: '_443._tcp.www', type: 'TLSA', content: '3 1 0 AABB' }),
+    ];
+
+    for (const candidate of validCases) {
+      expect(validateDnsRecordDraft(candidate, []).hasErrors).toBe(false);
+    }
+
+    const invalidCases = [
+      draft({ name: 'child', type: 'DS', content: `60485 13 2 ${'A'.repeat(63)}` }),
+      draft({ name: 'child', type: 'DS', content: `60485 13 3 ${'A'.repeat(64)}` }),
+      draft({ name: 'ssh', type: 'SSHFP', content: `4 2 ${'B'.repeat(63)}` }),
+      draft({ name: 'ssh', type: 'SSHFP', content: `4 3 ${'B'.repeat(64)}` }),
+      draft({ name: '_443._tcp.www', type: 'TLSA', content: `3 1 1 ${'C'.repeat(63)}` }),
+      draft({ name: '_443._tcp.www', type: 'TLSA', content: '3 1 0 ABC' }),
+      draft({ name: '_443._tcp.www', type: 'TLSA', content: `3 1 3 ${'C'.repeat(64)}` }),
+      draft({ name: '_443._tcp.www', type: 'TLSA', content: `3 1 1 ${'C'.repeat(32)}\n${'C'.repeat(32)}` }),
+    ];
+
+    expect(invalidCases.map((candidate) => validateDnsRecordDraft(candidate, []).errors[0]?.messageKey)).toEqual([
+      'dns.zone.records.validation.content.ds',
+      'dns.zone.records.validation.content.ds',
+      'dns.zone.records.validation.content.sshfp',
+      'dns.zone.records.validation.content.sshfp',
+      'dns.zone.records.validation.content.tlsa',
+      'dns.zone.records.validation.content.tlsa',
+      'dns.zone.records.validation.content.tlsa',
+      'dns.zone.records.validation.content.tlsa',
+    ]);
+  });
+
+  it('blocks apex DS records and incompatible priority or dynamic update settings', () => {
+    const apexDs = validateDnsRecordDraft(
+      draft({ name: '@', type: 'DS', content: `60485 13 2 ${'A'.repeat(64)}` }),
+      []
+    );
+    expect(apexDs.errors.map((issue) => issue.messageKey)).toContain('dns.zone.records.validation.conflict.ds_apex');
+
+    const incompatible = validateDnsRecordDraft(
+      draft({ name: 'ssh', type: 'SSHFP', content: `4 2 ${'B'.repeat(64)}`, priority: '10', dynamicUpdateEnabled: true }),
+      []
+    );
+    expect(incompatible.errors.map((issue) => issue.messageKey)).toEqual(
+      expect.arrayContaining([
+        'dns.zone.records.validation.priority.unsupported',
+        'dns.zone.records.validation.dynamic.unsupported',
+      ])
+    );
+  });
+
+  it('never sends stale unsupported priority or dynamic-update values', () => {
+    const d = draft({
+      name: 'child',
+      type: 'DS',
+      content: `60485 13 2 ${'A'.repeat(64)}`,
+      priority: '10',
+      dynamicUpdateEnabled: true,
+    });
+
+    expect(buildDnsRecordCreatePayload(10, d)).toMatchObject({
+      type: 'DS',
+      priority: undefined,
+      dynamic_update_enabled: false,
+    });
+    expect(buildDnsRecordUpdatePayload(d)).toMatchObject({
+      priority: undefined,
+      dynamic_update_enabled: false,
+    });
   });
 
   it('enforces the inclusive live API TTL range', () => {

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 
 import { useAuth } from '../../../app/auth';
+import { useAppMode } from '../../../app/appMode';
 import { useI18n } from '../../../app/i18n';
 import { useObjectScope } from '../../../app/objectScope';
 import { useChrome } from '../../../components/layout/ChromeContext';
@@ -27,9 +28,11 @@ import {
 } from '../../../lib/api/datasets';
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
 import { datasetCapabilities, gateDatasetAction } from '../../../lib/gates/dataset';
+import { resourceId } from '../../../lib/resources';
 
 import { useDatasetContext } from './DatasetContext';
 import { DatasetSpaceCard, DatasetTemporaryExpansionCard } from './DatasetOverviewSummaryCards';
+import { datasetExpansionCapabilities } from './DatasetExpansionCapabilities';
 import { DatasetTransactionsCard } from './DatasetTransactionsCard';
 
 function asNumber(v: unknown): number | undefined {
@@ -793,18 +796,30 @@ function DatasetManagementCard() {
 }
 
 export function DatasetOverviewPage() {
-  const { dataset, chains, chainsLoading, chainsError } = useDatasetContext();
+  const { dataset, detailPath, chains, chainsLoading, chainsError } = useDatasetContext();
+  const { mode } = useAppMode();
+  const auth = useAuth();
+  const hasExpansion = resourceId((dataset as any).dataset_expansion) !== undefined;
+  const isVpsDataset = resourceId((dataset as any).vps) !== undefined;
+  const expansionCapabilities = datasetExpansionCapabilities({
+    mode,
+    role: auth.role,
+    hasExpansion,
+    isVpsDataset,
+  });
 
   return (
     <div className="space-y-6" data-testid="dataset.overview">
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className={`grid grid-cols-1 gap-6${expansionCapabilities.showEntry ? ' lg:grid-cols-2' : ''}`}>
         <div className="space-y-6">
           <DatasetSpaceCard dataset={dataset} />
           <DatasetManagementCard />
         </div>
-        <div className="space-y-6">
-          <DatasetTemporaryExpansionCard dataset={dataset} />
-        </div>
+        {expansionCapabilities.showEntry ? (
+          <div className="space-y-6">
+            <DatasetTemporaryExpansionCard dataset={dataset} destination={`${detailPath}/expansion`} />
+          </div>
+        ) : null}
       </div>
 
       <DatasetTransactionsCard chains={chains} chainsLoading={chainsLoading} chainsError={chainsError} />

@@ -2,6 +2,7 @@ import type { ActionState } from './api/actionStates';
 import type { Transaction, TransactionChain } from './api/transactions';
 import { extractConcernRefs } from './concerns';
 import { resourceId, refLabel } from './resources';
+import { isFailedChainState, isFinishedChainState } from './taskStatus';
 
 export type OperationCategory =
   | 'vps'
@@ -266,15 +267,23 @@ function migration(ctx: OperationMatchContext): boolean {
 }
 
 function systemBackupNoise(ctx: OperationMatchContext): boolean {
-  if (hasAny(ctx, ['backup', 'backups', 'autosnapshot', 'auto snapshot', 'retention', 'garbage collect', 'gc', 'scrub'])) return true;
-  if (hasAll(ctx, ['snapshot', 'sync'])) return true;
-  if (hasAll(ctx, ['snapshot', 'prune'])) return true;
-  if (hasAll(ctx, ['snapshot', 'rotate'])) return true;
-  if (hasAll(ctx, ['download', 'expire'])) return true;
-  if (hasAll(ctx, ['artifact', 'cleanup'])) return true;
-  if (hasAll(ctx, ['generated', 'cleanup'])) return true;
-  if (hasAll(ctx, ['storage', 'cleanup'])) return true;
-  return false;
+  const backupRelated = hasAny(ctx, ['backup', 'backups', 'snapshot', 'autosnapshot', 'auto snapshot']);
+  if (!backupRelated) return false;
+
+  return hasAny(ctx, [
+    'automatic',
+    'automated',
+    'automatically',
+    'auto',
+    'autosnapshot',
+    'auto snapshot',
+    'scheduled',
+    'schedule',
+    'retention',
+    'prune',
+    'sync',
+    'cleanup',
+  ]);
 }
 
 const RULES: OperationRule[] = [
@@ -484,7 +493,7 @@ export function operationBadgeVariant(op: OperationTaxonomy): 'neutral' | 'ok' |
 
 export function shouldCollapseSystemOperation(op: OperationTaxonomy, state?: unknown): boolean {
   const st = String(state ?? '').trim().toLowerCase();
-  const active = st && !['done', 'failed', 'fatal', 'resolved', 'cancelled', 'canceled'].includes(st);
-  if (active) return false;
+  if (isFailedChainState(state)) return false;
+  if (st && !isFinishedChainState(state)) return false;
   return op.systemNoise || op.visibility === 'system';
 }

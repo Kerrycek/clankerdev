@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, RotateCw } from 'lucide-react';
+import { Camera, RotateCw, Square } from 'lucide-react';
 import { Link, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchActionState } from '../../../lib/api/actionStates';
@@ -426,15 +426,6 @@ export function VpsLayout() {
     if (!value) return;
 
     switch (value) {
-      case 'action:start':
-        if (startGate.allowed) startM.mutate(snapshotPowerVariables());
-        return;
-      case 'action:restart':
-        if (restartGate.allowed) setConfirm({ kind: 'restart', force: false });
-        return;
-      case 'action:stop':
-        if (stopGate.allowed) setConfirm({ kind: 'stop', force: false });
-        return;
       case 'action:root_password':
         if (passwdGate.allowed) setConfirm({ kind: 'passwd', type: 'secure' });
         return;
@@ -617,27 +608,36 @@ export function VpsLayout() {
               ) : null}
 
               {canMutateVps && vps.is_running === true ? (
-                <ActionButton
-                  variant="secondary"
-                  testId="vps.action.restart.header"
-                  disabled={!restartGate.allowed}
-                  disabledReason={!restartGate.allowed ? restartGate.reason : undefined}
-                  onClick={() => setConfirm({ kind: 'restart', force: false })}
-                  title={t('action.vps.restart.label')}
-                >
-                  <RotateCw className="h-4 w-4" aria-hidden="true" />
-                  {t('action.vps.restart.label')}
-                </ActionButton>
+                <>
+                  <ActionButton
+                    variant="secondary"
+                    testId="vps.action.restart.header"
+                    disabled={!restartGate.allowed}
+                    disabledReason={!restartGate.allowed ? restartGate.reason : undefined}
+                    onClick={() => setConfirm({ kind: 'restart', force: false })}
+                    title={t('action.vps.restart.label')}
+                  >
+                    <RotateCw className="h-4 w-4" aria-hidden="true" />
+                    {t('action.vps.restart.label')}
+                  </ActionButton>
+                  <ActionButton
+                    variant="danger"
+                    testId="vps.action.stop.header"
+                    disabled={!stopGate.allowed}
+                    disabledReason={!stopGate.allowed ? stopGate.reason : undefined}
+                    onClick={() => setConfirm({ kind: 'stop', force: false })}
+                    title={t('action.vps.stop.label')}
+                  >
+                    <Square className="h-4 w-4" aria-hidden="true" />
+                    {t('action.vps.stop.label')}
+                  </ActionButton>
+                </>
               ) : null}
 
               <VpsActionsMenu
                 basePath={basePath}
                 vpsId={vps.id}
                 canMutateVps={canMutateVps}
-                primaryHeaderAction={primaryHeaderAction}
-                startAllowed={startGate.allowed}
-                restartAllowed={restartGate.allowed}
-                stopAllowed={stopGate.allowed}
                 passwordAllowed={passwdGate.allowed}
                 showTasks={busyTransaction || busyLocal}
                 showSupportActions={mode === 'admin'}

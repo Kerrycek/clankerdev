@@ -50,7 +50,8 @@ test('@smoke dns zone advanced tabs render', async ({ page }, testInfo) => {
   await expect(page.getByTestId('dns.transfers.create.host_ip.opt.12')).toBeVisible();
   await expect(hostIpInput).toHaveAttribute('role', 'combobox');
   await expect(hostIpInput).toHaveAttribute('aria-expanded', 'true');
-  expect(hostIpLookupParams?.get('host_ip_address[purpose]')).toBe('vps');
+  expect(hostIpLookupParams?.get('host_ip_address[usable_for]')).toBe('vps');
+  expect(hostIpLookupParams?.has('host_ip_address[purpose]')).toBe(false);
   expect(hostIpLookupParams?.get('host_ip_address[routed]')).toBe('true');
   expect(hostIpLookupParams?.has('host_ip_address[q]')).toBe(false);
   expect(hostIpLookupParams?.has('host_ip_address[assigned]')).toBe(false);
@@ -75,6 +76,47 @@ test('@smoke dns zone advanced tabs render', async ({ page }, testInfo) => {
   await page.goto('/app/dns/zones/42/servers');
   await expect(page.getByTestId('dns.servers.page')).toBeVisible();
   await expect(page.getByTestId('dns.servers.row.1')).toBeVisible();
+});
+
+test('@smoke @smoke-mobile user DNS server addresses are visible and copyable', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+  await installHaveApiMock(page, {
+    user: { id: 10, login: 'alice', level: 1 },
+    handlers: {
+      'GET dns_zones/42': () => ({
+        dns_zone: {
+          id: 42,
+          name: 'example.test',
+          source: 'internal_source',
+          enabled: true,
+          user: { id: 10, login: 'alice' },
+        },
+      }),
+      'GET transaction_chains': () => ({ transaction_chains: [] }),
+      'GET dns_server_zones': () => ({
+        dns_server_zones: [{
+          id: 1,
+          dns_server: {
+            id: 5,
+            name: 'ns1.example.test',
+            ipv4_addr: '192.0.2.53',
+            ipv6_addr: '2001:db8::53',
+          },
+          type: 'primary_type',
+          serial: 1234,
+        }],
+      }),
+    },
+  });
+
+  await page.goto('/app/dns/zones/42/servers');
+
+  const row = page.getByTestId('dns.servers.row.1');
+  await expect(row).toContainText('ns1.example.test');
+  await expect(page.getByTestId('dns.servers.row.1.ipv4')).toContainText('192.0.2.53');
+  await expect(page.getByTestId('dns.servers.row.1.ipv6')).toContainText('2001:db8::53');
+  await expect(page.getByTestId('dns.servers.row.1.ipv4.copy')).toHaveAccessibleName('Copy IPv4 address');
+  await expect(page.getByTestId('dns.servers.row.1.ipv6.copy')).toHaveAccessibleName('Copy IPv6 address');
 });
 
 test('@smoke admin transfer host lookup is scoped to the DNS zone owner', async ({ page }) => {
@@ -109,7 +151,8 @@ test('@smoke admin transfer host lookup is scoped to the DNS zone owner', async 
   await expect(page.getByTestId('dns.transfers.create.host_ip.opt.12')).toBeVisible();
 
   expect(hostIpLookupParams?.get('host_ip_address[user]')).toBe('55');
-  expect(hostIpLookupParams?.get('host_ip_address[purpose]')).toBe('vps');
+  expect(hostIpLookupParams?.get('host_ip_address[usable_for]')).toBe('vps');
+  expect(hostIpLookupParams?.has('host_ip_address[purpose]')).toBe(false);
   expect(hostIpLookupParams?.get('host_ip_address[routed]')).toBe('true');
   expect(hostIpLookupParams?.has('host_ip_address[q]')).toBe(false);
   expect(hostIpLookupParams?.has('host_ip_address[assigned]')).toBe(false);

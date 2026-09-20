@@ -73,7 +73,7 @@ export const csVps_core = {
   'vps.list.actions.more.label': 'Další akce řádku VPS',
   'vps.actions.more.group.daily': 'Běžné akce',
   'vps.actions.more.group.sections': 'Sekce detailu',
-  'vps.actions.more.group.lifecycle': 'Lifecycle',
+  'vps.actions.more.group.lifecycle': 'Pokročilé operace',
   'vps.actions.more.group.support': 'Podpora a diagnostika',
   'vps.actions.more.group.admin': 'Admin operace',
   'vps.tabs.config': 'Konfigurace',

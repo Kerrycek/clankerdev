@@ -35,6 +35,7 @@ export interface DnsRecord {
   priority?: number;
   comment?: string;
   enabled?: boolean;
+  managed?: boolean;
   dynamic_update_enabled?: boolean;
   dynamic_update_url?: string;
   [k: string]: unknown;
@@ -134,14 +135,10 @@ export async function deleteDnsZone(zoneId: number) {
 }
 
 export async function fetchDnsRecords(opts?: {
-  fromId?: number;
-  limit?: number;
   user?: number;
   dns_zone?: number;
 }) {
   const params: Record<string, unknown> = {};
-  if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
-  if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.user !== undefined) params['user'] = opts.user;
   if (opts?.dns_zone !== undefined) params['dns_zone'] = opts.dns_zone;
 

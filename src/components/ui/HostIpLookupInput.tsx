@@ -16,6 +16,7 @@ export function HostIpLookupInput(props: {
   filters?: {
     assigned?: boolean;
     purpose?: string;
+    usableFor?: string;
     routed?: boolean;
   };
   limit?: number;
@@ -53,6 +54,7 @@ export function HostIpLookupInput(props: {
             user: props.userId ?? null,
             assigned: props.filters?.assigned ?? null,
             purpose: props.filters?.purpose ?? null,
+            usableFor: props.filters?.usableFor ?? null,
             routed: props.filters?.routed ?? null,
             limit: props.limit ?? 100,
           }
@@ -65,6 +67,7 @@ export function HostIpLookupInput(props: {
           user: props.userId,
           assigned: props.filters?.assigned,
           purpose: props.filters?.purpose,
+          usableFor: props.filters?.usableFor,
           routed: props.filters?.routed,
         });
         return res.data as HostIpAddress[];
