@@ -21,6 +21,7 @@ import { gateDnsAction } from '../../../lib/gates/dns';
 
 import { useDnsZoneContext } from './DnsZoneContext';
 import { preflightDnsZoneNotBusy } from './dnsPreflight';
+import { DNS_TTL_MAX, DNS_TTL_MIN, validateDnsTtl } from './dnsTtlContract';
 
 export function DnsZoneSettingsPage() {
   const { basePath } = useAppMode();
@@ -51,9 +52,18 @@ export function DnsZoneSettingsPage() {
   const [dnssec, setDnssec] = useState(zoneDefaults.dnssec);
 
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const defaultTtlValidation = validateDnsTtl(defaultTtl, { required: true });
+  const defaultTtlValidationMessage = defaultTtlValidation
+    ? t(`dns.zone.settings.ttl.validation.${defaultTtlValidation}`, {
+        min: DNS_TTL_MIN,
+        max: DNS_TTL_MAX,
+      })
+    : '';
 
   const saveM = useMutation({
     mutationFn: async () => {
+      if (defaultTtlValidation) throw new Error(defaultTtlValidationMessage);
+
       await preflightDnsZoneNotBusy({
         zoneId: zone.id,
         t,
@@ -64,7 +74,7 @@ export function DnsZoneSettingsPage() {
       return updateDnsZone(zone.id, {
         label: label.trim() || undefined,
         email: email.trim() || undefined,
-        default_ttl: defaultTtl.trim() ? Number(defaultTtl.trim()) : undefined,
+        default_ttl: Number(defaultTtl.trim()),
         enabled,
         dnssec_enabled: dnssec,
       });
@@ -177,10 +187,24 @@ export function DnsZoneSettingsPage() {
               <Input
                 value={defaultTtl}
                 onChange={(e) => setDefaultTtl(e.target.value)}
-                placeholder={t('common.unchanged')}
+                type="number"
+                inputMode="numeric"
+                min={DNS_TTL_MIN}
+                max={DNS_TTL_MAX}
+                step={1}
+                ariaInvalid={defaultTtlValidation !== null}
+                ariaDescribedBy="dns-settings-default-ttl-feedback"
                 disabled={formDisabled}
                 testId="dns.settings.default_ttl"
               />
+              <div
+                id="dns-settings-default-ttl-feedback"
+                className={`mt-1 text-xs ${defaultTtlValidation ? 'text-danger' : 'text-faint'}`}
+                data-testid="dns.settings.default_ttl.validation"
+              >
+                {defaultTtlValidationMessage ||
+                  t('dns.zone.settings.ttl.help', { min: DNS_TTL_MIN, max: DNS_TTL_MAX })}
+              </div>
             </div>
 
             <div className="space-y-2 pt-1">
@@ -225,7 +249,7 @@ export function DnsZoneSettingsPage() {
             <ActionButton
               onClick={() => saveM.mutate()}
               loading={saveM.isPending}
-              disabled={!saveGate.allowed}
+              disabled={!saveGate.allowed || defaultTtlValidation !== null}
               disabledReason={!saveGate.allowed ? saveGate.reason : undefined}
               testId="dns.settings.save"
             >

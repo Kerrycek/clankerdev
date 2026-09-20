@@ -1,4 +1,10 @@
 import type { DnsRecord } from '../../../lib/api/dns';
+import {
+  DNS_TTL_MAX,
+  DNS_TTL_MIN,
+  parseOptionalDnsTtl,
+  validateDnsTtl,
+} from './dnsTtlContract';
 
 export const DNS_RECORD_TYPES = ['A', 'AAAA', 'CAA', 'CNAME', 'DS', 'MX', 'NS', 'PTR', 'SRV', 'SSHFP', 'TLSA', 'TXT'] as const;
 
@@ -61,7 +67,7 @@ export type DnsRecordCreatePayload = {
 
 export type DnsRecordUpdatePayload = {
   content: string;
-  ttl?: number;
+  ttl?: number | null;
   priority?: number;
   comment?: string;
   enabled: boolean;
@@ -75,7 +81,6 @@ type DnsRecordCompat = DnsRecord & { dynamic?: boolean };
 const PRIORITY_RECORD_TYPES = new Set<string>(['MX', 'SRV']);
 const DYNAMIC_UPDATE_RECORD_TYPES = new Set<string>(['A', 'AAAA']);
 const HOST_TARGET_TYPES = new Set<string>(['CNAME', 'MX', 'NS', 'PTR']);
-const OPTIONAL_INT_MAX = 2_147_483_647;
 const PRIORITY_MAX = 65_535;
 const DS_DIGEST_LENGTHS: Readonly<Record<string, number>> = { '1': 40, '2': 64, '4': 96 };
 const SSHFP_FINGERPRINT_LENGTHS: Readonly<Record<string, number>> = { '1': 40, '2': 64 };
@@ -405,10 +410,13 @@ export function validateDnsRecordDraft(
     pushIssue(issues, 'content', 'error', 'dns.zone.records.validation.content.tlsa');
   }
 
-  validateOptionalNumber(issues, 'ttl', draft.ttl, {
-    max: OPTIONAL_INT_MAX,
-    messagePrefix: 'dns.zone.records.validation.ttl',
-  });
+  const ttlValidation = validateDnsTtl(draft.ttl);
+  if (ttlValidation) {
+    pushIssue(issues, 'ttl', 'error', `dns.zone.records.validation.ttl.${ttlValidation}`, {
+      min: DNS_TTL_MIN,
+      max: DNS_TTL_MAX,
+    });
+  }
   if (dnsRecordSupportsPriority(type)) {
     validateOptionalNumber(issues, 'priority', draft.priority, {
       required: true,
@@ -464,7 +472,7 @@ export function buildDnsRecordCreatePayload(zoneId: number, draft: DnsRecordDraf
     name: draft.name.trim(),
     type,
     content: draft.content,
-    ttl: parseOptionalInteger(draft.ttl),
+    ttl: parseOptionalDnsTtl(draft.ttl),
     priority: dnsRecordSupportsPriority(type) ? parseOptionalInteger(draft.priority) : undefined,
     comment: draft.comment.trim() || undefined,
     enabled: draft.enabled,
@@ -476,7 +484,10 @@ export function buildDnsRecordUpdatePayload(draft: DnsRecordDraft): DnsRecordUpd
   const type = draft.type.toUpperCase();
   return {
     content: draft.content,
-    ttl: parseOptionalInteger(draft.ttl),
+    // The active API distinguishes an omitted TTL (leave the existing value)
+    // from null (clear the override and inherit the zone default). The editor
+    // always represents the complete value, so an empty field must send null.
+    ttl: parseOptionalDnsTtl(draft.ttl) ?? null,
     priority: dnsRecordSupportsPriority(type) ? parseOptionalInteger(draft.priority) : undefined,
     comment: draft.comment.trim() || undefined,
     enabled: draft.enabled,
@@ -514,7 +525,7 @@ export function dnsRecordCreatePreview(draft: DnsRecordDraft): DnsRecordPreviewI
 export function dnsRecordUpdatePreview(original: DnsRecord, draft: DnsRecordDraft): DnsRecordPreviewItem[] {
   const candidates: DnsRecordPreviewItem[] = [
     { field: 'content', before: String(original.content ?? ''), after: draft.content },
-    { field: 'ttl', before: original.ttl ?? null, after: optionalNumberPreview(draft.ttl) ?? original.ttl ?? null },
+    { field: 'ttl', before: original.ttl ?? null, after: optionalNumberPreview(draft.ttl) },
     { field: 'priority', before: original.priority ?? null, after: optionalNumberPreview(draft.priority) ?? original.priority ?? null },
     { field: 'comment', before: normalizedComment(String(original.comment ?? '')), after: normalizedComment(draft.comment) },
     { field: 'enabled', before: original.enabled !== false, after: draft.enabled },

@@ -26,6 +26,21 @@ describe('DnsRecordModel', () => {
     expect(buildDnsRecordCreatePayload(10, defaultDnsRecordDraft(600)).ttl).toBeUndefined();
   });
 
+  it('clears an edited TTL override with an explicit null payload and preview', () => {
+    const original: DnsRecord = {
+      id: 1,
+      name: 'www',
+      type: 'A',
+      content: '192.0.2.10',
+      ttl: 3600,
+      enabled: true,
+    };
+    const d = { ...draftFromRecord(original), ttl: '' };
+
+    expect(buildDnsRecordUpdatePayload(d).ttl).toBeNull();
+    expect(dnsRecordUpdatePreview(original, d)).toContainEqual({ field: 'ttl', before: 3600, after: null });
+  });
+
   it('builds create and update payloads without changing backend field names', () => {
     const d = draft({
       name: ' www ',
@@ -157,6 +172,18 @@ describe('DnsRecordModel', () => {
       priority: undefined,
       dynamic_update_enabled: false,
     });
+  });
+
+  it('enforces the inclusive live API TTL range', () => {
+    const ttlIssues = (ttl: string) =>
+      validateDnsRecordDraft(draft({ name: 'www', type: 'A', content: '192.0.2.10', ttl }), []).errors.filter(
+        (issue) => issue.field === 'ttl'
+      );
+
+    expect(ttlIssues('59')[0]?.messageKey).toBe('dns.zone.records.validation.ttl.range');
+    expect(ttlIssues('60')).toEqual([]);
+    expect(ttlIssues('604800')).toEqual([]);
+    expect(ttlIssues('604801')[0]?.messageKey).toBe('dns.zone.records.validation.ttl.range');
   });
 
   it('blocks CNAME conflicts in both directions', () => {
