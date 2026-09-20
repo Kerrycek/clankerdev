@@ -16,7 +16,7 @@ export interface FinanceAccountStatusResult {
 export interface FinanceOverviewSummary {
   /** Sum and status counts share the account scope documented by summarizeFinanceAccounts. */
   monthlyPayment: number;
-  /** Legacy-style estimate for accounts due in the current UTC calendar month. */
+  /** Legacy-style estimate for accounts due in the current server billing month. */
   currentMonthExpected: number;
   accountCount: number;
   paidCount: number;
