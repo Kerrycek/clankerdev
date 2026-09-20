@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import { bootstrapVpsAdminWindow, installHaveApiMock } from "../../fixtures";
+import { expectNoDocumentHorizontalOverflow } from "../../helpers/horizontalOverflow";
 
 test.describe("Dashboard", () => {
   test("@pr-smoke @pr-smoke-mobile @smoke @smoke-mobile shows operational overview, KPI cards and navigation actions", async ({
@@ -188,6 +189,21 @@ test.describe("Dashboard", () => {
     await expect(page.getByTestId("app.dashboard.security.card")).toContainText(
       "CVE-2026-0001",
     );
+    const advisoryPrimary = page.getByTestId("app.dashboard.security.item.primary").first();
+    const advisoryDetails = page.getByTestId("app.dashboard.security.item.details").first();
+    const [advisoryPrimaryBox, advisoryDetailsBox] = await Promise.all([
+      advisoryPrimary.boundingBox(),
+      advisoryDetails.boundingBox(),
+    ]);
+    expect(advisoryPrimaryBox).not.toBeNull();
+    expect(advisoryDetailsBox).not.toBeNull();
+    if ((page.viewportSize()?.width ?? 0) >= 1024) {
+      expect(advisoryDetailsBox!.x).toBeGreaterThan(advisoryPrimaryBox!.x + advisoryPrimaryBox!.width - 2);
+      expect(Math.abs(advisoryDetailsBox!.y - advisoryPrimaryBox!.y)).toBeLessThanOrEqual(2);
+    } else {
+      expect(advisoryDetailsBox!.y).toBeGreaterThanOrEqual(advisoryPrimaryBox!.y + advisoryPrimaryBox!.height - 2);
+    }
+    await expectNoDocumentHorizontalOverflow(page);
     await expect(page.getByTestId("app.dashboard.news.card")).toContainText(
       "Maintenance window moved",
     );
