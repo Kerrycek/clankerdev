@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { useAccountTimeZone } from '../../../app/accountTimeZone';
 import { useAppMode } from '../../../app/appMode';
 import { useI18n } from '../../../app/i18n';
 import { useToasts } from '../../../app/toasts';
@@ -16,7 +17,7 @@ import {
 import { fetchUser, type User } from '../../../lib/api/users';
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
 
-import { formatDateTime } from '../../../lib/format';
+import { formatDateInTimeZone, formatDateTimeInTimeZone } from '../../../lib/format';
 import { formatErrorMessage } from '../../../lib/errors';
 import { parseLookupIdLike } from '../../../lib/lookupInput';
 import {
@@ -66,6 +67,7 @@ function AssignmentUserPreview(props: {
   loading: boolean;
   error: boolean;
 }) {
+  const accountTimeZone = useAccountTimeZone();
   const { t } = useI18n();
 
   if (!props.userId) return null;
@@ -105,7 +107,7 @@ function AssignmentUserPreview(props: {
         </div>
         <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
           {props.user.email ? <span>{props.user.email}</span> : null}
-          {props.user.paid_until ? <span>{t('payments.incoming.detail.paid_until')}: {formatDateTime(props.user.paid_until)}</span> : null}
+          {props.user.paid_until ? <span>{t('payments.incoming.detail.paid_until')}: {formatDateInTimeZone(props.user.paid_until, accountTimeZone)}</span> : null}
           {typeof props.user.monthly_payment === 'number' ? (
             <span>{t('payments.incoming.assign.lookup.monthly_payment')}: {props.user.monthly_payment}</span>
           ) : null}
@@ -117,6 +119,7 @@ function AssignmentUserPreview(props: {
 }
 
 export function IncomingPaymentDetailPage() {
+  const accountTimeZone = useAccountTimeZone();
   const { basePath } = useAppMode();
   const { t } = useI18n();
   const toasts = useToasts();
@@ -349,13 +352,13 @@ export function IncomingPaymentDetailPage() {
             />
             <CardBody>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <div>
+              <div data-testid="admin.payments.incoming.detail.event_date">
                 <div className="text-xs text-muted">{t('common.date')}</div>
-                <div className="text-sm">{formatDateTime(payment.date)}</div>
+                <div className="text-sm">{formatDateTimeInTimeZone(payment.date, accountTimeZone)}</div>
               </div>
               <div data-testid="admin.payments.incoming.detail.accepted_at">
                 <div className="text-xs text-muted">{t('payments.incoming.detail.accepted_at')}</div>
-                <div className="text-sm tabular-nums">{formatDateTime(payment.created_at)}</div>
+                <div className="text-sm tabular-nums">{formatDateTimeInTimeZone(payment.created_at, accountTimeZone)}</div>
               </div>
               <div>
                 <div className="text-xs text-muted">{t('payments.incoming.detail.transaction_id')}</div>
@@ -514,8 +517,8 @@ export function IncomingPaymentDetailPage() {
                         {incomingPaymentUserLabel(payment.user)}
                       </Link>
                     </div>
-                    <div className="mt-1 text-xs text-muted">
-                      {t('payments.incoming.detail.paid_until')}: {payment.user_paid_until ? formatDateTime(payment.user_paid_until) : '—'}
+                    <div className="mt-1 text-xs text-muted" data-testid="admin.payments.incoming.detail.user_paid_until">
+                      {t('payments.incoming.detail.paid_until')}: {payment.user_paid_until ? formatDateInTimeZone(payment.user_paid_until, accountTimeZone) : '—'}
                     </div>
                   </div>
                 ) : null}
