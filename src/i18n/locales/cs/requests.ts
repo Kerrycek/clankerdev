@@ -274,6 +274,8 @@ export const csRequests = {
   'requests.correction.submit_error.title': 'Opravy se nepodařilo odeslat',
   'payments.incoming.detail.invalid': 'Neplatná platba',
   'payments.incoming.detail.load_error.title': 'Nelze načíst platbu',
+  'payments.incoming.detail.stale.title': 'Zobrazuje se poslední načtený detail platby',
+  'payments.incoming.detail.stale.body': 'Nejnovější obnovení selhalo. Akce kontroly jsou vypnuté, dokud se úspěšně nenačtou aktuální data platby.',
   'payments.incoming.detail.card.payment': 'Platba',
   'payments.incoming.detail.transaction_id': 'ID transakce',
   'payments.incoming.detail.received_amount': 'Přijatá částka',

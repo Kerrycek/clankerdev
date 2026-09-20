@@ -274,6 +274,8 @@ export const enRequests = {
   'requests.correction.submit_error.title': 'Unable to submit corrections',
   'payments.incoming.detail.invalid': 'Invalid payment',
   'payments.incoming.detail.load_error.title': 'Unable to load payment',
+  'payments.incoming.detail.stale.title': 'Showing the last loaded payment details',
+  'payments.incoming.detail.stale.body': 'The latest refresh failed. Review actions are disabled until current payment data loads successfully.',
   'payments.incoming.detail.card.payment': 'Payment',
   'payments.incoming.detail.transaction_id': 'Transaction ID',
   'payments.incoming.detail.received_amount': 'Received amount',
