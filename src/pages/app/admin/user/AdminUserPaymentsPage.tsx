@@ -68,6 +68,10 @@ interface ManualPaymentReview {
   months: number;
 }
 
+type PaymentSettingsReview =
+  | { kind: 'paid_until'; previous: string; next: string }
+  | { kind: 'monthly_payment'; previous: number | null; next: number };
+
 export function AdminUserPaymentsPage() {
   const accountTimeZone = useAccountTimeZone();
   const { basePath } = useAppMode();
@@ -144,7 +148,9 @@ export function AdminUserPaymentsPage() {
   const [quickPaidUntil, setQuickPaidUntil] = useState('');
   const [quickMonthlyPayment, setQuickMonthlyPayment] = useState('');
   const [quickAmount, setQuickAmount] = useState('');
+  const [settingsReview, setSettingsReview] = useState<PaymentSettingsReview | null>(null);
   const [manualPaymentReview, setManualPaymentReview] = useState<ManualPaymentReview | null>(null);
+  const settingsInFlightRef = useRef(false);
   const manualPaymentInFlightRef = useRef(false);
 
   useEffect(() => {
@@ -165,17 +171,22 @@ export function AdminUserPaymentsPage() {
     && amountParsed % activeMonthlyPayment === 0
     ? amountParsed / activeMonthlyPayment
     : null;
-  const paidUntilChanged = quickPaidUntil !== isoToDateInput(paidUntil);
+  const currentPaidUntilInput = isoToDateInput(paidUntil);
+  const paidUntilChanged = quickPaidUntil !== currentPaidUntilInput;
   const monthlyPaymentChanged = monthlyPaymentParsed !== null && monthlyPaymentParsed !== monthlyPayment;
 
   const paidUntilM = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (nextPaidUntil: string | null) => {
       await updateUserAccount(userId, {
-        paid_until: quickPaidUntil ? quickPaidUntil : null,
+        paid_until: nextPaidUntil,
       });
+    },
+    onSettled: () => {
+      settingsInFlightRef.current = false;
     },
     onSuccess: () => {
       toasts.pushToast({ variant: 'ok', title: t('admin.user.payments.settings.toast.paid_until_saved') });
+      setSettingsReview(null);
       void qc.invalidateQueries({ queryKey: ['user_accounts', userId] });
       void qc.invalidateQueries({ queryKey: ['finance'] });
       void qc.invalidateQueries({ queryKey: ['payment_stats', 'estimate_income'] });
@@ -188,14 +199,20 @@ export function AdminUserPaymentsPage() {
   });
 
   const monthlyPaymentM = useMutation({
-    mutationFn: async () => {
-      if (monthlyPaymentParsed === null) throw new Error(t('admin.user.payments.settings.validation.monthly_payment'));
+    mutationFn: async (nextMonthlyPayment: number) => {
+      if (!Number.isSafeInteger(nextMonthlyPayment) || nextMonthlyPayment <= 0) {
+        throw new Error(t('admin.user.payments.settings.validation.monthly_payment'));
+      }
       await updateUserAccount(userId, {
-        monthly_payment: monthlyPaymentParsed,
+        monthly_payment: nextMonthlyPayment,
       });
+    },
+    onSettled: () => {
+      settingsInFlightRef.current = false;
     },
     onSuccess: () => {
       toasts.pushToast({ variant: 'ok', title: t('admin.user.payments.settings.toast.monthly_saved') });
+      setSettingsReview(null);
       void qc.invalidateQueries({ queryKey: ['user_accounts', userId] });
       void qc.invalidateQueries({ queryKey: ['finance'] });
       void qc.invalidateQueries({ queryKey: ['payment_stats', 'estimate_income'] });
@@ -255,7 +272,11 @@ export function AdminUserPaymentsPage() {
       toasts.pushToast({ variant: 'neutral', title: t('admin.user.payments.settings.validation.no_changes') });
       return;
     }
-    paidUntilM.mutate();
+    setSettingsReview({
+      kind: 'paid_until',
+      previous: currentPaidUntilInput,
+      next: quickPaidUntil,
+    });
   };
 
   const submitMonthlyPayment = (e: React.FormEvent) => {
@@ -264,7 +285,13 @@ export function AdminUserPaymentsPage() {
       toasts.pushToast({ variant: 'neutral', title: t('admin.user.payments.settings.validation.no_changes') });
       return;
     }
-    monthlyPaymentM.mutate();
+    if (monthlyPaymentParsed !== null) {
+      setSettingsReview({
+        kind: 'monthly_payment',
+        previous: monthlyPayment ?? null,
+        next: monthlyPaymentParsed,
+      });
+    }
   };
 
   const submitAddPayment = (e: React.FormEvent) => {
@@ -277,6 +304,14 @@ export function AdminUserPaymentsPage() {
     });
   };
 
+  const settingsMutationPending = paidUntilM.isPending || monthlyPaymentM.isPending;
+  const paidUntilMovesBackward = settingsReview?.kind === 'paid_until'
+    && Boolean(settingsReview.previous)
+    && Boolean(settingsReview.next)
+    && settingsReview.next < settingsReview.previous;
+  const paidUntilClears = settingsReview?.kind === 'paid_until'
+    && Boolean(settingsReview.previous)
+    && !settingsReview.next;
   const manualPaymentReviewStale = manualPaymentReview !== null
     && manualPaymentReview.monthlyPayment !== activeMonthlyPayment;
 
@@ -317,7 +352,7 @@ export function AdminUserPaymentsPage() {
                     type="date"
                     value={quickPaidUntil}
                     onChange={(e) => setQuickPaidUntil(e.target.value)}
-                    disabled={accountQ.isLoading || paidUntilM.isPending}
+                    disabled={accountQ.isFetching || settingsMutationPending}
                   />
                   <div className="text-xs text-muted">{paidUntilSubtitle}</div>
                   <Button
@@ -325,7 +360,7 @@ export function AdminUserPaymentsPage() {
                     variant="secondary"
                     size="sm"
                     loading={paidUntilM.isPending}
-                    disabled={accountQ.isLoading || !paidUntilChanged}
+                    disabled={accountQ.isFetching || settingsMutationPending || !paidUntilChanged}
                     testId="admin.user.payments.settings.paid_until.save"
                   >
                     {t('admin.user.payments.settings.save_paid_until')}
@@ -338,10 +373,10 @@ export function AdminUserPaymentsPage() {
                     testId="admin.user.payments.settings.monthly_payment"
                     type="number"
                     inputMode="numeric"
-                    min={0}
+                    min={1}
                     value={quickMonthlyPayment}
                     onChange={(e) => setQuickMonthlyPayment(e.target.value)}
-                    disabled={accountQ.isLoading || monthlyPaymentM.isPending}
+                    disabled={accountQ.isFetching || settingsMutationPending}
                   />
                   <div className="text-xs text-muted">{t('admin.user.payments.settings.hint.monthly_payment')}</div>
                   <Button
@@ -349,7 +384,7 @@ export function AdminUserPaymentsPage() {
                     variant="secondary"
                     size="sm"
                     loading={monthlyPaymentM.isPending}
-                    disabled={accountQ.isLoading || !monthlyPaymentChanged}
+                    disabled={accountQ.isFetching || settingsMutationPending || !monthlyPaymentChanged}
                     testId="admin.user.payments.settings.monthly.save"
                   >
                     {t('common.save')}
@@ -404,6 +439,76 @@ export function AdminUserPaymentsPage() {
           </div>
         </CardBody>
       </Card>
+
+      <ConfirmDialog
+        open={settingsReview !== null}
+        title={t('admin.user.payments.review.settings.title')}
+        description={t('admin.user.payments.review.settings.subtitle')}
+        confirmLabel={t('common.save')}
+        confirmLoading={settingsMutationPending}
+        cancelDisabled={settingsMutationPending}
+        onCancel={() => {
+          if (!settingsMutationPending) setSettingsReview(null);
+        }}
+        onConfirm={() => {
+          if (settingsReview === null || settingsInFlightRef.current) return;
+          settingsInFlightRef.current = true;
+          if (settingsReview.kind === 'paid_until') {
+            paidUntilM.mutate(settingsReview.next || null);
+          } else {
+            monthlyPaymentM.mutate(settingsReview.next);
+          }
+        }}
+        testId="admin.user.payments.settings.review"
+      >
+        {settingsReview ? (
+          <div className="space-y-3">
+            {paidUntilMovesBackward ? (
+              <Alert
+                variant="warn"
+                title={t('admin.user.payments.review.settings.backward.title')}
+                testId="admin.user.payments.settings.review.backward"
+              >
+                {t('admin.user.payments.review.settings.backward.body')}
+              </Alert>
+            ) : null}
+            {paidUntilClears ? (
+              <Alert
+                variant="danger"
+                title={t('admin.user.payments.review.settings.clear.title')}
+                testId="admin.user.payments.settings.review.clear"
+              >
+                {t('admin.user.payments.review.settings.clear.body')}
+              </Alert>
+            ) : null}
+            <div className="divide-y divide-border rounded-md border border-border bg-surface-2 text-sm">
+              <div className="grid gap-1 p-3 sm:grid-cols-[9rem_minmax(0,1fr)]" data-testid="admin.user.payments.settings.review.target">
+                <div className="text-xs font-medium uppercase tracking-wide text-muted">{t('admin.user.payments.review.target')}</div>
+                <div className="break-words font-medium">{user.login ? `${user.login} (#${userId})` : `#${userId}`}</div>
+              </div>
+              <div className="grid gap-1 p-3 sm:grid-cols-[9rem_minmax(0,1fr)]" data-testid="admin.user.payments.settings.review.change">
+                <div className="text-xs font-medium uppercase tracking-wide text-muted">
+                  {t(settingsReview.kind === 'paid_until'
+                    ? 'admin.user.payments.settings.field.paid_until'
+                    : 'admin.user.payments.settings.field.monthly_payment')}
+                </div>
+                <div className="break-words font-medium tabular-nums">
+                  {settingsReview.kind === 'paid_until' ? (
+                    <>{settingsReview.previous || t('common.none')} → {settingsReview.next || t('common.none')}</>
+                  ) : (
+                    <>{formatMoneyLike(settingsReview.previous ?? undefined)} → {formatMoneyLike(settingsReview.next)}</>
+                  )}
+                </div>
+              </div>
+            </div>
+            <Alert variant="info" title={t('admin.user.payments.review.impact')}>
+              {t(settingsReview.kind === 'paid_until'
+                ? 'admin.user.payments.review.settings.paid_until.impact'
+                : 'admin.user.payments.review.settings.monthly_payment.impact')}
+            </Alert>
+          </div>
+        ) : null}
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={manualPaymentReview !== null}
