@@ -99,9 +99,16 @@ describe('buildSidebarNavItems', () => {
     expect(sidebarNavSections(items)).toEqual([{ id: 'ungrouped', items }]);
     expect(sidebarFooterNavItems(items)).toEqual([]);
     expect(items.map((item) => item.id)).toContain('backups');
+    expect(items.find((item) => item.id === 'datasets')?.label).toBe('nav.vps_disks');
     expect(items.map((item) => item.id)).toContain('requests');
     expect(items.find((item) => item.id === 'requests')?.to).toBe('/app/requests');
     expect(items.at(-1)?.id).toBe('account');
+  });
+
+  it('keeps the generic dataset label in the administrator navigation', () => {
+    const items = buildSidebarNavItems({ basePath: '/admin', appMode: 'admin', role: 'admin', t: fakeT });
+
+    expect(items.find((item) => item.id === 'datasets')?.label).toBe('nav.datasets');
   });
 
   it('preserves support role gating inside the grouped admin navigation', () => {

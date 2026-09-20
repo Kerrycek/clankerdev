@@ -189,7 +189,7 @@ export function DatasetLayout() {
           kicker={
             <>
               <Link className="text-accent hover:underline" to={listPath}>
-                {section === 'nas' ? t('nav.nas') : t('nav.datasets')}
+                {section === 'nas' ? t('nav.nas') : t(mode === 'user' ? 'nav.vps_disks' : 'nav.datasets')}
               </Link>
               <span className="text-faint"> · </span>
               <span>#{ds.id}</span>
