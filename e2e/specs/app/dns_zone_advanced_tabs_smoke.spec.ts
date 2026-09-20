@@ -78,6 +78,47 @@ test('@smoke dns zone advanced tabs render', async ({ page }, testInfo) => {
   await expect(page.getByTestId('dns.servers.row.1')).toBeVisible();
 });
 
+test('@smoke @smoke-mobile user DNS server addresses are visible and copyable', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+  await installHaveApiMock(page, {
+    user: { id: 10, login: 'alice', level: 1 },
+    handlers: {
+      'GET dns_zones/42': () => ({
+        dns_zone: {
+          id: 42,
+          name: 'example.test',
+          source: 'internal_source',
+          enabled: true,
+          user: { id: 10, login: 'alice' },
+        },
+      }),
+      'GET transaction_chains': () => ({ transaction_chains: [] }),
+      'GET dns_server_zones': () => ({
+        dns_server_zones: [{
+          id: 1,
+          dns_server: {
+            id: 5,
+            name: 'ns1.example.test',
+            ipv4_addr: '192.0.2.53',
+            ipv6_addr: '2001:db8::53',
+          },
+          type: 'primary_type',
+          serial: 1234,
+        }],
+      }),
+    },
+  });
+
+  await page.goto('/app/dns/zones/42/servers');
+
+  const row = page.getByTestId('dns.servers.row.1');
+  await expect(row).toContainText('ns1.example.test');
+  await expect(page.getByTestId('dns.servers.row.1.ipv4')).toContainText('192.0.2.53');
+  await expect(page.getByTestId('dns.servers.row.1.ipv6')).toContainText('2001:db8::53');
+  await expect(page.getByTestId('dns.servers.row.1.ipv4.copy')).toHaveAccessibleName('Copy IPv4 address');
+  await expect(page.getByTestId('dns.servers.row.1.ipv6.copy')).toHaveAccessibleName('Copy IPv6 address');
+});
+
 test('@smoke admin transfer host lookup is scoped to the DNS zone owner', async ({ page }) => {
   let hostIpLookupParams: URLSearchParams | null = null;
   await bootstrapVpsAdminWindow(page);

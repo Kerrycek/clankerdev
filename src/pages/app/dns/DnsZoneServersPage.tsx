@@ -11,6 +11,7 @@ import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
+import { CopyButton } from '../../../components/ui/CopyButton';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { ErrorState } from '../../../components/ui/ErrorState';
 import { KeysetPagination } from '../../../components/ui/KeysetPagination';
@@ -30,6 +31,14 @@ import { preflightDnsZoneNotBusy } from './dnsPreflight';
 function serverName(x: any): string {
   const server: any = x?.dns_server ?? {};
   return String(server.name ?? (typeof server.id === 'number' ? `#${server.id}` : '—'));
+}
+
+function serverAddress(x: DnsServerZone, field: 'ipv4_addr' | 'ipv6_addr'): string | null {
+  const server = x.dns_server;
+  if (!server || !(field in server)) return null;
+
+  const value = server[field];
+  return typeof value === 'string' && value.trim() !== '' ? value.trim() : null;
 }
 
 function zoneTypeLabel(v: unknown, t: (key: string) => string): string {
@@ -147,7 +156,7 @@ export function DnsZoneServersPage() {
       ) : (
         <Card>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm table-list">
+            <table className="w-full min-w-max text-sm table-list">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-wide text-faint">
                   <th className="py-2 pl-4 pr-3">{t('dns.zone.servers.table.server')}</th>
@@ -163,7 +172,31 @@ export function DnsZoneServersPage() {
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.id} className="border-t border-border" data-testid={`dns.servers.row.${row.id}`}>
-                    <td className="py-2 pl-4 pr-3 font-medium text-fg">{serverName(row as any)}</td>
+                    <td className="py-2 pl-4 pr-3 text-fg">
+                      <div className="font-medium">{serverName(row as any)}</div>
+                      {(['ipv4_addr', 'ipv6_addr'] as const).map((field) => {
+                        const address = serverAddress(row, field);
+                        if (!address) return null;
+
+                        const version = field === 'ipv4_addr' ? 'ipv4' : 'ipv6';
+                        return (
+                          <div
+                            key={field}
+                            className="mt-1 flex items-center gap-2 whitespace-nowrap text-xs"
+                            data-testid={`dns.servers.row.${row.id}.${version}`}
+                          >
+                            <span className="text-muted">{t(`common.${version}`)}</span>
+                            <code className="text-fg">{address}</code>
+                            <CopyButton
+                              text={address}
+                              label={t('dns.zone.servers.copy_address', { version: t(`common.${version}`) })}
+                              iconOnly
+                              testId={`dns.servers.row.${row.id}.${version}.copy`}
+                            />
+                          </div>
+                        );
+                      })}
+                    </td>
                     <td className="py-2 pr-3"><Badge variant="neutral">{zoneTypeLabel((row as any).type, t)}</Badge></td>
                     <td className="py-2 pr-3">{typeof (row as any).serial === 'number' ? Number((row as any).serial) : t('common.na')}</td>
                     <td className="py-2 pr-3">{(row as any).loaded_at ? formatDateTime(String((row as any).loaded_at)) : t('common.na')}</td>
