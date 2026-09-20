@@ -23,6 +23,18 @@ export function formatDateTime(value: string | undefined | null): string {
   return d.toLocaleString();
 }
 
+export function formatDateTimeInTimeZone(
+  value: string | undefined | null,
+  timeZone: string
+): string {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleString(undefined, {
+    timeZone: isValidTimeZone(timeZone) ? timeZone : SAFE_TIME_ZONE,
+  });
+}
+
 export function formatDate(value: string | undefined | null): string {
   if (!value) return '—';
   const d = new Date(value);

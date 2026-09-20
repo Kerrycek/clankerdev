@@ -28,7 +28,7 @@ import { objectRef } from '../../../../lib/objectRef';
 import type { ObjectRef } from '../../../../lib/objectRef';
 
 import { formatErrorMessage } from '../../../../lib/errors';
-import { formatDate, formatDateInTimeZone } from '../../../../lib/format';
+import { formatDateInTimeZone, formatDateTimeInTimeZone } from '../../../../lib/format';
 import { cursorFromDescendingPage } from '../../../../lib/lockIndex';
 import { getPaidUntilStatus, paidUntilBadgeVariant, paidUntilStatusLabelKey } from '../../../../lib/paymentsBadges';
 import { formatMoneyLike, safeInt } from '../../../../lib/paymentsFormat';
@@ -696,7 +696,12 @@ export function AdminUserPaymentsPage() {
                     <tbody className="divide-y divide-border">
                       {visibleHistory.map((p) => (
                         <tr key={p.id} data-testid={`admin.user.payments.history.row.${p.id}`}>
-                          <td className="px-3 py-2 font-medium tabular-nums">{formatDate(p.created_at)}</td>
+                          <td
+                            className="px-3 py-2 font-medium tabular-nums"
+                            data-testid={`admin.user.payments.history.row.${p.id}.accepted_at`}
+                          >
+                            {formatDateTimeInTimeZone(p.created_at, accountTimeZone)}
+                          </td>
                           <td className="px-3 py-2 text-right tabular-nums">{formatMoneyLike(safeInt(p.amount))}</td>
                           <td className="px-3 py-2">
                             <span className="text-sm font-medium tabular-nums text-fg">
