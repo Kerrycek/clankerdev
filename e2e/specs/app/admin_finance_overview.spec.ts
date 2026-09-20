@@ -34,7 +34,7 @@ test('@pr-smoke @pr-smoke-mobile admin Finance overview uses a complete account 
   await page.goto('/admin/payments');
 
   await expect(page.getByTestId('nav.sidebar.finance')).toHaveAttribute('aria-current', 'page');
-  await expect(page.getByTestId('admin.finance.tabs').getByRole('link')).toHaveCount(3);
+  await expect(page.getByTestId('admin.finance.tabs').getByRole('link')).toHaveCount(4);
   await expect(page.getByTestId('admin.finance.overview.summary.monthly_payment')).toContainText(/2[\s,.]?500/);
   await expect(page.getByTestId('admin.finance.overview.summary.monthly_payment')).toContainText('CZK');
   await expect(page.getByTestId('admin.finance.overview.summary.paid')).toContainText('1');

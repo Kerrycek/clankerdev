@@ -121,18 +121,29 @@ export async function createUserPayment(opts: CreateUserPaymentInput) {
   });
 }
 
-export async function fetchUserPayments(opts?: { limit?: number; fromId?: number; userId?: number; accountedById?: number }) {
+export async function fetchUserPayments(opts?: {
+  limit?: number;
+  fromId?: number;
+  userId?: number;
+  accountedById?: number;
+  createdFrom?: string;
+  createdTo?: string;
+  includes?: string;
+}) {
   const params: Record<string, unknown> = {};
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
   if (opts?.userId !== undefined) params['user'] = opts.userId;
   if (opts?.accountedById !== undefined) params['accounted_by'] = opts.accountedById;
+  if (opts?.createdFrom) params['created_from'] = opts.createdFrom;
+  if (opts?.createdTo) params['created_to'] = opts.createdTo;
 
   const res = await haveApiCall<UserPayment[]>({
     method: 'GET',
     path: '/user_payments',
     namespace: 'user_payment',
     params,
+    meta: opts?.includes ? { includes: opts.includes } : undefined,
   });
 
   return { ...res, data: expectArray<UserPayment>(res.data, 'user_payments#index') };

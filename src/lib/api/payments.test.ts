@@ -64,10 +64,18 @@ describe('payments API wrappers', () => {
     expect(body).toEqual({ user_payment: { user: 7, incoming_payment: 15 } });
   });
 
-  test('fetchUserPayments forwards user and accounted_by filters', async () => {
+  test('fetchUserPayments forwards supported history filters and includes', async () => {
     globalThis.fetch = mockFetchOk({ user_payments: [], _meta: { total_count: 0 } }) as any;
 
-    await fetchUserPayments({ limit: 10, fromId: 55, userId: 7, accountedById: 2 });
+    await fetchUserPayments({
+      limit: 10,
+      fromId: 55,
+      userId: 7,
+      accountedById: 2,
+      createdFrom: '2026-09-01T00:00:00Z',
+      createdTo: '2026-09-30T23:59:59Z',
+      includes: 'user,accounted_by',
+    });
 
     const [url] = lastFetchCall();
     const u = new URL(url);
@@ -77,6 +85,9 @@ describe('payments API wrappers', () => {
     expect(u.searchParams.get('user_payment[from_id]')).toBe('55');
     expect(u.searchParams.get('user_payment[user]')).toBe('7');
     expect(u.searchParams.get('user_payment[accounted_by]')).toBe('2');
+    expect(u.searchParams.get('user_payment[created_from]')).toBe('2026-09-01T00:00:00Z');
+    expect(u.searchParams.get('user_payment[created_to]')).toBe('2026-09-30T23:59:59Z');
+    expect(u.searchParams.get('_meta[includes]')).toBe('user,accounted_by');
   });
 
   test('fetchPaymentInstructions uses user subresource path', async () => {
