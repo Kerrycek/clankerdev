@@ -186,6 +186,8 @@ export const enRequests = {
   'payments.incoming.list.open_id.placeholder': 'Payment #ID',
   'payments.incoming.list.filter.q.placeholder': 'Search (id, tx, vs, account, user...)',
   'payments.incoming.list.load_error.title': 'Unable to load incoming payments',
+  'payments.incoming.list.stale.title': 'Showing the last loaded incoming payments',
+  'payments.incoming.list.stale.body': 'The latest refresh failed. Rows and reconciliation totals may be out of date; retry before changing payment states.',
   'payments.incoming.list.empty': 'No incoming payments',
   'payments.incoming.list.col.amount': 'Amount',
   'payments.incoming.list.col.vs': 'VS',
