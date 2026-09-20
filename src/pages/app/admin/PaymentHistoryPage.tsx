@@ -205,11 +205,20 @@ export function PaymentHistoryPage() {
         </form>
       </Card>
 
+      {urlFiltersValid && !validationError && historyQ.isError && historyQ.data !== undefined ? (
+        <Alert
+          variant="warn"
+          title={t('finance.history.stale.title')}
+          description={t('finance.history.stale.body')}
+          testId="admin.finance.history.stale"
+        />
+      ) : null}
+
       {validationError || !urlFiltersValid ? (
         <Alert variant="danger" title={t('finance.history.filter.invalid')} testId="admin.finance.history.filter.error" />
       ) : historyQ.isLoading ? (
         <LoadingState testId="admin.finance.history.loading" />
-      ) : historyQ.isError ? (
+      ) : historyQ.isError && historyQ.data === undefined ? (
         <ErrorState
           title={t('finance.history.load_error')}
           error={historyQ.error}
