@@ -153,6 +153,8 @@ export const enAdmin_user = {
   "admin.user.payments.review.settings.monthly_payment.impact": "Updates the amount used to validate and extend future payments. Existing payment history is not changed.",
   "admin.user.payments.review.settings.no_changes": "Nothing will be saved until at least one value changes.",
   "admin.user.payments.review.settings.paid_until.impact": "Updates paid-until and the account expiration to the same date. It does not create a payment history row.",
+  "admin.user.payments.review.settings.stale.body": "The saved account value no longer matches this review. Close it and review the change again from the current data.",
+  "admin.user.payments.review.settings.stale.title": "Payment settings changed",
   "admin.user.payments.review.settings.subtitle": "Confirm what account metadata will change before saving.",
   "admin.user.payments.review.settings.title": "Review payment settings",
   "admin.user.payments.review.target": "Target account",

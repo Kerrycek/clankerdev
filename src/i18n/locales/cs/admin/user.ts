@@ -153,6 +153,8 @@ export const csAdmin_user = {
   "admin.user.payments.review.settings.monthly_payment.impact": "Aktualizuje částku používanou pro kontrolu a prodlužování budoucích plateb. Dosavadní historie plateb se nezmění.",
   "admin.user.payments.review.settings.no_changes": "Dokud se nezmění alespoň jedna hodnota, není co uložit.",
   "admin.user.payments.review.settings.paid_until.impact": "Nastaví datum „zaplaceno do“ i expiraci účtu na stejný den. Nevytvoří záznam v historii plateb.",
+  "admin.user.payments.review.settings.stale.body": "Uložená hodnota účtu už neodpovídá této rekapitulaci. Zavři ji a zkontroluj změnu znovu nad aktuálními daty.",
+  "admin.user.payments.review.settings.stale.title": "Nastavení plateb se změnilo",
   "admin.user.payments.review.settings.subtitle": "Před uložením potvrď, která metadata účtu se změní.",
   "admin.user.payments.review.settings.title": "Kontrola nastavení plateb",
   "admin.user.payments.review.target": "Cílový účet",

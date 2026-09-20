@@ -89,6 +89,7 @@ export function AdminUserPaymentsPage() {
     queryKey: ['user_accounts', userId],
     queryFn: async () => (await fetchUserAccount(userId)).data,
     staleTime: 30_000,
+    refetchOnWindowFocus: 'always',
   });
 
   const monthlyPayment = safeInt(accountQ.data?.monthly_payment ?? user.monthly_payment);
@@ -312,6 +313,11 @@ export function AdminUserPaymentsPage() {
   const paidUntilClears = settingsReview?.kind === 'paid_until'
     && Boolean(settingsReview.previous)
     && !settingsReview.next;
+  const settingsReviewStale = settingsReview !== null && (
+    settingsReview.kind === 'paid_until'
+      ? settingsReview.previous !== currentPaidUntilInput
+      : settingsReview.previous !== (monthlyPayment ?? null)
+  );
   const manualPaymentReviewStale = manualPaymentReview !== null
     && manualPaymentReview.monthlyPayment !== activeMonthlyPayment;
 
@@ -446,12 +452,13 @@ export function AdminUserPaymentsPage() {
         description={t('admin.user.payments.review.settings.subtitle')}
         confirmLabel={t('common.save')}
         confirmLoading={settingsMutationPending}
+        confirmDisabled={accountQ.isFetching || settingsReviewStale}
         cancelDisabled={settingsMutationPending}
         onCancel={() => {
           if (!settingsMutationPending) setSettingsReview(null);
         }}
         onConfirm={() => {
-          if (settingsReview === null || settingsInFlightRef.current) return;
+          if (settingsReview === null || settingsReviewStale || accountQ.isFetching || settingsInFlightRef.current) return;
           settingsInFlightRef.current = true;
           if (settingsReview.kind === 'paid_until') {
             paidUntilM.mutate(settingsReview.next || null);
@@ -463,6 +470,15 @@ export function AdminUserPaymentsPage() {
       >
         {settingsReview ? (
           <div className="space-y-3">
+            {settingsReviewStale ? (
+              <Alert
+                variant="warn"
+                title={t('admin.user.payments.review.settings.stale.title')}
+                testId="admin.user.payments.settings.review.stale"
+              >
+                {t('admin.user.payments.review.settings.stale.body')}
+              </Alert>
+            ) : null}
             {paidUntilMovesBackward ? (
               <Alert
                 variant="warn"
