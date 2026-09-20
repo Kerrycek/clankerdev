@@ -98,6 +98,7 @@ test('admin incoming payments: reconciliation summary links to all unmatched pay
   await bootstrapVpsAdminWindow(page);
   const haveApiMock = await installHaveApiMock(page, { user: { id: 1, login: 'admin', level: 100 } });
   const requestedStates: string[] = [];
+  const requestedStateCounts: Record<string, number> = {};
 
   const payments = [
     { id: 400, state: 'processed', user: null },
@@ -123,7 +124,10 @@ test('admin incoming payments: reconciliation summary links to all unmatched pay
 
   haveApiMock.addHandler('GET incoming_payments', ({ searchParams }) => {
     const state = String(searchParams.get('incoming_payment[state]') ?? '');
-    if (state) requestedStates.push(state);
+    if (state) {
+      requestedStates.push(state);
+      requestedStateCounts[state] = (requestedStateCounts[state] ?? 0) + 1;
+    }
 
     const stateTotals: Record<string, number> = {
       queued: 0,
@@ -149,11 +153,14 @@ test('admin incoming payments: reconciliation summary links to all unmatched pay
   await expect(page.getByTestId('admin.payments.incoming.reconciliation.metric.queued')).toContainText(/0/);
   await expect(page.getByTestId('admin.payments.incoming.reconciliation.processed_without_user')).toHaveCount(0);
   await expect(page.getByTestId('admin.payments.incoming.reconciliation.summary.open_unmatched')).toContainText(/Unmatched: 4/);
+  await expect.poll(() => ({ ...requestedStateCounts })).toEqual({ queued: 1, unmatched: 1, processed: 1, ignored: 1 });
 
   await page.getByTestId('admin.payments.incoming.reconciliation.summary.open_unmatched').click();
 
   await expect(page).toHaveURL(/state=unmatched/);
   await expect.poll(() => requestedStates).toContain('unmatched');
+  await expect.poll(() => ({ ...requestedStateCounts })).toEqual({ queued: 2, unmatched: 2, processed: 2, ignored: 2 });
+  await expect(page.getByTestId('admin.payments.incoming.reconciliation.metric.needs_review')).toContainText(/4/);
   await expect(page.locator('[data-testid="admin.payments.incoming.row.399.dot"]:visible')).toBeVisible();
   await expect(page.getByTestId('admin.payments.incoming.row.400')).toHaveCount(0);
 });

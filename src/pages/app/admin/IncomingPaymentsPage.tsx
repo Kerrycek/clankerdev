@@ -27,8 +27,11 @@ import { incomingPaymentStateFilterOptions } from './IncomingPaymentsModel';
 import { type IncomingPaymentBulkAction, type IncomingPaymentBulkReview } from './IncomingPaymentsBulkModel';
 import { AdminFinanceTabs } from './AdminFinanceTabs';
 
+const RECONCILIATION_STATES = ['queued', 'unmatched', 'processed', 'ignored'] as const;
+type ReconciliationState = typeof RECONCILIATION_STATES[number];
+
 async function fetchIncomingPaymentStateTotal(input: {
-  state: 'queued' | 'unmatched' | 'processed' | 'ignored';
+  state: ReconciliationState;
 }): Promise<number | undefined> {
   try {
     const res = await fetchIncomingPayments({
@@ -105,23 +108,36 @@ export function IncomingPaymentsPage() {
     refetchInterval: tierSlowMs,
   });
 
+  const activeReconciliationState = RECONCILIATION_STATES.find((candidate) => candidate === state);
   const reconciliationTotalsQ = useQuery({
-    queryKey: ['incoming_payments', 'reconciliation_totals'],
+    queryKey: ['incoming_payments', 'reconciliation_totals', { excluding: activeReconciliationState }],
     queryFn: async () => {
-      const [queued, unmatched, processed, ignored] = await Promise.all([
-        fetchIncomingPaymentStateTotal({ state: 'queued' }),
-        fetchIncomingPaymentStateTotal({ state: 'unmatched' }),
-        fetchIncomingPaymentStateTotal({ state: 'processed' }),
-        fetchIncomingPaymentStateTotal({ state: 'ignored' }),
-      ]);
+      const entries = await Promise.all(RECONCILIATION_STATES
+        .filter((candidate) => candidate !== activeReconciliationState)
+        .map(async (candidate) => [
+          candidate,
+          await fetchIncomingPaymentStateTotal({ state: candidate }),
+        ] as const));
 
-      return { queued, unmatched, processed, ignored };
+      return Object.fromEntries(entries) as Partial<Record<ReconciliationState, number | undefined>>;
     },
     refetchInterval: tierSlowMs,
   });
 
   const rows = paymentsQ.data?.data ?? [];
   const totalCount = getMetaTotalCount(paymentsQ.data?.meta);
+  const safeActiveStateTotal = typeof totalCount === 'number'
+    && Number.isSafeInteger(totalCount)
+    && totalCount >= 0
+    ? totalCount
+    : undefined;
+  const reconciliationTotals = useMemo(() => {
+    if (!activeReconciliationState) return reconciliationTotalsQ.data;
+    return {
+      ...reconciliationTotalsQ.data,
+      [activeReconciliationState]: safeActiveStateTotal,
+    };
+  }, [activeReconciliationState, reconciliationTotalsQ.data, safeActiveStateTotal]);
   const loadPaymentsPage = useCallback(async (fromId: number | undefined) => (
     await fetchIncomingPayments({
       limit: pagination.limit,
@@ -274,12 +290,11 @@ export function IncomingPaymentsPage() {
             rows={rows}
             activeState={state}
             onSetState={setStateFilter}
-            stateTotals={reconciliationTotalsQ.data}
+            stateTotals={reconciliationTotals}
             stateTotalsStatus={
               reconciliationTotalsQ.isLoading
                 ? 'loading'
-                : reconciliationTotalsQ.data
-                  && Object.values(reconciliationTotalsQ.data).every((total) => typeof total === 'number')
+                : RECONCILIATION_STATES.every((candidate) => typeof reconciliationTotals?.[candidate] === 'number')
                   ? 'complete'
                   : 'incomplete'
             }
