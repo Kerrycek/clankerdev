@@ -198,6 +198,28 @@ describe('BackupCenterPage', () => {
     expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', 'backups-tab-snapshots');
   });
 
+  it('distinguishes an empty account from an active dataset filter with no matches', async () => {
+    datasetsMock.mockResolvedValue({ data: [], meta: { total_count: 0 } } as never);
+    downloadsMock.mockResolvedValue({ data: [], meta: { total_count: 0 } } as never);
+
+    renderPage('/app/backups?tab=snapshots');
+
+    expect(await screen.findByText('backups.storage.empty.title')).toBeVisible();
+    expect(screen.getByText('backups.storage.empty.body')).toBeVisible();
+    expect(screen.queryByText('backups.snapshots.empty.title')).not.toBeInTheDocument();
+  });
+
+  it('keeps the no-match copy when a dataset filter is active', async () => {
+    datasetsMock.mockResolvedValue({ data: [], meta: { total_count: 0 } } as never);
+    downloadsMock.mockResolvedValue({ data: [], meta: { total_count: 0 } } as never);
+
+    renderPage('/app/backups?tab=plans&q=missing');
+
+    expect(await screen.findByText('backups.plans.empty.title')).toBeVisible();
+    expect(screen.getByText('backups.plans.empty.body')).toBeVisible();
+    expect(screen.queryByText('backups.storage.empty.title')).not.toBeInTheDocument();
+  });
+
   it('loads the download view with one backend-authorized global request', async () => {
     renderPage('/app/backups?tab=downloads');
 

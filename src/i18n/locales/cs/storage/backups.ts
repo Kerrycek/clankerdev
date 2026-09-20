@@ -17,6 +17,8 @@ export const csBackups = {
   'backups.kind.nas': 'NAS',
   'backups.vps': 'VPS',
   'backups.scope_limited': 'Načten je omezený rychlý přehled ({datasets} datasetů, {downloads} downloadů). Filtr prohledává jen tento výběr; úplná data najdeš v detailu datasetu.',
+  'backups.storage.empty.title': 'V účtu zatím není žádné úložiště',
+  'backups.storage.empty.body': 'Po vytvoření se tady zobrazí disky VPS a NAS úložiště.',
   'backups.stats.datasets': 'Úložiště v účtu',
   'backups.stats.datasets.help': 'Disky VPS a NAS úložiště',
   'backups.stats.downloads': 'Vygenerované downloady',
