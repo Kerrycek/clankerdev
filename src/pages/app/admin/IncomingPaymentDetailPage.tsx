@@ -32,6 +32,7 @@ import { dotVariantFromBadgeVariant } from '../../../lib/variantMap';
 import { ListShell } from '../../../components/layout/ListShell';
 import { PageHeader } from '../../../components/layout/PageHeader';
 
+import { Alert } from '../../../components/ui/Alert';
 import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
@@ -132,6 +133,7 @@ export function IncomingPaymentDetailPage() {
       if (!paymentId) throw new Error('invalid payment');
       return (await fetchIncomingPayment(paymentId, { includes: 'user' })).data;
     },
+    refetchOnWindowFocus: 'always',
   });
 
   const payment = q.data as IncomingPayment | undefined;
@@ -145,10 +147,11 @@ export function IncomingPaymentDetailPage() {
   });
   const dotVar = dotVariantFromBadgeVariant(primaryVar);
 
-  const [stateEdit, setStateEdit] = useState('');
+  const [stateEdit, setStateEdit] = useState<{ nextState: string; originalState: string } | null>(null);
   const [stateSaving, setStateSaving] = useState(false);
   const stateMutationInFlightRef = useRef(false);
-  const effectiveStateEdit = stateEdit || st;
+  const effectiveStateEdit = stateEdit?.nextState || st;
+  const stateReviewStale = Boolean(stateEdit && stateEdit.originalState !== st);
 
   const [assignUserId, setAssignUserId] = useState('');
   const [assigning, setAssigning] = useState(false);
@@ -181,7 +184,7 @@ export function IncomingPaymentDetailPage() {
   });
 
   async function saveState() {
-    if (!paymentId || !stateReview.canSubmit || stateMutationInFlightRef.current) return;
+    if (!paymentId || !stateReview.canSubmit || stateReviewStale || stateMutationInFlightRef.current) return;
 
     const next = String(stateReview.nextState).trim();
     if (!next) return;
@@ -198,7 +201,7 @@ export function IncomingPaymentDetailPage() {
         body: t('payments.incoming.detail.toast.state_updated.message'),
       });
 
-      setStateEdit('');
+      setStateEdit(null);
       await q.refetch();
       void qc.invalidateQueries({ queryKey: ['incoming_payments', 'index'] });
       void qc.invalidateQueries({ queryKey: ['incoming_payments', 'reconciliation_totals'] });
@@ -242,7 +245,7 @@ export function IncomingPaymentDetailPage() {
       });
 
       setAssignUserId('');
-      setStateEdit('');
+      setStateEdit(null);
 
       await q.refetch();
       void qc.invalidateQueries({ queryKey: ['incoming_payments', 'index'] });
@@ -453,7 +456,10 @@ export function IncomingPaymentDetailPage() {
                   <div className="text-xs text-muted">{t('payments.incoming.detail.change_state')}</div>
                   <Select
                     value={effectiveStateEdit}
-                    onChange={(e) => setStateEdit(e.target.value)}
+                    onChange={(e) => {
+                      const nextState = e.target.value;
+                      setStateEdit(nextState === st ? null : { nextState, originalState: st });
+                    }}
                     testId="admin.payments.incoming.state.select"
                   >
                     {incomingPaymentStateOptions().map((s) => (
@@ -463,6 +469,16 @@ export function IncomingPaymentDetailPage() {
                     ))}
                   </Select>
                 </div>
+
+                {stateReviewStale ? (
+                  <Alert
+                    variant="warn"
+                    title={t('payments.incoming.review.state.stale.title')}
+                    testId="admin.payments.incoming.state.review.stale"
+                  >
+                    {t('payments.incoming.review.state.stale.body')}
+                  </Alert>
+                ) : null}
 
                 {stateReview.warningKey ? (
                   <div className="rounded-md border border-warn-border bg-warn-bg px-3 py-2 text-sm text-warn">
@@ -489,7 +505,7 @@ export function IncomingPaymentDetailPage() {
                     variant="secondary"
                     onClick={saveState}
                     loading={stateSaving}
-                    disabled={!stateReview.canSubmit || stateSaving}
+                    disabled={!stateReview.canSubmit || stateReviewStale || stateSaving}
                     testId="admin.payments.incoming.state.save"
                   >
                     {t('common.save')}
