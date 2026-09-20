@@ -47,6 +47,7 @@ export const enFinance = {
   'finance.history.filter.accounted_by': 'Accounted by (admin ID)',
   'finance.history.filter.created_from': 'Accepted from',
   'finance.history.filter.created_to': 'Accepted to',
+  'finance.history.filter.time_zone': 'Date boundaries use the account time zone: {timeZone}.',
   'finance.history.filter.invalid': 'Use positive numeric IDs and a valid date range whose end is not before its start.',
   'finance.history.col.accepted_at': 'Accepted at',
   'finance.history.col.accounted_by': 'Accounted by',

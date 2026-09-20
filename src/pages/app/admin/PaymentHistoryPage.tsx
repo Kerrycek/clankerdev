@@ -76,8 +76,12 @@ export function PaymentHistoryPage() {
 
   const userId = userRaw ? parsePaymentHistoryId(userRaw) : undefined;
   const accountedById = accountedByRaw ? parsePaymentHistoryId(accountedByRaw) : undefined;
-  const createdFrom = createdFromRaw ? paymentHistoryDateBoundary(createdFromRaw) : undefined;
-  const createdTo = createdToRaw ? paymentHistoryDateBoundary(createdToRaw, true) : undefined;
+  const createdFrom = createdFromRaw
+    ? paymentHistoryDateBoundary(createdFromRaw, false, accountTimeZone)
+    : undefined;
+  const createdTo = createdToRaw
+    ? paymentHistoryDateBoundary(createdToRaw, true, accountTimeZone)
+    : undefined;
   const urlFiltersValid = (
     (!userRaw || userId !== undefined)
     && (!accountedByRaw || accountedById !== undefined)
@@ -135,8 +139,8 @@ export function PaymentHistoryPage() {
     const valid = (
       (!normalizedUser || parsePaymentHistoryId(normalizedUser) !== undefined)
       && (!normalizedAccountedBy || parsePaymentHistoryId(normalizedAccountedBy) !== undefined)
-      && (!normalizedFrom || paymentHistoryDateBoundary(normalizedFrom) !== undefined)
-      && (!normalizedTo || paymentHistoryDateBoundary(normalizedTo, true) !== undefined)
+      && (!normalizedFrom || paymentHistoryDateBoundary(normalizedFrom, false, accountTimeZone) !== undefined)
+      && (!normalizedTo || paymentHistoryDateBoundary(normalizedTo, true, accountTimeZone) !== undefined)
       && (!normalizedFrom || !normalizedTo || normalizedFrom <= normalizedTo)
     );
     setValidationError(!valid);
@@ -243,6 +247,9 @@ export function PaymentHistoryPage() {
               {t('common.clear')}
             </Button>
           </FilterBar>
+          <div className="mt-2 text-xs text-muted" data-testid="admin.finance.history.filter.time_zone">
+            {t('finance.history.filter.time_zone', { timeZone: accountTimeZone })}
+          </div>
         </form>
       </Card>
 

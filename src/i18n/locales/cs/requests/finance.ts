@@ -47,6 +47,7 @@ export const csFinance = {
   'finance.history.filter.accounted_by': 'Zaúčtoval (ID správce)',
   'finance.history.filter.created_from': 'Zaúčtováno od',
   'finance.history.filter.created_to': 'Zaúčtováno do',
+  'finance.history.filter.time_zone': 'Hranice dat používají časové pásmo účtu: {timeZone}.',
   'finance.history.filter.invalid': 'Použij kladná číselná ID a platný rozsah dat, ve kterém konec není před začátkem.',
   'finance.history.col.accepted_at': 'Zaúčtováno',
   'finance.history.col.accounted_by': 'Zaúčtoval',
