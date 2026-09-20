@@ -17,6 +17,7 @@
     "audit:mutations:check": "node scripts/audit-mutations.mjs --fail-on-warn",
     "audit:i18n": "node scripts/audit-i18n.mjs --fail",
     "audit:csp": "node scripts/audit-csp.mjs",
+    "audit:dev-tls": "node scripts/audit-dev-tls.mjs",
     "lint:tailwind": "node scripts/lint-tailwind-tokens.mjs",
     "lint:patterns": "node scripts/lint-banned-patterns.mjs",
     "lint": "npm run lint:tailwind && npm run lint:patterns",

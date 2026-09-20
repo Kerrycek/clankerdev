@@ -187,9 +187,11 @@ The BFF code is served from the active immutable release:
 /srv/clankerdev-release/current/bff
 ```
 
-`dev.crucio.cz` currently uses the local Debian snakeoil certificate because
-the hostname resolves to a private address. Replace it with a trusted internal
-or DNS-validated certificate when one is available.
+`dev.crucio.cz` currently uses the local Debian snakeoil certificate. Its SAN
+covers the machine hostname, not `dev.crucio.cz`, so strict TLS clients reject
+it. Run the read-only `npm run audit:dev-tls` preflight and follow
+[`tls-certificate.md`](tls-certificate.md) for the observed certificate facts,
+the certificate/private-key operations boundary and the safe rollout checks.
 
 The test API on `admin.crucio.cz` also needs the patch in
 `../admin.crucio.cz/vpsadmin-api-user-session-label.patch`. Without it, OAuth
