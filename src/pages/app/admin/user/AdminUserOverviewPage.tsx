@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { useAuth } from '../../../../app/auth';
 import { useI18n } from '../../../../app/i18n';
 import { useAccountTimeZone } from '../../../../app/accountTimeZone';
 import { useToasts } from '../../../../app/toasts';
@@ -37,8 +38,10 @@ import {
   type EditUserDraft,
   type StateDraft,
 } from './AdminUserOverviewModel';
+import { canViewGlobalFinance } from '../FinanceGlobalAdminGate';
 
 export function AdminUserOverviewPage() {
+  const auth = useAuth();
   const { t } = useI18n();
   const accountTimeZone = useAccountTimeZone();
   const toasts = useToasts();
@@ -54,10 +57,12 @@ export function AdminUserOverviewPage() {
   const paidUntil = typeof u.paid_until === 'string' && u.paid_until.trim() ? u.paid_until : null;
   const paidUntilStatus = getPaidUntilStatus(paidUntil);
   const stateBadge = objectStateBadge(u.object_state ?? 'active', t);
+  const canViewFinance = canViewGlobalFinance(auth.role);
 
   const paymentHistoryQ = useQuery({
     queryKey: ['user_payments', 'overview', { userId: u.id, limit: 5 }],
     queryFn: async () => (await fetchUserPayments({ userId: u.id, limit: 5 })).data,
+    enabled: canViewFinance,
     staleTime: 30_000,
   });
 
@@ -245,7 +250,7 @@ export function AdminUserOverviewPage() {
         </CardBody>
       </Card>
 
-      <Card testId="admin.user.payments.overview.card">
+      {canViewFinance ? <Card testId="admin.user.payments.overview.card">
         <CardHeader
           title={t('admin.user.overview.payments.title')}
           subtitle={t('admin.user.overview.payments.subtitle')}
@@ -313,7 +318,7 @@ export function AdminUserOverviewPage() {
             </div>
           </div>
         </CardBody>
-      </Card>
+      </Card> : null}
 
       <Card testId="admin.user.account_actions.card" className="lg:col-span-2">
         <CardHeader title={t('admin.user.account_actions.title')} subtitle={t('admin.user.account_actions.subtitle')} />
