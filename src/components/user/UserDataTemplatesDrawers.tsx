@@ -41,6 +41,18 @@ export function UserDataTemplateEditorDrawer(props: {
 }) {
   const { t } = useI18n();
   const contentLen = props.form.content.length;
+  const fieldIdPrefix = React.useId();
+  const labelInputId = `${fieldIdPrefix}-label`;
+  const labelHelpId = `${fieldIdPrefix}-label-help`;
+  const formatSelectId = `${fieldIdPrefix}-format`;
+  const formatHelpId = `${fieldIdPrefix}-format-help`;
+  const contentTextareaId = `${fieldIdPrefix}-content`;
+  const contentCountId = `${fieldIdPrefix}-content-count`;
+  const contentLimitStatusId = `${fieldIdPrefix}-content-limit-status`;
+  const contentDescriptionIds = [
+    contentCountId,
+    ...(props.contentOverLimit ? [contentLimitStatusId] : []),
+  ].join(' ');
 
   return (
     <Drawer
@@ -55,45 +67,67 @@ export function UserDataTemplateEditorDrawer(props: {
 
         <div className="grid gap-3 md:grid-cols-2">
           <div>
-            <div className="text-xs font-semibold text-muted">{t('user_data.fields.label')}</div>
+            <label htmlFor={labelInputId} className="text-xs font-semibold text-muted">
+              {t('user_data.fields.label')}
+            </label>
             <div className="mt-1">
               <Input
+                inputId={labelInputId}
                 value={props.form.label}
                 onChange={(e) => props.setForm((prev) => ({ ...prev, label: e.target.value }))}
                 placeholder={t('user_data.placeholders.label')}
                 autoComplete="off"
+                ariaDescribedBy={labelHelpId}
                 testId={`${props.prefix}.editor.label`}
+                className="min-h-11 sm:min-h-9"
               />
             </div>
-            <div className="mt-1 text-xs text-faint">{t('user_data.help.label')}</div>
+            <div id={labelHelpId} className="mt-1 text-xs text-faint">
+              {t('user_data.help.label')}
+            </div>
           </div>
 
           <div>
-            <div className="text-xs font-semibold text-muted">{t('user_data.fields.format')}</div>
+            <label htmlFor={formatSelectId} className="text-xs font-semibold text-muted">
+              {t('user_data.fields.format')}
+            </label>
             <div className="mt-1">
               <Select
+                selectId={formatSelectId}
                 value={props.form.format}
                 onChange={(e) => props.setForm((prev) => ({ ...prev, format: e.target.value }))}
                 options={props.formatOptions.slice(1)}
+                ariaDescribedBy={formatHelpId}
                 testId={`${props.prefix}.editor.format`}
+                className="min-h-11 sm:min-h-9"
               />
             </div>
-            <div className="mt-1 text-xs text-faint">{t('user_data.help.format')}</div>
+            <div id={formatHelpId} className="mt-1 text-xs text-faint">
+              {t('user_data.help.format')}
+            </div>
           </div>
         </div>
 
         <div>
           <div className="flex items-end justify-between gap-3">
-            <div className="text-xs font-semibold text-muted">{t('user_data.fields.content')}</div>
-            <div className={`text-xs ${props.contentOverLimit ? 'text-danger' : 'text-faint'}`}>
+            <label htmlFor={contentTextareaId} className="text-xs font-semibold text-muted">
+              {t('user_data.fields.content')}
+            </label>
+            <div
+              id={contentCountId}
+              className={`text-xs ${props.contentOverLimit ? 'text-danger' : 'text-faint'}`}
+            >
               {t('user_data.help.content_len', { n: contentLen, max: MAX_USER_DATA_CONTENT_LEN })}
             </div>
           </div>
           <div className="mt-1">
             <Textarea
+              textareaId={contentTextareaId}
               value={props.form.content}
               onChange={(e) => props.setForm((prev) => ({ ...prev, content: e.target.value }))}
               placeholder={t('user_data.placeholders.content')}
+              ariaInvalid={props.contentOverLimit || undefined}
+              ariaDescribedBy={contentDescriptionIds}
               testId={`${props.prefix}.editor.content`}
               className="min-h-56 font-mono text-xs"
             />
@@ -103,17 +137,37 @@ export function UserDataTemplateEditorDrawer(props: {
         <div>
           <div className="text-xs font-semibold text-muted">{t('user_data.validation.title')}</div>
           <div className="mt-2 space-y-1">
-            {props.validationHints.map((hint, idx) => (
-              <div key={`${hint.labelKey}-${idx}`} className="flex items-center gap-2 text-sm">
-                <StatusDot variant={hint.ok ? 'ok' : 'warn'} />
-                <span className={hint.ok ? 'text-fg' : 'text-muted'}>{t(hint.labelKey, hint.vars)}</span>
-              </div>
-            ))}
+            {props.validationHints.map((hint, idx) => {
+              const isContentLimitHint = hint.labelKey === 'user_data.validation.content_max';
+
+              return (
+                <div
+                  key={`${hint.labelKey}-${idx}`}
+                  id={isContentLimitHint ? contentLimitStatusId : undefined}
+                  role={isContentLimitHint ? 'status' : undefined}
+                  aria-atomic={isContentLimitHint ? 'true' : undefined}
+                  className="flex items-center gap-2 text-sm"
+                >
+                  <StatusDot variant={hint.ok ? 'ok' : 'warn'} />
+                  <span className={hint.ok ? 'text-fg' : 'text-muted'}>
+                    {isContentLimitHint && props.contentOverLimit ? (
+                      <span className="sr-only">{t('common.error')}: </span>
+                    ) : null}
+                    {t(hint.labelKey, hint.vars)}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
         <div className="flex items-center justify-end gap-2 pt-2">
-          <Button variant="secondary" onClick={props.onClose} disabled={props.busy}>
+          <Button
+            variant="secondary"
+            onClick={props.onClose}
+            disabled={props.busy}
+            className="min-h-11 sm:min-h-9"
+          >
             {t('common.cancel')}
           </Button>
 
@@ -123,6 +177,7 @@ export function UserDataTemplateEditorDrawer(props: {
               onClick={props.onUpdate}
               loading={props.updatePending}
               disabled={!props.canSave}
+              className="min-h-11 sm:min-h-9"
               testId={`${props.prefix}.editor.save`}
             >
               {t('common.save')}
@@ -133,6 +188,7 @@ export function UserDataTemplateEditorDrawer(props: {
               onClick={props.onCreate}
               loading={props.createPending}
               disabled={!props.canSave}
+              className="min-h-11 sm:min-h-9"
               testId={`${props.prefix}.editor.create`}
             >
               {t('common.create')}
