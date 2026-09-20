@@ -185,6 +185,7 @@ export function AdminUserPaymentsPage() {
     : null;
   const currentPaidUntilInput = isoToDateInput(paidUntil);
   const paidUntilChanged = quickPaidUntil !== currentPaidUntilInput;
+  const monthlyPaymentInvalid = quickMonthlyPayment.trim() !== '' && monthlyPaymentParsed === null;
   const monthlyPaymentChanged = monthlyPaymentParsed !== null && monthlyPaymentParsed !== monthlyPayment;
 
   const paidUntilM = useMutation({
@@ -406,9 +407,16 @@ export function AdminUserPaymentsPage() {
                     min={0}
                     value={quickMonthlyPayment}
                     onChange={(e) => setQuickMonthlyPayment(e.target.value)}
+                    ariaInvalid={monthlyPaymentInvalid}
                     disabled={accountReviewBlocked || settingsMutationPending}
                   />
-                  <div className="text-xs text-muted">{t('admin.user.payments.settings.hint.monthly_payment')}</div>
+                  {monthlyPaymentInvalid ? (
+                    <div className="text-xs text-danger" role="alert" data-testid="admin.user.payments.settings.monthly.validation">
+                      {t('admin.user.payments.settings.validation.monthly_payment')}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted">{t('admin.user.payments.settings.hint.monthly_payment')}</div>
+                  )}
                   <Button
                     type="submit"
                     variant="secondary"

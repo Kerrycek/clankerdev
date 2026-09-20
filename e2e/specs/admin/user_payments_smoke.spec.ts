@@ -224,7 +224,14 @@ test.describe('@smoke Admin user payments', () => {
     const monthlyInput = page.getByTestId('admin.user.payments.settings.monthly_payment');
     await expect(monthlyInput).toHaveValue('100');
 
+    await monthlyInput.fill('-1');
+    await expect(monthlyInput).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.getByTestId('admin.user.payments.settings.monthly.validation')).toContainText(/0 or more|0 nebo vyšší/i);
+    await expect(page.getByTestId('admin.user.payments.settings.monthly.save')).toBeDisabled();
+    expect(settingsUpdates).toHaveLength(0);
+
     await monthlyInput.fill('0');
+    await expect(monthlyInput).not.toHaveAttribute('aria-invalid', 'true');
     await page.getByTestId('admin.user.payments.settings.monthly.save').click();
     await expect(page.getByTestId('admin.user.payments.settings.review.change')).toContainText(/100.*0/);
     await expect(page.getByTestId('admin.user.payments.settings.review.monthly_payment_zero')).toContainText(/disabled|vypnut/i);
