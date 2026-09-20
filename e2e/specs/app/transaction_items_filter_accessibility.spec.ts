@@ -35,7 +35,7 @@ test('@pr-smoke @pr-smoke-mobile advanced item filters expose labels, keyboard o
 
   await page.goto('/app/transactions/items?node=5');
   await expect(page.getByTestId('transactions.items.empty')).toBeVisible();
-  await expectHeight(page.getByTestId('transactions.items.smart_filter.input'), mobile ? 44 : 36);
+  await expectHeight(page.getByTestId('transactions.items.smart_filter.input'), 44);
 
   const topActions = [
     page.getByTestId('transactions.items.smart_filter.help'),
