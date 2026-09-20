@@ -1,4 +1,4 @@
-import React, { type MutableRefObject } from 'react';
+import React, { type MutableRefObject, useId } from 'react';
 import { CircleHelp, SlidersHorizontal } from 'lucide-react';
 
 import { FilterBar } from '../../../components/layout/FilterBar';
@@ -70,6 +70,12 @@ export function TransactionItemsFilters({
   success,
   setSuccessValue,
 }: TransactionItemsFiltersProps) {
+  const chainInputId = useId();
+  const nodeInputId = useId();
+  const typeInputId = useId();
+  const doneSelectId = useId();
+  const successSelectId = useId();
+
   return (
     <>
       <FilterBar testId="transactions.items.list.filters">
@@ -82,12 +88,13 @@ export function TransactionItemsFilters({
             placeholder={t('transactions.items.search.placeholder')}
             ariaLabel={t('transactions.items.search.placeholder')}
             testId="transactions.items.smart_filter.input"
+            className="[&_input]:h-11 sm:[&_input]:h-9"
             suggestions={smartSuggestions}
             suffix={
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 px-0"
+                className="h-11 w-11 px-0 sm:h-8 sm:w-8"
                 onClick={onHelpOpen}
                 ariaLabel={t('filters.help.open')}
                 title={t('filters.help.open')}
@@ -108,6 +115,7 @@ export function TransactionItemsFilters({
         <Button
           variant="secondary"
           size="sm"
+          className="h-11 min-w-11 sm:h-8 sm:min-w-0"
           onClick={onAdvancedOpen}
           aria-label={t('filters.advanced.open')}
           title={t('filters.advanced.open')}
@@ -117,10 +125,21 @@ export function TransactionItemsFilters({
           <span className="ml-2 hidden sm:inline">{t('filters.advanced.label')}</span>
         </Button>
 
-        <CopyButton text={typeof window !== 'undefined' ? window.location.href : ''} label={t('common.copy_link')} testId="transactions.items.copy_link" />
+        <CopyButton
+          text={typeof window !== 'undefined' ? window.location.href : ''}
+          label={t('common.copy_link')}
+          className="h-11 sm:h-8"
+          testId="transactions.items.copy_link"
+        />
 
         {filtersActive || smartErrorsCount > 0 ? (
-          <Button variant="secondary" size="sm" onClick={clearFilters} testId="transactions.items.clear_filters">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="h-11 sm:h-8"
+            onClick={clearFilters}
+            testId="transactions.items.clear_filters"
+          >
             {t('common.clear_filters')}
           </Button>
         ) : null}
@@ -183,11 +202,23 @@ export function TransactionItemsFilters({
         footer={
           <div className="flex items-center justify-end gap-2">
             {filtersActive ? (
-              <Button variant="secondary" size="sm" onClick={clearFilters}>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-11 sm:h-8"
+                onClick={clearFilters}
+                testId="transactions.items.advanced.clear"
+              >
                 {t('common.clear_filters')}
               </Button>
             ) : null}
-            <Button variant="primary" size="sm" onClick={onAdvancedClose}>
+            <Button
+              variant="primary"
+              size="sm"
+              className="h-11 sm:h-8"
+              onClick={onAdvancedClose}
+              testId="transactions.items.advanced.footer_done"
+            >
               {t('common.done')}
             </Button>
           </div>
@@ -196,30 +227,68 @@ export function TransactionItemsFilters({
         <div className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <div className="text-sm font-medium">{t('transactions.items.advanced.chain.label')}</div>
+              <label className="block text-sm font-medium" htmlFor={chainInputId}>
+                {t('transactions.items.advanced.chain.label')}
+              </label>
               <div className="mt-1">
-                <Input value={chainIdText} onChange={(e) => setChainIdText(e.target.value)} placeholder="123" testId="transactions.items.advanced.chain" />
+                <Input
+                  inputId={chainInputId}
+                  inputMode="numeric"
+                  value={chainIdText}
+                  onChange={(e) => setChainIdText(e.target.value)}
+                  placeholder="123"
+                  className="h-11 sm:h-9"
+                  testId="transactions.items.advanced.chain"
+                />
               </div>
             </div>
             <div>
-              <div className="text-sm font-medium">{t('transactions.items.advanced.node.label')}</div>
+              <label className="block text-sm font-medium" htmlFor={nodeInputId}>
+                {t('transactions.items.advanced.node.label')}
+              </label>
               <div className="mt-1">
-                <Input value={nodeIdText} onChange={(e) => setNodeIdText(e.target.value)} placeholder="5" testId="transactions.items.advanced.node" />
+                <Input
+                  inputId={nodeInputId}
+                  inputMode="numeric"
+                  value={nodeIdText}
+                  onChange={(e) => setNodeIdText(e.target.value)}
+                  placeholder="5"
+                  className="h-11 sm:h-9"
+                  testId="transactions.items.advanced.node"
+                />
               </div>
             </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <div className="text-sm font-medium">{t('transactions.items.advanced.type.label')}</div>
+              <label className="block text-sm font-medium" htmlFor={typeInputId}>
+                {t('transactions.items.advanced.type.label')}
+              </label>
               <div className="mt-1">
-                <Input value={typeText} onChange={(e) => setTypeText(e.target.value)} placeholder="2" testId="transactions.items.advanced.type" />
+                <Input
+                  inputId={typeInputId}
+                  inputMode="numeric"
+                  value={typeText}
+                  onChange={(e) => setTypeText(e.target.value)}
+                  placeholder="2"
+                  className="h-11 sm:h-9"
+                  testId="transactions.items.advanced.type"
+                />
               </div>
             </div>
             <div>
-              <div className="text-sm font-medium">{t('transactions.items.advanced.done.label')}</div>
+              <label className="block text-sm font-medium" htmlFor={doneSelectId}>
+                {t('transactions.items.advanced.done.label')}
+              </label>
               <div className="mt-1">
-                <Select value={done} onChange={(e) => setDoneValue(e.target.value as DoneValue | '')} testId="transactions.items.advanced.done">
+                <Select
+                  selectId={doneSelectId}
+                  value={done}
+                  onChange={(e) => setDoneValue(e.target.value as DoneValue | '')}
+                  className="h-11 sm:h-9"
+                  testId="transactions.items.advanced.done"
+                >
                   <option value="">{t('common.all')}</option>
                   <option value="waiting">{t('task_state.waiting')}</option>
                   <option value="staged">{t('task_state.staged')}</option>
@@ -231,11 +300,15 @@ export function TransactionItemsFilters({
 
           <div className="grid gap-4 md:grid-cols-2">
             <div>
-              <div className="text-sm font-medium">{t('transactions.items.advanced.success.label')}</div>
+              <label className="block text-sm font-medium" htmlFor={successSelectId}>
+                {t('transactions.items.advanced.success.label')}
+              </label>
               <div className="mt-1">
                 <Select
+                  selectId={successSelectId}
                   value={success === '' ? '' : String(success)}
                   onChange={(e) => setSuccessValue(e.target.value === '' ? '' : e.target.value === '1' ? 1 : 0)}
+                  className="h-11 sm:h-9"
                   testId="transactions.items.advanced.success"
                 >
                   <option value="">{t('common.all')}</option>
