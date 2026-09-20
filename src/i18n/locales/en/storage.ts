@@ -7,11 +7,11 @@ export const enStorage = {
   "datasets.list.title": "Datasets",
   "datasets.list.description":
     "Browse storage datasets, snapshots and downloads.",
-  "datasets.list.search.placeholder": "Search datasets (name, VPS, user, #id)…",
+  "datasets.list.search.placeholder": "Filter this page (name, VPS, user, #id)…",
   "vps_datasets.list.title": "VPS disks",
   "vps_datasets.list.description":
     "Browse disks attached to VPS instances, their snapshots and downloads.",
-  "vps_datasets.list.search.placeholder": "Search VPS disks (name, VPS, #id)…",
+  "vps_datasets.list.search.placeholder": "Filter this page (name, VPS, #id)…",
   "vps_datasets.list.load_error.title": "Failed to load VPS disks",
   "vps_datasets.list.empty.title": "No VPS disks found",
   "vps_datasets.list.empty.body":
@@ -19,7 +19,7 @@ export const enStorage = {
   "nas.list.title": "NAS",
   "nas.list.description":
     "Browse primary-pool user datasets without VPS-specific filters.",
-  "nas.list.search.placeholder": "Search NAS datasets (name, user, #id)…",
+  "nas.list.search.placeholder": "Filter this NAS page (name, user, #id)…",
   "nas.list.load_error.title": "Failed to load NAS datasets",
   "nas.list.empty.title": "No NAS datasets found",
   "nas.list.empty.body":
@@ -28,22 +28,22 @@ export const enStorage = {
   "datasets.smart.suggest.open_dataset.secondary": "Go to the dataset detail",
   "datasets.smart.suggest.vps_id": "Filter by VPS ID",
   "datasets.smart.suggest.user_id": "Filter by user ID",
-  "datasets.smart.suggest.search": "Search: “{q}”",
-  "datasets.smart.suggest.search.secondary": "Full-text search",
+  "datasets.smart.suggest.search": "Filter this page: “{q}”",
+  "datasets.smart.suggest.search.secondary": "Local filter for the currently loaded API page",
   "datasets.smart_help.title": "Dataset filters",
   "datasets.smart_help.intro":
     "Use key:value filters or plain text. Press Enter to apply the best suggestion.",
   "datasets.smart_help.items.help": "Show this help",
   "datasets.smart_help.items.open": "Open dataset #123",
   "datasets.smart_help.items.q":
-    "Search by dataset name/full name, VPS hostname, or user",
+    "Filter the current API page by dataset name/full name, VPS hostname, or user",
   "datasets.smart_help.items.user": "Filter by owner user (admin only)",
   "datasets.smart_help.items.vps": "Filter by VPS ID",
-  "datasets.smart_help.items.free": "Plain text is treated as a search query",
+  "datasets.smart_help.items.free": "Plain text filters only the currently loaded API page",
   "datasets.smart_help.footnote":
     'Tip: wrap values with spaces in quotes, e.g. q:"foo bar".',
-  "datasets.advanced.q.label": "Search",
-  "datasets.advanced.q.placeholder": "Search by dataset, VPS hostname, or user",
+  "datasets.advanced.q.label": "Filter current page",
+  "datasets.advanced.q.placeholder": "Filter this page by dataset, VPS hostname, or user",
   "datasets.advanced.user.label": "Owner",
   "datasets.advanced.user.placeholder": "Select a user…",
   "datasets.advanced.vps.label": "VPS",
@@ -52,6 +52,12 @@ export const enStorage = {
     "Filters are stored in the URL so you can bookmark/share them.",
   "datasets.list.load_error.title": "Failed to load datasets",
   "datasets.list.empty": "No datasets found.",
+  "datasets.search.page_limited.title": "Search is limited to this page",
+  "datasets.search.page_limited.body":
+    "The API has no dataset full-text filter. This text filter checks only the currently loaded page; use the pagination controls to check later pages.",
+  "datasets.search.no_matches_page.title": "No matches on this page",
+  "datasets.search.no_matches_page.body":
+    "The requested text is not present on the currently loaded page. Clear the filter or continue to another page.",
   "datasets.usage.aria_label": "Dataset space usage",
   "datasets.usage.no_data": "No data",
   "datasets.usage.used_mib": "{mib} MiB used",

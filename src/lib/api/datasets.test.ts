@@ -41,7 +41,7 @@ afterEach(() => {
 });
 
 describe('datasets API wrappers', () => {
-  test('fetchDatasets uses dataset namespace and preserves params', async () => {
+  test('fetchDatasets uses only declared Dataset#index params', async () => {
     setMockRuntime();
     const fetchMock = mockFetchOk({
       datasets: [{ id: 1, name: 'tank/user' }],
@@ -49,13 +49,24 @@ describe('datasets API wrappers', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    await fetchDatasets({ limit: 42, includes: 'vps', count: true, role: 'hypervisor' });
+    if (false) {
+      // @ts-expect-error Dataset#index has no q filter in the API contract.
+      void fetchDatasets({ q: 'legacy-search' });
+    }
+    await fetchDatasets({
+      limit: 42,
+      includes: 'vps',
+      count: true,
+      role: 'hypervisor',
+      q: 'legacy-search',
+    } as never);
 
     const [url] = firstFetchCall(fetchMock);
     const u = new URL(String(url));
 
     expect(u.pathname).toBe('/v7.0/datasets');
     expect(u.searchParams.get('dataset[limit]')).toBe('42');
+    expect(u.searchParams.has('dataset[q]')).toBe(false);
     expect(u.searchParams.get('dataset[role]')).toBe('hypervisor');
     expect(u.searchParams.get('_meta[includes]')).toBe('vps');
     expect(u.searchParams.get('_meta[count]')).toBe('true');
