@@ -41,4 +41,8 @@ export const csCommon_filters = {
   'filters.search': 'Hledat',
   'filters.help.examples.help': 'Zobrazit nápovědu a dostupné klíče filtrů',
   'filters.smart.suggest.apply': 'Použít filtr',
+  'filters.smart.suggestions_available.one': 'Je dostupný {count} návrh.',
+  'filters.smart.suggestions_available.few': 'Jsou dostupné {count} návrhy.',
+  'filters.smart.suggestions_available.other': 'Je dostupných {count} návrhů.',
+  'filters.smart.no_suggestions': 'Žádné návrhy filtrů.',
 } as const;

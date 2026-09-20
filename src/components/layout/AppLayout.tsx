@@ -37,6 +37,7 @@ import { AppSidebar, buildSidebarNavItems } from './AppSidebar';
 import { SidebarTips } from './SidebarTips';
 import { FrontendFreshnessGuard } from './FrontendFreshnessGuard';
 import { useLocalMutationLocks } from './useLocalMutationLocks';
+import { MainContent, SkipToMainContentLink } from './MainContentAccessibility';
 
 const LEGACY_TRACKED_ACTION_STORAGE_KEY = 'webui-next.tracked_action_states';
 const LEGACY_PINNED_ACTION_STORAGE_KEY = 'webui-next.pinned_action_states';
@@ -60,7 +61,6 @@ function useOutsideClick(ref: React.RefObject<HTMLElement | null>, onOutside: ()
     return () => document.removeEventListener('mousedown', onDocClick);
   }, [enabled, onOutside, ref]);
 }
-
 
 const LazyActionStatesPanel = React.lazy(async () => {
   const mod = await import('./ActionStatesPanel');
@@ -98,7 +98,6 @@ export function AppLayout(props: { children: React.ReactNode }) {
   const toasts = useToasts();
   const navigate = useNavigate();
   const location = useLocation();
-
   const qc = useQueryClient();
   const docVisible = useDocumentVisibility();
   const online = useNetworkStatus();
@@ -112,7 +111,7 @@ export function AppLayout(props: { children: React.ReactNode }) {
   const [blockingActionStateId, setBlockingActionStateId] = useState<number | null>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const syncRef = useRef<HTMLDivElement>(null);
-
+  useEffect(() => setMobileNavOpen(false), [location.pathname]);
   const shortcutHint =
     typeof navigator !== 'undefined' && /mac/i.test(String((navigator as any).platform ?? '')) ? '⌘K · /' : 'Ctrl K · /';
 
@@ -626,6 +625,7 @@ export function AppLayout(props: { children: React.ReactNode }) {
 
   return (
     <ChromeContextProvider value={chrome}>
+      <SkipToMainContentLink label={i18n.t('common.skip_to_main')} testId="shell.skip-link" />
       <FrontendFreshnessGuard />
       <div className="flex min-h-screen bg-bg">
         {/*
@@ -747,12 +747,12 @@ export function AppLayout(props: { children: React.ReactNode }) {
               loginLogoutHref={loginLogoutHref}
             />
 
-            <main className="flex-1 p-4" data-testid="shell.main" data-document-title-region>
+            <MainContent className="flex-1 p-4" data-testid="shell.main" data-document-title-region>
               <div className="space-y-4">
                 <ContextualHelpPanel pathname={location.pathname} scope={mode} />
                 {props.children}
               </div>
-            </main>
+            </MainContent>
           </div>
         </div>
       </div>

@@ -10,6 +10,6 @@ echo "Current: $(git rev-parse --short HEAD) $(git log -1 --pretty=%s)"
 git fetch origin main
 git pull --ff-only origin main
 
-/usr/local/bin/deploy-dev-crucio-clankerdev "$repo"
+"$repo/deploy/dev.crucio.cz/deploy-dev-crucio-clankerdev.sh" "$repo"
 
 echo "Deployed: $(git rev-parse --short HEAD) $(git log -1 --pretty=%s)"

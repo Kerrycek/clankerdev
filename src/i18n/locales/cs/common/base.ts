@@ -10,6 +10,7 @@ export const csCommon_base = {
   'common.confirm': 'Potvrdit',
   'confirm.type_to_confirm': 'Pro potvrzení napiš „{value}“.',
   'common.continue': 'Pokračovat',
+  'common.skip_to_main': 'Přeskočit na hlavní obsah',
   'common.back': 'Zpět',
   'common.retry': 'Zkusit znovu',
   'common.refresh': 'Obnovit',

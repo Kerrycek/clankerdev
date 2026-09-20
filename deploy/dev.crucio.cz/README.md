@@ -23,22 +23,154 @@ Deploy the source checkout to `dev.crucio.cz` with:
 deploy-dev
 ```
 
-`deploy-dev` updates `/srv/clankerdev-deploy/repo` from GitHub, installs
-frontend and BFF dependencies, builds the SPA with `npm run build`, syncs
-`dist/` to `/var/www/dev.crucio.cz/current`, and restarts the BFF service.
+`deploy-dev` updates the mutable input checkout at
+`/srv/clankerdev-deploy/repo`, then runs the versioned helper from that same
+checkout. The helper serializes deployments with the root-owned nonblocking
+lock `/run/lock/clankerdev-dev-deploy.lock`. A second invocation exits before
+staging or publication.
 
-Deploy nginx and BFF units with:
+The mutable checkout must have no tracked changes. Untracked operational audit
+artifacts are allowed because they are never used as build input. For every new
+commit, the helper makes a fresh local clone on the release filesystem, checks
+out the exact full SHA, and builds both the SPA and BFF dependencies there. A
+fully verified stage is atomically renamed to:
 
 ```sh
-rsync -az deploy/dev.crucio.cz/webui-next-bff.service \
-  root@admin.crucio.cz:/etc/systemd/system/webui-next-bff.service
+/srv/clankerdev-release/releases/<full-commit-sha>
+```
 
+The frontend is published from that release, and the BFF unit resolves through
+the atomically replaced `/srv/clankerdev-release/current` symlink. Nothing runs
+`npm ci` in the active release or mutable source checkout. Releases are not
+deleted by this helper. Before any active-state change, the helper also runs a
+read/traverse/dependency-resolution check as the real `webui-bff` identity via
+`/usr/bin/setpriv`; a new stage is published with a traversable `0755` top-level
+directory and an unreadable reused release is rejected.
+
+Before activation, the provenance gate requires the input checkout, frontend
+`build-info.json`, and staged release to have the expected SHA. The input must
+be tracked-clean (its nonignored untracked count is reported separately), while
+the fresh release must have neither tracked nor nonignored untracked drift and
+the build metadata must say `dirty: false`. After the BFF restart, the gate also
+verifies the configured systemd checkout and the active process CWD and SHA.
+The helper then runs the public authentication smoke check.
+
+Before publication, the helper privately snapshots the current webroot, nginx
+configuration, BFF unit, and release-link metadata. Any later validation,
+reload, restart, provenance, or health-check failure enters one explicit
+rollback path. Rollback restores the prior current link, unit, webroot, and
+nginx configuration before restarting the prior BFF and validating health. It
+returns the original failure status. If every rollback step succeeds, the
+private backup is removed; otherwise its path is printed and retained for
+manual recovery.
+
+Deploy the nginx configuration manually when needed with:
+
+```sh
 rsync -az deploy/dev.crucio.cz/nginx-dev.crucio.cz.conf \
   root@admin.crucio.cz:/etc/nginx/sites-available/dev.crucio.cz
 ```
 
+The BFF unit is installed automatically by every `deploy-dev` run. Its
+`WorkingDirectory` and `ExecStart` use
+`/srv/clankerdev-release/current/bff`, so frontend and BFF activation share one
+release boundary.
+
+When introducing this release layout on a host that still has the previous
+installed wrapper, bootstrap the wrapper once after the reviewed commit has
+been pulled:
+
+```sh
+install -m 0755 deploy/dev.crucio.cz/deploy-dev.sh /usr/local/bin/deploy-dev
+deploy-dev
+```
+
+The first run creates `releases/<sha>` and `current`. It deliberately keeps the
+legacy `/srv/clankerdev-release/repo` checkout and captures the previously
+installed unit, so a first-rollout failure can restore the old BFF source.
+Subsequent deploys execute the versioned helper from the updated checkout and
+do not depend on an installed helper copy.
+
+To audit a completed deployment without changing state, run:
+
+```sh
+expected="$(git -C /srv/clankerdev-deploy/repo rev-parse HEAD)"
+release="$(readlink -f /srv/clankerdev-release/current)"
+node /srv/clankerdev-deploy/repo/scripts/dev-deploy-provenance.mjs \
+  --expected "$expected" \
+  --source-repo /srv/clankerdev-deploy/repo \
+  --build-info /var/www/dev.crucio.cz/current/build-info.json \
+  --release-root /srv/clankerdev-release \
+  --release-repo "$release"
+```
+
+Normally rollback is automatic. If it reports failed rollback steps, use only
+the retained `dev-crucio-deploy.*` directory printed by the helper. Replace the
+placeholder below with that exact directory and restore the captured state:
+
+```sh
+set -euo pipefail
+backup=/tmp/dev-crucio-deploy.REPORTED-BY-THE-HELPER
+repo=/srv/clankerdev-deploy/repo
+release_root=/srv/clankerdev-release
+current="$release_root/current"
+
+if [[ "$(<"$backup/previous-current-had-link")" == 1 ]]; then
+  node "$repo/scripts/dev-deploy-release-link.mjs" switch \
+    --root "$release_root" --current "$current" \
+    --target "$(<"$backup/previous-current-target")"
+elif [[ -L "$current" ]]; then
+  active="$(readlink -f "$current")"
+  node "$repo/scripts/dev-deploy-release-link.mjs" remove \
+    --root "$release_root" --current "$current" --expected-target "$active"
+fi
+
+if [[ "$(<"$backup/bff-unit-had-previous")" == 1 ]]; then
+  install -m 0644 "$backup/webui-next-bff.service" \
+    /etc/systemd/system/webui-next-bff.service
+else
+  rm -f /etc/systemd/system/webui-next-bff.service
+fi
+install -d -m 0755 /var/www/dev.crucio.cz/current
+rsync -a --delete "$backup/webroot/" /var/www/dev.crucio.cz/current/
+
+if [[ "$(<"$backup/nginx-conf-had-previous")" == 1 ]]; then
+  install -m 0644 "$backup/nginx-dev.crucio.cz.conf" \
+    /etc/nginx/sites-available/dev.crucio.cz
+else
+  rm -f /etc/nginx/sites-available/dev.crucio.cz
+fi
+if [[ "$(<"$backup/nginx-link-had-previous")" == 1 ]]; then
+  ln -sfn "$(<"$backup/previous-nginx-link-target")" \
+    /etc/nginx/sites-enabled/dev.crucio.cz
+else
+  rm -f /etc/nginx/sites-enabled/dev.crucio.cz
+fi
+```
+
+Then validate the restored service in this order:
+
+```sh
+systemctl daemon-reload
+nginx -t && systemctl reload nginx
+systemctl restart webui-next-bff.service
+bash /srv/clankerdev-deploy/repo/deploy/smoke-auth-endpoints.sh \
+  https://dev.crucio.cz --insecure
+```
+
+After successful validation, remove that one retained private backup. Do not
+delete anything below `/srv/clankerdev-release/releases`; retained releases are
+the rollback and diagnosis record.
+
 The `/v7.0` proxy strips `WWW-Authenticate` from unauthenticated API responses.
 The API still returns `401`, but browsers do not show a native Basic Auth prompt.
+
+The API-rendered OAuth page under `/_auth` contains an inline script whose
+contents change with the selected language, MFA step and one-time auth token.
+The dev nginx vhost injects a fresh `$request_id` nonce into its script tags and
+uses the same nonce in the route-scoped CSP header. Static inline form handlers
+remain hash-pinned. Keep the nonce injection and CSP declaration together;
+`npm run test:scripts` checks that contract and all three known handlers.
 
 The BFF environment lives on the server in:
 
@@ -49,20 +181,26 @@ The BFF environment lives on the server in:
 Use `oauth.env.example` as the shape of that file. Do not commit the real OAuth
 client secret or session secret.
 
-The BFF code is served from the source checkout:
+The BFF code is served from the active immutable release:
 
 ```sh
-/srv/clankerdev-deploy/repo/bff
+/srv/clankerdev-release/current/bff
 ```
 
-`dev.crucio.cz` currently uses the local Debian snakeoil certificate because
-the hostname resolves to a private address. Replace it with a trusted internal
-or DNS-validated certificate when one is available.
+`dev.crucio.cz` currently uses the local Debian snakeoil certificate. Its SAN
+covers the machine hostname, not `dev.crucio.cz`, so strict TLS clients reject
+it. Run the read-only `npm run audit:dev-tls` preflight and follow
+[`tls-certificate.md`](tls-certificate.md) for the observed certificate facts,
+the certificate/private-key operations boundary and the safe rollout checks.
 
 The test API on `admin.crucio.cz` also needs the patch in
 `../admin.crucio.cz/vpsadmin-api-user-session-label.patch`. Without it, OAuth
 session creation can fail with HTTP 500 when the upstream request does not carry
 a user-agent label.
+
+The password-reset endpoint also needs a notification-template oneshot and a
+dedicated queue worker. Their guarded dev-only rollout and post-release check
+are documented in [`password-recovery-runtime.md`](password-recovery-runtime.md).
 
 ## Dev smoke data
 

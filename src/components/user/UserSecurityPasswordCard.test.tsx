@@ -59,6 +59,22 @@ describe('UserSecurityPasswordCard password generator', () => {
     mocks.updateUser.mockResolvedValue({ data: { id: 42 } });
   });
 
+  it('gives every admin password field a distinct accessible name', () => {
+    renderCard();
+
+    expect(screen.queryByLabelText('security.password.current')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('security.password.new')).toHaveAttribute('type', 'password');
+    expect(screen.getByLabelText('security.password.new_repeat')).toHaveAttribute('type', 'password');
+  });
+
+  it('gives every self-service password field a distinct accessible name', () => {
+    renderCard('profile');
+
+    expect(screen.getByLabelText('security.password.current')).toHaveAttribute('type', 'password');
+    expect(screen.getByLabelText('security.password.new')).toHaveAttribute('type', 'password');
+    expect(screen.getByLabelText('security.password.new_repeat')).toHaveAttribute('type', 'password');
+  });
+
   it('fills both admin password fields and immediately copies the generated password', async () => {
     renderCard();
 

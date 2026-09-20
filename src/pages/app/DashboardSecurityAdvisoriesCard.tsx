@@ -38,43 +38,60 @@ function SecurityAdvisoryItem(props: { advisory: SecurityAdvisory; detailBasePat
   const affectedVpsCount = typeof advisory.affected_vps_count === 'number' ? advisory.affected_vps_count : null;
   const affectedNodeCount = typeof advisory.affected_node_count === 'number' ? advisory.affected_node_count : null;
   return (
-    <div className="space-y-1.5 bg-surface-2 px-3 py-2.5" data-testid="app.dashboard.security.item">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <Link to={detailHref} className="font-medium hover:underline">{title}</Link>
-        <Badge variant={stateBadge.variant}>{stateBadge.label}</Badge>
-        {advisory.affected === true ? (
-          <Badge variant="danger">{i18n.t('dashboard.section.security.affects_me')}</Badge>
-        ) : advisory.affected === false ? (
-          <Badge variant="neutral">{i18n.t('dashboard.section.security.not_affected')}</Badge>
+    <div
+      className="grid min-w-0 gap-x-6 gap-y-2 bg-surface-2 px-3 py-2.5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:items-start"
+      data-testid="app.dashboard.security.item"
+    >
+      <div className="min-w-0 space-y-1" data-testid="app.dashboard.security.item.primary">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+          <Link to={detailHref} className="min-w-0 break-words font-medium hover:underline">{title}</Link>
+          <Badge variant={stateBadge.variant}>{stateBadge.label}</Badge>
+          {advisory.affected === true ? (
+            <Badge variant="danger">{i18n.t('dashboard.section.security.affects_me')}</Badge>
+          ) : advisory.affected === false ? (
+            <Badge variant="neutral">{i18n.t('dashboard.section.security.not_affected')}</Badge>
+          ) : null}
+        </div>
+        {summary ? (
+          <div className="break-words text-sm text-muted" data-testid="app.dashboard.security.item.summary">
+            {summary}
+          </div>
         ) : null}
       </div>
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
-        <span>
-          {i18n.t('dashboard.section.security.published')}: {formatDateTime(advisory.published_at)}
-        </span>
-        {affectedNodeCount !== null ? (
-          <span>· {i18n.t('dashboard.section.security.affected_nodes', { count: affectedNodeCount })}</span>
-        ) : null}
-        {affectedUserCount !== null || affectedVpsCount !== null ? (
+      <div className="min-w-0 space-y-1.5 lg:text-right" data-testid="app.dashboard.security.item.details">
+        <div
+          className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted lg:justify-end"
+          data-testid="app.dashboard.security.item.meta"
+        >
           <span>
-            · {i18n.t('dashboard.section.security.affected_users_vps', {
-              users: affectedUserCount ?? '—',
-              vps: affectedVpsCount ?? '—',
-            })}
+            {i18n.t('dashboard.section.security.published')}: {formatDateTime(advisory.published_at)}
           </span>
-        ) : null}
+          {affectedNodeCount !== null ? (
+            <span>· {i18n.t('dashboard.section.security.affected_nodes', { count: affectedNodeCount })}</span>
+          ) : null}
+          {affectedUserCount !== null || affectedVpsCount !== null ? (
+            <span>
+              · {i18n.t('dashboard.section.security.affected_users_vps', {
+                users: affectedUserCount ?? '—',
+                vps: affectedVpsCount ?? '—',
+              })}
+            </span>
+          ) : null}
+        </div>
+        <div
+          className="flex flex-wrap items-center gap-1 lg:justify-end"
+          data-testid="app.dashboard.security.item.cves"
+        >
+          {cves.length > 0 ? (
+            cves.slice(0, 6).map((cve) => <Badge key={cve} variant="info">{cve}</Badge>)
+          ) : (
+            <Badge variant="neutral">{i18n.t('dashboard.section.security.no_cves')}</Badge>
+          )}
+          {cves.length > 6 ? (
+            <span className="text-xs text-muted">{i18n.t('common.more_n', { count: cves.length - 6 })}</span>
+          ) : null}
+        </div>
       </div>
-      <div className="flex flex-wrap gap-1">
-        {cves.length > 0 ? (
-          cves.slice(0, 6).map((cve) => <Badge key={cve} variant="info">{cve}</Badge>)
-        ) : (
-          <Badge variant="neutral">{i18n.t('dashboard.section.security.no_cves')}</Badge>
-        )}
-        {cves.length > 6 ? (
-          <span className="text-xs text-muted">{i18n.t('common.more_n', { count: cves.length - 6 })}</span>
-        ) : null}
-      </div>
-      {summary ? <div className="text-sm text-muted">{summary}</div> : null}
     </div>
   );
 }

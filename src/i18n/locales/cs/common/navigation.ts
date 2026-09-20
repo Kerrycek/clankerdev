@@ -26,6 +26,7 @@ export const csCommon_navigation = {
   'nav.status': 'Stav',
   'nav.dashboard': 'Přehled',
   'nav.vps': 'VPS',
+  'nav.vps_disks': 'Disky VPS',
   'nav.datasets': 'Datasety',
   'nav.nas': 'NAS',
   'nav.backups': 'Zálohy',

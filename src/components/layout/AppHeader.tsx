@@ -37,6 +37,13 @@ interface InlineSearchResult {
   group?: UserGlobalSearchGroup;
 }
 
+const INLINE_SEARCH_LISTBOX_ID = 'global-search-inline-listbox';
+const INLINE_SEARCH_STATUS_ID = 'global-search-inline-status';
+
+function inlineSearchOptionId(index: number): string {
+  return `${INLINE_SEARCH_LISTBOX_ID}-option-${index}`;
+}
+
 function userSearchGroupLabel(group: UserGlobalSearchGroup, t: AppHeaderProps['t']): string {
   if (group === 'vps') return t('palette.group.vps');
   if (group === 'ips') return t('palette.group.ip_addresses');
@@ -122,6 +129,7 @@ export function AppHeader(props: AppHeaderProps) {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchResults, setSearchResults] = useState<InlineSearchResult[]>([]);
+  const [settledSearch, setSettledSearch] = useState('');
   const [selectedSearchResult, setSelectedSearchResult] = useState(0);
   const debouncedSearch = useDebouncedValue(search.trim(), 180);
   const sessionIdleLimitSeconds = readSessionIdleLimitSeconds(auth.user?.preferred_session_length);
@@ -129,7 +137,10 @@ export function AppHeader(props: AppHeaderProps) {
   useEffect(() => {
     setSearch('');
     setSearchOpen(false);
+    setSearchLoading(false);
+    setSearchError(null);
     setSearchResults([]);
+    setSettledSearch('');
   }, [location.pathname]);
 
   const canUseClusterSearch = auth.canUseAdminUi && mode === 'admin';
@@ -140,6 +151,7 @@ export function AppHeader(props: AppHeaderProps) {
       setSearchLoading(false);
       setSearchError(null);
       setSearchResults([]);
+      setSettledSearch(q);
       return undefined;
     }
 
@@ -178,6 +190,7 @@ export function AppHeader(props: AppHeaderProps) {
       } finally {
         if (!alive || ac.signal.aborted) return;
         setSearchLoading(false);
+        setSettledSearch(q);
       }
     };
 
@@ -193,13 +206,29 @@ export function AppHeader(props: AppHeaderProps) {
     setSelectedSearchResult(0);
   }, [debouncedSearch, searchResults.length]);
 
+  const normalizedSearch = search.trim();
+  const searchDebouncePending = normalizedSearch !== debouncedSearch;
+  const searchRequestPending = normalizedSearch !== settledSearch;
+  const searchBusy = Boolean(normalizedSearch)
+    && (searchDebouncePending || searchRequestPending || searchLoading);
+
   const searchStatus = useMemo(() => {
-    if (!search.trim()) return t('palette.empty.type_to_search');
-    if (searchLoading) return t('palette.loading');
+    if (!normalizedSearch) return t('palette.empty.type_to_search');
+    if (searchBusy) return t('palette.loading');
     if (searchError) return `${t('palette.error_prefix')}: ${searchError}`;
     if (searchResults.length === 0) return t('palette.empty.no_results');
     return null;
-  }, [search, searchError, searchLoading, searchResults.length, t]);
+  }, [normalizedSearch, searchBusy, searchError, searchResults.length, t]);
+
+  const inlineSearchPopupOpen = searchOpen && Boolean(normalizedSearch);
+  const inlineSearchExpanded = inlineSearchPopupOpen
+    && !searchBusy
+    && !searchError
+    && searchResults.length > 0;
+  const inlineSearchActiveOptionId =
+    inlineSearchExpanded && searchResults[selectedSearchResult]
+      ? inlineSearchOptionId(selectedSearchResult)
+      : undefined;
 
   const openInlineResult = (result: InlineSearchResult) => {
     navigate(result.href);
@@ -240,6 +269,7 @@ export function AppHeader(props: AppHeaderProps) {
           role="search"
           onSubmit={(e) => {
             e.preventDefault();
+            if (!inlineSearchExpanded) return;
             const selected = searchResults[selectedSearchResult] ?? searchResults[0];
             if (selected) openInlineResult(selected);
           }}
@@ -260,44 +290,59 @@ export function AppHeader(props: AppHeaderProps) {
               if (e.key === 'Escape') {
                 e.preventDefault();
                 setSearchOpen(false);
+                setSelectedSearchResult(0);
                 return;
               }
               if (e.key === 'ArrowDown') {
                 e.preventDefault();
                 setSearchOpen(true);
+                if (!inlineSearchExpanded) return;
                 setSelectedSearchResult((prev) => Math.min(prev + 1, Math.max(0, searchResults.length - 1)));
                 return;
               }
               if (e.key === 'ArrowUp') {
                 e.preventDefault();
                 setSearchOpen(true);
+                if (!inlineSearchExpanded) return;
                 setSelectedSearchResult((prev) => Math.max(prev - 1, 0));
               }
             }}
             className="min-w-0 flex-1 bg-transparent text-sm text-fg outline-none placeholder:text-muted"
             placeholder={mode === 'admin' ? t('palette.placeholder.admin') : t('palette.placeholder.user')}
             aria-label={t('search.inline.aria')}
+            aria-controls={INLINE_SEARCH_LISTBOX_ID}
+            aria-expanded={inlineSearchExpanded}
+            aria-autocomplete="list"
+            aria-activedescendant={inlineSearchActiveOptionId}
+            aria-busy={searchBusy || undefined}
+            aria-describedby={inlineSearchPopupOpen && !inlineSearchExpanded ? INLINE_SEARCH_STATUS_ID : undefined}
+            role="combobox"
             data-testid="shell.inline-search.input"
           />
           <span className="hidden shrink-0 rounded border border-border bg-surface-2 px-2 py-0.5 text-xs text-faint lg:inline" title={t('palette.shortcut_title')}>
             {shortcutHint}
           </span>
 
-          {searchOpen && (search.trim() || searchResults.length > 0) ? (
+          {inlineSearchPopupOpen ? (
             <div
               className="absolute left-0 top-[calc(100%+0.5rem)] z-50 w-drawer-md overflow-hidden rounded-md border border-border bg-overlay-surface shadow-panel"
               data-testid="shell.inline-search.results"
               data-overlay="popover"
               data-overlay-surface="overlay"
             >
-              {searchResults.length > 0 ? (
-                <div className="py-1">
+              {inlineSearchExpanded ? (
+                <div
+                  id={INLINE_SEARCH_LISTBOX_ID}
+                  role="listbox"
+                  aria-label={t('search.inline.aria')}
+                  className="py-1"
+                >
                   {searchResults.map((result, index) => {
                     const showGroup = !canUseClusterSearch && result.group && (
                       index === 0 || searchResults[index - 1]?.group !== result.group
                     );
                     return (
-                      <React.Fragment key={result.key}>
+                      <React.Fragment key={`${result.key}:${index}`}>
                         {showGroup && result.group ? (
                           <div
                             className="border-t border-border px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted first:border-t-0"
@@ -308,6 +353,10 @@ export function AppHeader(props: AppHeaderProps) {
                         ) : null}
                         <button
                           type="button"
+                          id={inlineSearchOptionId(index)}
+                          role="option"
+                          aria-selected={index === selectedSearchResult}
+                          tabIndex={-1}
                           className={clsx(
                             'flex w-full flex-col items-start px-3 py-2 text-left text-sm',
                             index === selectedSearchResult ? 'bg-surface-2' : 'hover:bg-surface-2'
@@ -325,7 +374,14 @@ export function AppHeader(props: AppHeaderProps) {
                   })}
                 </div>
               ) : (
-                <div className="px-3 py-2 text-sm text-muted" data-testid="shell.inline-search.status">
+                <div
+                  id={INLINE_SEARCH_STATUS_ID}
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                  className={clsx('px-3 py-2 text-sm', searchError ? 'text-danger' : 'text-muted')}
+                  data-testid="shell.inline-search.status"
+                >
                   {searchStatus}
                 </div>
               )}

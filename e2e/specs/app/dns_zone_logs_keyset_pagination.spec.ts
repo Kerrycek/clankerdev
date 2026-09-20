@@ -100,6 +100,7 @@ test.describe('DNS zone logs filters and keyset pagination', () => {
 
     await page.goto('/app/dns/zones/10/logs');
     await expect(page.getByTestId('dns.logs.list')).toBeVisible();
+    await expect(page.getByLabel(/Record name \(exact match\)|Název záznamu \(přesná shoda\)/)).toBeVisible();
     await expect(page.getByTestId(`dns.logs.${itemKind}.300`)).toBeVisible();
     await expect(page.getByTestId(`dns.logs.${itemKind}.300.change`)).toHaveText(/Created|Vytvořeno/);
     await expect(page.getByTestId(`dns.logs.${itemKind}.299.change`)).toHaveText(/Updated|Aktualizováno/);

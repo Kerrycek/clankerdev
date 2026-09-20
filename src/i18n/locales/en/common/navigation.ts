@@ -26,6 +26,7 @@ export const enCommon_navigation = {
   'nav.status': 'Status',
   'nav.dashboard': 'Dashboard',
   'nav.vps': 'VPS',
+  'nav.vps_disks': 'VPS disks',
   'nav.datasets': 'Datasets',
   'nav.nas': 'NAS',
   'nav.backups': 'Backups',

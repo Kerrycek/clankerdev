@@ -22,7 +22,7 @@ export function getCspDirectiveTokens(source, directiveName) {
   return null;
 }
 
-export function validateScriptSource(source, requiredHash) {
+export function validateScriptSource(source, requiredHash, options = {}) {
   const tokens = getCspDirectiveTokens(source, 'script-src');
 
   if (!tokens) return ['has no script-src directive'];
@@ -32,7 +32,9 @@ export function validateScriptSource(source, requiredHash) {
   if (!tokens.includes("'self'")) {
     errors.push("script-src does not allow 'self'");
   }
-  if (!tokens.includes(`'${requiredHash}'`)) {
+  const hasAllowedNonce = options.allowNonce === true
+    && tokens.some((token) => /^'nonce-[^']+'$/.test(token));
+  if (!tokens.includes(`'${requiredHash}'`) && !hasAllowedNonce) {
     errors.push('script-src does not include the current inline-script hash');
   }
   if (tokens.includes("'unsafe-inline'")) {

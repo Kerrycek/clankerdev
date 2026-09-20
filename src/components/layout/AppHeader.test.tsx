@@ -1,8 +1,9 @@
 import React, { useRef, useState } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter, useLocation } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { searchUserObjects } from '../../lib/search/userGlobalSearch';
 import { AppHeader } from './AppHeader';
 
 vi.mock('../../app/auth', () => ({
@@ -20,6 +21,10 @@ vi.mock('../../app/objectScope', () => ({
   useObjectScope: () => ({ mineUserId: 53 }),
 }));
 
+vi.mock('../../lib/search/userGlobalSearch', () => ({
+  searchUserObjects: vi.fn(),
+}));
+
 function t(key: any, vars?: Record<string, unknown>): string {
   const translations: Record<string, string> = {
     'auth.session_idle.menu_label': 'Inactivity limit',
@@ -27,7 +32,13 @@ function t(key: any, vars?: Record<string, unknown>): string {
     'common.open_tasks': 'Open tasks',
     'nav.open': 'Open navigation',
     'palette.placeholder.user': 'Search VPS',
+    'palette.group.vps': 'VPS',
+    'palette.loading': 'Loading…',
+    'palette.error_prefix': 'Search failed',
+    'palette.empty.no_results': 'No results',
+    'palette.empty.type_to_search': 'Type to search',
     'palette.shortcut_title': 'Shortcut',
+    'search.inline.aria': 'Search objects',
     'settings.language.cs': 'CS',
     'settings.language.en': 'EN',
     'settings.language.label': 'Language',
@@ -90,11 +101,21 @@ function HeaderHarness(props: { onOpenPalette?: () => void } = {}) {
         onGoToPublicStatus={() => undefined}
         loginLogoutHref="/logout"
       />
+      <LocationProbe />
     </MemoryRouter>
   );
 }
 
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="shell.location-path">{location.pathname}</output>;
+}
+
 describe('AppHeader', () => {
+  beforeEach(() => {
+    vi.mocked(searchUserObjects).mockReset();
+  });
+
   it('opens the command palette from the mobile search trigger', () => {
     const onOpenPalette = vi.fn();
     render(<HeaderHarness onOpenPalette={onOpenPalette} />);
@@ -125,5 +146,204 @@ describe('AppHeader', () => {
     fireEvent.click(screen.getByTestId('shell.user-menu-button'));
     expect(screen.getByTestId('shell.user-menu')).toBeInTheDocument();
     expect(screen.queryByTestId('shell.user-menu.session-remaining')).not.toBeInTheDocument();
+  });
+
+  it('exposes inline results as a keyboard-controlled combobox and collapses cleanly on Escape', async () => {
+    vi.mocked(searchUserObjects).mockResolvedValue([
+      {
+        key: 'vps:11',
+        group: 'vps',
+        primary: 'mail.example',
+        secondary: 'VPS #11',
+        href: '/app/vps/11',
+        id: 11,
+        resource: 'Vps',
+        raw: {},
+      },
+      {
+        key: 'vps:12',
+        group: 'vps',
+        primary: 'web.example',
+        secondary: 'VPS #12',
+        href: '/app/vps/12',
+        id: 12,
+        resource: 'Vps',
+        raw: {},
+      },
+    ]);
+    render(<HeaderHarness />);
+
+    const input = screen.getByRole('combobox', { name: 'Search objects' });
+    expect(input).toHaveAttribute('aria-autocomplete', 'list');
+    expect(input).toHaveAttribute('aria-controls', 'global-search-inline-listbox');
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+    expect(input).not.toHaveAttribute('aria-activedescendant');
+
+    input.focus();
+    fireEvent.change(input, { target: { value: 'example' } });
+
+    const pendingStatus = screen.getByTestId('shell.inline-search.status');
+    expect(pendingStatus).toHaveTextContent('Loading…');
+    expect(pendingStatus).not.toHaveTextContent('No results');
+    expect(input).toHaveAttribute('aria-busy', 'true');
+
+    const listbox = await screen.findByRole('listbox', { name: 'Search objects' });
+    expect(listbox).toHaveAttribute('id', 'global-search-inline-listbox');
+
+    const options = await screen.findAllByRole('option');
+    expect(options).toHaveLength(2);
+    expect(options[0]).toHaveAttribute('id', 'global-search-inline-listbox-option-0');
+    expect(options[1]).toHaveAttribute('id', 'global-search-inline-listbox-option-1');
+    await waitFor(() => {
+      expect(input).toHaveAttribute('aria-expanded', 'true');
+      expect(input).toHaveAttribute('aria-activedescendant', options[0]?.id);
+      expect(options[0]).toHaveAttribute('aria-selected', 'true');
+    });
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    expect(input).toHaveFocus();
+    expect(input).toHaveAttribute('aria-activedescendant', options[1]?.id);
+    expect(options[0]).toHaveAttribute('aria-selected', 'false');
+    expect(options[1]).toHaveAttribute('aria-selected', 'true');
+
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(input).toHaveFocus();
+    expect(input).toHaveValue('example');
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+    expect(input).not.toHaveAttribute('aria-activedescendant');
+    expect(screen.queryByRole('listbox', { name: 'Search objects' })).not.toBeInTheDocument();
+  });
+
+  it('announces loading, empty, and error states without exposing an empty listbox', async () => {
+    let resolveSearch!: (value: Awaited<ReturnType<typeof searchUserObjects>>) => void;
+    vi.mocked(searchUserObjects)
+      .mockImplementationOnce(() => new Promise((resolve) => {
+        resolveSearch = resolve;
+      }))
+      .mockRejectedValueOnce(new Error('offline'));
+    render(<HeaderHarness />);
+
+    const input = screen.getByRole('combobox', { name: 'Search objects' });
+    input.focus();
+    fireEvent.change(input, { target: { value: 'pending' } });
+
+    const loadingStatus = screen.getByTestId('shell.inline-search.status');
+    expect(loadingStatus).toHaveTextContent('Loading…');
+    expect(loadingStatus).not.toHaveTextContent('No results');
+    expect(searchUserObjects).not.toHaveBeenCalled();
+    expect(loadingStatus).toHaveAttribute('id', 'global-search-inline-status');
+    expect(loadingStatus).toHaveAttribute('role', 'status');
+    expect(loadingStatus).toHaveAttribute('aria-live', 'polite');
+    expect(loadingStatus).not.toHaveAttribute('aria-busy');
+    expect(input).toHaveAttribute('aria-busy', 'true');
+    expect(input).toHaveAttribute('aria-describedby', 'global-search-inline-status');
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+
+    await waitFor(() => expect(searchUserObjects).toHaveBeenCalledTimes(1));
+    expect(loadingStatus).toHaveTextContent('Loading…');
+    expect(input).toHaveAttribute('aria-busy', 'true');
+
+    await act(async () => resolveSearch([]));
+
+    await waitFor(() => expect(loadingStatus).toHaveTextContent('No results'));
+    expect(loadingStatus).not.toHaveAttribute('aria-busy');
+    expect(input).not.toHaveAttribute('aria-busy');
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: 'failure' } });
+
+    expect(loadingStatus).toHaveTextContent('Loading…');
+    expect(loadingStatus).not.toHaveTextContent('No results');
+    expect(loadingStatus).not.toHaveTextContent('Search failed');
+    expect(input).toHaveAttribute('aria-busy', 'true');
+    expect(searchUserObjects).toHaveBeenCalledTimes(1);
+
+    await waitFor(() => expect(loadingStatus).toHaveTextContent('Search failed: offline'));
+    expect(loadingStatus).toHaveAttribute('role', 'status');
+    expect(loadingStatus).toHaveAttribute('aria-live', 'polite');
+    expect(input).toHaveAttribute('aria-describedby', 'global-search-inline-status');
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('does not submit a stale result while a replacement query is pending', async () => {
+    let resolveReplacement!: (value: Awaited<ReturnType<typeof searchUserObjects>>) => void;
+    vi.mocked(searchUserObjects)
+      .mockResolvedValueOnce([
+        {
+          key: 'vps:11',
+          group: 'vps',
+          primary: 'mail.example',
+          secondary: 'VPS #11',
+          href: '/app/vps/11',
+          id: 11,
+          resource: 'Vps',
+          raw: {},
+        },
+        {
+          key: 'vps:12',
+          group: 'vps',
+          primary: 'web.example',
+          secondary: 'VPS #12',
+          href: '/app/vps/12',
+          id: 12,
+          resource: 'Vps',
+          raw: {},
+        },
+      ])
+      .mockImplementationOnce(() => new Promise((resolve) => {
+        resolveReplacement = resolve;
+      }));
+    render(<HeaderHarness />);
+
+    const input = screen.getByRole('combobox', { name: 'Search objects' });
+    input.focus();
+    fireEvent.change(input, { target: { value: 'mail' } });
+    await screen.findByRole('option', { name: /mail\.example/i });
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+
+    fireEvent.change(input, { target: { value: 'replacement' } });
+    expect(input).toHaveAttribute('aria-busy', 'true');
+    expect(input).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('option')).not.toBeInTheDocument();
+
+    await waitFor(() => expect(searchUserObjects).toHaveBeenCalledTimes(2));
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    fireEvent.submit(screen.getByTestId('shell.inline-search'));
+
+    expect(screen.getByTestId('shell.location-path')).toHaveTextContent('/');
+    expect(input).toHaveValue('replacement');
+    expect(input).toHaveFocus();
+
+    await act(async () => resolveReplacement([
+      {
+        key: 'vps:21',
+        group: 'vps',
+        primary: 'replacement-one.example',
+        secondary: 'VPS #21',
+        href: '/app/vps/21',
+        id: 21,
+        resource: 'Vps',
+        raw: {},
+      },
+      {
+        key: 'vps:22',
+        group: 'vps',
+        primary: 'replacement-two.example',
+        secondary: 'VPS #22',
+        href: '/app/vps/22',
+        id: 22,
+        resource: 'Vps',
+        raw: {},
+      },
+    ]));
+
+    const replacementOptions = await screen.findAllByRole('option');
+    expect(replacementOptions).toHaveLength(2);
+    expect(replacementOptions[0]).toHaveAttribute('aria-selected', 'true');
+    expect(replacementOptions[1]).toHaveAttribute('aria-selected', 'false');
+    expect(input).toHaveAttribute('aria-activedescendant', replacementOptions[0]?.id);
   });
 });

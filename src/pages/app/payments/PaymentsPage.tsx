@@ -14,7 +14,11 @@ import { formatDateInTimeZone, formatDateTime } from '../../../lib/format';
 import { cursorFromDescendingPage } from '../../../lib/lockIndex';
 import { getPaidUntilStatus, paidUntilBadgeVariant, paidUntilStatusLabelKey } from '../../../lib/paymentsBadges';
 import { formatMoneyLike, safeInt } from '../../../lib/paymentsFormat';
-import { normalizePaymentInstructions, paidUntilSubtitleToken } from './PaymentsModel';
+import {
+  normalizePaymentInstructions,
+  paidUntilSubtitleToken,
+  paymentInstructionsPlainText,
+} from './PaymentsModel';
 import { PaymentInstructionsHtml } from './PaymentInstructionsHtml';
 
 import { ListShell } from '../../../components/layout/ListShell';
@@ -33,7 +37,7 @@ export function PaymentsPage() {
   const auth = useAuth();
   const accountTimeZone = useAccountTimeZone();
   const { basePath } = useAppMode();
-  const { t, tc } = useI18n();
+  const { lang, t, tc } = useI18n();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const tierBRefetchMs = useTierBIntervalMs();
@@ -82,6 +86,10 @@ export function PaymentsPage() {
   const canNext = pagination.hasForward || (historyPage.length > pagination.limit && cursor !== null);
 
   const instructions = normalizePaymentInstructions(instructionsQ.data);
+  const instructionsCopyText = React.useMemo(
+    () => paymentInstructionsPlainText(instructions, lang),
+    [instructions, lang],
+  );
 
   return (
     <ListShell>
@@ -117,7 +125,13 @@ export function PaymentsPage() {
         <Card>
           <CardHeader
             title={t('payments.my.instructions.title')}
-            actions={instructions ? <CopyButton text={instructions} testId="payments.my.instructions.copy" /> : null}
+            actions={instructions ? (
+              <CopyButton
+                text={instructionsCopyText}
+                className="min-h-11 sm:min-h-8"
+                testId="payments.my.instructions.copy"
+              />
+            ) : null}
           />
           <CardBody>
             {instructionsQ.isLoading ? <LoadingState /> : null}

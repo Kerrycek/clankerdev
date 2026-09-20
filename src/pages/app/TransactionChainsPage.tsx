@@ -43,6 +43,7 @@ import { useChrome } from '../../components/layout/ChromeContext';
 import { useKeysetPagination } from '../../lib/hooks/useKeysetPagination';
 import { useTierAIntervalMs, useTierBIntervalMs } from '../../lib/refreshTiers';
 import { useDebouncedValue } from '../../lib/hooks/useDebouncedValue';
+import { currentSuggestionRows } from '../../lib/currentSuggestionRows';
 import { parseNumericToken, splitKeyValueToken, tokenizeSmartInput, unquoteSmartValue } from '../../lib/smartFilter';
 import { isFailedChainState, isFinishedChainState } from '../../lib/taskStatus';
 import { mergeTransactionChainStreams, transactionChainPage } from './transactions/transactionChainPagination';
@@ -518,7 +519,7 @@ function TransactionChainsContent() {
         basePath,
         navigate,
         t,
-        userSuggestions: userSuggestQuery.data,
+        userSuggestions: currentSuggestionRows(smartNeedle, debouncedSmartNeedle, userSuggestQuery.data),
         onOpenHelp: () => setHelpOpen(true),
         onApply: () => void applySmartText(smart),
         onSetClassName: setClassName,
@@ -531,7 +532,7 @@ function TransactionChainsContent() {
           setSmartErrors([]);
         },
       }),
-    [applySmartText, basePath, navigate, smart, smartNeedle, t, uiMode, userSuggestQuery.data]
+    [applySmartText, basePath, debouncedSmartNeedle, navigate, smart, smartNeedle, t, uiMode, userSuggestQuery.data]
   );
 
   const activeFilterChips = useMemo(

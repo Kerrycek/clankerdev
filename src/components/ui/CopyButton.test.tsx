@@ -33,4 +33,24 @@ describe('CopyButton', () => {
     await waitFor(() => expect(button).toHaveAccessibleName('common.copied'));
     expect(screen.getByRole('status')).toHaveTextContent('common.copied');
   });
+
+  it.each([
+    ['success', true, 'common.copied'],
+    ['failure', false, 'common.copy_failed'],
+  ])('keeps a contextual accessible name while announcing copy %s', async (_case, copied, status) => {
+    clipboard.copy.mockResolvedValueOnce(copied);
+
+    render(<CopyButton text="ops@example.test" ariaLabel="Copy effective recipients for Operations" testId="copy-context" />);
+
+    const button = screen.getByTestId('copy-context');
+    expect(button).toHaveAccessibleName('Copy effective recipients for Operations');
+    expect(button).toHaveTextContent('common.copy');
+
+    fireEvent.click(button);
+
+    await waitFor(() => expect(clipboard.copy).toHaveBeenCalledWith('ops@example.test'));
+    await waitFor(() => expect(button).toHaveTextContent(status));
+    expect(button).toHaveAccessibleName('Copy effective recipients for Operations');
+    expect(screen.getByRole('status')).toHaveTextContent(status);
+  });
 });

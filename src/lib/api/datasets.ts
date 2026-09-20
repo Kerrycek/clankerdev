@@ -132,7 +132,6 @@ export interface SnapshotDownload {
 export async function fetchDatasets(opts?: {
   fromId?: number;
   limit?: number;
-  q?: string;
   user?: number;
   vps?: number;
   subtree?: number;
@@ -145,7 +144,6 @@ export async function fetchDatasets(opts?: {
   const params: Record<string, unknown> = {};
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
-  if (opts?.q !== undefined) params['q'] = opts.q;
   if (opts?.user !== undefined) params['user'] = opts.user;
   if (opts?.vps !== undefined) params['vps'] = opts.vps;
   if (opts?.subtree !== undefined) params['subtree'] = opts.subtree;

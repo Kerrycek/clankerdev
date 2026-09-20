@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { bootstrapVpsAdminWindow, installHaveApiMock, jsonFulfill } from '../../fixtures';
 
 test.describe('NAS datasets alias', () => {
-  test('renders NAS alias with primary-role datasets, owner rows, and unlimited capacity usage', async ({ page }) => {
+  test('renders NAS alias with primary-role datasets, owner rows, and unlimited capacity usage', async ({ page }, testInfo) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
     let requestedRole: string | null = null;
@@ -40,12 +40,13 @@ test.describe('NAS datasets alias', () => {
     await page.goto('/admin/nas');
 
     await expect(page.getByTestId('datasets.list.header')).toContainText('NAS');
-    const row = page.getByTestId('datasets.row.53');
-    await expect(row).toBeVisible();
-    await expect(row).toContainText('kerryhobordel');
-    await expect(row).toContainText('1.9 TiB');
+    const mobile = testInfo.project.name === 'mobile-chrome';
+    const entry = page.getByTestId(`datasets.${mobile ? 'card' : 'row'}.53`);
+    await expect(entry).toBeVisible();
+    await expect(entry).toContainText('kerryhobordel');
+    await expect(entry).toContainText('1.9 TiB');
 
-    const segments = row.getByRole('img', { name: 'Dataset space usage' }).locator('[style*="width"]');
+    const segments = entry.getByRole('img', { name: 'Dataset space usage' }).locator('[style*="width"]');
     await expect(segments).toHaveCount(2);
     await expect(segments.nth(0)).toHaveCSS('width', /.+/);
 
@@ -67,7 +68,7 @@ test.describe('NAS datasets alias', () => {
     await expect(page.getByTestId('datasets.advanced.vps')).toHaveCount(0);
   });
 
-  test('hides empty relation columns in NAS list too', async ({ page }) => {
+  test('hides empty relation columns in NAS list too', async ({ page }, testInfo) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
     await installHaveApiMock(page, {
@@ -95,10 +96,18 @@ test.describe('NAS datasets alias', () => {
 
     await page.goto('/admin/nas');
 
-    await expect(page.getByTestId('datasets.row.911')).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Snapshots' })).toHaveCount(0);
-    await expect(page.getByRole('columnheader', { name: 'Mounts' })).toHaveCount(0);
-    await expect(page.getByRole('columnheader', { name: 'Exports' })).toHaveCount(0);
+    const mobile = testInfo.project.name === 'mobile-chrome';
+    const entry = page.getByTestId(`datasets.${mobile ? 'card' : 'row'}.911`);
+    await expect(entry).toBeVisible();
+    if (mobile) {
+      await expect(entry).not.toContainText('Snapshots');
+      await expect(entry).not.toContainText('Mounts');
+      await expect(entry).not.toContainText('Exports');
+    } else {
+      await expect(page.getByRole('columnheader', { name: 'Snapshots' })).toHaveCount(0);
+      await expect(page.getByRole('columnheader', { name: 'Mounts' })).toHaveCount(0);
+      await expect(page.getByRole('columnheader', { name: 'Exports' })).toHaveCount(0);
+    }
   });
 
   test('creates a NAS subdataset from the NAS list', async ({ page }) => {
@@ -259,10 +268,16 @@ test.describe('NAS datasets alias', () => {
   test('shows NAS-specific empty state and keeps filter clearing available', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
+    const requestedQueries: string[] = [];
+
     await installHaveApiMock(page, {
       user: { id: 1, login: 'alice', level: 1 },
       handlers: {
-        'GET datasets': () => ({ datasets: [], _meta: { total_count: 0 } }),
+        'GET datasets': ({ searchParams }) => {
+          requestedQueries.push(searchParams.toString());
+          expect(searchParams.get('dataset[q]')).toBeNull();
+          return { datasets: [], _meta: { total_count: 0 } };
+        },
       },
     });
 
@@ -273,7 +288,9 @@ test.describe('NAS datasets alias', () => {
     await page.getByTestId('datasets.search.input').fill('missing-nas');
     await page.keyboard.press('Enter');
     await expect(page.getByTestId('datasets.active_filters')).toContainText('q:missing-nas');
-    await expect(page.getByTestId('datasets.list.empty')).toContainText('No results');
+    await expect(page.getByTestId('datasets.search.page_limited')).toBeVisible();
+    await expect(page.getByTestId('datasets.list.empty')).toContainText('No matches on this page');
+    expect(requestedQueries).toHaveLength(1);
     await page.getByTestId('datasets.filter.clear').click();
     await expect(page.getByTestId('datasets.active_filters')).toHaveCount(0);
   });

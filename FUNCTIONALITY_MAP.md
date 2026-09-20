@@ -1340,6 +1340,82 @@ frontend change claims only the narrower UI guarantees above.
 
 ---
 
+## User namespace and UID/GID map browsing
+
+**Status:** `mapped / implemented`
+
+User namespaces define the UID/GID range available to an account. Namespace
+maps label reusable per-VPS UID/GID translations within one namespace. WebUI
+Next exposes the owner workflow under
+`/app/profile/user-namespaces/{namespaces,maps}` (and the equivalent
+administrator self-profile routes), the global administrator workflow under
+`/admin/user-namespaces/{namespaces,maps}`, and the applicable map selector in
+VPS configuration.
+
+### Exact index and role contract
+
+| Resource | Supported exact filters | Role-aware owner behavior |
+| --- | --- | --- |
+| `GET /v7.0/user_namespaces` | `size`, `block_count`, `user`, plus `limit`/`from_id` | The backend forces an ordinary user to their own `user_id` and permits only `size` plus pagination. The UI therefore omits `user` and `block_count`. An administrator is not owner-restricted, so self and foreign fixed-owner views send that exact `user`; the global admin list may send exact `user` and `block_count`. |
+| `GET /v7.0/user_namespace_maps` | `user_namespace`, `user`, plus `limit`/`from_id` | The backend owner-restricts a non-admin through the namespace and permits `user_namespace` plus pagination. The UI therefore omits `user`. Administrator self, foreign-VPS, and filtered global views send the exact owner. |
+
+Neither index declares `q` or label search. A numeric smart-input value opens
+the exact namespace/map detail and supported `key:value` tokens apply only the
+filters above. Old links containing `q`, a URL owner on a fixed/non-admin view,
+or a non-admin `block_count` are canonicalized before the list component is
+mounted. The guard resets stale cursor/page state while preserving real
+`size`, `block_count`, or `user_namespace` filters applicable to that view, so
+there is no broad pre-normalization request that merely looks filtered.
+
+Both indexes use the backend's default ascending, exclusive
+`id > from_id` contract. The list requests one look-ahead row, renders only the
+selected limit, and derives the next cursor from the greatest visible ID. A
+hidden sentinel is never rendered; exact-size and below-limit terminal pages
+disable **Next** unless the local stack already contains a forward-visited
+cursor, and a non-advancing response fails closed to avoid loops.
+Namespace-map lists explicitly request the `user_namespace` expansion so the
+displayed namespace size and owner come from the resolved resource; the VPS
+configuration selector remains a lightweight reference-only consumer.
+
+The profile landing count, profile lists and map-creation namespace selector
+all use the same role rule. VPS configuration relies on backend owner scope for
+ordinary owners and sends the VPS owner explicitly for an administrator,
+including a foreign-owner VPS. Create, rename, delete, and map-entry mutation
+payloads and gates are unchanged by this index-contract correction.
+
+Evidence:
+
+- Backend resources in the read-only upstream checkout:
+  `api/lib/vpsadmin/api/resources/user_namespace.rb` and
+  `api/lib/vpsadmin/api/resources/user_namespace_map.rb`.
+- Legacy filter/owner behavior:
+  `webui/forms/userns.forms.php`, `webui/forms/vps.forms.php`, and
+  `webui/pages/page_adminvps.php` in the read-only upstream checkout.
+- WebUI Next API and role/URL semantics:
+  `src/lib/api/userNamespaces.ts` and
+  `src/components/userNamespaces/userNamespaceFilterSemantics.ts`.
+- Current list and VPS consumers:
+  `src/components/userNamespaces/UserNamespaceList.tsx`,
+  `src/components/userNamespaces/UserNamespaceMapList.tsx`, profile namespace
+  pages, and `src/pages/app/vps/VpsConfigurationPage.tsx`.
+- Strict wrapper and semantics tests:
+  `src/lib/api/userNamespaces.test.ts` and
+  `src/components/userNamespaces/userNamespaceFilterSemantics.test.ts`.
+- Mocked desktop/mobile contract coverage:
+  `e2e/specs/app/user_namespace_filter_contract.spec.ts`, plus the existing
+  mutation workflow in `e2e/specs/app/profile_user_namespaces.spec.ts`.
+
+The browser tests use deterministic HaveAPI mocks. They prove the exact first
+request, URL hygiene, role distinctions, profile/admin/VPS consumers,
+ascending two-page navigation, browser Back/Forward restoration, hidden
+look-ahead rows, exact and below-limit terminal states, expansion parameters,
+programmatic drawer labels, mobile overflow safety, and that existing map
+mutations still use their prior contract. Read-only contract tests reject any
+unexpected write; they do not claim a live authorization audit or perform live
+mutations.
+
+---
+
 ## Remaining product inventory
 
 The areas below are confirmed by current routes/source. Their status is
@@ -1374,7 +1450,8 @@ current UX, and end-to-end evidence.
 | Operations | transaction-chain audit pagination is mapped above; transaction-item diagnostics, action states, monitoring events, and broader task behavior are tracked as separate slices | `mapped / partial` |
 | Support events | incidents including report creation; OOM reports, details, and rules; OOM list traversal is mapped above | `inventory only` |
 | Payments | user payment/billing surface; history traversal is mapped above | `inventory only` |
-| Account | profile, resources, security, MFA, mail, keys, sessions, metrics tokens, user data, user namespaces/maps | `inventory only` |
+| Account | profile, resources, security, MFA, mail, keys, sessions, metrics tokens, user data | `inventory only` |
+| User namespaces | owner namespace/map browsing and VPS map selection; see the mapped capability above | `mapped / implemented` |
 
 ### Administrator surfaces
 
@@ -1384,7 +1461,7 @@ current UX, and end-to-end evidence.
 | VPS, datasets, NAS, exports, DNS | admin-scoped versions of the core service surfaces | `inventory only` |
 | Networking | IP addresses/detail, host IPs, assignments, live view, traffic by user | `inventory only` |
 | Users | list/detail; resources/usage with distinct loading, empty, and retryable error states; payments, environment config, security, MFA, sessions, keys, metrics, mail, user data, history | `inventory only` |
-| User namespaces | namespace and map lists/details | `inventory only` |
+| User namespaces | namespace and map lists/details; see the mapped capability above | `mapped / implemented` |
 | Finance | global overview, income forecast, incoming-payment list/detail/assignment and reconciliation | `inventory only` |
 | Audit | history list and event detail | `inventory only` |
 | Incidents, outages, monitoring, OOM | admin operational/support surfaces | `inventory only` |

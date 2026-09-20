@@ -22,7 +22,7 @@ export const enProfile_namespace = {
   "userns.namespace.smart.help.keys.id": "Open namespace detail by id.",
   "userns.namespace.smart.help.keys.size": "Filter by namespace size.",
   "userns.namespace.smart.help.keys.user": "Filter by owner id (admin only).",
-  "userns.namespace.smart.placeholder": "#123, size:65536, user:42…",
+  "userns.namespace.smart.placeholder": "#123, size:65536…",
   "userns.namespace.smart.suggestion.help_hint": "Use id, size, user, or blocks filters",
   "userns.namespace.smart.suggestion.help_title": "Namespace filters help",
   "userns.namespace.smart.suggestion.open": "Open namespace #{id}",

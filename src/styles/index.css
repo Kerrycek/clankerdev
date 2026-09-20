@@ -552,6 +552,29 @@
     object-fit: contain;
   }
 
+  /* Keep dashboard preference actions touch-safe without inflating dense desktop controls. */
+  .dashboard-preferences-touch-control,
+  .dashboard-preferences-touch-select {
+    min-height: 2.75rem;
+  }
+
+  @media (min-width: 640px) and (pointer: fine) {
+    .dashboard-preferences-touch-control {
+      min-height: 2rem;
+    }
+
+    .dashboard-preferences-touch-select {
+      min-height: 2.25rem;
+    }
+  }
+
+  @media (any-pointer: coarse) {
+    .dashboard-preferences-touch-control,
+    .dashboard-preferences-touch-select {
+      min-height: 2.75rem;
+    }
+  }
+
   @media (max-width: 767px) {
     .payment-instructions table[data-payment-table='true'],
     .payment-instructions table[data-payment-table='true'] tbody,

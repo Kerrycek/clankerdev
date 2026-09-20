@@ -82,6 +82,9 @@ describe('PublicLayout', () => {
 
     expect(screen.getByTestId('public.index')).toBeVisible();
     expect(screen.getByTestId('location')).toHaveTextContent('/');
+    expect(screen.getByTestId('public.skip-link')).toHaveAttribute('href', '#main-content');
+    expect(screen.getByTestId('public.main')).toHaveAttribute('id', 'main-content');
+    expect(screen.getByTestId('public.main')).toHaveAttribute('tabindex', '-1');
   });
 
   it('redirects authenticated visitors from the public index back to the app', async () => {

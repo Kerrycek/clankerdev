@@ -6,17 +6,21 @@ import { useAuth } from '../../../../app/auth';
 import { useI18n } from '../../../../app/i18n';
 import { Spinner } from '../../../../components/ui/Spinner';
 
-import { fetchUserNamespaces } from '../../../../lib/api/userNamespaces';
+import { explicitUserNamespaceOwnerId, fetchUserNamespaces } from '../../../../lib/api/userNamespaces';
 
 export function ProfileUserNamespacesIndexPage() {
   const { basePath } = useAppMode();
   const auth = useAuth();
   const { t } = useI18n();
   const userId = typeof auth.user?.id === 'number' ? auth.user.id : undefined;
+  const explicitOwnerId = explicitUserNamespaceOwnerId({
+    viewerRole: auth.role,
+    fixedOwnerId: userId,
+  });
 
   const q = useQuery({
-    queryKey: ['user_namespace', 'list', { forLanding: true, userId }],
-    queryFn: async () => (await fetchUserNamespaces({ limit: 2, userId })).data,
+    queryKey: ['user_namespace', 'list', { forLanding: true, userId: explicitOwnerId }],
+    queryFn: async () => (await fetchUserNamespaces({ limit: 2, userId: explicitOwnerId })).data,
     enabled: userId !== undefined,
     refetchOnWindowFocus: false,
   });

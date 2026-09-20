@@ -63,6 +63,41 @@ describe('operation taxonomy', () => {
     expect(shouldCollapseSystemOperation(activeOp, activeChain.state)).toBe(false);
   });
 
+  it.each(['failed', 'fatal'] as const)('keeps %s scheduled backup failures visible', (state) => {
+    const chain: TransactionChain = {
+      id: state === 'failed' ? 12 : 13,
+      label: 'Scheduled backup retention cleanup',
+      state,
+    };
+    const op = classifyTransactionChain(chain);
+
+    expect(op.systemNoise).toBe(true);
+    expect(shouldCollapseSystemOperation(op, chain.state)).toBe(false);
+  });
+
+  it.each([
+    'Automatic backup',
+    'Scheduled backup',
+    'Backup retention',
+    'Backup prune',
+    'Snapshot sync',
+    'Backup cleanup',
+  ])('classifies completed routine backup activity as system noise: %s', (label) => {
+    const chain: TransactionChain = { id: 14, label, state: 'done' };
+    const op = classifyTransactionChain(chain);
+
+    expect(op.systemNoise).toBe(true);
+    expect(shouldCollapseSystemOperation(op, chain.state)).toBe(true);
+  });
+
+  it.each(['Create backup', 'Restore backup', 'Delete backup', 'Snapshot rotate'])('keeps explicit backup work visible: %s', (label) => {
+    const chain: TransactionChain = { id: 15, label, state: 'done' };
+    const op = classifyTransactionChain(chain);
+
+    expect(op.systemNoise).toBe(false);
+    expect(shouldCollapseSystemOperation(op, chain.state)).toBe(false);
+  });
+
   it('uses action-state labels for toast/task operation names', () => {
     const state: ActionState = { id: 21, label: 'Stop VPS #16', status: true };
     const op = classifyActionState(state);

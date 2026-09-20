@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 
 import { useAppMode } from '../../../app/appMode';
+import { useAuth } from '../../../app/auth';
 import { useI18n } from '../../../app/i18n';
 import { useToasts } from '../../../app/toasts';
 
@@ -35,8 +36,10 @@ import { formatDateTime, formatDurationSeconds, formatMiB } from '../../../lib/f
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 import { cursorFromDescendingPage } from '../../../lib/lockIndex';
 import { hasActiveChains, objectStateBadge } from '../../../lib/taskStatus';
+import { resourceId } from '../../../lib/resources';
 
 import { useDatasetContext } from './DatasetContext';
+import { datasetExpansionCapabilities } from './DatasetExpansionCapabilities';
 import {
   datasetExpansionEditForm,
   defaultDatasetExpansionForm,
@@ -58,13 +61,14 @@ function expansionStateBadge(exp: DatasetExpansion, t: (k: string) => string) {
 export function DatasetExpansionPage() {
   const { dataset, refetch, datasetRef, busyTransaction, busyLocalLock, refetchChains } = useDatasetContext();
   const { mode } = useAppMode();
+  const auth = useAuth();
   const { t } = useI18n();
   const { pushToast } = useToasts();
   const chrome = useChrome();
   const qc = useQueryClient();
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const expansionId = typeof (dataset as any).dataset_expansion?.id === 'number' ? Number((dataset as any).dataset_expansion.id) : null;
+  const expansionId = resourceId((dataset as any).dataset_expansion) ?? null;
   const [newOpen, setNewOpen] = useState<DatasetExpansionCreateMode | null>(null);
   const [newForm, setNewForm] = useState<DatasetExpansionNewFormState>(defaultDatasetExpansionForm('create'));
   const [editOpen, setEditOpen] = useState(false);
@@ -88,11 +92,29 @@ export function DatasetExpansionPage() {
     staleTime: 10_000,
   });
 
+  const currentExpansion = expansionQ.data ?? null;
+  const expansionCapabilities = datasetExpansionCapabilities({
+    mode,
+    role: auth.role,
+    hasExpansion: expansionId !== null,
+    isVpsDataset: resourceId((dataset as any).vps) !== undefined,
+    expansionState: String(currentExpansion?.state ?? ''),
+  });
+
   const historyQ = useQuery({
-    queryKey: ['dataset_expansions', expansionId, 'history', { limit: pagination.limit, fromId: pagination.fromId }],
+    queryKey: [
+      'dataset_expansions',
+      expansionId,
+      'history',
+      { limit: pagination.limit, fromId: pagination.fromId, includeAdmin: expansionCapabilities.showAdminMetadata },
+    ],
     enabled: expansionId !== null,
     queryFn: async () =>
-      (await fetchDatasetExpansionHistory(expansionId as number, { limit: pagination.limit, fromId: pagination.fromId, includes: 'admin' })).data,
+      (await fetchDatasetExpansionHistory(expansionId as number, {
+        limit: pagination.limit,
+        fromId: pagination.fromId,
+        includes: expansionCapabilities.showAdminMetadata ? 'admin' : undefined,
+      })).data,
     staleTime: 10_000,
   });
 
@@ -111,6 +133,7 @@ export function DatasetExpansionPage() {
 
   const createM = useMutation({
     mutationFn: async (form: DatasetExpansionNewFormState) => {
+      if (!expansionCapabilities.canCreate) throw new Error(t('error.forbidden.title'));
       await preflightDatasetNotBusy();
       const added = parseExpansionGiB(form.addedSpaceGiB);
       const maxSeconds = parseExpansionDays(form.maxOverDays);
@@ -165,6 +188,7 @@ export function DatasetExpansionPage() {
 
   const updateM = useMutation({
     mutationFn: async (form: DatasetExpansionEditFormState) => {
+      if (!expansionCapabilities.canEdit) throw new Error(t('error.forbidden.title'));
       await preflightDatasetNotBusy();
       if (expansionId === null) throw new Error(t('dataset.expansion.internal_missing_id'));
       const maxSeconds = parseExpansionDays(form.maxOverDays);
@@ -192,6 +216,7 @@ export function DatasetExpansionPage() {
 
   const addSpaceM = useMutation({
     mutationFn: async () => {
+      if (!expansionCapabilities.canAddSpace) throw new Error(t('error.forbidden.title'));
       await preflightDatasetNotBusy();
       if (expansionId === null) throw new Error(t('dataset.expansion.internal_missing_id'));
       const added = parseExpansionGiB(addSpaceGiB);
@@ -224,7 +249,6 @@ export function DatasetExpansionPage() {
   });
 
   const busy = busyTransaction || busyLocalLock;
-  const currentExpansion = expansionQ.data ?? null;
   const stateBadge = currentExpansion ? expansionStateBadge(currentExpansion, t) : null;
   const objectBadge = objectStateBadge((dataset as any).object_state, t);
 
@@ -260,25 +284,27 @@ export function DatasetExpansionPage() {
               subtitle={t('dataset.expansion.subtitle')}
               actions={
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    testId="dataset.expansion.add_space.open"
-                    onClick={() => setAddSpaceOpen(true)}
-                    disabled={busy || String(currentExpansion.state ?? '') !== 'active'}
-                  >
-                    {t('dataset.expansion.add_space.open')}
-                  </Button>
-                  {mode === 'admin' ? (
-                    <Button
-                      testId="dataset.expansion.edit.open"
-                      variant="secondary"
-                      onClick={() => {
-                        setEditForm(datasetExpansionEditForm(currentExpansion));
-                        setEditOpen(true);
-                      }}
-                      disabled={busy}
-                    >
-                      {t('common.edit')}
-                    </Button>
+                  {expansionCapabilities.canEdit ? (
+                    <>
+                      <Button
+                        testId="dataset.expansion.add_space.open"
+                        onClick={() => setAddSpaceOpen(true)}
+                        disabled={busy || !expansionCapabilities.canAddSpace}
+                      >
+                        {t('dataset.expansion.add_space.open')}
+                      </Button>
+                      <Button
+                        testId="dataset.expansion.edit.open"
+                        variant="secondary"
+                        onClick={() => {
+                          setEditForm(datasetExpansionEditForm(currentExpansion));
+                          setEditOpen(true);
+                        }}
+                        disabled={busy}
+                      >
+                        {t('common.edit')}
+                      </Button>
+                    </>
                   ) : null}
                 </div>
               }
@@ -308,18 +334,22 @@ export function DatasetExpansionPage() {
                   <div className="text-xs text-faint">{t('dataset.expansion.field.created')}</div>
                   <div className="font-medium text-fg">{formatDateTime(currentExpansion.created_at)}</div>
                 </div>
-                <div>
-                  <div className="text-xs text-faint">{t('dataset.expansion.field.notify')}</div>
-                  <div className="font-medium text-fg">{t(currentExpansion.enable_notifications ? 'common.enabled' : 'common.disabled')}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-faint">{t('dataset.expansion.field.auto_shrink')}</div>
-                  <div className="font-medium text-fg">{t(currentExpansion.enable_shrink ? 'common.enabled' : 'common.disabled')}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-faint">{t('dataset.expansion.field.stop_vps')}</div>
-                  <div className="font-medium text-fg">{t(currentExpansion.stop_vps ? 'common.enabled' : 'common.disabled')}</div>
-                </div>
+                {expansionCapabilities.showAdminMetadata ? (
+                  <>
+                    <div>
+                      <div className="text-xs text-faint">{t('dataset.expansion.field.notify')}</div>
+                      <div className="font-medium text-fg">{t(currentExpansion.enable_notifications ? 'common.enabled' : 'common.disabled')}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-faint">{t('dataset.expansion.field.auto_shrink')}</div>
+                      <div className="font-medium text-fg">{t(currentExpansion.enable_shrink ? 'common.enabled' : 'common.disabled')}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-faint">{t('dataset.expansion.field.stop_vps')}</div>
+                      <div className="font-medium text-fg">{t(currentExpansion.stop_vps ? 'common.enabled' : 'common.disabled')}</div>
+                    </div>
+                  </>
+                ) : null}
                 <div>
                   <div className="text-xs text-faint">{t('dataset.expansion.field.max_over')}</div>
                   <div className="font-medium text-fg">
@@ -389,7 +419,9 @@ export function DatasetExpansionPage() {
                   <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-faint">{t('dataset.expansion.field.added_space')}</th>
                   <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-faint">{t('dataset.expansion.field.original_refquota')}</th>
                   <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-faint">{t('dataset.expansion.history.new_refquota')}</th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-faint">{t('common.user')}</th>
+                  {expansionCapabilities.showAdminMetadata ? (
+                    <th className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-faint">{t('common.user')}</th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
@@ -399,7 +431,9 @@ export function DatasetExpansionPage() {
                     <td className="px-3 py-2 font-medium text-fg">{formatMiB(row.added_space)}</td>
                     <td className="px-3 py-2 text-sm text-muted">{formatMiB(row.original_refquota)}</td>
                     <td className="px-3 py-2 text-sm text-muted">{formatMiB(row.new_refquota)}</td>
-                    <td className="px-3 py-2 text-sm text-muted">{typeof (row as any).admin?.login === 'string' ? String((row as any).admin.login) : (typeof (row as any).admin?.id === 'number' ? `#${(row as any).admin.id}` : t('common.na'))}</td>
+                    {expansionCapabilities.showAdminMetadata ? (
+                      <td className="px-3 py-2 text-sm text-muted">{typeof (row as any).admin?.login === 'string' ? String((row as any).admin.login) : (typeof (row as any).admin?.id === 'number' ? `#${(row as any).admin.id}` : t('common.na'))}</td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
@@ -412,7 +446,7 @@ export function DatasetExpansionPage() {
             title={t('dataset.expansion.create.title')}
             subtitle={t('dataset.expansion.create.inline_subtitle')}
             actions={
-              mode === 'admin' ? (
+              expansionCapabilities.canRegister ? (
                 <Button
                   testId="dataset.expansion.register.open"
                   variant="secondary"
@@ -464,7 +498,7 @@ export function DatasetExpansionPage() {
       )}
 
       <Modal
-        open={newOpen === 'register'}
+        open={expansionCapabilities.canRegister && newOpen === 'register'}
         onClose={() => {
           if (!createM.isPending) setNewOpen(null);
         }}
@@ -518,7 +552,7 @@ export function DatasetExpansionPage() {
       </Modal>
 
       <Modal
-        open={editOpen && editForm !== null}
+        open={expansionCapabilities.canEdit && editOpen && editForm !== null}
         onClose={() => {
           if (!updateM.isPending) setEditOpen(false);
         }}
@@ -559,7 +593,7 @@ export function DatasetExpansionPage() {
       </Modal>
 
       <Modal
-        open={addSpaceOpen}
+        open={expansionCapabilities.canAddSpace && addSpaceOpen}
         onClose={() => {
           if (!addSpaceM.isPending) setAddSpaceOpen(false);
         }}

@@ -44,6 +44,13 @@ type PaletteResult = {
   raw: unknown;
 };
 
+const COMMAND_PALETTE_LISTBOX_ID = 'command-palette-listbox';
+const COMMAND_PALETTE_STATUS_ID = 'command-palette-status';
+
+function commandPaletteOptionId(index: number): string {
+  return `${COMMAND_PALETTE_LISTBOX_ID}-option-${index}`;
+}
+
 type QualifierKey =
   | 'vps'
   | 'user'
@@ -231,6 +238,29 @@ function userKindsForQualifier(key: QualifierKey | null): UserGlobalSearchGroup[
   return [];
 }
 
+function coarsePointerQueries(): MediaQueryList[] {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return [];
+  return [window.matchMedia('(pointer: coarse)'), window.matchMedia('(any-pointer: coarse)')];
+}
+
+function useHasCoarsePointer(): boolean {
+  const [hasCoarsePointer, setHasCoarsePointer] = useState(() => (
+    coarsePointerQueries().some((query) => query.matches)
+  ));
+
+  useEffect(() => {
+    const queries = coarsePointerQueries();
+    const update = () => setHasCoarsePointer(queries.some((query) => query.matches));
+    update();
+    for (const query of queries) query.addEventListener('change', update);
+    return () => {
+      for (const query of queries) query.removeEventListener('change', update);
+    };
+  }, []);
+
+  return hasCoarsePointer;
+}
+
 export function CommandPalette(props: { open: boolean; onClose: () => void }) {
   const auth = useAuth();
   const { basePath, mode } = useAppMode();
@@ -238,30 +268,36 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
   const { t } = useI18n();
   const toasts = useToasts();
   const navigate = useNavigate();
+  const hasCoarsePointer = useHasCoarsePointer();
 
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [results, setResults] = useState<PaletteResult[]>([]);
+  const [settledQuery, setSettledQuery] = useState('');
   const [selected, setSelected] = useState(0);
   const [manualSelection, setManualSelection] = useState(false);
   const [helpOpenManual, setHelpOpenManual] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const debouncedQuery = useDebouncedValue(query.trim(), 200);
-  const helpFromQuery = query.trim() === '?';
+  const normalizedQuery = query.trim();
+  const debouncedQuery = useDebouncedValue(normalizedQuery, 200);
+  const helpFromQuery = normalizedQuery === '?';
   const helpOpen = helpFromQuery || helpOpenManual;
 
-  // Reset state when the palette opens.
+  // Clear hidden state on close and initialize a clean palette on open.
   useEffect(() => {
-    if (!props.open) return;
     setQuery('');
+    setLoading(false);
     setError(null);
     setResults([]);
+    setSettledQuery('');
     setSelected(0);
     setManualSelection(false);
     setHelpOpenManual(false);
+
+    if (!props.open) return;
 
     // Focus input on open.
     const tId = window.setTimeout(() => inputRef.current?.focus(), 0);
@@ -278,14 +314,21 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
       setLoading(false);
       setError(null);
       setResults([]);
+      setSettledQuery('');
       return;
     }
 
     const q = debouncedQuery;
+    if (q !== normalizedQuery) {
+      setLoading(false);
+      return;
+    }
+
     if (!q) {
       setLoading(false);
       setError(null);
       setResults([]);
+      setSettledQuery('');
       return;
     }
 
@@ -298,6 +341,7 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
       setLoading(false);
       setError(null);
       setResults([]);
+      setSettledQuery(q);
       return;
     }
 
@@ -344,6 +388,7 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
       } finally {
         if (!alive || ac.signal.aborted) return;
         setLoading(false);
+        setSettledQuery(q);
       }
     };
 
@@ -352,7 +397,7 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
       alive = false;
       ac.abort();
     };
-  }, [auth.user?.id, basePath, canUseClusterSearch, debouncedQuery, helpOpen, props.open, scope.mineUserId, t]);
+  }, [auth.user?.id, basePath, canUseClusterSearch, debouncedQuery, helpOpen, normalizedQuery, props.open, scope.mineUserId, t]);
 
   const visibleResults = results;
 
@@ -363,40 +408,67 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
     setSelected(0);
   }, [debouncedQuery, props.open]);
 
-  // Clamp selected index when results change.
-  useEffect(() => {
-    setSelected((prev) => {
-      const max = Math.max(0, visibleResults.length - 1);
-      return Math.min(Math.max(0, prev), max);
-    });
-  }, [visibleResults.length]);
-
-  const grouped = useMemo(() => {
+  const { grouped, flattened } = useMemo(() => {
     const map = new Map<PaletteResult['group'], PaletteResult[]>();
-    for (const r of visibleResults) {
-      const g = r.group;
+    for (const result of visibleResults) {
+      const g = result.group;
       const arr = map.get(g) ?? [];
-      arr.push(r);
+      arr.push(result);
       map.set(g, arr);
     }
 
     const order: PaletteResult['group'][] = ['vps', 'users', 'ips', 'dns_zones', 'tx_chains', 'other'];
-    return order
-      .map((g) => ({ group: g, rows: map.get(g) ?? [] }))
+    const flattened: PaletteResult[] = [];
+    const grouped = order
+      .map((group) => ({
+        group,
+        rows: (map.get(group) ?? []).map((result) => {
+          const index = flattened.length;
+          flattened.push(result);
+          return { result, index };
+        }),
+      }))
       .filter((x) => x.rows.length > 0);
+
+    return { grouped, flattened };
   }, [visibleResults]);
 
-  const flattened = visibleResults;
-  const indexByKey = useMemo(() => {
-    const m = new Map<string, number>();
-    for (let i = 0; i < flattened.length; i++) {
-      const r = flattened[i];
-      if (r) m.set(r.key, i);
-    }
-    return m;
-  }, [flattened]);
+  // Clamp selected index when results change.
+  useEffect(() => {
+    setSelected((prev) => {
+      const max = Math.max(0, flattened.length - 1);
+      return Math.min(Math.max(0, prev), max);
+    });
+  }, [flattened.length]);
+
+  const debouncePending = normalizedQuery !== debouncedQuery;
+  const requestPending = normalizedQuery !== settledQuery;
+  const searchBusy = Boolean(normalizedQuery)
+    && !helpOpen
+    && (debouncePending || requestPending || loading);
+
+  const automaticSelected = useMemo(() => {
+    if (!canUseClusterSearch) return 0;
+    const idToken = parseIdToken(debouncedQuery);
+    if (idToken === null) return 0;
+    const candidate = pickDirectOpenCandidate(idToken, flattened);
+    const candidateIndex = candidate ? flattened.indexOf(candidate) : -1;
+    return candidateIndex >= 0 ? candidateIndex : 0;
+  }, [canUseClusterSearch, debouncedQuery, flattened]);
+  const activeSelected = manualSelection ? selected : automaticSelected;
+
+  const resultsExpanded =
+    props.open && !helpOpen && Boolean(normalizedQuery) && !searchBusy && !error && flattened.length > 0;
+  const activeOptionId =
+    resultsExpanded && flattened[activeSelected] ? commandPaletteOptionId(activeSelected) : undefined;
+
+  useEffect(() => {
+    if (!resultsExpanded) return;
+    document.getElementById(commandPaletteOptionId(activeSelected))?.scrollIntoView?.({ block: 'nearest' });
+  }, [activeSelected, resultsExpanded]);
 
   const openResult = (r: PaletteResult, opts?: { newTab?: boolean }) => {
+    if (!resultsExpanded) return;
     if (opts?.newTab) {
       window.open(buildHrefWithBasename(r.href), '_blank', 'noopener');
     } else {
@@ -406,7 +478,8 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
   };
 
   const copySelected = async () => {
-    const r = flattened[selected];
+    if (!resultsExpanded) return;
+    const r = flattened[activeSelected];
     if (!r) return;
     try {
       const rel = buildHrefWithBasename(r.href);
@@ -419,7 +492,8 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
   };
 
   const copySelectedId = async () => {
-    const r = flattened[selected];
+    if (!resultsExpanded) return;
+    const r = flattened[activeSelected];
     const id = typeof r?.id === 'number' && Number.isFinite(r.id) ? r.id : null;
     if (!r || id === null) return;
     try {
@@ -431,15 +505,20 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
     }
   };
 
-  const onKeyDown = (e: React.KeyboardEvent) => {
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
+      if (!resultsExpanded) return;
       setManualSelection(true);
-      setSelected((prev) => Math.min(prev + 1, Math.max(0, flattened.length - 1)));
+      setSelected((prev) => Math.min(
+        (manualSelection ? prev : automaticSelected) + 1,
+        Math.max(0, flattened.length - 1)
+      ));
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
+      if (!resultsExpanded) return;
       setManualSelection(true);
-      setSelected((prev) => Math.max(prev - 1, 0));
+      setSelected((prev) => Math.max((manualSelection ? prev : automaticSelected) - 1, 0));
     } else if (e.key === 'Enter') {
       if (helpOpen) {
         e.preventDefault();
@@ -448,22 +527,12 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
         return;
       }
 
-      // When the user typed a pure ID token and did not explicitly navigate,
-      // pick a sensible direct-open target (admin scope only).
-      if (!manualSelection && canUseClusterSearch) {
-        const idToken = parseIdToken(debouncedQuery);
-        if (idToken !== null) {
-          const cand = pickDirectOpenCandidate(idToken, flattened);
-          if (cand) {
-            const newTab = e.metaKey || e.ctrlKey;
-            e.preventDefault();
-            openResult(cand, { newTab });
-            return;
-          }
-        }
+      if (!resultsExpanded) {
+        e.preventDefault();
+        return;
       }
 
-      const r = flattened[selected];
+      const r = flattened[activeSelected];
       if (!r) return;
       const newTab = e.metaKey || e.ctrlKey;
       e.preventDefault();
@@ -549,27 +618,38 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
       size="lg"
       testId="palette.modal"
     >
-      <div className="flex h-full flex-col" onKeyDown={onKeyDown}>
+      <div className="flex h-full flex-col">
         <div className="flex items-center gap-2">
           <div className="relative w-full">
             <Input
               ref={inputRef}
               testId="palette.input"
               ariaLabel={t('search.inline.aria')}
+              ariaControls={COMMAND_PALETTE_LISTBOX_ID}
+              ariaExpanded={resultsExpanded}
+              ariaAutocomplete="list"
+              ariaActiveDescendant={activeOptionId}
+              ariaBusy={searchBusy || undefined}
+              ariaDescribedBy={!helpOpen && !resultsExpanded ? COMMAND_PALETTE_STATUS_ID : undefined}
+              role="combobox"
               value={query}
+              onKeyDown={onKeyDown}
               onChange={(e) => {
                 setQuery(e.target.value);
                 if (helpOpenManual) setHelpOpenManual(false);
               }}
               placeholder={canUseClusterSearch ? t('palette.placeholder.admin') : t('palette.placeholder.user')}
-              className="h-11 pr-11"
+              className={clsx('h-11', hasCoarsePointer ? 'pr-12' : 'pr-11')}
             />
 
             <div className="absolute inset-y-0 right-0 flex items-center pr-1">
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 w-8 px-0"
+                className={clsx(
+                  'h-8 w-8 px-0',
+                  hasCoarsePointer && 'min-h-11 min-w-11'
+                )}
                 onClick={() => setHelpOpenManual(true)}
                 ariaLabel={t('filters.help.open')}
                 title={t('filters.help.open')}
@@ -585,7 +665,7 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
           </Button>
         </div>
 
-        <div className="mt-4 flex-1 overflow-y-auto">
+        <div className="mt-4 flex-1 overflow-y-auto" data-testid="palette.results-scroll">
           {helpOpen ? (
             <div data-testid="palette.help">
               <div className="text-sm font-semibold">{t('palette.help.title')}</div>
@@ -608,40 +688,77 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
                   }}
                   closeLabel={t('palette.help.back')}
                   showCloseButton
+                  keyRowTestIdPrefix="palette.help.key"
                 />
               </div>
             </div>
-          ) : !query.trim() ? (
-            <div className="text-sm text-muted" data-testid="palette.empty">
+          ) : !normalizedQuery ? (
+            <div
+              id={COMMAND_PALETTE_STATUS_ID}
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              className="text-sm text-muted"
+              data-testid="palette.empty"
+            >
               {t('palette.empty.type_to_search')}
             </div>
-          ) : loading ? (
-            <div className="flex items-center gap-2 text-sm text-muted" data-testid="palette.loading">
+          ) : searchBusy ? (
+            <div
+              id={COMMAND_PALETTE_STATUS_ID}
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              className="flex items-center gap-2 text-sm text-muted"
+              data-testid="palette.loading"
+            >
               <Spinner />
               {t('palette.loading')}
             </div>
           ) : error ? (
-            <div className="text-sm text-danger" data-testid="palette.error">
+            <div
+              id={COMMAND_PALETTE_STATUS_ID}
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              className="text-sm text-danger"
+              data-testid="palette.error"
+            >
               {t('palette.error_prefix')}: {error}
             </div>
           ) : flattened.length === 0 ? (
-            <div className="text-sm text-muted" data-testid="palette.no_results">
+            <div
+              id={COMMAND_PALETTE_STATUS_ID}
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+              className="text-sm text-muted"
+              data-testid="palette.no_results"
+            >
               {t('palette.empty.no_results')}
             </div>
           ) : (
-            <div className="space-y-4" data-testid="palette.results">
+            <div
+              id={COMMAND_PALETTE_LISTBOX_ID}
+              role="listbox"
+              aria-label={t('search.inline.aria')}
+              className="space-y-4"
+              data-testid="palette.results"
+            >
               {grouped.map((g) => (
                 <div key={g.group}>
                   <div className="text-xs font-semibold text-muted">{groupLabel(g.group, t)}</div>
                   <div className="mt-2 rounded-md border border-border">
-                    {g.rows.map((r) => {
-                      const idx = indexByKey.get(r.key);
-                      if (idx === undefined) return null;
-                      const isSel = idx === selected;
+                    {g.rows.map(({ result: r, index: idx }) => {
+                      const isSel = idx === activeSelected;
                       return (
                         <button
-                          key={r.key}
+                          key={commandPaletteOptionId(idx)}
                           type="button"
+                          id={commandPaletteOptionId(idx)}
+                          role="option"
+                          aria-selected={isSel}
+                          tabIndex={-1}
                           className={clsx(
                             'flex w-full items-start justify-between gap-3 px-3 py-2 text-left text-sm',
                             'hover:bg-surface-2',
@@ -652,6 +769,7 @@ export function CommandPalette(props: { open: boolean; onClose: () => void }) {
                             setSelected(idx);
                             setManualSelection(true);
                           }}
+                          onMouseDown={(e) => e.preventDefault()}
                           onClick={() => openResult(r)}
                           data-testid={`palette.result.${idx}`}
                         >

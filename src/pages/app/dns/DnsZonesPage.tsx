@@ -683,6 +683,7 @@ export function DnsZonesPage() {
                 if (smartErrors.length > 0) setSmartErrors([]);
               }}
               placeholder={t('dns.zones.search.placeholder')}
+              ariaLabel={t('dns.zones.search.placeholder')}
               testId="dns.zones.search.input"
               suggestions={smartSuggestions}
               onSubmit={() => void applySmartText(smart)}

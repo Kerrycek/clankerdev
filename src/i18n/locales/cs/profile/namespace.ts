@@ -22,7 +22,7 @@ export const csProfile_namespace = {
   "userns.namespace.smart.help.keys.id": "Otevře detail jmenného prostoru podle id.",
   "userns.namespace.smart.help.keys.size": "Filtr podle velikosti jmenného prostoru.",
   "userns.namespace.smart.help.keys.user": "Filtr podle id vlastníka (jen v administraci).",
-  "userns.namespace.smart.placeholder": "#123, size:65536, user:42…",
+  "userns.namespace.smart.placeholder": "#123, size:65536…",
   "userns.namespace.smart.suggestion.help_hint": "Použij id, size, user nebo blocks",
   "userns.namespace.smart.suggestion.help_title": "Nápověda filtrů jmenných prostorů",
   "userns.namespace.smart.suggestion.open": "Otevřít jmenný prostor #{id}",

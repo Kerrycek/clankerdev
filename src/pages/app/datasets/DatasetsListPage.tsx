@@ -43,8 +43,9 @@ import { TableRowLink } from '../../../components/ui/TableRowLink';
 import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 import { VpsLookupInput } from '../../../components/ui/VpsLookupInput';
 import { toneSurfaceClass } from '../../../components/ui/tone';
-
 import { DatasetUsage } from './DatasetUsage';
+import { DatasetPageSearchEmpty, DatasetPageSearchNotice } from './DatasetPageSearchState';
+import { filterDatasetPage } from './DatasetsListModel';
 
 function datasetLabel(ds: Dataset): string {
   const label = ds.full_name ?? ds.name ?? ds.label;
@@ -166,7 +167,6 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
       {
         limit: pagination.limit,
         fromId: pagination.fromId,
-        q: qText || null,
         user: mode === 'admin' ? userIdNum ?? null : scope.mineUserId ?? null,
         vps: showVpsFilter ? vpsIdNum ?? null : null,
         role: rolePreset ?? null,
@@ -178,7 +178,6 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
         limit: pagination.limit,
         fromId: pagination.fromId,
         includes,
-        q: qText || undefined,
         user: mode === 'admin' ? userIdNum : scope.mineUserId,
         vps: showVpsFilter ? vpsIdNum || undefined : undefined,
         role: rolePreset,
@@ -186,15 +185,16 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
     ).data,
   });
 
-  const rows = datasetsQ.data ?? [];
+  const pageRows = datasetsQ.data ?? [];
+  const rows = useMemo(() => filterDatasetPage(pageRows, qText), [pageRows, qText]);
   const showSnapshotColumn = rows.some((ds) => hasValue(ds.snapshots_count));
   const showMountColumn = rows.some((ds) => hasValue(ds.mount_count));
   const showExportColumn = rows.some((ds) => hasValue(ds.export_count));
   const showStateColumn = rows.some((ds) => hasValue((ds as any).object_state));
   const showRelatedMeta = showSnapshotColumn || showMountColumn || showExportColumn;
 
-  const pageCursor = useMemo(() => cursorFromDescendingPage(rows as any), [rows]);
-  const hasMore = rows.length >= pagination.limit;
+  const pageCursor = useMemo(() => cursorFromDescendingPage(pageRows as any), [pageRows]);
+  const hasMore = pageRows.length >= pagination.limit;
 
   const filtersActive = Boolean(qText) || Boolean(userIdNum !== undefined) || Boolean(showVpsFilter && vpsIdNum !== undefined);
 
@@ -543,7 +543,7 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
           testId="datasets.list.header"
           title={t(titleKey)}
           description={t(descriptionKey)}
-          meta={filtersActive ? t('list.meta.filters_active') : undefined}
+          meta={qText ? t('list.meta.filters_progressive') : filtersActive ? t('list.meta.filters_active') : undefined}
           actions={
             <>
               {props.headerActions}
@@ -564,6 +564,7 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
                 if (smartErrors.length > 0) setSmartErrors([]);
               }}
               placeholder={t(searchPlaceholderKey)}
+              ariaLabel={t(searchPlaceholderKey)}
               testId="datasets.search.input"
               suggestions={smartSuggestions}
               onSubmit={() => void applySmartText(smart)}
@@ -617,6 +618,7 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
         </FilterBar>
       }
     >
+      {qText ? <DatasetPageSearchNotice /> : null}
       {datasetsQ.isLoading ? (
         <LoadingState testId="datasets.list.loading" />
       ) : datasetsQ.isError ? (
@@ -627,6 +629,14 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
           onRetry={() => void datasetsQ.refetch()}
           showBack={false}
           detailsExtra={{ page: 'datasets.list', scope: scope.scope }}
+        />
+      ) : qText && rows.length === 0 ? (
+        <DatasetPageSearchEmpty
+          pagination={pagination}
+          pageCursor={pageCursor}
+          hasMore={hasMore}
+          hasSourceRows={pageRows.length > 0}
+          onClear={clearFilters}
         />
       ) : rows.length === 0 ? (
         <EmptyState
