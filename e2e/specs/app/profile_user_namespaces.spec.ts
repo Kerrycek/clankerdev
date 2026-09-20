@@ -25,13 +25,15 @@ test('profile: user namespaces - create map and edit entries', async ({ page }) 
     handlers: {
       'GET user_namespaces': async (ctx) => {
         namespacesListCalls += 1;
-        expect(ctx.searchParams.get('user_namespace[user]')).toBe('1');
+        expect(ctx.searchParams.get('user_namespace[user]')).toBeNull();
+        expect(ctx.searchParams.get('user_namespace[q]')).toBeNull();
         return { user_namespaces: namespaces };
       },
 
       'GET user_namespace_maps': async (ctx) => {
         mapListCalls += 1;
-        expect(ctx.searchParams.get('user_namespace_map[user]')).toBe('1');
+        expect(ctx.searchParams.get('user_namespace_map[user]')).toBeNull();
+        expect(ctx.searchParams.get('user_namespace_map[q]')).toBeNull();
         return { user_namespace_maps: maps };
       },
 
@@ -54,6 +56,7 @@ test('profile: user namespaces - create map and edit entries', async ({ page }) 
 
       'PUT user_namespace_maps/501': async (ctx) => {
         const b = await ctx.request.postDataJSON();
+        expect(b.user_namespace_map.user_namespace).toBe(101);
         const m = maps.find((x) => x.id === 501);
         m.label = b.user_namespace_map.label;
         return { user_namespace_map: m };
