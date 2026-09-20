@@ -158,6 +158,43 @@ test('admin incoming payments: reconciliation summary links to all unmatched pay
   await expect(page.getByTestId('admin.payments.incoming.row.400')).toHaveCount(0);
 });
 
+test('@pr-smoke @pr-smoke-mobile admin incoming payments: incomplete global totals are never presented as authoritative', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+  const haveApiMock = await installHaveApiMock(page, { user: { id: 1, login: 'admin', level: 100 } });
+
+  const queuedPayment = {
+    id: 450,
+    state: 'queued',
+    date: '2026-02-14T09:00:00Z',
+    transaction_id: 'TX-450',
+    amount: 1000,
+    currency: 'CZK',
+    account_name: 'Test account',
+    vs: '450',
+    user: null,
+    user_paid_until: null,
+    created_at: '2026-02-14T09:00:00Z',
+  };
+
+  haveApiMock.addHandler('GET incoming_payments', ({ searchParams }) => {
+    const state = String(searchParams.get('incoming_payment[state]') ?? '');
+    const rows = !state || state === 'queued' ? [queuedPayment] : [];
+    return {
+      status: true,
+      response: {
+        incoming_payments: rows,
+        _meta: state === 'queued' ? {} : { total_count: rows.length },
+      },
+    };
+  });
+
+  await page.goto(withAppUrl('/admin/payments/incoming'));
+
+  await expect(page.getByTestId('admin.payments.incoming.reconciliation.totals.incomplete')).toBeVisible();
+  await expect(page.getByTestId('admin.payments.incoming.reconciliation.totals.incomplete')).toContainText(/must not be treated as a global total/);
+  await expect(page.getByTestId('admin.payments.incoming.reconciliation.metric.queued')).toContainText(/1/);
+});
+
 test('admin incoming payments: only sends supported state filters and opens an exact payment ID', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
   const haveApiMock = await installHaveApiMock(page, { user: { id: 1, login: 'admin', level: 100 } });

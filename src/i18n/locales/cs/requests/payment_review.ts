@@ -2,6 +2,10 @@
 export const csPaymentReview = {
   'payments.incoming.reconcile.summary.title': 'Souhrn párování',
   'payments.incoming.reconcile.summary.subtitle': 'Aktuální stránka: {count} plateb; filtr stavu: {state}.',
+  'payments.incoming.reconcile.summary.totals.loading.title': 'Načítají se globální součty párování',
+  'payments.incoming.reconcile.summary.totals.loading.body': 'Dokud nedorazí součty všech stavů, ukazují počítadla níže dočasně pouze platby na této stránce.',
+  'payments.incoming.reconcile.summary.totals.incomplete.title': 'Globální součty párování nejsou kompletní',
+  'payments.incoming.reconcile.summary.totals.incomplete.body': 'Alespoň jeden součet stavu se nepodařilo ověřit. Jeho počítadlo proto vychází jen z této stránky a nelze je považovat za globální; obnovení zkusí načtení znovu.',
   'payments.incoming.reconcile.summary.needs_review': 'Ke kontrole',
   'payments.incoming.reconcile.summary.needs_review.detail': 'Ve frontě: {queued}; nespárováno: {unmatched}.',
   'payments.incoming.reconcile.summary.needs_review.queued': 'Ve frontě: {count}',

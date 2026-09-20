@@ -37,7 +37,10 @@ async function fetchIncomingPaymentStateTotal(input: {
       count: true,
     });
 
-    return getMetaTotalCount(res.meta);
+    const total = getMetaTotalCount(res.meta);
+    return typeof total === 'number' && Number.isSafeInteger(total) && total >= 0
+      ? total
+      : undefined;
   } catch {
     return undefined;
   }
@@ -272,6 +275,14 @@ export function IncomingPaymentsPage() {
             activeState={state}
             onSetState={setStateFilter}
             stateTotals={reconciliationTotalsQ.data}
+            stateTotalsStatus={
+              reconciliationTotalsQ.isLoading
+                ? 'loading'
+                : reconciliationTotalsQ.data
+                  && Object.values(reconciliationTotalsQ.data).every((total) => typeof total === 'number')
+                  ? 'complete'
+                  : 'incomplete'
+            }
           />
           <IncomingPaymentsListContent
             rows={rows}
