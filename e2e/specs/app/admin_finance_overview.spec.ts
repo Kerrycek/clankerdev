@@ -96,3 +96,29 @@ test('@pr-smoke non-admin sessions cannot mount global Finance totals', async ({
   await page.waitForLoadState('networkidle');
   expect(globalFinanceRequests).toEqual([]);
 });
+
+test('@pr-smoke @pr-smoke-mobile admin Finance explains an empty assessment distribution', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100 },
+    handlers: {
+      'GET users': ({ searchParams }) => {
+        const objectState = searchParams.get('user[object_state]') ?? 'active';
+        const rows = [
+          { id: 20, login: 'free', level: 1, object_state: 'active', monthly_payment: 0, paid_until: null },
+          { id: 21, login: 'deleted', level: 1, object_state: 'deleted', monthly_payment: 500, paid_until: null },
+        ].filter((user) => user.object_state === objectState);
+        return { users: rows };
+      },
+      'GET system_configs': () => ({
+        system_configs: [{ category: 'plugin_payments', name: 'default_currency', value: 'CZK' }],
+      }),
+    },
+  });
+
+  await page.goto('/admin/payments');
+
+  await expect(page.getByTestId('admin.finance.overview.risk.empty')).toBeVisible();
+  await expect(page.getByTestId('admin.finance.overview.distribution.empty')).toBeVisible();
+  await expect(page.getByTestId('admin.finance.overview.distribution.table')).toHaveCount(0);
+});
