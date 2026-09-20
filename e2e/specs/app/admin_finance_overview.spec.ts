@@ -13,7 +13,7 @@ test('@pr-smoke @pr-smoke-mobile admin Finance overview uses a complete account 
     webuiNext: { serverTimeZone: 'Europe/Prague' },
   });
   await installHaveApiMock(page, {
-    user: { id: 1, login: 'admin', level: 100 },
+    user: { id: 1, login: 'admin', level: 100, time_zone: 'Europe/Prague' },
     handlers: {
       'GET users': ({ searchParams }) => {
         const fromId = Number(searchParams.get('user[from_id]') ?? 0);
@@ -21,7 +21,7 @@ test('@pr-smoke @pr-smoke-mobile admin Finance overview uses a complete account 
         const rows = [
           { id: 10, login: 'paid', level: 1, object_state: 'active', monthly_payment: 300, paid_until: isoDaysFromNow(20) },
           { id: 11, login: 'soon', level: 1, object_state: 'active', monthly_payment: 400, paid_until: isoDaysFromNow(2) },
-          { id: 12, login: 'late', level: 1, object_state: 'suspended', monthly_payment: 500, paid_until: isoDaysFromNow(-2) },
+          { id: 12, login: 'late', level: 1, object_state: 'suspended', monthly_payment: 500, paid_until: '2026-09-19T22:30:00Z' },
           { id: 13, login: 'missing', level: 1, object_state: 'active', monthly_payment: 600, paid_until: null },
           { id: 14, login: 'broken', level: 1, object_state: 'active', monthly_payment: 700, paid_until: 'broken-date' },
           { id: 15, login: 'deleted', level: 1, object_state: 'deleted', monthly_payment: 800, paid_until: null },
@@ -53,12 +53,17 @@ test('@pr-smoke @pr-smoke-mobile admin Finance overview uses a complete account 
   await expect(page.getByTestId('admin.finance.overview.summary.invalid')).toContainText('1');
   await expect(page.getByTestId('admin.finance.overview.scope')).toContainText(/5/);
 
+  const expectedPaidUntil = await page.evaluate(() => new Date('2026-09-19T22:30:00Z').toLocaleDateString(undefined, {
+    timeZone: 'Europe/Prague',
+  }));
   if (testInfo.project.name === 'mobile-chrome') {
     await expect(page.getByTestId('admin.finance.overview.risk.mobile')).toBeVisible();
     await expect(page.getByTestId('admin.finance.overview.risk.row.12.mobile')).toBeVisible();
+    await expect(page.getByTestId('admin.finance.overview.risk.row.12.mobile')).toContainText(expectedPaidUntil);
   } else {
     await expect(page.getByTestId('admin.finance.overview.risk.table')).toBeVisible();
     await expect(page.getByTestId('admin.finance.overview.risk.row.12')).toBeVisible();
+    await expect(page.getByTestId('admin.finance.overview.risk.row.12')).toContainText(expectedPaidUntil);
   }
 
   await expect(page.getByTestId('admin.finance.overview.distribution.table')).toBeVisible();
