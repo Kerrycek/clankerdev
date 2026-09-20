@@ -2,8 +2,9 @@ import React from 'react';
 
 import { clsx } from './clsx';
 
-export function Textarea(props: {
+export interface TextareaProps {
   testId?: string;
+  textareaId?: string;
   ariaLabel?: string;
   value?: string;
   defaultValue?: string;
@@ -17,9 +18,13 @@ export function Textarea(props: {
   label?: React.ReactNode;
   ariaInvalid?: boolean;
   ariaDescribedBy?: string;
-}) {
+}
+
+export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(props, ref) {
   const textarea = (
     <textarea
+      ref={ref}
+      id={props.textareaId}
       data-testid={props.testId}
       aria-label={props.ariaLabel}
       name={props.name}
@@ -49,4 +54,4 @@ export function Textarea(props: {
       {textarea}
     </label>
   );
-}
+});

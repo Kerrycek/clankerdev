@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useId, useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { useI18n } from '../../app/i18n';
@@ -39,6 +39,11 @@ export function UserSecuritySettingsCard(props: {
   const [enableNewLoginNotif, setEnableNewLoginNotif] = useState(stored.notif);
   const [preferredSessionMin, setPreferredSessionMin] = useState(stored.sessMin);
   const [preferredLogoutAll, setPreferredLogoutAll] = useState(stored.logoutAll);
+  const sessionLengthInputId = useId();
+  const sessionLengthLabelId = useId();
+  const sessionLengthDescriptionId = useId();
+  const sessionLengthUnitId = useId();
+  const sessionLengthValidationId = useId();
 
   useEffect(() => {
     setEnableBasicAuth(stored.basic);
@@ -170,28 +175,53 @@ export function UserSecuritySettingsCard(props: {
           <div className="rounded-md border border-border bg-surface-2 px-3 py-2" data-testid={`${prefix}.settings.session_length`}>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <div className="text-sm font-medium text-fg">{t('security.settings.session_length.label')}</div>
-                <div className="mt-0.5 text-xs text-muted">{t('security.settings.session_length.desc')}</div>
+                <label
+                  id={sessionLengthLabelId}
+                  htmlFor={sessionLengthInputId}
+                  className="text-sm font-medium text-fg"
+                >
+                  {t('security.settings.session_length.label')}
+                </label>
+                <div id={sessionLengthDescriptionId} className="mt-0.5 text-xs text-muted">
+                  {t('security.settings.session_length.desc')}
+                </div>
               </div>
 
               <div className="flex items-center gap-2">
                 <Input
+                  inputId={sessionLengthInputId}
                   type="number"
                   value={preferredSessionMin}
                   onChange={(e) => setPreferredSessionMin(e.target.value)}
-                  className="w-24"
+                  ariaInvalid={!review.sessionParse.valid}
+                  ariaDescribedBy={[
+                    sessionLengthDescriptionId,
+                    sessionLengthUnitId,
+                    !review.sessionParse.valid ? sessionLengthValidationId : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  className="min-h-11 w-24 sm:min-h-9"
                   testId={`${prefix}.settings.session_length.input`}
                 />
-                <span className="text-xs text-faint">{t('security.settings.session_length.unit')}</span>
+                <span id={sessionLengthUnitId} className="text-xs text-faint">
+                  {t('security.settings.session_length.unit')}
+                </span>
               </div>
             </div>
 
-            <div className="mt-2 flex flex-wrap items-center gap-2">
+            <div
+              className="mt-2 flex flex-wrap items-center gap-2"
+              role="group"
+              aria-labelledby={sessionLengthLabelId}
+            >
               {[0, 20, 60, 240].map((m) => (
                 <Button
                   key={m}
                   size="sm"
                   variant="secondary"
+                  className="min-h-11 sm:min-h-8"
+                  aria-pressed={preferredSessionMin === String(m)}
                   onClick={() => setPreferredSessionMin(String(m))}
                   testId={`${prefix}.settings.session_length.preset.${m}`}
                 >
@@ -212,13 +242,20 @@ export function UserSecuritySettingsCard(props: {
           <UserSecuritySettingsReviewCard prefix={prefix} review={review} />
 
           {!review.sessionParse.valid ? (
-            <Alert variant="warn" title={t('security.settings.review.validation.title')} testId={`${prefix}.settings.session_length.validation`}>
-              {t(review.sessionParse.validationKey)}
-            </Alert>
+            <div id={sessionLengthValidationId}>
+              <Alert
+                variant="warn"
+                title={t('security.settings.review.validation.title')}
+                testId={`${prefix}.settings.session_length.validation`}
+              >
+                {t(review.sessionParse.validationKey)}
+              </Alert>
+            </div>
           ) : null}
 
           <div className="flex items-center gap-2 pt-2">
             <Button
+              className="min-h-11 sm:min-h-9"
               onClick={() => settingsM.mutate()}
               loading={settingsM.isPending}
               disabled={!review.canSubmit || settingsM.isPending}
@@ -229,6 +266,7 @@ export function UserSecuritySettingsCard(props: {
 
             <Button
               variant="secondary"
+              className="min-h-11 sm:min-h-9"
               onClick={reset}
               disabled={!review.hasChanges || settingsM.isPending}
               testId={`${prefix}.settings.reset`}
