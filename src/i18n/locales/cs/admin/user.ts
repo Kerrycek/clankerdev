@@ -174,6 +174,8 @@ export const csAdmin_user = {
   "admin.user.payments.settings.hint.monthly_payment": "Výchozí měsíční částka používaná pro předpisy a kontrolu plateb.",
   "admin.user.payments.settings.hint.paid_until": "Změna data „zaplaceno do“ také aktualizuje expiraci uživatele.",
   "admin.user.payments.settings.load_error.title": "Nepodařilo se načíst nastavení plateb",
+  "admin.user.payments.settings.stale.title": "Zobrazuje se poslední načtené nastavení plateb",
+  "admin.user.payments.settings.stale.body": "Nejnovější obnovení účtu selhalo. Nastavení plateb a ruční přidání platby jsou vypnuté, dokud se úspěšně nenačtou aktuální data účtu.",
   "admin.user.payments.settings.modal.title": "Upravit nastavení plateb",
   "admin.user.payments.settings.save_paid_until": "Uložit datum",
   "admin.user.payments.settings.title": "Nastavení účtu",

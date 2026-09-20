@@ -174,6 +174,8 @@ export const enAdmin_user = {
   "admin.user.payments.settings.hint.monthly_payment": "Default monthly amount used for payment expectations and checks.",
   "admin.user.payments.settings.hint.paid_until": "Changing paid-until also updates user expiration.",
   "admin.user.payments.settings.load_error.title": "Failed to load payment settings",
+  "admin.user.payments.settings.stale.title": "Showing the last loaded payment settings",
+  "admin.user.payments.settings.stale.body": "The latest account refresh failed. Payment settings and manual payment actions are disabled until current account data loads successfully.",
   "admin.user.payments.settings.modal.title": "Edit payment settings",
   "admin.user.payments.settings.save_paid_until": "Save date",
   "admin.user.payments.settings.title": "Account settings",
