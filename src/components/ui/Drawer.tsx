@@ -94,7 +94,11 @@ export function Drawer(props: {
           <button
             type="button"
             onClick={props.onClose}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted hover:bg-surface-2"
+            className={clsx(
+              'inline-flex h-8 w-8 min-h-11 min-w-11 items-center justify-center rounded-md text-muted hover:bg-surface-2',
+              'sm:min-h-8 sm:min-w-8',
+              '[@media(any-pointer:coarse)]:min-h-11 [@media(any-pointer:coarse)]:min-w-11'
+            )}
             aria-label={t('common.close')}
             data-testid={closeTestId}
           >
