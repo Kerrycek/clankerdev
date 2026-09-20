@@ -142,6 +142,12 @@ export const csDns = {
   'dns.zone.records.modal.create.name.help': 'Název záznamu v rámci zóny.',
   'dns.zone.records.modal.create.type.label': 'Typ',
   'dns.zone.records.modal.create.content.label': 'Obsah',
+  'dns.zone.records.modal.create.content.help.ds':
+    'Formát: key tag, algoritmus, typ otisku (1, 2 nebo 4) a hexadecimální otisk.',
+  'dns.zone.records.modal.create.content.help.sshfp':
+    'Formát: algoritmus, typ fingerprintu (1 nebo 2) a hexadecimální fingerprint.',
+  'dns.zone.records.modal.create.content.help.tlsa':
+    'Formát: použití, selektor, typ porovnání (0, 1 nebo 2) a hexadecimální data certifikátu.',
   'dns.zone.records.modal.create.ttl.label': 'TTL',
   'dns.zone.records.modal.create.priority.label': 'Priorita',
   'dns.zone.records.modal.create.comment.label': 'Komentář',
@@ -177,14 +183,23 @@ export const csDns = {
   'dns.zone.records.validation.content.srv_hint': 'Obsah SRV je obvykle „váha port cíl“; před uložením hodnotu ověř.',
   'dns.zone.records.validation.content.srv': 'Obsah SRV musí být platný cíl nebo „váha port cíl“.',
   'dns.zone.records.validation.content.caa': 'Obsah CAA má vypadat například: 0 issue "letsencrypt.org".',
+  'dns.zone.records.validation.content.ds':
+    'Obsah DS musí obsahovat key tag, algoritmus, typ otisku a hexadecimální otisk požadované délky.',
+  'dns.zone.records.validation.content.sshfp':
+    'Obsah SSHFP musí obsahovat algoritmus, typ fingerprintu a hexadecimální fingerprint požadované délky.',
+  'dns.zone.records.validation.content.tlsa':
+    'Obsah TLSA musí obsahovat použití, selektor, typ porovnání a hexadecimální data požadované délky.',
   'dns.zone.records.validation.ttl.integer': 'TTL musí být celé číslo.',
   'dns.zone.records.validation.ttl.range': 'TTL musí být mezi 0 a {max}.',
   'dns.zone.records.validation.priority.required': 'Priorita je povinná pro MX a SRV záznamy.',
   'dns.zone.records.validation.priority.integer': 'Priorita musí být celé číslo.',
   'dns.zone.records.validation.priority.range': 'Priorita musí být mezi 0 a {max}.',
+  'dns.zone.records.validation.priority.unsupported': 'Prioritu lze nastavit pouze u záznamů MX a SRV.',
+  'dns.zone.records.validation.dynamic.unsupported': 'Dynamické aktualizace jsou dostupné pouze pro záznamy A a AAAA.',
   'dns.zone.records.validation.conflict.cname_existing': 'CNAME {name} nemůže existovat spolu s {count} dalšími záznamy se stejným názvem.',
   'dns.zone.records.validation.conflict.cname_blocks': 'Tento název už má CNAME záznam. Přidej novou hodnotu pod jiný název nebo nejdřív uprav CNAME.',
   'dns.zone.records.validation.conflict.cname_apex': 'Apex CNAME záznamy často kolidují s povinnými záznamy zóny. Před uložením to ověř.',
+  'dns.zone.records.validation.conflict.ds_apex': 'DS záznamy nejsou povoleny na apexu zóny.',
   'dns.zone.records.validation.conflict.duplicate': 'Pro tento název, typ a obsah už existuje shodný záznam.',
   'dns.zone.records.row_error.title': 'Poslední změna tohoto záznamu selhala',
   'dns.zone.settings.card.title': 'Nastavení zóny',

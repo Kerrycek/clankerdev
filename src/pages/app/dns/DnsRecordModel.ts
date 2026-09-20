@@ -1,6 +1,6 @@
 import type { DnsRecord } from '../../../lib/api/dns';
 
-export const DNS_RECORD_TYPES = ['A', 'AAAA', 'CNAME', 'MX', 'TXT', 'SRV', 'NS', 'PTR', 'CAA'] as const;
+export const DNS_RECORD_TYPES = ['A', 'AAAA', 'CAA', 'CNAME', 'DS', 'MX', 'NS', 'PTR', 'SRV', 'SSHFP', 'TLSA', 'TXT'] as const;
 
 export type DnsRecordType = (typeof DNS_RECORD_TYPES)[number];
 
@@ -73,9 +73,17 @@ export type DnsRecordUpdatePayload = {
 type DnsRecordCompat = DnsRecord & { dynamic?: boolean };
 
 const PRIORITY_RECORD_TYPES = new Set<string>(['MX', 'SRV']);
+const DYNAMIC_UPDATE_RECORD_TYPES = new Set<string>(['A', 'AAAA']);
 const HOST_TARGET_TYPES = new Set<string>(['CNAME', 'MX', 'NS', 'PTR']);
 const OPTIONAL_INT_MAX = 2_147_483_647;
 const PRIORITY_MAX = 65_535;
+const DS_DIGEST_LENGTHS: Readonly<Record<string, number>> = { '1': 40, '2': 64, '4': 96 };
+const SSHFP_FINGERPRINT_LENGTHS: Readonly<Record<string, number>> = { '1': 40, '2': 64 };
+const TLSA_ASSOCIATION_DATA_LENGTHS: Readonly<Record<string, number | undefined>> = {
+  '0': undefined,
+  '1': 64,
+  '2': 128,
+};
 
 export function defaultDnsRecordDraft(defaultTtl?: number | null): DnsRecordDraft {
   void defaultTtl;
@@ -120,6 +128,45 @@ export function dnsZoneLabel(zone: { id: number; name?: string; label?: string }
 
 export function isDnsRecordType(value: string): value is DnsRecordType {
   return DNS_RECORD_TYPES.includes(value.toUpperCase() as DnsRecordType);
+}
+
+export function dnsRecordSupportsPriority(value: string): boolean {
+  return PRIORITY_RECORD_TYPES.has(value.toUpperCase());
+}
+
+export function dnsRecordSupportsDynamicUpdate(value: string): boolean {
+  return DYNAMIC_UPDATE_RECORD_TYPES.has(value.toUpperCase());
+}
+
+export function dnsRecordContentPlaceholder(value: string): string {
+  switch (value.toUpperCase()) {
+    case 'A':
+      return '192.0.2.10';
+    case 'AAAA':
+      return '2001:db8::10';
+    case 'CAA':
+      return '0 issue "letsencrypt.org"';
+    case 'CNAME':
+      return 'target.example.com.';
+    case 'DS':
+      return '60485 13 2 <SHA-256 digest>';
+    case 'MX':
+      return 'mail.example.com.';
+    case 'NS':
+      return 'ns1.example.com.';
+    case 'PTR':
+      return 'target.example.com.';
+    case 'SRV':
+      return '5 5060 sip.example.com.';
+    case 'SSHFP':
+      return '4 2 <SHA-256 fingerprint>';
+    case 'TLSA':
+      return '3 1 1 <SHA-256 association data>';
+    case 'TXT':
+      return 'verification=value';
+    default:
+      return '';
+  }
 }
 
 function parseOptionalInteger(value: string): number | undefined {
@@ -221,6 +268,53 @@ function isValidCaaContent(value: string): boolean {
   return /^[A-Za-z][A-Za-z0-9_-]*$/.test(parts[1] ?? '') && parts.slice(2).join(' ').trim().length > 0;
 }
 
+function exactComponents(value: string, count: number): string[] | null {
+  if (/[\r\n]/.test(value)) return null;
+  const components = value.trim().split(/\s+/);
+  return components.length === count ? components : null;
+}
+
+function isHex(value: string, length: number): boolean {
+  return value.length === length && /^[a-fA-F0-9]+$/.test(value);
+}
+
+function isValidDsContent(value: string): boolean {
+  const components = exactComponents(value, 4);
+  if (!components) return false;
+  const [keyTag = '', algorithm = '', digestType = '', digest = ''] = components;
+  const digestLength = Object.prototype.hasOwnProperty.call(DS_DIGEST_LENGTHS, digestType)
+    ? DS_DIGEST_LENGTHS[digestType]
+    : undefined;
+  return /^\d+$/.test(keyTag) && /^\d+$/.test(algorithm) && digestLength !== undefined && isHex(digest, digestLength);
+}
+
+function isValidSshfpContent(value: string): boolean {
+  const components = exactComponents(value, 3);
+  if (!components) return false;
+  const [algorithm = '', fingerprintType = '', fingerprint = ''] = components;
+  const fingerprintLength = Object.prototype.hasOwnProperty.call(SSHFP_FINGERPRINT_LENGTHS, fingerprintType)
+    ? SSHFP_FINGERPRINT_LENGTHS[fingerprintType]
+    : undefined;
+  return /^\d+$/.test(algorithm) && fingerprintLength !== undefined && isHex(fingerprint, fingerprintLength);
+}
+
+function isValidTlsaContent(value: string): boolean {
+  const components = exactComponents(value, 4);
+  if (!components) return false;
+  const [usage = '', selector = '', matchingType = '', associationData = ''] = components;
+  if (
+    !/^\d+$/.test(usage) ||
+    !/^\d+$/.test(selector) ||
+    !Object.prototype.hasOwnProperty.call(TLSA_ASSOCIATION_DATA_LENGTHS, matchingType)
+  ) {
+    return false;
+  }
+
+  const expectedLength = TLSA_ASSOCIATION_DATA_LENGTHS[matchingType];
+  if (expectedLength !== undefined) return isHex(associationData, expectedLength);
+  return /^(?:[a-fA-F0-9]{2})+$/.test(associationData);
+}
+
 function srvContentLooksComplete(value: string): boolean {
   const parts = value.trim().split(/\s+/);
   if (parts.length < 3) return false;
@@ -303,17 +397,31 @@ export function validateDnsRecordDraft(
     }
   } else if (type === 'CAA' && !isValidCaaContent(content)) {
     pushIssue(issues, 'content', 'error', 'dns.zone.records.validation.content.caa');
+  } else if (type === 'DS' && !isValidDsContent(content)) {
+    pushIssue(issues, 'content', 'error', 'dns.zone.records.validation.content.ds');
+  } else if (type === 'SSHFP' && !isValidSshfpContent(content)) {
+    pushIssue(issues, 'content', 'error', 'dns.zone.records.validation.content.sshfp');
+  } else if (type === 'TLSA' && !isValidTlsaContent(content)) {
+    pushIssue(issues, 'content', 'error', 'dns.zone.records.validation.content.tlsa');
   }
 
   validateOptionalNumber(issues, 'ttl', draft.ttl, {
     max: OPTIONAL_INT_MAX,
     messagePrefix: 'dns.zone.records.validation.ttl',
   });
-  validateOptionalNumber(issues, 'priority', draft.priority, {
-    required: PRIORITY_RECORD_TYPES.has(type),
-    max: PRIORITY_MAX,
-    messagePrefix: 'dns.zone.records.validation.priority',
-  });
+  if (dnsRecordSupportsPriority(type)) {
+    validateOptionalNumber(issues, 'priority', draft.priority, {
+      required: true,
+      max: PRIORITY_MAX,
+      messagePrefix: 'dns.zone.records.validation.priority',
+    });
+  } else if (draft.priority.trim()) {
+    pushIssue(issues, 'priority', 'error', 'dns.zone.records.validation.priority.unsupported');
+  }
+
+  if (draft.dynamicUpdateEnabled && !dnsRecordSupportsDynamicUpdate(type)) {
+    pushIssue(issues, 'dynamic_update_enabled', 'error', 'dns.zone.records.validation.dynamic.unsupported');
+  }
 
   const otherRecords = records.filter((record) => record.id !== opts?.editingRecordId && sameRecordName(record.name, name));
   const otherCname = otherRecords.find((record) => String(record.type ?? '').toUpperCase() === 'CNAME');
@@ -331,6 +439,10 @@ export function validateDnsRecordDraft(
     pushIssue(issues, 'conflict', 'warning', 'dns.zone.records.validation.conflict.cname_apex');
   }
 
+  if (name && type === 'DS' && normalizedRecordName(name) === '@') {
+    pushIssue(issues, 'name', 'error', 'dns.zone.records.validation.conflict.ds_apex');
+  }
+
   const duplicate = otherRecords.find((record) => {
     return String(record.type ?? '').toUpperCase() === type && String(record.content ?? '').trim() === content;
   });
@@ -346,27 +458,29 @@ export function validateExistingDnsRecord(record: DnsRecord, records: readonly D
 }
 
 export function buildDnsRecordCreatePayload(zoneId: number, draft: DnsRecordDraft): DnsRecordCreatePayload {
+  const type = draft.type.toUpperCase();
   return {
     dns_zone: zoneId,
     name: draft.name.trim(),
-    type: draft.type.toUpperCase(),
+    type,
     content: draft.content,
     ttl: parseOptionalInteger(draft.ttl),
-    priority: parseOptionalInteger(draft.priority),
+    priority: dnsRecordSupportsPriority(type) ? parseOptionalInteger(draft.priority) : undefined,
     comment: draft.comment.trim() || undefined,
     enabled: draft.enabled,
-    dynamic_update_enabled: draft.dynamicUpdateEnabled,
+    dynamic_update_enabled: dnsRecordSupportsDynamicUpdate(type) ? draft.dynamicUpdateEnabled : false,
   };
 }
 
 export function buildDnsRecordUpdatePayload(draft: DnsRecordDraft): DnsRecordUpdatePayload {
+  const type = draft.type.toUpperCase();
   return {
     content: draft.content,
     ttl: parseOptionalInteger(draft.ttl),
-    priority: parseOptionalInteger(draft.priority),
+    priority: dnsRecordSupportsPriority(type) ? parseOptionalInteger(draft.priority) : undefined,
     comment: draft.comment.trim() || undefined,
     enabled: draft.enabled,
-    dynamic_update_enabled: draft.dynamicUpdateEnabled,
+    dynamic_update_enabled: dnsRecordSupportsDynamicUpdate(type) ? draft.dynamicUpdateEnabled : false,
   };
 }
 
