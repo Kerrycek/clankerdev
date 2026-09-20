@@ -16,10 +16,27 @@ const handlers = {
     created_at: '2026-02-02T08:00:00Z',
     updated_at: '2026-02-02T08:02:00Z',
     action_state: { id: 555, label: 'Action #555' },
-    concerns: [
-      { class_name: 'Vps', row_id: 100, label: 'vps100', type: 'direct' },
-      { class_name: 'Node', row_id: 2, label: 'node2', type: 'direct' },
-    ],
+    concerns: {
+      type: 'affect',
+      objects: [
+        ['Vps', 100],
+        ['Dataset', 200],
+        ['DnsZone', 300],
+        ['Node', 2],
+        ['UnknownConcern', 404],
+        ['Vps', '999'],
+        ['Vps', -1],
+        ['Vps', 998, 'unexpected-third-item'],
+        { class_name: 'Vps', row_id: 997 },
+      ],
+      labels: {
+        Vps: 'VPS',
+        Dataset: 'Dataset',
+        DnsZone: 'DNS zone',
+        Node: 'Node',
+        UnknownConcern: 'Unknown object',
+      },
+    },
   }),
   'GET transaction_chains/124': () => ({
     id: 124,
@@ -30,7 +47,7 @@ const handlers = {
     created_at: '2026-02-02T09:00:00Z',
     updated_at: '2026-02-02T09:02:00Z',
     action_state: { id: 556, label: 'Done action' },
-    concerns: [{ class_name: 'Vps', row_id: 101, label: 'vps101', type: 'direct' }],
+    concerns: { type: 'affect', objects: [['Vps', 101]], labels: { Vps: 'VPS' } },
   }),
   'GET transaction_chains/125': () => ({
     id: 125,
@@ -41,7 +58,7 @@ const handlers = {
     created_at: '2026-02-02T10:00:00Z',
     updated_at: '2026-02-02T10:02:00Z',
     action_state: { id: 557, label: 'Running action' },
-    concerns: [{ class_name: 'Vps', row_id: 102, label: 'vps102', type: 'direct' }],
+    concerns: { type: 'affect', objects: [['Vps', 102]], labels: { Vps: 'VPS' } },
   }),
   'GET transactions': ({ searchParams }: { searchParams: URLSearchParams }) => {
     const chainId = searchParams.get('transaction[transaction_chain]');
@@ -178,6 +195,22 @@ test.describe('@pr-smoke TransactionChainDetailPage', () => {
     await expect(page.getByTestId('transactions.chain.detail.header')).toBeVisible();
     await expect(page.getByTestId('transactions.chain.detail.info')).toBeVisible();
 
+    const concerns = page.getByTestId('transactions.chain.detail.concerns');
+    await expect(concerns).toContainText('VPS #100');
+    await expect(concerns).toContainText('Dataset #200');
+    await expect(concerns).toContainText('DNS zone #300');
+    await expect(concerns).toContainText('Node #2');
+    await expect(concerns).toContainText('Unknown object #404');
+    await expect(concerns).not.toContainText('#999');
+    await expect(concerns).not.toContainText('#998');
+    await expect(concerns).not.toContainText('#997');
+    await expect(page.getByTestId('transactions.chain.detail.concern.0.open')).toHaveAttribute('href', '/app/vps/100');
+    await expect(page.getByTestId('transactions.chain.detail.concern.1.open')).toHaveAttribute('href', '/app/datasets/200');
+    await expect(page.getByTestId('transactions.chain.detail.concern.2.open')).toHaveAttribute('href', '/app/dns/zones/300');
+    await expect(page.getByTestId('transactions.chain.detail.concern.3.open')).toHaveCount(0);
+    await expect(page.getByTestId('transactions.chain.detail.concern.4.open')).toHaveCount(0);
+    await expect(concerns.locator('a[href^="/admin"]')).toHaveCount(0);
+
     await expect(page.getByTestId('transactions.chain.detail.tx.701')).toBeVisible();
     await expect(page.getByTestId('transactions.chain.detail.tx.702')).toBeVisible();
     await expect(page.getByTestId('transactions.chain.detail.tx.open.702')).toBeVisible();
@@ -311,6 +344,11 @@ test.describe('@pr-smoke TransactionChainDetailPage', () => {
       'href',
       '/admin/transactions/items/702'
     );
+    await expect(page.getByTestId('transactions.chain.detail.concern.0.open')).toHaveAttribute('href', '/admin/vps/100');
+    await expect(page.getByTestId('transactions.chain.detail.concern.1.open')).toHaveAttribute('href', '/admin/datasets/200');
+    await expect(page.getByTestId('transactions.chain.detail.concern.2.open')).toHaveAttribute('href', '/admin/dns/zones/300');
+    await expect(page.getByTestId('transactions.chain.detail.concern.3.open')).toHaveAttribute('href', '/admin/nodes/2');
+    await expect(page.getByTestId('transactions.chain.detail.concern.4.open')).toHaveCount(0);
     await page.setViewportSize({ width: 390, height: 844 });
     await expectNoDocumentHorizontalOverflow(page);
     await expectTableHorizontalScrollUsable(page, 'transactions.chain.detail.transactions.table');

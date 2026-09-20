@@ -16,6 +16,8 @@ import { resourceId, refLabel } from '../../lib/resources';
 import { safeContentUrl } from '../../lib/safeUrl';
 import { durationSec, safeJson } from '../../lib/txFormat';
 import { dotVariantFromRowVariant, tableVariantFromBadgeVariant } from '../../lib/variantMap';
+import { normalizeTransactionChainConcerns } from '../../lib/concerns';
+import { directConcernLink, shortConcernClassName } from '../../lib/concernLinks';
 
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
@@ -534,45 +536,52 @@ function DebugSummaryTile(props: { label: React.ReactNode; value: React.ReactNod
 function ChainConcerns(props: { basePath: string; concerns: unknown; t: (k: any, vars?: any) => string }) {
   const { basePath, concerns, t } = props;
 
-  const list = Array.isArray(concerns) ? (concerns as any[]) : [];
+  const list = normalizeTransactionChainConcerns(concerns);
 
   if (!list.length) {
-    return <div className="text-sm text-muted">{t('common.na')}</div>;
+    return <div className="text-sm text-muted" data-testid="transactions.chain.detail.concerns.empty">{t('common.na')}</div>;
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-testid="transactions.chain.detail.concerns">
       {list.map((c, idx) => {
-        if (!c || typeof c !== 'object') return null;
-        const cls = String((c as any).class_name ?? '');
-        const rowId = typeof (c as any).row_id === 'number' ? ((c as any).row_id as number) : undefined;
-        const label = (c as any).label ? String((c as any).label) : '';
-
-        const hasObject = Boolean((c as any).object);
-        const directHref = hasObject ? safeContentUrl(String((c as any).object)) : null;
-
-        // For common objects we can link to native pages.
-        const internalHref = (() => {
-          if (!rowId) return null;
-          if (cls === 'Vps') return `${basePath}/vps/${rowId}`;
-          if (cls === 'User') return basePath === '/admin' ? `${basePath}/users/${rowId}` : null;
-          return null;
-        })();
-
-        const text = rowId ? `${cls} #${rowId}` : cls;
+        const cls = c.class_name;
+        const rowId = c.row_id;
+        const label = c.label ?? '';
+        const raw = c.raw && typeof c.raw === 'object' && !Array.isArray(c.raw)
+          ? c.raw as Record<string, unknown>
+          : null;
+        const directHref = typeof raw?.['object'] === 'string' ? safeContentUrl(raw['object']) : null;
+        const internalHref = directConcernLink(basePath, cls, rowId)
+          ?? (shortConcernClassName(cls) === 'User' && basePath === '/admin' ? `${basePath}/users/${rowId}` : null);
+        const text = `${c.class_label ?? shortConcernClassName(cls)} #${rowId}`;
 
         return (
-          <div key={idx} className="flex flex-wrap items-center gap-2 text-sm">
+          <div
+            key={`${cls}:${rowId}`}
+            className="flex flex-wrap items-center gap-2 text-sm"
+            data-testid={`transactions.chain.detail.concern.${idx}`}
+          >
             <span className="rounded-md border border-border bg-surface-2 px-2 py-0.5 text-xs text-muted">{text}</span>
             {label ? <span className="text-sm text-muted">{label}</span> : null}
 
             {internalHref ? (
-              <Link className="text-xs text-accent hover:underline" to={internalHref}>
+              <Link
+                className="text-xs text-accent hover:underline"
+                to={internalHref}
+                data-testid={`transactions.chain.detail.concern.${idx}.open`}
+              >
                 {t('common.open')}
               </Link>
             ) : null}
             {directHref ? (
-              <a className="text-xs text-accent hover:underline" href={directHref} target="_blank" rel="noreferrer">
+              <a
+                className="text-xs text-accent hover:underline"
+                href={directHref}
+                target="_blank"
+                rel="noreferrer"
+                data-testid={`transactions.chain.detail.concern.${idx}.external`}
+              >
                 {t('transactions.link.open_object')}
               </a>
             ) : null}
