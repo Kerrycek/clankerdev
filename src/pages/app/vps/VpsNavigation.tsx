@@ -24,10 +24,6 @@ export function VpsActionsMenu(props: {
   basePath: string;
   vpsId: number;
   canMutateVps: boolean;
-  primaryHeaderAction: 'start' | 'console' | 'access';
-  startAllowed: boolean;
-  restartAllowed: boolean;
-  stopAllowed: boolean;
   passwordAllowed: boolean;
   showTasks: boolean;
   showSupportActions: boolean;
@@ -52,11 +48,6 @@ export function VpsActionsMenu(props: {
       <option value="">{t('vps.actions.more.placeholder')}</option>
       {props.canMutateVps ? (
         <optgroup label={t('vps.actions.more.group.daily')}>
-          {props.primaryHeaderAction !== 'start' ? (
-            <option value="action:start" disabled={!props.startAllowed}>{t('action.vps.start.label')}</option>
-          ) : null}
-          <option value="action:restart" disabled={!props.restartAllowed}>{t('action.vps.restart.label')}</option>
-          <option value="action:stop" disabled={!props.stopAllowed}>{t('action.vps.stop.label')}</option>
           <option value="action:root_password" disabled={!props.passwordAllowed}>{t('vps.power.root_password.button')}</option>
           {props.showTasks ? <option value="tasks">{t('common.open_tasks')}</option> : null}
         </optgroup>
@@ -69,7 +60,6 @@ export function VpsActionsMenu(props: {
         <option value={contextualVpsPath('/features')}>{t('vps.tabs.features')}</option>
         <option value={contextualVpsPath('/maintenance')}>{t('vps.tabs.maintenance')}</option>
         <option value={contextualVpsPath('/history')}>{t('vps.tabs.history')}</option>
-        {props.canMutateVps ? <option value={contextualVpsPath('/lifecycle')}>{t('vps.tabs.lifecycle')}</option> : null}
         <option value={`${props.basePath}/transactions?class_name=Vps&row_id=${props.vpsId}`}>{t('vps.overview.admin_actions.transaction_log')}</option>
       </optgroup>
       {props.canMutateVps ? (
@@ -77,6 +67,8 @@ export function VpsActionsMenu(props: {
           <option value={contextualVpsPath('/lifecycle/reinstall')}>{t('action.vps.reinstall.label')}</option>
           <option value={contextualVpsPath('/lifecycle/clone')}>{t('action.vps.clone.label')}</option>
           <option value={contextualVpsPath('/lifecycle/swap')}>{t('action.vps.swap.label')}</option>
+          <option value={contextualVpsPath('/lifecycle/template')}>{t('action.vps.template.label')}</option>
+          <option value={contextualVpsPath('/lifecycle/boot')}>{t('action.vps.boot.label')}</option>
           <option value={contextualVpsPath('/lifecycle/delete')}>{t('action.vps.delete.label')}</option>
         </optgroup>
       ) : null}
@@ -110,8 +102,6 @@ export function VpsActionsMenu(props: {
             {t('vps.overview.admin_actions.user_namespaces')}
           </option>
           <option value={contextualVpsPath('/lifecycle/lifetime')}>{t('action.vps.lifecycle.label')}</option>
-          <option value={contextualVpsPath('/lifecycle/template')}>{t('action.vps.template.label')}</option>
-          <option value={contextualVpsPath('/lifecycle/boot')}>{t('action.vps.boot.label')}</option>
           <option value={contextualVpsPath('/lifecycle/replace')}>{t('action.vps.replace.label')}</option>
           <option value={contextualVpsPath('/lifecycle/migrate')}>{t('action.vps.migrate.label')}</option>
         </optgroup>

@@ -103,10 +103,8 @@ test.describe('@workflow-matrix @pr-smoke @smoke VPS detail power actions', () =
 
     await page.goto('/app/vps/123');
 
-    const actionsMenu = page.getByTestId('vps.actions.menu');
-    await expect(actionsMenu).toBeVisible();
-    await expect(actionsMenu.locator('option[value="action:stop"]')).toBeEnabled();
-    await actionsMenu.selectOption('action:stop');
+    await expect(page.getByTestId('vps.action.stop.header')).toBeEnabled();
+    await page.getByTestId('vps.action.stop.header').click();
 
     await expect(page.getByTestId('vps.action.stop_confirm')).toBeVisible();
     await expect(page.getByTestId('vps.action.stop_confirm.target')).toContainText('vps123.example');
@@ -129,7 +127,7 @@ test.describe('@workflow-matrix @pr-smoke @smoke VPS detail power actions', () =
     await installPowerMock(page, { action: 'restart', actionStateId: 778, isRunning: true });
 
     await page.goto('/app/vps/123');
-    await page.getByTestId('vps.actions.menu').selectOption('action:restart');
+    await page.getByTestId('vps.action.restart.header').click();
 
     await expect(page.getByTestId('vps.action.restart_confirm')).toBeVisible();
     await expect(page.getByTestId('vps.action.restart_confirm.target')).toContainText('vps123.example');
@@ -151,7 +149,7 @@ test.describe('@workflow-matrix @pr-smoke @smoke VPS detail power actions', () =
     await installPowerMock(page, { action: 'restart', actionStateId: 780, isRunning: true, admin: true });
 
     await page.goto('/admin/vps/123?user=42');
-    await page.getByTestId('vps.actions.menu').selectOption('action:restart');
+    await page.getByTestId('vps.action.restart.header').click();
     await page.getByTestId('vps.action.restart_confirm.confirm').click();
     await expect(page.getByTestId('modal.action_progress')).toBeVisible();
     await page.goto('/admin/vps?user=84');

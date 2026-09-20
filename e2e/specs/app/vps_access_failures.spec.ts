@@ -58,7 +58,7 @@ test.describe('@workflow-matrix VPS access failure regressions', () => {
     });
 
     await page.goto('/app/vps/123');
-    await page.getByTestId('vps.actions.menu').selectOption('action:stop');
+    await page.getByTestId('vps.action.stop.header').click();
     await expect(page.getByTestId('vps.action.stop_confirm')).toBeVisible();
     await navigateWithinVps(page, '/app/vps/456');
     await expect(page.getByTestId('vps.action.stop_confirm')).toHaveCount(0);
