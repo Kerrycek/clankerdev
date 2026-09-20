@@ -371,9 +371,9 @@ export function AdminUserOverviewPage() {
                   />
                 </label>
 
-                <div>
+                <div className="min-w-0">
                   <div className="mb-1 text-xs font-semibold text-muted">{t('lifetimes.field.remind_after')}</div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
                     <Input
                       type="datetime-local"
                       value={stateDraft.remindAfterDate}
@@ -382,6 +382,7 @@ export function AdminUserOverviewPage() {
                       ariaLabel={t('lifetimes.field.remind_after')}
                       ariaDescribedBy="admin-user-reminder-help"
                       testId="admin.user.lifecycle.remind_after"
+                      className="min-w-0"
                     />
                     <Button
                       type="button"
@@ -390,6 +391,7 @@ export function AdminUserOverviewPage() {
                       onClick={() => setStateField('remindAfterDate', '')}
                       disabled={!stateDraft.remindAfterDate.trim()}
                       testId="admin.user.lifecycle.remind_after.clear"
+                      className="shrink-0"
                     >
                       {t('common.clear')}
                     </Button>
