@@ -189,6 +189,10 @@ The test API on `admin.crucio.cz` also needs the patch in
 session creation can fail with HTTP 500 when the upstream request does not carry
 a user-agent label.
 
+The password-reset endpoint also needs a notification-template oneshot and a
+dedicated queue worker. Their guarded dev-only rollout and post-release check
+are documented in [`password-recovery-runtime.md`](password-recovery-runtime.md).
+
 ## Dev smoke data
 
 Networking and lifecycle UI smoke tests need disposable test rows in the local
