@@ -193,3 +193,68 @@ test('admin incoming payment: route change drops the previous payment edits with
   await expect(page.getByTestId('admin.payments.incoming.assign.submit')).toBeDisabled();
   expect(mutations).toEqual([]);
 });
+
+test('@pr-smoke @pr-smoke-mobile admin incoming payment: state changes are single-flight and invalidate cached reconciliation totals', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+  const haveApiMock = await installHaveApiMock(page, { user: { id: 1, login: 'admin', level: 100 } });
+
+  let state = 'unmatched';
+  let stateUpdateRequests = 0;
+  let listRequests = 0;
+  const totalRequests: Record<string, number> = {};
+  let releaseStateUpdate: (() => void) | undefined;
+  const stateUpdateGate = new Promise<void>((resolve) => {
+    releaseStateUpdate = resolve;
+  });
+
+  const paymentEnvelope = () => ({
+    id: 500,
+    state,
+    date: '2026-02-14T09:00:00Z',
+    transaction_id: 'TX-500',
+    amount: 1000,
+    currency: 'CZK',
+    account_name: 'Test account',
+    vs: '500',
+    user: null,
+    user_paid_until: null,
+    created_at: '2026-02-14T09:00:00Z',
+  });
+
+  haveApiMock.addHandler('GET incoming_payments', ({ searchParams }) => {
+    const requestedState = String(searchParams.get('incoming_payment[state]') ?? '');
+    if (requestedState) totalRequests[requestedState] = (totalRequests[requestedState] ?? 0) + 1;
+    else listRequests += 1;
+    const rows = !requestedState || requestedState === state ? [paymentEnvelope()] : [];
+    return {
+      status: true,
+      response: { incoming_payments: rows, _meta: { total_count: rows.length } },
+    };
+  });
+  haveApiMock.addHandler('GET incoming_payments/500', () => ({ incoming_payment: paymentEnvelope() }));
+  haveApiMock.addHandler('PUT incoming_payments/500', async ({ json }) => {
+    stateUpdateRequests += 1;
+    await stateUpdateGate;
+    state = String(json?.incoming_payment?.state ?? state);
+    return { incoming_payment: paymentEnvelope() };
+  });
+
+  await page.goto(withAppUrl('/admin/payments/incoming'));
+  await expect.poll(() => ({ ...totalRequests })).toEqual({ queued: 1, unmatched: 1, processed: 1, ignored: 1 });
+  expect(listRequests).toBe(1);
+
+  await page.goto(withAppUrl('/admin/payments/incoming/500'));
+  await page.getByTestId('admin.payments.incoming.state.select').selectOption('ignored');
+  await page.getByTestId('admin.payments.incoming.state.save').click();
+  await expect.poll(() => stateUpdateRequests).toBe(1);
+  await expect(page.getByTestId('admin.payments.incoming.state.save')).toBeDisabled();
+  await page.getByTestId('admin.payments.incoming.state.save').click({ force: true });
+  expect(stateUpdateRequests).toBe(1);
+  releaseStateUpdate?.();
+
+  await expect(page.getByTestId('admin.payments.incoming.detail.500.state')).toHaveText(/Ignored/);
+  await page.getByRole('link', { name: /Back|Zpět/ }).click();
+
+  await expect.poll(() => ({ ...totalRequests })).toEqual({ queued: 2, unmatched: 2, processed: 2, ignored: 2 });
+  expect(listRequests).toBe(2);
+});
