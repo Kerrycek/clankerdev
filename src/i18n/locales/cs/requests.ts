@@ -278,6 +278,8 @@ export const csRequests = {
   'payments.incoming.detail.stale.body': 'Nejnovější obnovení selhalo. Akce kontroly jsou vypnuté, dokud se úspěšně nenačtou aktuální data platby.',
   'payments.incoming.detail.card.payment': 'Platba',
   'payments.incoming.detail.transaction_id': 'ID transakce',
+  'payments.incoming.detail.accepted_at': 'Přijato v',
+  'payments.incoming.detail.transaction_type': 'Typ transakce',
   'payments.incoming.detail.received_amount': 'Přijatá částka',
   'payments.incoming.detail.accounted_amount': 'Zaúčtovaná částka',
   'payments.incoming.detail.account': 'Účet',

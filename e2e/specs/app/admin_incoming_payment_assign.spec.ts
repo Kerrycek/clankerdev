@@ -27,6 +27,7 @@ test('@pr-smoke @pr-smoke-mobile admin incoming payment: assign to user', async 
       state,
       date: '2026-02-14T09:00:00Z',
       transaction_id: 'TX-300',
+      transaction_type: 'credit transfer',
       amount: 1000,
       currency: 'CZK',
       src_amount: 40,
@@ -110,6 +111,8 @@ test('@pr-smoke @pr-smoke-mobile admin incoming payment: assign to user', async 
   await page.goto(withAppUrl('/admin/payments/incoming/300'));
 
   await expect(page.getByTestId('admin.payments.incoming.state.save')).toBeDisabled();
+  await expect(page.getByTestId('admin.payments.incoming.detail.accepted_at')).toContainText('2/14/2026');
+  await expect(page.getByTestId('admin.payments.incoming.detail.transaction_type')).toContainText('credit transfer');
   await expectNoDocumentHorizontalOverflow(page);
   await page.getByTestId('admin.payments.incoming.state.select').selectOption('ignored');
   await expect(page.getByTestId('admin.payments.incoming.state.save')).toBeEnabled();

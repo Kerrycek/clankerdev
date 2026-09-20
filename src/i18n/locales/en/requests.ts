@@ -278,6 +278,8 @@ export const enRequests = {
   'payments.incoming.detail.stale.body': 'The latest refresh failed. Review actions are disabled until current payment data loads successfully.',
   'payments.incoming.detail.card.payment': 'Payment',
   'payments.incoming.detail.transaction_id': 'Transaction ID',
+  'payments.incoming.detail.accepted_at': 'Accepted at',
+  'payments.incoming.detail.transaction_type': 'Transaction type',
   'payments.incoming.detail.received_amount': 'Received amount',
   'payments.incoming.detail.accounted_amount': 'Accounted amount',
   'payments.incoming.detail.account': 'Account',

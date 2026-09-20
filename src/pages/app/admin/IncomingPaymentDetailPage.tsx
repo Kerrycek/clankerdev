@@ -353,6 +353,10 @@ export function IncomingPaymentDetailPage() {
                 <div className="text-xs text-muted">{t('common.date')}</div>
                 <div className="text-sm">{formatDateTime(payment.date)}</div>
               </div>
+              <div data-testid="admin.payments.incoming.detail.accepted_at">
+                <div className="text-xs text-muted">{t('payments.incoming.detail.accepted_at')}</div>
+                <div className="text-sm tabular-nums">{formatDateTime(payment.created_at)}</div>
+              </div>
               <div>
                 <div className="text-xs text-muted">{t('payments.incoming.detail.transaction_id')}</div>
                 <div className="text-sm tabular-nums">{String(payment.transaction_id ?? '—')}</div>
@@ -361,6 +365,10 @@ export function IncomingPaymentDetailPage() {
                 <div className="text-xs text-muted">{t('payments.incoming.detail.received_amount')}</div>
                 <div className="text-sm font-semibold tabular-nums">{recvAmount}</div>
                 {acctAmount ? <div className="text-xs text-muted">{t('payments.incoming.detail.accounted_amount')}: {acctAmount}</div> : null}
+              </div>
+              <div data-testid="admin.payments.incoming.detail.transaction_type">
+                <div className="text-xs text-muted">{t('payments.incoming.detail.transaction_type')}</div>
+                <div className="text-sm">{String(payment.transaction_type ?? '—')}</div>
               </div>
               <div>
                 <div className="text-xs text-muted">{t('payments.incoming.detail.account')}</div>
