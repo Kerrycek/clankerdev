@@ -10,6 +10,11 @@ export interface ResourceRef {
 
 export type IncomingPaymentState = 'queued' | 'unmatched' | 'processed' | 'ignored' | string;
 
+/**
+ * Exact incoming_payment output contract. The resource does not expose a
+ * linked user payment, user, or paid-until value; reconciliation UI must use
+ * the state and bank reference fields below instead of inventing relations.
+ */
 export interface IncomingPayment {
   id: number;
   transaction_id?: string;
@@ -21,8 +26,6 @@ export interface IncomingPayment {
   src_currency?: string;
   account_name?: string;
   user_ident?: string;
-  user?: ResourceRef;
-  user_paid_until?: string | null;
   user_message?: string;
   vs?: string;
   ks?: string;
@@ -55,11 +58,10 @@ export async function fetchIncomingPayments(opts?: {
   return { ...res, data: expectArray<IncomingPayment>(res.data, 'incoming_payments#index') };
 }
 
-export async function fetchIncomingPayment(paymentId: number, opts?: { includes?: string }) {
+export async function fetchIncomingPayment(paymentId: number) {
   return haveApiCall<IncomingPayment>({
     method: 'GET',
     path: `/incoming_payments/${paymentId}`,
-    meta: opts?.includes ? { includes: opts.includes } : undefined,
   });
 }
 

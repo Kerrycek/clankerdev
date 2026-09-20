@@ -3,6 +3,7 @@ import { describe, expect, test, vi } from 'vitest';
 import {
   createUserPayment,
   estimateIncome,
+  fetchIncomingPayment,
   fetchIncomingPayments,
   fetchPaymentInstructions,
   fetchUserPayments,
@@ -48,6 +49,18 @@ describe('payments API wrappers', () => {
     expect(u.searchParams.get('incoming_payment[limit]')).toBe('1');
     expect(u.searchParams.get('incoming_payment[state]')).toBe('unmatched');
     expect(u.searchParams.get('_meta[count]')).toBe('true');
+  });
+
+  test('fetchIncomingPayment does not request relations outside the API contract', async () => {
+    globalThis.fetch = mockFetchOk({ incoming_payment: { id: 300, state: 'processed' } }) as any;
+
+    await fetchIncomingPayment(300);
+
+    const [url] = lastFetchCall();
+    const u = new URL(url);
+
+    expect(u.pathname).toBe('/v7.0/incoming_payments/300');
+    expect(u.searchParams.has('_meta[includes]')).toBe(false);
   });
 
   test('createUserPayment sends namespaced incoming-payment payload', async () => {

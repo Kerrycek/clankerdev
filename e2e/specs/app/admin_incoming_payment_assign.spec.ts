@@ -9,7 +9,6 @@ test('@pr-smoke @pr-smoke-mobile admin incoming payment: assign to user', async 
   await bootstrapVpsAdminWindow(page);
   const haveApiMock = await installHaveApiMock(page, { user: { id: 1, login: 'admin', level: 100 } });
 
-  let assigned = false;
   let assignedUser: { id: number; login: string } | null = null;
   let state: string = 'unmatched';
   let assignmentRequests = 0;
@@ -37,8 +36,6 @@ test('@pr-smoke @pr-smoke-mobile admin incoming payment: assign to user', async 
       user_message: 'hello',
       user_ident: 'VS:123456',
       comment: 'mock',
-      user: assigned ? assignedUser : null,
-      user_paid_until: assigned ? '2026-03-01T00:00:00Z' : null,
       created_at: '2026-02-14T09:00:00Z',
     };
   }
@@ -86,7 +83,6 @@ test('@pr-smoke @pr-smoke-mobile admin incoming payment: assign to user', async 
     assignmentRequests += 1;
     await assignmentGate;
     const userId = Number(json?.user_payment?.user);
-    assigned = true;
     assignedUser = { id: userId, login: 'alice' };
     // user_payment#create atomically transitions its linked incoming payment.
     state = 'processed';
@@ -135,10 +131,10 @@ test('@pr-smoke @pr-smoke-mobile admin incoming payment: assign to user', async 
   expect(assignmentRequests).toBe(1);
   releaseAssignment?.();
 
-  // After refetch, the user should be visible and the assign button disabled.
+  // The API-owned processed state closes the assignment form without relying
+  // on user metadata that incoming_payment#show does not expose.
   await expect(page.getByTestId('admin.payments.incoming.detail.300.state')).toHaveText(/Processed/);
   await expect(page.getByTestId('admin.payments.incoming.assign.inline')).toHaveCount(0);
-  await expect(page.getByText('alice')).toBeVisible();
   expect(stateUpdateRequests).toBe(0);
 });
 
@@ -154,7 +150,6 @@ test('admin incoming payment: route change drops the previous payment edits with
     currency: 'CZK',
     account_name: 'Test account',
     vs: String(id),
-    user: null,
     created_at: '2026-02-14T09:00:00Z',
   });
   await installHaveApiMock(page, {
@@ -213,8 +208,6 @@ test('@pr-smoke @pr-smoke-mobile admin incoming payment: stale state review cann
     currency: 'CZK',
     account_name: 'Test account',
     vs: '600',
-    user: null,
-    user_paid_until: null,
     created_at: '2026-02-14T09:00:00Z',
   });
 
@@ -263,8 +256,6 @@ test('@pr-smoke @pr-smoke-mobile admin incoming payment: refresh failure keeps c
     currency: 'CZK',
     account_name: 'Test account',
     vs: '700',
-    user: null,
-    user_paid_until: null,
     created_at: '2026-02-14T09:00:00Z',
   };
 
@@ -348,8 +339,6 @@ test('@pr-smoke @pr-smoke-mobile admin incoming payment: state changes are singl
     currency: 'CZK',
     account_name: 'Test account',
     vs: '500',
-    user: null,
-    user_paid_until: null,
     created_at: '2026-02-14T09:00:00Z',
   });
 

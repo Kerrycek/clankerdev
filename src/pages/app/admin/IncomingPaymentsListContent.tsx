@@ -10,22 +10,17 @@ import { StatusDot } from '../../../components/ui/StatusDot';
 import { TableCard } from '../../../components/ui/TableCard';
 import { TableRowLink } from '../../../components/ui/TableRowLink';
 import type { IncomingPayment } from '../../../lib/api/payments';
-import { formatDateInTimeZone, formatDateTimeInTimeZone } from '../../../lib/format';
+import { formatDateTimeInTimeZone } from '../../../lib/format';
 import type { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 import {
-  getPaidUntilStatus,
   incomingPaymentBadgeVariant,
-  incomingPaymentPrimaryVariant,
-  incomingPaymentRowVariantWithAccount,
+  incomingPaymentRowVariant,
   incomingPaymentStateLabelKey,
-  paidUntilBadgeVariant,
-  paidUntilStatusLabelKey,
 } from '../../../lib/paymentsBadges';
 import { dotVariantFromBadgeVariant } from '../../../lib/variantMap';
 import {
   incomingPaymentAccountedAmountLabel,
   incomingPaymentReceivedAmountLabel,
-  incomingPaymentUserLabel,
 } from './IncomingPaymentsModel';
 
 type PaginationController = ReturnType<typeof useKeysetPagination>;
@@ -55,12 +50,7 @@ export function IncomingPaymentsListContent(props: {
       <div className="space-y-2 md:hidden">
         {props.rows.map((p) => {
           const st = String(p.state ?? '').trim();
-          const acctStatus = p.user ? getPaidUntilStatus(p.user_paid_until) : null;
-          const primaryVar = incomingPaymentPrimaryVariant({
-            state: st,
-            user: p.user,
-            user_paid_until: p.user_paid_until,
-          });
+          const primaryVar = incomingPaymentBadgeVariant(st);
           const dotVar = dotVariantFromBadgeVariant(primaryVar);
 
           const recvAmount = incomingPaymentReceivedAmountLabel(p);
@@ -99,22 +89,6 @@ export function IncomingPaymentsListContent(props: {
                     <span className="text-faint">VS:</span> {String(p.vs ?? '—')}{' '}
                     <span className="text-faint">TX:</span> {String(p.transaction_id ?? '—')}
                   </div>
-                  <div className="mt-1 text-xs text-muted">
-                    <span className="text-faint">{t('common.user')}:</span> {incomingPaymentUserLabel(p.user)}
-                  </div>
-                  {p.user ? (
-                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
-                      <span className="text-faint">{t('payments.incoming.list.col.paid_until')}:</span>{' '}
-                      <span data-testid={`admin.payments.incoming.row.${p.id}.paid_until.mobile`}>
-                        {p.user_paid_until ? formatDateInTimeZone(p.user_paid_until, accountTimeZone) : '—'}
-                      </span>
-                      {acctStatus && (acctStatus.status === 'due_soon' || acctStatus.status === 'overdue') ? (
-                        <Badge variant={paidUntilBadgeVariant(acctStatus.status)}>
-                          {t(paidUntilStatusLabelKey(acctStatus.status))}
-                        </Badge>
-                      ) : null}
-                    </div>
-                  ) : null}
                 </div>
                 <Link className="text-xs font-medium text-accent hover:underline" to={`${props.basePath}/payments/incoming/${p.id}`}>
                   {t('common.open')}
@@ -184,25 +158,14 @@ export function IncomingPaymentsListContent(props: {
             <th className="px-3 py-2">{t('payments.incoming.list.col.amount')}</th>
             <th className="px-3 py-2">{t('payments.incoming.list.col.vs')}</th>
             <th className="px-3 py-2">{t('payments.incoming.list.col.account')}</th>
-            <th className="px-3 py-2">{t('common.user')}</th>
-            <th className="px-3 py-2">{t('payments.incoming.list.col.paid_until')}</th>
             <th className="px-3 py-2">{t('common.state')}</th>
           </tr>
         </thead>
         <tbody>
           {props.rows.map((p) => {
             const st = String(p.state ?? '').trim();
-            const acctStatus = p.user ? getPaidUntilStatus(p.user_paid_until) : null;
-            const rowVar = incomingPaymentRowVariantWithAccount({
-              state: st,
-              user: p.user,
-              user_paid_until: p.user_paid_until,
-            });
-            const primaryVar = incomingPaymentPrimaryVariant({
-              state: st,
-              user: p.user,
-              user_paid_until: p.user_paid_until,
-            });
+            const rowVar = incomingPaymentRowVariant(st);
+            const primaryVar = incomingPaymentBadgeVariant(st);
             const dotVar = dotVariantFromBadgeVariant(primaryVar);
 
             const recvAmount = incomingPaymentReceivedAmountLabel(p);
@@ -244,26 +207,6 @@ export function IncomingPaymentsListContent(props: {
                 </td>
                 <td className="px-3 py-2 text-xs text-muted tabular-nums">{String(p.vs ?? '—')}</td>
                 <td className="px-3 py-2 text-xs text-muted">{String(p.account_name ?? '—')}</td>
-                <td className="px-3 py-2 text-xs text-muted">{incomingPaymentUserLabel(p.user)}</td>
-                <td className="px-3 py-2 text-xs text-muted">
-                  {p.user ? (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className="tabular-nums"
-                        data-testid={`admin.payments.incoming.row.${p.id}.paid_until.desktop`}
-                      >
-                        {p.user_paid_until ? formatDateInTimeZone(p.user_paid_until, accountTimeZone) : '—'}
-                      </span>
-                      {acctStatus && (acctStatus.status === 'due_soon' || acctStatus.status === 'overdue') ? (
-                        <Badge variant={paidUntilBadgeVariant(acctStatus.status)}>
-                          {t(paidUntilStatusLabelKey(acctStatus.status))}
-                        </Badge>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <span className="text-faint">—</span>
-                  )}
-                </td>
                 <td className="px-3 py-2">
                   <Badge variant={incomingPaymentBadgeVariant(st)}>{t(incomingPaymentStateLabelKey(st))}</Badge>
                 </td>

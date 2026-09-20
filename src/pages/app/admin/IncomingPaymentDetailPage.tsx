@@ -21,12 +21,8 @@ import { formatDateInTimeZone, formatDateTimeInTimeZone } from '../../../lib/for
 import { formatErrorMessage } from '../../../lib/errors';
 import { parseLookupIdLike } from '../../../lib/lookupInput';
 import {
-  getPaidUntilStatus,
   incomingPaymentBadgeVariant,
-  incomingPaymentPrimaryVariant,
   incomingPaymentStateLabelKey,
-  paidUntilBadgeVariant,
-  paidUntilStatusLabelKey,
 } from '../../../lib/paymentsBadges';
 import { dotVariantFromBadgeVariant } from '../../../lib/variantMap';
 
@@ -49,7 +45,6 @@ import {
   incomingPaymentAccountedAmountLabel,
   incomingPaymentReceivedAmountLabel,
   incomingPaymentStateOptions,
-  incomingPaymentUserLabel,
   parsePositivePaymentId,
 } from './IncomingPaymentsModel';
 
@@ -134,7 +129,7 @@ export function IncomingPaymentDetailPage() {
     enabled: Boolean(paymentId),
     queryFn: async () => {
       if (!paymentId) throw new Error('invalid payment');
-      return (await fetchIncomingPayment(paymentId, { includes: 'user' })).data;
+      return (await fetchIncomingPayment(paymentId)).data;
     },
     refetchOnWindowFocus: 'always',
   });
@@ -143,12 +138,7 @@ export function IncomingPaymentDetailPage() {
   const detailStale = q.isError && payment !== undefined;
 
   const st = String(payment?.state ?? '').trim();
-  const acctStatus = payment?.user ? getPaidUntilStatus(payment.user_paid_until) : null;
-  const primaryVar = incomingPaymentPrimaryVariant({
-    state: st,
-    user: payment?.user,
-    user_paid_until: payment?.user_paid_until,
-  });
+  const primaryVar = incomingPaymentBadgeVariant(st);
   const dotVar = dotVariantFromBadgeVariant(primaryVar);
 
   const [stateEdit, setStateEdit] = useState<{ nextState: string; originalState: string } | null>(null);
@@ -161,7 +151,7 @@ export function IncomingPaymentDetailPage() {
   const [assigning, setAssigning] = useState(false);
   const assignmentInFlightRef = useRef(false);
 
-  const isAssigned = Boolean(payment?.user);
+  const isProcessed = st === 'processed';
 
   const recvAmount = useMemo(() => incomingPaymentReceivedAmountLabel(payment), [payment]);
   const acctAmount = useMemo(() => incomingPaymentAccountedAmountLabel(payment), [payment]);
@@ -179,7 +169,7 @@ export function IncomingPaymentDetailPage() {
   const assignLookupUserId = useMemo(() => parseLookupIdLike(assignUserId), [assignUserId]);
   const assignUserQ = useQuery({
     queryKey: ['users', 'incoming_payment_assignment_lookup', assignLookupUserId],
-    enabled: assignLookupUserId !== null && !isAssigned,
+    enabled: assignLookupUserId !== null && !isProcessed,
     queryFn: async () => {
       if (assignLookupUserId === null) throw new Error('missing user id');
       return (await fetchUser(assignLookupUserId)).data;
@@ -307,9 +297,6 @@ export function IncomingPaymentDetailPage() {
           <span className="inline-flex items-center gap-2">
             <StatusDot variant={dotVar} testId={`admin.payments.incoming.detail.${paymentId}.dot`} />
             <Badge variant={incomingPaymentBadgeVariant(st)} testId={`admin.payments.incoming.detail.${paymentId}.state`}>{t(incomingPaymentStateLabelKey(st))}</Badge>
-            {acctStatus && (acctStatus.status === 'due_soon' || acctStatus.status === 'overdue') ? (
-              <Badge variant={paidUntilBadgeVariant(acctStatus.status)}>{t(paidUntilStatusLabelKey(acctStatus.status))}</Badge>
-            ) : null}
           </span>
         }
         actions={
@@ -409,7 +396,7 @@ export function IncomingPaymentDetailPage() {
           </CardBody>
           </Card>
 
-          {!isAssigned ? (
+          {!isProcessed ? (
             <Card testId="admin.payments.incoming.assign.inline">
               <CardHeader
                 title={t('payments.incoming.assign.card.title')}
@@ -506,20 +493,6 @@ export function IncomingPaymentDetailPage() {
                 {stateReview.warningKey ? (
                   <div className="rounded-md border border-warn-border bg-warn-bg px-3 py-2 text-sm text-warn">
                     {t(stateReview.warningKey)}
-                  </div>
-                ) : null}
-
-                {isAssigned ? (
-                  <div className="rounded-md border border-border bg-surface-2 px-3 py-2">
-                    <div className="text-xs text-muted">{t('common.user')}</div>
-                    <div className="mt-1 text-sm font-medium">
-                      <Link className="text-accent hover:underline" to={`${basePath}/users/${payment.user?.id}`}>
-                        {incomingPaymentUserLabel(payment.user)}
-                      </Link>
-                    </div>
-                    <div className="mt-1 text-xs text-muted" data-testid="admin.payments.incoming.detail.user_paid_until">
-                      {t('payments.incoming.detail.paid_until')}: {payment.user_paid_until ? formatDateInTimeZone(payment.user_paid_until, accountTimeZone) : '—'}
-                    </div>
                   </div>
                 ) : null}
 

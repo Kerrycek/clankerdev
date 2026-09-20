@@ -17,10 +17,8 @@ export type IncomingPaymentBulkReview = {
   eligibleIds: number[];
   eligibleCount: number;
   skippedMissing: number;
-  skippedAssigned: number;
   skippedAlreadyTarget: number;
   skippedUnknownState: number;
-  unassignedProcessedCount: number;
   requiresConfirmation: boolean;
   confirmationTarget?: string;
   confirmationMatches: boolean;
@@ -51,11 +49,9 @@ function normalizeSelectedIds(ids: Iterable<number>): number[] {
   return Array.from(new Set(Array.from(ids).filter((id) => Number.isFinite(id) && id > 0).map((id) => Math.floor(id))));
 }
 
-function bulkActionNeedsReview(targetState: KnownIncomingPaymentState, eligibleCount: number, unassignedProcessedCount: number): boolean {
+function bulkActionNeedsReview(targetState: KnownIncomingPaymentState, eligibleCount: number): boolean {
   if (eligibleCount <= 0) return false;
-  if (targetState === 'ignored') return true;
-  if (targetState === 'processed' && unassignedProcessedCount > 0) return true;
-  return false;
+  return targetState === 'ignored' || targetState === 'processed';
 }
 
 export function buildIncomingPaymentBulkReview(input: {
@@ -69,10 +65,8 @@ export function buildIncomingPaymentBulkReview(input: {
 
   const eligibleIds: number[] = [];
   let skippedMissing = 0;
-  let skippedAssigned = 0;
   let skippedAlreadyTarget = 0;
   let skippedUnknownState = 0;
-  let unassignedProcessedCount = 0;
 
   for (const id of selectedIds) {
     const row = rowsById.get(id);
@@ -92,18 +86,11 @@ export function buildIncomingPaymentBulkReview(input: {
       continue;
     }
 
-    const assigned = Boolean(row.user);
-    if (assigned && targetState !== 'processed') {
-      skippedAssigned += 1;
-      continue;
-    }
-
-    if (!assigned && targetState === 'processed') unassignedProcessedCount += 1;
     eligibleIds.push(id);
   }
 
   const confirmationTarget = undefined;
-  const requiresConfirmation = bulkActionNeedsReview(targetState, eligibleIds.length, unassignedProcessedCount);
+  const requiresConfirmation = bulkActionNeedsReview(targetState, eligibleIds.length);
   const confirmationMatches = true;
 
   return {
@@ -113,10 +100,8 @@ export function buildIncomingPaymentBulkReview(input: {
     eligibleIds,
     eligibleCount: eligibleIds.length,
     skippedMissing,
-    skippedAssigned,
     skippedAlreadyTarget,
     skippedUnknownState,
-    unassignedProcessedCount,
     requiresConfirmation,
     confirmationTarget,
     confirmationMatches,
@@ -126,7 +111,6 @@ export function buildIncomingPaymentBulkReview(input: {
 
 export function selectIncomingPaymentNeedsReviewIds(rows: IncomingPayment[]): number[] {
   return rows
-    .filter((row) => !row.user)
     .filter((row) => {
       const state = normalizeIncomingPaymentState(row.state);
       return state === 'queued' || state === 'unmatched';

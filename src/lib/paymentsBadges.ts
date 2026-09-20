@@ -29,52 +29,6 @@ export function incomingPaymentRowVariant(state: IncomingPaymentState | undefine
   return undefined;
 }
 
-function rowSeverity(v: TableRowVariant | undefined): number {
-  if (!v) return 0;
-  if (v === 'danger') return 4;
-  if (v === 'warn') return 3;
-  if (v === 'info') return 2;
-  if (v === 'ok') return 1;
-  return 0; // muted/neutral
-}
-
-/**
- * Incoming payments triage surfaces need a “primary semantic” variant (for dots)
- * and a RowTone-Exception variant (for table rows).
- *
- * Account status (paid_until) should override when it indicates risk
- * (due soon / overdue), but only when the payment is already assigned to a user.
- */
-export function incomingPaymentPrimaryVariant(
-  opts: { state?: IncomingPaymentState | undefined | null; user?: unknown | null; user_paid_until?: unknown },
-  now: Date = new Date()
-): BadgeVariant {
-  const base = incomingPaymentBadgeVariant(opts.state);
-
-  if (!opts.user) return base;
-
-  const st = getPaidUntilStatus(opts.user_paid_until, now).status;
-  if (st === 'overdue') return 'danger';
-  if (st === 'due_soon') return base === 'danger' ? 'danger' : 'warn';
-
-  return base;
-}
-
-export function incomingPaymentRowVariantWithAccount(
-  opts: { state?: IncomingPaymentState | undefined | null; user?: unknown | null; user_paid_until?: unknown },
-  now: Date = new Date()
-): TableRowVariant | undefined {
-  const stateV = incomingPaymentRowVariant(opts.state);
-
-  if (!opts.user) return stateV;
-
-  const st = getPaidUntilStatus(opts.user_paid_until, now).status;
-  const acctV: TableRowVariant | undefined = st === 'overdue' ? 'danger' : st === 'due_soon' ? 'warn' : undefined;
-
-  return rowSeverity(acctV) > rowSeverity(stateV) ? acctV : stateV;
-}
-
-
 function parseDate(value: unknown): Date | null {
   if (!value) return null;
   if (typeof value !== 'string') return null;

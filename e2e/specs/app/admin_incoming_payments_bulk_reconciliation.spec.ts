@@ -8,15 +8,15 @@ test('admin incoming payments: bulk reconciliation uses visible selection with b
   await bootstrapVpsAdminWindow(page);
   const haveApiMock = await installHaveApiMock(page, { user: { id: 1, login: 'admin', level: 100 } });
 
-  const payments = new Map<number, { id: number; state: string; user: { id: number; login: string } | null }>([
-    [300, { id: 300, state: 'queued', user: null }],
-    [299, { id: 299, state: 'unmatched', user: null }],
-    [298, { id: 298, state: 'processed', user: { id: 10, login: 'alice' } }],
+  const payments = new Map<number, { id: number; state: string }>([
+    [300, { id: 300, state: 'queued' }],
+    [299, { id: 299, state: 'unmatched' }],
+    [298, { id: 298, state: 'processed' }],
   ]);
   const updatedIds: number[] = [];
 
   function paymentEnvelope(id: number) {
-    const payment = payments.get(id) ?? { id, state: 'queued', user: null };
+    const payment = payments.get(id) ?? { id, state: 'queued' };
     return {
       id: payment.id,
       state: payment.state,
@@ -26,8 +26,6 @@ test('admin incoming payments: bulk reconciliation uses visible selection with b
       currency: 'CZK',
       account_name: 'Test account',
       vs: String(payment.id),
-      user: payment.user,
-      user_paid_until: payment.user ? '2026-03-01T00:00:00Z' : null,
       created_at: '2026-02-14T09:00:00Z',
     };
   }
@@ -80,12 +78,12 @@ test('admin incoming payments: reconciliation summary links to all unmatched pay
   const requestedStates: string[] = [];
 
   const payments = [
-    { id: 400, state: 'processed', user: null },
-    { id: 399, state: 'unmatched', user: null },
-    { id: 398, state: 'processed', user: { id: 11, login: 'bob' } },
+    { id: 400, state: 'processed' },
+    { id: 399, state: 'unmatched' },
+    { id: 398, state: 'processed' },
   ];
 
-  function paymentEnvelope(payment: { id: number; state: string; user: { id: number; login: string } | null }) {
+  function paymentEnvelope(payment: { id: number; state: string }) {
     return {
       id: payment.id,
       state: payment.state,
@@ -95,8 +93,6 @@ test('admin incoming payments: reconciliation summary links to all unmatched pay
       currency: 'CZK',
       account_name: 'Test account',
       vs: String(payment.id),
-      user: payment.user,
-      user_paid_until: payment.user ? '2026-03-01T00:00:00Z' : null,
       created_at: '2026-02-14T09:00:00Z',
     };
   }
@@ -181,8 +177,6 @@ test('admin incoming payments: descending keyset jump reaches page five without 
     currency: 'CZK',
     account_name: 'Test account',
     vs: String(125 - index),
-    user: { id: 10, login: 'alice' },
-    user_paid_until: '2026-03-01T00:00:00Z',
     created_at: '2026-02-14T09:00:00Z',
   }));
   const cursors: Array<number | null> = [];
@@ -200,13 +194,16 @@ test('admin incoming payments: descending keyset jump reaches page five without 
   });
 
   await page.goto(withAppUrl('/admin/payments/incoming?limit=25'));
-  const pagination = page.getByTestId('admin.payments.incoming.pagination.desktop');
+  const pagination = page.locator(
+    '[data-testid="admin.payments.incoming.pagination.desktop"]:visible, '
+    + '[data-testid="admin.payments.incoming.pagination.mobile"]:visible',
+  );
   await expect(pagination).toContainText(/1.*5/);
-  await pagination.getByTestId('admin.payments.incoming.pagination.desktop.page.5').click();
+  await pagination.getByRole('button', { name: /Go to page 5/ }).click();
 
   await expect(page).toHaveURL(/(?:\?|&)page=5(?:&|$)/);
   await expect(page).toHaveURL(/(?:\?|&)from_id=26(?:&|$)/);
-  await expect(page.getByTestId('admin.payments.incoming.row.25')).toBeVisible();
+  await expect(page.locator('[data-testid="admin.payments.incoming.row.25"]:visible, [data-testid="admin.payments.incoming.row.25.dot"]:visible').first()).toBeVisible();
   await expect(page.getByTestId('admin.payments.incoming.row.26')).toHaveCount(0);
   expect(cursors).toEqual(expect.arrayContaining([null, 101, 76, 51, 26]));
 });

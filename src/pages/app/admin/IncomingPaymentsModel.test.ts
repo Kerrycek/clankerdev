@@ -11,7 +11,6 @@ import {
   incomingPaymentAccountedAmountLabel,
   incomingPaymentReceivedAmountLabel,
   incomingPaymentStateFilterOptions,
-  incomingPaymentUserLabel,
   normalizeIncomingPaymentState,
   parseIncomingPaymentStateValue,
   parsePositivePaymentId,
@@ -54,8 +53,6 @@ describe('IncomingPaymentsModel', () => {
   test('formats incoming payment labels', () => {
     expect(formatIncomingPaymentMoney(1000, 'CZK')).toMatch(/1/);
     expect(formatIncomingPaymentMoney(1.25, 'TOKEN')).toBe('1.25 TOKEN');
-    expect(incomingPaymentUserLabel({ id: 7, login: 'alice' })).toBe('alice');
-    expect(incomingPaymentUserLabel({ id: 8 })).toBe('#8');
     expect(incomingPaymentReceivedAmountLabel(payment)).toMatch(/40/);
     expect(incomingPaymentAccountedAmountLabel(payment)).toMatch(/1/);
   });
@@ -74,10 +71,10 @@ describe('IncomingPaymentsModel', () => {
       marksProcessed: true,
     });
 
-    expect(buildIncomingPaymentAssignReview({ payment: { ...payment, user: { id: 123, login: 'alice' } }, rawUserId: '456' })).toMatchObject({
+    expect(buildIncomingPaymentAssignReview({ payment: { ...payment, state: 'processed' }, rawUserId: '456' })).toMatchObject({
       canSubmit: false,
-      alreadyAssigned: true,
-      validationKey: 'payments.incoming.review.assign.validation.already_assigned',
+      alreadyProcessed: true,
+      validationKey: 'payments.incoming.review.assign.validation.already_processed',
     });
   });
 
@@ -101,15 +98,6 @@ describe('IncomingPaymentsModel', () => {
       warningKey: 'payments.incoming.review.state.warning.ignored',
     });
 
-    expect(
-      buildIncomingPaymentStateReview({
-        payment: { ...payment, user: { id: 123, login: 'alice' } },
-        nextState: 'processed',
-      })
-    ).toMatchObject({
-      canSubmit: true,
-      badgeVariant: 'ok',
-    });
   });
 
   test('summarizes reconciliation state for the current page', () => {
@@ -118,7 +106,7 @@ describe('IncomingPaymentsModel', () => {
         { ...payment, id: 1, state: 'queued' },
         { ...payment, id: 2, state: 'unmatched' },
         { ...payment, id: 3, state: 'processed' },
-        { ...payment, id: 4, state: 'processed', user: { id: 7, login: 'alice' } },
+        { ...payment, id: 4, state: 'processed' },
         { ...payment, id: 5, state: 'ignored' },
         { ...payment, id: 6, state: 'unexpected' },
       ])
@@ -129,24 +117,14 @@ describe('IncomingPaymentsModel', () => {
       processed: 2,
       ignored: 1,
       unknown: 1,
-      assigned: 1,
-      unassigned: 5,
       needsReview: 2,
-      processedWithoutUser: 1,
     });
   });
 
   test('describes reconciliation state and review search targets', () => {
     expect(describeIncomingPaymentState({ state: 'processed' })).toMatchObject({
-      badgeVariant: 'warn',
-      explanationKey: 'payments.incoming.reconcile.state.processed_unassigned.explanation',
-      warningKey: 'payments.incoming.reconcile.state.processed_unassigned.warning',
-    });
-
-    expect(describeIncomingPaymentState({ state: 'processed', user: { id: 7, login: 'alice' } })).toMatchObject({
       badgeVariant: 'ok',
       explanationKey: 'payments.incoming.reconcile.state.processed.explanation',
-      warningKey: undefined,
     });
 
     expect(

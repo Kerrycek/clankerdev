@@ -19,7 +19,7 @@ import {
 } from './IncomingPaymentsBulkModel';
 
 function skippedTotal(review: IncomingPaymentBulkReview): number {
-  return review.skippedAlreadyTarget + review.skippedAssigned + review.skippedMissing + review.skippedUnknownState;
+  return review.skippedAlreadyTarget + review.skippedMissing + review.skippedUnknownState;
 }
 
 export function IncomingPaymentsBulkActions(props: {
@@ -147,7 +147,6 @@ export function IncomingPaymentsBulkActions(props: {
               eligible: review.eligibleCount,
               skipped,
               already: review.skippedAlreadyTarget,
-              assigned: review.skippedAssigned,
               unknown: review.skippedUnknownState,
             })}
           </div>
@@ -182,7 +181,7 @@ export function IncomingPaymentsBulkActions(props: {
             <Alert variant="warn" title={t('payments.incoming.bulk.review.warning.title')} testId="admin.payments.incoming.bulk.review.warning">
               {review.targetState === 'ignored'
                 ? t('payments.incoming.bulk.review.warning.ignored')
-                : t('payments.incoming.bulk.review.warning.processed_without_user', { count: review.unassignedProcessedCount })}
+                : t('payments.incoming.bulk.review.warning.processed_without_user', { count: review.eligibleCount })}
             </Alert>
           ) : null}
 
@@ -193,7 +192,6 @@ export function IncomingPaymentsBulkActions(props: {
                 eligible: review.eligibleCount,
                 skipped,
                 already: review.skippedAlreadyTarget,
-                assigned: review.skippedAssigned,
                 unknown: review.skippedUnknownState,
               })}
             </div>
