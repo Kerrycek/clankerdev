@@ -9,6 +9,7 @@ import { useUiSettings, type UiLanguagePreference } from '../../app/uiSettings';
 import { clsx } from '../ui/clsx';
 import { buildPasswordRecoveryUrl } from '../../lib/auth/passwordRecovery';
 import { withRouterBasename, withSameOriginNextParam } from '../../lib/routerPaths';
+import { MainContent, SkipToMainContentLink } from './MainContentAccessibility';
 
 type IdleCapableWindow = Window & {
   requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
@@ -155,6 +156,7 @@ function PublicLayoutInner() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <SkipToMainContentLink label={i18n.t('common.skip_to_main')} testId="public.skip-link" />
       <header className="sticky top-0 z-30 border-b border-border bg-bg">
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="flex h-14 items-center gap-3">
@@ -252,14 +254,14 @@ function PublicLayoutInner() {
         </div>
       </header>
 
-      <main className="flex-1" data-document-title-region>
+      <MainContent className="flex-1" data-testid="public.main" data-document-title-region>
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-6">
           <div className="space-y-6">
             <DeferredPublicHelpPanel pathname={location.pathname} scope="public" />
             <Outlet />
           </div>
         </div>
-      </main>
+      </MainContent>
 
       <footer className="border-t border-border">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-4 text-xs text-muted">
