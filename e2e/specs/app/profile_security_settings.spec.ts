@@ -45,9 +45,17 @@ test('@smoke profile: security review guards password and auth setting changes',
   await expect(page.getByTestId('profile.security.password.review')).toHaveCount(0);
   await expect(page.getByTestId('profile.security.password.save')).toBeDisabled();
 
-  await page.getByTestId('profile.security.password.current').fill('old-secret');
-  await page.getByTestId('profile.security.password.new').fill('new-secret');
-  await page.getByTestId('profile.security.password.new2').fill('new-secret');
+  const currentPassword = page.getByLabel('Current password', { exact: true });
+  const newPassword = page.getByLabel('New password', { exact: true });
+  const repeatedPassword = page.getByLabel('Repeat new password', { exact: true });
+
+  await expect(currentPassword).toHaveAttribute('autocomplete', 'current-password');
+  await expect(newPassword).toHaveAttribute('autocomplete', 'new-password');
+  await expect(repeatedPassword).toHaveAttribute('autocomplete', 'new-password');
+
+  await currentPassword.fill('old-secret');
+  await newPassword.fill('new-secret');
+  await repeatedPassword.fill('new-secret');
   await expect(page.getByTestId('profile.security.password.save')).toBeEnabled();
 
   const passwordReqP = page.waitForRequest((r) => r.method() === 'PUT' && r.url().includes('/users/1'));
