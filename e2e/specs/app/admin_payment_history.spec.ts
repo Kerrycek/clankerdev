@@ -42,13 +42,10 @@ test('@pr-smoke @pr-smoke-mobile admin payment history is filterable, linked, an
 
   await expect(page.getByRole('link', { name: /member42/i }).first()).toHaveAttribute('href', '/admin/users/42');
   await expect(page.getByRole('link', { name: '#300' }).first()).toHaveAttribute('href', '/admin/payments/incoming/300');
-  await expect(page.getByTestId('admin.finance.history.filter.time_zone')).toContainText('Europe/Prague');
   await expectNoDocumentHorizontalOverflow(page);
 
   await page.getByTestId('admin.finance.history.filter.user').fill('#42');
   await page.getByTestId('admin.finance.history.filter.accounted_by').fill('1');
-  await page.getByTestId('admin.finance.history.filter.created_from').fill('2026-09-01');
-  await page.getByTestId('admin.finance.history.filter.created_to').fill('2026-09-30');
   await page.getByTestId('admin.finance.history.filter.apply').click();
 
   await expect(page).toHaveURL(/user=42/);
@@ -58,8 +55,8 @@ test('@pr-smoke @pr-smoke-mobile admin payment history is filterable, linked, an
   const filtered = requests.at(-1)!;
   expect(filtered.searchParams.get('user_payment[user]')).toBe('42');
   expect(filtered.searchParams.get('user_payment[accounted_by]')).toBe('1');
-  expect(filtered.searchParams.get('user_payment[created_from]')).toBe('2026-08-31T22:00:00.000Z');
-  expect(filtered.searchParams.get('user_payment[created_to]')).toBe('2026-09-30T21:59:59.999Z');
+  expect(filtered.searchParams.has('user_payment[created_from]')).toBe(false);
+  expect(filtered.searchParams.has('user_payment[created_to]')).toBe(false);
   expect(filtered.searchParams.get('_meta[includes]')).toBe('user,accounted_by');
 
   const screenshot = process.env.E2E_ADMIN_PAYMENT_HISTORY_SCREENSHOT?.trim();

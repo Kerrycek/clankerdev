@@ -27,7 +27,6 @@ import { resourceRefLabel } from '../payments/PaymentsModel';
 import { AdminFinanceTabs } from './AdminFinanceTabs';
 import {
   parsePaymentHistoryId,
-  paymentHistoryDateBoundary,
   paymentHistoryMonths,
 } from './PaymentHistoryModel';
 
@@ -59,38 +58,23 @@ export function PaymentHistoryPage() {
 
   const userRaw = searchParams.get('user') ?? '';
   const accountedByRaw = searchParams.get('accounted_by') ?? '';
-  const createdFromRaw = searchParams.get('created_from') ?? '';
-  const createdToRaw = searchParams.get('created_to') ?? '';
   const [draftUser, setDraftUser] = useState(userRaw);
   const [draftAccountedBy, setDraftAccountedBy] = useState(accountedByRaw);
-  const [draftCreatedFrom, setDraftCreatedFrom] = useState(createdFromRaw);
-  const [draftCreatedTo, setDraftCreatedTo] = useState(createdToRaw);
   const [validationError, setValidationError] = useState(false);
 
   useEffect(() => {
     setDraftUser(userRaw);
     setDraftAccountedBy(accountedByRaw);
-    setDraftCreatedFrom(createdFromRaw);
-    setDraftCreatedTo(createdToRaw);
-  }, [accountedByRaw, createdFromRaw, createdToRaw, userRaw]);
+  }, [accountedByRaw, userRaw]);
 
   const userId = userRaw ? parsePaymentHistoryId(userRaw) : undefined;
   const accountedById = accountedByRaw ? parsePaymentHistoryId(accountedByRaw) : undefined;
-  const createdFrom = createdFromRaw
-    ? paymentHistoryDateBoundary(createdFromRaw, false, accountTimeZone)
-    : undefined;
-  const createdTo = createdToRaw
-    ? paymentHistoryDateBoundary(createdToRaw, true, accountTimeZone)
-    : undefined;
   const urlFiltersValid = (
     (!userRaw || userId !== undefined)
     && (!accountedByRaw || accountedById !== undefined)
-    && (!createdFromRaw || createdFrom !== undefined)
-    && (!createdToRaw || createdTo !== undefined)
-    && (!createdFromRaw || !createdToRaw || createdFromRaw <= createdToRaw)
   );
 
-  const filterKey = JSON.stringify({ userId, accountedById, createdFromRaw, createdToRaw });
+  const filterKey = JSON.stringify({ userId, accountedById });
   const pagination = useKeysetPagination({
     id: 'admin.payments.history',
     filterKey,
@@ -106,16 +90,12 @@ export function PaymentHistoryPage() {
       fromId: pagination.fromId,
       userId,
       accountedById,
-      createdFrom,
-      createdTo,
     }],
     queryFn: async () => (await fetchUserPayments({
       limit: pagination.limit + 1,
       fromId: pagination.fromId,
       userId,
       accountedById,
-      createdFrom,
-      createdTo,
       includes: 'user,accounted_by',
     })).data,
     enabled: urlFiltersValid,
@@ -134,14 +114,9 @@ export function PaymentHistoryPage() {
     event.preventDefault();
     const normalizedUser = draftUser.trim().replace(/^#/, '');
     const normalizedAccountedBy = draftAccountedBy.trim().replace(/^#/, '');
-    const normalizedFrom = draftCreatedFrom.trim();
-    const normalizedTo = draftCreatedTo.trim();
     const valid = (
       (!normalizedUser || parsePaymentHistoryId(normalizedUser) !== undefined)
       && (!normalizedAccountedBy || parsePaymentHistoryId(normalizedAccountedBy) !== undefined)
-      && (!normalizedFrom || paymentHistoryDateBoundary(normalizedFrom, false, accountTimeZone) !== undefined)
-      && (!normalizedTo || paymentHistoryDateBoundary(normalizedTo, true, accountTimeZone) !== undefined)
-      && (!normalizedFrom || !normalizedTo || normalizedFrom <= normalizedTo)
     );
     setValidationError(!valid);
     if (!valid) return;
@@ -151,8 +126,6 @@ export function PaymentHistoryPage() {
       for (const key of ['user', 'accounted_by', 'created_from', 'created_to', 'from_id', 'page']) next.delete(key);
       if (normalizedUser) next.set('user', normalizedUser);
       if (normalizedAccountedBy) next.set('accounted_by', normalizedAccountedBy);
-      if (normalizedFrom) next.set('created_from', normalizedFrom);
-      if (normalizedTo) next.set('created_to', normalizedTo);
       return next;
     });
   };
@@ -161,8 +134,6 @@ export function PaymentHistoryPage() {
     setValidationError(false);
     setDraftUser('');
     setDraftAccountedBy('');
-    setDraftCreatedFrom('');
-    setDraftCreatedTo('');
     setSearchParams((previous) => {
       const next = new URLSearchParams(previous);
       for (const key of ['user', 'accounted_by', 'created_from', 'created_to', 'from_id', 'page']) next.delete(key);
@@ -224,22 +195,6 @@ export function PaymentHistoryPage() {
               ariaInvalid={validationError}
               testId="admin.finance.history.filter.accounted_by"
             />
-            <Input
-              label={t('finance.history.filter.created_from')}
-              value={draftCreatedFrom}
-              onChange={(event) => setDraftCreatedFrom(event.target.value)}
-              type="date"
-              ariaInvalid={validationError}
-              testId="admin.finance.history.filter.created_from"
-            />
-            <Input
-              label={t('finance.history.filter.created_to')}
-              value={draftCreatedTo}
-              onChange={(event) => setDraftCreatedTo(event.target.value)}
-              type="date"
-              ariaInvalid={validationError}
-              testId="admin.finance.history.filter.created_to"
-            />
             <Button type="submit" size="sm" testId="admin.finance.history.filter.apply">
               {t('common.search')}
             </Button>
@@ -247,9 +202,6 @@ export function PaymentHistoryPage() {
               {t('common.clear')}
             </Button>
           </FilterBar>
-          <div className="mt-2 text-xs text-muted" data-testid="admin.finance.history.filter.time_zone">
-            {t('finance.history.filter.time_zone', { timeZone: accountTimeZone })}
-          </div>
         </form>
       </Card>
 
