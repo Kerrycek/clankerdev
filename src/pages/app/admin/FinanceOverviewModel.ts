@@ -47,6 +47,25 @@ function parsePaidUntil(value: unknown): number | null {
   return Number.isFinite(timestamp) ? timestamp : Number.NaN;
 }
 
+function calendarMonthFormatter(timeZone: string): Intl.DateTimeFormat {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+    });
+  } catch {
+    throw new RangeError('Finance overview requires a valid billing time zone');
+  }
+}
+
+function calendarMonthKey(timestamp: number, formatter: Intl.DateTimeFormat): string | null {
+  const parts = formatter.formatToParts(new Date(timestamp));
+  const year = parts.find((part) => part.type === 'year')?.value;
+  const month = parts.find((part) => part.type === 'month')?.value;
+  return year && month ? `${year}-${month}` : null;
+}
+
 /** Billing overview scope shared by totals and account drill-downs. */
 export function isFinanceAccountInScope(account: FinanceAccount): boolean {
   return positiveFiniteMonthlyPayment(account.monthly_payment) !== null && isIncludedObjectState(account.object_state);
@@ -81,12 +100,14 @@ export function classifyFinanceAccount(
 export function summarizeFinanceAccounts(
   accounts: readonly FinanceAccount[],
   now: Date = new Date(),
+  billingTimeZone = 'UTC',
 ): FinanceOverviewSummary {
   const nowTimestamp = now.getTime();
   if (!Number.isFinite(nowTimestamp)) throw new RangeError('Finance overview requires a valid current date');
 
-  const currentMonthStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1);
-  const nextMonthStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1);
+  const monthFormatter = calendarMonthFormatter(billingTimeZone);
+  const currentMonth = calendarMonthKey(nowTimestamp, monthFormatter);
+  if (!currentMonth) throw new RangeError('Finance overview could not resolve the current billing month');
   const summary: FinanceOverviewSummary = {
     monthlyPayment: 0,
     currentMonthExpected: 0,
@@ -111,7 +132,7 @@ export function summarizeFinanceAccounts(
     const paidUntilTimestamp = parsePaidUntil(account.paid_until);
     if (
       paidUntilTimestamp === null ||
-      (Number.isFinite(paidUntilTimestamp) && paidUntilTimestamp >= currentMonthStart && paidUntilTimestamp < nextMonthStart)
+      (Number.isFinite(paidUntilTimestamp) && calendarMonthKey(paidUntilTimestamp, monthFormatter) === currentMonth)
     ) {
       summary.currentMonthExpected += monthlyPayment;
     }

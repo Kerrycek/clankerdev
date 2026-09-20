@@ -24,10 +24,32 @@ function boundedInteger(value: unknown, fallback: number, min: number, max: numb
   return integer >= min && integer <= max ? integer : fallback;
 }
 
-export function defaultIncomeForecastFilters(now: Date = new Date()): IncomeForecastFilters {
+export function defaultIncomeForecastFilters(
+  now: Date = new Date(),
+  billingTimeZone = 'UTC',
+): IncomeForecastFilters {
+  if (!Number.isFinite(now.getTime())) throw new RangeError('Income forecast requires a valid current date');
+
+  let parts: Intl.DateTimeFormatPart[];
+  try {
+    parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: billingTimeZone,
+      year: 'numeric',
+      month: 'numeric',
+    }).formatToParts(now);
+  } catch {
+    throw new RangeError('Income forecast requires a valid billing time zone');
+  }
+
+  const year = Number(parts.find((part) => part.type === 'year')?.value);
+  const month = Number(parts.find((part) => part.type === 'month')?.value);
+  if (!Number.isInteger(year) || !Number.isInteger(month)) {
+    throw new RangeError('Income forecast could not resolve the current billing month');
+  }
+
   return {
-    year: now.getFullYear(),
-    month: now.getMonth() + 1,
+    year,
+    month,
     select: 'exactly_until',
     duration: 1,
   };

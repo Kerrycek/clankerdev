@@ -27,6 +27,15 @@ describe('IncomeForecastModel', () => {
     }, defaults)).toEqual(defaults);
   });
 
+  test('defaults to the current month in the server billing time zone', () => {
+    const boundary = new Date('2026-09-30T22:30:00Z');
+
+    expect(defaultIncomeForecastFilters(boundary, 'UTC')).toMatchObject({ year: 2026, month: 9 });
+    expect(defaultIncomeForecastFilters(boundary, 'Europe/Prague')).toMatchObject({ year: 2026, month: 10 });
+    expect(() => defaultIncomeForecastFilters(boundary, 'not-a-zone')).toThrow(/billing time zone/);
+    expect(() => defaultIncomeForecastFilters(new Date('broken'), 'UTC')).toThrow(/current date/);
+  });
+
   test('builds at most six newest-first cohort selectors across year boundaries', () => {
     expect(buildIncomeForecastPeriods({ year: 2026, month: 2 }, 3).map((period) => period.key)).toEqual([
       '2026-02',

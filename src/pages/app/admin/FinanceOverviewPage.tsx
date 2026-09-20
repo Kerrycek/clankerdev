@@ -4,6 +4,7 @@ import { AlertTriangle, CalendarClock, RefreshCw, TrendingUp, UsersRound } from 
 import { Link } from 'react-router-dom';
 
 import { useAppMode } from '../../../app/appMode';
+import { useServerTimeZone } from '../../../app/accountTimeZone';
 import { useI18n } from '../../../app/i18n';
 import { ListShell } from '../../../components/layout/ListShell';
 import { PageHeader } from '../../../components/layout/PageHeader';
@@ -62,6 +63,7 @@ function financeStatusBadge(status: FinanceAccountStatus) {
 
 export function FinanceOverviewPage() {
   const { basePath } = useAppMode();
+  const billingTimeZone = useServerTimeZone();
   const { lang, t } = useI18n();
   const locale = lang === 'cs' ? 'cs-CZ' : 'en-US';
 
@@ -88,8 +90,8 @@ export function FinanceOverviewPage() {
   const complete = snapshot?.complete === true;
   const users = complete ? snapshot.rows : [];
   const summary = useMemo(
-    () => complete ? summarizeFinanceAccounts(users) : null,
-    [complete, users],
+    () => complete ? summarizeFinanceAccounts(users, new Date(), billingTimeZone) : null,
+    [billingTimeZone, complete, users],
   );
   const currency = defaultCurrency(configsQ.data);
 
@@ -202,7 +204,7 @@ export function FinanceOverviewPage() {
             />
             <StatCard
               title={t('finance.overview.summary.current_month')}
-              subtitle={t('finance.overview.summary.current_month.subtitle')}
+              subtitle={t('finance.overview.summary.current_month.subtitle', { timeZone: billingTimeZone })}
               value={formatAmount(summary.currentMonthExpected, locale, currency)}
               icon={<CalendarClock size={18} aria-hidden="true" />}
               variant="featured"

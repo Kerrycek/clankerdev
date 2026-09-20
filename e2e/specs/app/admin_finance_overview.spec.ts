@@ -7,7 +7,10 @@ function isoDaysFromNow(days: number): string {
 }
 
 test('@pr-smoke @pr-smoke-mobile admin Finance overview uses a complete account snapshot', async ({ page }, testInfo) => {
-  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+  await bootstrapVpsAdminWindow(page, {
+    sessionToken: 'TEST',
+    webuiNext: { serverTimeZone: 'Europe/Prague' },
+  });
   await installHaveApiMock(page, {
     user: { id: 1, login: 'admin', level: 100 },
     handlers: {
@@ -37,6 +40,7 @@ test('@pr-smoke @pr-smoke-mobile admin Finance overview uses a complete account 
   await expect(page.getByTestId('admin.finance.tabs').getByRole('link')).toHaveCount(3);
   await expect(page.getByTestId('admin.finance.overview.summary.monthly_payment')).toContainText(/2[\s,.]?500/);
   await expect(page.getByTestId('admin.finance.overview.summary.monthly_payment')).toContainText('CZK');
+  await expect(page.getByTestId('admin.finance.overview.summary.current_month')).toContainText('Europe/Prague');
   await expect(page.getByTestId('admin.finance.overview.summary.paid')).toContainText('1');
   await expect(page.getByTestId('admin.finance.overview.summary.due_soon')).toContainText('1');
   await expect(page.getByTestId('admin.finance.overview.summary.overdue')).toContainText('2');

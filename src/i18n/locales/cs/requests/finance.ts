@@ -16,7 +16,7 @@ export const csFinance = {
   'finance.overview.summary.monthly_payment': 'Celkový měsíční předpis',
   'finance.overview.summary.monthly_payment.subtitle': 'Součet měsíčních předpisů všech zahrnutých účtů',
   'finance.overview.summary.current_month': 'Výhled na tento měsíc',
-  'finance.overview.summary.current_month.subtitle': 'Předpis účtů bez paid_until nebo s expirací v tomto měsíci',
+  'finance.overview.summary.current_month.subtitle': 'Účty bez paid_until nebo s expirací v tomto měsíci podle časového pásma serveru {timeZone}',
   'finance.overview.summary.paid': 'Zaplaceno',
   'finance.overview.summary.paid.subtitle': 'Platnost nejméně dalších 7 dní',
   'finance.overview.summary.due_soon': 'Brzy expiruje',
