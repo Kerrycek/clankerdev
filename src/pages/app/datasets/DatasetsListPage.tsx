@@ -564,6 +564,7 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
                 if (smartErrors.length > 0) setSmartErrors([]);
               }}
               placeholder={t(searchPlaceholderKey)}
+              ariaLabel={t(searchPlaceholderKey)}
               testId="datasets.search.input"
               suggestions={smartSuggestions}
               onSubmit={() => void applySmartText(smart)}

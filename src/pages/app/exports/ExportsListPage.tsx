@@ -23,6 +23,7 @@ import { UserLookupInput } from '../../../components/ui/UserLookupInput';
 import { fetchExports } from '../../../lib/api/exports';
 import { searchUsers } from '../../../lib/api/users';
 import { useDebouncedValue } from '../../../lib/hooks/useDebouncedValue';
+import { currentSuggestionRows } from '../../../lib/currentSuggestionRows';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 import { cursorFromAscendingPage } from '../../../lib/lockIndex';
 import { parseNumericToken, splitKeyValueToken, tokenizeSmartInput, unquoteSmartValue } from '../../../lib/smartFilter';
@@ -278,7 +279,7 @@ export function ExportsListPage() {
       });
 
       if (isGlobalAdminView) {
-        for (const user of userSearchQ.data ?? []) {
+        for (const user of currentSuggestionRows(smartNeedle, userSuggestNeedle, userSearchQ.data)) {
           const login = String(user.login ?? `#${user.id}`);
           smartSuggestions.push({
             id: `user-${user.id}`,

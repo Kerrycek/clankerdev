@@ -93,6 +93,7 @@ export function TransactionChainsFilters({
             onChange={onSmartChange}
             onSubmit={onSmartSubmit}
             placeholder={t('transactions.chains.search.placeholder')}
+            ariaLabel={t('transactions.chains.search.placeholder')}
             suggestions={smartSuggestions}
             testId="transactions.chains.smart_filter.input"
             suffix={
@@ -100,10 +101,11 @@ export function TransactionChainsFilters({
                 type="button"
                 className="grid h-9 w-9 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-fg"
                 title={t('filters.help.open')}
+                aria-label={t('filters.help.open')}
                 onClick={onHelpOpen}
                 data-testid="transactions.chains.smart_filter.help"
               >
-                <CircleHelp className="h-4 w-4" />
+                <CircleHelp className="h-4 w-4" aria-hidden />
               </button>
             }
           />
