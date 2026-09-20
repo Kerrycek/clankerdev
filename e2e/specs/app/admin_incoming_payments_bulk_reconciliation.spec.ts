@@ -4,7 +4,7 @@ import { bootstrapVpsAdminWindow } from '../../fixtures/bootstrap';
 import { installHaveApiMock } from '../../fixtures/haveapi';
 import { withAppUrl } from '../../fixtures/url';
 
-test('admin incoming payments: bulk reconciliation uses visible selection with button confirmation', async ({ page }) => {
+test('@pr-smoke @pr-smoke-mobile admin incoming payments: bulk reconciliation refreshes list and totals once', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
   const haveApiMock = await installHaveApiMock(page, { user: { id: 1, login: 'admin', level: 100 } });
 
@@ -14,6 +14,8 @@ test('admin incoming payments: bulk reconciliation uses visible selection with b
     [298, { id: 298, state: 'processed', user: { id: 10, login: 'alice' } }],
   ]);
   const updatedIds: number[] = [];
+  let listRequests = 0;
+  const totalRequests: Record<string, number> = {};
 
   function paymentEnvelope(id: number) {
     const payment = payments.get(id) ?? { id, state: 'queued', user: null };
@@ -32,14 +34,24 @@ test('admin incoming payments: bulk reconciliation uses visible selection with b
     };
   }
 
-  haveApiMock.addHandler('GET incoming_payments', () => ({
-    status: true,
-    response: {
-      incoming_payments: Array.from(payments.keys())
-        .sort((a, b) => b - a)
-        .map(paymentEnvelope),
-    },
-  }));
+  haveApiMock.addHandler('GET incoming_payments', ({ searchParams }) => {
+    const state = String(searchParams.get('incoming_payment[state]') ?? '');
+    const rows = Array.from(payments.keys())
+      .sort((a, b) => b - a)
+      .map(paymentEnvelope)
+      .filter((payment) => !state || payment.state === state);
+
+    if (state) totalRequests[state] = (totalRequests[state] ?? 0) + 1;
+    else listRequests += 1;
+
+    return {
+      status: true,
+      response: {
+        incoming_payments: rows,
+        _meta: { total_count: rows.length },
+      },
+    };
+  });
 
   for (const id of [299, 300]) {
     haveApiMock.addHandler(`PUT incoming_payments/${id}`, async ({ json }) => {
@@ -58,6 +70,12 @@ test('admin incoming payments: bulk reconciliation uses visible selection with b
   await page.goto(withAppUrl('/admin/payments/incoming'));
 
   await expect(page.getByTestId('admin.payments.incoming.bulk.card')).toBeVisible();
+  await expect.poll(() => ({ ...totalRequests })).toEqual({ queued: 1, unmatched: 1, processed: 1, ignored: 1 });
+  expect(listRequests).toBe(1);
+  await expect(page.getByTestId('admin.payments.incoming.filters.refresh')).toBeEnabled();
+  await page.getByTestId('admin.payments.incoming.filters.refresh').click();
+  await expect.poll(() => ({ ...totalRequests })).toEqual({ queued: 2, unmatched: 2, processed: 2, ignored: 2 });
+  expect(listRequests).toBe(2);
   await page.getByTestId('admin.payments.incoming.bulk.select_needs_review').click();
   await expect(page.getByTestId('admin.payments.incoming.bulk.summary')).toContainText(/Eligible: 1/);
 
@@ -72,6 +90,8 @@ test('admin incoming payments: bulk reconciliation uses visible selection with b
   await expect(page.getByTestId('admin.payments.incoming.row.300')).toContainText(/Ignored/);
   await expect(page.getByTestId('admin.payments.incoming.row.299')).toContainText(/Ignored/);
   await expect(page.getByTestId('admin.payments.incoming.row.298')).toContainText(/Processed/);
+  await expect.poll(() => ({ ...totalRequests })).toEqual({ queued: 3, unmatched: 3, processed: 3, ignored: 3 });
+  expect(listRequests).toBe(3);
 });
 
 test('admin incoming payments: reconciliation summary links to all unmatched payments', async ({ page }) => {
@@ -200,13 +220,16 @@ test('admin incoming payments: descending keyset jump reaches page five without 
   });
 
   await page.goto(withAppUrl('/admin/payments/incoming?limit=25'));
-  const pagination = page.getByTestId('admin.payments.incoming.pagination.desktop');
+  const pagination = page.locator([
+    '[data-testid="admin.payments.incoming.pagination.desktop"]:visible',
+    '[data-testid="admin.payments.incoming.pagination.mobile"]:visible',
+  ].join(', '));
   await expect(pagination).toContainText(/1.*5/);
-  await pagination.getByTestId('admin.payments.incoming.pagination.desktop.page.5').click();
+  await pagination.getByRole('button', { name: /(?:Go to page|Přejít na stránku) 5/ }).click();
 
   await expect(page).toHaveURL(/(?:\?|&)page=5(?:&|$)/);
   await expect(page).toHaveURL(/(?:\?|&)from_id=26(?:&|$)/);
-  await expect(page.getByTestId('admin.payments.incoming.row.25')).toBeVisible();
-  await expect(page.getByTestId('admin.payments.incoming.row.26')).toHaveCount(0);
+  await expect(page.locator('[data-testid="admin.payments.incoming.row.25.dot"]:visible')).toBeVisible();
+  await expect(page.getByTestId('admin.payments.incoming.row.26.dot')).toHaveCount(0);
   expect(cursors).toEqual(expect.arrayContaining([null, 101, 76, 51, 26]));
 });
