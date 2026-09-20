@@ -40,7 +40,7 @@ export function DnsZoneTransferCreateModal(props: {
           value={props.hostIpId}
           onChange={props.onHostIpIdChange}
           userId={props.ownerUserId}
-          filters={{ purpose: 'vps', routed: true }}
+          filters={{ usableFor: 'vps', routed: true }}
           ariaLabel={t('dns.zone.transfers.field.host_ip')}
           label={t('dns.zone.transfers.field.host_ip')}
           invalidSelectionMessage={t('dns.zone.transfers.field.host_ip_ineligible')}

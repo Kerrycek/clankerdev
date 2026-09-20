@@ -15,8 +15,6 @@ import {
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
 import { formatErrorMessage } from '../../../lib/errors';
 import { gateDnsAction } from '../../../lib/gates/dns';
-import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
-import { cursorFromDescendingPage } from '../../../lib/lockIndex';
 
 import { ActionButton } from '../../../components/ui/ActionButton';
 import { Alert } from '../../../components/ui/Alert';
@@ -106,17 +104,11 @@ function PrimaryDnsZoneRecordsPage() {
     const trimmed = qstr.trim();
     if (trimmed) next.set('q', trimmed);
     else next.delete('q');
+    next.delete('from_id');
+    next.delete('limit');
+    next.delete('page');
     if (next.toString() !== searchParams.toString()) setSearchParams(next, { replace: true });
   }, [qstr, searchParams, setSearchParams]);
-
-  const pagination = useKeysetPagination({
-    id: 'dns.records.list',
-    filterKey: JSON.stringify({ zoneId: zone.id, q: qstr.trim() }),
-    searchParams,
-    setSearchParams,
-    defaultLimit: 50,
-    allowedLimits: [25, 50, 100],
-  });
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createDraft, setCreateDraft] = useState<DnsRecordDraft>(() => defaultDnsRecordDraft());
@@ -126,35 +118,27 @@ function PrimaryDnsZoneRecordsPage() {
   const [rowErrors, setRowErrors] = useState<Map<number, string>>(() => new Map());
 
   const recordsQ = useQuery({
-    queryKey: ['dns_records', 'index', { dns_zone: zone.id, limit: pagination.limit, fromId: pagination.fromId }],
-    queryFn: async () =>
-      fetchDnsRecords({
-        dns_zone: zone.id,
-        limit: pagination.limit,
-        fromId: pagination.fromId,
-      }),
+    queryKey: ['dns_records', 'index', { dns_zone: zone.id }],
+    queryFn: async () => fetchDnsRecords({ dns_zone: zone.id }),
   });
 
-  const pageData = recordsQ.data?.data ?? [];
-  const totalCount =
-    typeof recordsQ.data?.meta?.['total_count'] === 'number' ? Number(recordsQ.data.meta['total_count']) : pageData.length;
+  const records = recordsQ.data?.data ?? [];
+  const totalCount = records.length;
   const rows = useMemo(
-    () => pageData.filter((record) => matchesRecordSearch(record, qstr)),
-    [pageData, qstr]
+    () => records.filter((record) => matchesRecordSearch(record, qstr)),
+    [qstr, records]
   );
 
-  const pageCursor = useMemo(() => cursorFromDescendingPage(pageData), [pageData]);
-  const hasMore = pageData.length >= pagination.limit;
   const filtersActive = Boolean(qstr.trim());
 
   const validationById = useMemo(() => {
-    return new Map(rows.map((record) => [record.id, validateExistingDnsRecord(record, pageData)]));
-  }, [pageData, rows]);
+    return new Map(rows.map((record) => [record.id, validateExistingDnsRecord(record, records)]));
+  }, [records, rows]);
 
-  const createValidation = useMemo(() => validateDnsRecordDraft(createDraft, pageData), [createDraft, pageData]);
+  const createValidation = useMemo(() => validateDnsRecordDraft(createDraft, records), [createDraft, records]);
   const editValidation = useMemo(
-    () => validateDnsRecordDraft(editDraft, pageData, { editingRecordId: edit?.id }),
-    [edit?.id, editDraft, pageData]
+    () => validateDnsRecordDraft(editDraft, records, { editingRecordId: edit?.id }),
+    [edit?.id, editDraft, records]
   );
   const createPreview = useMemo(() => dnsRecordCreatePreview(createDraft), [createDraft]);
   const editPreview = useMemo(() => (edit ? dnsRecordUpdatePreview(edit, editDraft) : []), [edit, editDraft]);
@@ -166,7 +150,7 @@ function PrimaryDnsZoneRecordsPage() {
 
   const createM = useMutation({
     mutationFn: async () => {
-      const validation = validateDnsRecordDraft(createDraft, pageData);
+      const validation = validateDnsRecordDraft(createDraft, records);
       if (validation.hasErrors) throw new Error(t('dns.zone.records.validation.local_failed'));
       await preflightDnsZoneNotBusy({ zoneId: zone.id, t, concernClasses, knownBusy: busyTransaction || busyLocalLock });
       return createDnsRecord(buildDnsRecordCreatePayload(zone.id, createDraft));
@@ -185,7 +169,6 @@ function PrimaryDnsZoneRecordsPage() {
       }
       setCreateOpen(false);
       setCreateDraft(defaultDnsRecordDraft());
-      pagination.goToPage(1);
       recordsQ.refetch();
       refetchZone();
       refetchChains();
@@ -201,7 +184,7 @@ function PrimaryDnsZoneRecordsPage() {
   const updateM = useMutation({
     mutationFn: async () => {
       if (!edit) throw new Error('No record selected');
-      const validation = validateDnsRecordDraft(editDraft, pageData, { editingRecordId: edit.id });
+      const validation = validateDnsRecordDraft(editDraft, records, { editingRecordId: edit.id });
       if (validation.hasErrors) throw new Error(t('dns.zone.records.validation.local_failed'));
       await preflightDnsZoneNotBusy({ zoneId: zone.id, t, concernClasses, knownBusy: busyTransaction || busyLocalLock });
       return updateDnsRecord(edit.id, buildDnsRecordUpdatePayload(editDraft));
@@ -282,6 +265,7 @@ function PrimaryDnsZoneRecordsPage() {
   };
 
   const openEdit = (record: DnsRecord) => {
+    if (record.managed) return;
     updateM.reset();
     setRowErrors((current) => deleteMapValue(current, record.id));
     setEdit(record);
@@ -294,6 +278,7 @@ function PrimaryDnsZoneRecordsPage() {
   };
 
   const openDelete = (record: DnsRecord) => {
+    if (record.managed) return;
     deleteM.reset();
     setConfirmDelete(record);
   };
@@ -362,17 +347,6 @@ function PrimaryDnsZoneRecordsPage() {
           rowErrors={rowErrors}
           updateGate={updateGate}
           deleteGate={deleteGate}
-          page={pagination.page}
-          pageCount={pagination.stack.length}
-          canPrev={pagination.canPrev}
-          canNext={hasMore}
-          pageCursor={pageCursor}
-          limit={pagination.limit}
-          allowedLimits={pagination.allowedLimits}
-          onLimitChange={pagination.setLimit}
-          onPrev={pagination.goPrev}
-          onNext={pagination.goNext}
-          onGoToPage={pagination.goToPage}
           onEdit={openEdit}
           onDelete={openDelete}
         />
