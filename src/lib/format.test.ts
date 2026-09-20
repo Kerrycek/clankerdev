@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { compactText, formatDateInTimeZone } from './format';
+import { compactText, formatDateInTimeZone, formatDateTimeInTimeZone } from './format';
 
 describe('compactText', () => {
   it('keeps short values intact', () => {
@@ -41,6 +41,27 @@ describe('formatDateInTimeZone', () => {
     const value = '2026-02-01T00:00:00Z';
     expect(formatDateInTimeZone(value, 'not-a-zone')).toBe(
       new Date(value).toLocaleDateString(undefined, { timeZone: 'UTC' })
+    );
+  });
+});
+
+describe('formatDateTimeInTimeZone', () => {
+  it('formats the same instant in the selected time zone', () => {
+    const value = '2026-09-20T01:02:03.000Z';
+    expect(formatDateTimeInTimeZone(value, 'Europe/Prague')).toBe(
+      new Date(value).toLocaleString(undefined, { timeZone: 'Europe/Prague' }),
+    );
+    expect(formatDateTimeInTimeZone(value, 'America/Los_Angeles')).toBe(
+      new Date(value).toLocaleString(undefined, { timeZone: 'America/Los_Angeles' }),
+    );
+  });
+
+  it('keeps empty and invalid values safe and falls back to UTC', () => {
+    const value = '2026-09-20T01:02:03.000Z';
+    expect(formatDateTimeInTimeZone(null, 'UTC')).toBe('—');
+    expect(formatDateTimeInTimeZone('invalid', 'UTC')).toBe('invalid');
+    expect(formatDateTimeInTimeZone(value, 'not-a-zone')).toBe(
+      new Date(value).toLocaleString(undefined, { timeZone: 'UTC' }),
     );
   });
 });
