@@ -164,6 +164,8 @@ export const csAdmin_user = {
   "admin.user.payments.history.description": "Zaúčtované platby a ruční zásahy na účtu uživatele.",
   "admin.user.payments.history.source.manual": "Ruční",
   "admin.user.payments.history.title": "Historie plateb uživatele",
+  "admin.user.payments.history.stale.title": "Zobrazuje se poslední načtená historie plateb",
+  "admin.user.payments.history.stale.body": "Nejnovější obnovení historie selhalo. V řádcích nemusí být nejnovější účetní zásah; před dalším rozhodnutím načtení zopakuj.",
   "admin.user.payments.instructions.description": "Zobraz a zkopíruj platební údaje vygenerované pro tohoto uživatele. Načtou se až po rozbalení.",
   "admin.user.payments.quick.subtitle": "Platební stav, měsíční částka a ruční platby na jednom místě.",
   "admin.user.payments.quick.title": "Účetní akce",
