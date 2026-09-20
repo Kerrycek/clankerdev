@@ -7,6 +7,11 @@ test.describe('@smoke Admin user payments', () => {
   test('@pr-smoke @pr-smoke-mobile admin user payments: shows stats, instructions and history', async ({ page }) => {
     await bootstrapVpsAdminWindow(page);
     let paymentInstructionRequests = 0;
+    let manualPaymentRequests = 0;
+    let releaseManualPayment: (() => void) | undefined;
+    const manualPaymentGate = new Promise<void>((resolve) => {
+      releaseManualPayment = resolve;
+    });
   
     await installHaveApiMock(page, {
       user: { id: 1, login: 'admin', level: 100 },
@@ -58,17 +63,21 @@ test.describe('@smoke Admin user payments', () => {
             },
           ],
         }),
-        'POST user_payments': () => ({
-          user_payment: {
-            id: 9002,
-            amount: 100,
-            created_at: '2026-02-11T12:00:00.000Z',
-            from_date: '2026-03-01T00:00:00.000Z',
-            to_date: '2026-04-01T00:00:00.000Z',
-            accounted_by: { id: 1, login: 'admin' },
-          },
-          _meta: { action_state_id: 123 },
-        }),
+        'POST user_payments': async () => {
+          manualPaymentRequests += 1;
+          await manualPaymentGate;
+          return {
+            user_payment: {
+              id: 9002,
+              amount: 1800,
+              created_at: '2026-02-11T12:00:00.000Z',
+              from_date: '2026-03-01T00:00:00.000Z',
+              to_date: '2027-09-01T00:00:00.000Z',
+              accounted_by: { id: 1, login: 'admin' },
+            },
+            _meta: { action_state_id: 123 },
+          };
+        },
       },
     });
   
@@ -97,8 +106,29 @@ test.describe('@smoke Admin user payments', () => {
     await page.getByTestId('admin.user.payments.settings.monthly_payment').fill('120');
     await page.getByTestId('admin.user.payments.settings.monthly.save').click();
 
+    await page.getByTestId('admin.user.payments.add.amount_input').fill('150.5');
+    await expect(page.getByTestId('admin.user.payments.add.validation')).toContainText(/valid|platnou/i);
+    await expect(page.getByTestId('admin.user.payments.add.save')).toBeDisabled();
+
+    await page.getByTestId('admin.user.payments.add.amount_input').fill('150');
+    await expect(page.getByTestId('admin.user.payments.add.validation')).toContainText(/multiple|násobkem/i);
+    await expect(page.getByTestId('admin.user.payments.add.save')).toBeDisabled();
+    expect(manualPaymentRequests).toBe(0);
+
     await page.getByTestId('admin.user.payments.add.amount_input').fill('1800');
     await page.getByTestId('admin.user.payments.add.save').click();
+    await expect(page.getByTestId('admin.user.payments.add.review')).toBeVisible();
+    await expect(page.getByTestId('admin.user.payments.add.review.target')).toContainText('alice (#42)');
+    await expect(page.getByTestId('admin.user.payments.add.review.months')).toContainText('18');
+    await expect(page.getByTestId('admin.user.payments.add.review.amount')).toContainText('1,800');
+    await expect(page.getByTestId('admin.user.payments.add.review')).toContainText(/e-mail/i);
+    expect(manualPaymentRequests).toBe(0);
+    await page.getByTestId('admin.user.payments.add.review.confirm').click();
+    await expect.poll(() => manualPaymentRequests).toBe(1);
+    await expect(page.getByTestId('admin.user.payments.add.review.confirm')).toBeDisabled();
+    await page.getByTestId('admin.user.payments.add.review.confirm').click({ force: true });
+    expect(manualPaymentRequests).toBe(1);
+    releaseManualPayment?.();
     await expect(page.getByTestId('admin.user.payments.add.amount_input')).toHaveValue('');
   });
 
