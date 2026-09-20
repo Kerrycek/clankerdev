@@ -12,13 +12,14 @@ import { useChrome } from '../../../../components/layout/ChromeContext';
 import { Badge } from '../../../../components/ui/Badge';
 import { Button } from '../../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../../components/ui/Card';
+import { CopyButton } from '../../../../components/ui/CopyButton';
 import { EmptyState } from '../../../../components/ui/EmptyState';
 import { ErrorState } from '../../../../components/ui/ErrorState';
 import { Input } from '../../../../components/ui/Input';
 import { KeysetPagination } from '../../../../components/ui/KeysetPagination';
 import { LoadingState } from '../../../../components/ui/LoadingState';
 
-import { createUserPayment, fetchUserPayments } from '../../../../lib/api/payments';
+import { createUserPayment, fetchPaymentInstructions, fetchUserPayments } from '../../../../lib/api/payments';
 import { fetchUserAccount, updateUserAccount } from '../../../../lib/api/userAccounts';
 import { getMetaActionStateId } from '../../../../lib/api/haveapi';
 import { objectRef } from '../../../../lib/objectRef';
@@ -32,10 +33,13 @@ import { formatMoneyLike, safeInt } from '../../../../lib/paymentsFormat';
 import { useKeysetPagination } from '../../../../lib/hooks/useKeysetPagination';
 
 import {
+  normalizePaymentInstructions,
   paidUntilSubtitleToken,
   parsePositiveInt,
+  paymentInstructionsPlainText,
   resourceRefLabel,
 } from '../../payments/PaymentsModel';
+import { PaymentInstructionsHtml } from '../../payments/PaymentInstructionsHtml';
 
 import { useAdminUserContext } from './AdminUserLayout';
 
@@ -52,7 +56,7 @@ function isoToDateInput(value: unknown): string {
 export function AdminUserPaymentsPage() {
   const accountTimeZone = useAccountTimeZone();
   const { basePath } = useAppMode();
-  const { t, tc } = useI18n();
+  const { lang, t, tc } = useI18n();
   const toasts = useToasts();
   const qc = useQueryClient();
   const chrome = useChrome();
@@ -60,6 +64,7 @@ export function AdminUserPaymentsPage() {
   const { userId, user, refetch } = useAdminUserContext();
 
   const [searchParams, setSearchParams] = useSearchParams();
+  const [instructionsOpen, setInstructionsOpen] = useState(false);
 
   const accountQ = useQuery({
     queryKey: ['user_accounts', userId],
@@ -99,6 +104,19 @@ export function AdminUserPaymentsPage() {
       ).data,
     staleTime: 15_000,
   });
+
+  const instructionsQ = useQuery({
+    queryKey: ['users', 'payment_instructions', userId],
+    queryFn: async () => (await fetchPaymentInstructions(userId)).data,
+    enabled: instructionsOpen,
+    staleTime: 10 * 60_000,
+  });
+
+  const instructions = normalizePaymentInstructions(instructionsQ.data);
+  const instructionsCopyText = useMemo(
+    () => paymentInstructionsPlainText(instructions, lang),
+    [instructions, lang],
+  );
 
   const historyPage = historyQ.data ?? [];
   const visibleHistory = useMemo(
@@ -334,6 +352,62 @@ export function AdminUserPaymentsPage() {
             </form>
           </div>
         </CardBody>
+      </Card>
+
+      <Card testId="admin.user.payments.instructions.card">
+        <CardHeader
+          className={instructionsOpen ? undefined : 'border-b-0'}
+          title={t('payments.my.instructions.title')}
+          subtitle={t('admin.user.payments.instructions.description')}
+          actions={(
+            <>
+              {instructionsOpen && instructions ? (
+                <CopyButton
+                  text={instructionsCopyText}
+                  testId="admin.user.payments.instructions.copy"
+                />
+              ) : null}
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => setInstructionsOpen((open) => !open)}
+                aria-expanded={instructionsOpen}
+                aria-controls="admin-user-payment-instructions-content"
+                testId="admin.user.payments.instructions.toggle"
+              >
+                {t(instructionsOpen ? 'common.collapse' : 'common.expand')}
+              </Button>
+            </>
+          )}
+        />
+        {instructionsOpen ? (
+          <CardBody>
+            <div id="admin-user-payment-instructions-content">
+              {instructionsQ.isLoading ? <LoadingState /> : null}
+              {instructionsQ.isError ? (
+                <ErrorState
+                  title={t('payments.my.instructions.load_error.title')}
+                  error={instructionsQ.error}
+                  onRetry={() => void instructionsQ.refetch()}
+                  showBack={false}
+                />
+              ) : null}
+              {!instructionsQ.isLoading && !instructionsQ.isError ? (
+                instructions ? (
+                  <PaymentInstructionsHtml
+                    html={instructions}
+                    testId="admin.user.payments.instructions.text"
+                  />
+                ) : (
+                  <div className="text-sm text-muted" data-testid="admin.user.payments.instructions.empty">
+                    {t('common.na')}
+                  </div>
+                )
+              ) : null}
+            </div>
+          </CardBody>
+        ) : null}
       </Card>
 
       <div className="space-y-3">

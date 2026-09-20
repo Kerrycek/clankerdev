@@ -1,10 +1,12 @@
 import { expect, test } from '@playwright/test';
 
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
+import { expectNoDocumentHorizontalOverflow } from '../../helpers/horizontalOverflow';
 
 test.describe('@smoke Admin user payments', () => {
-  test('admin user payments: shows stats, instructions and history', async ({ page }) => {
+  test('@pr-smoke @pr-smoke-mobile admin user payments: shows stats, instructions and history', async ({ page }) => {
     await bootstrapVpsAdminWindow(page);
+    let paymentInstructionRequests = 0;
   
     await installHaveApiMock(page, {
       user: { id: 1, login: 'admin', level: 100 },
@@ -37,9 +39,12 @@ test.describe('@smoke Admin user payments', () => {
             paid_until: '2026-04-01T00:00:00.000Z',
           },
         }),
-        'GET users/42/get_payment_instructions': () => ({
-          instructions: '<h3>Payment in EUR</h3><table><tr><td>Account:</td><td>123456/0100</td></tr><tr><td>VS:</td><td>42</td></tr></table>',
-        }),
+        'GET users/42/get_payment_instructions': () => {
+          paymentInstructionRequests += 1;
+          return {
+            instructions: '<h3>Payment in EUR</h3><table><tr><td>Account:</td><td>123456/0100</td></tr><tr><td>VS:</td><td>42</td></tr></table>',
+          };
+        },
         'GET user_payments': () => ({
           user_payments: [
             {
@@ -72,6 +77,14 @@ test.describe('@smoke Admin user payments', () => {
     await expect(page.getByTestId('admin.user.payments.quick.card')).toBeVisible();
     await expect(page.getByTestId('admin.user.payments.settings.paid_until')).toHaveValue('2026-03-01');
     await expect(page.getByTestId('admin.user.payments.settings.monthly_payment')).toHaveValue('100');
+
+    await expect(page.getByTestId('admin.user.payments.instructions.card')).toBeVisible();
+    expect(paymentInstructionRequests).toBe(0);
+    await page.getByTestId('admin.user.payments.instructions.toggle').click();
+    await expect(page.getByTestId('admin.user.payments.instructions.text')).toContainText('123456/0100');
+    await expect(page.getByTestId('admin.user.payments.instructions.copy')).toBeVisible();
+    expect(paymentInstructionRequests).toBe(1);
+    await expectNoDocumentHorizontalOverflow(page);
 
     await expect(page.getByTestId('admin.user.payments.history.table')).toBeVisible();
     await expect(page.getByTestId('admin.user.payments.history.row.9001')).toBeVisible();
