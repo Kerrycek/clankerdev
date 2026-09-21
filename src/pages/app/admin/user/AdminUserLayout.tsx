@@ -24,6 +24,7 @@ import { LoadingState } from '../../../../components/ui/LoadingState';
 import { ObjectHeader } from '../../../../components/ui/ObjectHeader';
 import { TabsNav } from '../../../../components/ui/TabsNav';
 import { canViewGlobalFinance } from '../FinanceGlobalAdminGate';
+import { canManageUserResourcePackages } from './AdminUserPackageGate';
 
 export interface AdminUserOutletContext {
   user: User;
@@ -194,7 +195,11 @@ export function AdminUserLayout() {
             items={[
               { to: `${basePath}/users/${u.id}`, label: t('admin.user.tabs.overview'), end: true },
               { to: `${basePath}/users/${u.id}/resources/usage`, label: t('admin.user.tabs.resource_usage'), end: true },
-              { to: `${basePath}/users/${u.id}/resources`, label: t('admin.user.tabs.resources'), end: true },
+              ...(canManageUserResourcePackages(auth.role) ? [{
+                to: `${basePath}/users/${u.id}/resources`,
+                label: t('admin.user.tabs.resources'),
+                end: true,
+              }] : []),
               ...(canViewGlobalFinance(auth.role) ? [{
                 to: `${basePath}/users/${u.id}/payments`,
                 label: t('admin.user.tabs.payments'),
