@@ -195,12 +195,14 @@ export function IncomingPaymentsPage() {
     let succeeded = 0;
     let failed = 0;
     let firstError: unknown;
+    const succeededIds: number[] = [];
 
     try {
       for (const id of review.eligibleIds) {
         try {
           await updateIncomingPaymentState(id, review.targetState);
           succeeded += 1;
+          succeededIds.push(id);
         } catch (error: unknown) {
           failed += 1;
           firstError ??= error;
@@ -210,7 +212,7 @@ export function IncomingPaymentsPage() {
       if (succeeded > 0) {
         setSelectedIds((prev) => {
           const next = new Set(prev);
-          for (const id of review.eligibleIds) next.delete(id);
+          for (const id of succeededIds) next.delete(id);
           return next;
         });
         await Promise.all([

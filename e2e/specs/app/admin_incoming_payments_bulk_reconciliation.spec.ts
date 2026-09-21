@@ -94,6 +94,67 @@ test('@pr-smoke @pr-smoke-mobile admin incoming payments: bulk reconciliation re
   expect(listRequests).toBe(3);
 });
 
+test('@pr-smoke @pr-smoke-mobile admin incoming payments: partial bulk failure keeps failed rows selected for retry', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+  const haveApiMock = await installHaveApiMock(page, { user: { id: 1, login: 'admin', level: 100 } });
+  const payments = new Map<number, { id: number; state: string; user: null }>([
+    [300, { id: 300, state: 'queued', user: null }],
+    [299, { id: 299, state: 'unmatched', user: null }],
+  ]);
+
+  const paymentEnvelope = (id: number) => ({
+    ...payments.get(id),
+    date: '2026-02-14T09:00:00Z',
+    transaction_id: `TX-${id}`,
+    amount: 1_000,
+    currency: 'CZK',
+    account_name: 'Test account',
+    vs: String(id),
+    user_paid_until: null,
+    created_at: '2026-02-14T09:00:00Z',
+  });
+
+  haveApiMock.addHandler('GET incoming_payments', ({ searchParams }) => {
+    const state = searchParams.get('incoming_payment[state]');
+    const rows = [...payments.values()].filter((payment) => !state || payment.state === state);
+    return {
+      status: true,
+      response: {
+        incoming_payments: rows.map((payment) => paymentEnvelope(payment.id)),
+        _meta: { total_count: rows.length },
+      },
+    };
+  });
+  haveApiMock.addHandler('PUT incoming_payments/300', () => {
+    const payment = payments.get(300);
+    if (payment) payment.state = 'ignored';
+    return { incoming_payment: paymentEnvelope(300) };
+  });
+  haveApiMock.addHandler('PUT incoming_payments/299', () => ({
+    status: 503,
+    contentType: 'application/json',
+    body: JSON.stringify({ status: false, message: 'temporary reconciliation failure', response: null }),
+  }));
+
+  await page.goto(withAppUrl('/admin/payments/incoming'));
+  await page.getByTestId('admin.payments.incoming.bulk.select_needs_review').click();
+  await page.getByTestId('admin.payments.incoming.bulk.action').selectOption('mark_ignored');
+  await page.getByTestId('admin.payments.incoming.bulk.review.open').click();
+  await page.getByTestId('admin.payments.incoming.bulk.review.confirm').click();
+
+  const succeededSelection = page.locator([
+    '[data-testid="admin.payments.incoming.bulk.select.300"]:visible',
+    '[data-testid="admin.payments.incoming.bulk.select.300.mobile"]:visible',
+  ].join(', '));
+  const failedSelection = page.locator([
+    '[data-testid="admin.payments.incoming.bulk.select.299"]:visible',
+    '[data-testid="admin.payments.incoming.bulk.select.299.mobile"]:visible',
+  ].join(', '));
+  await expect(succeededSelection).not.toBeChecked();
+  await expect(failedSelection).toBeChecked();
+  await expect(page.getByText(/temporary reconciliation failure/)).toBeVisible();
+});
+
 test('admin incoming payments: reconciliation summary links to all unmatched payments', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
   const haveApiMock = await installHaveApiMock(page, { user: { id: 1, login: 'admin', level: 100 } });
