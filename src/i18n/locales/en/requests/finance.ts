@@ -43,6 +43,8 @@ export const enFinance = {
   'finance.history.title': 'Payment history',
   'finance.history.description': 'Accepted member payments across all accounts, with direct links to the member and source payment.',
   'finance.history.load_error': 'Unable to load payment history',
+  'finance.history.stale.title': 'Showing the last loaded payment history',
+  'finance.history.stale.body': 'The latest refresh failed. These rows may be out of date; retry before making audit-sensitive decisions.',
   'finance.history.empty': 'No accepted payments match these filters.',
   'finance.history.filter.user': 'Member ID',
   'finance.history.filter.accounted_by': 'Accounted by (admin ID)',

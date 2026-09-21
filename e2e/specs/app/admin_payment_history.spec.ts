@@ -73,6 +73,50 @@ test('@pr-smoke @pr-smoke-mobile admin payment history is filterable, linked, an
   }
 });
 
+test('@pr-smoke @pr-smoke-mobile admin payment history keeps the last page after refresh failure', async ({ page }) => {
+  let requests = 0;
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100, time_zone: 'Europe/Prague' },
+    handlers: {
+      'GET user_payments': () => {
+        requests += 1;
+        if (requests > 1) {
+          return {
+            status: 503,
+            contentType: 'application/json',
+            body: JSON.stringify({ status: false, message: 'temporary history failure', response: null }),
+          };
+        }
+
+        return {
+          user_payments: [{
+            id: 9100,
+            user: { id: 42, login: 'member42' },
+            accounted_by: { id: 1, login: 'admin' },
+            amount: 300,
+            from_date: '2026-09-01T00:00:00Z',
+            to_date: '2026-10-01T00:00:00Z',
+            created_at: '2026-09-20T01:02:03Z',
+          }],
+        };
+      },
+    },
+  });
+
+  await page.goto('/admin/payments/history');
+
+  await expect(page.locator('[data-testid^="admin.finance.history.row.9100"]:visible')).toBeVisible();
+  await expect(page.getByTestId('admin.finance.history.stale')).toHaveCount(0);
+
+  await page.getByTestId('admin.finance.history.refresh').click();
+
+  await expect.poll(() => requests).toBeGreaterThan(1);
+  await expect(page.getByTestId('admin.finance.history.stale')).toContainText(/last loaded payment history/i);
+  await expect(page.locator('[data-testid^="admin.finance.history.row.9100"]:visible')).toBeVisible();
+  await expect(page.getByTestId('admin.finance.history.error')).toHaveCount(0);
+});
+
 test('non-admin sessions cannot mount global payment history', async ({ page }) => {
   const paymentRequests: URL[] = [];
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });

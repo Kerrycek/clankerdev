@@ -43,6 +43,8 @@ export const csFinance = {
   'finance.history.title': 'Historie plateb',
   'finance.history.description': 'Zaúčtované členské platby napříč všemi účty s přímými odkazy na člena a zdrojovou platbu.',
   'finance.history.load_error': 'Historii plateb nelze načíst',
+  'finance.history.stale.title': 'Zobrazuje se poslední načtená historie plateb',
+  'finance.history.stale.body': 'Nejnovější obnovení selhalo. Tyto řádky mohou být zastaralé; před rozhodnutím závislým na auditu načtení zopakuj.',
   'finance.history.empty': 'Těmto filtrům neodpovídá žádná zaúčtovaná platba.',
   'finance.history.filter.user': 'ID člena',
   'finance.history.filter.accounted_by': 'Zaúčtoval (ID správce)',
