@@ -119,7 +119,7 @@ describe('buildSidebarNavItems', () => {
 
     expect(visibleIds).not.toContain('security-advisories');
     expect(visibleIds).not.toContain('action-states');
-    expect(items.find((item) => item.id === 'finance')?.to).toBe('/admin/payments/incoming');
+    expect(visibleIds).not.toContain('finance');
     expect(sidebarFooterNavItems(items).map((item) => item.id)).toEqual(['account']);
   });
 

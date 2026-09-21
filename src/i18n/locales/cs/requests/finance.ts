@@ -37,6 +37,7 @@ export const csFinance = {
   'finance.overview.risk.col.paid_until': 'Zaplaceno do',
   'finance.overview.distribution.title': 'Nejčastější měsíční předpisy',
   'finance.overview.distribution.description': 'Rozložení deseti nejčastějších částek v aktuálním snímku.',
+  'finance.overview.distribution.empty': 'V aktuálním snímku není žádný účet s kladným měsíčním předpisem.',
   'finance.overview.distribution.col.amount': 'Částka',
   'finance.overview.distribution.col.users': 'Účtů',
   'finance.history.title': 'Historie plateb',

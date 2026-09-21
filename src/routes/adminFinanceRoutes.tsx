@@ -29,17 +29,17 @@ const FinanceGlobalAdminGate = lazyRoute(
 );
 
 export const adminFinanceRoutes = [
-  { path: 'payments/incoming', element: <IncomingPaymentsPage /> },
-  {
-    path: 'payments/incoming/:paymentId',
-    element: <ParamKeyedRoute param="paymentId"><IncomingPaymentDetailPage /></ParamKeyedRoute>,
-  },
-  { path: 'payments/forecast', element: <IncomeForecastPage /> },
   {
     element: <FinanceGlobalAdminGate />,
     children: [
       { path: 'payments', element: <FinanceOverviewPage /> },
       { path: 'payments/history', element: <PaymentHistoryPage /> },
+      { path: 'payments/incoming', element: <IncomingPaymentsPage /> },
+      {
+        path: 'payments/incoming/:paymentId',
+        element: <ParamKeyedRoute param="paymentId"><IncomingPaymentDetailPage /></ParamKeyedRoute>,
+      },
+      { path: 'payments/forecast', element: <IncomeForecastPage /> },
     ],
   },
 ];

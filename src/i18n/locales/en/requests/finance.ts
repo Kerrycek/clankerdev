@@ -37,6 +37,7 @@ export const enFinance = {
   'finance.overview.risk.col.paid_until': 'Paid until',
   'finance.overview.distribution.title': 'Most common monthly assessments',
   'finance.overview.distribution.description': 'Distribution of the ten most common amounts in the current snapshot.',
+  'finance.overview.distribution.empty': 'No account in the current snapshot has a positive monthly assessment.',
   'finance.overview.distribution.col.amount': 'Amount',
   'finance.overview.distribution.col.users': 'Accounts',
   'finance.history.title': 'Payment history',
