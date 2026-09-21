@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { HaveApiError } from '../../../lib/api/haveapi';
 import type { Vps } from '../../../lib/api/vps';
 import {
+  CONFIG_FIELD_META,
   buildPayload,
   createBuildErrorResult,
   normalizeDraft,
@@ -38,6 +39,13 @@ function labelForKey(key: VpsConfigReviewKey): string {
 }
 
 describe('VpsConfigurationModel', () => {
+  it('marks runtime resource changes as live and not restart-dependent', () => {
+    for (const key of ['cpu', 'cpu_limit', 'memory', 'swap'] as const) {
+      expect(CONFIG_FIELD_META[key].risks).toContain('live');
+      expect(CONFIG_FIELD_META[key].risks).not.toContain('requires_restart');
+    }
+  });
+
   it('keeps legacy update payload shape while adding admin request options to review', () => {
     const baseline = normalizeDraft(baseVps);
     const draft = {

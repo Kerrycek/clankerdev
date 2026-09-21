@@ -38,7 +38,8 @@ async function installResourcesMock(page: Page, putHandler: () => unknown, actio
 }
 
 async function reviewAndSubmit(page: Page, expectedChanges: number) {
-  await page.getByRole('button', { name: `Save (${expectedChanges})`, exact: true }).click();
+  await expect(page.getByTestId('vps.config.header.save')).toHaveText(`Save (${expectedChanges})`);
+  await page.getByTestId('vps.config.header.save').click();
   await expect(page.getByText('Review and apply VPS configuration changes?')).toBeVisible();
   await page.getByRole('button', { name: 'Save', exact: true }).click();
 }
@@ -59,6 +60,9 @@ test.describe('@workflow-matrix VPS resource mutation regressions', () => {
     await resourceInput(page, 'CPU').fill('4');
     await resourceInput(page, 'Memory (MiB)').fill('4096');
     await resourceInput(page, 'Swap (MiB)').fill('512');
+
+    await expect(page.getByTestId('vps.config.review').getByText('Applied live')).toHaveCount(3);
+    await expect(page.getByTestId('vps.config.review').getByText('Requires restart')).toHaveCount(0);
 
     const requestPromise = page.waitForRequest(
       (request) => request.method() === 'PUT' && request.url().includes('/api/v7.0/vpses/123')
@@ -116,8 +120,8 @@ test.describe('@workflow-matrix VPS resource mutation regressions', () => {
     await expect(resourceInput(page, 'CPU')).toHaveValue('4');
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(page.getByTestId('vps.mutation.uncertain')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Save (1)', exact: true })).toBeDisabled();
-    await page.getByRole('button', { name: 'Save (1)', exact: true }).evaluate((button) => (button as HTMLButtonElement).click());
+    await expect(page.getByTestId('vps.config.header.save')).toBeDisabled();
+    await page.getByTestId('vps.config.header.save').evaluate((button) => (button as HTMLButtonElement).click());
     await page.waitForTimeout(100);
     expect(putCount).toBe(1);
     await expect(page.getByTestId('modal.action_progress')).toBeHidden();

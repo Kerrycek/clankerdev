@@ -332,7 +332,7 @@ export function VpsConfigurationPage() {
       <VpsConfigSectionCard
         title={t('vps.config.section.resources')}
         subtitle={t(canEditAdminConfig ? 'vps.config.section.resources_help_admin' : 'vps.config.section.resources_help')}
-        risks={['requires_restart']}
+        risks={['live']}
         bodyClassName="grid gap-4 md:grid-cols-3"
       >
         <Field label={t('vps.config.field.cpu')} errors={fieldMessages('cpu')}>
