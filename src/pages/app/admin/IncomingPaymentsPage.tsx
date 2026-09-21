@@ -16,6 +16,7 @@ import { useToasts } from '../../../app/toasts';
 import { ListShell } from '../../../components/layout/ListShell';
 import { PageHeader } from '../../../components/layout/PageHeader';
 
+import { Alert } from '../../../components/ui/Alert';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { ErrorState } from '../../../components/ui/ErrorState';
 import { LoadingState } from '../../../components/ui/LoadingState';
@@ -268,7 +269,7 @@ export function IncomingPaymentsPage() {
     >
       {paymentsQ.isLoading ? (
         <LoadingState testId="admin.payments.incoming.loading" />
-      ) : paymentsQ.isError ? (
+      ) : paymentsQ.isError && paymentsQ.data === undefined ? (
         <ErrorState
           testId="admin.payments.incoming.error"
           title={t('payments.incoming.list.load_error.title')}
@@ -276,6 +277,14 @@ export function IncomingPaymentsPage() {
         />
       ) : (
         <div className="space-y-3">
+          {paymentsQ.isError ? (
+            <Alert
+              variant="warn"
+              title={t('payments.incoming.list.stale.title')}
+              description={t('payments.incoming.list.stale.body')}
+              testId="admin.payments.incoming.stale"
+            />
+          ) : null}
           {rows.length > 0 ? (
             <IncomingPaymentsBulkActions
               rows={rows}

@@ -275,6 +275,61 @@ test('@pr-smoke @pr-smoke-mobile admin incoming payments: an empty filtered page
   await expect(page.locator('[data-testid="admin.payments.incoming.row.475.dot"]:visible')).toBeVisible();
 });
 
+test('@pr-smoke @pr-smoke-mobile admin incoming payments: refresh failure keeps the last reconciliation page', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+  const haveApiMock = await installHaveApiMock(page, { user: { id: 1, login: 'admin', level: 100 } });
+  let queuedRequests = 0;
+
+  const queuedPayment = {
+    id: 480,
+    state: 'queued',
+    date: '2026-02-14T09:00:00Z',
+    transaction_id: 'TX-480',
+    amount: 1000,
+    currency: 'CZK',
+    account_name: 'Test account',
+    vs: '480',
+    user: null,
+    user_paid_until: null,
+    created_at: '2026-02-14T09:00:00Z',
+  };
+
+  haveApiMock.addHandler('GET incoming_payments', ({ searchParams }) => {
+    const state = String(searchParams.get('incoming_payment[state]') ?? '');
+    if (state === 'queued') {
+      queuedRequests += 1;
+      if (queuedRequests > 1) {
+        return {
+          status: 503,
+          contentType: 'application/json',
+          body: JSON.stringify({ status: false, message: 'temporary incoming-payment failure', response: null }),
+        };
+      }
+    }
+
+    const rows = state === 'queued' ? [queuedPayment] : [];
+    return {
+      status: true,
+      response: {
+        incoming_payments: rows,
+        _meta: { total_count: rows.length },
+      },
+    };
+  });
+
+  await page.goto(withAppUrl('/admin/payments/incoming?state=queued'));
+
+  await expect(page.locator('[data-testid="admin.payments.incoming.row.480.dot"]:visible')).toBeVisible();
+  await expect(page.getByTestId('admin.payments.incoming.stale')).toHaveCount(0);
+
+  await page.getByTestId('admin.payments.incoming.filters.refresh').click();
+
+  await expect.poll(() => queuedRequests).toBeGreaterThan(1);
+  await expect(page.getByTestId('admin.payments.incoming.stale')).toContainText(/last loaded incoming payments/i);
+  await expect(page.locator('[data-testid="admin.payments.incoming.row.480.dot"]:visible')).toBeVisible();
+  await expect(page.getByTestId('admin.payments.incoming.error')).toHaveCount(0);
+});
+
 test('@pr-smoke @pr-smoke-mobile admin incoming payments: incomplete global totals are never presented as authoritative', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
   const haveApiMock = await installHaveApiMock(page, { user: { id: 1, login: 'admin', level: 100 } });
