@@ -53,6 +53,7 @@ export function IncomingPaymentsReconciliationSummary(props: {
   activeState: string;
   onSetState: (state: string) => void;
   stateTotals?: Partial<Record<'queued' | 'unmatched' | 'processed' | 'ignored', number>>;
+  stateTotalsStatus: 'loading' | 'complete' | 'incomplete';
 }) {
   const { t } = useI18n();
   const summary = useMemo(() => buildIncomingPaymentsReconciliationSummary(props.rows), [props.rows]);
@@ -100,7 +101,16 @@ export function IncomingPaymentsReconciliationSummary(props: {
         }
       />
       <CardBody>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+        {props.stateTotalsStatus !== 'complete' ? (
+          <Alert
+            variant={props.stateTotalsStatus === 'loading' ? 'neutral' : 'warn'}
+            title={t(`payments.incoming.reconcile.summary.totals.${props.stateTotalsStatus}.title`)}
+            description={t(`payments.incoming.reconcile.summary.totals.${props.stateTotalsStatus}.body`)}
+            testId={`admin.payments.incoming.reconciliation.totals.${props.stateTotalsStatus}`}
+          />
+        ) : null}
+
+        <div className={props.stateTotalsStatus === 'complete' ? 'grid grid-cols-1 gap-3 md:grid-cols-4' : 'mt-3 grid grid-cols-1 gap-3 md:grid-cols-4'}>
           <MetricTile
             label={t('payments.incoming.reconcile.summary.needs_review')}
             value={needsReviewCount}
