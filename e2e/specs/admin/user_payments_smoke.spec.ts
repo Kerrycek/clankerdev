@@ -7,6 +7,11 @@ test.describe('@smoke Admin user payments', () => {
   test('@pr-smoke @pr-smoke-mobile admin user payments: shows stats, instructions and history', async ({ page }) => {
     await bootstrapVpsAdminWindow(page);
     let paymentInstructionRequests = 0;
+    const settingsUpdates: unknown[] = [];
+    let releaseSettingsUpdate: (() => void) | undefined;
+    const settingsUpdateGate = new Promise<void>((resolve) => {
+      releaseSettingsUpdate = resolve;
+    });
     let manualPaymentRequests = 0;
     let releaseManualPayment: (() => void) | undefined;
     const manualPaymentGate = new Promise<void>((resolve) => {
@@ -37,13 +42,17 @@ test.describe('@smoke Admin user payments', () => {
             paid_until: '2026-03-01T00:00:00.000Z',
           },
         }),
-        'PUT user_accounts/42': () => ({
-          user_account: {
-            id: 42,
-            monthly_payment: 120,
-            paid_until: '2026-04-01T00:00:00.000Z',
-          },
-        }),
+        'PUT user_accounts/42': async ({ reqJson }) => {
+          settingsUpdates.push(reqJson);
+          await settingsUpdateGate;
+          return {
+            user_account: {
+              id: 42,
+              monthly_payment: 120,
+              paid_until: '2026-04-01T00:00:00.000Z',
+            },
+          };
+        },
         'GET users/42/get_payment_instructions': () => {
           paymentInstructionRequests += 1;
           return {
@@ -100,11 +109,44 @@ test.describe('@smoke Admin user payments', () => {
     await expect(page.getByTestId('admin.user.payments.history.row.9001.source')).toHaveText('#300');
     await expect(page.getByTestId('admin.user.payments.history.row.9001.source')).toHaveAttribute('href', '/admin/payments/incoming/300');
 
+    await page.getByTestId('admin.user.payments.settings.paid_until').fill('2026-02-01');
+    await page.getByTestId('admin.user.payments.settings.paid_until.save').click();
+    await expect(page.getByTestId('admin.user.payments.settings.review.backward')).toBeVisible();
+    await expect(page.getByTestId('admin.user.payments.settings.review.target')).toContainText('alice (#42)');
+    expect(settingsUpdates).toHaveLength(0);
+    await page.getByTestId('admin.user.payments.settings.review.cancel').click();
+
+    await page.getByTestId('admin.user.payments.settings.paid_until').fill('');
+    await page.getByTestId('admin.user.payments.settings.paid_until.save').click();
+    await expect(page.getByTestId('admin.user.payments.settings.review.clear')).toBeVisible();
+    expect(settingsUpdates).toHaveLength(0);
+    await page.getByTestId('admin.user.payments.settings.review.cancel').click();
+
     await page.getByTestId('admin.user.payments.settings.paid_until').fill('2026-04-01');
     await page.getByTestId('admin.user.payments.settings.paid_until.save').click();
+    await expect(page.getByTestId('admin.user.payments.settings.review.change')).toContainText('2026-03-01 → 2026-04-01');
+    await expect(page.getByTestId('admin.user.payments.settings.review')).toContainText(/expiration|expiraci/i);
+    expect(settingsUpdates).toHaveLength(0);
+    await page.getByTestId('admin.user.payments.settings.review.confirm').click();
+    await expect.poll(() => settingsUpdates.length).toBe(1);
+    await expect(page.getByTestId('admin.user.payments.settings.review.confirm')).toBeDisabled();
+    await page.getByTestId('admin.user.payments.settings.review.confirm').click({ force: true });
+    expect(settingsUpdates).toHaveLength(1);
+    releaseSettingsUpdate?.();
+    await expect(page.getByTestId('admin.user.payments.settings.review')).toBeHidden();
+    await expect(page.getByTestId('admin.user.payments.settings.monthly_payment')).toBeEnabled();
 
     await page.getByTestId('admin.user.payments.settings.monthly_payment').fill('120');
     await page.getByTestId('admin.user.payments.settings.monthly.save').click();
+    await expect(page.getByTestId('admin.user.payments.settings.review.change')).toContainText(/100.*120/);
+    expect(settingsUpdates).toHaveLength(1);
+    await page.getByTestId('admin.user.payments.settings.review.confirm').click();
+    await expect.poll(() => settingsUpdates.length).toBe(2);
+    await expect(page.getByTestId('admin.user.payments.add.amount_input')).toBeEnabled();
+    expect(settingsUpdates).toEqual([
+      { user_account: { paid_until: '2026-04-01' } },
+      { user_account: { monthly_payment: 120 } },
+    ]);
 
     await page.getByTestId('admin.user.payments.add.amount_input').fill('150.5');
     await expect(page.getByTestId('admin.user.payments.add.validation')).toContainText(/valid|platnou/i);
