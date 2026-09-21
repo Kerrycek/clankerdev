@@ -194,6 +194,55 @@ test('admin incoming payment: route change drops the previous payment edits with
   expect(mutations).toEqual([]);
 });
 
+test('@pr-smoke @pr-smoke-mobile admin incoming payment: stale state review cannot overwrite a newer state', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+  const haveApiMock = await installHaveApiMock(page, { user: { id: 1, login: 'admin', level: 100 } });
+  let state = 'unmatched';
+  let detailRequests = 0;
+  let stateUpdateRequests = 0;
+
+  const paymentEnvelope = () => ({
+    id: 600,
+    state,
+    date: '2026-02-14T09:00:00Z',
+    transaction_id: 'TX-600',
+    amount: 1_000,
+    currency: 'CZK',
+    account_name: 'Test account',
+    vs: '600',
+    user: null,
+    user_paid_until: null,
+    created_at: '2026-02-14T09:00:00Z',
+  });
+
+  haveApiMock.addHandler('GET incoming_payments/600', () => {
+    detailRequests += 1;
+    return { incoming_payment: paymentEnvelope() };
+  });
+  haveApiMock.addHandler('PUT incoming_payments/600', () => {
+    stateUpdateRequests += 1;
+    return { incoming_payment: paymentEnvelope() };
+  });
+
+  await page.goto(withAppUrl('/admin/payments/incoming/600'));
+  await page.getByTestId('admin.payments.incoming.state.select').selectOption('ignored');
+  await expect(page.getByTestId('admin.payments.incoming.state.save')).toBeEnabled();
+
+  state = 'processed';
+  await page.evaluate(() => window.dispatchEvent(new Event('visibilitychange')));
+  await expect.poll(() => detailRequests).toBeGreaterThan(1);
+
+  await expect(page.getByTestId('admin.payments.incoming.detail.600.state')).toHaveText(/Processed/);
+  await expect(page.getByTestId('admin.payments.incoming.state.review.stale')).toBeVisible();
+  await expect(page.getByTestId('admin.payments.incoming.state.save')).toBeDisabled();
+  await page.getByTestId('admin.payments.incoming.state.save').click({ force: true });
+  expect(stateUpdateRequests).toBe(0);
+
+  await page.getByTestId('admin.payments.incoming.state.select').selectOption('queued');
+  await expect(page.getByTestId('admin.payments.incoming.state.review.stale')).toHaveCount(0);
+  await expect(page.getByTestId('admin.payments.incoming.state.save')).toBeEnabled();
+});
+
 test('@pr-smoke @pr-smoke-mobile admin incoming payment: state changes are single-flight and invalidate cached reconciliation totals', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
   const haveApiMock = await installHaveApiMock(page, { user: { id: 1, login: 'admin', level: 100 } });

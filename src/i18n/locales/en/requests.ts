@@ -339,6 +339,8 @@ export const enRequests = {
   'payments.incoming.review.state.subtitle': 'Use this for reconciliation decisions that do not create a user payment.',
   'payments.incoming.review.state.no_payment': 'The incoming payment is not loaded yet.',
   'payments.incoming.review.state.no_change': 'Select a different state to queue a reconciliation change.',
+  'payments.incoming.review.state.stale.title': 'The payment state changed',
+  'payments.incoming.review.state.stale.body': 'Another update changed this payment after you selected an action. Review the current state and select the intended action again.',
   'payments.incoming.review.state.invalid': 'The selected state is not supported.',
   'payments.incoming.review.state.change': 'State change',
   'payments.incoming.review.state.warning.title': 'Review before saving',

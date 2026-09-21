@@ -339,6 +339,8 @@ export const csRequests = {
   'payments.incoming.review.state.subtitle': 'Použij pro rozhodnutí párování, která nevytvářejí platbu uživatele.',
   'payments.incoming.review.state.no_payment': 'Příchozí platba ještě není načtená.',
   'payments.incoming.review.state.no_change': 'Vyber jiný stav, aby bylo možné uložit změnu párování.',
+  'payments.incoming.review.state.stale.title': 'Stav platby se změnil',
+  'payments.incoming.review.state.stale.body': 'Jiná aktualizace změnila tuto platbu po výběru akce. Zkontroluj aktuální stav a vyber požadovanou akci znovu.',
   'payments.incoming.review.state.invalid': 'Vybraný stav není podporovaný.',
   'payments.incoming.review.state.change': 'Změna stavu',
   'payments.incoming.review.state.warning.title': 'Zkontroluj před uložením',
