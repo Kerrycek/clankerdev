@@ -202,6 +202,59 @@ test('admin user detail: lifecycle state update sends object state', async ({ pa
   expect(updates).toEqual([{ user: { object_state: 'suspended' } }]);
 });
 
+test('@pr-smoke @pr-smoke-mobile admin user detail: soft delete keeps a durable queued receipt with task links', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+
+  const updates: Array<Record<string, unknown>> = [];
+  const user = {
+    id: 42,
+    login: 'alice',
+    level: 1,
+    full_name: 'Alice Example',
+    email: 'alice@example.test',
+    object_state: 'active',
+    expiration_date: null,
+    remind_after_date: null,
+  };
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100 },
+    handlers: {
+      'GET users/42': () => ({ user }),
+      'PUT users/42': ({ reqJson }) => {
+        updates.push((reqJson as { user?: Record<string, unknown> }).user ?? {});
+        // Async user updates can return the previous resource representation.
+        return { user, _meta: { action_state_id: 742 } };
+      },
+      'GET users': () => ({ users: [] }),
+    },
+  });
+
+  await page.goto('/admin/users/42');
+  await page.getByTestId('admin.user.lifecycle.state').selectOption('soft_delete');
+  await page.getByTestId('admin.user.lifecycle.save').click();
+
+  await expect.poll(() => updates.length).toBe(1);
+  expect(updates[0]?.['object_state']).toBe('soft_delete');
+  expect(typeof updates[0]?.['expiration_date']).toBe('string');
+
+  const receipt = page.getByTestId('admin.user.lifecycle.receipt');
+  await expect(receipt).toBeVisible();
+  await expect(receipt).toContainText('Account change queued');
+  await expect(receipt).toContainText('Deactivated – recoverable (soft_delete)');
+  await expect(receipt).toContainText('#742');
+  await expect(page.getByTestId('admin.user.lifecycle.receipt.open_action')).toHaveAttribute(
+    'href',
+    '/admin/action-states/742'
+  );
+  await expect(page.getByTestId('admin.user.lifecycle.state')).toHaveValue('soft_delete');
+  await expect(page.getByTestId('admin.user.lifecycle.save')).toBeDisabled();
+  await expectNoDocumentHorizontalOverflow(page);
+
+  await page.getByTestId('admin.user.lifecycle.receipt.open_tasks').click();
+  await expect(page.getByTestId('tasks.drawer')).toBeVisible();
+});
+
 test('admin user detail: resets lifecycle draft when the user route changes', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
   const updates: string[] = [];
