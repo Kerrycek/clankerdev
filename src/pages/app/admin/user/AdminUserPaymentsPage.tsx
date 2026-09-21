@@ -142,6 +142,8 @@ export function AdminUserPaymentsPage() {
   );
 
   const historyPage = historyQ.data ?? [];
+  const historyInitialError = historyQ.isError && historyQ.data === undefined;
+  const historyDataStale = historyQ.isError && historyQ.data !== undefined;
   const visibleHistory = useMemo(
     () => historyPage.slice(0, pagination.limit),
     [historyPage, pagination.limit]
@@ -662,9 +664,23 @@ export function AdminUserPaymentsPage() {
           <CardHeader title={t('admin.user.payments.history.title')} subtitle={t('admin.user.payments.history.description')} />
           <CardBody>
             {historyQ.isLoading ? <LoadingState /> : null}
-            {historyQ.isError ? <ErrorState title={t('payments.my.history.load_error.title')} error={historyQ.error} /> : null}
+            {historyInitialError ? (
+              <ErrorState
+                testId="admin.user.payments.history.error"
+                title={t('payments.my.history.load_error.title')}
+                error={historyQ.error}
+              />
+            ) : null}
+            {historyDataStale ? (
+              <Alert
+                variant="warn"
+                title={t('admin.user.payments.history.stale.title')}
+                description={t('admin.user.payments.history.stale.body')}
+                testId="admin.user.payments.history.stale"
+              />
+            ) : null}
 
-            {!historyQ.isLoading && !historyQ.isError ? (
+            {!historyQ.isLoading && historyQ.data !== undefined ? (
               visibleHistory.length > 0 ? (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm table-list" data-testid="admin.user.payments.history.table">

@@ -421,4 +421,96 @@ test.describe('@smoke Admin user payments', () => {
     await expect(page.getByTestId('admin.user.payments.settings.monthly_payment')).toHaveCount(0);
     await expect(page.getByTestId('admin.user.payments.add.amount_input')).toHaveCount(0);
   });
+
+  test('@pr-smoke @pr-smoke-mobile admin payment history remains visible when its post-write refresh fails', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page);
+    let historyRequests = 0;
+    let failHistoryRefresh = false;
+    let manualPaymentRequests = 0;
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 100 },
+      handlers: {
+        'GET users/42': () => ({
+          user: {
+            id: 42,
+            login: 'alice',
+            level: 1,
+            monthly_payment: 100,
+            paid_until: '2026-03-01T00:00:00.000Z',
+          },
+        }),
+        'GET user_accounts/42': () => ({
+          user_account: {
+            id: 42,
+            monthly_payment: 100,
+            paid_until: '2026-03-01T00:00:00.000Z',
+          },
+        }),
+        'GET users/43': () => ({
+          user: {
+            id: 43,
+            login: 'bob',
+            level: 1,
+            monthly_payment: 200,
+            paid_until: '2026-03-01T00:00:00.000Z',
+          },
+        }),
+        'GET user_accounts/43': () => ({
+          user_account: {
+            id: 43,
+            monthly_payment: 200,
+            paid_until: '2026-03-01T00:00:00.000Z',
+          },
+        }),
+        'GET user_payments': ({ searchParams }) => {
+          historyRequests += 1;
+          const userId = Number(searchParams.get('user_payment[user]'));
+          if (userId === 43 || failHistoryRefresh) {
+            return {
+              status: 503,
+              contentType: 'application/json',
+              body: JSON.stringify({ status: false, message: 'temporary history failure', response: null }),
+            };
+          }
+          return {
+            user_payments: [{
+              id: 9001,
+              amount: 100,
+              created_at: '2026-02-10T12:00:00.000Z',
+              from_date: '2026-02-01T00:00:00.000Z',
+              to_date: '2026-03-01T00:00:00.000Z',
+              accounted_by: { id: 1, login: 'admin' },
+            }],
+          };
+        },
+        'POST user_payments': () => {
+          manualPaymentRequests += 1;
+          failHistoryRefresh = true;
+          return {
+            user_payment: { id: 9002, amount: 100 },
+            _meta: { action_state_id: 124 },
+          };
+        },
+      },
+    });
+
+    await page.goto('/admin/users/42/payments');
+    await expect(page.getByTestId('admin.user.payments.history.row.9001')).toBeVisible();
+
+    await page.getByTestId('admin.user.payments.add.amount_input').fill('100');
+    await page.getByTestId('admin.user.payments.add.save').click();
+    await page.getByTestId('admin.user.payments.add.review.confirm').click();
+    await expect.poll(() => manualPaymentRequests).toBe(1);
+    await expect.poll(() => historyRequests).toBeGreaterThan(1);
+
+    await expect(page.getByTestId('admin.user.payments.history.stale')).toContainText(/may not include the newest/i);
+    await expect(page.getByTestId('admin.user.payments.history.row.9001')).toBeVisible();
+    await expect(page.getByTestId('admin.user.payments.history.error')).toHaveCount(0);
+
+    failHistoryRefresh = false;
+    await page.goto('/admin/users/43/payments');
+    await expect(page.getByTestId('admin.user.payments.history.error')).toBeVisible();
+    await expect(page.getByTestId('admin.user.payments.history.table')).toHaveCount(0);
+  });
 });
