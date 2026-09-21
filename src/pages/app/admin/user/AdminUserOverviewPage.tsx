@@ -39,6 +39,7 @@ import {
   type StateDraft,
 } from './AdminUserOverviewModel';
 import { canViewGlobalFinance } from '../FinanceGlobalAdminGate';
+import { canAdministerUser } from './AdminUserOverviewPermissions';
 
 const USER_STATE_OPTIONS = [
   {
@@ -95,6 +96,7 @@ export function AdminUserOverviewPage() {
   const paidUntilStatus = getPaidUntilStatus(paidUntil);
   const stateBadge = objectStateBadge(u.object_state ?? 'active', t);
   const canViewFinance = canViewGlobalFinance(auth.role);
+  const canAdminister = canAdministerUser(auth.role);
   const selectedStateOption = USER_STATE_OPTIONS.find((option) => option.value === stateDraft.objectState)
     ?? USER_STATE_OPTIONS[0];
 
@@ -192,6 +194,7 @@ export function AdminUserOverviewPage() {
 
   const editM = useMutation({
     mutationFn: async () => {
+      if (!canAdminister) throw new Error(t('gate.blocked.permission.body'));
       const payload = buildEditPayload();
       if (!payload) throw new Error('validation');
       return updateUser(u.id, payload);
@@ -209,7 +212,10 @@ export function AdminUserOverviewPage() {
   });
 
   const stateM = useMutation({
-    mutationFn: (variables: { userId: number; objectLabel: string; payload: Record<string, unknown> }) => updateUser(variables.userId, variables.payload),
+    mutationFn: (variables: { userId: number; objectLabel: string; payload: Record<string, unknown> }) => {
+      if (!canAdminister) throw new Error(t('gate.blocked.permission.body'));
+      return updateUser(variables.userId, variables.payload);
+    },
     onMutate: (variables) => lifetimeMutationGuard.acquire(variables.userId),
     onSuccess: (res, variables, context) => {
       const actionStateId = getMetaActionStateId(res.meta);
@@ -229,11 +235,11 @@ export function AdminUserOverviewPage() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <AdminUserMutationGuardAlert userId={u.id} refetch={refetch} />
+      {canAdminister ? <AdminUserMutationGuardAlert userId={u.id} refetch={refetch} /> : null}
       <Card testId="admin.user.details.card">
         <CardHeader
           title={t('common.details')}
-          actions={
+          actions={canAdminister ? (
             <Button
               variant="secondary"
               size="sm"
@@ -243,7 +249,7 @@ export function AdminUserOverviewPage() {
             >
               {t('admin.user.edit.open')}
             </Button>
-          }
+          ) : null}
         />
         <CardBody>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -362,7 +368,7 @@ export function AdminUserOverviewPage() {
         </CardBody>
       </Card> : null}
 
-      <Card testId="admin.user.account_actions.card" className="lg:col-span-2">
+      {canAdminister ? <Card testId="admin.user.account_actions.card" className="lg:col-span-2">
         <CardHeader title={t('admin.user.account_actions.title')} subtitle={t('admin.user.account_actions.subtitle')} />
         <CardBody>
           <div className="grid gap-4">
@@ -495,9 +501,9 @@ export function AdminUserOverviewPage() {
             </form>
           </div>
         </CardBody>
-      </Card>
+      </Card> : null}
 
-      <Drawer
+      {canAdminister ? <Drawer
         open={editOpen}
         onClose={() => {
           if (editM.isPending) return;
@@ -596,7 +602,7 @@ export function AdminUserOverviewPage() {
             </label>
           </div>
         </div>
-      </Drawer>
+      </Drawer> : null}
 
     </div>
   );
