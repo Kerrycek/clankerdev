@@ -20,14 +20,17 @@ export function RequestsExpandedContent(props: {
   request: UnifiedRequestRow;
   isAdmin: boolean;
   basePath: string;
+  returnTo: string;
   compact?: boolean;
   onResolved: () => void | Promise<void>;
 }) {
   const { t } = useI18n();
-  const { request, isAdmin, basePath, compact = false, onResolved } = props;
+  const { request, isAdmin, basePath, returnTo, compact = false, onResolved } = props;
   const id = requestId(request);
   const reqType = requestType(request);
-  const testPrefix = `admin.requests.expanded.${reqType}.${id}`;
+  const testPrefix = compact
+    ? `admin.requests.expanded.mobile.${reqType}.${id}`
+    : `admin.requests.expanded.${reqType}.${id}`;
   const risk = request._type === 'registration' ? fraudRiskBadge(request) : null;
   const updatedAt = requestDateValue(request, 'updated_at');
 
@@ -135,6 +138,7 @@ export function RequestsExpandedContent(props: {
           basePath={basePath}
           compact={compact}
           showDetailLink
+          detailHref={`${basePath}/requests/${reqType}/${id}?${new URLSearchParams({ returnTo }).toString()}`}
           testIdPrefix={`${testPrefix}.resolve`}
           onResolved={onResolved}
         />

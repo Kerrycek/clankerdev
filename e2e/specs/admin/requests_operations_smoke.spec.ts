@@ -655,7 +655,13 @@ test('@workflow-matrix @smoke admin requests: visible state and type segments ke
 
   await expect(page.getByTestId('admin.requests.state_segments')).toBeVisible();
   await expect(page.getByTestId('admin.requests.type_segments')).toBeVisible();
-  await expect(page.locator('[data-testid^="admin.requests.expand."]')).toHaveCount(0);
+  await expect(page.getByTestId('admin.requests.row.registration.201.full_name')).toHaveText('Alice Example');
+  await expect(page.locator('[data-testid^="admin.requests.expanded_row."]')).toHaveCount(0);
+  await page.getByTestId('admin.requests.expand_all').click();
+  await expect(page.getByTestId('admin.requests.expanded_row.registration.201')).toBeVisible();
+  await expect(page.getByTestId('admin.requests.expanded_row.change.199')).toBeVisible();
+  await expect(page.getByTestId('admin.requests.expand_all')).toHaveText(/collapse all|sbalit vše/i);
+  await page.getByTestId('admin.requests.expand_all').click();
   await expect(page.locator('[data-testid^="admin.requests.expanded_row."]')).toHaveCount(0);
 
   await page.getByTestId('admin.requests.type.change').click();
@@ -667,6 +673,69 @@ test('@workflow-matrix @smoke admin requests: visible state and type segments ke
   await expect(page.getByTestId('admin.requests.row.registration.201')).toBeVisible();
   await expect(page.getByTestId('admin.requests.row.change.199')).toHaveCount(0);
   await expect(page).toHaveURL(/type=registration/);
+});
+
+test('@workflow-matrix @smoke @smoke-mobile admin requests: sequential review opens the next request after each decision', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+  let first = { ...registration(302), user: undefined, login: 'first-user', full_name: 'First Applicant' };
+  let second = { ...registration(301), user: undefined, login: 'second-user', full_name: 'Second Applicant' };
+  const third = { ...registration(300), user: undefined, login: 'third-user', full_name: 'Third Applicant' };
+  const resolveBodies: unknown[] = [];
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100 },
+    handlers: {
+      'GET user_request/registrations': ({ searchParams }) => {
+        const state = searchParams.get('registration[state]');
+        const registrations = [first, second, third];
+        return { registrations: state ? registrations.filter((request) => request.state === state) : registrations };
+      },
+      'GET user_request/changes': () => ({ changes: [] }),
+      'GET user_request/registrations/302': () => ({ registration: first }),
+      'GET user_request/registrations/301': () => ({ registration: second }),
+      'GET user_request/registrations/300': () => ({ registration: third }),
+      'POST user_request/registrations/302/resolve': ({ reqJson }) => {
+        resolveBodies.push(reqJson);
+        first = { ...first, state: 'denied' };
+        return { registration: first };
+      },
+      'POST user_request/registrations/301/resolve': ({ reqJson }) => {
+        resolveBodies.push(reqJson);
+        second = { ...second, state: 'ignored' };
+        return { registration: second };
+      },
+    },
+  });
+
+  await page.goto('/admin/requests');
+  await expect(page.locator(
+    '[data-testid="admin.requests.row.registration.302.full_name"]:visible, [data-testid="admin.requests.mobile.row.registration.302.full_name"]:visible',
+  )).toHaveText('First Applicant');
+  await expect(page.getByTestId('admin.requests.review.start')).toContainText('3');
+  await page.getByTestId('admin.requests.review.start').click();
+
+  await expect(page).toHaveURL(/\/admin\/requests\/registration\/302/);
+  await expect(page.getByTestId('admin.requests.review.continue')).toBeChecked();
+  await expect(page.getByTestId('admin.requests.review.queue')).toContainText(/3/);
+
+  await page.getByTestId('admin.requests.resolve.action.deny').click();
+  await page.getByTestId('admin.requests.resolve.reason').fill('Does not meet the requirements');
+  await page.getByTestId('admin.requests.resolve.submit').click();
+
+  await expect(page).toHaveURL(/\/admin\/requests\/registration\/301/);
+  await expect(page.getByTestId('admin.requests.review.queue')).toContainText(/2/);
+  await expect(page.getByTestId('admin.requests.review.continue')).toBeChecked();
+
+  await page.getByTestId('admin.requests.review.continue').uncheck();
+  await page.getByTestId('admin.requests.resolve.action.ignore').click();
+  await expect(page).toHaveURL(/\/admin\/requests(?:\?|$)/);
+  await expect(page.locator(
+    '[data-testid="admin.requests.row.registration.300"]:visible, [data-testid="admin.requests.mobile.row.registration.300"]:visible',
+  )).toBeVisible();
+  expect(resolveBodies).toEqual([
+    { registration: { action: 'deny', reason: 'Does not meet the requirements' } },
+    { registration: { action: 'ignore' } },
+  ]);
 });
 
 test('@workflow-matrix @smoke admin requests: main input opens a typed ID or selects an applicant without request q', async ({ page }) => {
@@ -866,7 +935,7 @@ test('@workflow-matrix @smoke @smoke-mobile admin requests: correction queue sta
   await expect(visibleRegistration(500)).toBeVisible();
   await expect(page).toHaveURL(/state=pending_correction/);
 
-  await expect(page.locator('[data-testid^="admin.requests.expand."]')).toHaveCount(0);
+  await expect(page.getByTestId('admin.requests.expand_all')).toBeVisible();
   await expect(page.getByTestId('admin.requests.bulk.selection_mode')).toHaveCount(0);
 
   correctionState = 'awaiting';

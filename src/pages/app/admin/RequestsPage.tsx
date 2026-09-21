@@ -29,6 +29,7 @@ import { parseNumericToken } from '../../../lib/smartFilter';
 import { isLocalLockPersistenceError, type LocalMutationGeneration } from '../../../lib/localLocks';
 import { objectRef } from '../../../lib/objectRef';
 import { RequestsBulkActions } from './RequestsBulkActions';
+import { RequestsExpandedContent } from './RequestsExpandedContent';
 import { RequestsFilters } from './RequestsFilters';
 import { RequestsListContent } from './RequestsListContent';
 import { RequestsListStatus } from './RequestsListStatus';
@@ -38,6 +39,7 @@ import {
   requestActionNeedsReason,
   requestBulkReviewActions,
   requestCanEnterBulkReview,
+  requestReviewActions,
 } from './RequestReviewModel';
 import {
   ALL_ADMIN_REQUEST_STATES,
@@ -105,6 +107,7 @@ export function RequestsPage() {
   const [clientPtr, setClientPtr] = useState(() => sp.get('client_ptr') ?? '');
   const [smart, setSmart] = useState('');
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(() => new Set());
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
   const [bulkAction, setBulkAction] = useState<ResolveUserRequestAction>('ignore');
@@ -296,6 +299,19 @@ export function RequestsPage() {
     canResolve,
     lockedRequestIds.has(requestId(row)),
   )).map(requestKey)), [canResolve, lockedRequestIds, rows]);
+  const reviewableRows = useMemo(() => rows.filter((row) => (
+    !lockedRequestIds.has(requestId(row))
+      && requestReviewActions(requestType(row), row, canResolve).length > 0
+  )), [canResolve, lockedRequestIds, rows]);
+
+  useEffect(() => {
+    const visibleKeys = new Set(rows.map(requestKey));
+    setExpandedKeys((previous) => {
+      const next = new Set([...previous].filter((key) => visibleKeys.has(key)));
+      return next.size === previous.size ? previous : next;
+    });
+  }, [rows]);
+
   useEffect(() => {
     setSelectedKeys((previous) => {
       const next = new Set([...previous].filter((key) => bulkSelectableKeys.has(key)));
@@ -322,6 +338,23 @@ export function RequestsPage() {
       }
       return next;
     });
+  }
+
+  function toggleExpanded(key: string) {
+    setExpandedKeys((previous) => {
+      const next = new Set(previous);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  function expandAll() {
+    setExpandedKeys(new Set(rows.map(requestKey)));
+  }
+
+  function collapseAll() {
+    setExpandedKeys(new Set());
   }
 
   const selectedRows = useMemo(
@@ -469,6 +502,21 @@ export function RequestsPage() {
     },
     [basePath, listReturnTo],
   );
+
+  const startSequentialReview = useCallback(() => {
+    const [first, ...remaining] = reviewableRows;
+    if (!first) return;
+    navigate(requestDetailHref(requestType(first), requestId(first)), {
+      state: {
+        returnTo: listReturnTo,
+        reviewQueueActive: true,
+        reviewQueue: remaining.map((request) => ({
+          type: requestType(request),
+          id: requestId(request),
+        })),
+      },
+    });
+  }, [listReturnTo, navigate, requestDetailHref, reviewableRows]);
 
   const openRequestById = useCallback(async (id: number) => {
     if (openingRequestId !== null) return;
@@ -688,6 +736,7 @@ export function RequestsPage() {
           isAdmin={isAdmin}
           basePath={basePath}
           returnTo={listReturnTo}
+          expandedKeys={expandedKeys}
           selectionMode={selectionMode}
           selectedKeys={selectedKeys}
           bulkSelectableKeys={bulkSelectableKeys}
@@ -695,8 +744,30 @@ export function RequestsPage() {
           canNext={canNext}
           pageCursor={pageCursor}
           pagination={pagination}
+          reviewableCount={reviewableRows.length}
+          onStartReview={startSequentialReview}
+          onToggleExpanded={toggleExpanded}
+          onExpandAll={expandAll}
+          onCollapseAll={collapseAll}
           onToggleSelected={toggleSelected}
           onToggleAllVisible={toggleAllVisible}
+          renderExpandedContent={(request, compact) => (
+            <RequestsExpandedContent
+              request={request}
+              isAdmin={isAdmin}
+              basePath={basePath}
+              returnTo={listReturnTo}
+              compact={compact}
+              onResolved={async () => {
+                setExpandedKeys((previous) => {
+                  const next = new Set(previous);
+                  next.delete(requestKey(request));
+                  return next;
+                });
+                await refreshRequests();
+              }}
+            />
+          )}
         />
       </RequestsListStatus>
     </ListShell>

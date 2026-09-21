@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronRight } from 'lucide-react';
@@ -32,6 +32,7 @@ import { StatusDot } from '../../../components/ui/StatusDot';
 import { RequestAddressMapLink } from './RequestAddressMapLink';
 import {
   isDefinitiveRequestNotFound,
+  parseRequestReviewQueue,
   requestMatchesReviewTarget,
   requestResourceLabel,
   safeRequestsReturnTo,
@@ -42,6 +43,7 @@ import {
   RequestReviewActions,
   requestOperationalLinks,
 } from './RequestReviewActions';
+import { fetchAwaitingReviewTarget, RequestReviewPreconditionError } from './RequestResolveMutation';
 import { requestLinkedUserId, requestMissingRequiredUser, safePositiveInteger } from './RequestReviewModel';
 
 class RequestTypeMismatchError extends Error {
@@ -211,8 +213,48 @@ export function RequestDetailPage() {
   const locationState = location.state && typeof location.state === 'object'
     ? location.state as Record<string, unknown>
     : undefined;
+  const reviewQueue = useMemo(
+    () => parseRequestReviewQueue(locationState?.['reviewQueue']),
+    [locationState],
+  );
+  const reviewQueueActive = locationState?.['reviewQueueActive'] === true;
+  const [continueReviewQueue, setContinueReviewQueue] = useState(reviewQueueActive);
   const queryReturnTo = new URLSearchParams(location.search).get('returnTo');
   const returnTo = safeRequestsReturnTo(locationState?.['returnTo'] ?? queryReturnTo, basePath);
+
+  useEffect(() => {
+    setContinueReviewQueue(reviewQueueActive);
+  }, [reqId, reviewQueueActive]);
+
+  async function afterResolved() {
+    if (!continueReviewQueue) {
+      navigate(returnTo, { replace: true });
+      return;
+    }
+
+    for (const [index, target] of reviewQueue.entries()) {
+      try {
+        await fetchAwaitingReviewTarget(target.type, target.id);
+      } catch (error: unknown) {
+        if (error instanceof RequestReviewPreconditionError) continue;
+        // A transient preflight failure should not silently discard the queue.
+        // Open the target and let its retryable detail state explain the problem.
+      }
+
+      const detailParams = new URLSearchParams({ returnTo });
+      navigate(`${basePath}/requests/${target.type}/${target.id}?${detailParams.toString()}`, {
+        replace: true,
+        state: {
+          returnTo,
+          reviewQueueActive: true,
+          reviewQueue: reviewQueue.slice(index + 1),
+        },
+      });
+      return;
+    }
+
+    navigate(returnTo, { replace: true });
+  }
 
   const requestQ = useQuery({
     queryKey: ['user_request', reqType, 'show', reqId],
@@ -355,6 +397,23 @@ export function RequestDetailPage() {
                   <div className="mt-1 whitespace-pre-line text-sm">{request.admin_response}</div>
                 </div>
               ) : null}
+              {reviewQueueActive ? (
+                <div className="rounded-lg border border-border bg-surface-2 p-3" data-testid="admin.requests.review.queue">
+                  <label className="flex cursor-pointer items-start gap-2 text-sm font-medium">
+                    <input
+                      className="mt-0.5 h-4 w-4 rounded border-border"
+                      type="checkbox"
+                      checked={continueReviewQueue}
+                      onChange={(event) => setContinueReviewQueue(event.target.checked)}
+                      data-testid="admin.requests.review.continue"
+                    />
+                    <span>{t('requests.review.continue')}</span>
+                  </label>
+                  <div className="mt-1 text-xs text-muted">
+                    {t('requests.review.remaining', { count: String(reviewQueue.length + 1) })}
+                  </div>
+                </div>
+              ) : null}
               <RequestReviewActions
                 request={request}
                 reqType={reqType}
@@ -362,7 +421,7 @@ export function RequestDetailPage() {
                 isAdmin={canResolve}
                 basePath={basePath}
                 testIdPrefix="admin.requests.resolve"
-                onResolved={() => navigate(returnTo, { replace: true })}
+                onResolved={afterResolved}
               />
             </CardBody>
           </Card>
