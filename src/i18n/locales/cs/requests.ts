@@ -308,8 +308,6 @@ export const csRequests = {
   'payments.incoming.assign.lookup.monthly_payment': 'Měsíční platba',
   'payments.incoming.assign.toast.title': 'Přiřazení zařazeno',
   'payments.incoming.assign.toast.message': 'Vytvoření platby uživatele bylo zařazeno do fronty.',
-  'payments.incoming.assign.toast.state_update_failed.title': 'Přiřazeno, ale stav nebyl změněn',
-  'payments.incoming.assign.toast.state_update_failed.message': 'Platba uživatele byla vytvořena, ale stav příchozí platby se nepodařilo nastavit na Zpracováno. Změň jej prosím ručně.',
   'payments.incoming.assign.toast.error.title': 'Nelze přiřadit platbu',
   'payments.incoming.assign.toast.invalid_user.title': 'Neplatné ID uživatele',
   'payments.incoming.assign.toast.invalid_user.message': 'Zadej číselné ID uživatele nebo vyber uživatele z našeptávače.',

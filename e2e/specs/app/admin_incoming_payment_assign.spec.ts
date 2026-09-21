@@ -3,14 +3,21 @@ import { test, expect } from '@playwright/test';
 import { bootstrapVpsAdminWindow } from '../../fixtures/bootstrap';
 import { installHaveApiMock } from '../../fixtures/haveapi';
 import { withAppUrl } from '../../fixtures/url';
+import { expectNoDocumentHorizontalOverflow } from '../../helpers/horizontalOverflow';
 
-test('admin incoming payment: assign to user', async ({ page }) => {
+test('@pr-smoke @pr-smoke-mobile admin incoming payment: assign to user', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
   const haveApiMock = await installHaveApiMock(page, { user: { id: 1, login: 'admin', level: 100 } });
 
   let assigned = false;
   let assignedUser: { id: number; login: string } | null = null;
   let state: string = 'unmatched';
+  let assignmentRequests = 0;
+  let stateUpdateRequests = 0;
+  let releaseAssignment: (() => void) | undefined;
+  const assignmentGate = new Promise<void>((resolve) => {
+    releaseAssignment = resolve;
+  });
 
   const paymentId = 300;
 
@@ -64,6 +71,7 @@ test('admin incoming payment: assign to user', async ({ page }) => {
   }));
 
   haveApiMock.addHandler('PUT incoming_payments/300', async ({ json }) => {
+    stateUpdateRequests += 1;
     state = String(json?.incoming_payment?.state ?? state);
     return {
       status: true,
@@ -74,9 +82,13 @@ test('admin incoming payment: assign to user', async ({ page }) => {
   });
 
   haveApiMock.addHandler('POST user_payments', async ({ json }) => {
+    assignmentRequests += 1;
+    await assignmentGate;
     const userId = Number(json?.user_payment?.user);
     assigned = true;
     assignedUser = { id: userId, login: 'alice' };
+    // user_payment#create atomically transitions its linked incoming payment.
+    state = 'processed';
 
     return {
       status: true,
@@ -98,6 +110,7 @@ test('admin incoming payment: assign to user', async ({ page }) => {
   await page.goto(withAppUrl('/admin/payments/incoming/300'));
 
   await expect(page.getByTestId('admin.payments.incoming.state.save')).toBeDisabled();
+  await expectNoDocumentHorizontalOverflow(page);
   await page.getByTestId('admin.payments.incoming.state.select').selectOption('ignored');
   await expect(page.getByTestId('admin.payments.incoming.state.save')).toBeEnabled();
   await page.getByTestId('admin.payments.incoming.state.select').selectOption('unmatched');
@@ -113,11 +126,17 @@ test('admin incoming payment: assign to user', async ({ page }) => {
   await expect(page.getByTestId('admin.payments.incoming.assign.submit')).toBeEnabled();
 
   await page.getByTestId('admin.payments.incoming.assign.submit').click();
+  await expect.poll(() => assignmentRequests).toBe(1);
+  await expect(page.getByTestId('admin.payments.incoming.assign.submit')).toBeDisabled();
+  await page.getByTestId('admin.payments.incoming.assign.submit').click({ force: true });
+  expect(assignmentRequests).toBe(1);
+  releaseAssignment?.();
 
   // After refetch, the user should be visible and the assign button disabled.
   await expect(page.getByTestId('admin.payments.incoming.detail.300.state')).toHaveText(/Processed/);
   await expect(page.getByTestId('admin.payments.incoming.assign.inline')).toHaveCount(0);
   await expect(page.getByText('alice')).toBeVisible();
+  expect(stateUpdateRequests).toBe(0);
 });
 
 test('admin incoming payment: route change drops the previous payment edits without writing', async ({ page }) => {

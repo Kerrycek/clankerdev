@@ -308,8 +308,6 @@ export const enRequests = {
   'payments.incoming.assign.lookup.monthly_payment': 'Monthly payment',
   'payments.incoming.assign.toast.title': 'Assignment queued',
   'payments.incoming.assign.toast.message': 'User payment creation was queued.',
-  'payments.incoming.assign.toast.state_update_failed.title': 'Assigned, but state not updated',
-  'payments.incoming.assign.toast.state_update_failed.message': 'User payment was created, but the incoming payment state could not be set to Processed. Please update it manually.',
   'payments.incoming.assign.toast.error.title': 'Unable to assign payment',
   'payments.incoming.assign.toast.invalid_user.title': 'Invalid user id',
   'payments.incoming.assign.toast.invalid_user.message': 'Please enter a numeric user id or pick a user from suggestions.',

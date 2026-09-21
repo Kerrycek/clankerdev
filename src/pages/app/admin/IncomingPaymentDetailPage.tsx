@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -149,6 +149,8 @@ export function IncomingPaymentDetailPage() {
   const effectiveStateEdit = stateEdit || st;
 
   const [assignUserId, setAssignUserId] = useState('');
+  const [assigning, setAssigning] = useState(false);
+  const assignmentInFlightRef = useRef(false);
 
   const isAssigned = Boolean(payment?.user);
 
@@ -204,7 +206,7 @@ export function IncomingPaymentDetailPage() {
   }
 
   async function submitAssign() {
-    if (!paymentId) return;
+    if (!paymentId || assignmentInFlightRef.current) return;
 
     const userId = assignReview.userId;
     if (!assignReview.canSubmit || !userId) {
@@ -216,23 +218,13 @@ export function IncomingPaymentDetailPage() {
       return;
     }
 
+    assignmentInFlightRef.current = true;
+    setAssigning(true);
+
     try {
       const res = await createUserPayment({ incoming_payment: paymentId, user: userId });
       const asId = getMetaActionStateId(res.meta);
       if (asId) chrome.trackActionState(asId);
-
-      // After matching, default to marking the incoming payment as processed.
-      if (String(st).trim() !== 'processed') {
-        try {
-          await updateIncomingPaymentState(paymentId, 'processed');
-        } catch (e: unknown) {
-          toasts.pushToast({
-            variant: 'warn',
-            title: t('payments.incoming.assign.toast.state_update_failed.title'),
-            body: `${t('payments.incoming.assign.toast.state_update_failed.message')} (${formatErrorMessage(e)})`,
-          });
-        }
-      }
 
       toasts.pushToast({
         variant: 'ok',
@@ -252,6 +244,9 @@ export function IncomingPaymentDetailPage() {
         title: t('payments.incoming.assign.toast.error.title'),
         body: formatErrorMessage(e),
       });
+    } finally {
+      assignmentInFlightRef.current = false;
+      setAssigning(false);
     }
   }
 
@@ -411,7 +406,8 @@ export function IncomingPaymentDetailPage() {
                     <Button
                       variant="primary"
                       onClick={submitAssign}
-                      disabled={!assignReview.canSubmit}
+                      loading={assigning}
+                      disabled={!assignReview.canSubmit || assigning}
                       testId="admin.payments.incoming.assign.submit"
                     >
                       {t('payments.incoming.assign.modal.submit')}
