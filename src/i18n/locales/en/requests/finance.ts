@@ -17,7 +17,7 @@ export const enFinance = {
   'finance.overview.summary.monthly_payment': 'Total monthly assessment',
   'finance.overview.summary.monthly_payment.subtitle': 'Sum of the monthly assessment for every included account',
   'finance.overview.summary.current_month': 'This month’s outlook',
-  'finance.overview.summary.current_month.subtitle': 'Assessment for accounts without paid_until or expiring this month',
+  'finance.overview.summary.current_month.subtitle': 'Accounts without paid_until or expiring this month in server time zone {timeZone}',
   'finance.overview.summary.paid': 'Paid',
   'finance.overview.summary.paid.subtitle': 'Valid for at least another 7 days',
   'finance.overview.summary.due_soon': 'Expiring soon',

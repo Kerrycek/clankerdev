@@ -58,4 +58,16 @@ describe('FinanceOverviewModel', () => {
       excludedAccountCount: 5,
     });
   });
+
+  test('uses the billing time zone for paid-until month boundaries', () => {
+    const boundaryAccounts = [
+      { id: 1, monthly_payment: 100, paid_until: '2026-09-30T22:00:00Z', object_state: 'active' },
+      { id: 2, monthly_payment: 200, paid_until: '2026-08-31T22:00:00Z', object_state: 'active' },
+      { id: 3, monthly_payment: 50, paid_until: null, object_state: 'active' },
+    ];
+
+    expect(summarizeFinanceAccounts(boundaryAccounts, now, 'UTC').currentMonthExpected).toBe(150);
+    expect(summarizeFinanceAccounts(boundaryAccounts, now, 'Europe/Prague').currentMonthExpected).toBe(250);
+    expect(() => summarizeFinanceAccounts(boundaryAccounts, now, 'not-a-zone')).toThrow(/billing time zone/);
+  });
 });
