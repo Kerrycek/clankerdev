@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
+import { useAccountTimeZone } from '../../../app/accountTimeZone';
 import { useI18n } from '../../../app/i18n';
 import { Badge } from '../../../components/ui/Badge';
 import { Card } from '../../../components/ui/Card';
@@ -9,7 +10,7 @@ import { StatusDot } from '../../../components/ui/StatusDot';
 import { TableCard } from '../../../components/ui/TableCard';
 import { TableRowLink } from '../../../components/ui/TableRowLink';
 import type { IncomingPayment } from '../../../lib/api/payments';
-import { formatDateTime } from '../../../lib/format';
+import { formatDateInTimeZone, formatDateTimeInTimeZone } from '../../../lib/format';
 import type { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 import {
   getPaidUntilStatus,
@@ -44,6 +45,7 @@ export function IncomingPaymentsListContent(props: {
   onToggleSelected?: (id: number, selected: boolean) => void;
   onToggleAllVisible?: (selected: boolean) => void;
 }) {
+  const accountTimeZone = useAccountTimeZone();
   const { t } = useI18n();
   const selectedIds = props.selectedIds ?? new Set<number>();
   const allVisibleSelected = props.rows.length > 0 && props.rows.every((row) => selectedIds.has(row.id));
@@ -81,7 +83,12 @@ export function IncomingPaymentsListContent(props: {
                     <div className="text-sm font-semibold">#{p.id}</div>
                     <Badge variant={incomingPaymentBadgeVariant(st)}>{t(incomingPaymentStateLabelKey(st))}</Badge>
                   </div>
-                  <div className="mt-1 text-xs text-muted">{formatDateTime(p.date)}</div>
+                  <div
+                    className="mt-1 text-xs text-muted"
+                    data-testid={`admin.payments.incoming.row.${p.id}.date.mobile`}
+                  >
+                    {formatDateTimeInTimeZone(p.date, accountTimeZone)}
+                  </div>
                   <div className="mt-2 text-sm font-medium tabular-nums">{recvAmount}</div>
                   {acctAmount ? (
                     <div className="mt-1 text-xs text-muted">
@@ -98,7 +105,9 @@ export function IncomingPaymentsListContent(props: {
                   {p.user ? (
                     <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
                       <span className="text-faint">{t('payments.incoming.list.col.paid_until')}:</span>{' '}
-                      {p.user_paid_until ? formatDateTime(p.user_paid_until) : '—'}
+                      <span data-testid={`admin.payments.incoming.row.${p.id}.paid_until.mobile`}>
+                        {p.user_paid_until ? formatDateInTimeZone(p.user_paid_until, accountTimeZone) : '—'}
+                      </span>
                       {acctStatus && (acctStatus.status === 'due_soon' || acctStatus.status === 'overdue') ? (
                         <Badge variant={paidUntilBadgeVariant(acctStatus.status)}>
                           {t(paidUntilStatusLabelKey(acctStatus.status))}
@@ -223,7 +232,12 @@ export function IncomingPaymentsListContent(props: {
                     <span className="font-medium text-accent">#{p.id}</span>
                   </div>
                 </td>
-                <td className="px-3 py-2 text-xs text-muted">{formatDateTime(p.date)}</td>
+                <td
+                  className="px-3 py-2 text-xs text-muted"
+                  data-testid={`admin.payments.incoming.row.${p.id}.date.desktop`}
+                >
+                  {formatDateTimeInTimeZone(p.date, accountTimeZone)}
+                </td>
                 <td className="px-3 py-2">
                   <div className="text-sm font-medium tabular-nums">{recvAmount}</div>
                   {acctAmount ? <div className="text-xs text-muted">{acctAmount}</div> : null}
@@ -234,7 +248,12 @@ export function IncomingPaymentsListContent(props: {
                 <td className="px-3 py-2 text-xs text-muted">
                   {p.user ? (
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="tabular-nums">{p.user_paid_until ? formatDateTime(p.user_paid_until) : '—'}</span>
+                      <span
+                        className="tabular-nums"
+                        data-testid={`admin.payments.incoming.row.${p.id}.paid_until.desktop`}
+                      >
+                        {p.user_paid_until ? formatDateInTimeZone(p.user_paid_until, accountTimeZone) : '—'}
+                      </span>
                       {acctStatus && (acctStatus.status === 'due_soon' || acctStatus.status === 'overdue') ? (
                         <Badge variant={paidUntilBadgeVariant(acctStatus.status)}>
                           {t(paidUntilStatusLabelKey(acctStatus.status))}
