@@ -155,13 +155,15 @@ export function buildSidebarNavItems(opts: {
     items.push({ id: 'requests', to: `${basePath}/requests`, label: t('nav.requests'), icon: <Inbox size={18} />, group: 'users-finance' });
     items.push({ id: 'mailer', to: `${basePath}/mailer/templates`, label: t('nav.mailer'), icon: <Mail size={18} />, group: 'content' });
     items.push({ id: 'content', to: `${basePath}/content/news`, label: t('nav.content'), icon: <FileText size={18} />, group: 'content' });
-    items.push({
-      id: 'finance',
-      to: role === 'admin' ? `${basePath}/payments` : `${basePath}/payments/incoming`,
-      label: t('nav.finance'),
-      icon: <CreditCard size={18} />,
-      group: 'users-finance',
-    });
+    if (role === 'admin') {
+      items.push({
+        id: 'finance',
+        to: `${basePath}/payments`,
+        label: t('nav.finance'),
+        icon: <CreditCard size={18} />,
+        group: 'users-finance',
+      });
+    }
     items.push({ id: 'cluster', to: `${basePath}/cluster/summary`, label: t('nav.cluster'), icon: <Settings size={18} />, group: 'infrastructure' });
     items.push({ id: 'nodes', to: `${basePath}/nodes`, label: t('nav.nodes'), icon: <Cpu size={18} />, group: 'infrastructure' });
     items.push({ id: 'migration-plans', to: `${basePath}/migration-plans`, label: t('nav.migration_plans'), icon: <GitMerge size={18} />, group: 'infrastructure' });

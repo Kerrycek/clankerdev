@@ -61,7 +61,7 @@ test('@pr-smoke @pr-smoke-mobile admin Finance overview uses a complete account 
   }
 });
 
-test('@pr-smoke non-admin sessions cannot mount global Finance totals', async ({ page }) => {
+test('@pr-smoke @pr-smoke-mobile non-admin sessions cannot mount global Finance routes', async ({ page }) => {
   const globalFinanceRequests: string[] = [];
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
   await installHaveApiMock(page, {
@@ -88,11 +88,19 @@ test('@pr-smoke non-admin sessions cannot mount global Finance totals', async ({
     },
   });
 
-  await page.goto('/admin/payments');
+  for (const path of [
+    '/admin/payments',
+    '/admin/payments/incoming',
+    '/admin/payments/incoming/300',
+    '/admin/payments/forecast',
+  ]) {
+    await page.goto(path);
+    await expect(page).toHaveURL((url) => url.pathname === '/app/payments' && url.hash === '');
+    await expect(page.getByTestId('payments.my.stat.payment_id')).toContainText('2');
+    await expect(page.getByTestId('admin.finance.tabs')).toHaveCount(0);
+    await expect(page.getByTestId('nav.sidebar.finance')).toHaveCount(0);
+  }
 
-  await expect(page).toHaveURL((url) => url.pathname === '/app/payments' && url.hash === '');
-  await expect(page.getByTestId('payments.my.stat.payment_id')).toContainText('2');
-  await expect(page.getByTestId('admin.finance.tabs')).toHaveCount(0);
   await page.waitForLoadState('networkidle');
   expect(globalFinanceRequests).toEqual([]);
 });
