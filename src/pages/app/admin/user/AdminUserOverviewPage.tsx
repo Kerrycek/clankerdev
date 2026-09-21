@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { useAuth } from '../../../../app/auth';
 import { useI18n } from '../../../../app/i18n';
 import { useAccountTimeZone } from '../../../../app/accountTimeZone';
 import { useToasts } from '../../../../app/toasts';
@@ -17,7 +18,7 @@ import { SwitchRow } from '../../../../components/ui/SwitchRow';
 import { updateUser } from '../../../../lib/api/users';
 import { getMetaActionStateId } from '../../../../lib/api/haveapi';
 import { fetchUserPayments } from '../../../../lib/api/payments';
-import { adminDateTimeInputToIso } from '../../../../lib/datetimeLocal';
+import { adminDateTimeInputToIso, dateToAdminDateTimeInput } from '../../../../lib/datetimeLocal';
 import { formatDateInTimeZone, formatDateTime, formatDateTimeInTimeZone } from '../../../../lib/format';
 import { getPaidUntilStatus, paidUntilBadgeVariant, paidUntilStatusLabelKey } from '../../../../lib/paymentsBadges';
 import { formatMoneyLike } from '../../../../lib/paymentsFormat';
@@ -37,8 +38,18 @@ import {
   type EditUserDraft,
   type StateDraft,
 } from './AdminUserOverviewModel';
+import { canViewGlobalFinance } from '../FinanceGlobalAdminGate';
+
+function reminderPresetInput(preset: '1w' | '2w' | '1y'): string {
+  const next = new Date();
+  if (preset === '1y') next.setFullYear(next.getFullYear() + 1);
+  else next.setDate(next.getDate() + (preset === '1w' ? 7 : 14));
+  next.setSeconds(0, 0);
+  return dateToAdminDateTimeInput(next);
+}
 
 export function AdminUserOverviewPage() {
+  const auth = useAuth();
   const { t } = useI18n();
   const accountTimeZone = useAccountTimeZone();
   const toasts = useToasts();
@@ -54,10 +65,12 @@ export function AdminUserOverviewPage() {
   const paidUntil = typeof u.paid_until === 'string' && u.paid_until.trim() ? u.paid_until : null;
   const paidUntilStatus = getPaidUntilStatus(paidUntil);
   const stateBadge = objectStateBadge(u.object_state ?? 'active', t);
+  const canViewFinance = canViewGlobalFinance(auth.role);
 
   const paymentHistoryQ = useQuery({
     queryKey: ['user_payments', 'overview', { userId: u.id, limit: 5 }],
     queryFn: async () => (await fetchUserPayments({ userId: u.id, limit: 5 })).data,
+    enabled: canViewFinance,
     staleTime: 30_000,
   });
 
@@ -245,7 +258,7 @@ export function AdminUserOverviewPage() {
         </CardBody>
       </Card>
 
-      <Card testId="admin.user.payments.overview.card">
+      {canViewFinance ? <Card testId="admin.user.payments.overview.card">
         <CardHeader
           title={t('admin.user.overview.payments.title')}
           subtitle={t('admin.user.overview.payments.subtitle')}
@@ -316,7 +329,7 @@ export function AdminUserOverviewPage() {
             </div>
           </div>
         </CardBody>
-      </Card>
+      </Card> : null}
 
       <Card testId="admin.user.account_actions.card" className="lg:col-span-2">
         <CardHeader title={t('admin.user.account_actions.title')} subtitle={t('admin.user.account_actions.subtitle')} />
@@ -339,7 +352,7 @@ export function AdminUserOverviewPage() {
                 <span className="text-sm text-muted">{t('admin.user.lifecycle.current_state')}</span>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                 <Select
                   label={t('lifetimes.field.state')}
                   value={stateDraft.objectState}
@@ -365,6 +378,53 @@ export function AdminUserOverviewPage() {
                     testId="admin.user.lifecycle.expiration"
                   />
                 </label>
+
+                <div className="min-w-0">
+                  <div className="mb-1 text-xs font-semibold text-muted">{t('lifetimes.field.remind_after')}</div>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Input
+                      type="datetime-local"
+                      value={stateDraft.remindAfterDate}
+                      onChange={(e) => setStateField('remindAfterDate', e.target.value)}
+                      disabled={!stateDraft.expirationDate.trim()}
+                      ariaLabel={t('lifetimes.field.remind_after')}
+                      ariaDescribedBy="admin-user-reminder-help"
+                      testId="admin.user.lifecycle.remind_after"
+                      className="min-w-0"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => setStateField('remindAfterDate', '')}
+                      disabled={!stateDraft.remindAfterDate.trim()}
+                      testId="admin.user.lifecycle.remind_after.clear"
+                      className="shrink-0"
+                    >
+                      {t('common.clear')}
+                    </Button>
+                  </div>
+                  <div id="admin-user-reminder-help" className="mt-1 text-xs text-faint">
+                    {stateDraft.expirationDate.trim()
+                      ? t('admin.user.lifecycle.remind_after.help')
+                      : t('lifetimes.admin_update.remind_requires_expiration')}
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {(['1w', '2w', '1y'] as const).map((preset) => (
+                      <Button
+                        key={preset}
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setStateField('remindAfterDate', reminderPresetInput(preset))}
+                        disabled={!stateDraft.expirationDate.trim()}
+                        testId={`admin.user.lifecycle.remind_after.${preset}`}
+                      >
+                        {t(`admin.user.lifecycle.remind_after.${preset}`)}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <label className="block">

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
+import { expectNoDocumentHorizontalOverflow } from '../../helpers/horizontalOverflow';
 
 test('admin user detail: shows header and shortcut links', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
@@ -183,6 +184,8 @@ test('admin user detail: lifecycle state update sends object state', async ({ pa
   await expect(page.getByTestId('admin.user.page')).toBeVisible();
 
   await expect(page.getByTestId('admin.user.lifecycle.save')).toBeDisabled();
+  await expect(page.getByTestId('admin.user.lifecycle.remind_after')).toBeDisabled();
+  await expect(page.getByTestId('admin.user.lifecycle.remind_after.1w')).toBeDisabled();
   await page.getByTestId('admin.user.lifecycle.state').selectOption('suspended');
   await expect(page.getByTestId('admin.user.lifecycle.save')).toBeEnabled();
   await page.getByTestId('admin.user.lifecycle.save').click();
@@ -249,6 +252,54 @@ test('admin user detail: expiration-only update accepts a synchronous response w
   await expect.poll(() => updateRequests).toBe(1);
   await expect(page.getByTestId('admin.user.mutation.uncertain')).toHaveCount(0);
   await expect(page.getByTestId('admin.user.lifecycle.save')).toBeDisabled();
+});
+
+test('@pr-smoke @pr-smoke-mobile admin user detail: reminder timing can be set and cleared without changing other lifecycle fields', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+
+  const updates: Array<Record<string, unknown>> = [];
+  let user = {
+    id: 42,
+    login: 'alice',
+    level: 1,
+    object_state: 'active',
+    expiration_date: '2026-10-01T12:00:00.000Z' as string | null,
+    remind_after_date: null as string | null,
+  };
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100 },
+    handlers: {
+      'GET users/42': () => ({ user }),
+      'PUT users/42': ({ reqJson }) => {
+        const payload = (reqJson as { user?: Record<string, unknown> }).user ?? {};
+        updates.push(payload);
+        user = { ...user, ...payload };
+        return { user, _meta: {} };
+      },
+    },
+  });
+
+  await page.goto('/admin/users/42');
+  const reminder = page.getByTestId('admin.user.lifecycle.remind_after');
+  await expect(reminder).toBeEnabled();
+  await expectNoDocumentHorizontalOverflow(page);
+  await page.getByTestId('admin.user.lifecycle.remind_after.1w').click();
+  await expect(reminder).not.toHaveValue('');
+  await reminder.fill('2026-09-25T12:00');
+  await expect(page.getByTestId('admin.user.lifecycle.save')).toBeEnabled();
+  await page.getByTestId('admin.user.lifecycle.save').click();
+
+  await expect.poll(() => updates.length).toBe(1);
+  expect(Object.keys(updates[0] ?? {})).toEqual(['remind_after_date']);
+  expect(typeof updates[0]?.['remind_after_date']).toBe('string');
+  expect(Number.isNaN(Date.parse(String(updates[0]?.['remind_after_date'])))).toBe(false);
+
+  await page.getByTestId('admin.user.lifecycle.remind_after.clear').click();
+  await expect(page.getByTestId('admin.user.lifecycle.save')).toBeEnabled();
+  await page.getByTestId('admin.user.lifecycle.save').click();
+
+  await expect.poll(() => updates.length).toBe(2);
+  expect(updates[1]).toEqual({ remind_after_date: null });
 });
 
 for (const scenario of [

@@ -19,10 +19,18 @@ export function resolveAccountTimeZone(
   accountTimeZone: unknown,
   serverTimeZone: unknown
 ): string {
-  return validTimeZone(accountTimeZone) ?? validTimeZone(serverTimeZone) ?? SAFE_TIME_ZONE;
+  return validTimeZone(accountTimeZone) ?? resolveServerTimeZone(serverTimeZone);
+}
+
+export function resolveServerTimeZone(serverTimeZone: unknown): string {
+  return validTimeZone(serverTimeZone) ?? SAFE_TIME_ZONE;
 }
 
 export function useAccountTimeZone(): string {
   const auth = useAuth();
   return resolveAccountTimeZone(auth.user?.time_zone, getRuntimeConfig().serverTimeZone);
+}
+
+export function useServerTimeZone(): string {
+  return resolveServerTimeZone(getRuntimeConfig().serverTimeZone);
 }

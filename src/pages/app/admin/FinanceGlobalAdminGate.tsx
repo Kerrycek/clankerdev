@@ -9,9 +9,8 @@ export function canViewGlobalFinance(role: UserRole): boolean {
 }
 
 /**
- * Ordinary users can read only their own payment-related data. Keep global
- * totals behind an administrator boundary so a user-scoped response can never
- * be presented as a complete organization-wide result.
+ * Ordinary users can read only their own payment-related data. Keep every
+ * global Finance surface behind the same administrator boundary as the API.
  */
 export function FinanceGlobalAdminGate() {
   const auth = useAuth();

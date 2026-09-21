@@ -4,6 +4,7 @@ import { AlertTriangle, CalendarClock, RefreshCw, TrendingUp, UsersRound } from 
 import { Link } from 'react-router-dom';
 
 import { useAppMode } from '../../../app/appMode';
+import { useAccountTimeZone, useServerTimeZone } from '../../../app/accountTimeZone';
 import { useI18n } from '../../../app/i18n';
 import { ListShell } from '../../../components/layout/ListShell';
 import { PageHeader } from '../../../components/layout/PageHeader';
@@ -18,7 +19,7 @@ import { TableCard } from '../../../components/ui/TableCard';
 import { fetchFinanceUsersSnapshot } from '../../../lib/api/finance';
 import { fetchSystemConfigs, type SystemConfigItem } from '../../../lib/api/systemConfig';
 import type { User } from '../../../lib/api/users';
-import { formatDateTime } from '../../../lib/format';
+import { formatDateInTimeZone, formatDateTime } from '../../../lib/format';
 import { paidUntilBadgeVariant } from '../../../lib/paymentsBadges';
 import { safeInt } from '../../../lib/paymentsFormat';
 import { AdminFinanceTabs } from './AdminFinanceTabs';
@@ -62,6 +63,8 @@ function financeStatusBadge(status: FinanceAccountStatus) {
 
 export function FinanceOverviewPage() {
   const { basePath } = useAppMode();
+  const accountTimeZone = useAccountTimeZone();
+  const billingTimeZone = useServerTimeZone();
   const { lang, t } = useI18n();
   const locale = lang === 'cs' ? 'cs-CZ' : 'en-US';
 
@@ -77,8 +80,8 @@ export function FinanceOverviewPage() {
   });
 
   const configsQ = useQuery({
-    queryKey: ['system_configs'],
-    queryFn: async () => (await fetchSystemConfigs()).data,
+    queryKey: ['system_configs', 'plugin_payments'],
+    queryFn: async ({ signal }) => (await fetchSystemConfigs({ category: 'plugin_payments', signal })).data,
     retry: false,
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
@@ -88,8 +91,8 @@ export function FinanceOverviewPage() {
   const complete = snapshot?.complete === true;
   const users = complete ? snapshot.rows : [];
   const summary = useMemo(
-    () => complete ? summarizeFinanceAccounts(users) : null,
-    [complete, users],
+    () => complete ? summarizeFinanceAccounts(users, new Date(), billingTimeZone) : null,
+    [billingTimeZone, complete, users],
   );
   const currency = defaultCurrency(configsQ.data);
 
@@ -202,7 +205,7 @@ export function FinanceOverviewPage() {
             />
             <StatCard
               title={t('finance.overview.summary.current_month')}
-              subtitle={t('finance.overview.summary.current_month.subtitle')}
+              subtitle={t('finance.overview.summary.current_month.subtitle', { timeZone: billingTimeZone })}
               value={formatAmount(summary.currentMonthExpected, locale, currency)}
               icon={<CalendarClock size={18} aria-hidden="true" />}
               variant="featured"
@@ -259,7 +262,7 @@ export function FinanceOverviewPage() {
                         subtitle={formatAmount(safeInt(user.monthly_payment) ?? 0, locale, currency)}
                         testId={`admin.finance.overview.risk.row.${user.id}.mobile`}
                         rows={[
-                          { label: t('finance.overview.risk.col.paid_until'), value: formatDateTime(user.paid_until) },
+                          { label: t('finance.overview.risk.col.paid_until'), value: formatDateInTimeZone(user.paid_until, accountTimeZone) },
                           {
                             label: t('common.state'),
                             value: <Badge variant={financeStatusBadge(classification.status)}>{t(`finance.overview.status.${classification.status}`)}</Badge>,
@@ -285,7 +288,7 @@ export function FinanceOverviewPage() {
                             <Link className="text-accent hover:underline" to={`${basePath}/users/${user.id}/payments`}>{userLabel(user)}</Link>
                           </td>
                           <td className="px-4 py-3 text-right">{formatAmount(safeInt(user.monthly_payment) ?? 0, locale, currency)}</td>
-                          <td className="px-4 py-3">{formatDateTime(user.paid_until)}</td>
+                          <td className="px-4 py-3">{formatDateInTimeZone(user.paid_until, accountTimeZone)}</td>
                           <td className="px-4 py-3">
                             <Badge variant={financeStatusBadge(classification.status)}>{t(`finance.overview.status.${classification.status}`)}</Badge>
                           </td>
@@ -306,22 +309,28 @@ export function FinanceOverviewPage() {
                 <h2 id="finance-distribution-title" className="text-lg font-semibold">{t('finance.overview.distribution.title')}</h2>
                 <p className="mt-1 text-sm text-muted">{t('finance.overview.distribution.description')}</p>
               </div>
-              <TableCard minWidth="sm" tableTestId="admin.finance.overview.distribution.table">
-                <thead>
-                  <tr className="border-b border-border text-left text-xs text-muted">
-                    <th className="px-4 py-3">{t('finance.overview.distribution.col.amount')}</th>
-                    <th className="px-4 py-3 text-right">{t('finance.overview.distribution.col.users')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {distribution.map((row) => (
-                    <tr key={row.amount} className="border-b border-border/60 last:border-b-0">
-                      <td className="px-4 py-3 font-medium">{formatAmount(row.amount, locale, currency)}</td>
-                      <td className="px-4 py-3 text-right">{new Intl.NumberFormat(locale).format(row.count)}</td>
+              {distribution.length > 0 ? (
+                <TableCard minWidth="sm" tableTestId="admin.finance.overview.distribution.table">
+                  <thead>
+                    <tr className="border-b border-border text-left text-xs text-muted">
+                      <th className="px-4 py-3">{t('finance.overview.distribution.col.amount')}</th>
+                      <th className="px-4 py-3 text-right">{t('finance.overview.distribution.col.users')}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </TableCard>
+                  </thead>
+                  <tbody>
+                    {distribution.map((row) => (
+                      <tr key={row.amount} className="border-b border-border/60 last:border-b-0">
+                        <td className="px-4 py-3 font-medium">{formatAmount(row.amount, locale, currency)}</td>
+                        <td className="px-4 py-3 text-right">{new Intl.NumberFormat(locale).format(row.count)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </TableCard>
+              ) : (
+                <Card className="p-4 text-sm text-muted" testId="admin.finance.overview.distribution.empty">
+                  {t('finance.overview.distribution.empty')}
+                </Card>
+              )}
             </section>
           </div>
         </div>

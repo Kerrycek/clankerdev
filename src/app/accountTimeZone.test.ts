@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveAccountTimeZone } from './accountTimeZone';
+import { resolveAccountTimeZone, resolveServerTimeZone } from './accountTimeZone';
 import { SAFE_TIME_ZONE } from '../lib/timeZones';
 
 describe('resolveAccountTimeZone', () => {
@@ -23,5 +23,10 @@ describe('resolveAccountTimeZone', () => {
     expect(resolveAccountTimeZone('  America/Los_Angeles  ', 'Europe/Prague')).toBe(
       'America/Los_Angeles'
     );
+  });
+
+  it('resolves the billing server zone without an account override', () => {
+    expect(resolveServerTimeZone('  Europe/Prague  ')).toBe('Europe/Prague');
+    expect(resolveServerTimeZone('not-a-zone')).toBe(SAFE_TIME_ZONE);
   });
 });
