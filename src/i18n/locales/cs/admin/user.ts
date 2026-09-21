@@ -113,7 +113,7 @@ export const csAdmin_user = {
   "admin.user.lifecycle.state.soft_delete": "Vyřazený – lze obnovit (soft_delete)",
   "admin.user.lifecycle.state.soft_delete.description": "Odstaví VPS, exporty a DNS a ukončí přístupy. Účet i jeho data lze ještě obnovit.",
   "admin.user.lifecycle.state.hard_delete": "Nevratně odstranit data (hard_delete)",
-  "admin.user.lifecycle.state.hard_delete.description": "Nevratně odstraní VPS, datasety, DNS a další zdroje člena a uvolní jeho přihlašovací jméno.",
+  "admin.user.lifecycle.state.hard_delete.description": "Nevratně odstraní VPS, datasety, DNS a další zdroje člena a uvolní jeho přezdívku.",
   "admin.user.lifecycle.state.deleted": "Smazaný záznam – systémový (deleted)",
   "admin.user.lifecycle.state.deleted.description": "Konečný interní stav backendu; u uživatelského účtu jej nelze nastavit ručně.",
   "admin.user.lifecycle.remind_after.1w": "Odložit o 1 týden",
