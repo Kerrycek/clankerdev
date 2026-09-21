@@ -45,7 +45,7 @@ export type VpsConfigRequestOptionKey = 'change_reason' | 'admin_override' | 'ad
 export type VpsConfigReviewKey = VpsConfigFieldKey | VpsConfigRequestOptionKey;
 
 export type VpsConfigSection = 'identity' | 'resources' | 'network' | 'namespace' | 'boot' | 'admin';
-export type VpsConfigRisk = 'safe' | 'requires_restart' | 'admin_only' | 'boot' | 'network';
+export type VpsConfigRisk = 'safe' | 'live' | 'requires_restart' | 'admin_only' | 'boot' | 'network';
 
 export type VpsConfigFieldMeta = {
   labelKey: string;
@@ -85,22 +85,22 @@ export const CONFIG_FIELD_META: Record<VpsConfigReviewKey, VpsConfigFieldMeta> =
   cpu: {
     labelKey: 'vps.config.field.cpu',
     section: 'resources',
-    risks: ['requires_restart'],
+    risks: ['live'],
   },
   cpu_limit: {
     labelKey: 'vps.config.field.cpu_limit',
     section: 'admin',
-    risks: ['requires_restart', 'admin_only'],
+    risks: ['live', 'admin_only'],
   },
   memory: {
     labelKey: 'vps.config.field.memory',
     section: 'resources',
-    risks: ['requires_restart'],
+    risks: ['live'],
   },
   swap: {
     labelKey: 'vps.config.field.swap',
     section: 'resources',
-    risks: ['requires_restart'],
+    risks: ['live'],
   },
   dns_resolver: {
     labelKey: 'vps.config.field.dns_resolver',

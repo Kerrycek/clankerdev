@@ -68,6 +68,7 @@ export function VpsConfigMobileActionBar(props: {
 function riskVariant(risk: VpsConfigRisk): React.ComponentProps<typeof Badge>['variant'] {
   switch (risk) {
     case 'safe':
+    case 'live':
       return 'ok';
     case 'requires_restart':
       return 'warn';
