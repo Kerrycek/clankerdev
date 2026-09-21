@@ -11,12 +11,19 @@ export interface SystemConfigItem {
   [k: string]: unknown;
 }
 
-export async function fetchSystemConfigs() {
+export interface FetchSystemConfigsOptions {
+  category?: string;
+  signal?: AbortSignal;
+}
+
+export async function fetchSystemConfigs(options: FetchSystemConfigsOptions = {}) {
+  const category = options.category?.trim();
   const res = await haveApiCall<SystemConfigItem[]>({
     method: 'GET',
     path: '/system_configs',
     namespace: 'system_config',
-    params: {},
+    params: category ? { category } : {},
+    signal: options.signal,
   });
 
   return { ...res, data: expectArray<SystemConfigItem>(res.data, 'system_configs#index') };

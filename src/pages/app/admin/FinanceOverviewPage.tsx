@@ -79,8 +79,8 @@ export function FinanceOverviewPage() {
   });
 
   const configsQ = useQuery({
-    queryKey: ['system_configs'],
-    queryFn: async () => (await fetchSystemConfigs()).data,
+    queryKey: ['system_configs', 'plugin_payments'],
+    queryFn: async ({ signal }) => (await fetchSystemConfigs({ category: 'plugin_payments', signal })).data,
     retry: false,
     staleTime: 5 * 60_000,
     refetchOnWindowFocus: false,
