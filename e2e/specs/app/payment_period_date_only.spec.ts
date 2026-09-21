@@ -80,7 +80,7 @@ async function assertDateOnlyPaymentPeriods(page: Page, scenario: PaymentPeriodS
   await page.goto('/app/payments');
 
   const userRow = page.getByTestId('payments.my.history.table').locator('tbody tr').first();
-  const userCreatedAt = userRow.locator('td').nth(0);
+  const userCreatedAt = page.getByTestId('payments.my.history.row.9001.accepted_at');
   const userPeriod = userRow.locator('td').nth(2);
   await expect(userPeriod).toHaveText(scenario.expectedPeriod);
   expect(await userPeriod.innerText()).not.toMatch(/\d{1,2}:\d{2}|\b(?:AM|PM)\b/i);
@@ -92,7 +92,7 @@ async function assertDateOnlyPaymentPeriods(page: Page, scenario: PaymentPeriodS
   const overview = page.getByTestId('admin.user.payments.overview.card');
   const adminPayment = overview.locator('.divide-y > div').first();
   const adminPeriod = adminPayment.locator('.truncate');
-  const adminCreatedAt = adminPayment.locator('.text-faint');
+  const adminCreatedAt = page.getByTestId('admin.user.overview.payments.row.9001.accepted_at');
   await expect(adminPeriod).toHaveText(scenario.expectedPeriod);
   expect(await adminPeriod.innerText()).not.toMatch(/\d{1,2}:\d{2}|\b(?:AM|PM)\b/i);
   await expect(adminCreatedAt).toContainText(scenario.expectedCreatedTime);
@@ -101,10 +101,11 @@ async function assertDateOnlyPaymentPeriods(page: Page, scenario: PaymentPeriodS
   await page.goto('/admin/users/42/payments');
 
   const adminHistoryRow = page.getByTestId('admin.user.payments.history.row.9001');
-  const adminHistoryCreatedAt = adminHistoryRow.locator('td').nth(0);
+  const adminHistoryCreatedAt = page.getByTestId('admin.user.payments.history.row.9001.accepted_at');
   const adminHistoryPeriod = adminHistoryRow.locator('td').nth(2);
   const [expectedFromDate, expectedToDate] = scenario.expectedPeriod.split(' → ');
-  await expect(adminHistoryCreatedAt).toHaveText(scenario.expectedAdminHistoryCreatedDate);
+  await expect(adminHistoryCreatedAt).toContainText(scenario.expectedAdminHistoryCreatedDate);
+  await expect(adminHistoryCreatedAt).toContainText(scenario.expectedCreatedTime);
   await expect(adminHistoryPeriod.locator('span').nth(0)).toHaveText(expectedFromDate);
   await expect(adminHistoryPeriod.locator('span').nth(2)).toHaveText(expectedToDate);
   expect(await adminHistoryPeriod.innerText()).not.toMatch(/\d{1,2}:\d{2}|\b(?:AM|PM)\b/i);
@@ -127,7 +128,7 @@ test.describe('payment period account time-zone parity', () => {
         toDate: '2026-07-01T00:00:00Z',
         createdAt: '2026-06-15T10:30:00Z',
         expectedPeriod: '6/1/2026 → 7/1/2026',
-        expectedCreatedTime: '3:30',
+        expectedCreatedTime: '12:30',
         expectedAdminHistoryCreatedDate: '6/15/2026',
         viewport: { width: 1440, height: 1000 },
       });
@@ -143,7 +144,7 @@ test.describe('payment period account time-zone parity', () => {
         toDate: '2026-03-01T00:00:00Z',
         createdAt: '2026-02-14T17:30:00Z',
         expectedPeriod: '2/1/2026 → 3/1/2026',
-        expectedCreatedTime: '9:30',
+        expectedCreatedTime: '6:30',
         expectedAdminHistoryCreatedDate: '2/14/2026',
         viewport: { width: 1440, height: 1000 },
       });
@@ -163,7 +164,7 @@ test.describe('payment period account time-zone parity', () => {
         toDate: '2026-07-01T00:00:00Z',
         createdAt: '2026-06-15T10:30:00Z',
         expectedPeriod: '1. 6. 2026 → 1. 7. 2026',
-        expectedCreatedTime: '3:30',
+        expectedCreatedTime: '12:30',
         expectedAdminHistoryCreatedDate: '15. 6. 2026',
         viewport: { width: 390, height: 844 },
       });
@@ -184,8 +185,8 @@ test.describe('payment period signed-in account override', () => {
       toDate: '2026-03-01T00:00:00Z',
       createdAt: '2026-02-14T17:30:00Z',
       expectedPeriod: '1/31/2026 → 2/28/2026',
-      expectedCreatedTime: '2:30',
-      expectedAdminHistoryCreatedDate: '2/15/2026',
+      expectedCreatedTime: '9:30',
+      expectedAdminHistoryCreatedDate: '2/14/2026',
       viewport: { width: 1440, height: 1000 },
     });
   });

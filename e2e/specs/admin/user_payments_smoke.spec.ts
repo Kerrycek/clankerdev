@@ -19,7 +19,7 @@ test.describe('@smoke Admin user payments', () => {
     });
   
     await installHaveApiMock(page, {
-      user: { id: 1, login: 'admin', level: 100 },
+      user: { id: 1, login: 'admin', level: 100, time_zone: 'America/Los_Angeles' },
       handlers: {
         'GET users/42': () => ({
           user: {
@@ -64,7 +64,7 @@ test.describe('@smoke Admin user payments', () => {
             {
               id: 9001,
               amount: 100,
-              created_at: '2026-02-10T12:00:00.000Z',
+              created_at: '2026-02-10T00:30:00.000Z',
               from_date: '2026-02-01T00:00:00.000Z',
               to_date: '2026-03-01T00:00:00.000Z',
               accounted_by: { id: 1, login: 'admin' },
@@ -106,6 +106,8 @@ test.describe('@smoke Admin user payments', () => {
 
     await expect(page.getByTestId('admin.user.payments.history.table')).toBeVisible();
     await expect(page.getByTestId('admin.user.payments.history.row.9001')).toBeVisible();
+    await expect(page.getByTestId('admin.user.payments.history.row.9001.accepted_at')).toContainText('2/9/2026');
+    await expect(page.getByTestId('admin.user.payments.history.row.9001.accepted_at')).toContainText('4:30');
     await expect(page.getByTestId('admin.user.payments.history.row.9001.source')).toHaveText('#300');
     await expect(page.getByTestId('admin.user.payments.history.row.9001.source')).toHaveAttribute('href', '/admin/payments/incoming/300');
 

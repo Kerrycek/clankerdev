@@ -10,7 +10,7 @@ import { useTierBIntervalMs } from '../../../lib/refreshTiers';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 
 import { fetchPaymentInstructions, fetchUserPayments } from '../../../lib/api/payments';
-import { formatDateInTimeZone, formatDateTime } from '../../../lib/format';
+import { formatDateInTimeZone, formatDateTime, formatDateTimeInTimeZone } from '../../../lib/format';
 import { cursorFromDescendingPage } from '../../../lib/lockIndex';
 import { getPaidUntilStatus, paidUntilBadgeVariant, paidUntilStatusLabelKey } from '../../../lib/paymentsBadges';
 import { formatMoneyLike, safeInt } from '../../../lib/paymentsFormat';
@@ -173,7 +173,12 @@ export function PaymentsPage() {
                     <tbody className="divide-y divide-border">
                       {visibleHistory.map((p) => (
                         <tr key={p.id}>
-                          <td className="px-3 py-2 font-medium tabular-nums">{formatDateTime(p.created_at)}</td>
+                          <td
+                            className="px-3 py-2 font-medium tabular-nums"
+                            data-testid={`payments.my.history.row.${p.id}.accepted_at`}
+                          >
+                            {formatDateTimeInTimeZone(p.created_at, accountTimeZone)}
+                          </td>
                           <td className="px-3 py-2 text-right tabular-nums">{formatMoneyLike(safeInt(p.amount))}</td>
                           <td className="px-3 py-2 text-xs text-muted">
                             <span className="tabular-nums">

@@ -19,7 +19,7 @@ import { updateUser } from '../../../../lib/api/users';
 import { getMetaActionStateId } from '../../../../lib/api/haveapi';
 import { fetchUserPayments } from '../../../../lib/api/payments';
 import { adminDateTimeInputToIso, dateToAdminDateTimeInput } from '../../../../lib/datetimeLocal';
-import { formatDateInTimeZone, formatDateTime } from '../../../../lib/format';
+import { formatDateInTimeZone, formatDateTime, formatDateTimeInTimeZone } from '../../../../lib/format';
 import { getPaidUntilStatus, paidUntilBadgeVariant, paidUntilStatusLabelKey } from '../../../../lib/paymentsBadges';
 import { formatMoneyLike } from '../../../../lib/paymentsFormat';
 import { roleFromLevel } from '../../../../lib/roles';
@@ -314,8 +314,11 @@ export function AdminUserOverviewPage() {
                               )}`
                             : t('common.na')}
                         </div>
-                        <div className="text-xs text-faint">
-                          {payment.created_at ? formatDateTime(payment.created_at) : t('common.na')}
+                        <div
+                          className="text-xs text-faint"
+                          data-testid={`admin.user.overview.payments.row.${payment.id}.accepted_at`}
+                        >
+                          {payment.created_at ? formatDateTimeInTimeZone(payment.created_at, accountTimeZone) : t('common.na')}
                           {payment.incoming_payment?.id ? ` · #${payment.incoming_payment.id}` : ''}
                         </div>
                       </div>
