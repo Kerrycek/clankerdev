@@ -137,6 +137,11 @@ export function IncomingPaymentsPage() {
   const [bulkAction, setBulkAction] = useState<IncomingPaymentBulkAction>('mark_unmatched');
   const [bulkApplying, setBulkApplying] = useState(false);
 
+  const refreshIncomingPayments = () => Promise.all([
+    paymentsQ.refetch(),
+    reconciliationTotalsQ.refetch(),
+  ]);
+
   useEffect(() => {
     const visibleIds = new Set(rows.map((row) => row.id));
     setSelectedIds((prev) => {
@@ -189,8 +194,10 @@ export function IncomingPaymentsPage() {
           for (const id of review.eligibleIds) next.delete(id);
           return next;
         });
-        await paymentsQ.refetch();
-        qc.invalidateQueries({ queryKey: ['incoming_payments', 'index'] });
+        await Promise.all([
+          qc.invalidateQueries({ queryKey: ['incoming_payments', 'index'] }),
+          qc.invalidateQueries({ queryKey: ['incoming_payments', 'reconciliation_totals'] }),
+        ]);
       }
 
       if (failed === 0) {
@@ -214,7 +221,7 @@ export function IncomingPaymentsPage() {
     } finally {
       setBulkApplying(false);
     }
-  }, [paymentsQ, qc, t, toasts]);
+  }, [qc, t, toasts]);
 
   const shareUrl = useMemo(() => (typeof window !== 'undefined' ? window.location.href : ''), [sp]);
 
@@ -232,7 +239,8 @@ export function IncomingPaymentsPage() {
           basePath={basePath}
           state={state}
           setSearchParams={setSp}
-          onRefresh={() => paymentsQ.refetch()}
+          onRefresh={() => void refreshIncomingPayments()}
+          refreshing={paymentsQ.isFetching || reconciliationTotalsQ.isFetching}
           shareUrl={shareUrl}
         />
       }

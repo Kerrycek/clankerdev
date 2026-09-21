@@ -27,6 +27,7 @@ export function IncomingPaymentsFilters(props: {
   state: string;
   setSearchParams: SearchParamSetter;
   onRefresh: () => void;
+  refreshing: boolean;
   shareUrl: string;
 }) {
   const { t } = useI18n();
@@ -95,7 +96,14 @@ export function IncomingPaymentsFilters(props: {
             ))}
         </Select>
 
-        <Button type="button" variant="secondary" size="sm" onClick={props.onRefresh} testId="admin.payments.incoming.filters.refresh">
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          loading={props.refreshing}
+          onClick={props.onRefresh}
+          testId="admin.payments.incoming.filters.refresh"
+        >
           {t('common.refresh')}
         </Button>
         <CopyButton
