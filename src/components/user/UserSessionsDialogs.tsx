@@ -70,6 +70,7 @@ export function UserSessionRenameDialog(props: {
 
 export function UserSessionCloseDialog(props: {
   session: UserSession | null;
+  error: string | null;
   closing: boolean;
   testIdPrefix: string;
   onCancel: () => void;
@@ -93,6 +94,11 @@ export function UserSessionCloseDialog(props: {
     >
       {session ? (
         <div className="space-y-3">
+          {props.error ? (
+            <Alert variant="danger" title={t('common.error')} testId={`${props.testIdPrefix}.close_dialog.error`}>
+              {props.error}
+            </Alert>
+          ) : null}
           <div className="rounded-md border border-border bg-surface-2 p-3 text-sm text-muted" data-testid={`${props.testIdPrefix}.close_dialog.review`}>
             <div>{t('profile.sessions.close.review_label', { label: userSessionDisplayLabel(session) })}</div>
             <div className="mt-1">
