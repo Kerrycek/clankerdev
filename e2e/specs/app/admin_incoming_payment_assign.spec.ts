@@ -243,6 +243,86 @@ test('@pr-smoke @pr-smoke-mobile admin incoming payment: stale state review cann
   await expect(page.getByTestId('admin.payments.incoming.state.save')).toBeEnabled();
 });
 
+test('@pr-smoke @pr-smoke-mobile admin incoming payment: refresh failure keeps context and blocks review actions', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+  const haveApiMock = await installHaveApiMock(page, { user: { id: 1, login: 'admin', level: 100 } });
+  let detailRequests = 0;
+  let failRefresh = false;
+  let stateUpdateRequests = 0;
+  let assignmentRequests = 0;
+
+  const payment = {
+    id: 700,
+    state: 'unmatched',
+    date: '2026-02-14T09:00:00Z',
+    transaction_id: 'TX-700',
+    amount: 1_000,
+    currency: 'CZK',
+    account_name: 'Test account',
+    vs: '700',
+    user: null,
+    user_paid_until: null,
+    created_at: '2026-02-14T09:00:00Z',
+  };
+
+  haveApiMock.addHandler('GET incoming_payments/700', () => {
+    detailRequests += 1;
+    if (failRefresh) {
+      return {
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: false, message: 'temporary detail failure', response: null }),
+      };
+    }
+    return { incoming_payment: payment };
+  });
+  haveApiMock.addHandler('GET users/123', () => ({
+    user: { id: 123, login: 'alice', full_name: 'Alice Example' },
+  }));
+  haveApiMock.addHandler('PUT incoming_payments/700', () => {
+    stateUpdateRequests += 1;
+    return { incoming_payment: payment };
+  });
+  haveApiMock.addHandler('POST user_payments', () => {
+    assignmentRequests += 1;
+    return { user_payment: { id: 900 } };
+  });
+
+  await page.goto(withAppUrl('/admin/payments/incoming/700'));
+  await page.getByTestId('admin.payments.incoming.state.select').selectOption('ignored');
+  await page.getByTestId('admin.payments.incoming.assign.user_id').fill('123');
+  await expect(page.getByTestId('admin.payments.incoming.state.save')).toBeEnabled();
+  await expect(page.getByTestId('admin.payments.incoming.assign.submit')).toBeEnabled();
+
+  const requestsBeforeFailure = detailRequests;
+  failRefresh = true;
+  await page.evaluate(() => window.dispatchEvent(new Event('visibilitychange')));
+  await expect.poll(() => detailRequests).toBeGreaterThan(requestsBeforeFailure);
+
+  await expect(page.getByTestId('admin.payments.incoming.detail.stale')).toContainText(/review actions are disabled/i);
+  await expect(page.getByTestId('admin.payments.incoming.detail.700.state')).toHaveText(/Unmatched/);
+  await expect(page.getByTestId('admin.payments.incoming.state.select')).toBeDisabled();
+  await expect(page.getByTestId('admin.payments.incoming.assign.user_id')).toBeDisabled();
+  await expect(page.getByTestId('admin.payments.incoming.state.save')).toBeDisabled();
+  await expect(page.getByTestId('admin.payments.incoming.assign.submit')).toBeDisabled();
+  await expect(page.getByText(/Unable to load payment/)).toHaveCount(0);
+
+  await page.getByTestId('admin.payments.incoming.state.save').click({ force: true });
+  await page.getByTestId('admin.payments.incoming.assign.submit').click({ force: true });
+  expect(stateUpdateRequests).toBe(0);
+  expect(assignmentRequests).toBe(0);
+
+  const requestsBeforeRecovery = detailRequests;
+  failRefresh = false;
+  await page.evaluate(() => window.dispatchEvent(new Event('visibilitychange')));
+  await expect.poll(() => detailRequests).toBeGreaterThan(requestsBeforeRecovery);
+  await expect(page.getByTestId('admin.payments.incoming.detail.stale')).toHaveCount(0);
+  await expect(page.getByTestId('admin.payments.incoming.state.select')).toBeEnabled();
+  await expect(page.getByTestId('admin.payments.incoming.assign.user_id')).toBeEnabled();
+  await expect(page.getByTestId('admin.payments.incoming.state.save')).toBeEnabled();
+  await expect(page.getByTestId('admin.payments.incoming.assign.submit')).toBeEnabled();
+});
+
 test('@pr-smoke @pr-smoke-mobile admin incoming payment: state changes are single-flight and invalidate cached reconciliation totals', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
   const haveApiMock = await installHaveApiMock(page, { user: { id: 1, login: 'admin', level: 100 } });

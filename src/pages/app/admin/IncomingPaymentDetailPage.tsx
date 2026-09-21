@@ -137,6 +137,7 @@ export function IncomingPaymentDetailPage() {
   });
 
   const payment = q.data as IncomingPayment | undefined;
+  const detailStale = q.isError && payment !== undefined;
 
   const st = String(payment?.state ?? '').trim();
   const acctStatus = payment?.user ? getPaidUntilStatus(payment.user_paid_until) : null;
@@ -184,7 +185,7 @@ export function IncomingPaymentDetailPage() {
   });
 
   async function saveState() {
-    if (!paymentId || !stateReview.canSubmit || stateReviewStale || stateMutationInFlightRef.current) return;
+    if (!paymentId || !stateReview.canSubmit || stateReviewStale || detailStale || stateMutationInFlightRef.current) return;
 
     const next = String(stateReview.nextState).trim();
     if (!next) return;
@@ -218,7 +219,7 @@ export function IncomingPaymentDetailPage() {
   }
 
   async function submitAssign() {
-    if (!paymentId || assignmentInFlightRef.current) return;
+    if (!paymentId || detailStale || assignmentInFlightRef.current) return;
 
     const userId = assignReview.userId;
     if (!assignReview.canSubmit || !userId) {
@@ -279,7 +280,7 @@ export function IncomingPaymentDetailPage() {
     );
   }
 
-  if (q.isError) {
+  if (q.isError && !payment) {
     return (
       <ListShell>
         <ErrorState title={t('payments.incoming.detail.load_error.title')} error={q.error} />
@@ -316,6 +317,15 @@ export function IncomingPaymentDetailPage() {
           </div>
         }
       />
+
+      {detailStale ? (
+        <Alert
+          variant="warn"
+          title={t('payments.incoming.detail.stale.title')}
+          description={t('payments.incoming.detail.stale.body')}
+          testId="admin.payments.incoming.detail.stale"
+        />
+      ) : null}
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <div className="space-y-3 lg:col-span-2">
@@ -409,6 +419,7 @@ export function IncomingPaymentDetailPage() {
                       <UserLookupInput
                         value={assignUserId}
                         onChange={setAssignUserId}
+                        disabled={detailStale}
                         placeholder={t('payments.incoming.assign.user_placeholder')}
                         testId="admin.payments.incoming.assign.user_id"
                         ariaLabel={t('payments.incoming.assign.user_id')}
@@ -420,7 +431,7 @@ export function IncomingPaymentDetailPage() {
                       variant="primary"
                       onClick={submitAssign}
                       loading={assigning}
-                      disabled={!assignReview.canSubmit || assigning}
+                      disabled={!assignReview.canSubmit || detailStale || assigning}
                       testId="admin.payments.incoming.assign.submit"
                     >
                       {t('payments.incoming.assign.modal.submit')}
@@ -456,6 +467,7 @@ export function IncomingPaymentDetailPage() {
                   <div className="text-xs text-muted">{t('payments.incoming.detail.change_state')}</div>
                   <Select
                     value={effectiveStateEdit}
+                    disabled={detailStale}
                     onChange={(e) => {
                       const nextState = e.target.value;
                       setStateEdit(nextState === st ? null : { nextState, originalState: st });
@@ -505,7 +517,7 @@ export function IncomingPaymentDetailPage() {
                     variant="secondary"
                     onClick={saveState}
                     loading={stateSaving}
-                    disabled={!stateReview.canSubmit || stateReviewStale || stateSaving}
+                    disabled={!stateReview.canSubmit || stateReviewStale || detailStale || stateSaving}
                     testId="admin.payments.incoming.state.save"
                   >
                     {t('common.save')}
