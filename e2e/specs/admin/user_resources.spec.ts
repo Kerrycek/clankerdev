@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
+import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock } from '../../fixtures';
 
 test('admin user resource usage and package assignment are separate', async ({ page }) => {
   let packageUserFilter: string | null = null;
@@ -91,4 +91,58 @@ test('admin user resource usage and package assignment are separate', async ({ p
   await expect(page.getByTestId('profile.resources.usage.environment.7.resource.32.bar').locator('div').nth(1)).toHaveAttribute('style', 'width: 25%;');
   await expect(page.getByTestId('profile.resources.usage.environment.7.resource.35')).toHaveCount(0);
   await expect(page.getByTestId('profile.resources.page')).not.toContainText(/přidat balíček|add package/i);
+});
+
+test('admin can retry a failed package removal with the error kept in context', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+  let deleteCalls = 0;
+  let assignments = [
+    {
+      id: 21,
+      is_personal: false,
+      environment: { id: 7, label: 'Production' },
+      cluster_resource_package: { id: 11, label: 'Standard Production', is_personal: false },
+    },
+  ];
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100 },
+    handlers: {
+      'GET users/53': () => ({ user: { id: 53, login: 'kavman', level: 1 } }),
+      'GET environments': () => ({ environments: [{ id: 7, label: 'Production' }] }),
+      'GET cluster_resource_packages': () => ({
+        cluster_resource_packages: [{ id: 11, label: 'Standard Production' }],
+      }),
+      'GET user_cluster_resource_packages': () => ({
+        user_cluster_resource_packages: [...assignments],
+      }),
+      'GET cluster_resource_packages/11/items': () => ({ items: [] }),
+      'DELETE user_cluster_resource_packages/21': () => {
+        deleteCalls += 1;
+        if (deleteCalls === 1) return failEnvelope('Package is still referenced');
+
+        assignments = [];
+        return {};
+      },
+    },
+  });
+
+  await page.goto('/admin/users/53/resources');
+  const assignment = page.getByTestId('admin.user.resources.assignment.21');
+  await assignment.getByRole('button', { name: /odebrat|remove/i }).click();
+
+  const dialog = page.getByTestId('admin.user.resources.remove.confirm');
+  await dialog.getByTestId('admin.user.resources.remove.confirm.confirm').click();
+
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByTestId('admin.user.resources.remove.error')).toContainText('Package is still referenced');
+  await expect(assignment).toBeVisible();
+  expect(deleteCalls).toBe(1);
+
+  await dialog.getByTestId('admin.user.resources.remove.confirm.confirm').click();
+
+  await expect(dialog).toBeHidden();
+  await expect(page.getByTestId('admin.user.resources.assignment.21')).toHaveCount(0);
+  expect(deleteCalls).toBe(2);
 });
