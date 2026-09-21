@@ -21,6 +21,7 @@ test('admin user detail: shows header and shortcut links', async ({ page }) => {
           address: 'Example street\nExample city',
         },
       }),
+      'GET vpses': () => ({ vpses: [], _meta: { total_count: 7 } }),
     },
   });
 
@@ -30,12 +31,14 @@ test('admin user detail: shows header and shortcut links', async ({ page }) => {
   await expect(page.getByTestId('admin.user.header')).toBeVisible();
 
   await expect(page.getByTestId('admin.user.action.vps')).toHaveAttribute('href', '/admin/vps?user=42');
+  await expect(page.getByTestId('admin.user.action.vps_count')).toHaveText('7');
   await expect(page.getByTestId('admin.user.action.datasets')).toHaveAttribute('href', '/admin/datasets?user=42');
   await expect(page.getByTestId('admin.user.action.dns')).toHaveAttribute('href', '/admin/dns?user=42');
   await expect(page.getByTestId('admin.user.action.requests')).toHaveAttribute('href', '/admin/requests?user=42');
   await expect(page.getByTestId('admin.user.action.user_namespaces')).toHaveAttribute('href', '/admin/user-namespaces/maps?user=42');
 
   await expect(page.getByTestId('admin.user.refresh')).toBeVisible();
+  await expectNoDocumentHorizontalOverflow(page);
 });
 
 test('@workflow-matrix @pr-smoke @pr-smoke-mobile admin user detail: VPS create keeps the selected member context', async ({ page }) => {
@@ -186,7 +189,12 @@ test('admin user detail: lifecycle state update sends object state', async ({ pa
   await expect(page.getByTestId('admin.user.lifecycle.save')).toBeDisabled();
   await expect(page.getByTestId('admin.user.lifecycle.remind_after')).toBeDisabled();
   await expect(page.getByTestId('admin.user.lifecycle.remind_after.1w')).toBeDisabled();
+  await expect(page.getByTestId('admin.user.lifecycle.state')).toContainText('Active account (active)');
+  await expect(page.getByTestId('admin.user.lifecycle.state')).toContainText('Deactivated – recoverable (soft_delete)');
+  await expect(page.getByTestId('admin.user.lifecycle.state').locator('option[value="deleted"]')).toHaveAttribute('disabled', '');
+  await expect(page.getByTestId('admin.user.lifecycle.state.description')).toContainText('fully available');
   await page.getByTestId('admin.user.lifecycle.state').selectOption('suspended');
+  await expect(page.getByTestId('admin.user.lifecycle.state.description')).toContainText('Temporarily stops VPS');
   await expect(page.getByTestId('admin.user.lifecycle.save')).toBeEnabled();
   await page.getByTestId('admin.user.lifecycle.save').click();
 

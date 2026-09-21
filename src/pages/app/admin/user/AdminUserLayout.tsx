@@ -9,6 +9,8 @@ import { useI18n } from '../../../../app/i18n';
 import { DetailShell } from '../../../../components/layout/DetailShell';
 
 import { fetchUser, type User } from '../../../../lib/api/users';
+import { fetchVpsList } from '../../../../lib/api/vps';
+import { getMetaTotalCount } from '../../../../lib/api/haveapi';
 import { roleFromLevel } from '../../../../lib/roles';
 
 import { buildAdminUserSecurityStatuses } from '../../../../components/user/UserSecurityModel';
@@ -53,6 +55,19 @@ export function AdminUserLayout() {
     queryFn: async () => {
       if (!userId) throw new Error(t('admin.user.invalid_id'));
       return (await fetchUser(userId)).data;
+    },
+    enabled: Boolean(userId),
+    staleTime: 30_000,
+  });
+
+  const vpsCountQ = useQuery({
+    queryKey: ['vpses', 'admin-user-count', { userId }],
+    queryFn: async () => {
+      if (!userId) throw new Error(t('admin.user.invalid_id'));
+      const result = await fetchVpsList({ user: userId, limit: 0, count: true });
+      const count = getMetaTotalCount(result.meta);
+      if (count === undefined) throw new Error(t('admin.user.vps_count.load_error'));
+      return count;
     },
     enabled: Boolean(userId),
     staleTime: 30_000,
@@ -126,6 +141,15 @@ export function AdminUserLayout() {
                     testId="admin.user.action.vps"
                   >
                     {t('nav.vps')}
+                    {vpsCountQ.data !== undefined ? (
+                      <span
+                        className="ml-1 inline-flex min-w-5 items-center justify-center rounded-full border border-border bg-surface-2 px-1.5 text-xs font-semibold tabular-nums text-muted"
+                        data-testid="admin.user.action.vps_count"
+                        title={t('admin.user.vps_count.title', { count: vpsCountQ.data })}
+                      >
+                        {vpsCountQ.data}
+                      </span>
+                    ) : null}
                   </LinkButton>
                   <LinkButton
                     to={`${basePath}/datasets?user=${u.id}`}

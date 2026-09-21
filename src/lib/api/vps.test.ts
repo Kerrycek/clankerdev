@@ -83,6 +83,7 @@ describe('vps API wrappers', () => {
       location: 2,
       environment: 9,
       includes: 'node__location,user',
+      count: true,
     });
 
     const [url] = lastFetchCall();
@@ -98,6 +99,7 @@ describe('vps API wrappers', () => {
     expect(u.searchParams.get('vps[location]')).toBe('2');
     expect(u.searchParams.get('vps[environment]')).toBe('9');
     expect(u.searchParams.get('_meta[includes]')).toBe('node__location,user');
+    expect(u.searchParams.get('_meta[count]')).toBe('true');
   });
 
   test('fetchVpsStatuses forwards time-window and cursor params', async () => {
