@@ -66,8 +66,22 @@ test('@pr-smoke @pr-smoke-mobile admin Finance overview uses a complete account 
     await expect(page.getByTestId('admin.finance.overview.risk.row.12')).toContainText(expectedPaidUntil);
   }
 
-  await expect(page.getByTestId('admin.finance.overview.distribution.table')).toBeVisible();
+  await expect(page.getByTestId('admin.finance.overview.distribution')).toBeVisible();
+  await expect(page.getByTestId('admin.finance.overview.risk.filter.overdue')).toHaveAttribute('aria-pressed', 'true');
+  await page.getByTestId('admin.finance.overview.risk.filter.invalid').click();
+  await expect(page.getByTestId('admin.finance.overview.risk.filter.invalid')).toHaveAttribute('aria-pressed', 'true');
+  if (testInfo.project.name === 'mobile-chrome') {
+    await expect(page.getByTestId('admin.finance.overview.risk.row.14.mobile')).toBeVisible();
+  } else {
+    await expect(page.getByTestId('admin.finance.overview.risk.row.14')).toBeVisible();
+  }
   await expect(page.getByText('deleted', { exact: true })).toHaveCount(0);
+
+  const overflow = await page.getByTestId('admin.finance.overview.distribution').evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+  expect(overflow.scrollWidth).toBeLessThanOrEqual(overflow.clientWidth);
 
   const screenshot = process.env.E2E_ADMIN_FINANCE_OVERVIEW_SCREENSHOT?.trim();
   if (screenshot) {
@@ -186,7 +200,63 @@ test('@pr-smoke @pr-smoke-mobile admin Finance explains an empty assessment dist
 
   await page.goto('/admin/payments');
 
-  await expect(page.getByTestId('admin.finance.overview.risk.empty')).toBeVisible();
+  await expect(page.getByText(/no accounts in the “overdue” category/i)).toBeVisible();
   await expect(page.getByTestId('admin.finance.overview.distribution.empty')).toBeVisible();
-  await expect(page.getByTestId('admin.finance.overview.distribution.table')).toHaveCount(0);
+  await expect(page.getByTestId('admin.finance.overview.distribution')).toHaveCount(0);
+});
+
+test('@pr-smoke @pr-smoke-mobile admin Finance reuses a complete large snapshot during member review', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page, {
+    sessionToken: 'TEST',
+    webuiNext: { serverTimeZone: 'Europe/Prague' },
+  });
+
+  const activeUsers = Array.from({ length: 1_600 }, (_, index) => ({
+    id: 1_000 + index,
+    login: `active-${index}`,
+    level: 1,
+    object_state: 'active',
+    monthly_payment: 300 + (index % 6) * 150,
+    paid_until: isoDaysFromNow(index % 3 === 0 ? -2 : 20),
+  }));
+  const suspendedUsers = Array.from({ length: 50 }, (_, index) => ({
+    id: 3_000 + index,
+    login: `suspended-${index}`,
+    level: 1,
+    object_state: 'suspended',
+    monthly_payment: 300,
+    paid_until: isoDaysFromNow(-10),
+  }));
+  let userRequests = 0;
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100, time_zone: 'Europe/Prague' },
+    handlers: {
+      'GET users': async ({ searchParams }) => {
+        userRequests += 1;
+        await new Promise((resolve) => setTimeout(resolve, 40));
+        const fromId = Number(searchParams.get('user[from_id]') ?? 0);
+        const limit = Number(searchParams.get('user[limit]') ?? 1_000);
+        const objectState = searchParams.get('user[object_state]') ?? 'active';
+        const source = objectState === 'suspended' ? suspendedUsers : activeUsers;
+        return { users: source.filter((user) => user.id > fromId).slice(0, limit) };
+      },
+      'GET system_configs': () => ({
+        system_configs: [{ category: 'plugin_payments', name: 'default_currency', value: 'CZK' }],
+      }),
+    },
+  });
+
+  await page.goto('/admin/payments');
+  await expect(page.getByTestId('admin.finance.overview.scope')).toContainText(/1[,.\s]?650/);
+  expect(userRequests).toBe(3);
+
+  await page.getByTestId('nav.sidebar.nodes').evaluate((element: HTMLElement) => element.click());
+  await expect(page).toHaveURL(/\/admin\/nodes$/);
+  await page.getByTestId('nav.sidebar.finance').evaluate((element: HTMLElement) => element.click());
+  await expect(page).toHaveURL(/\/admin\/payments$/);
+
+  await expect(page.getByTestId('admin.finance.overview.loading')).toHaveCount(0);
+  await expect(page.getByTestId('admin.finance.overview.scope')).toContainText(/1[,.\s]?650/);
+  expect(userRequests).toBe(3);
 });
