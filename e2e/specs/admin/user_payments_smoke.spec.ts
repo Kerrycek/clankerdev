@@ -176,6 +176,78 @@ test.describe('@smoke Admin user payments', () => {
     await expect(page.getByTestId('admin.user.payments.add.amount_input')).toHaveValue('');
   });
 
+  test('@pr-smoke @pr-smoke-mobile admin can disable monthly assessment with zero', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page);
+    let monthlyPayment = 100;
+    const settingsUpdates: unknown[] = [];
+    let manualPaymentRequests = 0;
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 100 },
+      handlers: {
+        'GET users/42': () => ({
+          user: {
+            id: 42,
+            login: 'alice',
+            level: 1,
+            monthly_payment: monthlyPayment,
+            paid_until: '2026-03-01T00:00:00.000Z',
+          },
+        }),
+        'GET user_accounts/42': () => ({
+          user_account: {
+            id: 42,
+            monthly_payment: monthlyPayment,
+            paid_until: '2026-03-01T00:00:00.000Z',
+          },
+        }),
+        'PUT user_accounts/42': ({ reqJson }) => {
+          settingsUpdates.push(reqJson);
+          monthlyPayment = 0;
+          return {
+            user_account: {
+              id: 42,
+              monthly_payment: monthlyPayment,
+              paid_until: '2026-03-01T00:00:00.000Z',
+            },
+          };
+        },
+        'GET user_payments': () => ({ user_payments: [] }),
+        'POST user_payments': () => {
+          manualPaymentRequests += 1;
+          return { user_payment: { id: 9002, amount: 100 } };
+        },
+      },
+    });
+
+    await page.goto('/admin/users/42/payments');
+    const monthlyInput = page.getByTestId('admin.user.payments.settings.monthly_payment');
+    await expect(monthlyInput).toHaveValue('100');
+
+    await monthlyInput.fill('-1');
+    await expect(monthlyInput).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.getByTestId('admin.user.payments.settings.monthly.validation')).toContainText(/0 or more|0 nebo vyšší/i);
+    await expect(page.getByTestId('admin.user.payments.settings.monthly.save')).toBeDisabled();
+    expect(settingsUpdates).toHaveLength(0);
+
+    await monthlyInput.fill('0');
+    await expect(monthlyInput).not.toHaveAttribute('aria-invalid', 'true');
+    await page.getByTestId('admin.user.payments.settings.monthly.save').click();
+    await expect(page.getByTestId('admin.user.payments.settings.review.change')).toContainText(/100.*0/);
+    await expect(page.getByTestId('admin.user.payments.settings.review.monthly_payment_zero')).toContainText(/disabled|vypnut/i);
+    expect(settingsUpdates).toHaveLength(0);
+
+    await page.getByTestId('admin.user.payments.settings.review.confirm').click();
+    await expect.poll(() => settingsUpdates).toEqual([
+      { user_account: { monthly_payment: 0 } },
+    ]);
+    await expect(monthlyInput).toHaveValue('0');
+    await expect(page.getByTestId('admin.user.payments.add.validation')).toContainText(/not set|není nastavena/i);
+    await expect(page.getByTestId('admin.user.payments.add.save')).toBeDisabled();
+    expect(manualPaymentRequests).toBe(0);
+    await expectNoDocumentHorizontalOverflow(page);
+  });
+
   test('@pr-smoke @pr-smoke-mobile admin payment history hides its lookahead and stops on an exact 200-row terminal page', async ({ page }) => {
     await bootstrapVpsAdminWindow(page);
     const paymentRequests: Array<{ fromId: number | null; limit: number; userId: number | null }> = [];

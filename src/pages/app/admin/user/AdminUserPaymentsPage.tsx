@@ -37,7 +37,6 @@ import { useKeysetPagination } from '../../../../lib/hooks/useKeysetPagination';
 import {
   normalizePaymentInstructions,
   paidUntilSubtitleToken,
-  parsePositiveInt,
   paymentInstructionsPlainText,
   resourceRefLabel,
 } from '../../payments/PaymentsModel';
@@ -60,6 +59,13 @@ function parsePositiveWholeAmount(value: string): number | null {
   if (!/^\d+$/.test(normalized)) return null;
   const amount = Number(normalized);
   return Number.isSafeInteger(amount) && amount > 0 ? amount : null;
+}
+
+function parseNonNegativeWholeAmount(value: string): number | null {
+  const normalized = value.trim();
+  if (!/^\d+$/.test(normalized)) return null;
+  const amount = Number(normalized);
+  return Number.isSafeInteger(amount) && amount >= 0 ? amount : null;
 }
 
 interface ManualPaymentReview {
@@ -167,7 +173,7 @@ export function AdminUserPaymentsPage() {
     setQuickMonthlyPayment(monthlyPayment !== undefined ? String(monthlyPayment) : '');
   }, [monthlyPayment]);
 
-  const monthlyPaymentParsed = parsePositiveInt(quickMonthlyPayment);
+  const monthlyPaymentParsed = parseNonNegativeWholeAmount(quickMonthlyPayment);
   const amountParsed = parsePositiveWholeAmount(quickAmount);
   const activeMonthlyPayment = typeof monthlyPayment === 'number' && monthlyPayment > 0
     ? monthlyPayment
@@ -179,6 +185,7 @@ export function AdminUserPaymentsPage() {
     : null;
   const currentPaidUntilInput = isoToDateInput(paidUntil);
   const paidUntilChanged = quickPaidUntil !== currentPaidUntilInput;
+  const monthlyPaymentInvalid = quickMonthlyPayment.trim() !== '' && monthlyPaymentParsed === null;
   const monthlyPaymentChanged = monthlyPaymentParsed !== null && monthlyPaymentParsed !== monthlyPayment;
 
   const paidUntilM = useMutation({
@@ -206,7 +213,7 @@ export function AdminUserPaymentsPage() {
 
   const monthlyPaymentM = useMutation({
     mutationFn: async (nextMonthlyPayment: number) => {
-      if (!Number.isSafeInteger(nextMonthlyPayment) || nextMonthlyPayment <= 0) {
+      if (!Number.isSafeInteger(nextMonthlyPayment) || nextMonthlyPayment < 0) {
         throw new Error(t('admin.user.payments.settings.validation.monthly_payment'));
       }
       await updateUserAccount(userId, {
@@ -397,12 +404,19 @@ export function AdminUserPaymentsPage() {
                     testId="admin.user.payments.settings.monthly_payment"
                     type="number"
                     inputMode="numeric"
-                    min={1}
+                    min={0}
                     value={quickMonthlyPayment}
                     onChange={(e) => setQuickMonthlyPayment(e.target.value)}
+                    ariaInvalid={monthlyPaymentInvalid}
                     disabled={accountReviewBlocked || settingsMutationPending}
                   />
-                  <div className="text-xs text-muted">{t('admin.user.payments.settings.hint.monthly_payment')}</div>
+                  {monthlyPaymentInvalid ? (
+                    <div className="text-xs text-danger" role="alert" data-testid="admin.user.payments.settings.monthly.validation">
+                      {t('admin.user.payments.settings.validation.monthly_payment')}
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted">{t('admin.user.payments.settings.hint.monthly_payment')}</div>
+                  )}
                   <Button
                     type="submit"
                     variant="secondary"
@@ -514,6 +528,15 @@ export function AdminUserPaymentsPage() {
                 testId="admin.user.payments.settings.review.clear"
               >
                 {t('admin.user.payments.review.settings.clear.body')}
+              </Alert>
+            ) : null}
+            {settingsReview.kind === 'monthly_payment' && settingsReview.next === 0 ? (
+              <Alert
+                variant="warn"
+                title={t('admin.user.payments.review.settings.monthly_payment_zero.title')}
+                testId="admin.user.payments.settings.review.monthly_payment_zero"
+              >
+                {t('admin.user.payments.review.settings.monthly_payment_zero.body')}
               </Alert>
             ) : null}
             <div className="divide-y divide-border rounded-md border border-border bg-surface-2 text-sm">
