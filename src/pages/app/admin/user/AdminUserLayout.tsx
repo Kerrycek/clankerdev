@@ -3,6 +3,7 @@ import { Link, Outlet, useOutletContext, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
 import { useAppMode } from '../../../../app/appMode';
+import { useAuth } from '../../../../app/auth';
 import { useI18n } from '../../../../app/i18n';
 
 import { DetailShell } from '../../../../components/layout/DetailShell';
@@ -20,6 +21,7 @@ import { LinkButton } from '../../../../components/ui/LinkButton';
 import { LoadingState } from '../../../../components/ui/LoadingState';
 import { ObjectHeader } from '../../../../components/ui/ObjectHeader';
 import { TabsNav } from '../../../../components/ui/TabsNav';
+import { canViewGlobalFinance } from '../FinanceGlobalAdminGate';
 
 export interface AdminUserOutletContext {
   user: User;
@@ -40,6 +42,7 @@ function parseIdParam(v: string | undefined): number | null {
 
 export function AdminUserLayout() {
   const { basePath } = useAppMode();
+  const auth = useAuth();
   const { t } = useI18n();
 
   const params = useParams();
@@ -168,7 +171,10 @@ export function AdminUserLayout() {
               { to: `${basePath}/users/${u.id}`, label: t('admin.user.tabs.overview'), end: true },
               { to: `${basePath}/users/${u.id}/resources/usage`, label: t('admin.user.tabs.resource_usage'), end: true },
               { to: `${basePath}/users/${u.id}/resources`, label: t('admin.user.tabs.resources'), end: true },
-              { to: `${basePath}/users/${u.id}/payments`, label: t('admin.user.tabs.payments') },
+              ...(canViewGlobalFinance(auth.role) ? [{
+                to: `${basePath}/users/${u.id}/payments`,
+                label: t('admin.user.tabs.payments'),
+              }] : []),
               {
                 to: `${basePath}/users/${u.id}/environment-configs`,
                 label: t('admin.user.tabs.environment_configs'),

@@ -317,22 +317,28 @@ export function FinanceOverviewPage() {
                 <h2 id="finance-distribution-title" className="text-lg font-semibold">{t('finance.overview.distribution.title')}</h2>
                 <p className="mt-1 text-sm text-muted">{t('finance.overview.distribution.description')}</p>
               </div>
-              <TableCard minWidth="sm" tableTestId="admin.finance.overview.distribution.table">
-                <thead>
-                  <tr className="border-b border-border text-left text-xs text-muted">
-                    <th className="px-4 py-3">{t('finance.overview.distribution.col.amount')}</th>
-                    <th className="px-4 py-3 text-right">{t('finance.overview.distribution.col.users')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {distribution.map((row) => (
-                    <tr key={row.amount} className="border-b border-border/60 last:border-b-0">
-                      <td className="px-4 py-3 font-medium">{formatAmount(row.amount, locale, currency)}</td>
-                      <td className="px-4 py-3 text-right">{new Intl.NumberFormat(locale).format(row.count)}</td>
+              {distribution.length > 0 ? (
+                <TableCard minWidth="sm" tableTestId="admin.finance.overview.distribution.table">
+                  <thead>
+                    <tr className="border-b border-border text-left text-xs text-muted">
+                      <th className="px-4 py-3">{t('finance.overview.distribution.col.amount')}</th>
+                      <th className="px-4 py-3 text-right">{t('finance.overview.distribution.col.users')}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </TableCard>
+                  </thead>
+                  <tbody>
+                    {distribution.map((row) => (
+                      <tr key={row.amount} className="border-b border-border/60 last:border-b-0">
+                        <td className="px-4 py-3 font-medium">{formatAmount(row.amount, locale, currency)}</td>
+                        <td className="px-4 py-3 text-right">{new Intl.NumberFormat(locale).format(row.count)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </TableCard>
+              ) : (
+                <Card className="p-4 text-sm text-muted" testId="admin.finance.overview.distribution.empty">
+                  {t('finance.overview.distribution.empty')}
+                </Card>
+              )}
             </section>
           </div>
         </div>

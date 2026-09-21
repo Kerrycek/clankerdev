@@ -121,7 +121,13 @@ export async function createUserPayment(opts: CreateUserPaymentInput) {
   });
 }
 
-export async function fetchUserPayments(opts?: { limit?: number; fromId?: number; userId?: number; accountedById?: number }) {
+export async function fetchUserPayments(opts?: {
+  limit?: number;
+  fromId?: number;
+  userId?: number;
+  accountedById?: number;
+  includes?: string;
+}) {
   const params: Record<string, unknown> = {};
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
@@ -133,6 +139,7 @@ export async function fetchUserPayments(opts?: { limit?: number; fromId?: number
     path: '/user_payments',
     namespace: 'user_payment',
     params,
+    meta: opts?.includes ? { includes: opts.includes } : undefined,
   });
 
   return { ...res, data: expectArray<UserPayment>(res.data, 'user_payments#index') };
