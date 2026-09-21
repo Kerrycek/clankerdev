@@ -19,6 +19,10 @@ const IncomeForecastPage = lazyRoute(
   () => import('../pages/app/admin/IncomeForecastPage'),
   'IncomeForecastPage',
 );
+const PaymentHistoryPage = lazyRoute(
+  () => import('../pages/app/admin/PaymentHistoryPage'),
+  'PaymentHistoryPage',
+);
 const FinanceGlobalAdminGate = lazyRoute(
   () => import('../pages/app/admin/FinanceGlobalAdminGate'),
   'FinanceGlobalAdminGate',
@@ -29,6 +33,7 @@ export const adminFinanceRoutes = [
     element: <FinanceGlobalAdminGate />,
     children: [
       { path: 'payments', element: <FinanceOverviewPage /> },
+      { path: 'payments/history', element: <PaymentHistoryPage /> },
       { path: 'payments/incoming', element: <IncomingPaymentsPage /> },
       {
         path: 'payments/incoming/:paymentId',
