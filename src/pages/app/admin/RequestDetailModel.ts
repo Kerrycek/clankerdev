@@ -2,8 +2,32 @@ import { HaveApiError } from '../../../lib/api/haveapi';
 
 export type FraudCheckStatus = 'pending' | 'failed' | 'success';
 export type InferredRequestType = 'registration' | 'change';
+export type RequestReviewQueueTarget = { type: InferredRequestType; id: number };
 
 const RESOLVED_REQUEST_STATES = new Set(['approved', 'denied', 'ignored', 'pending_correction']);
+
+export function parseRequestReviewQueue(value: unknown): RequestReviewQueueTarget[] {
+  if (!Array.isArray(value)) return [];
+  const targets: RequestReviewQueueTarget[] = [];
+  const seen = new Set<string>();
+
+  for (const candidate of value.slice(0, 200)) {
+    if (!candidate || typeof candidate !== 'object') continue;
+    const record = candidate as Record<string, unknown>;
+    const type = record['type'];
+    const rawId = record['id'];
+    if (type !== 'registration' && type !== 'change') continue;
+    if (typeof rawId !== 'number' && !(typeof rawId === 'string' && /^\d+$/.test(rawId.trim()))) continue;
+    const id = Number(rawId);
+    if (!Number.isSafeInteger(id) || id <= 0) continue;
+    const key = `${type}-${id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    targets.push({ type, id });
+  }
+
+  return targets;
+}
 
 export function inferRequestReviewType(value: unknown): InferredRequestType | null {
   if (!value || typeof value !== 'object') return null;

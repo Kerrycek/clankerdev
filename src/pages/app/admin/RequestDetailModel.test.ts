@@ -6,10 +6,28 @@ import {
   inferRequestReviewType,
   isDefinitiveRequestNotFound,
   isResolvedRequestReviewState,
+  parseRequestReviewQueue,
   requestMatchesReviewTarget,
   requestResourceLabel,
   safeRequestsReturnTo,
 } from './RequestDetailModel';
+
+describe('parseRequestReviewQueue', () => {
+  it('keeps unique valid request targets and rejects malformed history state', () => {
+    expect(parseRequestReviewQueue([
+      { type: 'registration', id: 12 },
+      { type: 'change', id: '11' },
+      { type: 'registration', id: 12 },
+      { type: 'other', id: 10 },
+      { type: 'change', id: -1 },
+      null,
+    ])).toEqual([
+      { type: 'registration', id: 12 },
+      { type: 'change', id: 11 },
+    ]);
+    expect(parseRequestReviewQueue({ type: 'registration', id: 12 })).toEqual([]);
+  });
+});
 
 describe('inferRequestReviewType', () => {
   it('distinguishes request payloads and fails closed for ambiguous shapes', () => {

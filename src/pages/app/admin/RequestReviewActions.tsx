@@ -104,6 +104,7 @@ export function RequestReviewActions(props: {
   testIdPrefix: string;
   compact?: boolean;
   showDetailLink?: boolean;
+  detailHref?: string;
   onResolved?: () => void | Promise<void>;
 }) {
   const { t } = useI18n();
@@ -348,7 +349,10 @@ export function RequestReviewActions(props: {
           </Button>
         ))}
         {props.showDetailLink ? (
-          <Link className="text-sm text-accent hover:underline" to={`${props.basePath}/requests/${props.reqType}/${props.reqId}`}>
+          <Link
+            className="text-sm text-accent hover:underline"
+            to={props.detailHref ?? `${props.basePath}/requests/${props.reqType}/${props.reqId}`}
+          >
             {t('requests.detail.open_full')}
           </Link>
         ) : null}
