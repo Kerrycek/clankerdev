@@ -146,6 +146,8 @@ export function IncomingPaymentDetailPage() {
   const dotVar = dotVariantFromBadgeVariant(primaryVar);
 
   const [stateEdit, setStateEdit] = useState('');
+  const [stateSaving, setStateSaving] = useState(false);
+  const stateMutationInFlightRef = useRef(false);
   const effectiveStateEdit = stateEdit || st;
 
   const [assignUserId, setAssignUserId] = useState('');
@@ -179,10 +181,13 @@ export function IncomingPaymentDetailPage() {
   });
 
   async function saveState() {
-    if (!paymentId || !stateReview.canSubmit) return;
+    if (!paymentId || !stateReview.canSubmit || stateMutationInFlightRef.current) return;
 
     const next = String(stateReview.nextState).trim();
     if (!next) return;
+
+    stateMutationInFlightRef.current = true;
+    setStateSaving(true);
 
     try {
       await updateIncomingPaymentState(paymentId, next);
@@ -194,14 +199,18 @@ export function IncomingPaymentDetailPage() {
       });
 
       setStateEdit('');
-      q.refetch();
-      qc.invalidateQueries({ queryKey: ['incoming_payments', 'index'] });
+      await q.refetch();
+      void qc.invalidateQueries({ queryKey: ['incoming_payments', 'index'] });
+      void qc.invalidateQueries({ queryKey: ['incoming_payments', 'reconciliation_totals'] });
     } catch (e: unknown) {
       toasts.pushToast({
         variant: 'danger',
         title: t('payments.incoming.detail.toast.state_updated.error.title'),
         body: formatErrorMessage(e),
       });
+    } finally {
+      stateMutationInFlightRef.current = false;
+      setStateSaving(false);
     }
   }
 
@@ -237,6 +246,7 @@ export function IncomingPaymentDetailPage() {
 
       await q.refetch();
       void qc.invalidateQueries({ queryKey: ['incoming_payments', 'index'] });
+      void qc.invalidateQueries({ queryKey: ['incoming_payments', 'reconciliation_totals'] });
       void qc.invalidateQueries({ predicate: (query) => ['user_payments', 'finance', 'payment_stats'].includes(String(query.queryKey[0])) });
     } catch (e: unknown) {
       toasts.pushToast({
@@ -478,7 +488,8 @@ export function IncomingPaymentDetailPage() {
                   <Button
                     variant="secondary"
                     onClick={saveState}
-                    disabled={!stateReview.canSubmit}
+                    loading={stateSaving}
+                    disabled={!stateReview.canSubmit || stateSaving}
                     testId="admin.payments.incoming.state.save"
                   >
                     {t('common.save')}
