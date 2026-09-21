@@ -40,6 +40,35 @@ import {
 } from './AdminUserOverviewModel';
 import { canViewGlobalFinance } from '../FinanceGlobalAdminGate';
 
+const USER_STATE_OPTIONS = [
+  {
+    value: 'active',
+    labelKey: 'admin.user.lifecycle.state.active',
+    descriptionKey: 'admin.user.lifecycle.state.active.description',
+  },
+  {
+    value: 'suspended',
+    labelKey: 'admin.user.lifecycle.state.suspended',
+    descriptionKey: 'admin.user.lifecycle.state.suspended.description',
+  },
+  {
+    value: 'soft_delete',
+    labelKey: 'admin.user.lifecycle.state.soft_delete',
+    descriptionKey: 'admin.user.lifecycle.state.soft_delete.description',
+  },
+  {
+    value: 'hard_delete',
+    labelKey: 'admin.user.lifecycle.state.hard_delete',
+    descriptionKey: 'admin.user.lifecycle.state.hard_delete.description',
+  },
+  {
+    value: 'deleted',
+    labelKey: 'admin.user.lifecycle.state.deleted',
+    descriptionKey: 'admin.user.lifecycle.state.deleted.description',
+    disabled: true,
+  },
+] as const;
+
 function reminderPresetInput(preset: '1w' | '2w' | '1y'): string {
   const next = new Date();
   if (preset === '1y') next.setFullYear(next.getFullYear() + 1);
@@ -66,6 +95,8 @@ export function AdminUserOverviewPage() {
   const paidUntilStatus = getPaidUntilStatus(paidUntil);
   const stateBadge = objectStateBadge(u.object_state ?? 'active', t);
   const canViewFinance = canViewGlobalFinance(auth.role);
+  const selectedStateOption = USER_STATE_OPTIONS.find((option) => option.value === stateDraft.objectState)
+    ?? USER_STATE_OPTIONS[0];
 
   const paymentHistoryQ = useQuery({
     queryKey: ['user_payments', 'overview', { userId: u.id, limit: 5 }],
@@ -353,19 +384,25 @@ export function AdminUserOverviewPage() {
               </div>
 
               <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-                <Select
-                  label={t('lifetimes.field.state')}
-                  value={stateDraft.objectState}
-                  onChange={(e) => setObjectState(e.target.value)}
-                  testId="admin.user.lifecycle.state"
-                  options={[
-                    { value: 'active', label: t('state.active') },
-                    { value: 'suspended', label: t('state.suspended') },
-                    { value: 'soft_delete', label: t('state.soft_delete') },
-                    { value: 'hard_delete', label: t('state.hard_delete') },
-                    { value: 'deleted', label: t('state.deleted') },
-                  ]}
-                />
+                <div>
+                  <Select
+                    label={t('admin.user.lifecycle.state.field')}
+                    value={stateDraft.objectState}
+                    onChange={(e) => setObjectState(e.target.value)}
+                    testId="admin.user.lifecycle.state"
+                    options={USER_STATE_OPTIONS.map((option) => ({
+                      value: option.value,
+                      label: t(option.labelKey),
+                      disabled: 'disabled' in option ? option.disabled : false,
+                    }))}
+                  />
+                  <div
+                    className="mt-1 text-xs text-faint"
+                    data-testid="admin.user.lifecycle.state.description"
+                  >
+                    {t(selectedStateOption.descriptionKey)}
+                  </div>
+                </div>
                 <label className="block">
                   <span className="mb-1 block text-xs font-semibold text-muted">{t('lifetimes.field.expiration')}</span>
                   <Input

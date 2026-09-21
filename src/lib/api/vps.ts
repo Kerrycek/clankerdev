@@ -194,10 +194,12 @@ export async function fetchVpsList(opts?: {
   location?: number;
   environment?: number;
   includes?: string;
+  count?: boolean;
   /** Optional abort signal (used by command palette for rapid typing). */
   signal?: AbortSignal;
 }) {
   const params: Record<string, string | number | boolean> = {};
+  const meta: Record<string, string | boolean> = {};
 
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
@@ -208,13 +210,15 @@ export async function fetchVpsList(opts?: {
   if (opts?.node !== undefined) params['node'] = opts.node;
   if (opts?.location !== undefined) params['location'] = opts.location;
   if (opts?.environment !== undefined) params['environment'] = opts.environment;
+  if (opts?.includes) meta['includes'] = opts.includes;
+  if (opts?.count) meta['count'] = true;
 
   const res = await haveApiCall<Vps[]>({
     method: 'GET',
     path: '/vpses',
     namespace: 'vps',
     params,
-    meta: opts?.includes ? { includes: opts.includes } : undefined,
+    meta: Object.keys(meta).length > 0 ? meta : undefined,
     signal: opts?.signal,
   });
   return { ...res, data: expectArray<Vps>(res.data, 'vpses') };
