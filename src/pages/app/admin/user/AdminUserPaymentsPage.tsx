@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 
@@ -9,9 +9,11 @@ import { useToasts } from '../../../../app/toasts';
 
 import { useChrome } from '../../../../components/layout/ChromeContext';
 
+import { Alert } from '../../../../components/ui/Alert';
 import { Badge } from '../../../../components/ui/Badge';
 import { Button } from '../../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../../components/ui/Card';
+import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog';
 import { CopyButton } from '../../../../components/ui/CopyButton';
 import { EmptyState } from '../../../../components/ui/EmptyState';
 import { ErrorState } from '../../../../components/ui/ErrorState';
@@ -51,6 +53,19 @@ function isoToDateInput(value: unknown): string {
     return /^\d{4}-\d{2}-\d{2}/.test(trimmed) ? trimmed.slice(0, 10) : '';
   }
   return d.toISOString().slice(0, 10);
+}
+
+function parsePositiveWholeAmount(value: string): number | null {
+  const normalized = value.trim();
+  if (!/^\d+$/.test(normalized)) return null;
+  const amount = Number(normalized);
+  return Number.isSafeInteger(amount) && amount > 0 ? amount : null;
+}
+
+interface ManualPaymentReview {
+  amount: number;
+  monthlyPayment: number;
+  months: number;
 }
 
 export function AdminUserPaymentsPage() {
@@ -129,6 +144,8 @@ export function AdminUserPaymentsPage() {
   const [quickPaidUntil, setQuickPaidUntil] = useState('');
   const [quickMonthlyPayment, setQuickMonthlyPayment] = useState('');
   const [quickAmount, setQuickAmount] = useState('');
+  const [manualPaymentReview, setManualPaymentReview] = useState<ManualPaymentReview | null>(null);
+  const manualPaymentInFlightRef = useRef(false);
 
   useEffect(() => {
     setQuickPaidUntil(isoToDateInput(paidUntil));
@@ -139,7 +156,15 @@ export function AdminUserPaymentsPage() {
   }, [monthlyPayment]);
 
   const monthlyPaymentParsed = parsePositiveInt(quickMonthlyPayment);
-  const amountParsed = parsePositiveInt(quickAmount);
+  const amountParsed = parsePositiveWholeAmount(quickAmount);
+  const activeMonthlyPayment = typeof monthlyPayment === 'number' && monthlyPayment > 0
+    ? monthlyPayment
+    : null;
+  const manualPaymentMonths = amountParsed !== null
+    && activeMonthlyPayment !== null
+    && amountParsed % activeMonthlyPayment === 0
+    ? amountParsed / activeMonthlyPayment
+    : null;
   const paidUntilChanged = quickPaidUntil !== isoToDateInput(paidUntil);
   const monthlyPaymentChanged = monthlyPaymentParsed !== null && monthlyPaymentParsed !== monthlyPayment;
 
@@ -183,12 +208,12 @@ export function AdminUserPaymentsPage() {
   });
 
   const addM = useMutation({
-    mutationFn: async () => {
-      if (amountParsed === null) {
+    mutationFn: async (amount: number) => {
+      if (!Number.isSafeInteger(amount) || amount <= 0) {
         throw new Error(t('admin.user.payments.add_payment.validation.amount'));
       }
 
-      const res = await createUserPayment({ user: userId, amount: amountParsed });
+      const res = await createUserPayment({ user: userId, amount });
 
       const asId = getMetaActionStateId(res.meta);
       if (asId) {
@@ -205,11 +230,13 @@ export function AdminUserPaymentsPage() {
       return { lockRef: ref };
     },
     onSettled: (_data, _err, _vars, ctx: { lockRef?: ObjectRef } | undefined) => {
+      manualPaymentInFlightRef.current = false;
       if (ctx?.lockRef) chrome.releaseLocalLock(ctx.lockRef);
     },
     onSuccess: () => {
       toasts.pushToast({ variant: 'ok', title: t('admin.user.payments.add_payment.toast.created') });
       setQuickAmount('');
+      setManualPaymentReview(null);
       void qc.invalidateQueries({ queryKey: ['user_payments'] });
       void qc.invalidateQueries({ queryKey: ['user_accounts', userId] });
       void qc.invalidateQueries({ queryKey: ['finance'] });
@@ -242,8 +269,16 @@ export function AdminUserPaymentsPage() {
 
   const submitAddPayment = (e: React.FormEvent) => {
     e.preventDefault();
-    addM.mutate();
+    if (amountParsed === null || manualPaymentMonths === null || activeMonthlyPayment === null) return;
+    setManualPaymentReview({
+      amount: amountParsed,
+      monthlyPayment: activeMonthlyPayment,
+      months: manualPaymentMonths,
+    });
   };
+
+  const manualPaymentReviewStale = manualPaymentReview !== null
+    && manualPaymentReview.monthlyPayment !== activeMonthlyPayment;
 
   return (
     <div className="space-y-4">
@@ -337,14 +372,30 @@ export function AdminUserPaymentsPage() {
                 value={quickAmount}
                 onChange={(e) => setQuickAmount(e.target.value)}
                 placeholder={monthlyPayment !== undefined ? String(monthlyPayment) : undefined}
-                disabled={addM.isPending}
+                disabled={addM.isPending || monthlyPaymentM.isPending || accountQ.isFetching}
               />
+              {activeMonthlyPayment === null ? (
+                <div className="text-xs text-danger" data-testid="admin.user.payments.add.validation">
+                  {t('admin.user.payments.add_payment.validation.no_monthly_payment')}
+                </div>
+              ) : quickAmount.trim() && amountParsed === null ? (
+                <div className="text-xs text-danger" data-testid="admin.user.payments.add.validation">
+                  {t('admin.user.payments.add_payment.validation.amount')}
+                </div>
+              ) : amountParsed !== null && manualPaymentMonths === null ? (
+                <div className="text-xs text-danger" data-testid="admin.user.payments.add.validation">
+                  {t('admin.user.payments.add_payment.validation.multiple', { monthly: formatMoneyLike(activeMonthlyPayment) })}
+                </div>
+              ) : activeMonthlyPayment !== null ? (
+                <div className="text-xs text-muted" data-testid="admin.user.payments.add.hint">
+                  {t('admin.user.payments.add_payment.hint.multiple', { monthly: formatMoneyLike(activeMonthlyPayment) })}
+                </div>
+              ) : null}
               <Button
                 type="submit"
                 variant="primary"
                 size="sm"
-                loading={addM.isPending}
-                disabled={amountParsed === null}
+                disabled={manualPaymentMonths === null || addM.isPending || monthlyPaymentM.isPending || accountQ.isFetching}
                 testId="admin.user.payments.add.save"
               >
                 {t('admin.user.payments.add_payment')}
@@ -353,6 +404,64 @@ export function AdminUserPaymentsPage() {
           </div>
         </CardBody>
       </Card>
+
+      <ConfirmDialog
+        open={manualPaymentReview !== null}
+        title={t('admin.user.payments.review.add.title')}
+        description={t('admin.user.payments.review.add.subtitle')}
+        confirmLabel={t('admin.user.payments.add_payment')}
+        confirmLoading={addM.isPending}
+        confirmDisabled={accountQ.isFetching || manualPaymentReviewStale}
+        cancelDisabled={addM.isPending}
+        onCancel={() => {
+          if (!addM.isPending) setManualPaymentReview(null);
+        }}
+        onConfirm={() => {
+          if (manualPaymentReview === null || manualPaymentReviewStale || accountQ.isFetching || manualPaymentInFlightRef.current) return;
+          manualPaymentInFlightRef.current = true;
+          addM.mutate(manualPaymentReview.amount);
+        }}
+        testId="admin.user.payments.add.review"
+      >
+        {manualPaymentReview !== null ? (
+          <div className="space-y-3">
+            {manualPaymentReviewStale ? (
+              <Alert
+                variant="warn"
+                title={t('admin.user.payments.review.add.stale.title')}
+                testId="admin.user.payments.add.review.stale"
+              >
+                {t('admin.user.payments.review.add.stale.body')}
+              </Alert>
+            ) : null}
+            <div className="divide-y divide-border rounded-md border border-border bg-surface-2 text-sm">
+              <div className="grid gap-1 p-3 sm:grid-cols-[9rem_minmax(0,1fr)]" data-testid="admin.user.payments.add.review.target">
+                <div className="text-xs font-medium uppercase tracking-wide text-muted">{t('admin.user.payments.review.target')}</div>
+                <div className="break-words font-medium">{user.login ? `${user.login} (#${userId})` : `#${userId}`}</div>
+              </div>
+              <div className="grid gap-1 p-3 sm:grid-cols-[9rem_minmax(0,1fr)]" data-testid="admin.user.payments.add.review.monthly">
+                <div className="text-xs font-medium uppercase tracking-wide text-muted">{t('admin.user.payments.settings.field.monthly_payment')}</div>
+                <div className="font-medium tabular-nums">{formatMoneyLike(manualPaymentReview.monthlyPayment)}</div>
+              </div>
+              <div className="grid gap-1 p-3 sm:grid-cols-[9rem_minmax(0,1fr)]" data-testid="admin.user.payments.add.review.months">
+                <div className="text-xs font-medium uppercase tracking-wide text-muted">{t('admin.user.payments.add_payment.field.months')}</div>
+                <div className="font-medium tabular-nums">{manualPaymentReview.months}</div>
+              </div>
+              <div className="grid gap-1 p-3 sm:grid-cols-[9rem_minmax(0,1fr)]" data-testid="admin.user.payments.add.review.amount">
+                <div className="text-xs font-medium uppercase tracking-wide text-muted">{t('admin.user.payments.add_payment.field.amount')}</div>
+                <div className="font-medium tabular-nums">{formatMoneyLike(manualPaymentReview.amount)}</div>
+              </div>
+            </div>
+            <Alert variant="info" title={t('admin.user.payments.review.impact')}>
+              {t('admin.user.payments.review.add.impact')}
+            </Alert>
+            <Alert variant="warn" title={t('admin.user.payments.review.add.email.title')}>
+              {t('admin.user.payments.review.add.email.body')}
+            </Alert>
+            <p className="text-xs text-muted">{t('admin.user.payments.review.add.queue')}</p>
+          </div>
+        ) : null}
+      </ConfirmDialog>
 
       <Card testId="admin.user.payments.instructions.card">
         <CardHeader
