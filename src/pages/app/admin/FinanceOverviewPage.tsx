@@ -154,7 +154,7 @@ export function FinanceOverviewPage() {
     >
       {snapshotQ.isLoading ? (
         <LoadingState testId="admin.finance.overview.loading" />
-      ) : snapshotQ.isError ? (
+      ) : snapshotQ.isError && !snapshot ? (
         <ErrorState
           title={t('finance.overview.load_error')}
           error={snapshotQ.error}
@@ -172,6 +172,14 @@ export function FinanceOverviewPage() {
         />
       ) : summary ? (
         <div className="space-y-4">
+          {snapshotQ.isError ? (
+            <Alert
+              variant="warn"
+              title={t('finance.overview.stale.title')}
+              description={t('finance.overview.stale.body')}
+              testId="admin.finance.overview.stale"
+            />
+          ) : null}
           <Alert
             variant="neutral"
             title={t('finance.overview.scope.title')}

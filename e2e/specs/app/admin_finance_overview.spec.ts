@@ -76,6 +76,51 @@ test('@pr-smoke @pr-smoke-mobile admin Finance overview uses a complete account 
   }
 });
 
+test('@pr-smoke @pr-smoke-mobile admin Finance overview keeps a complete snapshot after refresh failure', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page, {
+    sessionToken: 'TEST',
+    webuiNext: { serverTimeZone: 'Europe/Prague' },
+  });
+  let userRequests = 0;
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100, time_zone: 'Europe/Prague' },
+    handlers: {
+      'GET users': ({ searchParams }) => {
+        userRequests += 1;
+        if (userRequests > 2) {
+          return {
+            status: 503,
+            contentType: 'application/json',
+            body: JSON.stringify({ status: false, message: 'temporary snapshot failure', response: null }),
+          };
+        }
+
+        const objectState = searchParams.get('user[object_state]') ?? 'active';
+        return {
+          users: objectState === 'active'
+            ? [{ id: 20, login: 'member20', level: 1, object_state: 'active', monthly_payment: 300, paid_until: null }]
+            : [],
+        };
+      },
+      'GET system_configs': () => ({
+        system_configs: [{ category: 'plugin_payments', name: 'default_currency', value: 'CZK' }],
+      }),
+    },
+  });
+
+  await page.goto('/admin/payments');
+
+  await expect(page.getByTestId('admin.finance.overview.summary.monthly_payment')).toContainText(/300/);
+  await expect(page.getByTestId('admin.finance.overview.stale')).toHaveCount(0);
+
+  await page.getByTestId('admin.finance.overview.refresh').click();
+
+  await expect.poll(() => userRequests).toBeGreaterThan(2);
+  await expect(page.getByTestId('admin.finance.overview.stale')).toContainText(/last complete Finance snapshot/i);
+  await expect(page.getByTestId('admin.finance.overview.summary.monthly_payment')).toContainText(/300/);
+  await expect(page.getByTestId('admin.finance.overview.error')).toHaveCount(0);
+});
+
 test('@pr-smoke @pr-smoke-mobile non-admin sessions cannot mount global Finance routes', async ({ page }) => {
   const globalFinanceRequests: string[] = [];
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });

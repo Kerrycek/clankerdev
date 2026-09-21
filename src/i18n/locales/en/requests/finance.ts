@@ -8,6 +8,8 @@ export const enFinance = {
   'finance.overview.description': 'Global member payment status, monthly outlook, and accounts requiring attention.',
   'finance.overview.refresh': 'Refresh overview',
   'finance.overview.load_error': 'Unable to load the finance overview',
+  'finance.overview.stale.title': 'Showing the last complete Finance snapshot',
+  'finance.overview.stale.body': 'The latest refresh failed. The totals below remain available from the last complete load; retry before making time-sensitive decisions.',
   'finance.overview.incomplete.title': 'The global total could not be completed',
   'finance.overview.incomplete.body': 'The API returned a list that was too large or unstable. {count} accounts were scanned; partial sums are intentionally not presented as global.',
   'finance.overview.scope.title': 'Completed multi-request account scan',
