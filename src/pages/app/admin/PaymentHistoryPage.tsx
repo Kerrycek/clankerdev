@@ -18,7 +18,7 @@ import { KeysetPagination } from '../../../components/ui/KeysetPagination';
 import { LoadingState } from '../../../components/ui/LoadingState';
 import { TableCard } from '../../../components/ui/TableCard';
 import { fetchUserPayments, type ResourceRef, type UserPayment } from '../../../lib/api/payments';
-import { formatDateInTimeZone, formatDateTime } from '../../../lib/format';
+import { formatDateInTimeZone, formatDateTimeInTimeZone } from '../../../lib/format';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 import { cursorFromDescendingPage } from '../../../lib/lockIndex';
 import { formatMoneyLike, safeInt } from '../../../lib/paymentsFormat';
@@ -229,7 +229,7 @@ export function PaymentHistoryPage() {
                 title={<ResourceLink basePath={basePath} resource={payment.user} />}
                 subtitle={formatMoneyLike(safeInt(payment.amount))}
                 rows={[
-                  { label: t('finance.history.col.accepted_at'), value: formatDateTime(payment.created_at) },
+                  { label: t('finance.history.col.accepted_at'), value: formatDateTimeInTimeZone(payment.created_at, accountTimeZone) },
                   { label: t('finance.history.col.accounted_by'), value: <ResourceLink basePath={basePath} resource={payment.accounted_by} /> },
                   { label: t('finance.history.col.period'), value: period(payment) },
                   { label: t('finance.history.col.months'), value: paymentHistoryMonths(payment.from_date, payment.to_date) ?? '—' },
@@ -254,7 +254,7 @@ export function PaymentHistoryPage() {
             <tbody>
               {visibleHistory.map((payment) => (
                 <tr key={payment.id} className="border-b border-border/60 last:border-b-0" data-testid={`admin.finance.history.row.${payment.id}`}>
-                  <td className="px-4 py-3 tabular-nums">{formatDateTime(payment.created_at)}</td>
+                  <td className="px-4 py-3 tabular-nums">{formatDateTimeInTimeZone(payment.created_at, accountTimeZone)}</td>
                   <td className="px-4 py-3 font-medium"><ResourceLink basePath={basePath} resource={payment.user} /></td>
                   <td className="px-4 py-3"><ResourceLink basePath={basePath} resource={payment.accounted_by} /></td>
                   <td className="px-4 py-3 text-right tabular-nums">{formatMoneyLike(safeInt(payment.amount))}</td>

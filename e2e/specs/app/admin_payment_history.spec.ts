@@ -42,6 +42,13 @@ test('@pr-smoke @pr-smoke-mobile admin payment history is filterable, linked, an
 
   await expect(page.getByRole('link', { name: /member42/i }).first()).toHaveAttribute('href', '/admin/users/42');
   await expect(page.getByRole('link', { name: '#300' }).first()).toHaveAttribute('href', '/admin/payments/incoming/300');
+  const expectedAcceptedAt = await page.evaluate(() => new Date('2026-09-20T01:02:03Z').toLocaleString(undefined, {
+    timeZone: 'Europe/Prague',
+  }));
+  const visibleHistoryRow = testInfo.project.name === 'mobile-chrome'
+    ? page.getByTestId('admin.finance.history.row.9001.mobile')
+    : page.getByTestId('admin.finance.history.row.9001');
+  await expect(visibleHistoryRow).toContainText(expectedAcceptedAt);
   await expectNoDocumentHorizontalOverflow(page);
 
   await page.getByTestId('admin.finance.history.filter.user').fill('#42');
