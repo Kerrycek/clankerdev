@@ -21,6 +21,11 @@ export function AdminFinanceTabs() {
           label: t('finance.tabs.overview'),
           end: true,
           testId: 'admin.finance.tabs.overview',
+        }, {
+          to: `${basePath}/payments/history`,
+          label: t('finance.tabs.history'),
+          end: true,
+          testId: 'admin.finance.tabs.history',
         }] : []),
         {
           to: `${basePath}/payments/incoming`,

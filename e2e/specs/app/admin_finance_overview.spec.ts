@@ -7,9 +7,13 @@ function isoDaysFromNow(days: number): string {
 }
 
 test('@pr-smoke @pr-smoke-mobile admin Finance overview uses a complete account snapshot', async ({ page }, testInfo) => {
-  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+  const systemConfigRequests: URL[] = [];
+  await bootstrapVpsAdminWindow(page, {
+    sessionToken: 'TEST',
+    webuiNext: { serverTimeZone: 'Europe/Prague' },
+  });
   await installHaveApiMock(page, {
-    user: { id: 1, login: 'admin', level: 100 },
+    user: { id: 1, login: 'admin', level: 100, time_zone: 'Europe/Prague' },
     handlers: {
       'GET users': ({ searchParams }) => {
         const fromId = Number(searchParams.get('user[from_id]') ?? 0);
@@ -17,7 +21,7 @@ test('@pr-smoke @pr-smoke-mobile admin Finance overview uses a complete account 
         const rows = [
           { id: 10, login: 'paid', level: 1, object_state: 'active', monthly_payment: 300, paid_until: isoDaysFromNow(20) },
           { id: 11, login: 'soon', level: 1, object_state: 'active', monthly_payment: 400, paid_until: isoDaysFromNow(2) },
-          { id: 12, login: 'late', level: 1, object_state: 'suspended', monthly_payment: 500, paid_until: isoDaysFromNow(-2) },
+          { id: 12, login: 'late', level: 1, object_state: 'suspended', monthly_payment: 500, paid_until: '2026-09-19T22:30:00Z' },
           { id: 13, login: 'missing', level: 1, object_state: 'active', monthly_payment: 600, paid_until: null },
           { id: 14, login: 'broken', level: 1, object_state: 'active', monthly_payment: 700, paid_until: 'broken-date' },
           { id: 15, login: 'deleted', level: 1, object_state: 'deleted', monthly_payment: 800, paid_until: null },
@@ -25,30 +29,41 @@ test('@pr-smoke @pr-smoke-mobile admin Finance overview uses a complete account 
         ].filter((user) => user.id > fromId && user.object_state === objectState);
         return { users: rows };
       },
-      'GET system_configs': () => ({
-        system_configs: [{ category: 'plugin_payments', name: 'default_currency', value: 'CZK' }],
-      }),
+      'GET system_configs': ({ url }) => {
+        systemConfigRequests.push(new URL(url.href));
+        return {
+          system_configs: [{ category: 'plugin_payments', name: 'default_currency', value: 'CZK' }],
+        };
+      },
     },
   });
 
   await page.goto('/admin/payments');
 
   await expect(page.getByTestId('nav.sidebar.finance')).toHaveAttribute('aria-current', 'page');
-  await expect(page.getByTestId('admin.finance.tabs').getByRole('link')).toHaveCount(3);
+  await expect(page.getByTestId('admin.finance.tabs').getByRole('link')).toHaveCount(4);
   await expect(page.getByTestId('admin.finance.overview.summary.monthly_payment')).toContainText(/2[\s,.]?500/);
   await expect(page.getByTestId('admin.finance.overview.summary.monthly_payment')).toContainText('CZK');
+  await expect.poll(() => systemConfigRequests.length).toBe(1);
+  expect(systemConfigRequests[0]?.searchParams.get('system_config[category]')).toBe('plugin_payments');
+  await expect(page.getByTestId('admin.finance.overview.summary.current_month')).toContainText('Europe/Prague');
   await expect(page.getByTestId('admin.finance.overview.summary.paid')).toContainText('1');
   await expect(page.getByTestId('admin.finance.overview.summary.due_soon')).toContainText('1');
   await expect(page.getByTestId('admin.finance.overview.summary.overdue')).toContainText('2');
   await expect(page.getByTestId('admin.finance.overview.summary.invalid')).toContainText('1');
   await expect(page.getByTestId('admin.finance.overview.scope')).toContainText(/5/);
 
+  const expectedPaidUntil = await page.evaluate(() => new Date('2026-09-19T22:30:00Z').toLocaleDateString(undefined, {
+    timeZone: 'Europe/Prague',
+  }));
   if (testInfo.project.name === 'mobile-chrome') {
     await expect(page.getByTestId('admin.finance.overview.risk.mobile')).toBeVisible();
     await expect(page.getByTestId('admin.finance.overview.risk.row.12.mobile')).toBeVisible();
+    await expect(page.getByTestId('admin.finance.overview.risk.row.12.mobile')).toContainText(expectedPaidUntil);
   } else {
     await expect(page.getByTestId('admin.finance.overview.risk.table')).toBeVisible();
     await expect(page.getByTestId('admin.finance.overview.risk.row.12')).toBeVisible();
+    await expect(page.getByTestId('admin.finance.overview.risk.row.12')).toContainText(expectedPaidUntil);
   }
 
   await expect(page.getByTestId('admin.finance.overview.distribution.table')).toBeVisible();
@@ -61,7 +76,7 @@ test('@pr-smoke @pr-smoke-mobile admin Finance overview uses a complete account 
   }
 });
 
-test('@pr-smoke non-admin sessions cannot mount global Finance totals', async ({ page }) => {
+test('@pr-smoke @pr-smoke-mobile non-admin sessions cannot mount global Finance routes', async ({ page }) => {
   const globalFinanceRequests: string[] = [];
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
   await installHaveApiMock(page, {
@@ -88,11 +103,45 @@ test('@pr-smoke non-admin sessions cannot mount global Finance totals', async ({
     },
   });
 
-  await page.goto('/admin/payments');
+  for (const path of [
+    '/admin/payments',
+    '/admin/payments/incoming',
+    '/admin/payments/incoming/300',
+    '/admin/payments/forecast',
+  ]) {
+    await page.goto(path);
+    await expect(page).toHaveURL((url) => url.pathname === '/app/payments' && url.hash === '');
+    await expect(page.getByTestId('payments.my.stat.payment_id')).toContainText('2');
+    await expect(page.getByTestId('admin.finance.tabs')).toHaveCount(0);
+    await expect(page.getByTestId('nav.sidebar.finance')).toHaveCount(0);
+  }
 
-  await expect(page).toHaveURL((url) => url.pathname === '/app/payments' && url.hash === '');
-  await expect(page.getByTestId('payments.my.stat.payment_id')).toContainText('2');
-  await expect(page.getByTestId('admin.finance.tabs')).toHaveCount(0);
   await page.waitForLoadState('networkidle');
   expect(globalFinanceRequests).toEqual([]);
+});
+
+test('@pr-smoke @pr-smoke-mobile admin Finance explains an empty assessment distribution', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100 },
+    handlers: {
+      'GET users': ({ searchParams }) => {
+        const objectState = searchParams.get('user[object_state]') ?? 'active';
+        const rows = [
+          { id: 20, login: 'free', level: 1, object_state: 'active', monthly_payment: 0, paid_until: null },
+          { id: 21, login: 'deleted', level: 1, object_state: 'deleted', monthly_payment: 500, paid_until: null },
+        ].filter((user) => user.object_state === objectState);
+        return { users: rows };
+      },
+      'GET system_configs': () => ({
+        system_configs: [{ category: 'plugin_payments', name: 'default_currency', value: 'CZK' }],
+      }),
+    },
+  });
+
+  await page.goto('/admin/payments');
+
+  await expect(page.getByTestId('admin.finance.overview.risk.empty')).toBeVisible();
+  await expect(page.getByTestId('admin.finance.overview.distribution.empty')).toBeVisible();
+  await expect(page.getByTestId('admin.finance.overview.distribution.table')).toHaveCount(0);
 });

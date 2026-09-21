@@ -186,6 +186,8 @@ export const csRequests = {
   'payments.incoming.list.open_id.placeholder': '#ID platby',
   'payments.incoming.list.filter.q.placeholder': 'Hledat (id, tx, VS, účet, uživatel...)',
   'payments.incoming.list.load_error.title': 'Nelze načíst příchozí platby',
+  'payments.incoming.list.stale.title': 'Zobrazují se poslední načtené příchozí platby',
+  'payments.incoming.list.stale.body': 'Nejnovější obnovení selhalo. Řádky a součty párování mohou být zastaralé; před změnou stavů plateb načtení zopakuj.',
   'payments.incoming.list.empty': 'Žádné příchozí platby',
   'payments.incoming.list.col.amount': 'Částka',
   'payments.incoming.list.col.vs': 'VS',

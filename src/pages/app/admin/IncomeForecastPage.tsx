@@ -4,6 +4,7 @@ import { CreditCard, RefreshCw, UsersRound } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 
 import { useAppMode } from '../../../app/appMode';
+import { useServerTimeZone } from '../../../app/accountTimeZone';
 import { useI18n } from '../../../app/i18n';
 import { estimateIncome } from '../../../lib/api/payments';
 import { FilterBar } from '../../../components/layout/FilterBar';
@@ -46,10 +47,14 @@ function parsePage(value: string | null, pageCount: number): number {
 
 export function IncomeForecastPage() {
   const { basePath } = useAppMode();
+  const billingTimeZone = useServerTimeZone();
   const { lang, t } = useI18n();
   const [searchParams, setSearchParams] = useSearchParams();
   const locale = lang === 'cs' ? 'cs-CZ' : 'en-US';
-  const defaults = useMemo(() => defaultIncomeForecastFilters(), []);
+  const defaults = useMemo(
+    () => defaultIncomeForecastFilters(new Date(), billingTimeZone),
+    [billingTimeZone],
+  );
 
   const filters = useMemo(() => normalizeIncomeForecastFilters({
     year: searchParams.get('year'),

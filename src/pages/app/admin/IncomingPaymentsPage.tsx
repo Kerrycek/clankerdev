@@ -16,6 +16,7 @@ import { useToasts } from '../../../app/toasts';
 import { ListShell } from '../../../components/layout/ListShell';
 import { PageHeader } from '../../../components/layout/PageHeader';
 
+import { Alert } from '../../../components/ui/Alert';
 import { EmptyState } from '../../../components/ui/EmptyState';
 import { ErrorState } from '../../../components/ui/ErrorState';
 import { LoadingState } from '../../../components/ui/LoadingState';
@@ -27,8 +28,11 @@ import { incomingPaymentStateFilterOptions } from './IncomingPaymentsModel';
 import { type IncomingPaymentBulkAction, type IncomingPaymentBulkReview } from './IncomingPaymentsBulkModel';
 import { AdminFinanceTabs } from './AdminFinanceTabs';
 
+const RECONCILIATION_STATES = ['queued', 'unmatched', 'processed', 'ignored'] as const;
+type ReconciliationState = typeof RECONCILIATION_STATES[number];
+
 async function fetchIncomingPaymentStateTotal(input: {
-  state: 'queued' | 'unmatched' | 'processed' | 'ignored';
+  state: ReconciliationState;
 }): Promise<number | undefined> {
   try {
     const res = await fetchIncomingPayments({
@@ -37,7 +41,10 @@ async function fetchIncomingPaymentStateTotal(input: {
       count: true,
     });
 
-    return getMetaTotalCount(res.meta);
+    const total = getMetaTotalCount(res.meta);
+    return typeof total === 'number' && Number.isSafeInteger(total) && total >= 0
+      ? total
+      : undefined;
   } catch {
     return undefined;
   }
@@ -102,23 +109,36 @@ export function IncomingPaymentsPage() {
     refetchInterval: tierSlowMs,
   });
 
+  const activeReconciliationState = RECONCILIATION_STATES.find((candidate) => candidate === state);
   const reconciliationTotalsQ = useQuery({
-    queryKey: ['incoming_payments', 'reconciliation_totals'],
+    queryKey: ['incoming_payments', 'reconciliation_totals', { excluding: activeReconciliationState }],
     queryFn: async () => {
-      const [queued, unmatched, processed, ignored] = await Promise.all([
-        fetchIncomingPaymentStateTotal({ state: 'queued' }),
-        fetchIncomingPaymentStateTotal({ state: 'unmatched' }),
-        fetchIncomingPaymentStateTotal({ state: 'processed' }),
-        fetchIncomingPaymentStateTotal({ state: 'ignored' }),
-      ]);
+      const entries = await Promise.all(RECONCILIATION_STATES
+        .filter((candidate) => candidate !== activeReconciliationState)
+        .map(async (candidate) => [
+          candidate,
+          await fetchIncomingPaymentStateTotal({ state: candidate }),
+        ] as const));
 
-      return { queued, unmatched, processed, ignored };
+      return Object.fromEntries(entries) as Partial<Record<ReconciliationState, number | undefined>>;
     },
     refetchInterval: tierSlowMs,
   });
 
   const rows = paymentsQ.data?.data ?? [];
   const totalCount = getMetaTotalCount(paymentsQ.data?.meta);
+  const safeActiveStateTotal = typeof totalCount === 'number'
+    && Number.isSafeInteger(totalCount)
+    && totalCount >= 0
+    ? totalCount
+    : undefined;
+  const reconciliationTotals = useMemo(() => {
+    if (!activeReconciliationState) return reconciliationTotalsQ.data;
+    return {
+      ...reconciliationTotalsQ.data,
+      [activeReconciliationState]: safeActiveStateTotal,
+    };
+  }, [activeReconciliationState, reconciliationTotalsQ.data, safeActiveStateTotal]);
   const loadPaymentsPage = useCallback(async (fromId: number | undefined) => (
     await fetchIncomingPayments({
       limit: pagination.limit,
@@ -136,6 +156,11 @@ export function IncomingPaymentsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
   const [bulkAction, setBulkAction] = useState<IncomingPaymentBulkAction>('mark_unmatched');
   const [bulkApplying, setBulkApplying] = useState(false);
+
+  const refreshIncomingPayments = () => Promise.all([
+    paymentsQ.refetch(),
+    reconciliationTotalsQ.refetch(),
+  ]);
 
   useEffect(() => {
     const visibleIds = new Set(rows.map((row) => row.id));
@@ -171,12 +196,14 @@ export function IncomingPaymentsPage() {
     let succeeded = 0;
     let failed = 0;
     let firstError: unknown;
+    const succeededIds: number[] = [];
 
     try {
       for (const id of review.eligibleIds) {
         try {
           await updateIncomingPaymentState(id, review.targetState);
           succeeded += 1;
+          succeededIds.push(id);
         } catch (error: unknown) {
           failed += 1;
           firstError ??= error;
@@ -186,11 +213,13 @@ export function IncomingPaymentsPage() {
       if (succeeded > 0) {
         setSelectedIds((prev) => {
           const next = new Set(prev);
-          for (const id of review.eligibleIds) next.delete(id);
+          for (const id of succeededIds) next.delete(id);
           return next;
         });
-        await paymentsQ.refetch();
-        qc.invalidateQueries({ queryKey: ['incoming_payments', 'index'] });
+        await Promise.all([
+          qc.invalidateQueries({ queryKey: ['incoming_payments', 'index'] }),
+          qc.invalidateQueries({ queryKey: ['incoming_payments', 'reconciliation_totals'] }),
+        ]);
       }
 
       if (failed === 0) {
@@ -214,7 +243,7 @@ export function IncomingPaymentsPage() {
     } finally {
       setBulkApplying(false);
     }
-  }, [paymentsQ, qc, t, toasts]);
+  }, [qc, t, toasts]);
 
   const shareUrl = useMemo(() => (typeof window !== 'undefined' ? window.location.href : ''), [sp]);
 
@@ -232,54 +261,74 @@ export function IncomingPaymentsPage() {
           basePath={basePath}
           state={state}
           setSearchParams={setSp}
-          onRefresh={() => paymentsQ.refetch()}
+          onRefresh={() => void refreshIncomingPayments()}
+          refreshing={paymentsQ.isFetching || reconciliationTotalsQ.isFetching}
           shareUrl={shareUrl}
         />
       }
     >
       {paymentsQ.isLoading ? (
         <LoadingState testId="admin.payments.incoming.loading" />
-      ) : paymentsQ.isError ? (
+      ) : paymentsQ.isError && paymentsQ.data === undefined ? (
         <ErrorState
           testId="admin.payments.incoming.error"
           title={t('payments.incoming.list.load_error.title')}
           error={paymentsQ.error}
         />
-      ) : rows.length === 0 ? (
-        <EmptyState testId="admin.payments.incoming.empty" title={t('payments.incoming.list.empty')} />
       ) : (
         <div className="space-y-3">
-          <IncomingPaymentsBulkActions
-            rows={rows}
-            selectedIds={selectedIds}
-            action={bulkAction}
-            applying={bulkApplying}
-            onActionChange={setBulkAction}
-            onReplaceSelection={replaceSelection}
-            onClearSelection={clearSelection}
-            onApply={applyBulkReview}
-          />
+          {paymentsQ.isError ? (
+            <Alert
+              variant="warn"
+              title={t('payments.incoming.list.stale.title')}
+              description={t('payments.incoming.list.stale.body')}
+              testId="admin.payments.incoming.stale"
+            />
+          ) : null}
+          {rows.length > 0 ? (
+            <IncomingPaymentsBulkActions
+              rows={rows}
+              selectedIds={selectedIds}
+              action={bulkAction}
+              applying={bulkApplying}
+              onActionChange={setBulkAction}
+              onReplaceSelection={replaceSelection}
+              onClearSelection={clearSelection}
+              onApply={applyBulkReview}
+            />
+          ) : null}
           <IncomingPaymentsReconciliationSummary
             rows={rows}
             activeState={state}
             onSetState={setStateFilter}
-            stateTotals={reconciliationTotalsQ.data}
+            stateTotals={reconciliationTotals}
+            stateTotalsStatus={
+              reconciliationTotalsQ.isLoading
+                ? 'loading'
+                : RECONCILIATION_STATES.every((candidate) => typeof reconciliationTotals?.[candidate] === 'number')
+                  ? 'complete'
+                  : 'incomplete'
+            }
           />
-          <IncomingPaymentsListContent
-            rows={rows}
-            basePath={basePath}
-            pagination={pagination}
-            pageCount={countedPagination.pageCount}
-            totalPagesKnown={countedPagination.totalPagesKnown}
-            onGoToPage={countedPagination.goToPage}
-            maxDirectPage={countedPagination.maxDirectPage}
-            jumpPending={countedPagination.isJumping}
-            pageCursor={countedPagination.pageCursor}
-            canNext={countedPagination.canNext}
-            selectedIds={selectedIds}
-            onToggleSelected={toggleSelected}
-            onToggleAllVisible={toggleAllVisible}
-          />
+          {rows.length === 0 ? (
+            <EmptyState testId="admin.payments.incoming.empty" title={t('payments.incoming.list.empty')} />
+          ) : (
+            <IncomingPaymentsListContent
+              rows={rows}
+              basePath={basePath}
+              pagination={pagination}
+              pageCount={countedPagination.pageCount}
+              totalPagesKnown={countedPagination.totalPagesKnown}
+              onGoToPage={countedPagination.goToPage}
+              maxDirectPage={countedPagination.maxDirectPage}
+              jumpPending={countedPagination.isJumping}
+              pageCursor={countedPagination.pageCursor}
+              canNext={countedPagination.canNext}
+              selectedIds={selectedIds}
+              onToggleSelected={toggleSelected}
+              onToggleAllVisible={toggleAllVisible}
+            />
+          )}
         </div>
       )}
     </ListShell>

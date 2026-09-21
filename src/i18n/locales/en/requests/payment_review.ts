@@ -2,6 +2,10 @@
 export const enPaymentReview = {
   'payments.incoming.reconcile.summary.title': 'Reconciliation summary',
   'payments.incoming.reconcile.summary.subtitle': 'Current page: {count} payments; state filter: {state}.',
+  'payments.incoming.reconcile.summary.totals.loading.title': 'Loading global reconciliation totals',
+  'payments.incoming.reconcile.summary.totals.loading.body': 'Until all state totals arrive, the counters below temporarily reflect the payments on this page.',
+  'payments.incoming.reconcile.summary.totals.incomplete.title': 'Global reconciliation totals are incomplete',
+  'payments.incoming.reconcile.summary.totals.incomplete.body': 'At least one state total could not be verified. Its counter falls back to this page and must not be treated as a global total; refresh to try again.',
   'payments.incoming.reconcile.summary.needs_review': 'Needs review',
   'payments.incoming.reconcile.summary.needs_review.detail': 'Queued: {queued}; unmatched: {unmatched}.',
   'payments.incoming.reconcile.summary.needs_review.queued': 'Queued: {count}',
