@@ -265,4 +265,57 @@ test.describe('@smoke Admin user payments', () => {
     await expect(page.getByTestId('admin.user.payments.history.row.9601')).toBeVisible();
     await expect(next).toBeDisabled();
   });
+
+  test('@pr-smoke @pr-smoke-mobile admin payment settings review fails closed after a background account change', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page);
+    let monthlyPayment = 100;
+    let accountRequests = 0;
+    let settingsUpdates = 0;
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 100 },
+      handlers: {
+        'GET users/42': () => ({
+          user: {
+            id: 42,
+            login: 'alice',
+            level: 1,
+            monthly_payment: monthlyPayment,
+            paid_until: '2026-03-01T00:00:00.000Z',
+          },
+        }),
+        'GET user_accounts/42': () => {
+          accountRequests += 1;
+          return {
+            user_account: {
+              id: 42,
+              monthly_payment: monthlyPayment,
+              paid_until: '2026-03-01T00:00:00.000Z',
+            },
+          };
+        },
+        'PUT user_accounts/42': () => {
+          settingsUpdates += 1;
+          return { user_account: { id: 42, monthly_payment: 120 } };
+        },
+        'GET user_payments': () => ({ user_payments: [] }),
+      },
+    });
+
+    await page.goto('/admin/users/42/payments');
+    await expect(page.getByTestId('admin.user.payments.settings.monthly_payment')).toHaveValue('100');
+
+    await page.getByTestId('admin.user.payments.settings.monthly_payment').fill('120');
+    await page.getByTestId('admin.user.payments.settings.monthly.save').click();
+    await expect(page.getByTestId('admin.user.payments.settings.review.change')).toContainText(/100.*120/);
+
+    monthlyPayment = 110;
+    await page.evaluate(() => window.dispatchEvent(new Event('visibilitychange')));
+    await expect.poll(() => accountRequests).toBeGreaterThan(1);
+
+    await expect(page.getByTestId('admin.user.payments.settings.review.stale')).toBeVisible();
+    await expect(page.getByTestId('admin.user.payments.settings.review.confirm')).toBeDisabled();
+    await page.getByTestId('admin.user.payments.settings.review.confirm').click({ force: true });
+    expect(settingsUpdates).toBe(0);
+  });
 });
