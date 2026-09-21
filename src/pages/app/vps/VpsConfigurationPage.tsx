@@ -21,6 +21,7 @@ import { explicitUserNamespaceOwnerId, fetchUserNamespaceMaps } from '../../../l
 import { updateVps } from '../../../lib/api/vps';
 import { gateVpsMutation } from '../../../lib/gates/vps';
 import { objectRef } from '../../../lib/objectRef';
+import { formatMiB } from '../../../lib/format';
 import { preflightVpsNotBusy } from './vpsPreflight';
 import { useVps } from './VpsContext';
 import { freezeVpsMutationSnapshot, type VpsMutationSnapshot } from './VpsMutationSnapshot';
@@ -75,7 +76,7 @@ function mergeFieldErrorMessages(args: {
 
 export function VpsConfigurationPage() {
   const auth = useAuth();
-  const { mode } = useAppMode();
+  const { basePath, mode } = useAppMode();
   const isAdminMode = mode === 'admin';
   const canEditAdminConfig = isAdminMode && auth.role === 'admin';
   const canMutateVps = !isAdminMode || canEditAdminConfig;
@@ -344,6 +345,26 @@ export function VpsConfigurationPage() {
         <Field label={t('vps.config.field.swap')} help={t('vps.config.help.mib')} errors={fieldMessages('swap')}>
           <Input value={effective.swap} type="number" min={0} step={1} onChange={(e) => patchDraft({ swap: e.target.value })} disabled={saveM.isPending} />
         </Field>
+        {canEditAdminConfig ? (
+          <div className="md:col-span-3 flex flex-col gap-3 rounded-md border border-border bg-surface-2 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="text-sm font-semibold text-fg">{t('vps.config.field.ssd')}</div>
+              <div className="mt-1 text-xs text-muted">
+                {t('vps.config.help.ssd', { size: typeof vps.diskspace === 'number' ? formatMiB(vps.diskspace) : t('common.na') })}
+              </div>
+            </div>
+            <Button
+              to={`${basePath}/vps/${vpsId}/storage?resize=ssd`}
+              variant="secondary"
+              disabled={dirty || saveM.isPending}
+              disabledReason={dirty ? t('vps.config.help.ssd_unsaved') : undefined}
+              testId="vps.config.ssd.resize"
+              className="shrink-0"
+            >
+              {t('vps.storage.resize.open')}
+            </Button>
+          </div>
+        ) : null}
       </VpsConfigSectionCard>
 
       <VpsConfigSectionCard
