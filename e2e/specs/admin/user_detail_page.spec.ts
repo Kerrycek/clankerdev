@@ -150,6 +150,53 @@ test('admin user detail: edit drawer saves safe account fields', async ({ page }
   ]);
 });
 
+test('admin user detail: edit drawer can clear optional account fields', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+
+  const updates: any[] = [];
+  let user = {
+    id: 42,
+    login: 'alice',
+    level: 1,
+    full_name: 'Alice Example',
+    email: 'alice@example.test',
+    address: 'Example street',
+    info: 'Old note',
+    mailer_enabled: true,
+  };
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100 },
+    handlers: {
+      'GET users/42': () => ({ user }),
+      'PUT users/42': ({ reqJson }) => {
+        const payload = (reqJson as { user?: Record<string, unknown> }).user ?? {};
+        updates.push(payload);
+        user = { ...user, ...payload };
+        return { user };
+      },
+    },
+  });
+
+  await page.goto('/admin/users/42');
+  await page.getByTestId('admin.user.edit.open').click();
+  await page.getByTestId('admin.user.edit.full_name').fill('');
+  await page.getByTestId('admin.user.edit.email').fill('');
+  await page.getByTestId('admin.user.edit.address').fill('');
+  await page.getByTestId('admin.user.edit.info').fill('');
+  await page.getByTestId('admin.user.edit.save').click();
+
+  await expect(page.getByTestId('admin.user.edit.drawer')).toHaveCount(0);
+  expect(updates).toEqual([{
+    full_name: '',
+    email: '',
+    address: '',
+    level: 1,
+    info: '',
+    mailer_enabled: true,
+  }]);
+});
+
 test('admin user detail: lifecycle state update sends object state', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
 
