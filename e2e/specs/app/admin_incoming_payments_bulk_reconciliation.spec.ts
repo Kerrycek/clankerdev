@@ -8,17 +8,17 @@ test('@pr-smoke @pr-smoke-mobile admin incoming payments: bulk reconciliation re
   await bootstrapVpsAdminWindow(page);
   const haveApiMock = await installHaveApiMock(page, { user: { id: 1, login: 'admin', level: 100 } });
 
-  const payments = new Map<number, { id: number; state: string; user: { id: number; login: string } | null }>([
-    [300, { id: 300, state: 'queued', user: null }],
-    [299, { id: 299, state: 'unmatched', user: null }],
-    [298, { id: 298, state: 'processed', user: { id: 10, login: 'alice' } }],
+  const payments = new Map<number, { id: number; state: string }>([
+    [300, { id: 300, state: 'queued' }],
+    [299, { id: 299, state: 'unmatched' }],
+    [298, { id: 298, state: 'processed' }],
   ]);
   const updatedIds: number[] = [];
   let listRequests = 0;
   const totalRequests: Record<string, number> = {};
 
   function paymentEnvelope(id: number) {
-    const payment = payments.get(id) ?? { id, state: 'queued', user: null };
+    const payment = payments.get(id) ?? { id, state: 'queued' };
     return {
       id: payment.id,
       state: payment.state,
@@ -28,8 +28,6 @@ test('@pr-smoke @pr-smoke-mobile admin incoming payments: bulk reconciliation re
       currency: 'CZK',
       account_name: 'Test account',
       vs: String(payment.id),
-      user: payment.user,
-      user_paid_until: payment.user ? '2026-03-01T00:00:00Z' : null,
       created_at: '2026-02-14T09:00:00Z',
     };
   }
@@ -162,12 +160,12 @@ test('admin incoming payments: reconciliation summary links to all unmatched pay
   const requestedStateCounts: Record<string, number> = {};
 
   const payments = [
-    { id: 400, state: 'processed', user: null },
-    { id: 399, state: 'unmatched', user: null },
-    { id: 398, state: 'processed', user: { id: 11, login: 'bob' } },
+    { id: 400, state: 'processed' },
+    { id: 399, state: 'unmatched' },
+    { id: 398, state: 'processed' },
   ];
 
-  function paymentEnvelope(payment: { id: number; state: string; user: { id: number; login: string } | null }) {
+  function paymentEnvelope(payment: { id: number; state: string }) {
     return {
       id: payment.id,
       state: payment.state,
@@ -177,8 +175,6 @@ test('admin incoming payments: reconciliation summary links to all unmatched pay
       currency: 'CZK',
       account_name: 'Test account',
       vs: String(payment.id),
-      user: payment.user,
-      user_paid_until: payment.user ? '2026-03-01T00:00:00Z' : null,
       created_at: '2026-02-14T09:00:00Z',
     };
   }
@@ -410,8 +406,6 @@ test('admin incoming payments: descending keyset jump reaches page five without 
     currency: 'CZK',
     account_name: 'Test account',
     vs: String(125 - index),
-    user: { id: 10, login: 'alice' },
-    user_paid_until: '2026-03-01T00:00:00Z',
     created_at: '2026-02-14T09:00:00Z',
   }));
   const cursors: Array<number | null> = [];

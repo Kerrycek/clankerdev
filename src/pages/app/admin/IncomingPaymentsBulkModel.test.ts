@@ -11,7 +11,7 @@ const rows = [
   { id: 1, state: 'queued' },
   { id: 2, state: 'unmatched' },
   { id: 3, state: 'processed' },
-  { id: 4, state: 'unmatched', user: { id: 10, login: 'alice' } },
+  { id: 4, state: 'unmatched' },
   { id: 5, state: 'unexpected' },
 ];
 
@@ -33,9 +33,8 @@ describe('IncomingPaymentsBulkModel', () => {
     expect(review).toMatchObject({
       targetState: 'ignored',
       selectedCount: 6,
-      eligibleIds: [1, 2, 3],
-      eligibleCount: 3,
-      skippedAssigned: 1,
+      eligibleIds: [1, 2, 3, 4],
+      eligibleCount: 4,
       skippedUnknownState: 1,
       skippedMissing: 1,
       requiresConfirmation: true,
@@ -45,7 +44,7 @@ describe('IncomingPaymentsBulkModel', () => {
     });
   });
 
-  test('allows processed state but highlights unassigned processed risk', () => {
+  test('allows processed state but highlights the state-only reconciliation risk', () => {
     const review = buildIncomingPaymentBulkReview({
       rows,
       selectedIds: [1, 4],
@@ -55,7 +54,6 @@ describe('IncomingPaymentsBulkModel', () => {
     expect(review).toMatchObject({
       targetState: 'processed',
       eligibleIds: [1, 4],
-      unassignedProcessedCount: 1,
       requiresConfirmation: true,
       confirmationTarget: undefined,
       canSubmit: true,
@@ -76,6 +74,6 @@ describe('IncomingPaymentsBulkModel', () => {
       canSubmit: true,
     });
 
-    expect(selectIncomingPaymentNeedsReviewIds(rows)).toEqual([1, 2]);
+    expect(selectIncomingPaymentNeedsReviewIds(rows)).toEqual([1, 2, 4]);
   });
 });

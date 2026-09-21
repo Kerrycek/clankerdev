@@ -1,6 +1,4 @@
 import React, { useMemo } from 'react';
-import { Link } from 'react-router-dom';
-
 import { useI18n } from '../../../app/i18n';
 import { Alert } from '../../../components/ui/Alert';
 import { Badge } from '../../../components/ui/Badge';
@@ -15,7 +13,6 @@ import {
   describeIncomingPaymentState,
   incomingPaymentAccountedAmountLabel,
   incomingPaymentReceivedAmountLabel,
-  incomingPaymentUserLabel,
 } from './IncomingPaymentsModel';
 
 function MetricTile(props: {
@@ -203,7 +200,7 @@ export function IncomingPaymentsReconciliationSummary(props: {
 
 export function IncomingPaymentReconciliationCard(props: { payment: IncomingPayment; basePath: string }) {
   const { t } = useI18n();
-  const descriptor = describeIncomingPaymentState({ state: props.payment.state, user: props.payment.user });
+  const descriptor = describeIncomingPaymentState({ state: props.payment.state });
   const searchTargets = buildIncomingPaymentReviewSearchTargets(props.payment);
   const receivedAmount = incomingPaymentReceivedAmountLabel(props.payment);
   const accountedAmount = incomingPaymentAccountedAmountLabel(props.payment);
@@ -229,15 +226,6 @@ export function IncomingPaymentReconciliationCard(props: { payment: IncomingPaym
           <ReviewRow label={t('payments.incoming.reconcile.detail.next_action')} testId="admin.payments.incoming.reconciliation.detail.next_action">
             {t(descriptor.nextActionKey)}
           </ReviewRow>
-          <ReviewRow label={t('payments.incoming.review.assignment')} testId="admin.payments.incoming.reconciliation.detail.assignment">
-            {props.payment.user ? (
-              <Link className="text-accent hover:underline" to={`${props.basePath}/users/${props.payment.user.id}/payments`}>
-                {incomingPaymentUserLabel(props.payment.user)}
-              </Link>
-            ) : (
-              t('payments.incoming.review.assignment.unassigned')
-            )}
-          </ReviewRow>
           <ReviewRow label={t('payments.incoming.detail.received_amount')} testId="admin.payments.incoming.reconciliation.detail.amount">
             <span className="tabular-nums">{receivedAmount}</span>
             {accountedAmount ? (
@@ -251,12 +239,6 @@ export function IncomingPaymentReconciliationCard(props: { payment: IncomingPaym
         <div className="mt-4 rounded-lg border border-border bg-surface-2 p-3">
           <div className="text-sm font-semibold">{t('payments.incoming.reconcile.links.title')}</div>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            {props.payment.user ? (
-              <Button to={`${props.basePath}/users/${props.payment.user.id}/payments`} variant="secondary" size="sm" testId="admin.payments.incoming.reconciliation.link.user_payments">
-                {t('payments.incoming.reconcile.link.user_payments')}
-              </Button>
-            ) : null}
-
             {searchTargets.filter((target) => target.key !== 'transaction').map((target) => (
               <CopyButton
                 key={`${target.key}:${target.value}`}

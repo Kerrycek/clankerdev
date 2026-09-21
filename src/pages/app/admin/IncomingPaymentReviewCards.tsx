@@ -140,9 +140,6 @@ export function IncomingPaymentStateReviewCard(props: {
         <ReviewRow label={t('payments.incoming.review.impact')} testId="admin.payments.incoming.state.review.impact">
           {t(props.review.impactKey)}
         </ReviewRow>
-        <ReviewRow label={t('payments.incoming.review.assignment')} testId="admin.payments.incoming.state.review.assignment">
-          {props.payment.user ? t('payments.incoming.review.assignment.assigned') : t('payments.incoming.review.assignment.unassigned')}
-        </ReviewRow>
       </div>
     </div>
   );

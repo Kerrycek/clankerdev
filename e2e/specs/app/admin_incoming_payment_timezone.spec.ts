@@ -28,8 +28,6 @@ test('@pr-smoke @pr-smoke-mobile incoming payment dates follow the signed-in acc
           currency: 'CZK',
           account_name: 'Test account',
           vs: '300',
-          user: { id: 42, login: 'alice' },
-          user_paid_until: '2026-03-01T00:00:00Z',
         }],
       }),
       'GET incoming_payments/300': () => ({
@@ -44,8 +42,6 @@ test('@pr-smoke @pr-smoke-mobile incoming payment dates follow the signed-in acc
           currency: 'CZK',
           account_name: 'Test account',
           vs: '300',
-          user: { id: 42, login: 'alice' },
-          user_paid_until: '2026-03-01T00:00:00Z',
         },
       }),
     },
@@ -57,7 +53,6 @@ test('@pr-smoke @pr-smoke-mobile incoming payment dates follow the signed-in acc
     const eventDate = page.getByTestId(`admin.payments.incoming.row.300.date.${surface}`);
     await expect(eventDate).toContainText('2/13/2026');
     await expect(eventDate).toContainText('4:30');
-    await expect(page.getByTestId(`admin.payments.incoming.row.300.paid_until.${surface}`)).toHaveText('2/28/2026');
   }
   await expectNoDocumentHorizontalOverflow(page);
 
@@ -67,6 +62,5 @@ test('@pr-smoke @pr-smoke-mobile incoming payment dates follow the signed-in acc
   await expect(page.getByTestId('admin.payments.incoming.detail.event_date')).toContainText('4:30');
   await expect(page.getByTestId('admin.payments.incoming.detail.accepted_at')).toContainText('2/13/2026');
   await expect(page.getByTestId('admin.payments.incoming.detail.accepted_at')).toContainText('5:30');
-  await expect(page.getByTestId('admin.payments.incoming.detail.user_paid_until')).toHaveText('Paid until: 2/28/2026');
   await expectNoDocumentHorizontalOverflow(page);
 });
