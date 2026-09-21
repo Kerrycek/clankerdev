@@ -91,6 +91,9 @@ export function AdminUserPaymentsPage() {
     staleTime: 30_000,
     refetchOnWindowFocus: 'always',
   });
+  const accountInitialError = accountQ.isError && accountQ.data === undefined;
+  const accountDataStale = accountQ.isError && accountQ.data !== undefined;
+  const accountReviewBlocked = accountQ.isFetching || accountQ.isError;
 
   const monthlyPayment = safeInt(accountQ.data?.monthly_payment ?? user.monthly_payment);
   const paidUntil = (accountQ.data?.paid_until ?? user.paid_until) as unknown;
@@ -269,6 +272,7 @@ export function AdminUserPaymentsPage() {
 
   const submitPaidUntil = (e: React.FormEvent) => {
     e.preventDefault();
+    if (accountReviewBlocked) return;
     if (!paidUntilChanged) {
       toasts.pushToast({ variant: 'neutral', title: t('admin.user.payments.settings.validation.no_changes') });
       return;
@@ -282,6 +286,7 @@ export function AdminUserPaymentsPage() {
 
   const submitMonthlyPayment = (e: React.FormEvent) => {
     e.preventDefault();
+    if (accountReviewBlocked) return;
     if (!monthlyPaymentChanged) {
       toasts.pushToast({ variant: 'neutral', title: t('admin.user.payments.settings.validation.no_changes') });
       return;
@@ -297,6 +302,7 @@ export function AdminUserPaymentsPage() {
 
   const submitAddPayment = (e: React.FormEvent) => {
     e.preventDefault();
+    if (accountReviewBlocked) return;
     if (amountParsed === null || manualPaymentMonths === null || activeMonthlyPayment === null) return;
     setManualPaymentReview({
       amount: amountParsed,
@@ -320,20 +326,30 @@ export function AdminUserPaymentsPage() {
   );
   const manualPaymentReviewStale = manualPaymentReview !== null
     && manualPaymentReview.monthlyPayment !== activeMonthlyPayment;
-
   return (
     <div className="space-y-4">
       <Card testId="admin.user.payments.quick.card">
         <CardHeader title={t('admin.user.payments.quick.title')} subtitle={t('admin.user.payments.quick.subtitle')} />
         <CardBody>
-          {accountQ.isError ? (
+          {accountInitialError ? (
             <ErrorState
+              testId="admin.user.payments.settings.error"
               title={t('admin.user.payments.settings.load_error.title')}
               error={accountQ.error}
               showDetails
             />
           ) : null}
 
+          {accountDataStale ? (
+            <Alert
+              variant="warn"
+              title={t('admin.user.payments.settings.stale.title')}
+              description={t('admin.user.payments.settings.stale.body')}
+              testId="admin.user.payments.settings.stale"
+            />
+          ) : null}
+
+          {!accountInitialError ? (
           <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
             <div className="space-y-4 rounded-lg border border-border bg-surface-2 p-3">
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -358,7 +374,7 @@ export function AdminUserPaymentsPage() {
                     type="date"
                     value={quickPaidUntil}
                     onChange={(e) => setQuickPaidUntil(e.target.value)}
-                    disabled={accountQ.isFetching || settingsMutationPending}
+                    disabled={accountReviewBlocked || settingsMutationPending}
                   />
                   <div className="text-xs text-muted">{paidUntilSubtitle}</div>
                   <Button
@@ -366,7 +382,7 @@ export function AdminUserPaymentsPage() {
                     variant="secondary"
                     size="sm"
                     loading={paidUntilM.isPending}
-                    disabled={accountQ.isFetching || settingsMutationPending || !paidUntilChanged}
+                    disabled={accountReviewBlocked || settingsMutationPending || !paidUntilChanged}
                     testId="admin.user.payments.settings.paid_until.save"
                   >
                     {t('admin.user.payments.settings.save_paid_until')}
@@ -382,7 +398,7 @@ export function AdminUserPaymentsPage() {
                     min={1}
                     value={quickMonthlyPayment}
                     onChange={(e) => setQuickMonthlyPayment(e.target.value)}
-                    disabled={accountQ.isFetching || settingsMutationPending}
+                    disabled={accountReviewBlocked || settingsMutationPending}
                   />
                   <div className="text-xs text-muted">{t('admin.user.payments.settings.hint.monthly_payment')}</div>
                   <Button
@@ -390,7 +406,7 @@ export function AdminUserPaymentsPage() {
                     variant="secondary"
                     size="sm"
                     loading={monthlyPaymentM.isPending}
-                    disabled={accountQ.isFetching || settingsMutationPending || !monthlyPaymentChanged}
+                    disabled={accountReviewBlocked || settingsMutationPending || !monthlyPaymentChanged}
                     testId="admin.user.payments.settings.monthly.save"
                   >
                     {t('common.save')}
@@ -413,7 +429,7 @@ export function AdminUserPaymentsPage() {
                 value={quickAmount}
                 onChange={(e) => setQuickAmount(e.target.value)}
                 placeholder={monthlyPayment !== undefined ? String(monthlyPayment) : undefined}
-                disabled={addM.isPending || monthlyPaymentM.isPending || accountQ.isFetching}
+                disabled={addM.isPending || monthlyPaymentM.isPending || accountReviewBlocked}
               />
               {activeMonthlyPayment === null ? (
                 <div className="text-xs text-danger" data-testid="admin.user.payments.add.validation">
@@ -436,13 +452,14 @@ export function AdminUserPaymentsPage() {
                 type="submit"
                 variant="primary"
                 size="sm"
-                disabled={manualPaymentMonths === null || addM.isPending || monthlyPaymentM.isPending || accountQ.isFetching}
+                disabled={manualPaymentMonths === null || addM.isPending || monthlyPaymentM.isPending || accountReviewBlocked}
                 testId="admin.user.payments.add.save"
               >
                 {t('admin.user.payments.add_payment')}
               </Button>
             </form>
           </div>
+          ) : null}
         </CardBody>
       </Card>
 
@@ -452,13 +469,13 @@ export function AdminUserPaymentsPage() {
         description={t('admin.user.payments.review.settings.subtitle')}
         confirmLabel={t('common.save')}
         confirmLoading={settingsMutationPending}
-        confirmDisabled={accountQ.isFetching || settingsReviewStale}
+        confirmDisabled={accountReviewBlocked || settingsReviewStale}
         cancelDisabled={settingsMutationPending}
         onCancel={() => {
           if (!settingsMutationPending) setSettingsReview(null);
         }}
         onConfirm={() => {
-          if (settingsReview === null || settingsReviewStale || accountQ.isFetching || settingsInFlightRef.current) return;
+          if (settingsReview === null || settingsReviewStale || accountReviewBlocked || settingsInFlightRef.current) return;
           settingsInFlightRef.current = true;
           if (settingsReview.kind === 'paid_until') {
             paidUntilM.mutate(settingsReview.next || null);
@@ -532,13 +549,13 @@ export function AdminUserPaymentsPage() {
         description={t('admin.user.payments.review.add.subtitle')}
         confirmLabel={t('admin.user.payments.add_payment')}
         confirmLoading={addM.isPending}
-        confirmDisabled={accountQ.isFetching || manualPaymentReviewStale}
+        confirmDisabled={accountReviewBlocked || manualPaymentReviewStale}
         cancelDisabled={addM.isPending}
         onCancel={() => {
           if (!addM.isPending) setManualPaymentReview(null);
         }}
         onConfirm={() => {
-          if (manualPaymentReview === null || manualPaymentReviewStale || accountQ.isFetching || manualPaymentInFlightRef.current) return;
+          if (manualPaymentReview === null || manualPaymentReviewStale || accountReviewBlocked || manualPaymentInFlightRef.current) return;
           manualPaymentInFlightRef.current = true;
           addM.mutate(manualPaymentReview.amount);
         }}

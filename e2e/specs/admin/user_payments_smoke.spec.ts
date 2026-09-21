@@ -318,4 +318,107 @@ test.describe('@smoke Admin user payments', () => {
     await page.getByTestId('admin.user.payments.settings.review.confirm').click({ force: true });
     expect(settingsUpdates).toBe(0);
   });
+
+  test('@pr-smoke @pr-smoke-mobile admin payment account refresh failures preserve context but block every write', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page);
+    let accountRequests = 0;
+    let failAccountRefresh = false;
+    let settingsUpdates = 0;
+    let manualPaymentRequests = 0;
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 100 },
+      handlers: {
+        'GET users/42': () => ({
+          user: {
+            id: 42,
+            login: 'alice',
+            level: 1,
+            monthly_payment: 100,
+            paid_until: '2026-03-01T00:00:00.000Z',
+          },
+        }),
+        'GET user_accounts/42': () => {
+          accountRequests += 1;
+          if (failAccountRefresh) {
+            return {
+              status: 503,
+              contentType: 'application/json',
+              body: JSON.stringify({ status: false, message: 'temporary account failure', response: null }),
+            };
+          }
+          return {
+            user_account: {
+              id: 42,
+              monthly_payment: 100,
+              paid_until: '2026-03-01T00:00:00.000Z',
+            },
+          };
+        },
+        'PUT user_accounts/42': () => {
+          settingsUpdates += 1;
+          return { user_account: { id: 42, monthly_payment: 120 } };
+        },
+        'GET user_payments': () => ({ user_payments: [] }),
+        'POST user_payments': () => {
+          manualPaymentRequests += 1;
+          return { user_payment: { id: 9002 } };
+        },
+        'GET users/43': () => ({
+          user: {
+            id: 43,
+            login: 'bob',
+            level: 1,
+            monthly_payment: 200,
+            paid_until: '2026-03-01T00:00:00.000Z',
+          },
+        }),
+        'GET user_accounts/43': () => ({
+          status: 503,
+          contentType: 'application/json',
+          body: JSON.stringify({ status: false, message: 'initial account failure', response: null }),
+        }),
+      },
+    });
+
+    await page.goto('/admin/users/42/payments');
+    await page.getByTestId('admin.user.payments.settings.monthly_payment').fill('120');
+    await page.getByTestId('admin.user.payments.settings.monthly.save').click();
+    await expect(page.getByTestId('admin.user.payments.settings.review')).toBeVisible();
+
+    const requestsBeforeSettingsFailure = accountRequests;
+    failAccountRefresh = true;
+    await page.evaluate(() => window.dispatchEvent(new Event('visibilitychange')));
+    await expect.poll(() => accountRequests).toBeGreaterThan(requestsBeforeSettingsFailure);
+
+    await expect(page.getByTestId('admin.user.payments.settings.stale')).toContainText(/actions are disabled/i);
+    await expect(page.getByTestId('admin.user.payments.settings.review.confirm')).toBeDisabled();
+    await page.getByTestId('admin.user.payments.settings.review.confirm').click({ force: true });
+    expect(settingsUpdates).toBe(0);
+
+    const requestsBeforeRecovery = accountRequests;
+    failAccountRefresh = false;
+    await page.evaluate(() => window.dispatchEvent(new Event('visibilitychange')));
+    await expect.poll(() => accountRequests).toBeGreaterThan(requestsBeforeRecovery);
+    await expect(page.getByTestId('admin.user.payments.settings.stale')).toHaveCount(0);
+    await expect(page.getByTestId('admin.user.payments.settings.review.confirm')).toBeEnabled();
+    await page.getByTestId('admin.user.payments.settings.review.cancel').click();
+
+    await page.getByTestId('admin.user.payments.add.amount_input').fill('1800');
+    await page.getByTestId('admin.user.payments.add.save').click();
+    await expect(page.getByTestId('admin.user.payments.add.review')).toBeVisible();
+
+    failAccountRefresh = true;
+    await page.evaluate(() => window.dispatchEvent(new Event('visibilitychange')));
+    await expect(page.getByTestId('admin.user.payments.settings.stale')).toBeVisible();
+    await expect(page.getByTestId('admin.user.payments.add.review.confirm')).toBeDisabled();
+    await page.getByTestId('admin.user.payments.add.review.confirm').click({ force: true });
+    expect(manualPaymentRequests).toBe(0);
+
+    failAccountRefresh = false;
+    await page.goto('/admin/users/43/payments');
+    await expect(page.getByTestId('admin.user.payments.settings.error')).toBeVisible();
+    await expect(page.getByTestId('admin.user.payments.settings.monthly_payment')).toHaveCount(0);
+    await expect(page.getByTestId('admin.user.payments.add.amount_input')).toHaveCount(0);
+  });
 });
