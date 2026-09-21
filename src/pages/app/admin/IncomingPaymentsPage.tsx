@@ -274,20 +274,20 @@ export function IncomingPaymentsPage() {
           title={t('payments.incoming.list.load_error.title')}
           error={paymentsQ.error}
         />
-      ) : rows.length === 0 ? (
-        <EmptyState testId="admin.payments.incoming.empty" title={t('payments.incoming.list.empty')} />
       ) : (
         <div className="space-y-3">
-          <IncomingPaymentsBulkActions
-            rows={rows}
-            selectedIds={selectedIds}
-            action={bulkAction}
-            applying={bulkApplying}
-            onActionChange={setBulkAction}
-            onReplaceSelection={replaceSelection}
-            onClearSelection={clearSelection}
-            onApply={applyBulkReview}
-          />
+          {rows.length > 0 ? (
+            <IncomingPaymentsBulkActions
+              rows={rows}
+              selectedIds={selectedIds}
+              action={bulkAction}
+              applying={bulkApplying}
+              onActionChange={setBulkAction}
+              onReplaceSelection={replaceSelection}
+              onClearSelection={clearSelection}
+              onApply={applyBulkReview}
+            />
+          ) : null}
           <IncomingPaymentsReconciliationSummary
             rows={rows}
             activeState={state}
@@ -301,21 +301,25 @@ export function IncomingPaymentsPage() {
                   : 'incomplete'
             }
           />
-          <IncomingPaymentsListContent
-            rows={rows}
-            basePath={basePath}
-            pagination={pagination}
-            pageCount={countedPagination.pageCount}
-            totalPagesKnown={countedPagination.totalPagesKnown}
-            onGoToPage={countedPagination.goToPage}
-            maxDirectPage={countedPagination.maxDirectPage}
-            jumpPending={countedPagination.isJumping}
-            pageCursor={countedPagination.pageCursor}
-            canNext={countedPagination.canNext}
-            selectedIds={selectedIds}
-            onToggleSelected={toggleSelected}
-            onToggleAllVisible={toggleAllVisible}
-          />
+          {rows.length === 0 ? (
+            <EmptyState testId="admin.payments.incoming.empty" title={t('payments.incoming.list.empty')} />
+          ) : (
+            <IncomingPaymentsListContent
+              rows={rows}
+              basePath={basePath}
+              pagination={pagination}
+              pageCount={countedPagination.pageCount}
+              totalPagesKnown={countedPagination.totalPagesKnown}
+              onGoToPage={countedPagination.goToPage}
+              maxDirectPage={countedPagination.maxDirectPage}
+              jumpPending={countedPagination.isJumping}
+              pageCursor={countedPagination.pageCursor}
+              canNext={countedPagination.canNext}
+              selectedIds={selectedIds}
+              onToggleSelected={toggleSelected}
+              onToggleAllVisible={toggleAllVisible}
+            />
+          )}
         </div>
       )}
     </ListShell>

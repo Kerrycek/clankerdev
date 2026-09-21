@@ -226,6 +226,55 @@ test('admin incoming payments: reconciliation summary links to all unmatched pay
   await expect(page.getByTestId('admin.payments.incoming.row.400')).toHaveCount(0);
 });
 
+test('@pr-smoke @pr-smoke-mobile admin incoming payments: an empty filtered page keeps global reconciliation navigation', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+  const haveApiMock = await installHaveApiMock(page, { user: { id: 1, login: 'admin', level: 100 } });
+
+  haveApiMock.addHandler('GET incoming_payments', ({ searchParams }) => {
+    const state = String(searchParams.get('incoming_payment[state]') ?? '');
+    const totals: Record<string, number> = {
+      queued: 0,
+      unmatched: 3,
+      processed: 8,
+      ignored: 2,
+    };
+    const unmatched = {
+      id: 475,
+      state: 'unmatched',
+      date: '2026-02-14T09:00:00Z',
+      transaction_id: 'TX-475',
+      amount: 1000,
+      currency: 'CZK',
+      account_name: 'Test account',
+      vs: '475',
+      user: null,
+      user_paid_until: null,
+      created_at: '2026-02-14T09:00:00Z',
+    };
+
+    return {
+      status: true,
+      response: {
+        incoming_payments: state === 'unmatched' ? [unmatched] : [],
+        _meta: { total_count: state ? totals[state] ?? 0 : 13 },
+      },
+    };
+  });
+
+  await page.goto(withAppUrl('/admin/payments/incoming?state=queued'));
+
+  await expect(page.getByTestId('admin.payments.incoming.empty')).toBeVisible();
+  await expect(page.getByTestId('admin.payments.incoming.bulk.card')).toHaveCount(0);
+  await expect(page.getByTestId('admin.payments.incoming.reconciliation.metric.needs_review')).toContainText(/3/);
+  await expect(page.getByTestId('admin.payments.incoming.reconciliation.summary.open_unmatched')).toContainText(/Unmatched: 3/);
+
+  await page.getByTestId('admin.payments.incoming.reconciliation.summary.open_unmatched').click();
+
+  await expect(page).toHaveURL(/state=unmatched/);
+  await expect(page.getByTestId('admin.payments.incoming.empty')).toHaveCount(0);
+  await expect(page.locator('[data-testid="admin.payments.incoming.row.475.dot"]:visible')).toBeVisible();
+});
+
 test('@pr-smoke @pr-smoke-mobile admin incoming payments: incomplete global totals are never presented as authoritative', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
   const haveApiMock = await installHaveApiMock(page, { user: { id: 1, login: 'admin', level: 100 } });
