@@ -18,13 +18,20 @@ describe('console token helpers', () => {
     expect(normalizeRemoteConsoleServer(null)).toBeNull();
   });
 
-
   test('rejects unsafe configured console server URLs', () => {
     expect(normalizeRemoteConsoleServer('javascript:alert(1)')).toBeNull();
     expect(normalizeRemoteConsoleServer('data:text/html,<script>alert(1)</script>')).toBeNull();
     expect(normalizeRemoteConsoleServer('//evil.example/console')).toBeNull();
+    expect(normalizeRemoteConsoleServer('http://console.example/')).toBeNull();
     expect(normalizeRemoteConsoleServer('https://user:pass@console.example')).toBeNull();
     expect(normalizeRemoteConsoleServer('console.example/no-scheme')).toBeNull();
+  });
+
+  test('allows plain HTTP only for local development loopback servers', () => {
+    expect(normalizeRemoteConsoleServer('http://localhost:3000/')).toBe('http://localhost:3000');
+    expect(normalizeRemoteConsoleServer('http://127.0.0.1:3000/')).toBe('http://127.0.0.1:3000');
+    expect(normalizeRemoteConsoleServer('http://[::1]:3000/')).toBe('http://[::1]:3000');
+    expect(normalizeRemoteConsoleServer('http://localhost.example/')).toBeNull();
   });
 
   test('accepts legacy and explicit token response fields', () => {
