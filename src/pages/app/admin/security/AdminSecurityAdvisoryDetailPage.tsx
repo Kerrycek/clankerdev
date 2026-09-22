@@ -294,7 +294,9 @@ export function AdminSecurityAdvisoryDetailPage() {
   } = useSecurityAdvisoryUpdateEditing({ invalidateDetail, setUpdateError });
 
   const [outageId, setOutageId] = useState('');
+  const [linkOutageError, setLinkOutageError] = useState<string | null>(null);
   const linkOutageM = useMutation({
+    onMutate: () => setLinkOutageError(null),
     mutationFn: async () => {
       const id = Number(outageId);
       if (!Number.isInteger(id) || id <= 0) throw new Error(t('admin.security_advisories.outages.invalid_id'));
@@ -303,24 +305,36 @@ export function AdminSecurityAdvisoryDetailPage() {
       return createSecurityAdvisoryOutageLink({ outage: id, security_advisory: advisoryId });
     },
     onSuccess: async () => {
+      setLinkOutageError(null);
       setOutageId('');
       await invalidateDetail();
       pushToast({ variant: 'ok', title: t('admin.security_advisories.toast.outage_linked') });
     },
-    onError: (error) => pushToast({ variant: 'danger', title: t('admin.security_advisories.toast.outage_link_failed'), body: formatErrorMessage(error) }),
+    onError: (error) => {
+      const message = formatErrorMessage(error);
+      setLinkOutageError(message);
+      pushToast({ variant: 'danger', title: t('admin.security_advisories.toast.outage_link_failed'), body: message });
+    },
   });
   const [unlinkTarget, setUnlinkTarget] = useState<SecurityAdvisoryOutageLink | null>(null);
+  const [unlinkOutageError, setUnlinkOutageError] = useState<string | null>(null);
   const unlinkOutageM = useMutation({
+    onMutate: () => setUnlinkOutageError(null),
     mutationFn: () => {
       if (!unlinkTarget) throw new Error('Missing outage link');
       return deleteSecurityAdvisoryOutageLink(unlinkTarget.id);
     },
     onSuccess: async () => {
+      setUnlinkOutageError(null);
       setUnlinkTarget(null);
       await invalidateDetail();
       pushToast({ variant: 'ok', title: t('admin.security_advisories.toast.outage_unlinked') });
     },
-    onError: (error) => pushToast({ variant: 'danger', title: t('common.error'), body: formatErrorMessage(error) }),
+    onError: (error) => {
+      const message = formatErrorMessage(error);
+      setUnlinkOutageError(message);
+      pushToast({ variant: 'danger', title: t('common.error'), body: message });
+    },
   });
 
   if (!validId) return <Alert variant="danger" title={t('common.error')}>{t('admin.security_advisories.invalid_id')}</Alert>;
@@ -424,10 +438,17 @@ export function AdminSecurityAdvisoryDetailPage() {
           outageId={outageId}
           loading={outagesQ.isLoading}
           linking={linkOutageM.isPending}
+          linkError={linkOutageError}
           error={outagesQ.error}
-          onOutageIdChange={setOutageId}
+          onOutageIdChange={(value) => {
+            setOutageId(value);
+            setLinkOutageError(null);
+          }}
           onLink={() => linkOutageM.mutate()}
-          onUnlink={setUnlinkTarget}
+          onUnlink={(link) => {
+            setUnlinkOutageError(null);
+            setUnlinkTarget(link);
+          }}
         />
       ) : null}
 
@@ -493,7 +514,11 @@ export function AdminSecurityAdvisoryDetailPage() {
         onUpdateConfirm={() => pendingUpdate && createUpdateM.mutate(pendingUpdate)}
         unlinkTarget={unlinkTarget}
         unlinkSaving={unlinkOutageM.isPending}
-        onUnlinkClose={() => setUnlinkTarget(null)}
+        unlinkError={unlinkOutageError}
+        onUnlinkClose={() => {
+          setUnlinkOutageError(null);
+          setUnlinkTarget(null);
+        }}
         onUnlinkConfirm={() => unlinkOutageM.mutate()}
       />
     </div>

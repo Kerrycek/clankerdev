@@ -402,6 +402,89 @@ test.describe('@smoke Security advisory admin management', () => {
     expect(rebuildAttempts).toBe(2);
   });
 
+  test('@pr-smoke @pr-smoke-mobile keeps rejected outage link changes in context for retry', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'SECURITY_OUTAGE_RETRY' });
+
+    const advisory = {
+      id: 77,
+      state: 'draft',
+      name: 'Linux kernel advisory',
+      published_at: null,
+      created_at: '2026-07-27T10:00:00.000Z',
+      en_summary: 'Kernel vulnerability',
+      en_description: 'Affects supported compute nodes.',
+      en_response: 'Apply the fixed kernel and reboot.',
+    };
+    let outageLinks: Array<Record<string, unknown>> = [];
+    let linkAttempts = 0;
+    let unlinkAttempts = 0;
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'security-admin', level: 90 },
+      handlers: {
+        'GET languages': () => ({ languages }),
+        'GET security_advisories/77': () => ({ security_advisory: advisory }),
+        'GET security_advisory_cves': () => ({ security_advisory_cves: [] }),
+        'GET nodes': () => ({ nodes: [] }),
+        'GET security_advisories/77/node_statuses': () => ({ node_statuses: [] }),
+        'GET security_advisory_updates': () => ({ security_advisory_updates: [] }),
+        'GET outage_security_advisories': () => ({ outage_security_advisories: outageLinks }),
+        'POST outage_security_advisories': ({ reqJson }) => {
+          linkAttempts += 1;
+          if (linkAttempts === 1) return failEnvelope('Outage link was rejected');
+          const outageId = (reqJson as any)?.outage_security_advisory?.outage;
+          const link = {
+            id: 801,
+            security_advisory_id: 77,
+            outage_id: outageId,
+            outage: {
+              id: outageId,
+              begins_at: '2026-07-27T14:00:00.000Z',
+              en_summary: 'Emergency kernel maintenance',
+            },
+          };
+          outageLinks = [link];
+          return { outage_security_advisory: link };
+        },
+        'DELETE outage_security_advisories/801': () => {
+          unlinkAttempts += 1;
+          if (unlinkAttempts === 1) return failEnvelope('Outage unlink was rejected');
+          outageLinks = [];
+          return null;
+        },
+      },
+    });
+
+    await page.goto('/admin/security-advisories/77?tab=outages');
+    const outageInput = page.getByTestId('admin.security_advisory.outages.id');
+    await outageInput.fill('321');
+    await page.getByTestId('admin.security_advisory.outages.link').click();
+
+    await expect(page.getByTestId('admin.security_advisory.outages.link_error')).toContainText(
+      'Outage link was rejected',
+    );
+    await expect(outageInput).toHaveValue('321');
+
+    await page.getByTestId('admin.security_advisory.outages.link').click();
+    await expect(page.getByTestId('admin.security_advisory.outages.link_error')).toHaveCount(0);
+    await expect(outageInput).toHaveValue('');
+    await expect(page.getByRole('link', { name: '#321' })).toBeVisible();
+
+    await page.getByTestId('admin.security_advisory.outages.unlink.801').click();
+    await page.getByTestId('admin.security_advisory.outages.unlink.confirm').click();
+
+    await expect(page.getByTestId('admin.security_advisory.outages.unlink.error')).toContainText(
+      'Outage unlink was rejected',
+    );
+    await expect(page.getByTestId('admin.security_advisory.outages.unlink')).toBeVisible();
+
+    await page.getByTestId('admin.security_advisory.outages.unlink.confirm').click();
+    await expect(page.getByTestId('admin.security_advisory.outages.unlink')).toHaveCount(0);
+    await expect(page.getByRole('link', { name: '#321' })).toHaveCount(0);
+    expect(linkAttempts).toBe(2);
+    expect(unlinkAttempts).toBe(2);
+  });
+
   test('rejects a normal user before any advisory administration is rendered', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installHaveApiMock(page, {

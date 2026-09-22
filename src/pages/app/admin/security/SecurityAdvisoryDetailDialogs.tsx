@@ -69,6 +69,7 @@ export function SecurityAdvisoryDetailDialogs(props: {
   onUpdateConfirm: () => void;
   unlinkTarget: SecurityAdvisoryOutageLink | null;
   unlinkSaving: boolean;
+  unlinkError: string | null;
   onUnlinkClose: () => void;
   onUnlinkConfirm: () => void;
 }) {
@@ -225,7 +226,17 @@ export function SecurityAdvisoryDetailDialogs(props: {
         danger
         confirmLoading={props.unlinkSaving}
         testId="admin.security_advisory.outages.unlink"
-      />
+      >
+        {props.unlinkError ? (
+          <Alert
+            variant="danger"
+            title={t('common.error')}
+            testId="admin.security_advisory.outages.unlink.error"
+          >
+            {props.unlinkError}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
     </>
   );
 }
