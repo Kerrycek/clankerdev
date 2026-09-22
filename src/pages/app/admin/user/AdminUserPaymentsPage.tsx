@@ -205,10 +205,6 @@ export function AdminUserPaymentsPage() {
       void qc.invalidateQueries({ queryKey: ['payment_stats', 'estimate_income'] });
       refetch();
     },
-    onError: (e) => {
-      const msg = formatErrorMessage(e);
-      toasts.pushToast({ variant: 'danger', title: t('common.error'), body: msg, autoDismissMs: false });
-    },
   });
 
   const monthlyPaymentM = useMutation({
@@ -230,10 +226,6 @@ export function AdminUserPaymentsPage() {
       void qc.invalidateQueries({ queryKey: ['finance'] });
       void qc.invalidateQueries({ queryKey: ['payment_stats', 'estimate_income'] });
       refetch();
-    },
-    onError: (e) => {
-      const msg = formatErrorMessage(e);
-      toasts.pushToast({ variant: 'danger', title: t('common.error'), body: msg, autoDismissMs: false });
     },
   });
 
@@ -273,10 +265,6 @@ export function AdminUserPaymentsPage() {
       void qc.invalidateQueries({ queryKey: ['payment_stats', 'estimate_income'] });
       refetch();
     },
-    onError: (e) => {
-      const msg = formatErrorMessage(e);
-      toasts.pushToast({ variant: 'danger', title: t('common.error'), body: msg, autoDismissMs: false });
-    },
   });
 
   const submitPaidUntil = (e: React.FormEvent) => {
@@ -286,6 +274,7 @@ export function AdminUserPaymentsPage() {
       toasts.pushToast({ variant: 'neutral', title: t('admin.user.payments.settings.validation.no_changes') });
       return;
     }
+    paidUntilM.reset();
     setSettingsReview({
       kind: 'paid_until',
       previous: currentPaidUntilInput,
@@ -301,6 +290,7 @@ export function AdminUserPaymentsPage() {
       return;
     }
     if (monthlyPaymentParsed !== null) {
+      monthlyPaymentM.reset();
       setSettingsReview({
         kind: 'monthly_payment',
         previous: monthlyPayment ?? null,
@@ -313,6 +303,7 @@ export function AdminUserPaymentsPage() {
     e.preventDefault();
     if (accountReviewBlocked) return;
     if (amountParsed === null || manualPaymentMonths === null || activeMonthlyPayment === null) return;
+    addM.reset();
     setManualPaymentReview({
       amount: amountParsed,
       monthlyPayment: activeMonthlyPayment,
@@ -321,6 +312,7 @@ export function AdminUserPaymentsPage() {
   };
 
   const settingsMutationPending = paidUntilM.isPending || monthlyPaymentM.isPending;
+  const settingsReviewError = settingsReview?.kind === 'paid_until' ? paidUntilM.error : monthlyPaymentM.error;
   const paidUntilMovesBackward = settingsReview?.kind === 'paid_until'
     && Boolean(settingsReview.previous)
     && Boolean(settingsReview.next)
@@ -488,7 +480,11 @@ export function AdminUserPaymentsPage() {
         confirmDisabled={accountReviewBlocked || settingsReviewStale}
         cancelDisabled={settingsMutationPending}
         onCancel={() => {
-          if (!settingsMutationPending) setSettingsReview(null);
+          if (!settingsMutationPending) {
+            paidUntilM.reset();
+            monthlyPaymentM.reset();
+            setSettingsReview(null);
+          }
         }}
         onConfirm={() => {
           if (settingsReview === null || settingsReviewStale || accountReviewBlocked || settingsInFlightRef.current) return;
@@ -510,6 +506,11 @@ export function AdminUserPaymentsPage() {
                 testId="admin.user.payments.settings.review.stale"
               >
                 {t('admin.user.payments.review.settings.stale.body')}
+              </Alert>
+            ) : null}
+            {settingsReviewError ? (
+              <Alert variant="danger" title={t('common.error')} testId="admin.user.payments.settings.review.error">
+                {formatErrorMessage(settingsReviewError)}
               </Alert>
             ) : null}
             {paidUntilMovesBackward ? (
@@ -577,7 +578,10 @@ export function AdminUserPaymentsPage() {
         confirmDisabled={accountReviewBlocked || manualPaymentReviewStale}
         cancelDisabled={addM.isPending}
         onCancel={() => {
-          if (!addM.isPending) setManualPaymentReview(null);
+          if (!addM.isPending) {
+            addM.reset();
+            setManualPaymentReview(null);
+          }
         }}
         onConfirm={() => {
           if (manualPaymentReview === null || manualPaymentReviewStale || accountReviewBlocked || manualPaymentInFlightRef.current) return;
@@ -595,6 +599,11 @@ export function AdminUserPaymentsPage() {
                 testId="admin.user.payments.add.review.stale"
               >
                 {t('admin.user.payments.review.add.stale.body')}
+              </Alert>
+            ) : null}
+            {addM.isError ? (
+              <Alert variant="danger" title={t('common.error')} testId="admin.user.payments.add.review.error">
+                {formatErrorMessage(addM.error)}
               </Alert>
             ) : null}
             <div className="divide-y divide-border rounded-md border border-border bg-surface-2 text-sm">
