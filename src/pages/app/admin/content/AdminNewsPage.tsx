@@ -220,6 +220,7 @@ export function AdminNewsPage() {
                         size="sm"
                         variant="danger"
                         onClick={() => {
+                          delM.reset();
                           setDeleteTarget(n);
                           setDeleteOpen(true);
                         }}
@@ -326,6 +327,7 @@ export function AdminNewsPage() {
         confirmLabel={t('common.delete')}
         confirmLoading={delM.isPending}
         onCancel={() => {
+          delM.reset();
           setDeleteOpen(false);
           setDeleteTarget(null);
         }}
@@ -333,9 +335,16 @@ export function AdminNewsPage() {
         testId="admin.newslog.delete_confirm"
       >
         {deleteTarget ? (
-          <div className="rounded-md border border-border bg-surface p-3 text-sm">
-            <div className="font-semibold">#{deleteTarget.id}</div>
-            <div className="mt-1 text-muted">{snippet(deleteTarget.message, 220) || t('common.na')}</div>
+          <div className="space-y-3">
+            <div className="rounded-md border border-border bg-surface p-3 text-sm">
+              <div className="font-semibold">#{deleteTarget.id}</div>
+              <div className="mt-1 text-muted">{snippet(deleteTarget.message, 220) || t('common.na')}</div>
+            </div>
+            {delM.isError ? (
+              <Alert variant="danger" title={t('common.error')} testId="admin.newslog.delete_confirm.error">
+                {formatErrorMessage(delM.error)}
+              </Alert>
+            ) : null}
           </div>
         ) : null}
       </ConfirmDialog>
