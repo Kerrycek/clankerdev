@@ -5,6 +5,7 @@ const test = require('node:test');
 
 const {
   DEFAULT_OAUTH_STATE_MAX_AGE_MS,
+  MIN_SESSION_SECRET_BYTES,
   clearSessionCookie,
   consumeOAuthState,
   createFixedWindowRateLimiter,
@@ -18,8 +19,32 @@ const {
   saveSession,
   setRuntimeConfigSecurityHeaders,
   setRuntimeSessionSecurityHeaders,
+  validateSessionSecret,
   validateOAuthTokenResponse,
 } = require('./security');
+
+test('session secret validation rejects missing and short signing keys without reflecting them', () => {
+  const shortSecret = 'change-me';
+
+  assert.throws(
+    () => validateSessionSecret(undefined),
+    new RegExp(`at least ${MIN_SESSION_SECRET_BYTES} bytes`),
+  );
+  assert.throws(
+    () => validateSessionSecret(shortSecret),
+    (error) => {
+      assert.match(error.message, new RegExp(`at least ${MIN_SESSION_SECRET_BYTES} bytes`));
+      assert.equal(error.message.includes(shortSecret), false);
+      return true;
+    },
+  );
+});
+
+test('session secret validation accepts a signing key of at least 32 UTF-8 bytes', () => {
+  const secret = 'á'.repeat(MIN_SESSION_SECRET_BYTES / 2);
+  assert.equal(Buffer.byteLength(secret, 'utf8'), MIN_SESSION_SECRET_BYTES);
+  assert.equal(validateSessionSecret(secret), secret);
+});
 
 test('sanitizeNext keeps same-origin paths and rejects redirect tricks', () => {
   assert.equal(sanitizeNext('/app/vps/42?tab=network#routes'), '/app/vps/42?tab=network#routes');
