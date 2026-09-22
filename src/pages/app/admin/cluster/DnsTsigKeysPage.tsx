@@ -95,6 +95,15 @@ export function DnsTsigKeysPage() {
     },
   });
   const deleteM = useMutation({ mutationFn: async () => { if (!confirmDelete) throw new Error('missing key'); return deleteDnsTsigKey(confirmDelete.id); }, onSuccess: () => { pushToast({ variant: 'ok', title: t('common.deleted') }); setConfirmDelete(null); void listQ.refetch(); } });
+  const openDelete = (row: DnsTsigKeySummary) => {
+    deleteM.reset();
+    setConfirmDelete(row);
+  };
+  const closeDelete = () => {
+    if (deleteM.isPending) return;
+    deleteM.reset();
+    setConfirmDelete(null);
+  };
 
   if (listQ.isLoading) return <LoadingState testId="admin.cluster.dns_tsig.loading" label={t('admin.cluster.dns_tsig.loading')} />;
   if (listQ.isError) return <ErrorState testId="admin.cluster.dns_tsig.error" title={t('admin.cluster.dns_tsig.load_failed')} error={listQ.error} onRetry={() => void listQ.refetch()} showBack={false} />;
@@ -144,7 +153,7 @@ export function DnsTsigKeysPage() {
                       title={t('common.delete')}
                       ariaLabel={`${t('common.delete')}: ${String(row.name ?? `#${row.id}`)}`}
                       testId={`admin.cluster.dns_tsig.card.${row.id}.delete`}
-                      onClick={() => setConfirmDelete(row)}
+                      onClick={() => openDelete(row)}
                     >
                       <Trash2 className="h-4 w-4" aria-hidden />
                       {t('common.delete')}
@@ -196,7 +205,7 @@ export function DnsTsigKeysPage() {
             }
           >
               <thead><tr className="text-left text-xs uppercase tracking-wide text-faint"><th className="py-2 pl-4 pr-3">{t('common.name')}</th><th className="py-2 pr-3">{t('common.user')}</th><th className="py-2 pr-3">{t('common.algorithm')}</th><th className="py-2 pr-3">{t('common.created')}</th><th className="py-2 pr-4">{t('common.actions')}</th></tr></thead>
-              <tbody>{rows.map((row) => <tr key={row.id} className="border-t border-border" data-testid={`admin.cluster.dns_tsig.row.${row.id}`}><td className="py-2 pl-4 pr-3 font-medium text-fg">{String(row.name ?? `#${row.id}`)}</td><td className="py-2 pr-3">{typeof row.user?.login === 'string' ? String(row.user.login) : t('common.na')}</td><td className="py-2 pr-3"><Badge variant="neutral">{String(row.algorithm ?? t('common.na'))}</Badge></td><td className="py-2 pr-3">{row.created_at ? formatDateTime(String(row.created_at)) : t('common.na')}</td><td className="py-2 pr-4 text-right"><ActionButton size="sm" variant="danger" className="h-8 w-8 min-w-8 px-0" title={t('common.delete')} ariaLabel={t('common.delete')} testId={`admin.cluster.dns_tsig.row.${row.id}.delete`} onClick={() => setConfirmDelete(row)}><Trash2 className="h-4 w-4" aria-hidden /></ActionButton></td></tr>)}</tbody>
+              <tbody>{rows.map((row) => <tr key={row.id} className="border-t border-border" data-testid={`admin.cluster.dns_tsig.row.${row.id}`}><td className="py-2 pl-4 pr-3 font-medium text-fg">{String(row.name ?? `#${row.id}`)}</td><td className="py-2 pr-3">{typeof row.user?.login === 'string' ? String(row.user.login) : t('common.na')}</td><td className="py-2 pr-3"><Badge variant="neutral">{String(row.algorithm ?? t('common.na'))}</Badge></td><td className="py-2 pr-3">{row.created_at ? formatDateTime(String(row.created_at)) : t('common.na')}</td><td className="py-2 pr-4 text-right"><ActionButton size="sm" variant="danger" className="h-8 w-8 min-w-8 px-0" title={t('common.delete')} ariaLabel={t('common.delete')} testId={`admin.cluster.dns_tsig.row.${row.id}.delete`} onClick={() => openDelete(row)}><Trash2 className="h-4 w-4" aria-hidden /></ActionButton></td></tr>)}</tbody>
           </TableCard>
         </>
       )}
@@ -238,7 +247,21 @@ export function DnsTsigKeysPage() {
         </div>
       </Modal>
 
-      <ConfirmDialog testId="admin.cluster.dns_tsig.delete_confirm" open={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title={t('admin.cluster.dns_tsig.delete.title')} description={confirmDelete ? t('admin.cluster.dns_tsig.delete.description', { name: String(confirmDelete.name ?? `#${confirmDelete.id}`) }) : ''} confirmLabel={t('common.delete')} confirmVariant="danger" onConfirm={() => deleteM.mutate()} loading={deleteM.isPending} />
+      <ConfirmDialog
+        testId="admin.cluster.dns_tsig.delete_confirm"
+        open={confirmDelete !== null}
+        onCancel={closeDelete}
+        title={t('admin.cluster.dns_tsig.delete.title')}
+        description={confirmDelete ? t('admin.cluster.dns_tsig.delete.description', { name: String(confirmDelete.name ?? `#${confirmDelete.id}`) }) : ''}
+        confirmLabel={t('common.delete')}
+        confirmVariant="danger"
+        onConfirm={() => deleteM.mutate()}
+        loading={deleteM.isPending}
+      >
+        {deleteM.isError ? (
+          <Alert variant="danger">{formatErrorMessage(deleteM.error)}</Alert>
+        ) : null}
+      </ConfirmDialog>
     </div>
   );
 }

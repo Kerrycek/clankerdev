@@ -98,3 +98,60 @@ test('@pr-smoke @pr-smoke-mobile @smoke-mobile admin TSIG key delete stays reach
     await expect(page.getByTestId('admin.cluster.dns_tsig.card.1')).toBeVisible();
   }
 });
+
+test('@pr-smoke @pr-smoke-mobile admin TSIG key delete keeps a rejected request in context', async ({
+  page,
+}, testInfo) => {
+  const mobile = testInfo.project.name === 'mobile-chrome';
+  let deleteCalls = 0;
+  if (mobile) await page.setViewportSize({ width: 320, height: 900 });
+
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 90 },
+    handlers: {
+      'GET dns_tsig_keys': () => ({
+        dns_tsig_keys: [{
+          id: 1,
+          name: 'active-transfer-key',
+          algorithm: 'hmac-sha256',
+          created_at: '2026-09-15T12:00:00Z',
+          user: { id: 10, login: 'alice' },
+        }],
+        _meta: { total_count: 1 },
+      }),
+      'DELETE dns_tsig_keys/1': () => {
+        deleteCalls += 1;
+        return {
+          status: 409,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            status: false,
+            message: 'TSIG key is still assigned to a DNS server',
+            response: null,
+          }),
+        };
+      },
+    },
+  });
+
+  await page.goto('/admin/cluster/dns-tsig-keys');
+  await page.getByTestId(
+    mobile ? 'admin.cluster.dns_tsig.card.1.delete' : 'admin.cluster.dns_tsig.row.1.delete',
+  ).click();
+  await page.getByTestId('admin.cluster.dns_tsig.delete_confirm.confirm').click();
+
+  await expect.poll(() => deleteCalls).toBe(1);
+  const dialog = page.getByTestId('admin.cluster.dns_tsig.delete_confirm');
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText('TSIG key is still assigned to a DNS server');
+  await expect(page.getByTestId('admin.cluster.dns_tsig.delete_confirm.confirm')).toBeEnabled();
+
+  await page.getByTestId('admin.cluster.dns_tsig.delete_confirm.cancel').click();
+  await page.getByTestId(
+    mobile ? 'admin.cluster.dns_tsig.card.1.delete' : 'admin.cluster.dns_tsig.row.1.delete',
+  ).click();
+  await expect(page.getByTestId('admin.cluster.dns_tsig.delete_confirm')).not.toContainText(
+    'TSIG key is still assigned to a DNS server',
+  );
+});
