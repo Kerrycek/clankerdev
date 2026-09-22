@@ -225,6 +225,7 @@ export function VpsConfigurationPage() {
 
   const applySave = () => {
     if (saveDisabled) return;
+    saveM.reset();
     setConfirmOpen(true);
   };
 
@@ -504,8 +505,22 @@ export function VpsConfigurationPage() {
           vpsId, payload: Object.freeze({ ...result.payload }), canMutate: canMutateVps,
           knownBusy: busyTransaction || busyLocalLock, objectLabel,
         }))}
+        testId="vps.config.confirm"
       >
         <div className="space-y-3">
+          {saveM.error ? (
+            <div data-testid="vps.config.confirm.error">
+              {fieldErrors.length > 0 ? (
+                <VpsConfigFieldErrorsAlert errors={fieldErrors} labelForKey={labelForKey} />
+              ) : (
+                <Alert variant="danger">
+                  {isMissingActionStateError(saveM.error)
+                    ? t('vps.mutation.error.missing_action_state')
+                    : String((saveM.error as Error)?.message ?? saveM.error)}
+                </Alert>
+              )}
+            </div>
+          ) : null}
           <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.config.confirm.target" />
           <VpsConfigChangesList changes={changes} compact />
         </div>
