@@ -670,7 +670,10 @@ export function VpsNetworkPage() {
           setOwnerUser('');
           setOwnerEnvironment('');
         }}
-        onFreeRoute={setFreeRouteIp}
+        onFreeRoute={(ip) => {
+          freeRouteM.reset();
+          setFreeRouteIp(ip);
+        }}
         onAssignRoute={(ip) => {
           setAddIpInitial(ip);
           setAddIpOpen(true);
@@ -689,8 +692,14 @@ export function VpsNetworkPage() {
           const networkInterfaceId = idFromResourceRef(row.ip_address?.network_interface);
           setAssignHostInterface(networkInterfaceId ? String(networkInterfaceId) : '');
         }}
-        onFreeHost={setFreeHost}
-        onDeleteHost={setDeleteHost}
+        onFreeHost={(row) => {
+          freeHostM.reset();
+          setFreeHost(row);
+        }}
+        onDeleteHost={(row) => {
+          deleteHostM.reset();
+          setDeleteHost(row);
+        }}
       />
 
       <AssignIpAddressModal
@@ -887,10 +896,20 @@ export function VpsNetworkPage() {
         confirmLabel={t('vps.network.host_addresses.action.free')}
         confirmLoading={freeHostM.isPending}
         confirmDisabled={!gate.allowed}
-        onCancel={() => setFreeHost(null)}
+        onCancel={() => {
+          freeHostM.reset();
+          setFreeHost(null);
+        }}
         onConfirm={submitFreeHost}
       >
-        <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.network.host_addresses.free_confirm.target" />
+        <div className="space-y-3">
+          <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.network.host_addresses.free_confirm.target" />
+          {freeHostM.isError ? (
+            <Alert variant="danger" testId="vps.network.host_addresses.free_confirm.error">
+              {errorMessage(freeHostM.error)}
+            </Alert>
+          ) : null}
+        </div>
       </ConfirmDialog>
 
       <Modal
@@ -1052,10 +1071,20 @@ export function VpsNetworkPage() {
         confirmLabel={t('common.delete')}
         confirmLoading={deleteHostM.isPending}
         confirmDisabled={!gate.allowed}
-        onCancel={() => setDeleteHost(null)}
+        onCancel={() => {
+          deleteHostM.reset();
+          setDeleteHost(null);
+        }}
         onConfirm={submitDeleteHost}
       >
-        <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.network.host_addresses.delete_confirm.target" />
+        <div className="space-y-3">
+          <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.network.host_addresses.delete_confirm.target" />
+          {deleteHostM.isError ? (
+            <Alert variant="danger" testId="vps.network.host_addresses.delete_confirm.error">
+              {errorMessage(deleteHostM.error)}
+            </Alert>
+          ) : null}
+        </div>
       </ConfirmDialog>
 
       <ConfirmDialog
@@ -1073,10 +1102,20 @@ export function VpsNetworkPage() {
         confirmLabel={t('vps.network.ip_addresses.action.free_route')}
         confirmLoading={freeRouteM.isPending}
         confirmDisabled={!gate.allowed}
-        onCancel={() => setFreeRouteIp(null)}
+        onCancel={() => {
+          freeRouteM.reset();
+          setFreeRouteIp(null);
+        }}
         onConfirm={submitFreeRoute}
       >
-        <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.network.ip_addresses.free_route_confirm.target" />
+        <div className="space-y-3">
+          <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.network.ip_addresses.free_route_confirm.target" />
+          {freeRouteM.isError ? (
+            <Alert variant="danger" testId="vps.network.ip_addresses.free_route_confirm.error">
+              {errorMessage(freeRouteM.error)}
+            </Alert>
+          ) : null}
+        </div>
       </ConfirmDialog>
 
       <ConfirmDialog
