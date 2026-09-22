@@ -11,6 +11,7 @@ import { Alert } from '../../../../components/ui/Alert';
 import { Badge } from '../../../../components/ui/Badge';
 import { Button } from '../../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../../components/ui/Card';
+import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog';
 import { Drawer } from '../../../../components/ui/Drawer';
 import { Input } from '../../../../components/ui/Input';
 import { LinkButton } from '../../../../components/ui/LinkButton';
@@ -76,6 +77,12 @@ interface LifecycleUpdateReceipt {
   requestedState?: string;
 }
 
+interface LifecycleUpdateRequest {
+  userId: number;
+  objectLabel: string;
+  payload: Record<string, unknown>;
+}
+
 function reminderPresetInput(preset: '1w' | '2w' | '1y'): string {
   const next = new Date();
   if (preset === '1y') next.setFullYear(next.getFullYear() + 1);
@@ -97,6 +104,7 @@ export function AdminUserOverviewPage() {
   const [stateDraft, setStateDraft] = useState<StateDraft>(() => makeStateDraft(u));
   const [stateError, setStateError] = useState<string | null>(null);
   const [stateReceipt, setStateReceipt] = useState<LifecycleUpdateReceipt | null>(null);
+  const [pendingStateUpdate, setPendingStateUpdate] = useState<LifecycleUpdateRequest | null>(null);
   const lifetimeMutationGuard = useAdminUserLifetimeMutationGuard(u.id);
   const userInfo = optionalStringField(u, 'info');
   const userRole = roleFromLevel(typeof u.level === 'number' ? u.level : undefined);
@@ -107,6 +115,7 @@ export function AdminUserOverviewPage() {
   const selectedStateOption = USER_STATE_OPTIONS.find((option) => option.value === stateDraft.objectState)
     ?? USER_STATE_OPTIONS[0];
   const receiptStateOption = USER_STATE_OPTIONS.find((option) => option.value === stateReceipt?.requestedState);
+  const pendingStateOption = USER_STATE_OPTIONS.find((option) => option.value === pendingStateUpdate?.payload['object_state']);
 
   const paymentHistoryQ = useQuery({
     queryKey: ['user_payments', 'overview', { userId: u.id, limit: 5 }],
@@ -219,7 +228,7 @@ export function AdminUserOverviewPage() {
   });
 
   const stateM = useMutation({
-    mutationFn: (variables: { userId: number; objectLabel: string; payload: Record<string, unknown> }) => updateUser(variables.userId, variables.payload),
+    mutationFn: (variables: LifecycleUpdateRequest) => updateUser(variables.userId, variables.payload),
     onMutate: (variables) => {
       setStateReceipt(null);
       return lifetimeMutationGuard.acquire(variables.userId);
@@ -235,6 +244,7 @@ export function AdminUserOverviewPage() {
       const requestedStateOption = USER_STATE_OPTIONS.find((option) => option.value === requestedState);
       if (u.id === variables.userId) {
         setStateError(null);
+        setPendingStateUpdate(null);
         // An asynchronous state update can return the account's old state while
         // the task is still queued. Keep the accepted request in the form so the
         // UI does not appear to undo the administrator's selection.
@@ -406,7 +416,18 @@ export function AdminUserOverviewPage() {
                   setStateError(t('admin.user.lifecycle.validation.no_changes'));
                   return;
                 }
-                stateM.mutate(Object.freeze({ userId: u.id, objectLabel: String(u.login ?? `#${u.id}`), payload: Object.freeze({ ...statePayload }) }));
+                const request = Object.freeze({
+                  userId: u.id,
+                  objectLabel: String(u.login ?? `#${u.id}`),
+                  payload: Object.freeze({ ...statePayload }),
+                });
+                if (typeof request.payload['object_state'] === 'string' && request.payload['object_state'] !== 'active') {
+                  stateM.reset();
+                  setStateError(null);
+                  setPendingStateUpdate(request);
+                  return;
+                }
+                stateM.mutate(request);
               }}
               data-testid="admin.user.lifecycle.form"
             >
@@ -671,6 +692,46 @@ export function AdminUserOverviewPage() {
           </div>
         </div>
       </Drawer>
+
+      <ConfirmDialog
+        open={pendingStateUpdate !== null}
+        title={t('admin.user.lifecycle.confirm.title')}
+        description={t('admin.user.lifecycle.confirm.description')}
+        danger
+        confirmLabel={t('admin.user.lifecycle.confirm.submit')}
+        confirmLoading={stateM.isPending}
+        onCancel={() => {
+          if (stateM.isPending) return;
+          setPendingStateUpdate(null);
+          setStateError(null);
+          stateM.reset();
+        }}
+        onConfirm={() => {
+          if (pendingStateUpdate) stateM.mutate(pendingStateUpdate);
+        }}
+        testId="admin.user.lifecycle.confirm"
+      >
+        <div className="space-y-3">
+          <div className="rounded-md border border-border bg-surface-2 p-3 text-sm">
+            <div>
+              <span className="text-muted">{t('admin.user.lifecycle.confirm.target')}: </span>
+              <strong>{pendingStateUpdate?.objectLabel} (#{pendingStateUpdate?.userId})</strong>
+            </div>
+            <div className="mt-2">
+              <span className="text-muted">{t('admin.user.lifecycle.confirm.state')}: </span>
+              <strong>{pendingStateOption ? t(pendingStateOption.labelKey) : t('common.na')}</strong>
+            </div>
+            {pendingStateOption ? (
+              <div className="mt-1 text-xs text-muted">{t(pendingStateOption.descriptionKey)}</div>
+            ) : null}
+          </div>
+          {stateError ? (
+            <Alert variant="danger" title={t('lifetimes.admin_update.error.title')}>
+              {stateError}
+            </Alert>
+          ) : null}
+        </div>
+      </ConfirmDialog>
 
     </div>
   );

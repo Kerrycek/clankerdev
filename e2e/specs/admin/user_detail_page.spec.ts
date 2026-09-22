@@ -198,6 +198,13 @@ test('admin user detail: lifecycle state update sends object state', async ({ pa
   await expect(page.getByTestId('admin.user.lifecycle.save')).toBeEnabled();
   await page.getByTestId('admin.user.lifecycle.save').click();
 
+  const confirmation = page.getByTestId('admin.user.lifecycle.confirm');
+  await expect(confirmation).toBeVisible();
+  await expect(confirmation).toContainText('alice (#42)');
+  await expect(confirmation).toContainText('Temporarily suspended (suspended)');
+  expect(updates).toHaveLength(0);
+  await page.getByTestId('admin.user.lifecycle.confirm.confirm').click();
+
   await expect.poll(() => updates.length).toBe(1);
   expect(updates).toEqual([{ user: { object_state: 'suspended' } }]);
 });
@@ -233,6 +240,13 @@ test('@pr-smoke @pr-smoke-mobile admin user detail: soft delete keeps a durable 
   await page.goto('/admin/users/42');
   await page.getByTestId('admin.user.lifecycle.state').selectOption('soft_delete');
   await page.getByTestId('admin.user.lifecycle.save').click();
+
+  const confirmation = page.getByTestId('admin.user.lifecycle.confirm');
+  await expect(confirmation).toBeVisible();
+  await expect(confirmation).toContainText('Deactivated – recoverable (soft_delete)');
+  await expect(confirmation).toContainText('revokes access');
+  expect(updates).toHaveLength(0);
+  await page.getByTestId('admin.user.lifecycle.confirm.confirm').click();
 
   await expect.poll(() => updates.length).toBe(1);
   expect(updates[0]?.['object_state']).toBe('soft_delete');
@@ -406,6 +420,9 @@ for (const scenario of [
     await page.goto('/admin/users/42');
     await page.getByTestId('admin.user.lifecycle.state').selectOption('suspended');
     await page.getByTestId('admin.user.lifecycle.save').click();
+    await expect(page.getByTestId('admin.user.lifecycle.confirm')).toBeVisible();
+    expect(updateRequests).toBe(0);
+    await page.getByTestId('admin.user.lifecycle.confirm.confirm').click();
 
     await expect(page.getByTestId('admin.user.mutation.pending')).toBeVisible();
     await expect(page.getByTestId('admin.user.mutation.acknowledge')).toHaveCount(0);
