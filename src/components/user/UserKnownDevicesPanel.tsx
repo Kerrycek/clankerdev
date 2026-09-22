@@ -161,6 +161,16 @@ export function UserKnownDevicesPanel(props: {
     },
   });
 
+  const openRemove = (id: number) => {
+    removeM.reset();
+    setRemoveId(id);
+  };
+
+  const closeRemove = () => {
+    removeM.reset();
+    setRemoveId(null);
+  };
+
   const prefix = props.testIdPrefix;
 
   return (
@@ -213,7 +223,7 @@ export function UserKnownDevicesPanel(props: {
           ) : devices.length === 0 ? (
             <KnownDevicesEmptyState hasFilter={Boolean(searchTrim)} testIdPrefix={prefix} onClearFilter={() => setQ('')} />
           ) : (
-            <UserKnownDevicesList devices={devices} testIdPrefix={prefix} onForget={setRemoveId} />
+            <UserKnownDevicesList devices={devices} testIdPrefix={prefix} onForget={openRemove} />
           )}
         </CardBody>
 
@@ -239,7 +249,7 @@ export function UserKnownDevicesPanel(props: {
         loading={removeM.isPending}
         error={removeM.error}
         testIdPrefix={prefix}
-        onCancel={() => setRemoveId(null)}
+        onCancel={closeRemove}
         onConfirm={() => {
           if (removeId === null) return;
           removeM.mutate(removeId);
