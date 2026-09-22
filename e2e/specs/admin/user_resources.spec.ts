@@ -146,3 +146,51 @@ test('admin can retry a failed package removal with the error kept in context', 
   await expect(page.getByTestId('admin.user.resources.assignment.21')).toHaveCount(0);
   expect(deleteCalls).toBe(2);
 });
+
+test('admin can retry a failed package assignment without losing the form', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+  let createCalls = 0;
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100 },
+    handlers: {
+      'GET users/53': () => ({ user: { id: 53, login: 'kavman', level: 1 } }),
+      'GET environments': () => ({ environments: [{ id: 7, label: 'Production' }] }),
+      'GET cluster_resource_packages': () => ({
+        cluster_resource_packages: [{ id: 11, label: 'Standard Production' }],
+      }),
+      'GET user_cluster_resource_packages': () => ({ user_cluster_resource_packages: [] }),
+      'POST user_cluster_resource_packages': () => {
+        createCalls += 1;
+        if (createCalls === 1) return failEnvelope('Package assignment changed on the server');
+        return { user_cluster_resource_package: { id: 31 } };
+      },
+    },
+  });
+
+  await page.goto('/admin/users/53/resources');
+  await page.getByTestId('admin.user.resources.add').click();
+
+  const modal = page.getByTestId('admin.user.resources.add.modal');
+  const environment = modal.getByRole('combobox').nth(0);
+  const resourcePackage = modal.getByRole('combobox').nth(1);
+  const comment = modal.getByRole('textbox');
+  const submit = modal.getByRole('button', { name: /přidat balíček|add package/i });
+
+  await environment.selectOption('7');
+  await resourcePackage.selectOption('11');
+  await comment.fill('Keep this note for retry');
+  await submit.click();
+
+  await expect(modal).toBeVisible();
+  await expect(modal.getByTestId('admin.user.resources.add.error')).toContainText('Package assignment changed on the server');
+  await expect(environment).toHaveValue('7');
+  await expect(resourcePackage).toHaveValue('11');
+  await expect(comment).toHaveValue('Keep this note for retry');
+  expect(createCalls).toBe(1);
+
+  await submit.click();
+
+  await expect(modal).toBeHidden();
+  expect(createCalls).toBe(2);
+});
