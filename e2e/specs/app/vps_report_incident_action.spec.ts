@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
+import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock } from '../../fixtures';
 
 test('@pr-smoke @pr-smoke-mobile admin VPS actions open a prefilled incident form without creating it', async ({
   page,
@@ -115,4 +115,52 @@ test('@pr-smoke @pr-smoke-mobile pending incident creation keeps its disabled Ca
   }
 
   await expect(page).toHaveURL(/\/admin\/vps\/123$/);
+});
+
+test('@pr-smoke @pr-smoke-mobile rejected incident creation keeps the report in context for retry', async ({
+  page,
+}) => {
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'INCIDENT_CREATE_RETRY' });
+
+  let createCalls = 0;
+  const vps = {
+    id: 123,
+    hostname: 'incident-target.example',
+    object_state: 'active',
+    is_running: true,
+    enable_network: true,
+    node: {
+      id: 1,
+      domain_name: 'node1.example',
+      location: { id: 2, label: 'Praha', environment: { id: 1, label: 'prod' } },
+    },
+    user: { id: 10, login: 'alice' },
+  };
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 99 },
+    handlers: {
+      'GET vpses/123': () => ({ vps }),
+      'GET ip_address_assignments': () => ({ ip_address_assignments: [] }),
+      'POST incident_reports': () => {
+        createCalls += 1;
+        if (createCalls === 1) return failEnvelope('Incident report was rejected');
+        return { incident_report: { id: 999 } };
+      },
+    },
+  });
+
+  await page.goto('/admin/incidents/new?vps=123');
+  await page.getByTestId('incidents.new.subject').fill('Network abuse report');
+  await page.getByTestId('incidents.new.text').fill('Evidence gathered for operator review.');
+  await page.getByTestId('incidents.new.submit').click();
+
+  await expect(page.getByTestId('incidents.new.submit.error')).toContainText('Incident report was rejected');
+  await expect(page.getByTestId('incidents.new.subject')).toHaveValue('Network abuse report');
+  await expect(page.getByTestId('incidents.new.text')).toHaveValue('Evidence gathered for operator review.');
+  await expect(page).toHaveURL(/\/admin\/incidents\/new\?vps=123$/);
+
+  await page.getByTestId('incidents.new.submit').click();
+  await expect(page).toHaveURL(/\/admin\/vps\/123$/);
+  expect(createCalls).toBe(2);
 });
