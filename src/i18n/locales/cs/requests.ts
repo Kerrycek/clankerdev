@@ -107,6 +107,8 @@ export const csRequests = {
   'requests.detail.address_map.open': 'Otevřít v OpenStreetMap',
   'requests.detail.address_map.aria': 'Otevřít adresu v OpenStreetMap: {address}',
   'requests.detail.address_map.loading': 'Hledám adresu v OpenStreetMap…',
+  'requests.detail.address_map.load': 'Načíst náhled mapy',
+  'requests.detail.address_map.privacy_notice': 'Náhled používá OpenStreetMap. Tato adresa se odešle geokódovací službě až po načtení mapy.',
   'requests.detail.address_map.retry': 'Zkusit znovu',
   'requests.detail.address_map.preview_title': 'Náhled adresy v OpenStreetMap',
   'requests.detail.address_map.not_found': 'Adresu se v OpenStreetMap nepodařilo najít.',

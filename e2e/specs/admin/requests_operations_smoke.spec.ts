@@ -163,8 +163,11 @@ test('@workflow-matrix @smoke admin requests: one list row opens the canonical d
   const mapCard = page.getByTestId('admin.requests.detail.registration.address.map');
   await expect(mapCard).toBeVisible();
   const mapPreview = mapCard.getByTestId('admin.requests.detail.registration.address.map.preview');
+  await expect(mapPreview).toHaveCount(0);
+  await expect.poll(osm.requestCount).toBe(0);
+  await mapCard.getByTestId('admin.requests.detail.registration.address.map.load').click();
   await expect(mapPreview).toBeVisible();
-  await expect.poll(osm.requestCount).toBe(2);
+  await expect.poll(osm.requestCount).toBe(1);
   await expect(mapCard.getByTestId('admin.requests.detail.registration.address.map.retry')).toHaveCount(0);
   await expect(mapPreview).toHaveAttribute('loading', 'eager');
   await expect(mapPreview).toHaveAttribute(
@@ -237,7 +240,11 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile @smoke admin requests: success
   });
 
   await page.goto('/admin/requests/registration/125?returnTo=%2Fadmin%2Frequests%3Fstate%3Dignored');
-  await expect(page.getByTestId('admin.requests.detail.registration.address.map.preview')).toBeVisible();
+  const mapCard = page.getByTestId('admin.requests.detail.registration.address.map');
+  await expect(mapCard.getByTestId('admin.requests.detail.registration.address.map.preview')).toHaveCount(0);
+  await expect.poll(osm.requestCount).toBe(0);
+  await mapCard.getByTestId('admin.requests.detail.registration.address.map.load').click();
+  await expect(mapCard.getByTestId('admin.requests.detail.registration.address.map.preview')).toBeVisible();
   await expect.poll(osm.requestCount).toBe(1);
   const metadataChevron = page.getByTestId('admin.requests.detail.metadata.chevron');
   await expect(metadataChevron).toBeVisible();
@@ -439,7 +446,7 @@ test('@workflow-matrix @smoke admin requests: change detail distinguishes no cha
   await expect(page.getByTestId('admin.requests.detail.change.address.current')).toContainText(/empty value|prázdná hodnota/i);
 });
 
-test('@workflow-matrix @pr-smoke @pr-smoke-mobile @smoke admin requests: automatic address map can retry a failed lookup', async ({ page }) => {
+test('@workflow-matrix @pr-smoke @pr-smoke-mobile @smoke admin requests: address map requires consent and can retry a failed lookup', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
   const osm = await installOsmMapMock(page, { failFirst: true });
 
@@ -454,6 +461,9 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile @smoke admin requests: automat
   const mapCard = page.getByTestId('admin.requests.detail.registration.address.map');
   const retry = mapCard.getByTestId('admin.requests.detail.registration.address.map.retry');
 
+  await expect(retry).toHaveCount(0);
+  await expect.poll(osm.requestCount).toBe(0);
+  await mapCard.getByTestId('admin.requests.detail.registration.address.map.load').click();
   await expect(retry).toBeVisible();
   await expect.poll(osm.requestCount).toBe(1);
   await retry.click();
@@ -461,7 +471,7 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile @smoke admin requests: automat
   await expect.poll(osm.requestCount).toBe(2);
 });
 
-test('@workflow-matrix @pr-smoke @smoke admin requests: automatic address map distinguishes an unknown address', async ({ page }) => {
+test('@workflow-matrix @pr-smoke @smoke admin requests: requested address map distinguishes an unknown address', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
   const osm = await installOsmMapMock(page, { empty: true });
 
@@ -475,6 +485,8 @@ test('@workflow-matrix @pr-smoke @smoke admin requests: automatic address map di
   await page.goto('/admin/requests/registration/127');
   const mapCard = page.getByTestId('admin.requests.detail.registration.address.map');
 
+  await expect.poll(osm.requestCount).toBe(0);
+  await mapCard.getByTestId('admin.requests.detail.registration.address.map.load').click();
   await expect(mapCard.getByText('The address was not found in OpenStreetMap.')).toBeVisible();
   await expect(mapCard.getByTestId('admin.requests.detail.registration.address.map.retry')).toHaveCount(0);
   await expect(mapCard.getByTestId('admin.requests.detail.registration.address.map.preview')).toHaveCount(0);

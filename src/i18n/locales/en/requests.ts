@@ -107,6 +107,8 @@ export const enRequests = {
   'requests.detail.address_map.open': 'Open in OpenStreetMap',
   'requests.detail.address_map.aria': 'Open address in OpenStreetMap: {address}',
   'requests.detail.address_map.loading': 'Looking up the address in OpenStreetMap…',
+  'requests.detail.address_map.load': 'Load map preview',
+  'requests.detail.address_map.privacy_notice': 'The preview uses OpenStreetMap. This address is sent to its geocoding service only after you load the map.',
   'requests.detail.address_map.retry': 'Try again',
   'requests.detail.address_map.preview_title': 'OpenStreetMap address preview',
   'requests.detail.address_map.not_found': 'The address was not found in OpenStreetMap.',

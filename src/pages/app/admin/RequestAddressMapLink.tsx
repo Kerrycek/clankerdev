@@ -58,10 +58,10 @@ function parseNominatimPoint(places: unknown): OsmPoint | null {
   return { lat, lon };
 }
 
-function useOsmPoint(address: string) {
+function useOsmPoint(address: string, enabled: boolean) {
   const query = useQuery({
     queryKey: ['openstreetmap', 'geocode', address],
-    enabled: Boolean(address),
+    enabled: Boolean(address) && enabled,
     staleTime: 30 * 60 * 1000,
     retry: false,
     queryFn: async (): Promise<OsmPoint | null> => {
@@ -74,10 +74,10 @@ function useOsmPoint(address: string) {
   });
 
   return {
-    point: query.data ?? null,
+    point: enabled ? query.data ?? null : null,
     loading: query.isFetching,
-    failed: Boolean(address) && !query.isFetching && query.isError,
-    notFound: Boolean(address) && !query.isFetching && query.isSuccess && query.data === null,
+    failed: enabled && Boolean(address) && !query.isFetching && query.isError,
+    notFound: enabled && Boolean(address) && !query.isFetching && query.isSuccess && query.data === null,
     retry: () => {
       void query.refetch();
     },
@@ -88,7 +88,9 @@ export function RequestAddressMapLink(props: { address: unknown; testId?: string
   const { t } = useI18n();
   const address = String(props.address ?? '').trim();
   const href = openStreetMapAddressUrl(address);
-  const { point, loading, failed, notFound, retry } = useOsmPoint(address);
+  const [requestedAddress, setRequestedAddress] = React.useState<string | null>(null);
+  const lookupRequested = Boolean(address) && requestedAddress === address;
+  const { point, loading, failed, notFound, retry } = useOsmPoint(address, lookupRequested);
   const embedHref = React.useMemo(() => openStreetMapEmbedUrl(point), [point]);
 
   if (!href) return <div className="text-sm">—</div>;
@@ -119,13 +121,24 @@ export function RequestAddressMapLink(props: { address: unknown; testId?: string
             <MapPin className="h-4 w-4" aria-hidden="true" />
           )}
           <span>
-            {loading
-              ? t('requests.detail.address_map.loading')
-              : t(notFound
-                ? 'requests.detail.address_map.not_found'
-                : 'requests.detail.address_map.preview_unavailable')}
+            {!lookupRequested
+              ? t('requests.detail.address_map.privacy_notice')
+              : loading
+                ? t('requests.detail.address_map.loading')
+                : t(notFound
+                  ? 'requests.detail.address_map.not_found'
+                  : 'requests.detail.address_map.preview_unavailable')}
           </span>
-          {failed ? (
+          {!lookupRequested ? (
+            <button
+              type="button"
+              onClick={() => setRequestedAddress(address)}
+              data-testid={`${props.testId ?? 'requests.detail.address_map'}.load`}
+              className="min-h-11 rounded-md border border-border bg-surface-2 px-3 py-1.5 font-medium text-fg transition hover:bg-accent-soft focus:outline-none focus:ring-2 focus:ring-focus/35"
+            >
+              {t('requests.detail.address_map.load')}
+            </button>
+          ) : failed ? (
             <button
               type="button"
               onClick={retry}
