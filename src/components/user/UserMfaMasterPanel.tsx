@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useI18n } from '../../app/i18n';
@@ -14,6 +14,7 @@ import { Alert } from '../ui/Alert';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { Card, CardBody, CardHeader } from '../ui/Card';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { SwitchRow } from '../ui/SwitchRow';
 
 export function UserMfaMasterPanel(props: {
@@ -25,6 +26,7 @@ export function UserMfaMasterPanel(props: {
   const { t } = useI18n();
   const toasts = useToasts();
   const qc = useQueryClient();
+  const [confirmDisable, setConfirmDisable] = useState(false);
 
   const userQ = useQuery({
     queryKey: ['users', props.userId],
@@ -75,6 +77,7 @@ export function UserMfaMasterPanel(props: {
       await updateUser(props.userId, { enable_multi_factor_auth: next });
     },
     onSuccess: async () => {
+      setConfirmDisable(false);
       await qc.invalidateQueries({ queryKey: ['users', props.userId] });
       await qc.invalidateQueries({ queryKey: ['user', 'current'] });
       toasts.pushToast({ variant: 'ok', title: t('security.mfa_master.toast.saved.title'), body: t('security.mfa_master.toast.saved.body') });
@@ -87,68 +90,93 @@ export function UserMfaMasterPanel(props: {
   const prefix = props.testIdPrefix;
 
   return (
-    <Card testId={`${prefix}.mfa_master.card`}>
-      <CardHeader title={t('security.mfa_master.title')} subtitle={t('security.mfa_master.subtitle')} />
-      <CardBody>
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-2" data-testid={`${prefix}.mfa_master.status`}>
-            <Badge variant={status.variant}>{status.label}</Badge>
-            <div className="text-xs text-muted">
-              {t('security.mfa_master.devices', {
-                enabled: enabledDeviceCount.enabledTotal,
-                total: enabledDeviceCount.total,
-              })}
+    <>
+      <Card testId={`${prefix}.mfa_master.card`}>
+        <CardHeader title={t('security.mfa_master.title')} subtitle={t('security.mfa_master.subtitle')} />
+        <CardBody>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap items-center gap-2" data-testid={`${prefix}.mfa_master.status`}>
+              <Badge variant={status.variant}>{status.label}</Badge>
+              <div className="text-xs text-muted">
+                {t('security.mfa_master.devices', {
+                  enabled: enabledDeviceCount.enabledTotal,
+                  total: enabledDeviceCount.total,
+                })}
+              </div>
             </div>
-          </div>
 
-          <SwitchRow
-            label={t('security.mfa_master.switch.label')}
-            description={t('security.mfa_master.switch.desc')}
-            checked={masterEnabled}
-            onChange={(v) => toggleM.mutate(v)}
-            disabled={toggleM.isPending}
-            testId={`${prefix}.mfa_master.switch`}
-          />
-
-          {masterEnabled && enabledDeviceCount.enabledTotal === 0 ? (
-            <Alert variant="warn" title={t('security.mfa_master.inactive.title')}>
-              {t('security.mfa_master.inactive.body')}
-            </Alert>
-          ) : null}
-
-          {!masterEnabled && enabledDeviceCount.enabledTotal > 0 ? (
-            <Alert variant="info" title={t('security.mfa_master.devices_present.title')}>
-              {t('security.mfa_master.devices_present.body')}
-            </Alert>
-          ) : null}
-
-          {toggleM.isError ? (
-            <div className="text-xs text-muted">
-              {t('security.mfa_master.last_error')}: {formatErrorMessage(toggleM.error)}
-            </div>
-          ) : null}
-
-          <div className="text-xs text-faint">
-            {t('security.mfa_master.note')}
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => {
-                // Refetch everything related to the MFA status.
-                void qc.invalidateQueries({ queryKey: ['users', props.userId] });
-                void qc.invalidateQueries({ queryKey: ['users', props.userId, 'totp_devices'] });
-                void qc.invalidateQueries({ queryKey: ['users', props.userId, 'webauthn_credentials'] });
+            <SwitchRow
+              label={t('security.mfa_master.switch.label')}
+              description={t('security.mfa_master.switch.desc')}
+              checked={masterEnabled}
+              onChange={(v) => {
+                toggleM.reset();
+                if (v) toggleM.mutate(true);
+                else setConfirmDisable(true);
               }}
-              testId={`${prefix}.mfa_master.refresh`}
-            >
-              {t('common.refresh')}
-            </Button>
+              disabled={toggleM.isPending}
+              testId={`${prefix}.mfa_master.switch`}
+            />
+
+            {masterEnabled && enabledDeviceCount.enabledTotal === 0 ? (
+              <Alert variant="warn" title={t('security.mfa_master.inactive.title')}>
+                {t('security.mfa_master.inactive.body')}
+              </Alert>
+            ) : null}
+
+            {!masterEnabled && enabledDeviceCount.enabledTotal > 0 ? (
+              <Alert variant="info" title={t('security.mfa_master.devices_present.title')}>
+                {t('security.mfa_master.devices_present.body')}
+              </Alert>
+            ) : null}
+
+            {toggleM.isError ? (
+              <div className="text-xs text-muted">
+                {t('security.mfa_master.last_error')}: {formatErrorMessage(toggleM.error)}
+              </div>
+            ) : null}
+
+            <div className="text-xs text-faint">
+              {t('security.mfa_master.note')}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  // Refetch everything related to the MFA status.
+                  void qc.invalidateQueries({ queryKey: ['users', props.userId] });
+                  void qc.invalidateQueries({ queryKey: ['users', props.userId, 'totp_devices'] });
+                  void qc.invalidateQueries({ queryKey: ['users', props.userId, 'webauthn_credentials'] });
+                }}
+                testId={`${prefix}.mfa_master.refresh`}
+              >
+                {t('common.refresh')}
+              </Button>
+            </div>
           </div>
-        </div>
-      </CardBody>
-    </Card>
+        </CardBody>
+      </Card>
+
+      <ConfirmDialog
+        open={confirmDisable}
+        title={t('security.mfa_master.disable_confirm.title')}
+        description={t('security.mfa_master.disable_confirm.body')}
+        confirmLabel={t('security.mfa_master.disable_confirm.confirm')}
+        danger
+        confirmLoading={toggleM.isPending}
+        onCancel={() => {
+          toggleM.reset();
+          setConfirmDisable(false);
+        }}
+        onConfirm={() => toggleM.mutate(false)}
+        testId={`${prefix}.mfa_master.disable_confirm`}
+      >
+        {toggleM.isError ? (
+          <Alert variant="danger">{formatErrorMessage(toggleM.error)}</Alert>
+        ) : null}
+      </ConfirmDialog>
+    </>
   );
 }
