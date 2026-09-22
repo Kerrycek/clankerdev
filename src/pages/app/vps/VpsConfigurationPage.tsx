@@ -29,6 +29,7 @@ import {
   ADMIN_LOCK_TYPES,
   CONFIG_FIELD_META,
   START_MENU_TIMEOUT_MAX,
+  VPS_MAP_MODES,
   buildPayload,
   createBuildErrorResult,
   currentResourceLabel,
@@ -38,6 +39,7 @@ import {
   resourceId,
   userNamespaceMapLabel,
   type CgroupVersion,
+  type VpsMapMode,
   type VpsConfigDraft,
   type VpsConfigReviewKey,
 } from './VpsConfigurationModel';
@@ -187,6 +189,8 @@ export function VpsConfigurationPage() {
         return optionLabel(dnsOptions, item.dnsResolver, t('vps.config.option.dns_unmanaged'));
       case 'user_namespace_map':
         return optionLabel(userNamespaceMapOptions, item.userNamespaceMap, t('vps.config.option.no_user_namespace_maps_available'));
+      case 'map_mode':
+        return t(`vps.config.option.map_mode.${item.mapMode}`);
       case 'cgroup_version':
         return item.cgroupVersion === 'cgroup_any' ? t('vps.config.option.cgroup_any') : item.cgroupVersion.replace('_', ' ');
       case 'allow_admin_modifications':
@@ -404,6 +408,20 @@ export function VpsConfigurationPage() {
             />
           )}
         </Field>
+        {canEditAdminConfig ? (
+          <Field label={t('vps.config.field.map_mode')} help={t('vps.config.help.map_mode')} errors={fieldMessages('map_mode')}>
+            <Select
+              value={effective.mapMode}
+              onChange={(e) => patchDraft({ mapMode: e.target.value as VpsMapMode })}
+              disabled={saveM.isPending}
+              options={VPS_MAP_MODES.map((mode) => ({
+                value: mode,
+                label: t(`vps.config.option.map_mode.${mode}`),
+              }))}
+              testId="vps.config.map_mode"
+            />
+          </Field>
+        ) : null}
       </VpsConfigSectionCard>
 
       <VpsConfigSectionCard

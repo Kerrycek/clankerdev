@@ -5,6 +5,7 @@ import type { Vps } from '../../../lib/api/vps';
 
 export type HostnameMode = 'managed' | 'manual';
 export type CgroupVersion = 'cgroup_any' | 'cgroup_v1' | 'cgroup_v2';
+export type VpsMapMode = 'native' | 'zfs';
 export type AdminLockType = 'no_lock' | 'absolute' | 'not_less' | 'not_more';
 
 export type VpsConfigDraft = {
@@ -17,6 +18,7 @@ export type VpsConfigDraft = {
   swap: string;
   dnsResolver: string;
   userNamespaceMap: string;
+  mapMode: VpsMapMode;
   autostartPriority: string;
   startMenuTimeout: string;
   cgroupVersion: CgroupVersion;
@@ -36,6 +38,7 @@ export type VpsConfigFieldKey =
   | 'swap'
   | 'dns_resolver'
   | 'user_namespace_map'
+  | 'map_mode'
   | 'autostart_priority'
   | 'start_menu_timeout'
   | 'cgroup_version'
@@ -63,6 +66,7 @@ export type VpsConfigBuildResult = {
 
 
 export const CGROUP_VERSIONS: readonly CgroupVersion[] = ['cgroup_any', 'cgroup_v1', 'cgroup_v2'];
+export const VPS_MAP_MODES: readonly VpsMapMode[] = ['native', 'zfs'];
 export const ADMIN_LOCK_TYPES: readonly AdminLockType[] = ['no_lock', 'absolute', 'not_less', 'not_more'];
 export const START_MENU_TIMEOUT_MAX = 24 * 60 * 60;
 
@@ -112,6 +116,11 @@ export const CONFIG_FIELD_META: Record<VpsConfigReviewKey, VpsConfigFieldMeta> =
     section: 'namespace',
     risks: ['requires_restart'],
   },
+  map_mode: {
+    labelKey: 'vps.config.field.map_mode',
+    section: 'namespace',
+    risks: ['requires_restart', 'admin_only'],
+  },
   autostart_priority: {
     labelKey: 'vps.config.field.autostart_priority',
     section: 'admin',
@@ -152,6 +161,7 @@ export const CONFIG_FIELD_META: Record<VpsConfigReviewKey, VpsConfigFieldMeta> =
 const SENSITIVE_KEYS = new Set<VpsConfigFieldKey>([
   'user',
   'user_namespace_map',
+  'map_mode',
   'cgroup_version',
   'allow_admin_modifications',
 ]);
@@ -199,6 +209,11 @@ function cgroupVersionText(value: unknown): CgroupVersion {
   return 'cgroup_any';
 }
 
+function mapModeText(value: unknown): VpsMapMode {
+  if (typeof value === 'string' && VPS_MAP_MODES.includes(value as VpsMapMode)) return value as VpsMapMode;
+  return 'native';
+}
+
 export function normalizeDraft(vps: Vps): VpsConfigDraft {
   return {
     hostnameMode: vps.manage_hostname === false ? 'manual' : 'managed',
@@ -210,6 +225,7 @@ export function normalizeDraft(vps: Vps): VpsConfigDraft {
     swap: numericText(vps.swap),
     dnsResolver: numericText(resourceId(vps.dns_resolver)),
     userNamespaceMap: numericText(resourceId(vps.user_namespace_map)),
+    mapMode: mapModeText(vps.map_mode),
     autostartPriority: numericText(vps.autostart_priority),
     startMenuTimeout: numericText(vps.start_menu_timeout),
     cgroupVersion: cgroupVersionText(vps.cgroup_version),
@@ -411,6 +427,14 @@ export function buildPayload(args: {
   if (draft.userNamespaceMap.trim() !== baseline.userNamespaceMap.trim()) {
     payload['user_namespace_map'] = parseRequiredId(draft.userNamespaceMap, t('vps.config.field.user_namespace_map'), t, 'user_namespace_map');
     changedKeys.push('user_namespace_map');
+  }
+
+  if (isAdminMode && draft.mapMode !== baseline.mapMode) {
+    if (!VPS_MAP_MODES.includes(draft.mapMode)) {
+      throw validationError(t('vps.config.validation.enum', { field: t('vps.config.field.map_mode') }), 'map_mode');
+    }
+    payload['map_mode'] = draft.mapMode;
+    changedKeys.push('map_mode');
   }
 
   if (isAdminMode) {
