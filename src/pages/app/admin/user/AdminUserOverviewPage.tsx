@@ -24,6 +24,7 @@ import { getPaidUntilStatus, paidUntilBadgeVariant, paidUntilStatusLabelKey } fr
 import { formatMoneyLike } from '../../../../lib/paymentsFormat';
 import { roleFromLevel } from '../../../../lib/roles';
 import { objectStateBadge } from '../../../../lib/taskStatus';
+import { timeZoneOptions } from '../../../../lib/timeZones';
 
 import { useAdminUserContext } from './AdminUserLayout';
 import {
@@ -32,6 +33,7 @@ import {
 } from './AdminUserMutationGuard';
 import {
   buildEditUserPayload,
+  editUserValidationError,
   makeEditDraft,
   makeStateDraft,
   optionalStringField,
@@ -98,6 +100,10 @@ export function AdminUserOverviewPage() {
   const canViewFinance = canViewGlobalFinance(auth.role);
   const selectedStateOption = USER_STATE_OPTIONS.find((option) => option.value === stateDraft.objectState)
     ?? USER_STATE_OPTIONS[0];
+  const editTimeZoneOptions = useMemo(
+    () => timeZoneOptions(editDraft.timeZone),
+    [editDraft.timeZone]
+  );
 
   const paymentHistoryQ = useQuery({
     queryKey: ['user_payments', 'overview', { userId: u.id, limit: 5 }],
@@ -175,9 +181,14 @@ export function AdminUserOverviewPage() {
   };
 
   const buildEditPayload = (): Record<string, unknown> | null => {
+    const validationError = editUserValidationError(editDraft);
+    if (validationError) {
+      setEditError(t(`admin.user.edit.validation.${validationError}`));
+      return null;
+    }
     const payload = buildEditUserPayload(editDraft);
     if (!payload) {
-      setEditError(t('admin.user.edit.validation.level'));
+      setEditError(t('admin.user.edit.error'));
       return null;
     }
     return payload;
@@ -257,6 +268,10 @@ export function AdminUserOverviewPage() {
             <div>
               <div className="text-xs text-muted">{t('admin.user.edit.field.mailer_enabled')}</div>
               <div className="text-sm">{u.mailer_enabled === false ? t('common.disabled') : t('common.enabled')}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted">{t('admin.user.edit.field.time_zone')}</div>
+              <div className="text-sm">{typeof u.time_zone === 'string' && u.time_zone.trim() ? u.time_zone : t('admin.user.edit.field.time_zone.default')}</div>
             </div>
             <div>
               <div className="text-xs text-muted">{t('admin.user.field.created')}</div>
@@ -531,7 +546,35 @@ export function AdminUserOverviewPage() {
             </Alert>
           ) : null}
 
+          {editDraft.login.trim() && editDraft.login.trim() !== u.login ? (
+            <Alert variant="warn" title={t('admin.user.edit.login_change.title')}>
+              {t('admin.user.edit.login_change.body', { current: u.login, next: editDraft.login.trim() })}
+            </Alert>
+          ) : null}
+
           <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="text-sm font-medium">{t('admin.user.edit.field.login')}</span>
+              <Input
+                value={editDraft.login}
+                onChange={(e) => setEditField('login', e.target.value)}
+                autoComplete="off"
+                maxLength={63}
+                testId="admin.user.edit.login"
+              />
+              <span className="mt-1 block text-xs text-faint">{t('admin.user.edit.field.login.help')}</span>
+            </label>
+
+            <label className="block">
+              <span className="text-sm font-medium">{t('admin.user.field.level')}</span>
+              <Input
+                value={editDraft.level}
+                onChange={(e) => setEditField('level', e.target.value)}
+                inputMode="numeric"
+                testId="admin.user.edit.level"
+              />
+            </label>
+
             <label className="block">
               <span className="text-sm font-medium">{t('requests.field.full_name')}</span>
               <Input
@@ -551,15 +594,17 @@ export function AdminUserOverviewPage() {
               />
             </label>
 
-            <label className="block">
-              <span className="text-sm font-medium">{t('admin.user.field.level')}</span>
-              <Input
-                value={editDraft.level}
-                onChange={(e) => setEditField('level', e.target.value)}
-                inputMode="numeric"
-                testId="admin.user.edit.level"
-              />
-            </label>
+            <Select
+              label={t('admin.user.edit.field.time_zone')}
+              value={editDraft.timeZone}
+              onChange={(e) => setEditField('timeZone', e.target.value)}
+              testId="admin.user.edit.time_zone"
+            >
+              <option value="">{t('admin.user.edit.field.time_zone.default')}</option>
+              {editTimeZoneOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </Select>
 
             <SwitchRow
               checked={editDraft.mailerEnabled}
