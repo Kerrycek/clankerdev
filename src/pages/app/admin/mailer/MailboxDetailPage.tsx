@@ -153,13 +153,6 @@ export function MailboxDetailPage() {
       setEditOpen(false);
       pushToast({ variant: 'ok', title: t('mailer.mailboxes.update_success') });
     },
-    onError: (err: any) => {
-      pushToast({
-        variant: 'danger',
-        title: t('mailer.mailboxes.update_error'),
-        body: formatErrorMessage(err),
-      });
-    },
   });
 
   // --- Delete mailbox ---
@@ -398,7 +391,14 @@ export function MailboxDetailPage() {
         }
         actions={
           <>
-            <Button variant="secondary" onClick={() => setEditOpen(true)} testId="admin.mailer.mailboxes.detail.edit">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                updateMailboxM.reset();
+                setEditOpen(true);
+              }}
+              testId="admin.mailer.mailboxes.detail.edit"
+            >
               {t('common.edit')}
             </Button>
             <Button variant="danger" onClick={() => setDeleteOpen(true)} testId="admin.mailer.mailboxes.detail.delete">
@@ -568,13 +568,24 @@ export function MailboxDetailPage() {
 
       <Modal
         open={editOpen}
-        onClose={() => setEditOpen(false)}
+        onClose={() => {
+          if (updateMailboxM.isPending) return;
+          updateMailboxM.reset();
+          setEditOpen(false);
+        }}
         title={t('mailer.mailboxes.edit.title')}
         testId="admin.mailer.mailboxes.edit.modal"
         size="md"
         footer={
           <div className="flex items-center justify-end gap-2">
-            <Button variant="secondary" onClick={() => setEditOpen(false)} disabled={updateMailboxM.isPending}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                updateMailboxM.reset();
+                setEditOpen(false);
+              }}
+              disabled={updateMailboxM.isPending}
+            >
               {t('common.cancel')}
             </Button>
             <Button
@@ -666,6 +677,16 @@ export function MailboxDetailPage() {
             description={t('mailer.mailboxes.enable_ssl.description')}
             testId="admin.mailer.mailboxes.edit.enable_ssl"
           />
+
+          {updateMailboxM.isError ? (
+            <Alert
+              variant="danger"
+              title={t('mailer.mailboxes.update_error')}
+              testId="admin.mailer.mailboxes.edit.error"
+            >
+              {formatErrorMessage(updateMailboxM.error)}
+            </Alert>
+          ) : null}
         </div>
       </Modal>
 
