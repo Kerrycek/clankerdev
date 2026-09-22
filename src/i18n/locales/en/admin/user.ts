@@ -67,7 +67,7 @@ export const enAdmin_user = {
   "admin.user.edit.title": "Edit user",
   "admin.user.edit.toast.saved": "User updated",
   "admin.user.edit.validation.level": "Enter a valid user level",
-  "admin.user.edit.validation.login": "Login cannot be empty",
+  "admin.user.edit.validation.login": "Use 2–63 letters, numbers, dots, or hyphens",
   "admin.user.edit.validation.time_zone": "Select a valid time zone",
   "admin.user.history.open_audit": "Open in Audit",
   "admin.user.history.smart_help.drawer.hint": "Tip: Type “?” in the filter input to see available keys and examples.",

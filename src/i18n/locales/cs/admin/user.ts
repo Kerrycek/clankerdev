@@ -67,7 +67,7 @@ export const csAdmin_user = {
   "admin.user.edit.title": "Upravit uživatele",
   "admin.user.edit.toast.saved": "Uživatel uložen",
   "admin.user.edit.validation.level": "Zadej platnou úroveň uživatele",
-  "admin.user.edit.validation.login": "Přihlašovací jméno nesmí být prázdné",
+  "admin.user.edit.validation.login": "Použij 2–63 písmen bez diakritiky, číslic, teček nebo spojovníků",
   "admin.user.edit.validation.time_zone": "Vyber platné časové pásmo",
   "admin.user.history.open_audit": "Otevřít v auditu",
   "admin.user.history.smart_help.drawer.hint": "Tip: napiš „?“ do filtru pro dostupné klíče a příklady.",

@@ -33,7 +33,7 @@ export type EditUserPayload = Record<string, unknown> & {
 export type EditUserValidationError = 'login' | 'level' | 'time_zone';
 
 export function editUserValidationError(draft: EditUserDraft): EditUserValidationError | null {
-  if (!draft.login.trim()) return 'login';
+  if (!/^[a-zA-Z0-9.-]{2,63}$/.test(draft.login.trim())) return 'login';
 
   const level = Number(draft.level);
   if (!Number.isFinite(level) || level < 0) return 'level';

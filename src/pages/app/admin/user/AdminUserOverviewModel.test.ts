@@ -47,6 +47,9 @@ describe('buildEditUserPayload', () => {
 
   it('validates login and time zone and can restore the server default time zone', () => {
     expect(editUserValidationError(draft({ login: '  ' }))).toBe('login');
+    expect(editUserValidationError(draft({ login: 'a' }))).toBe('login');
+    expect(editUserValidationError(draft({ login: 'alice_example' }))).toBe('login');
+    expect(editUserValidationError(draft({ login: 'alice.example-2' }))).toBeNull();
     expect(editUserValidationError(draft({ timeZone: 'not/a-time-zone' }))).toBe('time_zone');
     expect(buildEditUserPayload(draft({ timeZone: '' }))).toMatchObject({ time_zone: null });
   });
