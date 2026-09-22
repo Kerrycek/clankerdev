@@ -14,6 +14,11 @@ test('@smoke @pr-smoke admin cluster dns tools pages render', async ({ page }) =
         dnsServerListParams = new URLSearchParams(searchParams);
         return { dns_servers: [{ id: 1, name: 'ns1', node: { id: 11, domain_name: 'node1.example.test' }, ipv4_addr: '192.0.2.1', enable_user_dns_zones: true }], _meta: { total_count: 1 } };
       },
+      'DELETE dns_servers/1': () => ({
+        status: 409,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: false, message: 'DNS server still hosts active zones', response: null }),
+      }),
       'GET nodes': () => ({ nodes: [{ id: 11, domain_name: 'node1.example.test' }] }),
       'GET dns_tsig_keys': ({ searchParams }) => {
         listParams = new URLSearchParams(searchParams);
@@ -37,6 +42,18 @@ test('@smoke @pr-smoke admin cluster dns tools pages render', async ({ page }) =
   await expect(page.getByTestId('admin.cluster.dns_servers.row.1')).toBeVisible();
   await expect.poll(() => dnsServerListParams?.get('dns_server[q]')).toBeNull();
   await expect.poll(() => dnsServerListParams?.get('_meta[count]')).toBeNull();
+
+  await page.getByTestId('admin.cluster.dns_servers.row.1.delete').click();
+  await page.getByTestId('admin.cluster.dns_servers.delete_confirm.confirm').click();
+  const dnsServerDelete = page.getByTestId('admin.cluster.dns_servers.delete_confirm');
+  await expect(dnsServerDelete).toContainText('DNS server still hosts active zones');
+  await expect(page.getByTestId('admin.cluster.dns_servers.delete_confirm.confirm')).toBeEnabled();
+  await page.getByTestId('admin.cluster.dns_servers.delete_confirm.cancel').click();
+  await page.getByTestId('admin.cluster.dns_servers.row.1.delete').click();
+  await expect(page.getByTestId('admin.cluster.dns_servers.delete_confirm')).not.toContainText(
+    'DNS server still hosts active zones',
+  );
+  await page.getByTestId('admin.cluster.dns_servers.delete_confirm.cancel').click();
 
   await page.goto('/admin/cluster/dns-tsig-keys');
   await expect(page.getByTestId('admin.cluster.dns_tsig.page')).toBeVisible();
@@ -77,6 +94,11 @@ test('@pr-smoke-mobile @smoke-mobile admin DNS server actions stay reachable at 
         _meta: { total_count: 1 },
       }),
       'GET nodes': () => ({ nodes: [{ id: 11, domain_name: 'node1-with-a-long-name.example.test' }] }),
+      'DELETE dns_servers/1': () => ({
+        status: 409,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: false, message: 'DNS server still hosts active zones', response: null }),
+      }),
     },
   });
 
@@ -112,4 +134,7 @@ test('@pr-smoke-mobile @smoke-mobile admin DNS server actions stay reachable at 
   const confirmation = page.getByTestId('admin.cluster.dns_servers.delete_confirm');
   await expect(confirmation).toBeVisible();
   await expect(confirmation.getByTestId('admin.cluster.dns_servers.delete_confirm.confirm')).toBeVisible();
+  await confirmation.getByTestId('admin.cluster.dns_servers.delete_confirm.confirm').click();
+  await expect(confirmation).toContainText('DNS server still hosts active zones');
+  await expect(confirmation.getByTestId('admin.cluster.dns_servers.delete_confirm.confirm')).toBeEnabled();
 });
