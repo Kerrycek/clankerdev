@@ -104,6 +104,7 @@ export function VpsAdminReplaceCard(props: {
           disabled={props.pending}
           gate={props.gate}
           loading={props.pending}
+          errorMessage={props.errorMessage}
           onClick={props.onSubmit}
           confirmation={{
             title: t('vps.lifecycle.replace.submit'),
