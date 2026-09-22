@@ -11,6 +11,7 @@ import { parsePositiveInt } from '../../../../lib/parse';
 import { parseNumericToken, splitKeyValueToken, tokenizeSmartInput, unquoteSmartValue } from '../../../../lib/smartFilter';
 
 import { FilterBar } from '../../../../components/layout/FilterBar';
+import { Alert } from '../../../../components/ui/Alert';
 import { Badge } from '../../../../components/ui/Badge';
 import { Button } from '../../../../components/ui/Button';
 import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog';
@@ -565,6 +566,7 @@ export function ResourcePackagesPage() {
                         disabled={personal}
                         disabledReason={personal ? t('admin.cluster.resource_packages.delete_disabled.personal') : undefined}
                         onClick={() => {
+                          deleteM.reset();
                           setDeleteState({ open: true, pkg: p });
                         }}
                         testId={`admin.cluster.resource_packages.row.${id}.delete`}
@@ -629,6 +631,7 @@ export function ResourcePackagesPage() {
       <ConfirmDialog
         open={deleteState.open}
         onCancel={() => {
+          deleteM.reset();
           setDeleteState({ open: false, pkg: null });
         }}
         onConfirm={() => deleteM.mutate()}
@@ -642,11 +645,27 @@ export function ResourcePackagesPage() {
       >
         {deletePkg ? (
           <div className="space-y-3">
+            <div className="rounded-md border border-border bg-surface-subtle px-3 py-2">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted">
+                {t('admin.cluster.resource_packages.delete_confirm.target')}
+              </div>
+              <div className="mt-1 font-medium text-fg">
+                {typeof deletePkg.label === 'string' && deletePkg.label.trim() ? deletePkg.label.trim() : `#${deletePkg.id}`}
+                {typeof deletePkg.label === 'string' && deletePkg.label.trim() ? (
+                  <span className="ml-2 text-sm font-normal text-muted">#{deletePkg.id}</span>
+                ) : null}
+              </div>
+            </div>
             <div className="text-sm text-muted">
               {t('admin.cluster.resource_packages.delete_confirm.impact', {
                 count: deleteImpactQ.isLoading || deleteImpactQ.isError ? '—' : String(deleteImpactQ.data ?? 0),
               })}
             </div>
+            {deleteM.isError ? (
+              <Alert variant="danger" title={t('common.error')} testId="admin.cluster.resource_packages.delete_confirm.error">
+                {formatErrorMessage(deleteM.error)}
+              </Alert>
+            ) : null}
           </div>
         ) : null}
       </ConfirmDialog>
