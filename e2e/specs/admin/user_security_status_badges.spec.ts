@@ -93,3 +93,41 @@ test('@pr-smoke @pr-smoke-mobile admin user header shows lockout and password re
 
   expect(mutations).toEqual([]);
 });
+
+test('@pr-smoke @pr-smoke-mobile failed admin account-flag updates restore the server state', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+
+  const user = {
+    id: 42,
+    login: 'flag-user',
+    level: 1,
+    lockout: false,
+    password_reset: false,
+  };
+  let updates = 0;
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100 },
+    handlers: {
+      'GET users/42': () => ({ user }),
+      'PUT users/42': () => {
+        updates += 1;
+        return {
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ status: false, message: 'Flag update rejected' }),
+        };
+      },
+    },
+  });
+
+  await page.goto('/admin/users/42/security');
+
+  const passwordReset = page.getByTestId('admin.user.security.flags.password_reset').locator('input');
+  await expect(passwordReset).not.toBeChecked();
+  await passwordReset.click();
+
+  await expect.poll(() => updates).toBe(1);
+  await expect(passwordReset).not.toBeChecked();
+  await expect(page.getByTestId('toast.viewport').getByText('Failed to update flags')).toBeVisible();
+});
