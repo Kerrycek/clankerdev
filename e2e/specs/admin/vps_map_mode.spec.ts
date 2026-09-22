@@ -14,6 +14,8 @@ const vps = {
   diskspace: 20480,
   cgroup_version: 'cgroup_any',
   map_mode: 'native',
+  autostart_enable: false,
+  autostart_priority: 10,
   allow_admin_modifications: true,
   node: { id: 1, domain_name: 'node1.example', location: { id: 2, label: 'Praha' } },
   user: { id: 42, login: 'owner' },
@@ -40,6 +42,7 @@ test('@pr-smoke @pr-smoke-mobile admin reviews and submits a restart-dependent V
   await page.goto('/admin/vps/123/config');
   const mapMode = page.getByTestId('vps.config.map_mode');
   await expect(mapMode).toBeVisible();
+  await expect(page.getByTestId('vps.config.autostart_status')).toHaveText('Autostart inactive');
   await mapMode.selectOption('zfs');
 
   const review = page.getByTestId('vps.config.diff.map_mode');

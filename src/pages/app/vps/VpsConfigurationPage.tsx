@@ -7,6 +7,7 @@ import { useI18n } from '../../../app/i18n';
 import { useChrome } from '../../../components/layout/ChromeContext';
 import { ActionButton } from '../../../components/ui/ActionButton';
 import { Alert } from '../../../components/ui/Alert';
+import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
 import { Card, CardHeader } from '../../../components/ui/Card';
 import { Checkbox } from '../../../components/ui/Checkbox';
@@ -493,7 +494,21 @@ export function VpsConfigurationPage() {
           <Field label={t('vps.config.field.cpu_limit')} help={t('vps.config.help.cpu_limit_nullable')} errors={fieldMessages('cpu_limit')}>
             <Input value={effective.cpuLimit} type="number" min={0} step={1} onChange={(e) => patchDraft({ cpuLimit: e.target.value })} disabled={saveM.isPending} />
           </Field>
-          <Field label={t('vps.config.field.autostart_priority')} help={t('vps.config.help.autostart_priority')} errors={fieldMessages('autostart_priority')}>
+          <Field
+            label={(
+              <span className="flex flex-wrap items-center gap-2">
+                <span>{t('vps.config.field.autostart_priority')}</span>
+                <Badge
+                  variant={vps.autostart_enable === true ? 'ok' : 'neutral'}
+                  testId="vps.config.autostart_status"
+                >
+                  {t(vps.autostart_enable === true ? 'vps.config.autostart.enabled' : 'vps.config.autostart.disabled')}
+                </Badge>
+              </span>
+            )}
+            help={t('vps.config.help.autostart_priority')}
+            errors={fieldMessages('autostart_priority')}
+          >
             <Input
               value={effective.autostartPriority}
               type="number"
