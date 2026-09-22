@@ -341,15 +341,18 @@ function UserNamespaceMapListContent(props: UserNamespaceMapListProps & { viewer
 
   // Delete map
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const deleteM = useMutation({
+    onMutate: () => setDeleteError(null),
     mutationFn: async (mapId: number) => deleteUserNamespaceMap(mapId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user_namespace_map', 'list'] });
+      setDeleteError(null);
       setDeleteId(null);
     },
     onError: (e: any) => {
-      setCreateErr(String(e?.message ?? e));
+      setDeleteError(String(e?.message ?? e));
     },
   });
 
@@ -582,7 +585,10 @@ function UserNamespaceMapListContent(props: UserNamespaceMapListProps & { viewer
                         data-row-no-nav
                         data-testid={`${props.testIdPrefix}.row.${r.id}.delete`}
                         className="text-xs text-danger underline"
-                        onClick={() => setDeleteId(r.id)}
+                        onClick={() => {
+                          setDeleteError(null);
+                          setDeleteId(r.id);
+                        }}
                       >
                         {t('common.delete')}
                       </button>
@@ -689,11 +695,20 @@ function UserNamespaceMapListContent(props: UserNamespaceMapListProps & { viewer
         description={t('userns.map.delete.desc')}
         confirmLabel={t('common.delete')}
         confirmLoading={deleteM.isPending}
-        onCancel={() => setDeleteId(null)}
+        onCancel={() => {
+          setDeleteError(null);
+          setDeleteId(null);
+        }}
         onConfirm={() => {
           if (deleteId != null) deleteM.mutate(deleteId);
         }}
-      />
+      >
+        {deleteError ? (
+          <Alert title={t('common.error')} variant="danger" testId={`${props.testIdPrefix}.delete.error`}>
+            {deleteError}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
     </div>
   );
 }
