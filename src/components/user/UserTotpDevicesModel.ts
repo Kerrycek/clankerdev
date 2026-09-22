@@ -18,6 +18,22 @@ export function looksLikeTotpCode(v: string): boolean {
   return /^\d{6}$/.test(v.trim());
 }
 
+export function safeTotpProvisioningUri(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+
+  const raw = value.trim();
+  if (!raw || /[\u0000-\u001f\u007f]/.test(raw)) return null;
+
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== 'otpauth:' || parsed.hostname.toLowerCase() !== 'totp') return null;
+    if (parsed.username || parsed.password || parsed.port || parsed.hash) return null;
+    return raw;
+  } catch {
+    return null;
+  }
+}
+
 export function deviceLabel(device: Pick<UserTotpDevice, 'id' | 'label'>): string {
   return device.label ? String(device.label) : `#${device.id}`;
 }
