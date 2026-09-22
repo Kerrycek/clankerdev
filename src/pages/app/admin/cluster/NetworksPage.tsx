@@ -386,11 +386,13 @@ function NetworksContent() {
   const [form, setForm] = useState<FormState>(() => initForm());
 
   const openCreate = () => {
+    createM.reset();
     setForm(initForm());
     setEditor({ mode: 'create' });
   };
 
   const openEdit = (n: Network) => {
+    updateM.reset();
     setForm(initForm(n));
     setEditor({ mode: 'edit', network: n });
   };
@@ -430,8 +432,7 @@ function NetworksContent() {
       pushToast({ variant: 'ok', title: t('admin.cluster.networks.toast.created') });
       setEditor(null);
     },
-    onError: (e) => pushToast({ variant: 'danger', title: t('common.error'), body: formatErrorMessage(e) }),
-    });
+  });
 
   const updateM = useMutation({
     mutationFn: async () => {
@@ -460,7 +461,6 @@ function NetworksContent() {
       pushToast({ variant: 'ok', title: t('admin.cluster.networks.toast.saved') });
       setEditor(null);
     },
-    onError: (e) => pushToast({ variant: 'danger', title: t('common.error'), body: formatErrorMessage(e) }),
   });
 
   const busy = createM.isPending || updateM.isPending;
@@ -730,11 +730,24 @@ function NetworksContent() {
       <Modal
         open={Boolean(editor)}
         title={editor?.mode === 'edit' ? t('admin.cluster.networks.edit.title') : t('admin.cluster.networks.create.title')}
-        onClose={() => (busy ? null : setEditor(null))}
+        onClose={() => {
+          if (busy) return;
+          if (editor?.mode === 'edit') updateM.reset();
+          else createM.reset();
+          setEditor(null);
+        }}
         testId="admin.cluster.networks.editor"
         footer={
           <div className="flex items-center justify-end gap-2">
-            <Button variant="secondary" onClick={() => setEditor(null)} disabled={busy}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                if (editor?.mode === 'edit') updateM.reset();
+                else createM.reset();
+                setEditor(null);
+              }}
+              disabled={busy}
+            >
               {t('common.cancel')}
             </Button>
             <Button
@@ -912,6 +925,12 @@ function NetworksContent() {
               label={t('admin.cluster.networks.field.add_ip_addresses')}
               description={t('admin.cluster.networks.field.add_ip_addresses_desc')}
             />
+          ) : null}
+
+          {(editor?.mode === 'edit' ? updateM.isError : createM.isError) ? (
+            <Alert variant="danger" title={t('common.error')} testId="admin.cluster.networks.editor.error">
+              {formatErrorMessage(editor?.mode === 'edit' ? updateM.error : createM.error)}
+            </Alert>
           ) : null}
         </div>
       </Modal>
