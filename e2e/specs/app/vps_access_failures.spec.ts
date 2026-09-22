@@ -167,9 +167,10 @@ test.describe('@workflow-matrix VPS access failure regressions', () => {
     await page.getByTestId('vps.action.root_password_confirm.confirm').click();
 
     expect((await requestPromise).postDataJSON()).toEqual({ vps: { type: 'secure' } });
-    await expect(page.getByText(/server did not return a task identifier/i)).toBeVisible();
+    await expect(page.getByTestId('vps.action.root_password_confirm')).toBeVisible();
+    await expect(page.getByTestId('vps.action.root_password_confirm.error')).toContainText(/server did not return a task identifier/i);
+    await expect(page.getByTestId('vps.action.root_password_confirm.confirm')).toBeDisabled();
     await expect(page.getByText(secret, { exact: true })).toHaveCount(0);
-    await expect(page.getByText('New root password')).toHaveCount(0);
     await expect(page.getByTestId('vps.actions.menu').locator('option[value="action:root_password"]')).toBeDisabled();
   });
 

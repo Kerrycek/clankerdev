@@ -207,6 +207,9 @@ export function VpsLayout() {
     },
     onSettled: (_data, error, _variables, context) => context && chrome.settleLocalLock(context.lockRef, error, context.mutationGeneration),
     onSuccess: (res, variables, context) => {
+      if (variables.vpsId === vpsId) {
+        setConfirm((current) => current?.kind === 'stop' ? null : current);
+      }
       const asId = getMetaActionStateId(res.meta);
       if (asId !== undefined) {
         const objectLabel = variables.objectLabel;
@@ -237,6 +240,9 @@ export function VpsLayout() {
     },
     onSettled: (_data, error, _variables, context) => context && chrome.settleLocalLock(context.lockRef, error, context.mutationGeneration),
     onSuccess: (res, variables, context) => {
+      if (variables.vpsId === vpsId) {
+        setConfirm((current) => current?.kind === 'restart' ? null : current);
+      }
       const asId = getMetaActionStateId(res.meta);
       if (asId !== undefined) {
         const objectLabel = variables.objectLabel;
@@ -266,6 +272,9 @@ export function VpsLayout() {
     },
     onMutate: acquireMutationContext,
     onSuccess: (res, variables, context) => {
+      if (variables.vpsId === vpsId) {
+        setConfirm((current) => current?.kind === 'passwd' ? null : current);
+      }
       const asId = getMetaActionStateId(res.meta);
       if (asId === undefined) return;
       const objectLabel = variables.objectLabel;
@@ -402,6 +411,15 @@ export function VpsLayout() {
     : undefined;
   const currentPasswdMutationPending = passwdM.isPending && passwdM.variables?.vpsId === vpsId;
   const currentPasswdMutationError = passwdM.isError && passwdM.variables?.vpsId === vpsId ? passwdM.error : null;
+  const pageMutationError = startM.isError
+    ? startM.error
+    : stopM.isError && confirm?.kind !== 'stop'
+      ? stopM.error
+      : restartM.isError && confirm?.kind !== 'restart'
+        ? restartM.error
+        : currentPasswdMutationError && confirm?.kind !== 'passwd'
+          ? currentPasswdMutationError
+          : null;
   const busyLocal = busyLocalLock || startM.isPending || stopM.isPending || restartM.isPending || currentPasswdMutationPending;
 
   const startGate = gateVpsAction('start', { vps, busyLocal, busyTransaction });
@@ -427,7 +445,10 @@ export function VpsLayout() {
 
     switch (value) {
       case 'action:root_password':
-        if (passwdGate.allowed) setConfirm({ kind: 'passwd', type: 'secure' });
+        if (passwdGate.allowed) {
+          passwdM.reset();
+          setConfirm({ kind: 'passwd', type: 'secure' });
+        }
         return;
       case 'tasks':
         chrome.openTasks();
@@ -614,7 +635,10 @@ export function VpsLayout() {
                     testId="vps.action.restart.header"
                     disabled={!restartGate.allowed}
                     disabledReason={!restartGate.allowed ? restartGate.reason : undefined}
-                    onClick={() => setConfirm({ kind: 'restart', force: false })}
+                    onClick={() => {
+                      restartM.reset();
+                      setConfirm({ kind: 'restart', force: false });
+                    }}
                     title={t('action.vps.restart.label')}
                   >
                     <RotateCw className="h-4 w-4" aria-hidden="true" />
@@ -625,7 +649,10 @@ export function VpsLayout() {
                     testId="vps.action.stop.header"
                     disabled={!stopGate.allowed}
                     disabledReason={!stopGate.allowed ? stopGate.reason : undefined}
-                    onClick={() => setConfirm({ kind: 'stop', force: false })}
+                    onClick={() => {
+                      stopM.reset();
+                      setConfirm({ kind: 'stop', force: false });
+                    }}
                     title={t('action.vps.stop.label')}
                   >
                     <Square className="h-4 w-4" aria-hidden="true" />
@@ -667,7 +694,7 @@ export function VpsLayout() {
           />
         ) : null}
 
-        {(startM.isError || stopM.isError || restartM.isError || currentPasswdMutationError || showAsyncError) ? (
+        {(pageMutationError || showAsyncError) ? (
           <Card>
             <div className="p-4">
               <div className="text-sm font-medium">{t('common.action_failed')}</div>
@@ -675,11 +702,10 @@ export function VpsLayout() {
                 {showAsyncError
                   ? t('vps.power.error.task_failed', { id: currentPasswdAsyncError!.asId })
                   : (() => {
-                      const error = startM.error ?? stopM.error ?? restartM.error ?? currentPasswdMutationError;
-                      return isMissingActionStateError(error)
+                      return isMissingActionStateError(pageMutationError)
                         ? t('vps.mutation.error.missing_action_state')
-                        : error instanceof Error
-                          ? error.message
+                        : pageMutationError instanceof Error
+                          ? pageMutationError.message
                           : t('common.unknown_error');
                     })()}
               </div>
@@ -696,11 +722,12 @@ export function VpsLayout() {
           description={t('vps.power.stop.confirm_desc_basic')}
           danger
           confirmLabel={t('action.vps.stop.label')}
+          confirmLoading={stopM.isPending}
+          confirmDisabled={stopM.isPending || !stopGate.allowed}
           onCancel={() => setConfirm(null)}
           onConfirm={() => {
             const force = confirm && confirm.kind === 'stop' ? confirm.force : false;
             stopM.mutate(freezeVpsMutationSnapshot({ ...snapshotPowerVariables(), force }));
-            setConfirm(null);
           }}
         >
           <div className="space-y-3">
@@ -718,6 +745,15 @@ export function VpsLayout() {
               description={t('vps.power.stop.force.help')}
               testId="vps.action.stop_confirm.force"
             />
+            {stopM.isError ? (
+              <div className="rounded-md border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger" data-testid="vps.action.stop_confirm.error">
+                {isMissingActionStateError(stopM.error)
+                  ? t('vps.mutation.error.missing_action_state')
+                  : stopM.error instanceof Error
+                    ? stopM.error.message
+                    : t('common.unknown_error')}
+              </div>
+            ) : null}
           </div>
         </ConfirmDialog>
 
@@ -727,11 +763,12 @@ export function VpsLayout() {
           title={t('vps.power.restart.confirm_title')}
           description={t('vps.power.restart.confirm_desc_basic')}
           confirmLabel={t('action.vps.restart.label')}
+          confirmLoading={restartM.isPending}
+          confirmDisabled={restartM.isPending || !restartGate.allowed}
           onCancel={() => setConfirm(null)}
           onConfirm={() => {
             const force = confirm && confirm.kind === 'restart' ? confirm.force : false;
             restartM.mutate(freezeVpsMutationSnapshot({ ...snapshotPowerVariables(), force }));
-            setConfirm(null);
           }}
         >
           <div className="space-y-3">
@@ -749,6 +786,15 @@ export function VpsLayout() {
               description={t('vps.power.restart.force.help')}
               testId="vps.action.restart_confirm.force"
             />
+            {restartM.isError ? (
+              <div className="rounded-md border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger" data-testid="vps.action.restart_confirm.error">
+                {isMissingActionStateError(restartM.error)
+                  ? t('vps.mutation.error.missing_action_state')
+                  : restartM.error instanceof Error
+                    ? restartM.error.message
+                    : t('common.unknown_error')}
+              </div>
+            ) : null}
           </div>
         </ConfirmDialog>
 
@@ -758,11 +804,12 @@ export function VpsLayout() {
           title={t('action.vps.root_password.label')}
           description={t('vps.power.root_password.confirm_desc_basic')}
           confirmLabel={t('common.generate')}
+          confirmLoading={currentPasswdMutationPending}
+          confirmDisabled={currentPasswdMutationPending || !passwdGate.allowed}
           onCancel={() => setConfirm(null)}
           onConfirm={() => {
             const type = confirm && confirm.kind === 'passwd' ? confirm.type : 'secure';
             passwdM.mutate(freezeVpsMutationSnapshot({ ...snapshotPowerVariables(), type }));
-            setConfirm(null);
           }}
         >
           <div className="space-y-3">
@@ -791,6 +838,15 @@ export function VpsLayout() {
                 <span>{t('vps.power.root_password.type.simple')}</span>
               </label>
             </div>
+            {currentPasswdMutationError ? (
+              <div className="rounded-md border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger" data-testid="vps.action.root_password_confirm.error">
+                {isMissingActionStateError(currentPasswdMutationError)
+                  ? t('vps.mutation.error.missing_action_state')
+                  : currentPasswdMutationError instanceof Error
+                    ? currentPasswdMutationError.message
+                    : t('common.unknown_error')}
+              </div>
+            ) : null}
           </div>
         </ConfirmDialog>
 
