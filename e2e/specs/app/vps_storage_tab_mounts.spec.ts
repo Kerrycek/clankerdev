@@ -197,7 +197,9 @@ test.describe('@smoke VPS storage tab mounts', () => {
     await expect(page.getByTestId('vps.storage.root_dataset.metadata')).toContainText('5.0 GiB');
     await expect(page.getByTestId('vps.storage.root_dataset.metadata')).toContainText('15 GiB');
     await expect(page.getByTestId('vps.storage.root_dataset.metadata')).toContainText('20 GiB');
-    await expect(page.getByTestId('vps.storage.no_backup_cta_note')).toContainText('does not offer a normal Create backup button');
+    await expect(page.getByTestId('vps.storage.no_backup_cta_note')).toHaveCount(0);
+    await expect(page.getByTestId('vps.storage.root_dataset.details')).toBeVisible();
+    await expect(page.getByTestId('vps.storage.root_dataset.system_context')).toHaveCount(0);
     await expect(page.getByTestId('vps.storage.root_dataset.open')).toHaveAttribute('href', '/app/datasets/10');
     await expect(page.getByTestId('vps.storage.root_dataset.create_subdataset')).toHaveAttribute(
       'href',
@@ -213,6 +215,7 @@ test.describe('@smoke VPS storage tab mounts', () => {
     await expect(mountItem(page, 1)).toContainText('mounted');
     await expect(mountItem(page, 1)).toContainText('2026');
     await expect(page.getByText('Master enabled')).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 
     await page.getByTestId('vps.storage.mounts.add').click();
     await expect(page.getByTestId('vps.storage.mounts.create')).toBeVisible();

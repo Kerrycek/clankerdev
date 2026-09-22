@@ -121,26 +121,20 @@ export function VpsStorageMountsCard(props: {
             </div>
 
             <div className="hidden overflow-x-auto md:block">
-              <Table testId="vps.storage.mounts.table" minWidth="lg">
+              <Table testId="vps.storage.mounts.table" minWidth="md">
                 <thead>
                   <tr className="border-b border-border text-left text-xs text-muted">
                     <th className="px-4 py-3">{t('vps.storage.mounts.field.mountpoint')}</th>
                     <th className="px-4 py-3">{t('vps.storage.mounts.field.dataset')}</th>
-                    <th className="px-4 py-3">{t('vps.storage.mounts.field.mode_short')}</th>
-                    <th className="px-4 py-3">{t('vps.storage.mounts.field.type_short')}</th>
-                    <th className="px-4 py-3">{t('vps.storage.mounts.field.enabled_short')}</th>
-                    {props.canAdmin ? <th className="px-4 py-3">{t('vps.storage.mounts.field.master_short')}</th> : null}
-                    <th className="px-4 py-3">{t('vps.storage.mounts.field.on_start_fail_short')}</th>
-                    <th className="px-4 py-3">{t('vps.storage.mounts.field.default_map_short')}</th>
-                    <th className="px-4 py-3">{t('vps.storage.mounts.field.current_state_short')}</th>
-                    <th className="px-4 py-3">{t('vps.storage.mounts.field.expiration_short')}</th>
-                    <th className="px-4 py-3">{t('vps.storage.mounts.field.updated')}</th>
+                    <th className="px-4 py-3">{t('vps.storage.mounts.column.access')}</th>
+                    <th className="px-4 py-3">{t('vps.storage.mounts.column.status')}</th>
+                    <th className="px-4 py-3">{t('vps.storage.mounts.column.details')}</th>
                     {props.canMutate ? <th className="px-4 py-3"></th> : null}
                   </tr>
                 </thead>
                 <tbody>
                   {props.mounts.map((mount) => {
-                    const enabledLabel = canonicalBool(mount.enabled, true) ? t('common.yes') : t('common.no');
+                    const enabledLabel = canonicalBool(mount.enabled, true) ? t('common.enabled') : t('common.disabled');
                     const masterLabel = canonicalBool(mount.master_enabled, true) ? t('common.yes') : t('common.no');
                     return (
                       <tr key={mount.id} data-testid={`vps.storage.mounts.row.${mount.id}`} className="border-b border-border/60 last:border-b-0">
@@ -148,21 +142,32 @@ export function VpsStorageMountsCard(props: {
                         <td className="px-4 py-3">
                           <MountDatasetLink basePath={props.basePath} mount={mount} testId={`vps.storage.mounts.row.${mount.id}.dataset`} />
                         </td>
-                        <td className="px-4 py-3">{String(mount.mode ?? '—')}</td>
-                        <td className="px-4 py-3">{String(mount.type ?? '—')}</td>
                         <td className="px-4 py-3">
-                          <Badge variant={canonicalBool(mount.enabled, true) ? 'ok' : 'warn'}>{enabledLabel}</Badge>
+                          <div className="font-medium text-fg">{String(mount.mode ?? '—')}</div>
+                          <div className="mt-0.5 text-xs text-muted">{String(mount.type ?? '—')}</div>
                         </td>
-                        {props.canAdmin ? (
-                          <td className="px-4 py-3">
-                            <Badge variant={canonicalBool(mount.master_enabled, true) ? 'neutral' : 'warn'}>{masterLabel}</Badge>
-                          </td>
-                        ) : null}
-                        <td className="px-4 py-3">{String(mount.on_start_fail ?? '—')}</td>
-                        <td className="px-4 py-3">{canonicalBool(mount.use_default_map, true) ? t('common.yes') : t('common.no')}</td>
-                        <td className="px-4 py-3">{String(mount.current_state ?? '—')}</td>
-                        <td className="px-4 py-3 text-xs text-muted">{formatDateTime(mount.expiration_date)}</td>
-                        <td className="px-4 py-3 text-xs text-muted">{formatDateTime(mount.updated_at)}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1.5">
+                            <Badge variant={canonicalBool(mount.enabled, true) ? 'ok' : 'warn'}>{enabledLabel}</Badge>
+                            <Badge variant={mountStateTone(mount)}>{String(mount.current_state ?? t('common.na'))}</Badge>
+                            {props.canAdmin ? (
+                              <Badge variant={canonicalBool(mount.master_enabled, true) ? 'neutral' : 'warn'}>
+                                {t('vps.storage.mounts.master_short')}: {masterLabel}
+                              </Badge>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-muted">
+                          <details data-testid={`vps.storage.mounts.row.${mount.id}.details`}>
+                            <summary className="cursor-pointer font-medium text-fg">{t('common.details')}</summary>
+                            <div className="mt-2 max-w-sm space-y-1 break-words">
+                              <div>{t('vps.storage.mounts.field.on_start_fail', { value: String(mount.on_start_fail ?? '—') })}</div>
+                              <div>{t('vps.storage.mounts.field.default_map', { value: canonicalBool(mount.use_default_map, true) ? t('common.yes') : t('common.no') })}</div>
+                              <div>{t('vps.storage.mounts.field.expiration', { value: formatDateTime(mount.expiration_date) })}</div>
+                              <div>{t('vps.storage.mounts.field.updated')}: {formatDateTime(mount.updated_at)}</div>
+                            </div>
+                          </details>
+                        </td>
                         {props.canMutate ? <td className="px-4 py-3 text-right">
                           <div className="inline-flex items-center gap-2">
                             <Button variant="secondary" size="sm" testId={`vps.storage.mounts.row.${mount.id}.edit`} onClick={() => props.onEdit(mount)}>
