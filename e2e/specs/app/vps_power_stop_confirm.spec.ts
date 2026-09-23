@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
+import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock } from '../../fixtures';
 
 const vps = {
   id: 123,
@@ -120,6 +120,39 @@ test.describe('@workflow-matrix @pr-smoke @smoke VPS detail power actions', () =
     expect(request.postDataJSON()).toEqual({ vps: { force: true } });
     await expect(page.getByTestId('vps.action.stop_confirm')).toBeHidden();
     await expectTrackedTask(page, 777, 'Stop');
+  });
+
+  test('keeps the stop confirmation and force choice available after an immediate rejection', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    let attempts = 0;
+    await installHaveApiMock(page, {
+      user: { id: 42, login: 'user', level: 1 },
+      handlers: {
+        'GET vpses/123': () => ({ vps }),
+        'GET ip_addresses': () => ({ ip_addresses: [] }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'POST vpses/123/stop': () => {
+          attempts += 1;
+          return attempts === 1
+            ? failEnvelope('Stop rejected by API')
+            : { _meta: { action_state_id: 781 } };
+        },
+        'GET action_states/781': () => runningActionState(781, 'Stop VPS'),
+      },
+    });
+
+    await page.goto('/app/vps/123');
+    await page.getByTestId('vps.action.stop.header').click();
+    await page.getByTestId('vps.action.stop_confirm.force').click();
+    await page.getByTestId('vps.action.stop_confirm.confirm').click();
+
+    await expect(page.getByTestId('vps.action.stop_confirm')).toBeVisible();
+    await expect(page.getByTestId('vps.action.stop_confirm.force')).toBeChecked();
+    await expect(page.getByTestId('vps.action.stop_confirm.error')).toContainText('Stop rejected by API');
+
+    await page.getByTestId('vps.action.stop_confirm.confirm').click();
+    await expect(page.getByTestId('vps.action.stop_confirm')).toBeHidden();
+    await expectTrackedTask(page, 781, 'Stop');
   });
 
   test('restarts a running VPS with force and tracks the returned action state', async ({ page }) => {
