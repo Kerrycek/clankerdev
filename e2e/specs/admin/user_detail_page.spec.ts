@@ -198,8 +198,75 @@ test('admin user detail: lifecycle state update sends object state', async ({ pa
   await expect(page.getByTestId('admin.user.lifecycle.save')).toBeEnabled();
   await page.getByTestId('admin.user.lifecycle.save').click();
 
+  const confirmation = page.getByTestId('admin.user.lifecycle.confirm');
+  await expect(confirmation).toBeVisible();
+  await expect(confirmation).toContainText('alice (#42)');
+  await expect(confirmation).toContainText('Temporarily suspended (suspended)');
+  expect(updates).toHaveLength(0);
+  await page.getByTestId('admin.user.lifecycle.confirm.confirm').click();
+
   await expect.poll(() => updates.length).toBe(1);
   expect(updates).toEqual([{ user: { object_state: 'suspended' } }]);
+});
+
+test('@pr-smoke @pr-smoke-mobile admin user detail: soft delete keeps a durable queued receipt with task links', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+
+  const updates: Array<Record<string, unknown>> = [];
+  const user = {
+    id: 42,
+    login: 'alice',
+    level: 1,
+    full_name: 'Alice Example',
+    email: 'alice@example.test',
+    object_state: 'active',
+    expiration_date: null,
+    remind_after_date: null,
+  };
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100 },
+    handlers: {
+      'GET users/42': () => ({ user }),
+      'PUT users/42': ({ reqJson }) => {
+        updates.push((reqJson as { user?: Record<string, unknown> }).user ?? {});
+        // Async user updates can return the previous resource representation.
+        return { user, _meta: { action_state_id: 742 } };
+      },
+      'GET users': () => ({ users: [] }),
+    },
+  });
+
+  await page.goto('/admin/users/42');
+  await page.getByTestId('admin.user.lifecycle.state').selectOption('soft_delete');
+  await page.getByTestId('admin.user.lifecycle.save').click();
+
+  const confirmation = page.getByTestId('admin.user.lifecycle.confirm');
+  await expect(confirmation).toBeVisible();
+  await expect(confirmation).toContainText('Deactivated – recoverable (soft_delete)');
+  await expect(confirmation).toContainText('revokes access');
+  expect(updates).toHaveLength(0);
+  await page.getByTestId('admin.user.lifecycle.confirm.confirm').click();
+
+  await expect.poll(() => updates.length).toBe(1);
+  expect(updates[0]?.['object_state']).toBe('soft_delete');
+  expect(typeof updates[0]?.['expiration_date']).toBe('string');
+
+  const receipt = page.getByTestId('admin.user.lifecycle.receipt');
+  await expect(receipt).toBeVisible();
+  await expect(receipt).toContainText('Account change queued');
+  await expect(receipt).toContainText('Deactivated – recoverable (soft_delete)');
+  await expect(receipt).toContainText('#742');
+  await expect(page.getByTestId('admin.user.lifecycle.receipt.open_action')).toHaveAttribute(
+    'href',
+    '/admin/action-states/742'
+  );
+  await expect(page.getByTestId('admin.user.lifecycle.state')).toHaveValue('soft_delete');
+  await expect(page.getByTestId('admin.user.lifecycle.save')).toBeDisabled();
+  await expectNoDocumentHorizontalOverflow(page);
+
+  await page.getByTestId('admin.user.lifecycle.receipt.open_tasks').click();
+  await expect(page.getByTestId('tasks.drawer')).toBeVisible();
 });
 
 test('admin user detail: resets lifecycle draft when the user route changes', async ({ page }) => {
@@ -353,6 +420,9 @@ for (const scenario of [
     await page.goto('/admin/users/42');
     await page.getByTestId('admin.user.lifecycle.state').selectOption('suspended');
     await page.getByTestId('admin.user.lifecycle.save').click();
+    await expect(page.getByTestId('admin.user.lifecycle.confirm')).toBeVisible();
+    expect(updateRequests).toBe(0);
+    await page.getByTestId('admin.user.lifecycle.confirm.confirm').click();
 
     await expect(page.getByTestId('admin.user.mutation.pending')).toBeVisible();
     await expect(page.getByTestId('admin.user.mutation.acknowledge')).toHaveCount(0);
