@@ -189,3 +189,55 @@ test('@pr-smoke @pr-smoke-mobile admin user password: keeps generated fields usa
   await expect(failureToast).toContainText(/copy|clipboard|kopírov|schránk/i);
   await expect(failureToast).not.toContainText(generatedPassword);
 });
+
+test('@pr-smoke @pr-smoke-mobile admin user password: keeps a failed save in context and allows retry', async ({
+  page,
+}) => {
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'PASSWORD_SAVE_RETRY' });
+
+  const user = targetUser();
+  let updateCount = 0;
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 90 },
+    handlers: {
+      'GET users/42': () => ({ user }),
+      'PUT users/42': () => {
+        updateCount += 1;
+        if (updateCount === 1) {
+          return {
+            status: 409,
+            contentType: 'application/json',
+            body: JSON.stringify({ status: false, message: 'Password update was rejected', response: null }),
+          };
+        }
+
+        return { user };
+      },
+    },
+  });
+
+  await page.goto('/admin/users/42/security');
+
+  const newPassword = page.getByTestId('admin.user.security.password.new');
+  const repeatedPassword = page.getByTestId('admin.user.security.password.new2');
+  const save = page.getByTestId('admin.user.security.password.save');
+
+  await newPassword.fill('retry-secret');
+  await repeatedPassword.fill('retry-secret');
+  await save.click();
+
+  const error = page.getByTestId('admin.user.security.password.save_error');
+  await expect(error).toContainText('Password update was rejected');
+  await expect(newPassword).toHaveValue('retry-secret');
+  await expect(repeatedPassword).toHaveValue('retry-secret');
+  await expect(save).toBeEnabled();
+
+  await save.click();
+
+  await expect(error).toHaveCount(0);
+  await expect(newPassword).toHaveValue('');
+  await expect(repeatedPassword).toHaveValue('');
+  await expect(save).toBeDisabled();
+  expect(updateCount).toBe(2);
+});

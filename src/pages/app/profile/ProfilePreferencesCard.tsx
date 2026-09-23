@@ -6,8 +6,10 @@ import { useAuth } from '../../../app/auth';
 import { useI18n } from '../../../app/i18n';
 import { useToasts } from '../../../app/toasts';
 import { useUiSettings } from '../../../app/uiSettings';
+import { Alert } from '../../../components/ui/Alert';
 import { Button } from '../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { Select } from '../../../components/ui/Select';
 import { computeOtherModeUrl } from '../../../lib/modeSwitch';
 import { queueScopeAllObjectsWarning } from '../../../lib/pendingToasts';
@@ -29,6 +31,8 @@ export function ProfilePreferencesCard() {
   const navigate = useNavigate();
   const location = useLocation();
   const [includeTipsReset, setIncludeTipsReset] = React.useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = React.useState(false);
+  const [resetError, setResetError] = React.useState<string | null>(null);
   const [resettingPrefs, setResettingPrefs] = React.useState(false);
   const [retryingPrefs, setRetryingPrefs] = React.useState(false);
 
@@ -72,22 +76,19 @@ export function ProfilePreferencesCard() {
   };
 
   const resetPreferences = async () => {
-    const confirmed = window.confirm(
-      includeTipsReset
-        ? t('profile.prefs.reset.confirm_with_tips')
-        : t('profile.prefs.reset.confirm')
-    );
-    if (!confirmed) return;
-
+    setResetError(null);
     setResettingPrefs(true);
     try {
       await ui.resetPreferences({ includeTips: includeTipsReset });
+      setResetDialogOpen(false);
       toasts.pushToast({ variant: 'ok', title: t('profile.prefs.toast.reset.title') });
     } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      setResetError(message);
       toasts.pushToast({
         variant: 'danger',
         title: t('profile.prefs.toast.reset_failed.title'),
-        body: e instanceof Error ? e.message : String(e),
+        body: message,
         autoDismissMs: false,
       });
     } finally {
@@ -285,7 +286,10 @@ export function ProfilePreferencesCard() {
               <Button
                 variant="danger"
                 size="sm"
-                onClick={resetPreferences}
+                onClick={() => {
+                  setResetError(null);
+                  setResetDialogOpen(true);
+                }}
                 loading={resettingPrefs}
                 testId="profile.prefs.reset"
               >
@@ -295,6 +299,29 @@ export function ProfilePreferencesCard() {
           </div>
         </details>
       </CardBody>
+
+      <ConfirmDialog
+        open={resetDialogOpen}
+        title={t('profile.prefs.reset.action')}
+        description={includeTipsReset
+          ? t('profile.prefs.reset.confirm_with_tips')
+          : t('profile.prefs.reset.confirm')}
+        danger
+        confirmLabel={t('profile.prefs.reset.action')}
+        confirmLoading={resettingPrefs}
+        onConfirm={() => void resetPreferences()}
+        onCancel={() => {
+          setResetDialogOpen(false);
+          setResetError(null);
+        }}
+        testId="profile.prefs.reset.confirmation"
+      >
+        {resetError ? (
+          <Alert variant="danger" title={t('profile.prefs.toast.reset_failed.title')}>
+            {resetError}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
     </Card>
   );
 }

@@ -284,6 +284,42 @@ describe('DatasetPlansPage', () => {
     await waitFor(() => expect(api.deleteDatasetPlan).toHaveBeenCalledWith(10, 22));
   });
 
+  it('keeps a failed assignment in its modal and allows retry', async () => {
+    const user = userEvent.setup();
+    api.assignDatasetPlan
+      .mockRejectedValueOnce(new Error('Assignment rejected'))
+      .mockResolvedValueOnce({ data: { id: 23 }, meta: {} });
+    renderPage();
+
+    await user.click(await screen.findByTestId('dataset.plans.assign.open'));
+    await user.selectOptions(screen.getByTestId('dataset.plans.assign.select'), '13');
+    await user.click(screen.getByTestId('dataset.plans.assign.submit'));
+
+    expect(await screen.findByTestId('dataset.plans.assign.error')).toHaveTextContent('Assignment rejected');
+    expect(screen.getByTestId('dataset.plans.assign.select')).toHaveValue('13');
+
+    await user.click(screen.getByTestId('dataset.plans.assign.submit'));
+    await waitFor(() => expect(screen.queryByTestId('dataset.plans.assign.modal')).not.toBeInTheDocument());
+    expect(api.assignDatasetPlan).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps a failed removal in its confirmation and allows retry', async () => {
+    const user = userEvent.setup();
+    api.deleteDatasetPlan
+      .mockRejectedValueOnce(new Error('Removal rejected'))
+      .mockResolvedValueOnce({ data: undefined, meta: {} });
+    renderPage();
+
+    await user.click(await screen.findByTestId('dataset.plans.row.22.remove'));
+    await user.click(screen.getByTestId('dataset.plans.remove.confirm.confirm'));
+
+    expect(await screen.findByTestId('dataset.plans.remove.error')).toHaveTextContent('Removal rejected');
+
+    await user.click(screen.getByTestId('dataset.plans.remove.confirm.confirm'));
+    await waitFor(() => expect(screen.queryByTestId('dataset.plans.remove.confirm')).not.toBeInTheDocument());
+    expect(api.deleteDatasetPlan).toHaveBeenCalledTimes(2);
+  });
+
   it('lets an administrator manage plans whose user permission flags are disabled', async () => {
     const user = userEvent.setup();
     testState.mode = 'admin';

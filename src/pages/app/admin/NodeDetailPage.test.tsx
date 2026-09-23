@@ -154,6 +154,37 @@ describe('NodeDetailPage durable mutation snapshots', () => {
     ));
   });
 
+  it('keeps a rejected maintenance lock in the confirmation dialog and allows retry', async () => {
+    const user = userEvent.setup();
+    maintenanceMock
+      .mockRejectedValueOnce(new Error('maintenance lock refused'))
+      .mockResolvedValueOnce({ data: undefined, meta: { action_state_id: 502 } } as never);
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const router = createMemoryRouter([
+      { path: '/admin/nodes/:nodeId', element: <NodeDetailPageRoute /> },
+    ], { initialEntries: ['/admin/nodes/101?section=maintenance'] });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    );
+
+    await user.click(await screen.findByTestId('admin.node.maintenance.lock'));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'common.lock' }));
+
+    expect(await within(dialog).findByText('maintenance lock refused')).toBeVisible();
+    expect(screen.getByRole('dialog')).toBe(dialog);
+
+    await user.click(within(dialog).getByRole('button', { name: 'common.lock' }));
+    await waitFor(() => expect(maintenanceMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
   it('drops an unsubmitted source-node dialog and draft when the route id changes', async () => {
     const user = userEvent.setup();
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });

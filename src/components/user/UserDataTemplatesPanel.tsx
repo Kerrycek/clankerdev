@@ -22,6 +22,7 @@ import { useKeysetPagination } from '../../lib/hooks/useKeysetPagination';
 import { parseNumericToken, splitKeyValueToken, tokenizeSmartInput, unquoteSmartValue } from '../../lib/smartFilter';
 
 import { useChrome } from '../layout/ChromeContext';
+import { Alert } from '../ui/Alert';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import type { SelectOption } from '../ui/Select';
 
@@ -249,16 +250,20 @@ export function UserDataTemplatesPanel(props: {
   });
 
   const [deleteTarget, setDeleteTarget] = useState<VpsUserData | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const deleteM = useMutation({
+    onMutate: () => setDeleteError(null),
     mutationFn: async (id: number) => deleteVpsUserData(id),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['vps_user_data'] });
+      setDeleteError(null);
       setDeleteTarget(null);
       toasts.pushToast({ variant: 'ok', title: t('user_data.toast.deleted') });
     },
-    onError: (e) =>
-      toasts.pushToast({ variant: 'danger', title: t('common.error'), body: formatErrorMessage(e), autoDismissMs: false }),
+    onError: (e) => {
+      setDeleteError(formatErrorMessage(e));
+    },
   });
 
   const [deployVpsId, setDeployVpsId] = useState<number | null>(null);
@@ -349,7 +354,11 @@ export function UserDataTemplatesPanel(props: {
           onCreate={openCreate}
           onDeploy={openDeploy}
           onEdit={openEdit}
-          onDelete={setDeleteTarget}
+          onDelete={(item) => {
+            deleteM.reset();
+            setDeleteError(null);
+            setDeleteTarget(item);
+          }}
         />
       </div>
 
@@ -409,9 +418,20 @@ export function UserDataTemplatesPanel(props: {
           const id = safeUserDataId(deleteTarget?.id);
           if (id) deleteM.mutate(id);
         }}
-        onCancel={() => setDeleteTarget(null)}
+        onCancel={() => {
+          if (deleteM.isPending) return;
+          deleteM.reset();
+          setDeleteError(null);
+          setDeleteTarget(null);
+        }}
         testId={`${prefix}.delete.confirm`}
-      />
+      >
+        {deleteError ? (
+          <Alert variant="danger" title={t('common.error')} testId={`${prefix}.delete.confirm.error`}>
+            {deleteError}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
     </>
   );
 }
