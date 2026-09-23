@@ -1,6 +1,11 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import { bootstrapVpsAdminWindow, installHaveApiMock } from "../../fixtures";
+
+function downloadItemPrefix(page: Page, id: number) {
+  const mobile = (page.viewportSize()?.width ?? 1024) < 768;
+  return `dataset.downloads.${mobile ? "card" : "row"}.${id}`;
+}
 
 test.describe("@smoke Dataset downloads", () => {
   test("create backup deep link opens the create workflow and loads snapshots", async ({
@@ -52,6 +57,67 @@ test.describe("@smoke Dataset downloads", () => {
       page.getByTestId("dataset.downloads.create.snapshot"),
     ).toContainText("snap-200");
     await expect(page).toHaveURL(/\/app\/datasets\/10\/downloads$/);
+  });
+
+  test("@pr-smoke @pr-smoke-mobile clears a dismissed download creation error and retries cleanly", async ({
+    page,
+  }) => {
+    let createAttempts = 0;
+
+    await bootstrapVpsAdminWindow(page, { sessionToken: "TEST" });
+    await installHaveApiMock(page, {
+      user: { id: 1, login: "admin", level: 99 },
+      handlers: {
+        "GET datasets/10": () => ({
+          id: 10,
+          full_name: "tank/vps/ds10",
+          name: "ds10",
+          object_state: "active",
+          vps: { id: 300, hostname: "alpha.example" },
+        }),
+        "GET transaction_chains": () => ({ transaction_chains: [] }),
+        "GET snapshot_downloads": () => ({ snapshot_downloads: [] }),
+        "GET datasets/10/snapshots": () => ({
+          snapshots: [{
+            id: 200,
+            dataset: 10,
+            name: "snap-200",
+            label: "Before migration",
+            created_at: "2026-01-26T00:00:00.000Z",
+          }],
+        }),
+        "POST snapshot_downloads": () => {
+          createAttempts += 1;
+          if (createAttempts === 1) {
+            return {
+              status: 500,
+              contentType: "application/json",
+              body: JSON.stringify({ status: false, message: "Download creation rejected" }),
+            };
+          }
+          return { snapshot_download: { id: 501 } };
+        },
+      },
+    });
+
+    await page.goto("/app/datasets/10/downloads?action=create");
+    await page.getByTestId("dataset.downloads.create.snapshot").selectOption("200");
+    await page.getByTestId("dataset.downloads.create.submit").click();
+
+    await expect(page.getByTestId("dataset.downloads.create.modal")).toContainText(
+      "Download creation rejected",
+    );
+    await expect(page.getByTestId("dataset.downloads.create.snapshot")).toHaveValue("200");
+
+    await page.getByTestId("dataset.downloads.create.cancel").click();
+    await page.getByTestId("dataset.downloads.create.open").click();
+    await expect(page.getByTestId("dataset.downloads.create.modal")).not.toContainText(
+      "Download creation rejected",
+    );
+
+    await page.getByTestId("dataset.downloads.create.submit").click();
+    await expect(page.getByTestId("dataset.downloads.create.modal")).toHaveCount(0);
+    expect(createAttempts).toBe(2);
   });
 
   test("@pr-smoke @pr-smoke-mobile loads older snapshot candidates with the API cursor", async ({
@@ -118,6 +184,7 @@ test.describe("@smoke Dataset downloads", () => {
   test("creates download, tracks action state, and shows details from the API", async ({
     page,
   }) => {
+    const itemPrefix = downloadItemPrefix(page, 501);
     let created = false;
 
     await bootstrapVpsAdminWindow(page, {
@@ -230,10 +297,10 @@ test.describe("@smoke Dataset downloads", () => {
       "#702",
     );
     await page.getByTestId("modal.action_progress.continue").click();
-    await expect(page.getByTestId("dataset.downloads.row.501")).toContainText(
+    await expect(page.getByTestId(itemPrefix)).toContainText(
       "From base",
     );
-    await expect(page.getByTestId("dataset.downloads.row.501")).toContainText(
+    await expect(page.getByTestId(itemPrefix)).toContainText(
       "2099",
     );
   });
@@ -241,6 +308,12 @@ test.describe("@smoke Dataset downloads", () => {
   test("shows reliable ready, pending, expired and failed download states", async ({
     page,
   }) => {
+    const item601 = downloadItemPrefix(page, 601);
+    const item602 = downloadItemPrefix(page, 602);
+    const item603 = downloadItemPrefix(page, 603);
+    const item604 = downloadItemPrefix(page, 604);
+    const item605 = downloadItemPrefix(page, 605);
+
     await bootstrapVpsAdminWindow(page, {
       sessionToken: "TEST",
     });
@@ -317,60 +390,61 @@ test.describe("@smoke Dataset downloads", () => {
 
     await page.goto("/app/datasets/10/downloads");
 
-    await expect(page.getByTestId("dataset.downloads.row.601")).toContainText(
+    await expect(page.getByTestId(item601)).toContainText(
       "Ready",
     );
     await expect(
-      page.getByTestId("dataset.downloads.row.601.download"),
+      page.getByTestId(`${item601}.download`),
     ).toHaveAttribute("href", /generated\/601\.tar\.gz/);
     await expect(
-      page.getByTestId("dataset.downloads.row.601.copy_link"),
+      page.getByTestId(`${item601}.copy_link`),
     ).toBeVisible();
 
-    await expect(page.getByTestId("dataset.downloads.row.602")).toContainText(
+    await expect(page.getByTestId(item602)).toContainText(
       "Pending",
     );
     await expect(
-      page.getByTestId("dataset.downloads.row.602.download"),
+      page.getByTestId(`${item602}.download`),
     ).toBeDisabled();
     await expect(
-      page.getByTestId("dataset.downloads.row.602.copy_link"),
+      page.getByTestId(`${item602}.copy_link`),
     ).toHaveCount(0);
 
-    await expect(page.getByTestId("dataset.downloads.row.603")).toContainText(
+    await expect(page.getByTestId(item603)).toContainText(
       "Expired",
     );
     await expect(
-      page.getByTestId("dataset.downloads.row.603.download"),
+      page.getByTestId(`${item603}.download`),
     ).toBeDisabled();
     await expect(
-      page.getByTestId("dataset.downloads.row.603.retry"),
+      page.getByTestId(`${item603}.retry`),
     ).toBeVisible();
     await expect(
-      page.getByTestId("dataset.downloads.row.603.copy_link"),
+      page.getByTestId(`${item603}.copy_link`),
     ).toHaveCount(0);
 
-    await expect(page.getByTestId("dataset.downloads.row.604")).toContainText(
+    await expect(page.getByTestId(item604)).toContainText(
       "Failed",
     );
     await expect(
-      page.getByTestId("dataset.downloads.row.604.status_detail"),
+      page.getByTestId(`${item604}.status_detail`),
     ).toContainText("zfs send failed");
     await expect(
-      page.getByTestId("dataset.downloads.row.604.retry"),
+      page.getByTestId(`${item604}.retry`),
     ).toBeVisible();
 
-    await expect(page.getByTestId("dataset.downloads.row.605")).toContainText(
+    await expect(page.getByTestId(item605)).toContainText(
       "Ready",
     );
     await expect(
-      page.getByTestId("dataset.downloads.row.605.download"),
+      page.getByTestId(`${item605}.download`),
     ).toHaveAttribute("href", /page=backup&action=download_link&id=605/);
   });
 
   test("delete download uses a confirm dialog and removes the row", async ({
     page,
   }) => {
+    const itemPrefix = downloadItemPrefix(page, 501);
     let deleted = false;
     let deleteCalls = 0;
 
@@ -427,9 +501,9 @@ test.describe("@smoke Dataset downloads", () => {
     await page.goto("/admin/datasets/10/downloads");
 
     await expect(page.getByTestId("dataset.downloads.list")).toBeVisible();
-    await expect(page.getByTestId("dataset.downloads.row.501")).toBeVisible();
+    await expect(page.getByTestId(itemPrefix)).toBeVisible();
 
-    await page.getByTestId("dataset.downloads.row.501.delete").click();
+    await page.getByTestId(`${itemPrefix}.delete`).click();
     await expect(
       page.getByTestId("dataset.downloads.delete_confirm"),
     ).toBeVisible();
@@ -450,15 +524,14 @@ test.describe("@smoke Dataset downloads", () => {
       page.getByTestId("dataset.downloads.delete_confirm"),
     ).toBeHidden();
 
-    await expect(page.getByTestId("dataset.downloads.row.501")).toHaveCount(0);
+    await expect(page.getByTestId(itemPrefix)).toHaveCount(0);
     expect(deleteCalls).toBe(1);
   });
 
   test("@pr-smoke @pr-smoke-mobile @smoke-mobile normal users can download and delete their own ready backups", async ({
     page,
   }) => {
-    const mobile = (page.viewportSize()?.width ?? 1024) < 768;
-    const itemPrefix = `dataset.downloads.${mobile ? "card" : "row"}.501`;
+    const itemPrefix = downloadItemPrefix(page, 501);
     let deleted = false;
     let deleteCalls = 0;
 
@@ -529,6 +602,10 @@ test.describe("@smoke Dataset downloads", () => {
   test("shows pending, expired and failed download artifacts without exposing stale links", async ({
     page,
   }) => {
+    const item601 = downloadItemPrefix(page, 601);
+    const item602 = downloadItemPrefix(page, 602);
+    const item603 = downloadItemPrefix(page, 603);
+
     await bootstrapVpsAdminWindow(page, {
       sessionToken: "TEST",
     });
@@ -605,46 +682,46 @@ test.describe("@smoke Dataset downloads", () => {
 
     await page.goto("/app/datasets/10/downloads");
 
-    await expect(page.getByTestId("dataset.downloads.row.601")).toContainText(
+    await expect(page.getByTestId(item601)).toContainText(
       "Pending",
     );
     await expect(
-      page.getByTestId("dataset.downloads.row.601.status_detail"),
+      page.getByTestId(`${item601}.status_detail`),
     ).toContainText("Preparation is still running");
     await expect(
-      page.getByTestId("dataset.downloads.row.601.download"),
+      page.getByTestId(`${item601}.download`),
     ).toBeDisabled();
     await expect(
-      page.getByTestId("dataset.downloads.row.601.copy_link"),
+      page.getByTestId(`${item601}.copy_link`),
     ).toHaveCount(0);
 
-    await expect(page.getByTestId("dataset.downloads.row.602")).toContainText(
+    await expect(page.getByTestId(item602)).toContainText(
       "Expired",
     );
     await expect(
-      page.getByTestId("dataset.downloads.row.602.download"),
+      page.getByTestId(`${item602}.download`),
     ).toBeDisabled();
     await expect(
-      page.getByTestId("dataset.downloads.row.602.copy_link"),
+      page.getByTestId(`${item602}.copy_link`),
     ).toHaveCount(0);
     await expect(
-      page.getByTestId("dataset.downloads.row.602.retry"),
+      page.getByTestId(`${item602}.retry`),
     ).toBeVisible();
 
-    await expect(page.getByTestId("dataset.downloads.row.603")).toContainText(
+    await expect(page.getByTestId(item603)).toContainText(
       "Failed",
     );
     await expect(
-      page.getByTestId("dataset.downloads.row.603.status_detail"),
+      page.getByTestId(`${item603}.status_detail`),
     ).toContainText("zfs send failed");
     await expect(
-      page.getByTestId("dataset.downloads.row.603.download"),
+      page.getByTestId(`${item603}.download`),
     ).toBeDisabled();
     await expect(
-      page.getByTestId("dataset.downloads.row.603.copy_link"),
+      page.getByTestId(`${item603}.copy_link`),
     ).toHaveCount(0);
 
-    await page.getByTestId("dataset.downloads.row.603.retry").click();
+    await page.getByTestId(`${item603}.retry`).click();
     await expect(
       page.getByTestId("dataset.downloads.create.modal"),
     ).toBeVisible();

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAppMode } from '../../../app/appMode';
@@ -24,7 +24,7 @@ import { IncomingPaymentsFilters } from './IncomingPaymentsFilters';
 import { IncomingPaymentsBulkActions } from './IncomingPaymentsBulkActions';
 import { IncomingPaymentsListContent } from './IncomingPaymentsListContent';
 import { IncomingPaymentsReconciliationSummary } from './IncomingPaymentsReconciliationCards';
-import { incomingPaymentStateFilterOptions } from './IncomingPaymentsModel';
+import { incomingPaymentNeedsReview, incomingPaymentStateFilterOptions } from './IncomingPaymentsModel';
 import { type IncomingPaymentBulkAction, type IncomingPaymentBulkReview } from './IncomingPaymentsBulkModel';
 import { AdminFinanceTabs } from './AdminFinanceTabs';
 
@@ -56,6 +56,7 @@ export function IncomingPaymentsPage() {
   const toasts = useToasts();
   const qc = useQueryClient();
   const tierSlowMs = useTierSlowIntervalMs();
+  const navigate = useNavigate();
 
   const [sp, setSp] = useSearchParams();
 
@@ -126,6 +127,7 @@ export function IncomingPaymentsPage() {
   });
 
   const rows = paymentsQ.data?.data ?? [];
+  const reviewableRows = useMemo(() => rows.filter(incomingPaymentNeedsReview), [rows]);
   const totalCount = getMetaTotalCount(paymentsQ.data?.meta);
   const safeActiveStateTotal = typeof totalCount === 'number'
     && Number.isSafeInteger(totalCount)
@@ -246,6 +248,22 @@ export function IncomingPaymentsPage() {
   }, [qc, t, toasts]);
 
   const shareUrl = useMemo(() => (typeof window !== 'undefined' ? window.location.href : ''), [sp]);
+  const listReturnTo = useMemo(() => {
+    const query = sp.toString();
+    return `${basePath}/payments/incoming${query ? `?${query}` : ''}`;
+  }, [basePath, sp]);
+  const startSequentialReview = useCallback(() => {
+    const [first, ...remaining] = reviewableRows;
+    if (!first) return;
+    const detailParams = new URLSearchParams({ returnTo: listReturnTo });
+    navigate(`${basePath}/payments/incoming/${first.id}?${detailParams.toString()}`, {
+      state: {
+        returnTo: listReturnTo,
+        incomingPaymentReviewQueueActive: true,
+        incomingPaymentReviewQueue: remaining.map((payment) => payment.id),
+      },
+    });
+  }, [basePath, listReturnTo, navigate, reviewableRows]);
 
   return (
     <ListShell
@@ -316,6 +334,9 @@ export function IncomingPaymentsPage() {
             <IncomingPaymentsListContent
               rows={rows}
               basePath={basePath}
+              returnTo={listReturnTo}
+              reviewableCount={reviewableRows.length}
+              onStartReview={startSequentialReview}
               pagination={pagination}
               pageCount={countedPagination.pageCount}
               totalPagesKnown={countedPagination.totalPagesKnown}

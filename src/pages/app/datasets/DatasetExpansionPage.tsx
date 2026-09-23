@@ -32,6 +32,7 @@ import {
   type DatasetExpansion,
 } from '../../../lib/api/datasets';
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
+import { formatErrorMessage } from '../../../lib/errors';
 import { formatDateTime, formatDurationSeconds, formatMiB } from '../../../lib/format';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 import { cursorFromDescendingPage } from '../../../lib/lockIndex';
@@ -181,7 +182,6 @@ export function DatasetExpansionPage() {
     },
     onError: (err: any) => {
       if (err?.code === 'BUSY') chrome.openTasks();
-      pushToast({ variant: 'danger', title: t('dataset.expansion.create.error'), body: String(err?.message ?? err ?? '') });
     },
     onSettled: () => chrome.releaseLocalLock(datasetRef),
   });
@@ -209,7 +209,6 @@ export function DatasetExpansionPage() {
     },
     onError: (err: any) => {
       if (err?.code === 'BUSY') chrome.openTasks();
-      pushToast({ variant: 'danger', title: t('dataset.expansion.update.error'), body: String(err?.message ?? err ?? '') });
     },
     onSettled: () => chrome.releaseLocalLock(datasetRef),
   });
@@ -243,7 +242,6 @@ export function DatasetExpansionPage() {
     },
     onError: (err: any) => {
       if (err?.code === 'BUSY') chrome.openTasks();
-      pushToast({ variant: 'danger', title: t('dataset.expansion.add_space.error'), body: String(err?.message ?? err ?? '') });
     },
     onSettled: () => chrome.releaseLocalLock(datasetRef),
   });
@@ -288,7 +286,10 @@ export function DatasetExpansionPage() {
                     <>
                       <Button
                         testId="dataset.expansion.add_space.open"
-                        onClick={() => setAddSpaceOpen(true)}
+                        onClick={() => {
+                          addSpaceM.reset();
+                          setAddSpaceOpen(true);
+                        }}
                         disabled={busy || !expansionCapabilities.canAddSpace}
                       >
                         {t('dataset.expansion.add_space.open')}
@@ -297,6 +298,7 @@ export function DatasetExpansionPage() {
                         testId="dataset.expansion.edit.open"
                         variant="secondary"
                         onClick={() => {
+                          updateM.reset();
                           setEditForm(datasetExpansionEditForm(currentExpansion));
                           setEditOpen(true);
                         }}
@@ -451,6 +453,7 @@ export function DatasetExpansionPage() {
                   testId="dataset.expansion.register.open"
                   variant="secondary"
                   onClick={() => {
+                    createM.reset();
                     setNewForm(defaultDatasetExpansionForm('register'));
                     setNewOpen('register');
                   }}
@@ -487,6 +490,14 @@ export function DatasetExpansionPage() {
               <Checkbox checked={newForm.enableShrink} onChange={(checked) => setNewForm((f) => ({ ...f, mode: 'create', enableShrink: checked }))} label={t('dataset.expansion.form.enable_shrink')} />
               <Checkbox checked={newForm.stopVps} onChange={(checked) => setNewForm((f) => ({ ...f, mode: 'create', stopVps: checked }))} label={t('dataset.expansion.form.stop_vps')} />
             </div>
+            {createM.isError ? (
+              <Alert
+                variant="danger"
+                title={t('dataset.expansion.create.error')}
+                description={formatErrorMessage(createM.error)}
+                testId="dataset.expansion.create.error"
+              />
+            ) : null}
             <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-border pt-4">
               <Button testId="dataset.expansion.create.submit" onClick={() => void createM.mutate({ ...newForm, mode: 'create' })} loading={createM.isPending} disabled={busy}>
                 {t('dataset.expansion.create.submit')}
@@ -500,14 +511,24 @@ export function DatasetExpansionPage() {
       <Modal
         open={expansionCapabilities.canRegister && newOpen === 'register'}
         onClose={() => {
-          if (!createM.isPending) setNewOpen(null);
+          if (!createM.isPending) {
+            createM.reset();
+            setNewOpen(null);
+          }
         }}
         title={t('dataset.expansion.register.title')}
         size="md"
         testId="dataset.expansion.create.modal"
         footer={
           <div className="flex items-center justify-end gap-2">
-            <Button variant="secondary" onClick={() => setNewOpen(null)} disabled={createM.isPending}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                createM.reset();
+                setNewOpen(null);
+              }}
+              disabled={createM.isPending}
+            >
               {t('common.cancel')}
             </Button>
             <Button testId="dataset.expansion.register.submit" onClick={() => void createM.mutate(newForm)} loading={createM.isPending} disabled={busy}>
@@ -548,20 +569,38 @@ export function DatasetExpansionPage() {
             <Checkbox checked={newForm.enableShrink} onChange={(checked) => setNewForm((f) => ({ ...f, enableShrink: checked }))} label={t('dataset.expansion.form.enable_shrink')} />
             <Checkbox checked={newForm.stopVps} onChange={(checked) => setNewForm((f) => ({ ...f, stopVps: checked }))} label={t('dataset.expansion.form.stop_vps')} />
           </div>
+          {createM.isError ? (
+            <Alert
+              variant="danger"
+              title={t('dataset.expansion.create.error')}
+              description={formatErrorMessage(createM.error)}
+              testId="dataset.expansion.register.error"
+            />
+          ) : null}
         </div>
       </Modal>
 
       <Modal
         open={expansionCapabilities.canEdit && editOpen && editForm !== null}
         onClose={() => {
-          if (!updateM.isPending) setEditOpen(false);
+          if (!updateM.isPending) {
+            updateM.reset();
+            setEditOpen(false);
+          }
         }}
         title={t('dataset.expansion.edit.title')}
         size="md"
         testId="dataset.expansion.edit.modal"
         footer={
           <div className="flex items-center justify-end gap-2">
-            <Button variant="secondary" onClick={() => setEditOpen(false)} disabled={updateM.isPending}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                updateM.reset();
+                setEditOpen(false);
+              }}
+              disabled={updateM.isPending}
+            >
               {t('common.cancel')}
             </Button>
             <Button testId="dataset.expansion.edit.submit" onClick={() => editForm && void updateM.mutate(editForm)} loading={updateM.isPending} disabled={busy || editForm === null}>
@@ -588,6 +627,14 @@ export function DatasetExpansionPage() {
               <Checkbox checked={editForm.enableShrink} onChange={(checked) => setEditForm((f) => (f ? { ...f, enableShrink: checked } : f))} label={t('dataset.expansion.form.enable_shrink')} />
               <Checkbox checked={editForm.stopVps} onChange={(checked) => setEditForm((f) => (f ? { ...f, stopVps: checked } : f))} label={t('dataset.expansion.form.stop_vps')} />
             </div>
+            {updateM.isError ? (
+              <Alert
+                variant="danger"
+                title={t('dataset.expansion.update.error')}
+                description={formatErrorMessage(updateM.error)}
+                testId="dataset.expansion.edit.error"
+              />
+            ) : null}
           </div>
         ) : null}
       </Modal>
@@ -595,14 +642,24 @@ export function DatasetExpansionPage() {
       <Modal
         open={expansionCapabilities.canAddSpace && addSpaceOpen}
         onClose={() => {
-          if (!addSpaceM.isPending) setAddSpaceOpen(false);
+          if (!addSpaceM.isPending) {
+            addSpaceM.reset();
+            setAddSpaceOpen(false);
+          }
         }}
         title={t('dataset.expansion.add_space.title')}
         size="sm"
         testId="dataset.expansion.add_space.modal"
         footer={
           <div className="flex items-center justify-end gap-2">
-            <Button variant="secondary" onClick={() => setAddSpaceOpen(false)} disabled={addSpaceM.isPending}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                addSpaceM.reset();
+                setAddSpaceOpen(false);
+              }}
+              disabled={addSpaceM.isPending}
+            >
               {t('common.cancel')}
             </Button>
             <Button testId="dataset.expansion.add_space.submit" onClick={() => void addSpaceM.mutate()} loading={addSpaceM.isPending} disabled={busy}>
@@ -624,6 +681,14 @@ export function DatasetExpansionPage() {
             <div className="mt-1 text-xs text-faint">{t('dataset.expansion.form.added_space_hint')}</div>
           </div>
           <Alert variant="warn" title={t('dataset.expansion.add_space.warning_title')} description={t('dataset.expansion.add_space.warning_body')} />
+          {addSpaceM.isError ? (
+            <Alert
+              variant="danger"
+              title={t('dataset.expansion.add_space.error')}
+              description={formatErrorMessage(addSpaceM.error)}
+              testId="dataset.expansion.add_space.error"
+            />
+          ) : null}
         </div>
       </Modal>
     </div>

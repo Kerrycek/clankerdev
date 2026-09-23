@@ -264,16 +264,13 @@ export function DnsZoneSettingsPage() {
           <div className="text-sm font-medium text-danger">{t('dns.zone.settings.danger.title')}</div>
           <div className="mt-1 text-sm text-muted">{t('dns.zone.settings.danger.description')}</div>
 
-          {deleteM.isError ? (
-            <Alert title={t('dns.zone.settings.delete_failed')} variant="danger" className="mt-4">
-              {formatErrorMessage(deleteM.error)}
-            </Alert>
-          ) : null}
-
           <div className="mt-4 flex justify-end">
             <ActionButton
               variant="danger"
-              onClick={() => setConfirmDelete(true)}
+              onClick={() => {
+                deleteM.reset();
+                setConfirmDelete(true);
+              }}
               disabled={!deleteGate.allowed}
               disabledReason={!deleteGate.allowed ? deleteGate.reason : undefined}
               testId="dns.settings.delete.open"
@@ -311,6 +308,16 @@ export function DnsZoneSettingsPage() {
             name: String((zone as any).name ?? (zone as any).label ?? zone.id),
           })}
         </div>
+        {deleteM.isError ? (
+          <Alert
+            title={t('dns.zone.settings.delete_failed')}
+            variant="danger"
+            className="mt-3"
+            testId="dns.settings.delete_confirm.error"
+          >
+            {formatErrorMessage(deleteM.error)}
+          </Alert>
+        ) : null}
       </ConfirmDialog>
     </div>
   );
