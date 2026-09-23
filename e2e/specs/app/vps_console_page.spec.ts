@@ -234,7 +234,8 @@ test.describe('@smoke VPS console page', () => {
     await page.getByTestId('vps.console.new_session').click();
     await page.getByTestId('vps.console.new_session_dialog.confirm').click();
 
-    await expect(page.getByTestId('vps.console.new_session_error')).toBeVisible();
+    await expect(page.getByTestId('vps.console.new_session_dialog')).toBeVisible();
+    await expect(page.getByTestId('vps.console.new_session_dialog.error')).toContainText('console revoke outcome unknown');
     await expect(page.getByTestId('vps.console.revoked')).toBeVisible();
     await expect(page.getByTestId('vps.console.iframe')).toHaveCount(0);
     expect(deleteCalls).toBe(1);
@@ -273,6 +274,9 @@ test.describe('@smoke VPS console page', () => {
 
     await page.getByTestId('vps.console.revoke_session').click();
     await page.getByTestId('vps.console.revoke_session_dialog.confirm').click();
+    await expect(page.getByTestId('vps.console.revoke_session_dialog')).toBeVisible();
+    await expect(page.getByTestId('vps.console.revoke_session_dialog.error')).toContainText('temporary revoke failure');
+    await page.getByTestId('vps.console.revoke_session_dialog.cancel').click();
     await expect(page.getByTestId('vps.console.revoke_error')).toBeVisible();
 
     await page.getByTestId('vps.console.new_session').click();
