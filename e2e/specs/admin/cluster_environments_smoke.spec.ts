@@ -49,7 +49,8 @@ test.describe('@smoke Admin cluster environments', () => {
     });
   });
 
-  test('lists, filters, creates and edits environments', async ({ page }) => {
+  test('lists, filters, creates and edits environments', async ({ page }, testInfo) => {
+    const itemKind = testInfo.project.name === 'mobile-chrome' ? 'card' : 'row';
     const gets: URL[] = [];
     const posts: any[] = [];
     const puts: any[] = [];
@@ -64,7 +65,7 @@ test.describe('@smoke Admin cluster environments', () => {
     await page.goto('/admin/cluster/environments');
     await expect(page.getByTestId('admin.cluster.environments.page')).toBeVisible();
 
-    await expect(page.getByTestId('admin.cluster.environments.row.1')).toBeVisible();
+    await expect(page.getByTestId(`admin.cluster.environments.${itemKind}.1`)).toBeVisible();
 
     // Filter: has hypervisor = true (assert request is namespaced)
     await page.getByTestId('admin.cluster.environments.advanced').click();
@@ -98,7 +99,7 @@ test.describe('@smoke Admin cluster environments', () => {
     });
 
     // Edit
-    await page.getByTestId('admin.cluster.environments.row.1.edit').click();
+    await page.getByTestId(`admin.cluster.environments.${itemKind}.1.edit`).click();
     await expect(page.getByTestId('admin.cluster.environments.editor')).toBeVisible();
     await page.getByTestId('admin.cluster.environments.editor.max_vps').fill('10');
     await page.getByTestId('admin.cluster.environments.editor.save').click();

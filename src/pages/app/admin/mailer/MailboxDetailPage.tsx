@@ -223,13 +223,6 @@ export function MailboxDetailPage() {
       setHandlerModalOpen(false);
       pushToast({ variant: 'ok', title: t('mailer.mailboxes.handlers.create_success') });
     },
-    onError: (err: any) => {
-      pushToast({
-        variant: 'danger',
-        title: t('mailer.mailboxes.handlers.create_error'),
-        body: formatErrorMessage(err),
-      });
-    },
   });
 
   const updateHandlerM = useMutation({
@@ -254,14 +247,15 @@ export function MailboxDetailPage() {
       setEditingHandler(null);
       pushToast({ variant: 'ok', title: t('mailer.mailboxes.handlers.update_success') });
     },
-    onError: (err: any) => {
-      pushToast({
-        variant: 'danger',
-        title: t('mailer.mailboxes.handlers.update_error'),
-        body: formatErrorMessage(err),
-      });
-    },
   });
+
+  const closeHandlerEditor = () => {
+    if (createHandlerM.isPending || updateHandlerM.isPending) return;
+    createHandlerM.reset();
+    updateHandlerM.reset();
+    setHandlerModalOpen(false);
+    setEditingHandler(null);
+  };
 
   const [deleteHandler, setDeleteHandler] = useState<MailboxHandler | null>(null);
 
@@ -716,10 +710,7 @@ export function MailboxDetailPage() {
 
       <Modal
         open={handlerModalOpen}
-        onClose={() => {
-          setHandlerModalOpen(false);
-          setEditingHandler(null);
-        }}
+        onClose={closeHandlerEditor}
         title={editingHandler ? t('mailer.mailboxes.handlers.edit.title') : t('mailer.mailboxes.handlers.create.title')}
         testId="admin.mailer.mailboxes.handler.modal"
         size="md"
@@ -727,10 +718,7 @@ export function MailboxDetailPage() {
           <div className="flex items-center justify-end gap-2">
             <Button
               variant="secondary"
-              onClick={() => {
-                setHandlerModalOpen(false);
-                setEditingHandler(null);
-              }}
+              onClick={closeHandlerEditor}
               disabled={createHandlerM.isPending || updateHandlerM.isPending}
             >
               {t('common.cancel')}
@@ -751,6 +739,20 @@ export function MailboxDetailPage() {
         }
       >
         <div className="grid gap-3">
+          {(editingHandler ? updateHandlerM : createHandlerM).isError ? (
+            <Alert
+              variant="danger"
+              title={
+                editingHandler
+                  ? t('mailer.mailboxes.handlers.update_error')
+                  : t('mailer.mailboxes.handlers.create_error')
+              }
+              testId="admin.mailer.mailboxes.handler.modal.error"
+            >
+              {formatErrorMessage((editingHandler ? updateHandlerM : createHandlerM).error)}
+            </Alert>
+          ) : null}
+
           <div>
             <div className="text-xs font-semibold text-muted">{t('mailer.mailboxes.handlers.fields.class_name')}</div>
             <div className="mt-1">

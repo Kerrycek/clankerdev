@@ -81,6 +81,10 @@ function parsePositiveInt(v: string | undefined): number | null {
 
 const MAILER_RELATION_FETCH_LIMIT = 500;
 
+function RecipientMobileCellLabel(props: { children: React.ReactNode }) {
+  return <span className="text-xs font-medium text-faint @4xl:hidden">{props.children}</span>;
+}
+
 export function MailTemplateDetailPage() {
   const { basePath } = useAppMode();
   const { t } = useI18n();
@@ -459,8 +463,13 @@ export function MailTemplateDetailPage() {
               ) : (recipientsQ.data ?? []).length === 0 ? (
                 <div className="text-sm text-muted">{t('mailer.templates.detail.recipients.empty')}</div>
               ) : (
-                <TableCard minWidth="md" tableTestId="admin.mailer.templates.detail.recipients.table">
-                  <thead>
+                <TableCard
+                  className="@container"
+                  minWidth="full"
+                  tableClassName="block min-w-full @4xl:table @4xl:min-w-table-md"
+                  tableTestId="admin.mailer.templates.detail.recipients.table"
+                >
+                  <thead className="hidden @4xl:table-header-group">
                     <tr className="border-b border-border text-left text-xs text-muted">
                       <th className="px-4 py-2">{t('common.label')}</th>
                       <th className="px-4 py-2">{t('mailer.recipients.fields.to')}</th>
@@ -469,7 +478,7 @@ export function MailTemplateDetailPage() {
                       <th className="px-4 py-2" />
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="block @4xl:table-row-group">
                     {(recipientsQ.data ?? []).map((r: MailTemplateRecipient) => {
                       const mr = (r as any).mail_recipient as MailRecipient | undefined;
                       const rid = resourceId(mr);
@@ -479,22 +488,39 @@ export function MailTemplateDetailPage() {
                       const bcc = String((mr as any)?.bcc ?? '');
 
                       return (
-                        <tr key={rid ?? (r as any).id} className="border-b border-border">
-                          <td className="px-4 py-2 text-sm">{label}</td>
-                          <td className="max-w-xs truncate px-4 py-2 text-sm" title={to}>
-                            {to || <span className="text-muted">{t('common.na')}</span>}
+                        <tr
+                          key={rid ?? (r as any).id}
+                          className="block border-b border-border last:border-b-0 @4xl:table-row"
+                        >
+                          <td className="grid min-w-0 grid-cols-[minmax(6rem,0.38fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 text-sm @4xl:table-cell @4xl:px-4">
+                            <RecipientMobileCellLabel>{t('common.label')}</RecipientMobileCellLabel>
+                            <span className="min-w-0 break-words">{label}</span>
                           </td>
-                          <td className="max-w-xs truncate px-4 py-2 text-sm" title={cc}>
-                            {cc || <span className="text-muted">{t('common.na')}</span>}
+                          <td className="grid min-w-0 grid-cols-[minmax(6rem,0.38fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 text-sm @4xl:table-cell @4xl:max-w-xs @4xl:truncate @4xl:px-4" title={to}>
+                            <RecipientMobileCellLabel>{t('mailer.recipients.fields.to')}</RecipientMobileCellLabel>
+                            <span className="min-w-0 break-all @4xl:block @4xl:truncate">
+                              {to || <span className="text-muted">{t('common.na')}</span>}
+                            </span>
                           </td>
-                          <td className="max-w-xs truncate px-4 py-2 text-sm" title={bcc}>
-                            {bcc || <span className="text-muted">{t('common.na')}</span>}
+                          <td className="grid min-w-0 grid-cols-[minmax(6rem,0.38fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 text-sm @4xl:table-cell @4xl:max-w-xs @4xl:truncate @4xl:px-4" title={cc}>
+                            <RecipientMobileCellLabel>{t('mailer.recipients.fields.cc')}</RecipientMobileCellLabel>
+                            <span className="min-w-0 break-all @4xl:block @4xl:truncate">
+                              {cc || <span className="text-muted">{t('common.na')}</span>}
+                            </span>
                           </td>
-                          <td className="px-4 py-2 text-right text-sm">
+                          <td className="grid min-w-0 grid-cols-[minmax(6rem,0.38fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 text-sm @4xl:table-cell @4xl:max-w-xs @4xl:truncate @4xl:px-4" title={bcc}>
+                            <RecipientMobileCellLabel>{t('mailer.recipients.fields.bcc')}</RecipientMobileCellLabel>
+                            <span className="min-w-0 break-all @4xl:block @4xl:truncate">
+                              {bcc || <span className="text-muted">{t('common.na')}</span>}
+                            </span>
+                          </td>
+                          <td className="grid min-w-0 grid-cols-[minmax(6rem,0.38fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 text-sm @4xl:table-cell @4xl:px-4 @4xl:text-right">
+                            <RecipientMobileCellLabel>{t('common.actions')}</RecipientMobileCellLabel>
                             {rid ? (
                               <Button
                                 variant="danger"
                                 size="sm"
+                                className="min-h-11 w-full @4xl:min-h-8 @4xl:w-auto"
                                 onClick={() => {
                                   removeRecipientM.reset();
                                   setRemoveRecipientId(rid);

@@ -3,7 +3,11 @@ import { expect, test } from '@playwright/test';
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 
 test.describe('Admin content deletion feedback', () => {
-  test('keeps a rejected news deletion in context and supports retry', async ({ page }) => {
+  test('keeps a rejected news deletion in context and supports retry', async ({ page }, testInfo) => {
+    const deleteActionTestId =
+      testInfo.project.name === 'mobile-chrome'
+        ? 'admin.newslog.card.42.delete'
+        : 'admin.newslog.delete.42';
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
     const newsLogs: any[] = [
@@ -40,7 +44,7 @@ test.describe('Admin content deletion feedback', () => {
     });
 
     await page.goto('/admin/content/news');
-    await page.getByTestId('admin.newslog.delete.42').click();
+    await page.getByTestId(deleteActionTestId).click();
 
     const dialog = page.getByTestId('admin.newslog.delete_confirm');
     await expect(dialog).toContainText('Planned maintenance for the storage cluster');
@@ -53,11 +57,15 @@ test.describe('Admin content deletion feedback', () => {
 
     await dialog.getByRole('button', { name: /delete|smazat/i }).click();
     await expect(dialog).toBeHidden();
-    await expect(page.getByTestId('admin.newslog.delete.42')).toHaveCount(0);
+    await expect(page.getByTestId(deleteActionTestId)).toHaveCount(0);
     expect(deleteAttempts).toBe(2);
   });
 
-  test('keeps a rejected help box deletion in context and supports retry', async ({ page }) => {
+  test('keeps a rejected help box deletion in context and supports retry', async ({ page }, testInfo) => {
+    const deleteActionTestId =
+      testInfo.project.name === 'mobile-chrome'
+        ? 'admin.help_boxes.card.73.delete'
+        : 'admin.help_boxes.delete.73';
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
     const helpBoxes: any[] = [
@@ -98,7 +106,7 @@ test.describe('Admin content deletion feedback', () => {
     });
 
     await page.goto('/admin/content/help-boxes');
-    await page.getByTestId('admin.help_boxes.delete.73').click();
+    await page.getByTestId(deleteActionTestId).click();
 
     const dialog = page.getByTestId('admin.help_boxes.delete_confirm');
     await expect(dialog).toContainText('Storage usage guidance');
@@ -111,7 +119,7 @@ test.describe('Admin content deletion feedback', () => {
 
     await dialog.getByRole('button', { name: /delete|smazat/i }).click();
     await expect(dialog).toBeHidden();
-    await expect(page.getByTestId('admin.help_boxes.delete.73')).toHaveCount(0);
+    await expect(page.getByTestId(deleteActionTestId)).toHaveCount(0);
     expect(deleteAttempts).toBe(2);
   });
 });
