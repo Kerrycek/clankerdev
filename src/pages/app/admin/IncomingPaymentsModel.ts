@@ -62,6 +62,12 @@ export function parseIncomingPaymentReviewQueue(value: unknown): number[] {
   return ids;
 }
 
+export function incomingPaymentReviewQueueAfter(queue: number[], selectedId: number): number[] | null {
+  const selectedIndex = queue.indexOf(selectedId);
+  if (selectedIndex < 0) return null;
+  return [...queue.slice(selectedIndex + 1), ...queue.slice(0, selectedIndex)];
+}
+
 export function incomingPaymentMatchesReviewTarget(value: unknown, expectedId: number): boolean {
   if (!value || typeof value !== 'object' || !Number.isSafeInteger(expectedId) || expectedId <= 0) return false;
   const payment = value as IncomingPayment;

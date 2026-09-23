@@ -29,6 +29,17 @@ export function parseRequestReviewQueue(value: unknown): RequestReviewQueueTarge
   return targets;
 }
 
+export function requestReviewQueueAfter(
+  queue: RequestReviewQueueTarget[],
+  selected: RequestReviewQueueTarget,
+): RequestReviewQueueTarget[] | null {
+  const selectedIndex = queue.findIndex((target) => (
+    target.type === selected.type && target.id === selected.id
+  ));
+  if (selectedIndex < 0) return null;
+  return [...queue.slice(selectedIndex + 1), ...queue.slice(0, selectedIndex)];
+}
+
 export function inferRequestReviewType(value: unknown): InferredRequestType | null {
   if (!value || typeof value !== 'object') return null;
   const request = value as Record<string, unknown>;

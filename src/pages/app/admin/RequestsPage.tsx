@@ -33,7 +33,7 @@ import { RequestsExpandedContent } from './RequestsExpandedContent';
 import { RequestsFilters } from './RequestsFilters';
 import { RequestsListContent } from './RequestsListContent';
 import { RequestsListStatus } from './RequestsListStatus';
-import { requestMatchesReviewTarget } from './RequestDetailModel';
+import { requestMatchesReviewTarget, requestReviewQueueAfter } from './RequestDetailModel';
 import { fetchAwaitingReviewTarget, RequestReviewPreconditionError } from './RequestResolveMutation';
 import {
   requestActionNeedsReason,
@@ -503,6 +503,24 @@ export function RequestsPage() {
     [basePath, listReturnTo],
   );
 
+  const reviewQueueTargets = useMemo(() => reviewableRows.map((request) => ({
+    type: requestType(request),
+    id: requestId(request),
+  })), [reviewableRows]);
+
+  const requestReviewState = useCallback((request: UnifiedRequestRow) => {
+    const remaining = requestReviewQueueAfter(reviewQueueTargets, {
+      type: requestType(request),
+      id: requestId(request),
+    });
+    if (remaining === null) return undefined;
+    return {
+      returnTo: listReturnTo,
+      reviewQueueActive: true,
+      reviewQueue: remaining,
+    };
+  }, [listReturnTo, reviewQueueTargets]);
+
   const startSequentialReview = useCallback(() => {
     const [first, ...remaining] = reviewableRows;
     if (!first) return;
@@ -522,7 +540,7 @@ export function RequestsPage() {
     if (openingRequestId !== null) return;
     const onPage = rows.find((request) => requestId(request) === id);
     if (onPage) {
-      navigate(requestDetailHref(requestType(onPage), id));
+      navigate(requestDetailHref(requestType(onPage), id), { state: requestReviewState(onPage) });
       return;
     }
 
@@ -566,7 +584,7 @@ export function RequestsPage() {
     } finally {
       setOpeningRequestId(null);
     }
-  }, [navigate, openingRequestId, requestDetailHref, rows, t, toasts]);
+  }, [navigate, openingRequestId, requestDetailHref, requestReviewState, rows, t, toasts]);
 
   const smartNeedle = smart.trim();
   const debouncedNeedle = useDebouncedValue(smartNeedle, 200);
@@ -640,7 +658,7 @@ export function RequestsPage() {
           secondary: t(`requests.type.${rowType}`),
           onPick: () => {
             setSmart('');
-            navigate(requestDetailHref(rowType, id));
+            navigate(requestDetailHref(rowType, id), { state: requestReviewState(row) });
           },
           testId: `admin.requests.smart.suggest.request.${rowType}.${id}`,
         } satisfies SmartFilterSuggestion;
@@ -657,7 +675,7 @@ export function RequestsPage() {
       testId: `admin.requests.smart.suggest.user.${user.id}`,
     }));
     return [...visibleRequestSuggestions, ...userSuggestions].slice(0, 8);
-  }, [navigate, openRequestById, requestDetailHref, rows, smartNeedle, t, userSuggestQuery.data]);
+  }, [navigate, openRequestById, requestDetailHref, requestReviewState, rows, smartNeedle, t, userSuggestQuery.data]);
 
   const shareUrl = useMemo(() => (typeof window !== 'undefined' ? window.location.href : ''), [sp]);
   if (!isAdmin) return <Navigate to="/app" replace />;
@@ -746,6 +764,7 @@ export function RequestsPage() {
           pagination={pagination}
           reviewableCount={reviewableRows.length}
           onStartReview={startSequentialReview}
+          reviewStateFor={requestReviewState}
           onToggleExpanded={toggleExpanded}
           onExpandAll={expandAll}
           onCollapseAll={collapseAll}
@@ -757,6 +776,7 @@ export function RequestsPage() {
               isAdmin={isAdmin}
               basePath={basePath}
               returnTo={listReturnTo}
+              detailState={requestReviewState(request)}
               compact={compact}
               onResolved={async () => {
                 setExpandedKeys((previous) => {

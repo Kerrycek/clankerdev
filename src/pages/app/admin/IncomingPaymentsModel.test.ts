@@ -11,6 +11,7 @@ import {
   incomingPaymentAccountedAmountLabel,
   incomingPaymentMatchesReviewTarget,
   incomingPaymentNeedsReview,
+  incomingPaymentReviewQueueAfter,
   incomingPaymentReceivedAmountLabel,
   incomingPaymentStateFilterOptions,
   normalizeIncomingPaymentState,
@@ -62,6 +63,11 @@ describe('IncomingPaymentsModel', () => {
     expect(incomingPaymentMatchesReviewTarget(payment, 300)).toBe(true);
     expect(incomingPaymentMatchesReviewTarget({ ...payment, id: 301 }, 300)).toBe(false);
     expect(incomingPaymentMatchesReviewTarget({ ...payment, state: 'processed' }, 300)).toBe(false);
+  });
+
+  test('continues after a randomly selected unmatched payment and wraps once', () => {
+    expect(incomingPaymentReviewQueueAfter([302, 301, 300], 301)).toEqual([300, 302]);
+    expect(incomingPaymentReviewQueueAfter([302, 301, 300], 999)).toBeNull();
   });
 
   test('accepts only the incoming-payments list as a review return target', () => {

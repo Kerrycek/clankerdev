@@ -119,6 +119,7 @@ export function RequestsListContent(props: {
   pagination: RequestsPaginationProps;
   reviewableCount: number;
   onStartReview: () => void;
+  reviewStateFor: (request: UnifiedRequestRow) => unknown;
   onToggleExpanded: (key: string) => void;
   onExpandAll: () => void;
   onCollapseAll: () => void;
@@ -245,6 +246,7 @@ export function RequestsListContent(props: {
                   <Link
                     className="min-w-0 flex-1 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"
                     to={detailHref(props.basePath, request, props.returnTo)}
+                    state={props.reviewStateFor(request)}
                     aria-label={t('requests.list.open_detail', { id: String(id) })}
                   >
                     {summary}
@@ -343,6 +345,7 @@ export function RequestsListContent(props: {
                 <TableRowLink
                   testId={`admin.requests.row.${reqType}.${id}`}
                   to={props.selectionMode ? undefined : detailHref(props.basePath, request, props.returnTo)}
+                  state={props.selectionMode ? undefined : props.reviewStateFor(request)}
                   keyboardNavigation={false}
                   variant={rowVar}
                   className={expanded
@@ -389,6 +392,7 @@ export function RequestsListContent(props: {
                         <Link
                           className="rounded-sm font-medium text-accent focus:outline-none focus:ring-2 focus:ring-accent"
                           to={detailHref(props.basePath, request, props.returnTo)}
+                          state={props.reviewStateFor(request)}
                         >
                           #{id}
                         </Link>

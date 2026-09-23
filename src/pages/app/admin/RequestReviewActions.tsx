@@ -105,6 +105,7 @@ export function RequestReviewActions(props: {
   compact?: boolean;
   showDetailLink?: boolean;
   detailHref?: string;
+  detailState?: unknown;
   onResolved?: () => void | Promise<void>;
 }) {
   const { t } = useI18n();
@@ -352,6 +353,7 @@ export function RequestReviewActions(props: {
           <Link
             className="text-sm text-accent hover:underline"
             to={props.detailHref ?? `${props.basePath}/requests/${props.reqType}/${props.reqId}`}
+            state={props.detailState}
           >
             {t('requests.detail.open_full')}
           </Link>

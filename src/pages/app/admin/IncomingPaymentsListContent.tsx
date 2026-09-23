@@ -37,6 +37,7 @@ export function IncomingPaymentsListContent(props: {
   returnTo: string;
   reviewableCount: number;
   onStartReview: () => void;
+  reviewStateFor: (payment: IncomingPayment) => unknown;
   pagination: PaginationController;
   pageCount?: number;
   totalPagesKnown?: boolean;
@@ -106,7 +107,11 @@ export function IncomingPaymentsListContent(props: {
                     <span className="text-faint">TX:</span> {String(p.transaction_id ?? '—')}
                   </div>
                 </div>
-                <Link className="text-xs font-medium text-accent hover:underline" to={incomingPaymentDetailHref(props.basePath, p.id, props.returnTo)}>
+                <Link
+                  className="text-xs font-medium text-accent hover:underline"
+                  to={incomingPaymentDetailHref(props.basePath, p.id, props.returnTo)}
+                  state={props.reviewStateFor(p)}
+                >
                   {t('common.open')}
                 </Link>
               </div>
@@ -192,6 +197,7 @@ export function IncomingPaymentsListContent(props: {
                 key={p.id}
                 testId={`admin.payments.incoming.row.${p.id}`}
                 to={incomingPaymentDetailHref(props.basePath, p.id, props.returnTo)}
+                state={props.reviewStateFor(p)}
                 variant={rowVar}
                 className="border-b border-border/60 last:border-b-0"
               >
