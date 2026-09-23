@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { bootstrapVpsAdminWindow, installHaveApiMock, setUiSettingsLocalStorage } from '../../fixtures';
+import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock, setUiSettingsLocalStorage } from '../../fixtures';
 
 function namespacedPayload(body: unknown, namespace: string): Record<string, unknown> {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return {};
@@ -80,4 +80,63 @@ test('@smoke profile: overview exposes account actions and profile updates', asy
     'href',
     '/app/requests/change/55'
   );
+});
+
+test('@pr-smoke @pr-smoke-mobile profile keeps rejected personal changes in context for retry', async ({ page }) => {
+  const user = {
+    id: 1,
+    login: 'e2e',
+    level: 1,
+    full_name: 'E2E User',
+    email: 'e2e@example.test',
+    address: 'Test street 1, Prague',
+    time_zone: 'Europe/Prague',
+    mailer_enabled: true,
+  };
+  let changeAttempts = 0;
+
+  await setUiSettingsLocalStorage(page, { language: 'en' });
+  await bootstrapVpsAdminWindow(page, {
+    sessionToken: 'PROFILE_CHANGE_RETRY',
+    webuiNext: { serverTimeZone: 'Europe/Prague' },
+  });
+  await installHaveApiMock(page, {
+    user,
+    handlers: {
+      'GET users/current': () => ({ user }),
+      'GET users/1': () => ({ user }),
+      'POST user_request/changes': ({ reqJson }) => {
+        changeAttempts += 1;
+        if (changeAttempts === 1) return failEnvelope('Address needs manual verification');
+        return {
+          change: {
+            id: 56,
+            state: 'awaiting',
+            user: { id: user.id, login: user.login },
+            ...namespacedPayload(reqJson, 'change'),
+          },
+        };
+      },
+    },
+  });
+
+  await page.goto('/app/profile');
+  await page.getByTestId('profile.personal.address').fill('Retry street 3, Brno');
+  await page.getByTestId('profile.personal.change_reason').fill('Correcting my address');
+  await page.getByTestId('profile.personal.change.submit').click();
+
+  await expect(page.getByTestId('profile.personal.change.error')).toContainText(
+    'Address needs manual verification',
+  );
+  await expect(page.getByTestId('profile.personal.address')).toHaveValue('Retry street 3, Brno');
+  await expect(page.getByTestId('profile.personal.change_reason')).toHaveValue('Correcting my address');
+
+  await page.getByTestId('profile.personal.change.submit').click();
+  await expect(page.getByTestId('profile.personal.change.error')).toHaveCount(0);
+  await expect(page.getByTestId('profile.personal.change.sent')).toBeVisible();
+  await expect(page.getByTestId('profile.personal.change.sent.open')).toHaveAttribute(
+    'href',
+    '/app/requests/change/56',
+  );
+  expect(changeAttempts).toBe(2);
 });

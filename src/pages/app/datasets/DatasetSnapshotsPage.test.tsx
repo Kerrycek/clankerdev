@@ -1,9 +1,9 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Dataset } from '../../../lib/api/datasets';
 import { DatasetContextProvider } from './DatasetContext';
@@ -14,6 +14,8 @@ import {
 
 const api = vi.hoisted(() => ({
   fetchDatasetSnapshots: vi.fn(),
+  createDatasetSnapshot: vi.fn(),
+  fetchActiveTransactionChains: vi.fn(),
 }));
 
 vi.mock('../../../app/auth', () => ({
@@ -40,7 +42,7 @@ vi.mock('../../../components/layout/ChromeContext', () => ({
 }));
 
 vi.mock('../../../lib/api/transactions', () => ({
-  fetchActiveTransactionChains: vi.fn(),
+  fetchActiveTransactionChains: api.fetchActiveTransactionChains,
 }));
 
 vi.mock('../../../lib/api/datasets', async (importOriginal) => {
@@ -48,7 +50,7 @@ vi.mock('../../../lib/api/datasets', async (importOriginal) => {
   return {
     ...original,
     fetchDatasetSnapshots: api.fetchDatasetSnapshots,
-    createDatasetSnapshot: vi.fn(),
+    createDatasetSnapshot: api.createDatasetSnapshot,
     createSnapshotDownload: vi.fn(),
     deleteDatasetSnapshot: vi.fn(),
     rollbackDatasetSnapshot: vi.fn(),
@@ -118,6 +120,12 @@ function HistoryControls() {
   );
 }
 
+beforeEach(() => {
+  vi.clearAllMocks();
+  api.fetchActiveTransactionChains.mockResolvedValue([]);
+  api.createDatasetSnapshot.mockResolvedValue({ data: { id: 92 }, meta: {} });
+});
+
 describe('DatasetSnapshotsPage', () => {
   it('keeps detail query parameters unchanged by default and namespaces embedded actions', () => {
     expect(datasetSnapshotQueryParamKeys()).toEqual({ action: 'action' });
@@ -153,6 +161,34 @@ describe('DatasetSnapshotsPage', () => {
 
     expect(await screen.findByTestId('dataset.snapshots.row.91.rollback')).toBeEnabled();
     expect(screen.getByTestId('dataset.snapshots.row.91.delete')).toBeEnabled();
+  });
+
+  it('clears a dismissed snapshot creation error and allows a clean retry', async () => {
+    const user = userEvent.setup();
+    api.fetchDatasetSnapshots.mockResolvedValue({ data: [], meta: { total_count: 0 } });
+    api.createDatasetSnapshot
+      .mockRejectedValueOnce(new Error('Snapshot creation rejected'))
+      .mockResolvedValueOnce({ data: { id: 92 }, meta: {} });
+
+    renderPage();
+
+    await user.click(await screen.findByTestId('dataset.snapshots.create.open'));
+    fireEvent.change(screen.getByTestId('dataset.snapshots.create.label'), {
+      target: { value: 'Before migration' },
+    });
+    expect(screen.getByTestId('dataset.snapshots.create.label')).toHaveValue('Before migration');
+    await user.click(screen.getByTestId('dataset.snapshots.create.submit'));
+
+    expect(await screen.findByText('Snapshot creation rejected')).toBeVisible();
+    expect(screen.getByTestId('dataset.snapshots.create.label')).toHaveValue('Before migration');
+
+    await user.click(screen.getByTestId('dataset.snapshots.create.cancel'));
+    await user.click(screen.getByTestId('dataset.snapshots.create.open'));
+    expect(screen.queryByText('Snapshot creation rejected')).not.toBeInTheDocument();
+
+    await user.click(screen.getByTestId('dataset.snapshots.create.submit'));
+    await waitFor(() => expect(screen.queryByTestId('dataset.snapshots.create.modal')).not.toBeInTheDocument());
+    expect(api.createDatasetSnapshot).toHaveBeenCalledTimes(2);
   });
 
   it('requires the exact snapshot label before enabling rollback confirmation', async () => {

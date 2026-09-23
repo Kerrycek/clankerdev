@@ -62,6 +62,51 @@ test('user TSIG management is owner-scoped and reveals a new secret only once', 
   await expect(page.getByText('one-time-created-secret', { exact: true })).toHaveCount(0);
 });
 
+test('@pr-smoke @pr-smoke-mobile rejected TSIG key deletion stays in context and allows retry', async ({ page }) => {
+  let deleteCalls = 0;
+  const keys = [{
+    id: 7,
+    name: 'existing-transfer-key',
+    algorithm: 'hmac-sha256',
+    user: { id: 10, login: 'alice' },
+  }];
+
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+  await installHaveApiMock(page, {
+    user: { id: 10, login: 'alice', level: 1 },
+    handlers: {
+      'GET dns_tsig_keys': () => ({ dns_tsig_keys: keys }),
+      'DELETE dns_tsig_keys/7': () => {
+        deleteCalls += 1;
+        if (deleteCalls === 1) {
+          return {
+            status: 409,
+            contentType: 'application/json',
+            body: JSON.stringify({ status: false, message: 'TSIG key is still assigned' }),
+          };
+        }
+        keys.length = 0;
+        return {};
+      },
+    },
+  });
+
+  await page.goto('/app/dns/tsig-keys');
+  await page.getByTestId('dns.tsig.row.7.delete').click();
+  const dialog = page.getByTestId('dns.tsig.delete_confirm');
+  await dialog.getByTestId('dns.tsig.delete_confirm.confirm').click();
+
+  await expect(dialog.getByTestId('dns.tsig.delete_confirm.error')).toContainText('TSIG key is still assigned');
+  await expect(dialog).toContainText('existing-transfer-key');
+  await expect(dialog).toBeVisible();
+
+  await dialog.getByTestId('dns.tsig.delete_confirm.confirm').click();
+
+  await expect(dialog).toBeHidden();
+  await expect(page.getByTestId('dns.tsig.row.7')).toHaveCount(0);
+  expect(deleteCalls).toBe(2);
+});
+
 test('user TSIG management fails closed if a hidden look-ahead row has another owner', async ({ page }) => {
   const ownedKeys = Array.from({ length: 25 }, (_, index) => ({
     id: index + 1,

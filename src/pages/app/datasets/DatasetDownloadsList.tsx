@@ -86,10 +86,6 @@ export function DatasetDownloadsList(props: {
             const snapId =
               snap && typeof snap === "object" ? Number(snap.id) : undefined;
             const fromSnap = download.from_snapshot;
-            const fromSnapId =
-              fromSnap && typeof fromSnap === "object"
-                ? Number(fromSnap.id)
-                : undefined;
             const expiration = downloadExpiration(download);
             const checksum = downloadChecksum(download);
             const downloadHref = snapshotDownloadHref(
@@ -130,10 +126,10 @@ export function DatasetDownloadsList(props: {
                             })}
                           </span>
                         ) : null}
-                        {Number.isFinite(fromSnapId) ? (
+                        {fromSnap ? (
                           <span>
-                            {t("dataset.downloads.from_snapshot_ref", {
-                              id: fromSnapId,
+                            {t("dataset.downloads.from_snapshot", {
+                              snapshot: refLabel(fromSnap, t("common.na")),
                             })}
                           </span>
                         ) : null}
