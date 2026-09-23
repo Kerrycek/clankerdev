@@ -85,7 +85,7 @@ test.describe('ListShell primitives', () => {
     await expect(page.getByTestId('vps.list.header')).toBeVisible();
     await expect(page.getByTestId('vps.list.filters')).toBeVisible();
 
-    await page.goto('/app/datasets', { waitUntil: 'domcontentloaded' });
+    await page.goto('/app/nas', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('datasets.list.header')).toBeVisible();
     await expect(page.getByTestId('datasets.list.filters')).toBeVisible();
 

@@ -25,7 +25,7 @@ test.describe('Datasets list keyset pagination', () => {
     const page2 = Array.from({ length: 50 }, (_, i) => 250 - i).map(makeDataset);
 
     await installHaveApiMock(page, {
-      user: { id: 1, login: 'test', level: 1 },
+      user: { id: 1, login: 'test', level: 99 },
       handlers: {
         'GET datasets': ({ searchParams }) => {
           const fromId = searchParams.get('dataset[from_id]');
@@ -36,7 +36,7 @@ test.describe('Datasets list keyset pagination', () => {
   });
 
   test('navigates to next and previous pages via from_id', async ({ page }, testInfo) => {
-    await page.goto('/app/datasets');
+    await page.goto('/admin/datasets');
 
     const mobile = testInfo.project.name === 'mobile-chrome';
     const layout = mobile ? 'card' : 'row';
@@ -92,7 +92,7 @@ test.describe('Datasets list text filter contract', () => {
     const secondPage = [makeDataset(250, 'needle-on-next-page')];
 
     await installHaveApiMock(page, {
-      user: { id: 1, login: 'test', level: 1 },
+      user: { id: 1, login: 'test', level: 99 },
       handlers: {
         'GET datasets': ({ searchParams }) => {
           requestedQueries.push(searchParams.toString());
@@ -106,7 +106,7 @@ test.describe('Datasets list text filter contract', () => {
       },
     });
 
-    await page.goto('/app/datasets?q=needle-on-next-page');
+    await page.goto('/admin/datasets?q=needle-on-next-page');
 
     await expect(page.getByTestId('datasets.search.page_limited')).toContainText(
       'Search is limited to this page',
@@ -134,7 +134,7 @@ test.describe('Datasets list optional columns', () => {
     });
 
     await installHaveApiMock(page, {
-      user: { id: 1, login: 'test', level: 1 },
+      user: { id: 1, login: 'test', level: 99 },
       handlers: {
         'GET datasets': () => ({
           datasets: [
@@ -161,7 +161,7 @@ test.describe('Datasets list optional columns', () => {
   });
 
   test('hides related object columns when the API does not provide those values', async ({ page }, testInfo) => {
-    await page.goto('/app/datasets');
+    await page.goto('/admin/datasets');
 
     const mobile = testInfo.project.name === 'mobile-chrome';
     const entry = page.getByTestId(`datasets.${mobile ? 'card' : 'row'}.8`);

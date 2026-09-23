@@ -9,7 +9,7 @@ test.describe('Admin My view filtering', () => {
     let phase: 'app' | 'admin' = 'app';
 
     let lastVpsUserParam: string | null = null;
-    let lastDatasetsUserParam: string | null = null;
+    let datasetsRequestsInApp = 0;
     let lastZonesUserParam: string | null = null;
     let lastExportsUserParam: string | null = null;
 
@@ -49,7 +49,7 @@ test.describe('Admin My view filtering', () => {
         },
         'GET datasets': (ctx) => {
           const user = ctx.searchParams.get('dataset[user]');
-          if (phase === 'app') lastDatasetsUserParam = user;
+          if (phase === 'app') datasetsRequestsInApp += 1;
           if (phase === 'admin') lastDatasetsUserParamAdmin = user;
           return {
             datasets: [
@@ -93,8 +93,9 @@ test.describe('Admin My view filtering', () => {
 
     phase = 'app';
     await page.goto('/app/datasets');
-    await expect(page.getByTestId('datasets.list')).toBeVisible();
-    expect(lastDatasetsUserParam).toBe(String(ADMIN_USER_ID));
+    await expect(page).toHaveURL(/\/app\/vps(?:\?|$)/);
+    await expect(page.getByTestId('vps.list')).toBeVisible();
+    expect(datasetsRequestsInApp).toBe(0);
 
     phase = 'app';
     await page.goto('/app/dns');

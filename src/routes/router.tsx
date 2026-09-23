@@ -15,7 +15,6 @@ import { NotFoundPage } from '../pages/NotFoundPage';
 import { RootErrorPage } from '../pages/RootErrorPage';
 
 const DatasetsListPage = lazyRoute(() => import('../pages/app/datasets/DatasetsListPage'), 'DatasetsListPage');
-const VpsDatasetsPage = lazyRoute(() => import('../pages/app/datasets/VpsDatasetsPage'), 'VpsDatasetsPage');
 const DatasetLayout = lazyRoute(() => import('../pages/app/datasets/DatasetLayout'), 'DatasetLayout');
 const DatasetOverviewPage = lazyRoute(() => import('../pages/app/datasets/DatasetOverviewPage'), 'DatasetOverviewPage');
 const DatasetSnapshotsPage = lazyRoute(() => import('../pages/app/datasets/DatasetSnapshotsPage'), 'DatasetSnapshotsPage');
@@ -185,7 +184,7 @@ export const router = createBrowserRouter([
                 { path: 'console', element: <CoreRoutes.VpsConsolePage /> },
               ],
             },
-            { path: 'datasets', element: <VpsDatasetsPage /> },
+            { path: 'datasets', element: <Navigate to="/app/vps" replace /> },
             { path: 'nas', element: <NasDatasetsPage /> },
             { path: 'nas/new', element: <NasDatasetCreatePage /> },
             { path: 'backups', element: <BackupCenterPage /> },

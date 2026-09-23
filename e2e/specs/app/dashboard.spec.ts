@@ -154,16 +154,8 @@ test.describe("Dashboard", () => {
     await expect(page.getByTestId("app.dashboard.kpi.vps")).toContainText("3");
     expect(vpsRequests).toHaveLength(1);
     expect(new URLSearchParams(vpsRequests[0]).get("vps[limit]")).toBe("200");
-    await expect(page.getByTestId("app.dashboard.kpi.datasets")).toContainText(
-      "7",
-    );
-    await expect(page.getByTestId("app.dashboard.kpi.datasets")).toContainText(
-      "VPS disks",
-    );
-    expect(datasetRequests).toHaveLength(1);
-    expect(new URLSearchParams(datasetRequests[0]).get("dataset[role]")).toBe(
-      "hypervisor",
-    );
+    await expect(page.getByTestId("app.dashboard.kpi.datasets")).toHaveCount(0);
+    expect(datasetRequests).toHaveLength(0);
     await expect(page.getByTestId("app.dashboard.kpi.dns")).toContainText("2");
     await expect(page.getByTestId("app.dashboard.kpi.members")).toHaveCount(0);
     await expect(page.getByTestId("app.dashboard.kpi.cluster-vps")).toHaveCount(

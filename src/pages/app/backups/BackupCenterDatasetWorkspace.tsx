@@ -64,6 +64,7 @@ export function BackupCenterDatasetWorkspace(props: BackupCenterDatasetWorkspace
         refetch: async () => props.refetch(),
         section,
         listPath,
+        returnPath: `${basePath}/backups`,
         detailPath,
         datasetRef,
         busyLocalLock,

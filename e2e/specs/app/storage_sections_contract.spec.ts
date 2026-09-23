@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
 
 test.describe('User storage section contract', () => {
-  test('@pr-smoke @pr-smoke-mobile separates VPS disks and NAS while keeping the backup hub cross-storage', async ({ page }, testInfo) => {
+  test('@pr-smoke @pr-smoke-mobile keeps VPS disks in VPS detail and NAS as a separate service', async ({ page }, testInfo) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
     const requestedRoles: Array<string | null> = [];
@@ -14,7 +14,35 @@ test.describe('User storage section contract', () => {
       full_name: 'tank/vps/mail/root',
       vps: { id: 20, hostname: 'mail.example' },
       user: { id: 1, login: 'storage-user' },
+      used: 5120,
+      avail: 15360,
+      referenced: 4096,
+      refquota: 20480,
+      quota: 0,
+      snapshots_count: 0,
+      mount_count: 0,
+      export_count: 0,
       object_state: 'active',
+    };
+    const vps = {
+      id: 20,
+      hostname: 'mail.example',
+      object_state: 'active',
+      is_running: true,
+      enable_network: true,
+      cpus: 2,
+      memory: 2048,
+      swap: 0,
+      diskspace: 20480,
+      used_memory: 768,
+      used_swap: 0,
+      used_diskspace: 5120,
+      uptime: 12345,
+      loadavg1: 0.12,
+      dataset: { id: 101, name: 'tank/vps/mail/root' },
+      node: { id: 1, domain_name: 'node1.example' },
+      os_template: { label: 'debian' },
+      dns_resolver: 'inherit',
     };
     const nasDataset = {
       id: 202,
@@ -28,6 +56,10 @@ test.describe('User storage section contract', () => {
     await installHaveApiMock(page, {
       user: { id: 1, login: 'storage-user', level: 1 },
       handlers: {
+        'GET vpses': () => ({ vpses: [vps], _meta: { total_count: 1 } }),
+        'GET vpses/20': () => ({ vps }),
+        'GET vpses/20/mounts': () => ({ mounts: [] }),
+        'GET ip_addresses': () => ({ ip_addresses: [] }),
         'GET datasets': ({ searchParams }) => {
           const role = searchParams.get('dataset[role]');
           requestedRoles.push(role);
@@ -50,21 +82,26 @@ test.describe('User storage section contract', () => {
     const mobile = testInfo.project.name === 'mobile-chrome';
 
     await page.goto('/app/datasets');
-    await expect(page.getByTestId('datasets.list.header')).toContainText('VPS disks');
-    await expect(page.getByTestId('nav.sidebar.datasets')).toContainText('VPS disks');
-    await expect.poll(() => requestedRoles).toEqual(['hypervisor']);
-    await expect(page.getByTestId(`datasets.${mobile ? 'card' : 'row'}.101`)).toBeVisible();
-    await expect(page.getByTestId('datasets.row.202')).toHaveCount(0);
-    await expect(page.getByTestId('datasets.card.202')).toHaveCount(0);
+    await expect(page).toHaveURL(/\/app\/vps(?:\?|$)/);
+    await expect(page.getByTestId('vps.list')).toBeVisible();
+    await expect(page.getByTestId('nav.sidebar.datasets')).toHaveCount(0);
+    await expect(page.getByTestId('nav.drawer.datasets')).toHaveCount(0);
+    expect(requestedRoles).toEqual([]);
 
-    const vpsListEntry = page.getByTestId(`datasets.${mobile ? 'card' : 'row'}.101`);
-    await expect(vpsListEntry.getByRole('link', { name: 'tank/vps/mail/root' })).toHaveAttribute(
-      'href',
-      '/app/datasets/101',
-    );
-    await vpsListEntry.getByRole('link', { name: 'tank/vps/mail/root' }).click();
+    await page.goto('/app/vps/20/storage');
+    await expect(page.getByTestId('vps.storage.page')).toBeVisible();
+    await expect(page.getByTestId('vps.storage.root_dataset')).toContainText('root');
+    await expect(page.getByTestId('vps.storage.root_dataset.open')).toHaveAttribute('href', '/app/datasets/101');
+    await expect(page.getByTestId('vps.storage.root_dataset.snapshots')).toHaveAttribute('href', '/app/datasets/101/snapshots');
+    await expect(page.getByTestId('vps.storage.root_dataset.downloads')).toHaveAttribute('href', '/app/datasets/101/downloads');
+
+    await page.getByTestId('vps.storage.root_dataset.open').click();
     await expect(page).toHaveURL('/app/datasets/101');
-    await expect(page.getByTestId('dataset.header')).toContainText('VPS disks');
+    await expect(page.getByTestId('dataset.header')).toContainText('Storage');
+    await expect(page.getByTestId('dataset.header').getByRole('link', { name: 'Storage', exact: true })).toHaveAttribute(
+      'href',
+      '/app/vps/20/storage',
+    );
     await expect(page.getByRole('link', { name: 'Snapshots' })).toHaveAttribute(
       'href',
       '/app/datasets/101/snapshots',

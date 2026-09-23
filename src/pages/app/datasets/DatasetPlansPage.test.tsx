@@ -181,6 +181,7 @@ function renderPage() {
             refetch: vi.fn(async () => undefined),
             section: 'datasets',
             listPath: '/datasets',
+            returnPath: '/datasets',
             detailPath: '/datasets/10',
             datasetRef: { kind: 'Dataset', id: 10 },
             busyLocalLock: false,
