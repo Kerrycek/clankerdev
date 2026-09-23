@@ -194,12 +194,18 @@ export function UserDataTemplatesPanel(props: {
   const rows = listQ.data?.data ?? [];
   const canNext = Boolean(listQ.data?.hasNext) && !listQ.isFetching;
   const cursor = listQ.data?.nextCursor;
+  const recoveringEmptyPage = React.useRef<typeof listQ.data>(undefined);
 
   React.useEffect(() => {
+    if (rows.length > 0 || !pagination.canPrev || listQ.isError) recoveringEmptyPage.current = undefined;
     if (listQ.isSuccess && !listQ.isFetching && rows.length === 0 && pagination.canPrev) {
+      // Router transitions can commit after another query/mutation render.
+      // Request recovery once for this result instead of pushing repeatedly.
+      if (recoveringEmptyPage.current === listQ.data) return;
+      recoveringEmptyPage.current = listQ.data;
       pagination.goPrev();
     }
-  }, [listQ.isSuccess, listQ.isFetching, rows.length, pagination]);
+  }, [listQ.data, listQ.isSuccess, listQ.isFetching, listQ.isError, rows.length, pagination]);
 
   const formatOptions = useMemo<SelectOption[]>(() => [
     { value: '', label: t('common.all') },

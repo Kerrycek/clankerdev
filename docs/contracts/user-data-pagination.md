@@ -33,6 +33,10 @@ than `from_id`. The action calls `with_pagination(query)` without an explicit
 - Fresh pages rebuild forward cursor edges; successful empty cursor pages
   return to the preceding page. Filter changes clear the cursor. Browser
   Back/Forward and reload preserve a valid URL cursor.
+- URL-restoring lists derive the current cursor from the committed router
+  URL during render. A history transition must not query the preceding page
+  while waiting for a layout effect. Empty-page recovery runs once per result
+  while the router commits the navigation.
 
 ## What this does not establish
 
