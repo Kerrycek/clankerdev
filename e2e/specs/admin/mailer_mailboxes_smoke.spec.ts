@@ -209,3 +209,70 @@ test('@pr-smoke @pr-smoke-mobile keeps rejected mailbox edits in context for ret
   await expect(page.getByTestId('admin.mailer.mailboxes.detail.header')).toContainText('Incident inbox updated');
   expect(updateAttempts).toBe(2);
 });
+
+test('@pr-smoke @pr-smoke-mobile reconciles a partially rejected mailbox handler reorder before retry', async ({
+  page,
+}) => {
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'MAILBOX_HANDLER_REORDER_RETRY' });
+
+  const mailbox = {
+    id: 20,
+    label: 'Incident inbox',
+    server: 'imap.example.test',
+    port: 993,
+    user: 'incidents@example.test',
+    enable_ssl: true,
+    handlers_count: 2,
+  };
+  let handlers: any[] = [
+    { id: 101, class_name: 'First::Handler', order: 1, continue: false },
+    { id: 102, class_name: 'Second::Handler', order: 2, continue: false },
+  ];
+  let handlerLoads = 0;
+  let firstHandlerUpdates = 0;
+  let secondHandlerUpdates = 0;
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 90 },
+    handlers: {
+      'GET mailboxes/20': () => ({ mailbox }),
+      'GET mailboxes/20/handler': () => {
+        handlerLoads += 1;
+        return { handlers, _meta: { total_count: handlers.length } };
+      },
+      'PUT mailboxes/20/handler/102': ({ reqJson }) => {
+        secondHandlerUpdates += 1;
+        const changes = (reqJson as any)?.handler ?? {};
+        handlers = handlers.map((handler) => handler.id === 102 ? { ...handler, ...changes } : handler);
+        return { handler: handlers.find((handler) => handler.id === 102) };
+      },
+      'PUT mailboxes/20/handler/101': ({ reqJson }) => {
+        firstHandlerUpdates += 1;
+        if (firstHandlerUpdates === 1) return failEnvelope('Second reorder step was rejected');
+        const changes = (reqJson as any)?.handler ?? {};
+        handlers = handlers.map((handler) => handler.id === 101 ? { ...handler, ...changes } : handler);
+        return { handler: handlers.find((handler) => handler.id === 101) };
+      },
+    },
+  });
+
+  await page.goto('/admin/mailer/mailboxes/20');
+  await page.getByTestId('admin.mailer.mailboxes.handler.101.down').click();
+
+  await expect(page.getByTestId('admin.mailer.mailboxes.handlers.reorder.error')).toContainText(
+    'Second reorder step was rejected',
+  );
+  await expect.poll(() => handlerLoads).toBeGreaterThan(1);
+  await expect(page.getByTestId('admin.mailer.mailboxes.handler.101.down')).toBeEnabled();
+
+  await page.getByTestId('admin.mailer.mailboxes.handler.101.down').click();
+  await expect(page.getByTestId('admin.mailer.mailboxes.handlers.reorder.error')).toHaveCount(0);
+  await expect(
+    page.getByTestId('admin.mailer.mailboxes.detail.handlers.table').locator('tbody tr').first(),
+  ).toHaveAttribute('data-testid', 'admin.mailer.mailboxes.handler.102');
+
+  expect({ firstHandlerUpdates, secondHandlerUpdates }).toEqual({
+    firstHandlerUpdates: 2,
+    secondHandlerUpdates: 1,
+  });
+});

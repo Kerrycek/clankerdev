@@ -312,12 +312,8 @@ export function MailboxDetailPage() {
       await qc.invalidateQueries({ queryKey: ['mailer', 'mailboxes', 'handlers'] });
       pushToast({ variant: 'ok', title: t('mailer.mailboxes.handlers.reorder_success') });
     },
-    onError: (err: any) => {
-      pushToast({
-        variant: 'danger',
-        title: t('mailer.mailboxes.handlers.reorder_error'),
-        body: formatErrorMessage(err),
-      });
+    onError: async () => {
+      await qc.invalidateQueries({ queryKey: ['mailer', 'mailboxes', 'handlers'] });
     },
   });
 
@@ -332,6 +328,7 @@ export function MailboxDetailPage() {
     if (!fromHandler || !toHandler) return;
     next[idx] = toHandler;
     next[to] = fromHandler;
+    reorderHandlersM.reset();
     reorderHandlersM.mutate(next);
   };
 
@@ -455,6 +452,18 @@ export function MailboxDetailPage() {
               {t('mailer.mailboxes.handlers.create')}
             </Button>
           </div>
+
+          {reorderHandlersM.isError ? (
+            <div className="mt-4">
+              <Alert
+                variant="danger"
+                title={t('mailer.mailboxes.handlers.reorder_error')}
+                testId="admin.mailer.mailboxes.handlers.reorder.error"
+              >
+                {formatErrorMessage(reorderHandlersM.error)}
+              </Alert>
+            </div>
+          ) : null}
 
           {handlersQ.isLoading ? (
             <div className="mt-4">
