@@ -102,8 +102,9 @@ test('@pr-smoke @pr-smoke-mobile DNS server relation deletion failure stays in c
 
   await page.goto('/admin/dns/zones/42/servers');
 
-  const deleteAction = page.getByTestId('dns.servers.row.601.delete');
-  await deleteAction.scrollIntoViewIfNeeded();
+  const deleteAction = page.locator(
+    '[data-testid="dns.servers.row.601.delete"]:visible, [data-testid="dns.servers.card.601.delete"]:visible',
+  );
   await deleteAction.click();
   const dialog = page.getByTestId('dns.servers.delete');
   await dialog.getByTestId('dns.servers.delete.confirm').click();
