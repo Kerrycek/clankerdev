@@ -74,3 +74,38 @@ test('@smoke profile: MFA recovery readiness summary', async ({ page }) => {
   await expect(page.getByTestId('profile.mfa.known_devices.summary')).toContainText('Trusted for MFA');
   await expect(page.getByTestId('profile.mfa.mfa_master.status')).toContainText('Active');
 });
+
+test('@pr-smoke @pr-smoke-mobile profile: unexpected TOTP provisioning URI is never clickable', async ({ page }) => {
+  const user = {
+    id: 1,
+    login: 'e2e',
+    level: 1,
+    enable_multi_factor_auth: false,
+  };
+
+  await setUiSettingsLocalStorage(page, { language: 'en' });
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+  await installHaveApiMock(page, {
+    handlers: {
+      'GET users/current': () => ({ user }),
+      'GET users/1/totp_devices': () => ({ totp_devices: [] }),
+      'GET users/1/webauthn_credentials': () => ({ webauthn_credentials: [] }),
+      'GET users/1/known_devices': () => ({ known_devices: [] }),
+      'POST users/1/totp_devices': () => ({
+        id: 12,
+        label: 'Phone',
+        secret: 'SECRET123',
+        provisioning_uri: 'javascript:alert(document.domain)',
+      }),
+    },
+  });
+
+  await page.goto('/app/profile/mfa');
+  await page.getByTestId('profile.mfa.totp.add').click();
+  await page.getByTestId('profile.mfa.totp.wizard.label').fill('Phone');
+  await page.getByTestId('profile.mfa.totp.wizard.create').click();
+
+  await expect(page.getByTestId('profile.mfa.totp.wizard.uri_invalid')).toBeVisible();
+  await expect(page.getByTestId('profile.mfa.totp.wizard.uri_link')).toHaveCount(0);
+  await expect(page.getByTestId('profile.mfa.totp.wizard.uri')).toBeVisible();
+});

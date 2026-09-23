@@ -45,6 +45,8 @@ export const enProfile_mfa = {
   "profile.mfa.totp.wizard.open_in_authenticator": "Open in authenticator",
   "profile.mfa.totp.wizard.provisioning_uri": "Provisioning URI",
   "profile.mfa.totp.wizard.provisioning_uri_hint": "If your authenticator supports otpauth:// links, you can open it directly. Otherwise use the secret.",
+  "profile.mfa.totp.wizard.provisioning_uri_invalid": "Invalid authenticator link",
+  "profile.mfa.totp.wizard.provisioning_uri_invalid_hint": "The API returned a link outside the expected otpauth://totp format, so the browser will not open it. Use the displayed secret for manual setup.",
   "profile.mfa.totp.wizard.recovery_code": "Recovery code",
   "profile.mfa.totp.wizard.recovery_hint": "Keep this code offline (password manager, printed copy). It is shown only once.",
   "profile.mfa.totp.wizard.secret": "Secret",
