@@ -52,7 +52,7 @@ describe('ClusterHealthCard', () => {
 
     for (const panel of [praguePanel, brnoPanel]) {
       expect(panel).toHaveAttribute('data-cluster-location-layout', 'panel');
-      expect(panel).toHaveClass('rounded-lg', 'border-info-border', 'bg-surface', 'shadow-card');
+      expect(panel).toHaveClass('rounded-lg', 'border-border', 'bg-surface', 'shadow-card');
       expect(within(panel).getByRole('img')).toBeInTheDocument();
     }
 

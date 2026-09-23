@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock, jsonFulfill } from '../../fixtures';
+import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock, jsonFulfill, setUiSettingsLocalStorage } from '../../fixtures';
 
 /**
  * Public status landing smoke.
@@ -9,6 +9,7 @@ import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock, jsonFulfill 
  * Keep it fast and deterministic.
  */
 test('@pr-smoke @pr-smoke-mobile @smoke @smoke-mobile public overview shows key status surfaces', async ({ page }) => {
+  await setUiSettingsLocalStorage(page, { theme: 'dark', language: 'en' });
   await bootstrapVpsAdminWindow(page, {
     apiUrl: '/api',
     apiVersion: '7.0',
@@ -96,6 +97,51 @@ test('@pr-smoke @pr-smoke-mobile @smoke @smoke-mobile public overview shows key 
       );
     })).toBe(true);
   }
+
+  const prahaSummary = prahaPanel.locator('summary');
+  const borderColors = await prahaPanel.evaluate((panel) => {
+    const style = getComputedStyle(panel);
+    const root = getComputedStyle(document.documentElement);
+    return {
+      actual: style.borderTopColor,
+      neutral: `rgb(${root.getPropertyValue('--c-border').trim().replaceAll(' ', ', ')})`,
+      info: `rgb(${root.getPropertyValue('--c-info-border').trim().replaceAll(' ', ', ')})`,
+    };
+  });
+  expect(borderColors.actual).toBe(borderColors.neutral);
+  expect(borderColors.actual).not.toBe(borderColors.info);
+
+  await prahaSummary.getByText('Praha', { exact: true }).click();
+  await expect(prahaPanel).not.toHaveAttribute('open', '');
+  await expect.poll(() => prahaSummary.evaluate((summary) => ({
+    focused: document.activeElement === summary,
+    focusVisible: summary.matches(':focus-visible'),
+    boxShadow: getComputedStyle(summary).boxShadow,
+  }))).toEqual({ focused: true, focusVisible: false, boxShadow: 'none' });
+
+  await prahaSummary.click({ position: { x: 8, y: 8 } });
+  await expect(prahaPanel).toHaveAttribute('open', '');
+  await expect.poll(() => prahaSummary.evaluate((summary) => ({
+    focused: document.activeElement === summary,
+    focusVisible: summary.matches(':focus-visible'),
+    boxShadow: getComputedStyle(summary).boxShadow,
+  }))).toEqual({ focused: true, focusVisible: false, boxShadow: 'none' });
+
+  await page.locator('body').click({ position: { x: 4, y: 4 } });
+  let keyboardReachedSummary = false;
+  for (let i = 0; i < 40; i += 1) {
+    await page.keyboard.press('Tab');
+    keyboardReachedSummary = await prahaSummary.evaluate((summary) => document.activeElement === summary);
+    if (keyboardReachedSummary) break;
+  }
+  expect(keyboardReachedSummary).toBe(true);
+  await expect.poll(() => prahaSummary.evaluate((summary) => ({
+    focusVisible: summary.matches(':focus-visible'),
+    boxShadow: getComputedStyle(summary).boxShadow,
+  }))).toEqual({
+    focusVisible: true,
+    boxShadow: expect.not.stringMatching(/^none$/),
+  });
 
   const clusterProofScreenshot = process.env['E2E_CLUSTER_PUBLIC_PROOF_SCREENSHOT']?.trim();
   if (clusterProofScreenshot) {

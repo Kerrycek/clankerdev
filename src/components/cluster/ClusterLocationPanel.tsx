@@ -22,14 +22,14 @@ export function ClusterLocationPanel(props: {
     <details
       open={props.defaultOpen ?? true}
       className={clsx(
-        'group overflow-hidden rounded-lg border border-info-border bg-surface shadow-card',
+        'group overflow-hidden rounded-lg border border-border bg-surface shadow-card',
         props.className,
       )}
       data-cluster-location={props.location}
       data-cluster-location-layout="panel"
       data-testid={props.testId}
     >
-      <summary className="list-none cursor-pointer border-l-4 border-info bg-info-bg px-3 py-3 select-none">
+      <summary className="list-none cursor-pointer border-l-4 border-info bg-info-bg px-3 py-3 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus/35">
         <div className="grid gap-2 sm:flex sm:items-center sm:justify-between sm:gap-3">
           <div className="flex min-w-0 items-center gap-2">
             <ChevronDown
@@ -70,7 +70,7 @@ export function ClusterLocationPanel(props: {
           </div>
         </div>
       </summary>
-      <div className="border-t border-info-border">{props.children}</div>
+      <div className="border-t border-border">{props.children}</div>
     </details>
   );
 }
