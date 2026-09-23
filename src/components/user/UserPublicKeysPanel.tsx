@@ -214,7 +214,10 @@ export function UserPublicKeysPanel(props: {
                         variant="danger"
                         size="sm"
                         className="min-h-11"
-                        onClick={() => setDeleteKeyId(k.id)}
+                        onClick={() => {
+                          delM.reset();
+                          setDeleteKeyId(k.id);
+                        }}
                         testId={`${prefix}.row.${k.id}.delete`}
                       >
                         {t('common.delete')}
@@ -277,7 +280,10 @@ export function UserPublicKeysPanel(props: {
                             <Button
                               variant="danger"
                               size="sm"
-                              onClick={() => setDeleteKeyId(k.id)}
+                              onClick={() => {
+                                delM.reset();
+                                setDeleteKeyId(k.id);
+                              }}
                               testId={`${prefix}.row.${k.id}.delete`}
                             >
                               {t('common.delete')}
@@ -393,6 +399,7 @@ export function UserPublicKeysPanel(props: {
         open={deleteKeyId !== null}
         onCancel={() => {
           if (delM.isPending) return;
+          delM.reset();
           setDeleteKeyId(null);
         }}
         title={t('profile.keys.delete.title')}
@@ -405,7 +412,13 @@ export function UserPublicKeysPanel(props: {
           delM.mutate(deleteKeyId);
         }}
         testId={`${prefix}.delete_dialog`}
-      />
+      >
+        {delM.isError ? (
+          <Alert variant="danger" title={t('common.error')} testId={`${prefix}.delete_dialog.error`}>
+            {formatErrorMessage(delM.error)}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
     </>
   );
 }

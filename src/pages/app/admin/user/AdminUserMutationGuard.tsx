@@ -15,6 +15,7 @@ export function useAdminUserLifetimeMutationGuard(userId: number) {
 
   return {
     locked: chrome.isLocallyLocked(userRef),
+    openTasks: chrome.openTasks,
     acquire: async (targetUserId: number) => {
       const lockRef = objectRef('User', targetUserId);
       const mutationGeneration = await chrome.acquireLocalLock(lockRef, { durable: true });

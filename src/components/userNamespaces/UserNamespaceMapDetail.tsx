@@ -271,21 +271,25 @@ export function UserNamespaceMapDetail(props: {
   });
 
   const [deleteMapConfirm, setDeleteMapConfirm] = useState(false);
+  const [deleteMapError, setDeleteMapError] = useState<string | null>(null);
 
   const deleteMapM = useMutation({
+    onMutate: () => setDeleteMapError(null),
     mutationFn: async () => deleteUserNamespaceMap(props.mapId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['user_namespace_map', 'list'] });
       navigate(props.backTo, { replace: true });
     },
     onError: (e: any) => {
-      setGlobalError(String(e?.message ?? e));
+      setDeleteMapError(String(e?.message ?? e));
     },
   });
 
   const [deleteEntryConfirm, setDeleteEntryConfirm] = useState<null | { entryId: number }>(null);
+  const [deleteEntryError, setDeleteEntryError] = useState<string | null>(null);
 
   const deleteEntryM = useMutation({
+    onMutate: () => setDeleteEntryError(null),
     mutationFn: async (entryId: number) => deleteUserNamespaceMapEntry(props.mapId, entryId),
     onSuccess: (_r, entryId) => {
       qc.setQueryData<UserNamespaceMapEntry[]>(entriesQueryKey, (old) => (old ?? []).filter((e) => e.id !== entryId));
@@ -293,9 +297,10 @@ export function UserNamespaceMapDetail(props: {
         const p = prev ?? [];
         return p.filter((x) => x.id !== entryId);
       });
+      setDeleteEntryConfirm(null);
     },
     onError: (e: any) => {
-      setGlobalError(String(e?.message ?? e));
+      setDeleteEntryError(String(e?.message ?? e));
     },
   });
 
@@ -425,7 +430,10 @@ export function UserNamespaceMapDetail(props: {
             variant="danger"
             size="sm"
             disabled={!canInteract || deleteMapM.isPending}
-            onClick={() => setDeleteMapConfirm(true)}
+            onClick={() => {
+              setDeleteMapError(null);
+              setDeleteMapConfirm(true);
+            }}
           >
             {t('common.delete')}
           </Button>
@@ -701,7 +709,10 @@ export function UserNamespaceMapDetail(props: {
                               variant="secondary"
                               size="sm"
                               disabled={deleteEntryM.isPending}
-                              onClick={() => setDeleteEntryConfirm({ entryId: r.id })}
+                              onClick={() => {
+                                setDeleteEntryError(null);
+                                setDeleteEntryConfirm({ entryId: r.id });
+                              }}
                             >
                               {t('common.delete')}
                             </Button>
@@ -737,9 +748,18 @@ export function UserNamespaceMapDetail(props: {
         description={t('userns.map.delete.desc')}
         confirmLabel={t('common.delete')}
         confirmLoading={deleteMapM.isPending}
-        onCancel={() => setDeleteMapConfirm(false)}
+        onCancel={() => {
+          setDeleteMapError(null);
+          setDeleteMapConfirm(false);
+        }}
         onConfirm={() => deleteMapM.mutate()}
-      />
+      >
+        {deleteMapError ? (
+          <Alert title={t('common.error')} variant="danger" testId={`${props.testIdPrefix}.delete_map.error`}>
+            {deleteMapError}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
 
       <ConfirmDialog
         testId={`${props.testIdPrefix}.delete_entry.confirm`}
@@ -748,14 +768,22 @@ export function UserNamespaceMapDetail(props: {
         description={t('userns.entry.delete.desc')}
         confirmLabel={t('common.delete')}
         confirmLoading={deleteEntryM.isPending}
-        onCancel={() => setDeleteEntryConfirm(null)}
+        onCancel={() => {
+          setDeleteEntryError(null);
+          setDeleteEntryConfirm(null);
+        }}
         onConfirm={() => {
           if (deleteEntryConfirm) {
             deleteEntryM.mutate(deleteEntryConfirm.entryId);
-            setDeleteEntryConfirm(null);
           }
         }}
-      />
+      >
+        {deleteEntryError ? (
+          <Alert title={t('common.error')} variant="danger" testId={`${props.testIdPrefix}.delete_entry.error`}>
+            {deleteEntryError}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
 
       {/* Quick deep link for operators */}
       {mode === 'admin' && typeof window !== 'undefined' ? (

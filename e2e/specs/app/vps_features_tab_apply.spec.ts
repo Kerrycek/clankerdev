@@ -73,4 +73,57 @@ test.describe('VPS features tab', () => {
 
     await expect(page.getByTestId('vps.features.confirm')).toBeHidden();
   });
+
+  test('keeps a rejected update in the confirmation and supports retry', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    const features = [
+      { id: 1, name: 'quota', label: 'Quota', enabled: false },
+      { id: 2, name: 'xtables', label: 'XTables', enabled: true },
+    ];
+    let updateAttempts = 0;
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 90 },
+      handlers: {
+        'GET vpses/123': () => ({ vps }),
+        'GET ip_addresses': () => ({ ip_addresses: [] }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'GET vpses/123/features': () => ({ features }),
+        'POST vpses/123/features/update_all': () => {
+          updateAttempts += 1;
+          if (updateAttempts === 1) {
+            return {
+              status: 409,
+              contentType: 'application/json',
+              body: JSON.stringify({
+                status: false,
+                message: 'Feature configuration changed on the server. Review and retry.',
+                response: null,
+              }),
+            };
+          }
+
+          return { _meta: { action_state_id: 43 } };
+        },
+      },
+    });
+
+    await page.goto('/admin/vps/123/features');
+    await page.getByTestId('vps.features.item.1').click();
+    await page.getByTestId('vps.features.save').click();
+
+    const dialog = page.getByTestId('vps.features.confirm');
+    await expect(dialog).toContainText('vps123.example');
+
+    await page.getByTestId('vps.features.confirm.confirm').click();
+    await expect(page.getByTestId('vps.features.confirm.error')).toContainText(
+      'Feature configuration changed on the server. Review and retry.'
+    );
+    await expect(dialog).toContainText('vps123.example');
+
+    await page.getByTestId('vps.features.confirm.confirm').click();
+    await expect(dialog).toBeHidden();
+    expect(updateAttempts).toBe(2);
+  });
 });

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { useAppMode } from '../../../../app/appMode';
 import { useAuth } from '../../../../app/auth';
 import { useI18n } from '../../../../app/i18n';
 import { useAccountTimeZone } from '../../../../app/accountTimeZone';
@@ -10,8 +11,10 @@ import { Alert } from '../../../../components/ui/Alert';
 import { Badge } from '../../../../components/ui/Badge';
 import { Button } from '../../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../../components/ui/Card';
+import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog';
 import { Drawer } from '../../../../components/ui/Drawer';
 import { Input } from '../../../../components/ui/Input';
+import { LinkButton } from '../../../../components/ui/LinkButton';
 import { Select } from '../../../../components/ui/Select';
 import { SwitchRow } from '../../../../components/ui/SwitchRow';
 
@@ -72,6 +75,17 @@ const USER_STATE_OPTIONS = [
   },
 ] as const;
 
+interface LifecycleUpdateReceipt {
+  actionStateId?: number;
+  requestedState?: string;
+}
+
+interface LifecycleUpdateRequest {
+  userId: number;
+  objectLabel: string;
+  payload: Record<string, unknown>;
+}
+
 function reminderPresetInput(preset: '1w' | '2w' | '1y'): string {
   const next = new Date();
   if (preset === '1y') next.setFullYear(next.getFullYear() + 1);
@@ -82,6 +96,7 @@ function reminderPresetInput(preset: '1w' | '2w' | '1y'): string {
 
 export function AdminUserOverviewPage() {
   const auth = useAuth();
+  const { basePath } = useAppMode();
   const { t } = useI18n();
   const accountTimeZone = useAccountTimeZone();
   const toasts = useToasts();
@@ -91,6 +106,8 @@ export function AdminUserOverviewPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const [stateDraft, setStateDraft] = useState<StateDraft>(() => makeStateDraft(u));
   const [stateError, setStateError] = useState<string | null>(null);
+  const [stateReceipt, setStateReceipt] = useState<LifecycleUpdateReceipt | null>(null);
+  const [pendingStateUpdate, setPendingStateUpdate] = useState<LifecycleUpdateRequest | null>(null);
   const lifetimeMutationGuard = useAdminUserLifetimeMutationGuard(u.id);
   const userInfo = optionalStringField(u, 'info');
   const userRole = roleFromLevel(typeof u.level === 'number' ? u.level : undefined);
@@ -104,6 +121,8 @@ export function AdminUserOverviewPage() {
     () => timeZoneOptions(editDraft.timeZone),
     [editDraft.timeZone]
   );
+  const receiptStateOption = USER_STATE_OPTIONS.find((option) => option.value === stateReceipt?.requestedState);
+  const pendingStateOption = USER_STATE_OPTIONS.find((option) => option.value === pendingStateUpdate?.payload['object_state']);
 
   const paymentHistoryQ = useQuery({
     queryKey: ['user_payments', 'overview', { userId: u.id, limit: 5 }],
@@ -213,19 +232,42 @@ export function AdminUserOverviewPage() {
   });
 
   const stateM = useMutation({
-    mutationFn: (variables: { userId: number; objectLabel: string; payload: Record<string, unknown> }) => updateUser(variables.userId, variables.payload),
-    onMutate: (variables) => lifetimeMutationGuard.acquire(variables.userId),
+    mutationFn: (variables: LifecycleUpdateRequest) => updateUser(variables.userId, variables.payload),
+    onMutate: (variables) => {
+      setStateReceipt(null);
+      return lifetimeMutationGuard.acquire(variables.userId);
+    },
     onSuccess: (res, variables, context) => {
       const actionStateId = getMetaActionStateId(res.meta);
       if (actionStateId !== undefined) {
         lifetimeMutationGuard.track(actionStateId, t('admin.user.lifecycle.action_label'), variables.objectLabel, context);
       }
+      const requestedState = typeof variables.payload['object_state'] === 'string'
+        ? variables.payload['object_state']
+        : undefined;
+      const requestedStateOption = USER_STATE_OPTIONS.find((option) => option.value === requestedState);
       if (u.id === variables.userId) {
         setStateError(null);
-        setStateDraft(makeStateDraft(res.data ?? u));
+        setPendingStateUpdate(null);
+        // An asynchronous state update can return the account's old state while
+        // the task is still queued. Keep the accepted request in the form so the
+        // UI does not appear to undo the administrator's selection.
+        setStateDraft(makeStateDraft({ ...(res.data ?? u), ...variables.payload }));
+        setStateReceipt({ actionStateId, requestedState });
         void refetch().catch(() => undefined);
       }
-      toasts.pushToast({ variant: 'ok', title: t('admin.user.lifecycle.toast.saved') });
+      toasts.pushToast({
+        variant: 'ok',
+        title: actionStateId !== undefined
+          ? t('admin.user.lifecycle.receipt.queued.title')
+          : t('admin.user.lifecycle.receipt.saved.title'),
+        body: actionStateId !== undefined
+          ? t('admin.user.lifecycle.receipt.queued.body', {
+              id: actionStateId,
+              state: requestedStateOption ? t(requestedStateOption.labelKey) : requestedState ?? t('common.na'),
+            })
+          : t('admin.user.lifecycle.receipt.saved.body'),
+      });
     },
     onError: (err: any) => setStateError(String(err?.message ?? err)),
     onSettled: (_data, error, _variables, context) => lifetimeMutationGuard.settle(error, context),
@@ -382,10 +424,63 @@ export function AdminUserOverviewPage() {
                   setStateError(t('admin.user.lifecycle.validation.no_changes'));
                   return;
                 }
-                stateM.mutate(Object.freeze({ userId: u.id, objectLabel: String(u.login ?? `#${u.id}`), payload: Object.freeze({ ...statePayload }) }));
+                const request = Object.freeze({
+                  userId: u.id,
+                  objectLabel: String(u.login ?? `#${u.id}`),
+                  payload: Object.freeze({ ...statePayload }),
+                });
+                if (typeof request.payload['object_state'] === 'string' && request.payload['object_state'] !== 'active') {
+                  stateM.reset();
+                  setStateError(null);
+                  setPendingStateUpdate(request);
+                  return;
+                }
+                stateM.mutate(request);
               }}
               data-testid="admin.user.lifecycle.form"
             >
+              {stateReceipt ? (
+                <Alert
+                  variant="ok"
+                  title={stateReceipt.actionStateId !== undefined
+                    ? t('admin.user.lifecycle.receipt.queued.title')
+                    : t('admin.user.lifecycle.receipt.saved.title')}
+                  testId="admin.user.lifecycle.receipt"
+                >
+                  <div data-testid="admin.user.lifecycle.receipt.body">
+                    {stateReceipt.actionStateId !== undefined
+                      ? t('admin.user.lifecycle.receipt.queued.body', {
+                          id: stateReceipt.actionStateId,
+                          state: receiptStateOption
+                            ? t(receiptStateOption.labelKey)
+                            : stateReceipt.requestedState ?? t('common.na'),
+                        })
+                      : t('admin.user.lifecycle.receipt.saved.body')}
+                  </div>
+                  {stateReceipt.actionStateId !== undefined ? (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <LinkButton
+                        to={`${basePath}/action-states/${stateReceipt.actionStateId}`}
+                        size="sm"
+                        variant="secondary"
+                        testId="admin.user.lifecycle.receipt.open_action"
+                      >
+                        {t('admin.user.lifecycle.receipt.open_action')}
+                      </LinkButton>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => lifetimeMutationGuard.openTasks()}
+                        testId="admin.user.lifecycle.receipt.open_tasks"
+                      >
+                        {t('common.open_tasks')}
+                      </Button>
+                    </div>
+                  ) : null}
+                </Alert>
+              ) : null}
+
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant={stateBadge.variant}>{stateBadge.label}</Badge>
                 <span className="text-sm text-muted">{t('admin.user.lifecycle.current_state')}</span>
@@ -635,6 +730,46 @@ export function AdminUserOverviewPage() {
           </div>
         </div>
       </Drawer>
+
+      <ConfirmDialog
+        open={pendingStateUpdate !== null}
+        title={t('admin.user.lifecycle.confirm.title')}
+        description={t('admin.user.lifecycle.confirm.description')}
+        danger
+        confirmLabel={t('admin.user.lifecycle.confirm.submit')}
+        confirmLoading={stateM.isPending}
+        onCancel={() => {
+          if (stateM.isPending) return;
+          setPendingStateUpdate(null);
+          setStateError(null);
+          stateM.reset();
+        }}
+        onConfirm={() => {
+          if (pendingStateUpdate) stateM.mutate(pendingStateUpdate);
+        }}
+        testId="admin.user.lifecycle.confirm"
+      >
+        <div className="space-y-3">
+          <div className="rounded-md border border-border bg-surface-2 p-3 text-sm">
+            <div>
+              <span className="text-muted">{t('admin.user.lifecycle.confirm.target')}: </span>
+              <strong>{pendingStateUpdate?.objectLabel} (#{pendingStateUpdate?.userId})</strong>
+            </div>
+            <div className="mt-2">
+              <span className="text-muted">{t('admin.user.lifecycle.confirm.state')}: </span>
+              <strong>{pendingStateOption ? t(pendingStateOption.labelKey) : t('common.na')}</strong>
+            </div>
+            {pendingStateOption ? (
+              <div className="mt-1 text-xs text-muted">{t(pendingStateOption.descriptionKey)}</div>
+            ) : null}
+          </div>
+          {stateError ? (
+            <Alert variant="danger" title={t('lifetimes.admin_update.error.title')}>
+              {stateError}
+            </Alert>
+          ) : null}
+        </div>
+      </ConfirmDialog>
 
     </div>
   );

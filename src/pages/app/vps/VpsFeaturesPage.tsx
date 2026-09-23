@@ -146,7 +146,10 @@ export function VpsFeaturesPage() {
                 disabled={!dirty || !gate.allowed}
                 disabledReason={!gate.allowed ? gate.reason : undefined}
                 loading={m.isPending}
-                onClick={() => setConfirmOpen(true)}
+                onClick={() => {
+                  m.reset();
+                  setConfirmOpen(true);
+                }}
               >
                 {dirty ? t('vps.features.save_changes', { n: dirtyCount }) : t('vps.features.save_changes_empty')}
               </ActionButton>
@@ -243,7 +246,10 @@ export function VpsFeaturesPage() {
         confirmLabel={t('vps.features.confirm.apply')}
         confirmLoading={m.isPending}
         confirmDisabled={!gate.allowed}
-        onCancel={() => setConfirmOpen(false)}
+        onCancel={() => {
+          m.reset();
+          setConfirmOpen(false);
+        }}
         onConfirm={() => m.mutate(freezeVpsMutationSnapshot({
           vpsId, features: Object.freeze({ ...effective }), canMutate: canMutateVps,
           knownBusy: busyTransaction || busyLocalLock, objectLabel,
@@ -255,6 +261,15 @@ export function VpsFeaturesPage() {
             <div className="text-xs text-muted">
               {t('vps.features.confirm.summary', { n: dirtyCount })}
             </div>
+          ) : null}
+          {m.isError ? (
+            <Alert title={t('vps.features.apply_error')} variant="danger" testId="vps.features.confirm.error">
+              {isMissingActionStateError(m.error)
+                ? t('vps.mutation.error.missing_action_state')
+                : m.error instanceof Error
+                  ? m.error.message
+                  : String(m.error)}
+            </Alert>
           ) : null}
         </div>
       </ConfirmDialog> : null}

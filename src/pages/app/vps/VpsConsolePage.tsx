@@ -230,6 +230,7 @@ function MutableVpsConsolePage() {
               if (sessionSuspended) {
                 newSessionM.mutate();
               } else if (hasActiveLiveToken) {
+                newSessionM.reset();
                 setNewSessionConfirmOpen(true);
               } else {
                 void tokenQ.refetch();
@@ -256,7 +257,10 @@ function MutableVpsConsolePage() {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => setRevokeSessionConfirmOpen(true)}
+                onClick={() => {
+                  revokeSessionM.reset();
+                  setRevokeSessionConfirmOpen(true);
+                }}
                 testId="vps.console.revoke_session"
                 title={t('vps.console.revoke_session.title_hint')}
                 disabled={disabledRevokeSession}
@@ -338,7 +342,7 @@ function MutableVpsConsolePage() {
         </Alert>
       ) : null}
 
-      {newSessionM.isError ? (
+      {newSessionM.isError && !newSessionConfirmOpen ? (
         <Alert variant="danger" title={t('vps.console.new_session.error_title')} testId="vps.console.new_session_error">
           <div className="space-y-1">
             <div>{t('vps.console.new_session.error_body')}</div>
@@ -347,7 +351,7 @@ function MutableVpsConsolePage() {
         </Alert>
       ) : null}
 
-      {revokeSessionM.isError ? (
+      {revokeSessionM.isError && !revokeSessionConfirmOpen ? (
         <Alert variant="danger" title={t('vps.console.revoke_error.title')} testId="vps.console.revoke_error">
           <div className="space-y-1">
             <div>{t('vps.console.revoke_error.body')}</div>
@@ -516,11 +520,21 @@ function MutableVpsConsolePage() {
         }}
         onConfirm={() => {
           newSessionM.mutate(undefined, {
-            onSettled: () => setNewSessionConfirmOpen(false),
+            onSuccess: () => setNewSessionConfirmOpen(false),
           });
         }}
       >
-        <VpsConfirmTarget vpsId={vps.id} objectLabel={objectLabel} testId="vps.console.new_session_dialog.target" />
+        <div className="space-y-3">
+          <VpsConfirmTarget vpsId={vps.id} objectLabel={objectLabel} testId="vps.console.new_session_dialog.target" />
+          {newSessionM.isError ? (
+            <Alert variant="danger" title={t('vps.console.new_session.error_title')} testId="vps.console.new_session_dialog.error">
+              <div className="space-y-1">
+                <div>{t('vps.console.new_session.error_body')}</div>
+                <div className="font-mono text-xs">{consoleMutationErrorMessage(newSessionM.error)}</div>
+              </div>
+            </Alert>
+          ) : null}
+        </div>
       </ConfirmDialog>
 
       <ConfirmDialog
@@ -538,11 +552,21 @@ function MutableVpsConsolePage() {
         }}
         onConfirm={() => {
           revokeSessionM.mutate(undefined, {
-            onSettled: () => setRevokeSessionConfirmOpen(false),
+            onSuccess: () => setRevokeSessionConfirmOpen(false),
           });
         }}
       >
-        <VpsConfirmTarget vpsId={vps.id} objectLabel={objectLabel} testId="vps.console.revoke_session_dialog.target" />
+        <div className="space-y-3">
+          <VpsConfirmTarget vpsId={vps.id} objectLabel={objectLabel} testId="vps.console.revoke_session_dialog.target" />
+          {revokeSessionM.isError ? (
+            <Alert variant="danger" title={t('vps.console.revoke_error.title')} testId="vps.console.revoke_session_dialog.error">
+              <div className="space-y-1">
+                <div>{t('vps.console.revoke_error.body')}</div>
+                <div className="font-mono text-xs">{consoleMutationErrorMessage(revokeSessionM.error)}</div>
+              </div>
+            </Alert>
+          ) : null}
+        </div>
       </ConfirmDialog>
     </div>
   );

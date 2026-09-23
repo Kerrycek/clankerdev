@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
+import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock } from '../../fixtures';
 
 test.describe('@smoke Admin cluster OS templates and resource packages', () => {
   test.beforeEach(async ({ page }) => {
@@ -173,5 +173,203 @@ test.describe('@smoke Admin cluster OS templates and resource packages', () => {
         from_personal: false,
       },
     });
+  });
+
+  test('resource package editor keeps rejected changes in context for retry', async ({ page }) => {
+    let packages: any[] = [
+      { id: 21, label: 'Standard Production', is_personal: false },
+    ];
+    let createAttempts = 0;
+    let updateAttempts = 0;
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 90 },
+      handlers: {
+        'GET environments': () => ({ environments: [], _meta: { total_count: 0 } }),
+        'GET cluster_resource_packages': () => ({
+          cluster_resource_packages: [...packages],
+          _meta: { total_count: packages.length },
+        }),
+        'POST cluster_resource_packages': () => {
+          createAttempts += 1;
+          if (createAttempts === 1) return failEnvelope('Package label is already in use');
+          const created = { id: 22, label: 'Retry package', is_personal: false };
+          packages = [...packages, created];
+          return { cluster_resource_package: created };
+        },
+        'PUT cluster_resource_packages/22': () => {
+          updateAttempts += 1;
+          if (updateAttempts === 1) return failEnvelope('Package changed on the server');
+          packages = packages.map((pkg) => pkg.id === 22 ? { ...pkg, label: 'Renamed after retry' } : pkg);
+          return { cluster_resource_package: packages.find((pkg) => pkg.id === 22) };
+        },
+      },
+    });
+
+    await page.goto('/admin/cluster/resource-packages');
+    await page.getByTestId('admin.cluster.resource_packages.create').click();
+    const editor = page.getByTestId('admin.cluster.resource_packages.editor');
+    const label = page.getByTestId('admin.cluster.resource_packages.editor.label');
+    const save = page.getByTestId('admin.cluster.resource_packages.editor.save');
+
+    await label.fill('Retry package');
+    await save.click();
+    await expect(page.getByTestId('admin.cluster.resource_packages.editor.error')).toContainText('Package label is already in use');
+    await expect(label).toHaveValue('Retry package');
+    await save.click();
+    await expect(editor).toBeHidden();
+    await expect(page.getByTestId('admin.cluster.resource_packages.row.22')).toBeVisible();
+
+    await page.getByTestId('admin.cluster.resource_packages.row.22.edit').click();
+    await label.fill('Renamed after retry');
+    await save.click();
+    await expect(page.getByTestId('admin.cluster.resource_packages.editor.error')).toContainText('Package changed on the server');
+    await expect(label).toHaveValue('Renamed after retry');
+    await save.click();
+    await expect(editor).toBeHidden();
+    await expect(page.getByTestId('admin.cluster.resource_packages.row.22')).toContainText('Renamed after retry');
+
+    expect({ createAttempts, updateAttempts }).toEqual({ createAttempts: 2, updateAttempts: 2 });
+  });
+
+  test('resource package deletion keeps a rejected target in context and supports retry', async ({ page }) => {
+    const packages: any[] = [
+      { id: 21, label: 'Standard Production', is_personal: false },
+    ];
+    let deleteAttempts = 0;
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 90 },
+      handlers: {
+        'GET environments': () => ({ environments: [], _meta: { total_count: 0 } }),
+        'GET users': () => ({ users: [], _meta: { total_count: 0 } }),
+        'GET cluster_resource_packages': () => ({ cluster_resource_packages: packages, _meta: { total_count: packages.length } }),
+        'GET user_cluster_resource_packages': () => ({ user_cluster_resource_packages: [], _meta: { total_count: 0 } }),
+        'DELETE cluster_resource_packages/21': () => {
+          deleteAttempts += 1;
+          if (deleteAttempts === 1) {
+            return {
+              status: 409,
+              contentType: 'application/json',
+              body: JSON.stringify({ status: false, message: 'Package is still assigned' }),
+            };
+          }
+          packages.splice(0, 1);
+          return { cluster_resource_package: { id: 21 } };
+        },
+      },
+    });
+
+    await page.goto('/admin/cluster/resource-packages');
+    await page.getByTestId('admin.cluster.resource_packages.row.21.delete').click();
+    const dialog = page.getByTestId('admin.cluster.resource_packages.delete_confirm');
+    await expect(dialog).toContainText('Standard Production');
+
+    await dialog.getByRole('button', { name: /delete|smazat/i }).click();
+    await expect(page.getByTestId('admin.cluster.resource_packages.delete_confirm.error')).toContainText('Package is still assigned');
+    await expect(dialog).toContainText('Standard Production');
+
+    await dialog.getByRole('button', { name: /delete|smazat/i }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByTestId('admin.cluster.resource_packages.row.21')).toHaveCount(0);
+    expect(deleteAttempts).toBe(2);
+  });
+
+  test('resource package detail keeps a rejected deletion in context and supports retry', async ({ page }) => {
+    const resourcePackage = { id: 21, label: 'Standard Production', is_personal: false };
+    const items: any[] = [{ id: 31, cluster_resource: { id: 3, label: 'Memory', name: 'memory' }, value: 4096 }];
+    const assignments: any[] = [{
+      id: 41,
+      environment: { id: 1, label: 'Production' },
+      user: { id: 7, login: 'alice' },
+      cluster_resource_package: resourcePackage,
+      comment: '',
+    }];
+    let packageDeleteAttempts = 0;
+    let itemDeleteAttempts = 0;
+    let assignmentDeleteAttempts = 0;
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 90 },
+      handlers: {
+        'GET environments': () => ({ environments: [], _meta: { total_count: 0 } }),
+        'GET cluster_resources': () => ({ cluster_resources: [], _meta: { total_count: 0 } }),
+        'GET cluster_resource_packages/21': () => ({ cluster_resource_package: resourcePackage }),
+        'GET cluster_resource_packages/21/items': () => ({ items, _meta: { total_count: items.length } }),
+        'GET user_cluster_resource_packages': () => ({ user_cluster_resource_packages: assignments, _meta: { total_count: assignments.length } }),
+        'DELETE cluster_resource_packages/21/items/31': () => {
+          itemDeleteAttempts += 1;
+          if (itemDeleteAttempts === 1) {
+            return {
+              status: 409,
+              contentType: 'application/json',
+              body: JSON.stringify({ status: false, message: 'Resource item is still in use' }),
+            };
+          }
+          items.splice(0, 1);
+          return { item: { id: 31 } };
+        },
+        'DELETE user_cluster_resource_packages/41': () => {
+          assignmentDeleteAttempts += 1;
+          if (assignmentDeleteAttempts === 1) {
+            return {
+              status: 409,
+              contentType: 'application/json',
+              body: JSON.stringify({ status: false, message: 'Assignment changed on the server' }),
+            };
+          }
+          assignments.splice(0, 1);
+          return { user_cluster_resource_package: { id: 41 } };
+        },
+        'DELETE cluster_resource_packages/21': () => {
+          packageDeleteAttempts += 1;
+          if (packageDeleteAttempts === 1) {
+            return {
+              status: 409,
+              contentType: 'application/json',
+              body: JSON.stringify({ status: false, message: 'Package is still assigned' }),
+            };
+          }
+          return { cluster_resource_package: { id: 21 } };
+        },
+      },
+    });
+
+    await page.goto('/admin/cluster/resource-packages/21');
+
+    await page.getByTestId('admin.cluster.resource_package_detail.items.row.31.delete').click();
+    const itemDialog = page.getByTestId('admin.cluster.resource_package_detail.item_delete_confirm');
+    await expect(itemDialog).toContainText('Memory');
+    await expect(itemDialog).toContainText('4096');
+    await itemDialog.getByRole('button', { name: /delete|smazat/i }).click();
+    await expect(page.getByTestId('admin.cluster.resource_package_detail.item_delete_confirm.error')).toContainText('Resource item is still in use');
+    await itemDialog.getByRole('button', { name: /delete|smazat/i }).click();
+    await expect(itemDialog).toBeHidden();
+    await expect(page.getByTestId('admin.cluster.resource_package_detail.items.row.31')).toHaveCount(0);
+
+    await page.getByTestId('admin.cluster.resource_package_detail.assign.row.41.delete').click();
+    const assignmentDialog = page.getByTestId('admin.cluster.resource_package_detail.assign_delete_confirm');
+    await expect(assignmentDialog).toContainText('alice');
+    await expect(assignmentDialog).toContainText('Production');
+    await assignmentDialog.getByRole('button', { name: /delete|smazat/i }).click();
+    await expect(page.getByTestId('admin.cluster.resource_package_detail.assign_delete_confirm.error')).toContainText('Assignment changed on the server');
+    await assignmentDialog.getByRole('button', { name: /delete|smazat/i }).click();
+    await expect(assignmentDialog).toBeHidden();
+    await expect(page.getByTestId('admin.cluster.resource_package_detail.assign.row.41')).toHaveCount(0);
+
+    await page.getByTestId('admin.cluster.resource_package_detail.delete').click();
+    const dialog = page.getByTestId('admin.cluster.resource_package_detail.delete_confirm');
+    await expect(dialog).toContainText('Standard Production');
+    await expect(dialog).toContainText('#21');
+
+    await dialog.getByRole('button', { name: /delete|smazat/i }).click();
+    await expect(page.getByTestId('admin.cluster.resource_package_detail.delete_confirm.error')).toContainText('Package is still assigned');
+    await expect(dialog).toContainText('Standard Production');
+
+    await dialog.getByRole('button', { name: /delete|smazat/i }).click();
+    await expect(dialog).toBeHidden();
+    expect(itemDeleteAttempts).toBe(2);
+    expect(assignmentDeleteAttempts).toBe(2);
+    expect(packageDeleteAttempts).toBe(2);
   });
 });

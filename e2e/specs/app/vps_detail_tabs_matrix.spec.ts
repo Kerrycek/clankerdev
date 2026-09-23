@@ -50,7 +50,7 @@ async function captureOptInScreenshot(page: Page, envName: string): Promise<void
   await page.screenshot({ path: screenshotPath, fullPage: true });
 }
 
-test('@workflow-matrix @smoke VPS detail tabs expose storage and backups, access, lifecycle, and console routes', async ({ page }) => {
+test('@workflow-matrix @smoke VPS detail tabs expose storage, access, lifecycle, and console routes', async ({ page }) => {
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_USER_SESSION' });
 
   await page.route('**/_console/**', async (route) => {
@@ -108,7 +108,7 @@ test('@workflow-matrix @smoke VPS detail tabs expose storage and backups, access
   await expect(page.getByTestId('vps.header')).toBeVisible();
 
   const vpsHeader = page.getByTestId('vps.header');
-  await expect(vpsHeader.getByRole('link', { name: /^Storage & backups$/ })).toHaveAttribute('href', '/app/vps/123/storage');
+  await expect(vpsHeader.getByRole('link', { name: /^Storage$/ })).toHaveAttribute('href', '/app/vps/123/storage');
   await expect(vpsHeader.getByRole('link', { name: /^Access$/ })).toHaveAttribute('href', '/app/vps/123/access');
   await expect(vpsHeader.getByRole('link', { name: /^Console$/ }).first()).toHaveAttribute('href', '/app/vps/123/console');
 
@@ -163,7 +163,7 @@ test('@workflow-matrix @smoke VPS detail tabs expose storage and backups, access
   await expect(page.getByText('Admin lock type', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Admin override', { exact: true })).toHaveCount(0);
 
-  await page.getByRole('link', { name: /^Storage & backups$/ }).click();
+  await page.getByRole('link', { name: /^Storage$/ }).click();
   await expect(page).toHaveURL(/\/app\/vps\/123\/storage$/);
   await expect(page.getByTestId('vps.storage.page')).toBeVisible();
   if ((page.viewportSize()?.width ?? 0) < 768) {
@@ -334,7 +334,7 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile VPS admin overview keeps each 
     '/admin/vps/123/storage?user=10',
   );
   await expect(storage).toContainText('Pool: tank');
-  await expect(storage).toContainText('Root dataset, pool and VPS backups.');
+  await expect(storage).toContainText('Root dataset, pool, capacity and VPS mounts.');
   await expect(page.getByTestId('vps.overview.admin_ops.card')).toHaveCount(0);
   await expect(overview).not.toContainText('alice');
   await expect(page.getByTestId('vps.overview.admin_ops.user_id')).toHaveCount(0);

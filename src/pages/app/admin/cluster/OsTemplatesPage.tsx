@@ -541,6 +541,7 @@ export function OsTemplatesPage() {
   });
 
   const [confirmDelete, setConfirmDelete] = useState<null | { tpl: OsTemplate }>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const deleteM = useMutation({
     mutationFn: async () => {
@@ -548,11 +549,12 @@ export function OsTemplatesPage() {
       await deleteOsTemplate(confirmDelete.tpl.id);
     },
     onSuccess: () => {
+      setDeleteError(null);
       setConfirmDelete(null);
       void qc.invalidateQueries({ queryKey: ['os_templates', 'index'] });
     },
     onError: (err) => {
-      setActionError(formatErrorMessage(err));
+      setDeleteError(formatErrorMessage(err));
     },
   });
 
@@ -717,7 +719,10 @@ export function OsTemplatesPage() {
         <OsTemplatesList
           templates={rows}
           onEdit={openEdit}
-          onDelete={(template) => setConfirmDelete({ tpl: template })}
+          onDelete={(template) => {
+            setDeleteError(null);
+            setConfirmDelete({ tpl: template });
+          }}
         />
       ) : null}
 
@@ -935,7 +940,10 @@ export function OsTemplatesPage() {
 
       <ConfirmDialog
         open={Boolean(confirmDelete)}
-        onCancel={() => setConfirmDelete(null)}
+        onCancel={() => {
+          setDeleteError(null);
+          setConfirmDelete(null);
+        }}
         onConfirm={() => deleteM.mutate()}
         confirmLoading={deleteM.isPending}
         danger
@@ -948,7 +956,13 @@ export function OsTemplatesPage() {
             : undefined
         }
         testId="admin.cluster.os_templates.delete"
-      />
+      >
+        {deleteError ? (
+          <Alert title={t('common.error')} variant="danger" testId="admin.cluster.os_templates.delete.error">
+            {deleteError}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
     </div>
   );
 }

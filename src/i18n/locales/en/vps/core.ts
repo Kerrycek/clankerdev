@@ -61,7 +61,7 @@ export const enVps_core = {
   'vps.mutation.pending.body': 'Do not repeat this operation. Its in-flight safety marker cannot be acknowledged; wait for completion or recovery before reviewing the outcome.',
   'vps.tabs.overview': 'Overview',
   'vps.tabs.network': 'Network',
-  'vps.tabs.storage': 'Storage & backups',
+  'vps.tabs.storage': 'Storage',
   'vps.tabs.features': 'Features',
   'vps.tabs.maintenance': 'Maintenance',
   'vps.tabs.history': 'History',

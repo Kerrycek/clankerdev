@@ -4,7 +4,9 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useI18n } from '../../../../app/i18n';
 import { useToasts } from '../../../../app/toasts';
 import { fetchCluster, fetchClusterFullStats, setClusterMaintenance } from '../../../../lib/api/cluster';
+import { formatErrorMessage } from '../../../../lib/errors';
 
+import { Alert } from '../../../../components/ui/Alert';
 import { Card, CardBody, CardHeader } from '../../../../components/ui/Card';
 import { ErrorState } from '../../../../components/ui/ErrorState';
 import { LoadingState } from '../../../../components/ui/LoadingState';
@@ -65,13 +67,6 @@ export function ClusterSummaryPage() {
       if (!lock) setLockReason('');
       void clusterQ.refetch();
       void statsQ.refetch();
-    },
-    onError: (err: any, lock) => {
-      pushToast({
-        variant: 'danger',
-        title: lock ? t('admin.cluster.summary.maintenance.toast.lock_error.title') : t('admin.cluster.summary.maintenance.toast.unlock_error.title'),
-        body: typeof err?.message === 'string' && err.message ? err.message : t('common.try_again'),
-      });
     },
   });
 
@@ -135,7 +130,10 @@ export function ClusterSummaryPage() {
                   size="sm"
                   variant="secondary"
                   testId="admin.cluster.summary.maintenance.unlock"
-                  onClick={() => setConfirmMode('unlock')}
+                  onClick={() => {
+                    maintenanceM.reset();
+                    setConfirmMode('unlock');
+                  }}
                 >
                   {t('admin.cluster.summary.maintenance.action.unlock')}
                 </Button>
@@ -144,7 +142,10 @@ export function ClusterSummaryPage() {
                   size="sm"
                   variant="primary"
                   testId="admin.cluster.summary.maintenance.lock"
-                  onClick={() => setConfirmMode('lock')}
+                  onClick={() => {
+                    maintenanceM.reset();
+                    setConfirmMode('lock');
+                  }}
                 >
                   {t('admin.cluster.summary.maintenance.action.lock')}
                 </Button>
@@ -260,7 +261,9 @@ export function ClusterSummaryPage() {
       <ConfirmDialog
         open={confirmMode === 'lock'}
         onCancel={() => {
-          if (!maintenanceM.isPending) setConfirmMode(null);
+          if (maintenanceM.isPending) return;
+          maintenanceM.reset();
+          setConfirmMode(null);
         }}
         onConfirm={() => maintenanceM.mutate(true)}
         title={t('admin.cluster.summary.maintenance.dialog.lock.title')}
@@ -280,13 +283,24 @@ export function ClusterSummaryPage() {
             onChange={(e) => setLockReason(e.target.value)}
             placeholder={t('admin.cluster.summary.maintenance.dialog.lock.reason_placeholder')}
           />
+          {maintenanceM.isError ? (
+            <Alert
+              variant="danger"
+              title={t('admin.cluster.summary.maintenance.toast.lock_error.title')}
+              testId="admin.cluster.summary.maintenance.dialog.lock.error"
+            >
+              {formatErrorMessage(maintenanceM.error)}
+            </Alert>
+          ) : null}
         </div>
       </ConfirmDialog>
 
       <ConfirmDialog
         open={confirmMode === 'unlock'}
         onCancel={() => {
-          if (!maintenanceM.isPending) setConfirmMode(null);
+          if (maintenanceM.isPending) return;
+          maintenanceM.reset();
+          setConfirmMode(null);
         }}
         onConfirm={() => maintenanceM.mutate(false)}
         title={t('admin.cluster.summary.maintenance.dialog.unlock.title')}
@@ -294,7 +308,17 @@ export function ClusterSummaryPage() {
         confirmLabel={t('admin.cluster.summary.maintenance.action.unlock')}
         confirmLoading={maintenanceM.isPending && confirmMode === 'unlock'}
         testId="admin.cluster.summary.maintenance.dialog.unlock"
-      />
+      >
+        {maintenanceM.isError ? (
+          <Alert
+            variant="danger"
+            title={t('admin.cluster.summary.maintenance.toast.unlock_error.title')}
+            testId="admin.cluster.summary.maintenance.dialog.unlock.error"
+          >
+            {formatErrorMessage(maintenanceM.error)}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
     </div>
   );
 }

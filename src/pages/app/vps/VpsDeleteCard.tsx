@@ -36,6 +36,7 @@ export function VpsDeleteCard(props: {
           disabled={false}
           gate={props.gate}
           loading={props.pending}
+          errorMessage={props.errorMessage}
           onClick={props.onSubmit}
           confirmation={{
             title: t('vps.lifecycle.delete.submit'),

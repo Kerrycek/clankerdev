@@ -153,13 +153,6 @@ export function MailboxDetailPage() {
       setEditOpen(false);
       pushToast({ variant: 'ok', title: t('mailer.mailboxes.update_success') });
     },
-    onError: (err: any) => {
-      pushToast({
-        variant: 'danger',
-        title: t('mailer.mailboxes.update_error'),
-        body: formatErrorMessage(err),
-      });
-    },
   });
 
   // --- Delete mailbox ---
@@ -319,12 +312,8 @@ export function MailboxDetailPage() {
       await qc.invalidateQueries({ queryKey: ['mailer', 'mailboxes', 'handlers'] });
       pushToast({ variant: 'ok', title: t('mailer.mailboxes.handlers.reorder_success') });
     },
-    onError: (err: any) => {
-      pushToast({
-        variant: 'danger',
-        title: t('mailer.mailboxes.handlers.reorder_error'),
-        body: formatErrorMessage(err),
-      });
+    onError: async () => {
+      await qc.invalidateQueries({ queryKey: ['mailer', 'mailboxes', 'handlers'] });
     },
   });
 
@@ -339,6 +328,7 @@ export function MailboxDetailPage() {
     if (!fromHandler || !toHandler) return;
     next[idx] = toHandler;
     next[to] = fromHandler;
+    reorderHandlersM.reset();
     reorderHandlersM.mutate(next);
   };
 
@@ -398,7 +388,14 @@ export function MailboxDetailPage() {
         }
         actions={
           <>
-            <Button variant="secondary" onClick={() => setEditOpen(true)} testId="admin.mailer.mailboxes.detail.edit">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                updateMailboxM.reset();
+                setEditOpen(true);
+              }}
+              testId="admin.mailer.mailboxes.detail.edit"
+            >
               {t('common.edit')}
             </Button>
             <Button variant="danger" onClick={() => setDeleteOpen(true)} testId="admin.mailer.mailboxes.detail.delete">
@@ -455,6 +452,18 @@ export function MailboxDetailPage() {
               {t('mailer.mailboxes.handlers.create')}
             </Button>
           </div>
+
+          {reorderHandlersM.isError ? (
+            <div className="mt-4">
+              <Alert
+                variant="danger"
+                title={t('mailer.mailboxes.handlers.reorder_error')}
+                testId="admin.mailer.mailboxes.handlers.reorder.error"
+              >
+                {formatErrorMessage(reorderHandlersM.error)}
+              </Alert>
+            </div>
+          ) : null}
 
           {handlersQ.isLoading ? (
             <div className="mt-4">
@@ -568,13 +577,24 @@ export function MailboxDetailPage() {
 
       <Modal
         open={editOpen}
-        onClose={() => setEditOpen(false)}
+        onClose={() => {
+          if (updateMailboxM.isPending) return;
+          updateMailboxM.reset();
+          setEditOpen(false);
+        }}
         title={t('mailer.mailboxes.edit.title')}
         testId="admin.mailer.mailboxes.edit.modal"
         size="md"
         footer={
           <div className="flex items-center justify-end gap-2">
-            <Button variant="secondary" onClick={() => setEditOpen(false)} disabled={updateMailboxM.isPending}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                updateMailboxM.reset();
+                setEditOpen(false);
+              }}
+              disabled={updateMailboxM.isPending}
+            >
               {t('common.cancel')}
             </Button>
             <Button
@@ -666,6 +686,16 @@ export function MailboxDetailPage() {
             description={t('mailer.mailboxes.enable_ssl.description')}
             testId="admin.mailer.mailboxes.edit.enable_ssl"
           />
+
+          {updateMailboxM.isError ? (
+            <Alert
+              variant="danger"
+              title={t('mailer.mailboxes.update_error')}
+              testId="admin.mailer.mailboxes.edit.error"
+            >
+              {formatErrorMessage(updateMailboxM.error)}
+            </Alert>
+          ) : null}
         </div>
       </Modal>
 

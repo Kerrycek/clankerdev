@@ -32,7 +32,9 @@ test.describe('@smoke @pr-smoke @pr-smoke-mobile Admin mailer log contract', () 
       mail_template: { id: 10, label: 'Welcome mail' },
       mail_transaction: { id: 123 },
       text_plain: `Hello from mail ${id}`,
-      text_html: `<p>Hello <strong>from</strong> mail ${id}</p>`,
+      text_html: id === 101
+        ? `<!doctype html><html><head><style>strong{font-weight:700}</style></head><body><p>Hello <strong>from</strong> mail ${id}</p><img src="https://preview-tracker.invalid/pixel" alt="remote image"></body></html>`
+        : `<p>Hello <strong>from</strong> mail ${id}</p>`,
       created_at: '2025-01-01T12:00:00Z',
     });
 
@@ -55,6 +57,12 @@ test.describe('@smoke @pr-smoke @pr-smoke-mobile Admin mailer log contract', () 
   });
 
   test('lists mails and opens detail', async ({ page }) => {
+    let remotePreviewLoads = 0;
+    await page.route('https://preview-tracker.invalid/**', async (route) => {
+      remotePreviewLoads += 1;
+      await route.fulfill({ status: 204, body: '' });
+    });
+
     const listRequestPromise = page.waitForRequest((request) => {
       if (request.method() !== 'GET') return false;
       return new URL(request.url()).pathname.endsWith('/mail_logs');
@@ -82,7 +90,10 @@ test.describe('@smoke @pr-smoke @pr-smoke-mobile Admin mailer log contract', () 
 
     // HTML preview + raw toggle.
     await page.getByTestId('admin.mailer.log.detail.tab.html').click();
-    await expect(page.getByTestId('admin.mailer.log.detail.body.html')).toBeVisible();
+    const htmlPreview = page.getByTestId('admin.mailer.log.detail.body.html');
+    await expect(htmlPreview).toBeVisible();
+    await expect(htmlPreview.contentFrame().getByText('Hello from mail 101')).toBeVisible();
+    expect(remotePreviewLoads).toBe(0);
 
     await page.getByTestId('admin.mailer.log.detail.body.raw_toggle').click();
     await expect(page.getByTestId('admin.mailer.log.detail.body')).toContainText('<p>Hello');

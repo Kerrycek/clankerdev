@@ -23,6 +23,7 @@ export const csAdminCluster_resource_packages = {
   "admin.cluster.resource_packages.delete_confirm.description": "Tuto akci nelze vrátit zpět.",
   "admin.cluster.resource_packages.delete_confirm.hint": "Smazání potvrdíš tlačítkem v dialogu.",
   "admin.cluster.resource_packages.delete_confirm.impact": "Dopad: odebere balíček všem přiřazeným uživatelům ({{count}} přiřazení).",
+  "admin.cluster.resource_packages.delete_confirm.target": "Cílový balíček",
   "admin.cluster.resource_packages.delete_confirm.title": "Smazat balíček zdrojů?",
   "admin.cluster.resource_packages.delete_disabled.personal": "Osobní balíčky nelze smazat",
   "admin.cluster.resource_packages.edit.title": "Upravit balíček zdrojů",

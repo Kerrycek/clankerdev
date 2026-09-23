@@ -10,6 +10,7 @@ export const csAdminCluster_locations = {
   "admin.cluster.locations.editor.has_ipv6": "IPv6 je v této lokaci dostupné",
   "admin.cluster.locations.editor.label_placeholder": "např. prg1",
   "admin.cluster.locations.editor.remote_console": "URL serveru vzdálené konzole",
+  "admin.cluster.locations.editor.remote_console_error": "Použij HTTPS adresu nebo cestu na stejném originu. Nešifrované HTTP je povolené jen pro lokální loopback vývoj.",
   "admin.cluster.locations.editor.validation_body": "Vyplň prosím povinná pole a oprav neplatné hodnoty.",
   "admin.cluster.locations.empty.body": "Žádné lokace neodpovídají filtrům.",
   "admin.cluster.locations.empty.title": "Žádné lokace",

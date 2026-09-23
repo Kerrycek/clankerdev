@@ -23,6 +23,7 @@ export const enAdminCluster_resource_packages = {
   "admin.cluster.resource_packages.delete_confirm.description": "This action is irreversible.",
   "admin.cluster.resource_packages.delete_confirm.hint": "Confirm deletion with the button in this dialog.",
   "admin.cluster.resource_packages.delete_confirm.impact": "Impact: removes this package from all assigned users ({{count}} assignment(s)).",
+  "admin.cluster.resource_packages.delete_confirm.target": "Target package",
   "admin.cluster.resource_packages.delete_confirm.title": "Delete resource package?",
   "admin.cluster.resource_packages.delete_disabled.personal": "Personal packages cannot be deleted",
   "admin.cluster.resource_packages.edit.title": "Edit resource package",

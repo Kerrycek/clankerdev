@@ -61,16 +61,8 @@ export function VpsStorageOverviewCard(props: {
 
         <SummaryGrid testId="vps.storage.summary.grid">
           <StatCard
-            testId="vps.storage.summary.root"
-            className="md:col-span-3"
-            variant="compact"
-            title={t('vps.storage.overview.root.title')}
-            value={props.root.label}
-            subtitle={props.root.state ?? t('common.na')}
-          />
-          <StatCard
             testId="vps.storage.summary.capacity"
-            className="md:col-span-3"
+            className="md:col-span-4"
             variant="compact"
             title={t('vps.storage.overview.capacity.title')}
             value={percentLabel(props.root.capacityPercent)}
@@ -81,7 +73,7 @@ export function VpsStorageOverviewCard(props: {
           />
           <StatCard
             testId="vps.storage.summary.mounts"
-            className="md:col-span-3"
+            className="md:col-span-4"
             variant="compact"
             title={t('vps.storage.overview.mounts.title')}
             value={props.summary.mountCount}
@@ -92,7 +84,7 @@ export function VpsStorageOverviewCard(props: {
           />
           <StatCard
             testId="vps.storage.summary.access"
-            className="md:col-span-3"
+            className="md:col-span-4"
             variant="compact"
             title={t('vps.storage.overview.access.title')}
             value={t('vps.storage.overview.access.value', { rw: props.summary.writableMountCount, ro: props.summary.readOnlyMountCount })}
@@ -103,10 +95,6 @@ export function VpsStorageOverviewCard(props: {
             }
           />
         </SummaryGrid>
-
-        <div className="rounded-md border border-info-border bg-info-bg p-3 text-sm text-info" data-testid="vps.storage.no_backup_cta_note">
-          {t('vps.storage.overview.no_backup_cta')}
-        </div>
       </CardBody>
     </Card>
   );

@@ -1,3 +1,5 @@
+import { clearStoredOAuthToken } from '../lib/auth/tokenStore';
+
 export type OptionalRuntimeScriptName = 'config.js' | 'config.local.js';
 export type RuntimeScriptLoader = (src: string) => Promise<void>;
 
@@ -160,6 +162,13 @@ export async function loadBffRuntimeSession(
 
       const payload: unknown = await response.json();
       if (!payload || typeof payload !== 'object' || Array.isArray(payload)) continue;
+
+      // A valid same-origin BFF session response is authoritative. Clear tokens
+      // left by an earlier standalone OAuth deployment so a logged-out/expired
+      // BFF session cannot silently fall back to stale browser credentials.
+      clearStoredOAuthToken('session');
+      clearStoredOAuthToken('local');
+
       const values = payload as Record<string, unknown>;
       const accessToken = typeof values['accessToken'] === 'string' && values['accessToken'].trim()
         ? values['accessToken'].trim()

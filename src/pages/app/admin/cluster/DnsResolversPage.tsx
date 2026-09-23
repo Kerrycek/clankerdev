@@ -120,11 +120,13 @@ export function DnsResolversPage() {
   });
 
   const openCreate = () => {
+    createM.reset();
     setForm(initForm());
     setEditor({ mode: 'create' });
   };
 
   const openEdit = (r: DnsResolver) => {
+    updateM.reset();
     setForm(initForm(r));
     setEditor({ mode: 'edit', resolver: r });
   };
@@ -143,10 +145,6 @@ export function DnsResolversPage() {
       await qc.invalidateQueries({ queryKey: ['dns_resolvers'] });
       pushToast({ variant: 'ok', title: t('admin.cluster.dns_resolvers.toast.created') });
       setEditor(null);
-    },
-    onError: (e) => {
-      const msg = formatErrorMessage(e);
-      pushToast({ variant: 'danger', title: t('common.error'), body: msg });
     },
   });
 
@@ -188,10 +186,6 @@ export function DnsResolversPage() {
       pushToast({ variant: 'ok', title: t('admin.cluster.dns_resolvers.toast.saved') });
       setEditor(null);
     },
-    onError: (e) => {
-      const msg = formatErrorMessage(e);
-      pushToast({ variant: 'danger', title: t('common.error'), body: msg });
-    },
   });
 
   const deleteM = useMutation({
@@ -223,10 +217,6 @@ export function DnsResolversPage() {
       await qc.invalidateQueries({ queryKey: ['dns_resolvers'] });
       pushToast({ variant: 'ok', title: t('admin.cluster.dns_resolvers.toast.deleted') });
       setDeleteState({ open: false, resolver: undefined, force: false });
-    },
-    onError: (e) => {
-      const msg = formatErrorMessage(e);
-      pushToast({ variant: 'danger', title: t('common.error'), body: msg });
     },
   });
 
@@ -324,7 +314,10 @@ export function DnsResolversPage() {
                       <Button
                         size="sm"
                         variant="danger"
-                        onClick={() => setDeleteState({ open: true, resolver: r, force: false })}
+                        onClick={() => {
+                          deleteM.reset();
+                          setDeleteState({ open: true, resolver: r, force: false });
+                        }}
                         testId={`admin.cluster.dns_resolvers.row.${id}.delete`}
                       >
                         {t('common.delete')}
@@ -341,11 +334,24 @@ export function DnsResolversPage() {
       <Modal
         open={Boolean(editor)}
         title={editor?.mode === 'edit' ? t('admin.cluster.dns_resolvers.edit.title') : t('admin.cluster.dns_resolvers.create.title')}
-        onClose={() => (busy ? null : setEditor(null))}
+        onClose={() => {
+          if (busy) return;
+          if (editor?.mode === 'edit') updateM.reset();
+          else createM.reset();
+          setEditor(null);
+        }}
         testId="admin.cluster.dns_resolvers.editor"
         footer={
           <div className="flex items-center justify-end gap-2">
-            <Button variant="secondary" onClick={() => setEditor(null)} disabled={busy}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                if (editor?.mode === 'edit') updateM.reset();
+                else createM.reset();
+                setEditor(null);
+              }}
+              disabled={busy}
+            >
               {t('common.cancel')}
             </Button>
             <Button
@@ -409,6 +415,11 @@ export function DnsResolversPage() {
           {locationsQ.isError ? (
             <Alert variant="warn" title={t('admin.cluster.dns_resolvers.locations.error')}>{formatErrorMessage(locationsQ.error)}</Alert>
           ) : null}
+          {(editor?.mode === 'edit' ? updateM.isError : createM.isError) ? (
+            <Alert variant="danger" title={t('common.error')} testId="admin.cluster.dns_resolvers.editor.error">
+              {formatErrorMessage(editor?.mode === 'edit' ? updateM.error : createM.error)}
+            </Alert>
+          ) : null}
         </div>
       </Modal>
 
@@ -425,17 +436,28 @@ export function DnsResolversPage() {
         danger
         confirmLabel={t('common.delete')}
         confirmLoading={deleteM.isPending}
-        onCancel={() => (deleteM.isPending ? null : setDeleteState({ open: false, resolver: undefined, force: false }))}
+        onCancel={() => {
+          if (deleteM.isPending) return;
+          deleteM.reset();
+          setDeleteState({ open: false, resolver: undefined, force: false });
+        }}
         onConfirm={() => deleteM.mutate()}
         testId="admin.cluster.dns_resolvers.delete"
       >
-        <SwitchRow
-          testId="admin.cluster.dns_resolvers.delete.force"
-          label={t('admin.cluster.dns_resolvers.delete.force')}
-          description={t('admin.cluster.dns_resolvers.delete.force_desc')}
-          checked={deleteState.force}
-          onChange={(v) => setDeleteState((p) => ({ ...p, force: v }))}
-        />
+        <div className="space-y-3">
+          <SwitchRow
+            testId="admin.cluster.dns_resolvers.delete.force"
+            label={t('admin.cluster.dns_resolvers.delete.force')}
+            description={t('admin.cluster.dns_resolvers.delete.force_desc')}
+            checked={deleteState.force}
+            onChange={(v) => setDeleteState((p) => ({ ...p, force: v }))}
+          />
+          {deleteM.isError ? (
+            <Alert variant="danger" title={t('common.error')} testId="admin.cluster.dns_resolvers.delete.error">
+              {formatErrorMessage(deleteM.error)}
+            </Alert>
+          ) : null}
+        </div>
       </ConfirmDialog>
     </div>
   );

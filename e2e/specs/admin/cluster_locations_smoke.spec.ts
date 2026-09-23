@@ -101,7 +101,12 @@ test.describe('@smoke Admin cluster locations', () => {
     await page.getByTestId('admin.cluster.locations.editor.label').fill('newloc');
     await page.getByTestId('admin.cluster.locations.editor.environment').selectOption('1');
     await page.getByTestId('admin.cluster.locations.editor.domain').fill('newloc.vpsfree.cz');
+    await page.getByTestId('admin.cluster.locations.editor.remote_console').fill('http://console.example/newloc');
+    await expect(page.getByTestId('admin.cluster.locations.editor.remote_console_error')).toBeVisible();
+    await expect(page.getByTestId('admin.cluster.locations.editor.save')).toBeDisabled();
+    expect(posts).toHaveLength(0);
     await page.getByTestId('admin.cluster.locations.editor.remote_console').fill('https://console.example/newloc');
+    await expect(page.getByTestId('admin.cluster.locations.editor.remote_console_error')).toHaveCount(0);
     await page.getByTestId('admin.cluster.locations.editor.save').click();
 
     expect(posts.length).toBeGreaterThan(0);

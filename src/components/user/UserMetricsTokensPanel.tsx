@@ -215,6 +215,7 @@ export function UserMetricsTokensPanel(props: {
                             variant="danger"
                             size="sm"
                             onClick={() => {
+                              delM.reset();
                               setDeleteToken(tok);
                             }}
                             testId={`${prefix}.row.${tok.id}.delete`}
@@ -364,6 +365,7 @@ export function UserMetricsTokensPanel(props: {
         open={deleteToken !== null}
         onCancel={() => {
           if (delM.isPending) return;
+          delM.reset();
           setDeleteToken(null);
         }}
         title={t('profile.metrics.delete.title')}
@@ -377,27 +379,34 @@ export function UserMetricsTokensPanel(props: {
         }}
         testId={`${prefix}.delete_dialog`}
       >
-        {deleteToken && deleteDescriptor ? (
-          <div className="space-y-3">
-            <div className="rounded-md border border-border bg-surface-2 p-3 text-sm text-muted" data-testid={`${prefix}.delete_dialog.review`}>
-              <div>
-                {t('profile.metrics.delete.review_prefix', {
-                  prefix: metricsAccessTokenDisplayName(deleteToken),
-                })}
-              </div>
-              <div className="mt-1">
-                {t('profile.metrics.delete.review_state', {
-                  state: t(deleteDescriptor.labelKey),
-                  count: deleteToken.use_count ?? 0,
-                  last: deleteToken.last_use ? formatDateTime(deleteToken.last_use) : '—',
-                })}
-              </div>
-            </div>
-            <Alert variant="warn" title={t('profile.metrics.delete.confirmation_title')}>
-              {t('profile.metrics.delete.confirmation_body')}
+        <div className="space-y-3">
+          {delM.isError ? (
+            <Alert variant="danger" title={t('common.error')} testId={`${prefix}.delete_dialog.error`}>
+              {formatErrorMessage(delM.error)}
             </Alert>
-          </div>
-        ) : null}
+          ) : null}
+          {deleteToken && deleteDescriptor ? (
+            <>
+              <div className="rounded-md border border-border bg-surface-2 p-3 text-sm text-muted" data-testid={`${prefix}.delete_dialog.review`}>
+                <div>
+                  {t('profile.metrics.delete.review_prefix', {
+                    prefix: metricsAccessTokenDisplayName(deleteToken),
+                  })}
+                </div>
+                <div className="mt-1">
+                  {t('profile.metrics.delete.review_state', {
+                    state: t(deleteDescriptor.labelKey),
+                    count: deleteToken.use_count ?? 0,
+                    last: deleteToken.last_use ? formatDateTime(deleteToken.last_use) : '—',
+                  })}
+                </div>
+              </div>
+              <Alert variant="warn" title={t('profile.metrics.delete.confirmation_title')}>
+                {t('profile.metrics.delete.confirmation_body')}
+              </Alert>
+            </>
+          ) : null}
+        </div>
       </ConfirmDialog>
     </>
   );
