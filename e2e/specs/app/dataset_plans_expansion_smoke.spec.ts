@@ -100,6 +100,68 @@ test.describe('@smoke dataset plans and expansion', () => {
     await expect(page.getByTestId('dataset.expansion.history.row.1')).toBeVisible();
   });
 
+  test('keeps a failed expansion edit in context and allows retry', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    let updateAttempts = 0;
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 100 },
+      handlers: {
+        'GET datasets/42': () => ({
+          dataset: {
+            id: 42,
+            full_name: 'tank/users/alice',
+            name: 'alice',
+            environment: { id: 7, label: 'Production' },
+            dataset_expansion: { id: 9 },
+            object_state: 'active',
+            refquota: 20480,
+            vps: { id: 300, hostname: 'mail.example.test' },
+          },
+        }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'GET dataset_expansions/9': () => ({
+          dataset_expansion: {
+            id: 9,
+            state: 'active',
+            added_space: 10240,
+            original_refquota: 10240,
+            enable_notifications: true,
+            enable_shrink: true,
+            stop_vps: true,
+            over_refquota_seconds: 3600,
+            max_over_refquota_seconds: 7200,
+            created_at: '2026-02-27T10:00:00Z',
+          },
+        }),
+        'GET dataset_expansions/9/history': () => ({ histories: [] }),
+        'PUT dataset_expansions/9': () => {
+          updateAttempts += 1;
+          if (updateAttempts === 1) {
+            return {
+              status: 500,
+              contentType: 'application/json',
+              body: JSON.stringify({ status: false, message: 'Expansion update rejected' }),
+            };
+          }
+          return { dataset_expansion: { id: 9 } };
+        },
+      },
+    });
+
+    await page.goto('/admin/datasets/42/expansion');
+    await page.getByTestId('dataset.expansion.edit.open').click();
+    await page.getByTestId('dataset.expansion.edit.max_over').fill('14');
+    await page.getByTestId('dataset.expansion.edit.submit').click();
+
+    await expect(page.getByTestId('dataset.expansion.edit.error')).toContainText('Expansion update rejected');
+    await expect(page.getByTestId('dataset.expansion.edit.max_over')).toHaveValue('14');
+
+    await page.getByTestId('dataset.expansion.edit.submit').click();
+    await expect(page.getByTestId('dataset.expansion.edit.modal')).toHaveCount(0);
+    expect(updateAttempts).toBe(2);
+  });
+
   test('hides admin-only temporary expansion entry points from a user without an active expansion', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installHaveApiMock(page, {
