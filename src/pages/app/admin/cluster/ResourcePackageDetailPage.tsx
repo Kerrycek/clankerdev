@@ -69,6 +69,10 @@ function crLabel(cr: ClusterResource | null | undefined): string {
   return label || name || (typeof x.id === 'number' ? `#${x.id}` : '—');
 }
 
+function MobileCellLabel(props: { children: React.ReactNode }) {
+  return <div className="mb-1 text-xs font-semibold text-muted md:hidden">{props.children}</div>;
+}
+
 type ItemEditorState =
   | null
   | {
@@ -496,28 +500,40 @@ export function ResourcePackageDetailPage() {
               testId="admin.cluster.resource_package_detail.items.empty"
             />
           ) : (
-            <TableCard minWidth="md" testId="admin.cluster.resource_package_detail.items.table">
-              <thead>
+            <TableCard
+              tableClassName="block md:table md:min-w-table-md"
+              testId="admin.cluster.resource_package_detail.items.table"
+            >
+              <thead className="hidden md:table-header-group">
                 <tr>
                   <th className="px-3 py-2 text-left text-xs font-semibold text-muted">{t('admin.cluster.resource_packages.items.col.resource')}</th>
                   <th className="px-3 py-2 text-right text-xs font-semibold text-muted">{t('admin.cluster.resource_packages.items.col.value')}</th>
                   <th className="px-3 py-2 text-right text-xs font-semibold text-muted">{t('common.actions')}</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="block md:table-row-group">
                 {items.map((it) => {
                   const itemId = it.id;
                   const cr = (it as any).cluster_resource as ClusterResource | null | undefined;
                   const v = typeof it.value === 'number' ? it.value : null;
 
                   return (
-                    <tr key={itemId} data-testid={`admin.cluster.resource_package_detail.items.row.${itemId}`}>
-                      <td className="px-3 py-2">
-                        <div className="text-fg">{crLabel(cr)}</div>
+                    <tr
+                      key={itemId}
+                      data-testid={`admin.cluster.resource_package_detail.items.row.${itemId}`}
+                      className="block border-b border-border last:border-b-0 md:table-row"
+                    >
+                      <td className="block px-3 pb-1 pt-3 md:table-cell md:py-2">
+                        <MobileCellLabel>{t('admin.cluster.resource_packages.items.col.resource')}</MobileCellLabel>
+                        <div className="break-words text-fg">{crLabel(cr)}</div>
                       </td>
-                      <td className="px-3 py-2 text-right font-mono text-xs tabular-nums text-fg">{v == null ? '—' : String(v)}</td>
-                      <td className="px-3 py-2 text-right">
-                        <div className="inline-flex items-center gap-2">
+                      <td className="block px-3 py-1 font-mono text-xs tabular-nums text-fg md:table-cell md:py-2 md:text-right">
+                        <MobileCellLabel>{t('admin.cluster.resource_packages.items.col.value')}</MobileCellLabel>
+                        {v == null ? '—' : String(v)}
+                      </td>
+                      <td className="block px-3 pb-3 pt-1 md:table-cell md:py-2 md:text-right">
+                        <MobileCellLabel>{t('common.actions')}</MobileCellLabel>
+                        <div className="flex flex-wrap items-center gap-2 md:inline-flex">
                           <Button
                             size="sm"
                             variant="secondary"
@@ -569,7 +585,7 @@ export function ResourcePackageDetailPage() {
               />
             ) : (
               <TableCard
-                minWidth="lg"
+                tableClassName="block md:table md:min-w-table-lg"
                 testId="admin.cluster.resource_package_detail.assign.table"
                 footer={
                   <KeysetPagination
@@ -587,7 +603,7 @@ export function ResourcePackageDetailPage() {
                   />
                 }
               >
-                <thead>
+                <thead className="hidden md:table-header-group">
                   <tr>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted">{t('common.environment')}</th>
                     <th className="px-3 py-2 text-left text-xs font-semibold text-muted">{t('common.user')}</th>
@@ -597,7 +613,7 @@ export function ResourcePackageDetailPage() {
                     <th className="px-3 py-2 text-right text-xs font-semibold text-muted">{t('common.actions')}</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="block md:table-row-group">
                   {assignments.map((rec) => {
                     const recId = rec.id;
                     const e = (rec as any).environment as Environment | null | undefined;
@@ -607,14 +623,34 @@ export function ResourcePackageDetailPage() {
                     const createdAt = typeof rec.created_at === 'string' ? rec.created_at : null;
 
                     return (
-                      <tr key={recId} data-testid={`admin.cluster.resource_package_detail.assign.row.${recId}`}>
-                        <td className="px-3 py-2 text-muted">{envLabel(e)}</td>
-                        <td className="px-3 py-2 text-fg">{userLabel(u)}</td>
-                        <td className="px-3 py-2 text-muted">{comment || '—'}</td>
-                        <td className="px-3 py-2 text-muted">{userLabel(ab)}</td>
-                        <td className="px-3 py-2 text-muted">{formatDateTime(createdAt)}</td>
-                        <td className="px-3 py-2 text-right">
-                          <div className="inline-flex items-center gap-2">
+                      <tr
+                        key={recId}
+                        data-testid={`admin.cluster.resource_package_detail.assign.row.${recId}`}
+                        className="block border-b border-border last:border-b-0 md:table-row"
+                      >
+                        <td className="block px-3 pb-1 pt-3 text-muted md:table-cell md:py-2">
+                          <MobileCellLabel>{t('common.environment')}</MobileCellLabel>
+                          <span className="break-words">{envLabel(e)}</span>
+                        </td>
+                        <td className="block px-3 py-1 text-fg md:table-cell md:py-2">
+                          <MobileCellLabel>{t('common.user')}</MobileCellLabel>
+                          <span className="break-words">{userLabel(u)}</span>
+                        </td>
+                        <td className="block px-3 py-1 text-muted md:table-cell md:py-2">
+                          <MobileCellLabel>{t('common.comment')}</MobileCellLabel>
+                          <span className="break-words">{comment || '—'}</span>
+                        </td>
+                        <td className="block px-3 py-1 text-muted md:table-cell md:py-2">
+                          <MobileCellLabel>{t('admin.cluster.resource_packages.assign.col.added_by')}</MobileCellLabel>
+                          <span className="break-words">{userLabel(ab)}</span>
+                        </td>
+                        <td className="block px-3 py-1 text-muted md:table-cell md:py-2">
+                          <MobileCellLabel>{t('common.created_at')}</MobileCellLabel>
+                          {formatDateTime(createdAt)}
+                        </td>
+                        <td className="block px-3 pb-3 pt-1 md:table-cell md:py-2 md:text-right">
+                          <MobileCellLabel>{t('common.actions')}</MobileCellLabel>
+                          <div className="flex flex-wrap items-center gap-2 md:inline-flex">
                             <Button
                               size="sm"
                               variant="secondary"
