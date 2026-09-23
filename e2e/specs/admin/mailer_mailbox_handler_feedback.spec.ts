@@ -56,7 +56,7 @@ test('@pr-smoke @pr-smoke-mobile keeps rejected mailbox handler creation in cont
   expect(createAttempts).toBe(2);
 });
 
-test('@pr-smoke @pr-smoke-mobile keeps rejected mailbox handler edits in context for retry', async ({ page }) => {
+test('@pr-smoke @pr-smoke-mobile keeps rejected mailbox handler edits in context for retry', async ({ page }, testInfo) => {
   await bootstrapVpsAdminWindow(page, { sessionToken: 'MAILBOX_HANDLER_EDIT_RETRY' });
 
   let handlers: any[] = [{ id: 201, class_name: 'Custom::Handler', order: 1, continue: false }];
@@ -77,7 +77,13 @@ test('@pr-smoke @pr-smoke-mobile keeps rejected mailbox handler edits in context
   });
 
   await page.goto('/admin/mailer/mailboxes/20');
-  await page.getByTestId('admin.mailer.mailboxes.handler.201.edit').click();
+  const editButton = page.getByTestId('admin.mailer.mailboxes.handler.201.edit');
+  if (testInfo.project.name === 'mobile-chrome') {
+    await editButton.focus();
+    await editButton.press('Enter');
+  } else {
+    await editButton.click();
+  }
   await page.getByTestId('admin.mailer.mailboxes.handler.modal.class_name').fill('Custom::UpdatedHandler');
   await page.getByTestId('admin.mailer.mailboxes.handler.modal.order').fill('2');
   await page.getByTestId('admin.mailer.mailboxes.handler.modal.continue').click();
