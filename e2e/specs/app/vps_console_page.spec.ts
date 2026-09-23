@@ -310,4 +310,39 @@ test.describe('@smoke VPS console page', () => {
     await expect(page.getByTestId('vps.console.server_missing')).toContainText('remote console server configured');
     await expect(page.getByTestId('vps.console.iframe')).toHaveCount(0);
   });
+
+  test('does not create or expose a session for a plaintext remote console server', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    let createCalls = 0;
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'test', level: 1 },
+      handlers: {
+        'GET vpses/123': () => ({
+          vps: {
+            ...vps,
+            node: {
+              ...vps.node,
+              location: { label: 'dc1', remote_console_server: 'http://console.example' },
+            },
+          },
+        }),
+        'GET ip_addresses': () => ({ ip_addresses: [] }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'POST vpses/123/console_token': () => {
+          createCalls += 1;
+          return { token: 'MUST-NOT-BE-EXPOSED' };
+        },
+      },
+    });
+
+    await page.goto('/app/vps/123/console');
+
+    await expect(page.getByTestId('vps.console.connection_state')).toContainText('Unavailable');
+    await expect(page.getByTestId('vps.console.new_session')).toBeDisabled();
+    await expect(page.getByTestId('vps.console.server_missing')).toBeVisible();
+    await expect(page.getByTestId('vps.console.open_new_tab')).toHaveCount(0);
+    await expect(page.getByTestId('vps.console.iframe')).toHaveCount(0);
+    expect(createCalls).toBe(0);
+  });
 });

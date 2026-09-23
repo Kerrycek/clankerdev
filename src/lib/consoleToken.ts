@@ -27,7 +27,9 @@ export function normalizeRemoteConsoleServer(value: unknown): string | null {
 
   try {
     const parsed = new URL(server);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    const loopbackHttp = parsed.protocol === 'http:'
+      && (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1' || parsed.hostname === '[::1]');
+    if (parsed.protocol !== 'https:' && !loopbackHttp) return null;
     if (parsed.username || parsed.password) return null;
 
     parsed.search = '';
