@@ -27,6 +27,7 @@ import {
   type ResourceRef,
 } from '../../../lib/api/datasets';
 import { fetchTransactionChains } from '../../../lib/api/transactions';
+import { formatErrorMessage } from '../../../lib/errors';
 import { hasActiveChains } from '../../../lib/taskStatus';
 
 import { useDatasetContext } from './DatasetContext';
@@ -186,9 +187,6 @@ export function DatasetPlansPage() {
       refetch();
       refetchChains();
     },
-    onError: (err: any) => {
-      pushToast({ variant: 'danger', title: t('dataset.plans.assign.error'), body: String(err?.message ?? err ?? '') });
-    },
     onSettled: () => chrome.releaseLocalLock(datasetRef),
   });
 
@@ -205,9 +203,6 @@ export function DatasetPlansPage() {
       pushToast({ variant: 'ok', title: t('dataset.plans.remove.success') });
       refetch();
       refetchChains();
-    },
-    onError: (err: any) => {
-      pushToast({ variant: 'danger', title: t('dataset.plans.remove.error'), body: String(err?.message ?? err ?? '') });
     },
     onSettled: () => chrome.releaseLocalLock(datasetRef),
   });
@@ -280,7 +275,14 @@ export function DatasetPlansPage() {
           subtitle={t('dataset.plans.subtitle')}
           actions={
             canAssignAny ? (
-              <Button testId="dataset.plans.assign.open" onClick={() => setAssignOpen(true)} disabled={busy || environmentId === null}>
+              <Button
+                testId="dataset.plans.assign.open"
+                onClick={() => {
+                  assignM.reset();
+                  setAssignOpen(true);
+                }}
+                disabled={busy || environmentId === null}
+              >
                 {t('dataset.plans.assign.open')}
               </Button>
             ) : null
@@ -311,27 +313,51 @@ export function DatasetPlansPage() {
           body={canAssignAny ? t('dataset.plans.empty.body') : t('dataset.plans.empty.no_available')}
           action={
             canAssignAny ? (
-              <Button testId="dataset.plans.empty.assign" onClick={() => setAssignOpen(true)} disabled={busy || environmentId === null}>
+              <Button
+                testId="dataset.plans.empty.assign"
+                onClick={() => {
+                  assignM.reset();
+                  setAssignOpen(true);
+                }}
+                disabled={busy || environmentId === null}
+              >
                 {t('dataset.plans.assign.open')}
               </Button>
             ) : undefined
           }
         />
       ) : (
-        <DatasetPlansList items={planListItems} busy={busy} onRemove={setRemovePlan} />
+        <DatasetPlansList
+          items={planListItems}
+          busy={busy}
+          onRemove={(plan) => {
+            removeM.reset();
+            setRemovePlan(plan);
+          }}
+        />
       )}
 
       <Modal
         open={assignOpen}
         onClose={() => {
-          if (!assignM.isPending) setAssignOpen(false);
+          if (!assignM.isPending) {
+            assignM.reset();
+            setAssignOpen(false);
+          }
         }}
         title={t('dataset.plans.assign.title')}
         size="md"
         testId="dataset.plans.assign.modal"
         footer={
           <div className="flex items-center justify-end gap-2">
-            <Button variant="secondary" onClick={() => setAssignOpen(false)} disabled={assignM.isPending}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                assignM.reset();
+                setAssignOpen(false);
+              }}
+              disabled={assignM.isPending}
+            >
               {t('common.cancel')}
             </Button>
             <Button
@@ -399,19 +425,39 @@ export function DatasetPlansPage() {
               </Card>
             );
           })() : null}
+          {assignM.isError ? (
+            <Alert
+              variant="danger"
+              title={t('dataset.plans.assign.error')}
+              description={formatErrorMessage(assignM.error)}
+              testId="dataset.plans.assign.error"
+            />
+          ) : null}
         </div>
       </Modal>
 
       <ConfirmDialog
         open={removePlan !== null}
-        onCancel={() => setRemovePlan(null)}
+        onCancel={() => {
+          removeM.reset();
+          setRemovePlan(null);
+        }}
         onConfirm={() => removePlan && void removeM.mutate(removePlan.id)}
         confirmLoading={removeM.isPending}
         danger
         title={t('dataset.plans.remove.title')}
         description={removePlan ? t('dataset.plans.remove.body', { label: envPlanLabel(removePlan, t) }) : ''}
         testId="dataset.plans.remove.confirm"
-      />
+      >
+        {removeM.isError ? (
+          <Alert
+            variant="danger"
+            title={t('dataset.plans.remove.error')}
+            description={formatErrorMessage(removeM.error)}
+            testId="dataset.plans.remove.error"
+          />
+        ) : null}
+      </ConfirmDialog>
     </div>
   );
 }
