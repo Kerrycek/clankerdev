@@ -6,11 +6,13 @@ import { useAppMode } from '../../../../app/appMode';
 import { useI18n } from '../../../../app/i18n';
 import { useToasts } from '../../../../app/toasts';
 import { createMailbox, type Mailbox } from '../../../../lib/api/mailer';
+import { formatErrorMessage } from '../../../../lib/errors';
 import { formatDateTime } from '../../../../lib/format';
 import { useKeysetPagination } from '../../../../lib/hooks/useKeysetPagination';
 import { ListShell } from '../../../../components/layout/ListShell';
 import { PageHeader } from '../../../../components/layout/PageHeader';
 import { FilterBar } from '../../../../components/layout/FilterBar';
+import { Alert } from '../../../../components/ui/Alert';
 import { Badge } from '../../../../components/ui/Badge';
 import { Button } from '../../../../components/ui/Button';
 import { Checkbox } from '../../../../components/ui/Checkbox';
@@ -273,22 +275,21 @@ export function MailboxesPage() {
       setCreateOpen(false);
       pushToast({ variant: 'ok', title: t('mailer.mailboxes.create_success') });
     },
-    onError: (err: any) => {
-      pushToast({
-        variant: 'danger',
-        title: t('mailer.mailboxes.create_error'),
-        body: String(err?.message ?? err ?? ''),
-      });
-    },
   });
 
   const resetCreate = () => {
+    createM.reset();
     setForm({ label: '', server: '', port: '993', user: '', password: '', enable_ssl: true });
   };
 
   const openCreate = () => {
     resetCreate();
     setCreateOpen(true);
+  };
+
+  const closeCreate = () => {
+    setCreateOpen(false);
+    createM.reset();
   };
 
   return (
@@ -545,13 +546,13 @@ export function MailboxesPage() {
 
       <Modal
         open={createOpen}
-        onClose={() => setCreateOpen(false)}
+        onClose={closeCreate}
         title={t('mailer.mailboxes.create.title')}
         testId="admin.mailer.mailboxes.create.modal"
         size="md"
         footer={
           <div className="flex items-center justify-end gap-2">
-            <Button variant="secondary" onClick={() => setCreateOpen(false)} disabled={createM.isPending}>
+            <Button variant="secondary" onClick={closeCreate} disabled={createM.isPending}>
               {t('common.cancel')}
             </Button>
             <Button
@@ -567,6 +568,16 @@ export function MailboxesPage() {
         }
       >
         <div className="grid gap-3">
+          {createM.isError ? (
+            <Alert
+              variant="danger"
+              title={t('mailer.mailboxes.create_error')}
+              testId="admin.mailer.mailboxes.create.error"
+            >
+              {formatErrorMessage(createM.error)}
+            </Alert>
+          ) : null}
+
           <div>
             <div className="text-xs font-semibold text-muted">{t('mailer.mailboxes.fields.label')}</div>
             <div className="mt-1">
