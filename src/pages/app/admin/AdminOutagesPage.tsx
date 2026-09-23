@@ -531,13 +531,13 @@ function AdminOutageDetailPage({ outageId }: { outageId: number | undefined }) {
       setAttrsReviewOpen(false);
       setEditOpen(false);
     },
-    onError: (e) => pushToast({ variant: 'danger', title: t('common.error'), body: formatErrorMessage(e) }),
   });
 
   const submitAttrs = () => {
     const errors = validateOutageForm(form, t);
     setFormErrors(errors);
     if (hasErrors(errors)) return;
+    saveAttrsM.reset();
     setAttrsReviewOpen(true);
   };
 
@@ -554,17 +554,13 @@ function AdminOutageDetailPage({ outageId }: { outageId: number | undefined }) {
       setUpdateOpen(false);
       setConfirmState(null);
     },
-    onError: (error) => pushToast({
-      variant: 'danger',
-      title: t('common.error'),
-      body: formatErrorMessage(error),
-    }),
   });
 
   const submitUpdate = () => {
     const errors = validateOutageForm(form, t, { requireType: false });
     setFormErrors(errors);
     if (hasErrors(errors)) return;
+    postUpdateM.reset();
     setUpdateReviewOpen(true);
   };
 
@@ -593,11 +589,6 @@ function AdminOutageDetailPage({ outageId }: { outageId: number | undefined }) {
           handlersResult.data
         ));
       }
-      pushToast({
-        variant: 'danger',
-        title: t('common.error'),
-        body: outageScopeErrorMessage(error, t),
-      });
     },
   });
 
@@ -615,23 +606,27 @@ function AdminOutageDetailPage({ outageId }: { outageId: number | undefined }) {
 
   const openEdit = () => {
     if (!canMutate) return;
+    saveAttrsM.reset();
     setForm(initOutageForm(outage));
     setFormErrors({});
     setEditOpen(true);
   };
   const openUpdate = () => {
     if (!canMutate) return;
+    postUpdateM.reset();
     setForm({ ...initOutageForm(outage), enSummary: '', enDescription: '', csSummary: '', csDescription: '', sendMail: true });
     setFormErrors({});
     setUpdateOpen(true);
   };
   const openSystems = () => {
     if (!canMutate) return;
+    saveSystemsM.reset();
     setSystemsForm(initOutageSystemsForm(entities, handlers));
     setSystemsOpen(true);
   };
   const requestStateChange = (st: OutageAdminState) => {
     if (!canMutate) return;
+    postUpdateM.reset();
     setStateWarning('');
     if (st === 'announced' && (entities.length === 0 || handlers.length === 0)) {
       setStateWarning(t('admin.outages.change_state.announce_blocked'));
@@ -753,7 +748,7 @@ function AdminOutageDetailPage({ outageId }: { outageId: number | undefined }) {
         <div className="mt-4"><OutageForm form={form} setForm={setForm} errors={formErrors} includeState updateMode /></div>
       </Modal>
 
-      <Modal open={systemsOpen} title={t('admin.outages.systems.title')} onClose={() => setSystemsOpen(false)} size="lg" testId="admin.outages.systems.modal" footer={<div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setSystemsOpen(false)} disabled={saveSystemsM.isPending}>{t('common.cancel')}</Button><Button onClick={() => setSystemsReviewOpen(true)} loading={saveSystemsM.isPending} testId="admin.outages.systems.save">{t('admin.outages.action.review')}</Button></div>}>
+      <Modal open={systemsOpen} title={t('admin.outages.systems.title')} onClose={() => setSystemsOpen(false)} size="lg" testId="admin.outages.systems.modal" footer={<div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setSystemsOpen(false)} disabled={saveSystemsM.isPending}>{t('common.cancel')}</Button><Button onClick={() => { saveSystemsM.reset(); setSystemsReviewOpen(true); }} loading={saveSystemsM.isPending} testId="admin.outages.systems.save">{t('admin.outages.action.review')}</Button></div>}>
         {saveSystemsM.isError ? <Alert variant="danger" title={t('common.error')} testId="admin.outages.systems.error">{outageScopeErrorMessage(saveSystemsM.error, t)}</Alert> : null}
         <OutageScopeEditor form={systemsForm} setForm={setSystemsForm} />
       </Modal>
@@ -764,10 +759,20 @@ function AdminOutageDetailPage({ outageId }: { outageId: number | undefined }) {
         title={t('admin.outages.edit.confirm_title')}
         description={t('admin.outages.edit.confirm_body')}
         confirmLoading={saveAttrsM.isPending}
-        onCancel={() => setAttrsReviewOpen(false)}
+        onCancel={() => {
+          saveAttrsM.reset();
+          setAttrsReviewOpen(false);
+        }}
         onConfirm={() => saveAttrsM.mutate()}
       >
-        <OutageReviewSummary form={form} />
+        <div className="space-y-3">
+          <OutageReviewSummary form={form} />
+          {saveAttrsM.isError ? (
+            <Alert variant="danger" title={t('common.error')} testId="admin.outages.edit.confirm.error">
+              {formatErrorMessage(saveAttrsM.error)}
+            </Alert>
+          ) : null}
+        </div>
       </ConfirmDialog>
 
       <ConfirmDialog
@@ -776,10 +781,20 @@ function AdminOutageDetailPage({ outageId }: { outageId: number | undefined }) {
         title={t('admin.outages.update.confirm_title')}
         description={t('admin.outages.update.confirm_body')}
         confirmLoading={postUpdateM.isPending}
-        onCancel={() => setUpdateReviewOpen(false)}
+        onCancel={() => {
+          postUpdateM.reset();
+          setUpdateReviewOpen(false);
+        }}
         onConfirm={() => postUpdateM.mutate(undefined)}
       >
-        <OutageReviewSummary form={form} showState />
+        <div className="space-y-3">
+          <OutageReviewSummary form={form} showState />
+          {postUpdateM.isError ? (
+            <Alert variant="danger" title={t('common.error')} testId="admin.outages.update.confirm.error">
+              {formatErrorMessage(postUpdateM.error)}
+            </Alert>
+          ) : null}
+        </div>
       </ConfirmDialog>
 
       <ConfirmDialog
@@ -788,11 +803,21 @@ function AdminOutageDetailPage({ outageId }: { outageId: number | undefined }) {
         title={t('admin.outages.systems.confirm_title')}
         description={t('admin.outages.systems.confirm_body')}
         confirmLoading={saveSystemsM.isPending}
-        onCancel={() => setSystemsReviewOpen(false)}
+        onCancel={() => {
+          saveSystemsM.reset();
+          setSystemsReviewOpen(false);
+        }}
         onConfirm={() => saveSystemsM.mutate()}
       >
-        <div className="text-sm text-muted">
-          {systemsForm.scope.map((item) => item.label).join(', ') || t('admin.outages.systems.none_selected')}
+        <div className="space-y-3">
+          <div className="text-sm text-muted">
+            {systemsForm.scope.map((item) => item.label).join(', ') || t('admin.outages.systems.none_selected')}
+          </div>
+          {saveSystemsM.isError ? (
+            <Alert variant="danger" title={t('common.error')} testId="admin.outages.systems.confirm.error">
+              {outageScopeErrorMessage(saveSystemsM.error, t)}
+            </Alert>
+          ) : null}
         </div>
       </ConfirmDialog>
 
@@ -803,7 +828,10 @@ function AdminOutageDetailPage({ outageId }: { outageId: number | undefined }) {
         description={t('admin.outages.change_state.confirm_body', { state: confirmState ? t(`admin.outages.state.${confirmState}`) : '' })}
         danger={confirmState === 'cancelled'}
         confirmLoading={postUpdateM.isPending}
-        onCancel={() => setConfirmState(null)}
+        onCancel={() => {
+          postUpdateM.reset();
+          setConfirmState(null);
+        }}
         onConfirm={() => {
           if (!confirmState) return;
           postUpdateM.mutate(outageStateTransitionPayload(
@@ -811,7 +839,13 @@ function AdminOutageDetailPage({ outageId }: { outageId: number | undefined }) {
             confirmState
           ));
         }}
-      />
+      >
+        {postUpdateM.isError ? (
+          <Alert variant="danger" title={t('common.error')} testId="admin.outages.change_state.confirm.error">
+            {formatErrorMessage(postUpdateM.error)}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
     </div>
   );
 }
