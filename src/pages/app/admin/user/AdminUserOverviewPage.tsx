@@ -34,6 +34,7 @@ import {
   useAdminUserLifetimeMutationGuard,
 } from './AdminUserMutationGuard';
 import {
+  buildEditUserPayload,
   makeEditDraft,
   makeStateDraft,
   optionalStringField,
@@ -193,20 +194,12 @@ export function AdminUserOverviewPage() {
   };
 
   const buildEditPayload = (): Record<string, unknown> | null => {
-    const level = Number(editDraft.level);
-    if (!Number.isFinite(level) || level < 0) {
+    const payload = buildEditUserPayload(editDraft);
+    if (!payload) {
       setEditError(t('admin.user.edit.validation.level'));
       return null;
     }
-
-    return {
-      full_name: editDraft.fullName.trim() || undefined,
-      email: editDraft.email.trim() || undefined,
-      address: editDraft.address.trim() || undefined,
-      level,
-      info: editDraft.info.trim() || undefined,
-      mailer_enabled: editDraft.mailerEnabled,
-    };
+    return payload;
   };
 
   const editM = useMutation({
