@@ -26,7 +26,7 @@ human review is still outstanding. Excluded PRs #242, #435 and #433 are not incl
 - [x] Lint, i18n/CSP audits and typecheck on the combined code.
 - [x] 128 script tests and 24 BFF tests pass on the combined code.
 - [x] All 1,452 unit tests and production build pass after including PR497.
-- [ ] Complete combined desktop/mobile Playwright regression, including PR497.
+- [x] Complete combined desktop/mobile Playwright fixture regression, including PR497.
 - [ ] Verify critical login/session, VPS, DNS, storage/backup and admin workflows
   against an isolated actual API with synthetic member/admin accounts.
 - [ ] Establish server ordering for user-data; the frontend cannot prove absence
@@ -56,7 +56,11 @@ PR-tagged set passed 279 and exposed one existing backup navigation race.
 PR497 fixes that race; both deterministic interaction-order tests fail on main
 and pass after the fix. Its standalone validation passed 16 component and 18
 desktop/mobile browser cases, typecheck/lint/build. The combined candidate is
-revalidating the remaining mobile cases and the affected desktop backup suite.
+finished the remaining 241 mobile cases and the affected 9 desktop backup cases
+successfully. The original failing case passes on the corrected combined code.
+The union of smoke and PR-tagged selections covers 498 desktop and 318 mobile
+passing cases; the 9-case final backup run repeats 7 of those and adds 2 further
+desktop checks. One intentionally mobile-only case is skipped on desktop.
 
 Playwright uses deterministic API fixtures. Live map-provider tests from #494
 do not constitute a live authenticated API workflow. Structural audit debt on
