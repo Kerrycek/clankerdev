@@ -213,7 +213,6 @@ export function VpsAccessPage() {
       }
     },
     onError: (e: unknown, variables) => {
-      setPendingPasswordType((current) => current?.vpsId === variables.vpsId ? null : current);
       setPasswordMutationError({ vpsId: variables.vpsId, error: e });
       if (isBusyError(e)) chrome.openTasks();
     },
@@ -252,7 +251,6 @@ export function VpsAccessPage() {
       }
     },
     onError: (e: unknown) => {
-      setPendingPublicKeyId(null);
       if (isBusyError(e)) chrome.openTasks();
     },
     onSettled: (_data, error, _variables, context) => context && chrome.settleLocalLock(context.lockRef, error, context.mutationGeneration),
@@ -398,7 +396,11 @@ export function VpsAccessPage() {
               <ActionButton
                 loading={deployKeyM.isPending}
                 disabled={!canDeployKey}
-                onClick={() => (selectedPublicKeyId !== null ? setPendingPublicKeyId(selectedPublicKeyId) : undefined)}
+                onClick={() => {
+                  if (selectedPublicKeyId === null) return;
+                  deployKeyM.reset();
+                  setPendingPublicKeyId(selectedPublicKeyId);
+                }}
                 testId="vps.access.ssh.deploy"
               >
                 {t('vps.access.ssh.deploy.button')}
@@ -474,7 +476,15 @@ export function VpsAccessPage() {
                 <option value="secure">{t('vps.access.password_type.secure')}</option>
                 <option value="simple">{t('vps.access.password_type.simple')}</option>
               </select>
-              <ActionButton loading={currentPasswdMutationPending} disabled={!canGenerate} onClick={() => setPendingPasswordType({ vpsId, type: passwordType })} testId="vps.access.password.generate">
+              <ActionButton
+                loading={currentPasswdMutationPending}
+                disabled={!canGenerate}
+                onClick={() => {
+                  setPasswordMutationError((current) => current?.vpsId === vpsId ? null : current);
+                  setPendingPasswordType({ vpsId, type: passwordType });
+                }}
+                testId="vps.access.password.generate"
+              >
                 {t('vps.access.reset.button')}
               </ActionButton>
             </div>
@@ -514,7 +524,14 @@ export function VpsAccessPage() {
         onCancel={() => setPendingPasswordType(null)}
         onConfirm={() => currentPendingPasswordType && passwdM.mutate(freezeVpsMutationSnapshot({ ...snapshotAccessTarget(), type: currentPendingPasswordType.type }))}
       >
-        <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.access.password.confirm.target" />
+        <div className="space-y-3">
+          <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.access.password.confirm.target" />
+          {currentPasswordMutationError ? (
+            <Alert variant="danger" testId="vps.access.password.confirm.error">
+              {errorMessage(currentPasswordMutationError.error, t('vps.mutation.error.missing_action_state'))}
+            </Alert>
+          ) : null}
+        </div>
       </ConfirmDialog> : null}
 
       {canMutateVps ? <ConfirmDialog
@@ -530,7 +547,14 @@ export function VpsAccessPage() {
           ...snapshotAccessTarget(), publicKeyId: pendingPublicKeyId, keyLabel: pendingKeyLabel,
         }))}
       >
-        <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.access.ssh.confirm.target" />
+        <div className="space-y-3">
+          <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.access.ssh.confirm.target" />
+          {deployKeyM.isError ? (
+            <Alert variant="danger" testId="vps.access.ssh.confirm.error">
+              {errorMessage(deployKeyM.error, t('vps.mutation.error.missing_action_state'))}
+            </Alert>
+          ) : null}
+        </div>
       </ConfirmDialog> : null}
     </div>
   );
