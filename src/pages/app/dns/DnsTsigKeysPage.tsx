@@ -233,7 +233,7 @@ export function DnsTsigKeysPage() {
                       {row.created_at ? formatDateTime(String(row.created_at)) : t('common.na')}
                     </td>
                     <td className="py-2 pr-4 text-right">
-                      <ActionButton size="sm" variant="danger" onClick={() => setConfirmDelete(row)} testId={`dns.tsig.row.${row.id}.delete`}>
+                      <ActionButton size="sm" variant="danger" onClick={() => { deleteM.reset(); setConfirmDelete(row); }} testId={`dns.tsig.row.${row.id}.delete`}>
                         {t('common.delete')}
                       </ActionButton>
                     </td>
@@ -325,14 +325,21 @@ export function DnsTsigKeysPage() {
 
       <ConfirmDialog
         open={confirmDelete !== null}
-        onClose={() => setConfirmDelete(null)}
+        onClose={() => { deleteM.reset(); setConfirmDelete(null); }}
         title={t('dns.tsig.delete.title')}
         description={confirmDelete ? t('dns.tsig.delete.description', { name: String(confirmDelete.name ?? `#${confirmDelete.id}`) }) : ''}
         confirmLabel={t('common.delete')}
         confirmVariant="danger"
         onConfirm={() => deleteM.mutate()}
         loading={deleteM.isPending}
-      />
+        testId="dns.tsig.delete_confirm"
+      >
+        {deleteM.isError ? (
+          <Alert variant="danger" title={t('common.action_failed')} testId="dns.tsig.delete_confirm.error">
+            {formatErrorMessage(deleteM.error)}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
     </div>
   );
 }

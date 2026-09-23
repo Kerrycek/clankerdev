@@ -1148,8 +1148,17 @@ export function MigrationPlanDetailPage() {
           const target = snapshotPlanTarget();
           if (target) startM.mutate(Object.freeze({ ...target, request: Object.freeze({ action: 'start' as const }) }));
         }}
-        onCancel={() => setConfirm(null)}
-      />
+        onCancel={() => {
+          setConfirm(null);
+          startM.reset();
+        }}
+      >
+        {startM.isError ? (
+          <Alert title={t('admin.migration_plan.errors.start')} variant="danger">
+            {formatErrorMessage(startM.error)}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={confirm?.kind === 'cancel'}
@@ -1162,8 +1171,17 @@ export function MigrationPlanDetailPage() {
           const target = snapshotPlanTarget();
           if (target) cancelM.mutate(Object.freeze({ ...target, request: Object.freeze({ action: 'cancel' as const }) }));
         }}
-        onCancel={() => setConfirm(null)}
-      />
+        onCancel={() => {
+          setConfirm(null);
+          cancelM.reset();
+        }}
+      >
+        {cancelM.isError ? (
+          <Alert title={t('admin.migration_plan.errors.cancel')} variant="danger">
+            {formatErrorMessage(cancelM.error)}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={confirm?.kind === 'delete'}
@@ -1177,24 +1195,17 @@ export function MigrationPlanDetailPage() {
           const target = snapshotPlanTarget();
           if (target) deleteM.mutate(Object.freeze({ ...target, request: Object.freeze({ action: 'delete' as const }) }));
         }}
-        onCancel={() => setConfirm(null)}
-      />
-
-      {startM.isError ? (
-        <Alert title={t('admin.migration_plan.errors.start')} variant="danger">
-          {formatErrorMessage(startM.error)}
-        </Alert>
-      ) : null}
-      {cancelM.isError ? (
-        <Alert title={t('admin.migration_plan.errors.cancel')} variant="danger">
-          {formatErrorMessage(cancelM.error)}
-        </Alert>
-      ) : null}
-      {deleteM.isError ? (
-        <Alert title={t('admin.migration_plan.errors.delete')} variant="danger">
-          {formatErrorMessage(deleteM.error)}
-        </Alert>
-      ) : null}
+        onCancel={() => {
+          setConfirm(null);
+          deleteM.reset();
+        }}
+      >
+        {deleteM.isError ? (
+          <Alert title={t('admin.migration_plan.errors.delete')} variant="danger">
+            {formatErrorMessage(deleteM.error)}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
     </DetailShell>
   );
 }

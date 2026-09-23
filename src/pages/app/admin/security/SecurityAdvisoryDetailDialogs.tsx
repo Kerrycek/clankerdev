@@ -63,6 +63,7 @@ export function SecurityAdvisoryDetailDialogs(props: {
   onDeleteUpdateClose: () => void;
   onDeleteUpdateConfirm: () => void;
   deleteUpdateSaving: boolean;
+  deleteUpdateError: string | null;
   updateConfirmOpen: boolean;
   pendingUpdate: SecurityAdvisoryUpdateValues | null;
   onUpdateConfirmClose: () => void;
@@ -196,7 +197,17 @@ export function SecurityAdvisoryDetailDialogs(props: {
         confirmLoading={props.deleteUpdateSaving}
         danger
         testId="admin.security_advisory.update.delete_confirm"
-      />
+      >
+        {props.deleteUpdateError ? (
+          <Alert
+            variant="danger"
+            title={t('common.error')}
+            testId="admin.security_advisory.update.delete_confirm.error"
+          >
+            {props.deleteUpdateError}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={props.updateConfirmOpen}

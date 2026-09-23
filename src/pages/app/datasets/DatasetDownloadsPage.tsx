@@ -284,6 +284,7 @@ export function DatasetDownloadsPage() {
   }
 
   function retryDownload(download: SnapshotDownload) {
+    createDl.reset();
     setCreateDraft(snapshotDownloadDraftFromDownload(download));
     setCreateOpen(true);
   }
@@ -316,7 +317,10 @@ export function DatasetDownloadsPage() {
             {t("common.refresh")}
           </Button>
           <ActionButton
-            onClick={() => setCreateOpen(true)}
+            onClick={() => {
+              createDl.reset();
+              setCreateOpen(true);
+            }}
             disabled={!createGate.allowed}
             disabledReason={
               !createGate.allowed ? createGate.reason : undefined
@@ -365,7 +369,11 @@ export function DatasetDownloadsPage() {
 
       <DatasetDownloadCreateDialog
         open={createOpen}
-        onClose={() => setCreateOpen(false)}
+        onClose={() => {
+          if (createDl.isPending) return;
+          createDl.reset();
+          setCreateOpen(false);
+        }}
         datasetLabel={datasetLabelForToast}
         draft={createDraft}
         onDraftChange={setCreateDraft}
