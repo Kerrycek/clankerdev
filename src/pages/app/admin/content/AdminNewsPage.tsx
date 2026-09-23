@@ -264,6 +264,7 @@ export function AdminNewsPage() {
                           size="sm"
                           variant="danger"
                           onClick={() => {
+                            delM.reset();
                             setDeleteTarget(n);
                             setDeleteOpen(true);
                           }}
