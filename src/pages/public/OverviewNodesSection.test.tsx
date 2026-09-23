@@ -67,13 +67,16 @@ describe('OverviewNodesSection', () => {
 
     for (const panel of [...praguePanels, ...brnoPanels]) {
       expect(panel).toHaveAttribute('data-cluster-location-layout', 'panel');
-      expect(panel).toHaveClass('rounded-lg', 'border-info-border', 'bg-surface', 'shadow-card');
+      expect(panel).toHaveClass('rounded-lg', 'border-border', 'bg-surface', 'shadow-card');
     }
 
     expect(container.querySelector('[data-testid="public.nodes.location.Praha"] summary')).toHaveClass(
       'border-l-4',
       'border-info',
       'bg-info-bg',
+      'focus:outline-none',
+      'focus-visible:ring-2',
+      'focus-visible:ring-inset',
     );
     expect(container.querySelector('[data-testid="public.nodes.table.Praha"]')).toHaveTextContent('Praha-node');
     expect(container.querySelector('[data-testid="public.nodes.table.Praha"]')).not.toHaveTextContent('Brno-node');
