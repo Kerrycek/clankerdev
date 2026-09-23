@@ -118,6 +118,51 @@ async function installLifecycleMock(page: Page, options?: {
 }
 
 test.describe('@pr-smoke VPS lifecycle tab', () => {
+  test('@pr-smoke-mobile keeps rejected VPS configuration saves inside the review dialog and allows retry', async ({ page }) => {
+    let updateCalls = 0;
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installLifecycleMock(page, {
+      updateVps: () => {
+        updateCalls += 1;
+        if (updateCalls === 1) {
+          return {
+            status: 409,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              status: false,
+              message: 'VPS configuration changed on the server. Review and retry.',
+              response: null,
+            }),
+          };
+        }
+        return { vps, _meta: { action_state_id: 506 } };
+      },
+    });
+
+    await page.goto('/admin/vps/123/config');
+    await page.getByRole('textbox', { name: /^Hostname / }).fill('retry-config.example');
+    await page.getByTestId('vps.config.header.save').click();
+
+    const dialog = page.getByTestId('vps.config.confirm');
+    await expect(dialog).toBeVisible();
+    await dialog.getByTestId('vps.config.confirm.confirm').click();
+    await expect.poll(() => updateCalls).toBe(1);
+    await expect(dialog.getByTestId('vps.config.confirm.error')).toContainText(
+      'VPS configuration changed on the server. Review and retry.',
+    );
+    await expect(dialog).toBeVisible();
+
+    await dialog.getByTestId('vps.config.confirm.cancel').click();
+    await expect(dialog).toBeHidden();
+    await page.getByTestId('vps.config.header.save').click();
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByTestId('vps.config.confirm.error')).toHaveCount(0);
+
+    await dialog.getByTestId('vps.config.confirm.confirm').click();
+    await expect.poll(() => updateCalls).toBe(2);
+    await expect(dialog).toBeHidden();
+  });
+
   test('resets configuration review and lifetime editor when the VPS route changes', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installLifecycleMock(page);
