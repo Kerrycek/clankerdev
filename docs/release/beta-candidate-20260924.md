@@ -15,7 +15,7 @@ Initial four-PR integration: `141b92281a232c4c07a73a2c475ef93eba457b60`.
 | [494](https://github.com/Kerrycek/clankerdev/pull/494) | `0ba1b61327c54737df35663e15df186230b07c59` | Registration risk beside the decision and map layout |
 | [495](https://github.com/Kerrycek/clankerdev/pull/495) | `236e1d2701968817ec79901007b9b05b8f31caf4` | vpsAdmin first in browser titles |
 | [496](https://github.com/Kerrycek/clankerdev/pull/496) | `67b0c2d3db9aa8e2f8c0b3e2091ecd1443f9c8aa` | Supported user-data filters, bounded search and cursor navigation |
-| [497](https://github.com/Kerrycek/clankerdev/pull/497) | `ff4529c3` | Preserve backup tab/filter edits during overlapping navigation |
+| [497](https://github.com/Kerrycek/clankerdev/pull/497) | `ff4529c3f6fea1d61d3a1d41502c0b028ce311e2` | Preserve backup tab/filter edits during overlapping navigation |
 
 PR493–496 have successful static/unit and smoke CI. PR497's new CI is pending;
 human review is still outstanding. Excluded PRs #242, #435 and #433 are not included.
@@ -24,7 +24,8 @@ human review is still outstanding. Excluded PRs #242, #435 and #433 are not incl
 
 - [x] Integrate the four initial heads and the subsequent backup fix locally.
 - [x] Lint, i18n/CSP audits and typecheck on the combined code.
-- [x] 128 script tests, 24 BFF tests and 1,450 unit tests pass together.
+- [x] 128 script tests and 24 BFF tests pass on the combined code.
+- [x] All 1,452 unit tests and production build pass after including PR497.
 - [ ] Complete combined desktop/mobile Playwright regression, including PR497.
 - [ ] Verify critical login/session, VPS, DNS, storage/backup and admin workflows
   against an isolated actual API with synthetic member/admin accounts.
@@ -46,6 +47,8 @@ candidate-build.log and candidate-playwright.log. The initial ci:pr attempt
 stopped because the new worktree lacked BFF dependencies. After attaching the
 same locked dependencies used by the original worktree, the 24 BFF tests and
 full unit suite passed. No product code or checks were bypassed for this.
+After PR497, candidate-unit-with-backup-fix.log records all 1,452 tests passing
+and candidate-build-with-backup-fix.log records the successful final code build.
 
 The initial combined smoke set passed 218 desktop and 77 mobile cases, with
 one intentionally mobile-only case skipped on desktop. The additional desktop
