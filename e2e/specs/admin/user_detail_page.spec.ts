@@ -91,6 +91,7 @@ test('admin user detail: edit drawer saves safe account fields', async ({ page }
     full_name: 'Alice Example',
     email: 'alice@example.test',
     mailer_enabled: true,
+    time_zone: 'Europe/Prague',
     info: 'Initial note',
     address: 'Example street',
   };
@@ -102,12 +103,14 @@ test('admin user detail: edit drawer saves safe account fields', async ({ page }
       'PUT users/42': () => {
         user = {
           ...user,
+          login: 'alice-renamed',
           full_name: 'Alice Renamed',
           email: 'alice.renamed@example.test',
           level: 21,
           mailer_enabled: false,
-          info: 'Support account',
+          info: 'Admin note',
           address: 'New street',
+          time_zone: 'UTC',
         };
         return { user };
       },
@@ -126,12 +129,15 @@ test('admin user detail: edit drawer saves safe account fields', async ({ page }
 
   await page.getByTestId('admin.user.edit.open').click();
   await expect(page.getByTestId('admin.user.edit.drawer')).toBeVisible();
+  await page.getByTestId('admin.user.edit.login').fill('alice-renamed');
+  await expect(page.getByText('Login will change')).toBeVisible();
   await page.getByTestId('admin.user.edit.full_name').fill('Alice Renamed');
   await page.getByTestId('admin.user.edit.email').fill('alice.renamed@example.test');
   await page.getByTestId('admin.user.edit.level').fill('21');
   await page.getByTestId('admin.user.edit.mailer_enabled').click();
   await page.getByTestId('admin.user.edit.address').fill('New street');
-  await page.getByTestId('admin.user.edit.info').fill('Support account');
+  await page.getByTestId('admin.user.edit.time_zone').selectOption('UTC');
+  await page.getByTestId('admin.user.edit.info').fill('Admin note');
   await page.getByTestId('admin.user.edit.save').click();
 
   await expect(page.getByTestId('admin.user.edit.drawer')).toHaveCount(0);
@@ -139,12 +145,14 @@ test('admin user detail: edit drawer saves safe account fields', async ({ page }
   expect(updates).toEqual([
     {
       user: {
+        login: 'alice-renamed',
         full_name: 'Alice Renamed',
         email: 'alice.renamed@example.test',
         address: 'New street',
         level: 21,
-        info: 'Support account',
+        info: 'Admin note',
         mailer_enabled: false,
+        time_zone: 'UTC',
       },
     },
   ]);
@@ -163,6 +171,7 @@ test('admin user detail: edit drawer can clear optional account fields', async (
     address: 'Example street',
     info: 'Old note',
     mailer_enabled: true,
+    time_zone: 'Europe/Prague',
   };
 
   await installHaveApiMock(page, {
@@ -188,12 +197,14 @@ test('admin user detail: edit drawer can clear optional account fields', async (
 
   await expect(page.getByTestId('admin.user.edit.drawer')).toHaveCount(0);
   expect(updates).toEqual([{
+    login: 'alice',
     full_name: '',
     email: '',
     address: '',
     level: 1,
     info: '',
     mailer_enabled: true,
+    time_zone: 'Europe/Prague',
   }]);
 });
 
