@@ -119,13 +119,14 @@ test('@pr-smoke edits and deletes an advisory update with confirmation and refre
   await expect(updateCard).toHaveCount(0);
 });
 
-test('advisory update PUT and DELETE 403 errors preserve the editor, confirmation and data', async ({ page }) => {
+test('@pr-smoke @pr-smoke-mobile advisory update PUT and DELETE 403 errors preserve the editor, confirmation and data', async ({ page }) => {
   const update = initialUpdate();
+  let updates = [update];
   let putCalls = 0;
   let deleteCalls = 0;
 
   await installAdvisoryDetailMock(page, {
-    'GET security_advisory_updates': () => ({ security_advisory_updates: [update] }),
+    'GET security_advisory_updates': () => ({ security_advisory_updates: updates }),
     'PUT security_advisory_updates/701': () => {
       putCalls += 1;
       return {
@@ -136,6 +137,10 @@ test('advisory update PUT and DELETE 403 errors preserve the editor, confirmatio
     },
     'DELETE security_advisory_updates/701': () => {
       deleteCalls += 1;
+      if (deleteCalls > 1) {
+        updates = [];
+        return null;
+      }
       return {
         status: 403,
         contentType: 'application/json',
@@ -168,6 +173,12 @@ test('advisory update PUT and DELETE 403 errors preserve the editor, confirmatio
 
   await expect.poll(() => deleteCalls).toBe(1);
   await expect(deleteDialog).toBeVisible();
+  await expect(page.getByTestId('admin.security_advisory.update.delete_confirm.error')).toContainText('delete denied');
   await expect(updateCard).toContainText('Original update');
   await expect(page.getByTestId('toast.viewport')).toContainText('delete denied');
+
+  await page.getByTestId('admin.security_advisory.update.delete_confirm.confirm').click();
+  await expect.poll(() => deleteCalls).toBe(2);
+  await expect(deleteDialog).toBeHidden();
+  await expect(updateCard).toHaveCount(0);
 });

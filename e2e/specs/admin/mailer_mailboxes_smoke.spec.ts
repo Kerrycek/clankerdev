@@ -158,6 +158,49 @@ test.describe('@smoke Admin mailer mailboxes', () => {
   });
 });
 
+test('@pr-smoke @pr-smoke-mobile keeps rejected mailbox creation in context for retry', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'MAILBOX_CREATE_RETRY' });
+
+  let createAttempts = 0;
+  const mailboxes: any[] = [];
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 90 },
+    handlers: {
+      'GET mailboxes': () => ({ mailboxes, _meta: { total_count: mailboxes.length } }),
+      'POST mailboxes': ({ reqJson }) => {
+        createAttempts += 1;
+        if (createAttempts === 1) return failEnvelope('Mailbox credentials were rejected');
+        const created = { id: 30, ...((reqJson as any)?.mailbox ?? {}), handlers_count: 0 };
+        mailboxes.push(created);
+        return { mailbox: created };
+      },
+    },
+  });
+
+  await page.goto('/admin/mailer/mailboxes');
+  await page.getByTestId('admin.mailer.mailboxes.create').click();
+  await page.getByTestId('admin.mailer.mailboxes.create.label').fill('Retry inbox');
+  await page.getByTestId('admin.mailer.mailboxes.create.server').fill('imap.retry.example');
+  await page.getByTestId('admin.mailer.mailboxes.create.port').fill('993');
+  await page.getByTestId('admin.mailer.mailboxes.create.user').fill('retry@example.test');
+  await page.getByTestId('admin.mailer.mailboxes.create.password').fill('retry-secret');
+  await page.getByTestId('admin.mailer.mailboxes.create.modal.save').click();
+
+  await expect(page.getByTestId('admin.mailer.mailboxes.create.error')).toContainText(
+    'Mailbox credentials were rejected',
+  );
+  await expect(page.getByTestId('admin.mailer.mailboxes.create.modal')).toBeVisible();
+  await expect(page.getByTestId('admin.mailer.mailboxes.create.label')).toHaveValue('Retry inbox');
+  await expect(page.getByTestId('admin.mailer.mailboxes.create.server')).toHaveValue('imap.retry.example');
+  await expect(page.getByTestId('admin.mailer.mailboxes.create.user')).toHaveValue('retry@example.test');
+  await expect(page.getByTestId('admin.mailer.mailboxes.create.password')).toHaveValue('retry-secret');
+
+  await page.getByTestId('admin.mailer.mailboxes.create.modal.save').click();
+  await expect(page.getByTestId('admin.mailer.mailboxes.create.modal')).toHaveCount(0);
+  await expect(page.getByTestId('admin.mailer.mailboxes.row.30')).toBeVisible();
+  expect(createAttempts).toBe(2);
+});
+
 test('@pr-smoke @pr-smoke-mobile keeps rejected mailbox edits in context for retry', async ({ page }) => {
   await bootstrapVpsAdminWindow(page, { sessionToken: 'MAILBOX_EDIT_RETRY' });
 

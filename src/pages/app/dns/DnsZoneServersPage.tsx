@@ -161,7 +161,23 @@ export function DnsZoneServersPage() {
         </div>
       </Modal>
 
-      <ConfirmDialog testId="dns.servers.delete" open={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title={t('dns.zone.servers.delete.title')} description={confirmDelete ? t('dns.zone.servers.delete.description', { server: dnsZoneServerName(confirmDelete) }) : ''} confirmLabel={t('common.delete')} confirmVariant="danger" onConfirm={() => deleteM.mutate()} loading={deleteM.isPending} />
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        onClose={() => { deleteM.reset(); setConfirmDelete(null); }}
+        title={t('dns.zone.servers.delete.title')}
+        description={confirmDelete ? t('dns.zone.servers.delete.description', { server: dnsZoneServerName(confirmDelete) }) : ''}
+        confirmLabel={t('common.delete')}
+        confirmVariant="danger"
+        onConfirm={() => deleteM.mutate()}
+        loading={deleteM.isPending}
+        testId="dns.servers.delete"
+      >
+        {deleteM.isError ? (
+          <Alert variant="danger" title={t('common.action_failed')} testId="dns.servers.delete.error">
+            {formatErrorMessage(deleteM.error)}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
     </div>
   );
 }
