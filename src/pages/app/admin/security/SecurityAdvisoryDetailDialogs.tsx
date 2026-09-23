@@ -48,6 +48,7 @@ export function SecurityAdvisoryDetailDialogs(props: {
   onPublishConfirm: () => void;
   rebuildOpen: boolean;
   rebuildSaving: boolean;
+  rebuildError: string | null;
   onRebuildClose: () => void;
   onRebuildConfirm: () => void;
   updateEditorOpen: boolean;
@@ -145,7 +146,17 @@ export function SecurityAdvisoryDetailDialogs(props: {
         confirmLabel={t('admin.security_advisories.action.rebuild')}
         confirmLoading={props.rebuildSaving}
         testId="admin.security_advisory.rebuild_dialog"
-      />
+      >
+        {props.rebuildError ? (
+          <Alert
+            variant="danger"
+            title={t('admin.security_advisories.toast.rebuild_failed')}
+            testId="admin.security_advisory.rebuild_dialog.error"
+          >
+            {props.rebuildError}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
 
       <SecurityAdvisoryUpdateModal
         open={props.updateEditorOpen && props.canPostUpdate}

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
+import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock } from '../../fixtures';
 
 const languages = [
   { id: 1, code: 'en', label: 'English' },
@@ -353,6 +353,53 @@ test.describe('@smoke Security advisory admin management', () => {
           mutation.path === '/api/v7.0/outage_security_advisories',
       )?.body,
     ).toEqual({ outage_security_advisory: { outage: 321, security_advisory: 77 } });
+  });
+
+  test('@pr-smoke @pr-smoke-mobile keeps a rejected affected-VPS rebuild in context for retry', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'SECURITY_REBUILD_RETRY' });
+
+    const advisory = {
+      id: 77,
+      state: 'draft',
+      name: 'Linux kernel advisory',
+      published_at: null,
+      created_at: '2026-07-27T10:00:00.000Z',
+      en_summary: 'Kernel vulnerability',
+      en_description: 'Affects supported compute nodes.',
+      en_response: 'Apply the fixed kernel and reboot.',
+    };
+    let rebuildAttempts = 0;
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'security-admin', level: 90 },
+      handlers: {
+        'GET languages': () => ({ languages }),
+        'GET security_advisories/77': () => ({ security_advisory: advisory }),
+        'GET security_advisory_cves': () => ({ security_advisory_cves: [] }),
+        'GET nodes': () => ({ nodes: [] }),
+        'GET security_advisories/77/node_statuses': () => ({ node_statuses: [] }),
+        'GET security_advisory_updates': () => ({ security_advisory_updates: [] }),
+        'GET outage_security_advisories': () => ({ outage_security_advisories: [] }),
+        'POST security_advisories/77/rebuild_affected_vps': () => {
+          rebuildAttempts += 1;
+          if (rebuildAttempts === 1) return failEnvelope('Affected VPS rebuild was rejected');
+          return null;
+        },
+      },
+    });
+
+    await page.goto('/admin/security-advisories/77');
+    await page.getByTestId('admin.security_advisory.rebuild').click();
+    await page.getByTestId('admin.security_advisory.rebuild_dialog.confirm').click();
+
+    await expect(page.getByTestId('admin.security_advisory.rebuild_dialog.error')).toContainText(
+      'Affected VPS rebuild was rejected',
+    );
+    await expect(page.getByTestId('admin.security_advisory.rebuild_dialog')).toBeVisible();
+
+    await page.getByTestId('admin.security_advisory.rebuild_dialog.confirm').click();
+    await expect(page.getByTestId('admin.security_advisory.rebuild_dialog')).toHaveCount(0);
+    expect(rebuildAttempts).toBe(2);
   });
 
   test('rejects a normal user before any advisory administration is rendered', async ({ page }) => {

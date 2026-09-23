@@ -237,7 +237,6 @@ export function AdminSecurityAdvisoryDetailPage() {
       ]);
       pushToast({ variant: 'ok', title: t('admin.security_advisories.toast.rebuilt') });
     },
-    onError: (error) => pushToast({ variant: 'danger', title: t('admin.security_advisories.toast.rebuild_failed'), body: formatErrorMessage(error) }),
   });
 
   const [updateEditorOpen, setUpdateEditorOpen] = useState(false);
@@ -361,7 +360,10 @@ export function AdminSecurityAdvisoryDetailPage() {
           setEditorError(null);
           setEditorOpen(true);
         }}
-        onRebuild={() => setRebuildOpen(true)}
+        onRebuild={() => {
+          rebuildM.reset();
+          setRebuildOpen(true);
+        }}
         onPublish={openPublish}
         onPostUpdate={openUpdateCreate}
         onTabChange={(tab) => setSearchParams(tab === 'overview' ? {} : { tab })}
@@ -454,7 +456,12 @@ export function AdminSecurityAdvisoryDetailPage() {
         onPublishConfirm={() => publishM.mutate()}
         rebuildOpen={rebuildOpen}
         rebuildSaving={rebuildM.isPending}
-        onRebuildClose={() => setRebuildOpen(false)}
+        rebuildError={rebuildM.isError ? formatErrorMessage(rebuildM.error) : null}
+        onRebuildClose={() => {
+          if (rebuildM.isPending) return;
+          rebuildM.reset();
+          setRebuildOpen(false);
+        }}
         onRebuildConfirm={() => rebuildM.mutate()}
         updateEditorOpen={updateEditorOpen}
         editingUpdate={editingUpdate}
