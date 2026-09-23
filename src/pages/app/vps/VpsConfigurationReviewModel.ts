@@ -46,6 +46,8 @@ function draftRawValue(draft: VpsConfigDraft, key: VpsConfigReviewKey): unknown 
       return draft.dnsResolver;
     case 'user_namespace_map':
       return draft.userNamespaceMap;
+    case 'map_mode':
+      return draft.mapMode;
     case 'autostart_priority':
       return draft.autostartPriority;
     case 'start_menu_timeout':

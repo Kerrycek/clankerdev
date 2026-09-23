@@ -30,6 +30,7 @@ const baseVps: Vps = {
   autostart_priority: 10,
   start_menu_timeout: 5,
   cgroup_version: 'cgroup_any',
+  map_mode: 'native',
   allow_admin_modifications: false,
   cpu_limit: 200,
 };
@@ -137,6 +138,23 @@ describe('VpsConfigurationModel', () => {
 
     expect(result.changedKeys).toEqual(['start_menu_timeout']);
     expect(result.payload).toEqual({ start_menu_timeout: 30 });
+  });
+
+  it('keeps map mode admin-only and marks it as restart-dependent', () => {
+    expect(CONFIG_FIELD_META.map_mode.risks).toEqual(['requires_restart', 'admin_only']);
+
+    const baseline = normalizeDraft(baseVps);
+    const draft = { ...baseline, mapMode: 'zfs' as const };
+
+    expect(buildPayload({ baseline, draft, isAdminMode: false, t })).toMatchObject({
+      changedKeys: [],
+      payload: {},
+    });
+    expect(buildPayload({ baseline, draft, isAdminMode: true, t })).toMatchObject({
+      changedKeys: ['map_mode'],
+      payload: { map_mode: 'zfs' },
+      sensitive: true,
+    });
   });
 
   it('keeps owner changes separate from resource changes', () => {
