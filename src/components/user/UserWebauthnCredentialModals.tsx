@@ -73,7 +73,11 @@ export function UserWebauthnCreateModal(props: {
         </div>
 
         {props.isError ? (
-          <Alert variant="danger" title={t('profile.mfa.webauthn.create.failed')}>
+          <Alert
+            variant="danger"
+            title={t('profile.mfa.webauthn.create.failed')}
+            testId={`${prefix}.webauthn.create.error`}
+          >
             {formatErrorMessage(props.error)}
           </Alert>
         ) : null}
@@ -144,7 +148,11 @@ export function UserWebauthnEditModal(props: {
         />
 
         {props.isError ? (
-          <Alert variant="danger" title={t('profile.mfa.webauthn.edit.save_failed')}>
+          <Alert
+            variant="danger"
+            title={t('profile.mfa.webauthn.edit.save_failed')}
+            testId={`${prefix}.webauthn.edit.error`}
+          >
             {formatErrorMessage(props.error)}
           </Alert>
         ) : null}
@@ -179,7 +187,9 @@ export function UserWebauthnDeleteDialog(props: {
     >
       {props.isError ? (
         <div className="mt-2">
-          <Alert variant="danger">{formatErrorMessage(props.error)}</Alert>
+          <Alert variant="danger" testId={`${prefix}.webauthn.delete.error`}>
+            {formatErrorMessage(props.error)}
+          </Alert>
         </div>
       ) : null}
     </ConfirmDialog>

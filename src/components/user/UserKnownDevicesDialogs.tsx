@@ -30,7 +30,9 @@ export function UserKnownDeviceForgetDialog(props: {
     >
       {props.error ? (
         <div className="mt-2">
-          <Alert variant="danger">{formatErrorMessage(props.error)}</Alert>
+          <Alert variant="danger" testId={`${props.testIdPrefix}.known_devices.forget.error`}>
+            {formatErrorMessage(props.error)}
+          </Alert>
         </div>
       ) : null}
     </ConfirmDialog>
