@@ -8,6 +8,7 @@ import {
   isResolvedRequestReviewState,
   parseRequestReviewQueue,
   requestMatchesReviewTarget,
+  requestReviewQueueAfter,
   requestResourceLabel,
   safeRequestsReturnTo,
 } from './RequestDetailModel';
@@ -26,6 +27,25 @@ describe('parseRequestReviewQueue', () => {
       { type: 'change', id: 11 },
     ]);
     expect(parseRequestReviewQueue({ type: 'registration', id: 12 })).toEqual([]);
+  });
+});
+
+describe('requestReviewQueueAfter', () => {
+  const queue = [
+    { type: 'registration' as const, id: 12 },
+    { type: 'change' as const, id: 11 },
+    { type: 'registration' as const, id: 10 },
+  ];
+
+  it('continues after a randomly selected request and wraps through the visible queue once', () => {
+    expect(requestReviewQueueAfter(queue, { type: 'change', id: 11 })).toEqual([
+      { type: 'registration', id: 10 },
+      { type: 'registration', id: 12 },
+    ]);
+  });
+
+  it('does not activate automatic review for a request outside the reviewable queue', () => {
+    expect(requestReviewQueueAfter(queue, { type: 'change', id: 99 })).toBeNull();
   });
 });
 

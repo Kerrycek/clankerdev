@@ -21,11 +21,12 @@ export function RequestsExpandedContent(props: {
   isAdmin: boolean;
   basePath: string;
   returnTo: string;
+  detailState?: unknown;
   compact?: boolean;
   onResolved: () => void | Promise<void>;
 }) {
   const { t } = useI18n();
-  const { request, isAdmin, basePath, returnTo, compact = false, onResolved } = props;
+  const { request, isAdmin, basePath, returnTo, detailState, compact = false, onResolved } = props;
   const id = requestId(request);
   const reqType = requestType(request);
   const testPrefix = compact
@@ -139,6 +140,7 @@ export function RequestsExpandedContent(props: {
           compact={compact}
           showDetailLink
           detailHref={`${basePath}/requests/${reqType}/${id}?${new URLSearchParams({ returnTo }).toString()}`}
+          detailState={detailState}
           testIdPrefix={`${testPrefix}.resolve`}
           onResolved={onResolved}
         />

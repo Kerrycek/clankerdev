@@ -24,7 +24,11 @@ import { IncomingPaymentsFilters } from './IncomingPaymentsFilters';
 import { IncomingPaymentsBulkActions } from './IncomingPaymentsBulkActions';
 import { IncomingPaymentsListContent } from './IncomingPaymentsListContent';
 import { IncomingPaymentsReconciliationSummary } from './IncomingPaymentsReconciliationCards';
-import { incomingPaymentNeedsReview, incomingPaymentStateFilterOptions } from './IncomingPaymentsModel';
+import {
+  incomingPaymentNeedsReview,
+  incomingPaymentReviewQueueAfter,
+  incomingPaymentStateFilterOptions,
+} from './IncomingPaymentsModel';
 import { type IncomingPaymentBulkAction, type IncomingPaymentBulkReview } from './IncomingPaymentsBulkModel';
 import { AdminFinanceTabs } from './AdminFinanceTabs';
 
@@ -252,6 +256,16 @@ export function IncomingPaymentsPage() {
     const query = sp.toString();
     return `${basePath}/payments/incoming${query ? `?${query}` : ''}`;
   }, [basePath, sp]);
+  const paymentReviewIds = useMemo(() => reviewableRows.map((payment) => payment.id), [reviewableRows]);
+  const incomingPaymentReviewState = useCallback((payment: { id: number }) => {
+    const remaining = incomingPaymentReviewQueueAfter(paymentReviewIds, payment.id);
+    if (remaining === null) return undefined;
+    return {
+      returnTo: listReturnTo,
+      incomingPaymentReviewQueueActive: true,
+      incomingPaymentReviewQueue: remaining,
+    };
+  }, [listReturnTo, paymentReviewIds]);
   const startSequentialReview = useCallback(() => {
     const [first, ...remaining] = reviewableRows;
     if (!first) return;
@@ -337,6 +351,7 @@ export function IncomingPaymentsPage() {
               returnTo={listReturnTo}
               reviewableCount={reviewableRows.length}
               onStartReview={startSequentialReview}
+              reviewStateFor={incomingPaymentReviewState}
               pagination={pagination}
               pageCount={countedPagination.pageCount}
               totalPagesKnown={countedPagination.totalPagesKnown}

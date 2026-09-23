@@ -34,6 +34,7 @@ function hasTextSelection(): boolean {
  */
 export function TableRowLink(props: {
   to?: string;
+  state?: unknown;
   disabled?: boolean;
   variant?: TableRowVariant;
   className?: string;
@@ -63,9 +64,9 @@ export function TableRowLink(props: {
         return;
       }
 
-      navigate(props.to);
+      navigate(props.to, { state: props.state });
     },
-    [clickable, navigate, props.to]
+    [clickable, navigate, props.state, props.to]
   );
 
   const onKeyDown = useCallback(
@@ -77,10 +78,10 @@ export function TableRowLink(props: {
 
       if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        navigate(props.to);
+        navigate(props.to, { state: props.state });
       }
     },
-    [keyboardNavigable, navigate, props.to]
+    [keyboardNavigable, navigate, props.state, props.to]
   );
 
   return (
