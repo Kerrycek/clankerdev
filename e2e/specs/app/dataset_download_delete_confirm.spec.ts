@@ -54,6 +54,67 @@ test.describe("@smoke Dataset downloads", () => {
     await expect(page).toHaveURL(/\/app\/datasets\/10\/downloads$/);
   });
 
+  test("@pr-smoke @pr-smoke-mobile clears a dismissed download creation error and retries cleanly", async ({
+    page,
+  }) => {
+    let createAttempts = 0;
+
+    await bootstrapVpsAdminWindow(page, { sessionToken: "TEST" });
+    await installHaveApiMock(page, {
+      user: { id: 1, login: "admin", level: 99 },
+      handlers: {
+        "GET datasets/10": () => ({
+          id: 10,
+          full_name: "tank/vps/ds10",
+          name: "ds10",
+          object_state: "active",
+          vps: { id: 300, hostname: "alpha.example" },
+        }),
+        "GET transaction_chains": () => ({ transaction_chains: [] }),
+        "GET snapshot_downloads": () => ({ snapshot_downloads: [] }),
+        "GET datasets/10/snapshots": () => ({
+          snapshots: [{
+            id: 200,
+            dataset: 10,
+            name: "snap-200",
+            label: "Before migration",
+            created_at: "2026-01-26T00:00:00.000Z",
+          }],
+        }),
+        "POST snapshot_downloads": () => {
+          createAttempts += 1;
+          if (createAttempts === 1) {
+            return {
+              status: 500,
+              contentType: "application/json",
+              body: JSON.stringify({ status: false, message: "Download creation rejected" }),
+            };
+          }
+          return { snapshot_download: { id: 501 } };
+        },
+      },
+    });
+
+    await page.goto("/app/datasets/10/downloads?action=create");
+    await page.getByTestId("dataset.downloads.create.snapshot").selectOption("200");
+    await page.getByTestId("dataset.downloads.create.submit").click();
+
+    await expect(page.getByTestId("dataset.downloads.create.modal")).toContainText(
+      "Download creation rejected",
+    );
+    await expect(page.getByTestId("dataset.downloads.create.snapshot")).toHaveValue("200");
+
+    await page.getByTestId("dataset.downloads.create.cancel").click();
+    await page.getByTestId("dataset.downloads.create.open").click();
+    await expect(page.getByTestId("dataset.downloads.create.modal")).not.toContainText(
+      "Download creation rejected",
+    );
+
+    await page.getByTestId("dataset.downloads.create.submit").click();
+    await expect(page.getByTestId("dataset.downloads.create.modal")).toHaveCount(0);
+    expect(createAttempts).toBe(2);
+  });
+
   test("@pr-smoke @pr-smoke-mobile loads older snapshot candidates with the API cursor", async ({
     page,
   }) => {
