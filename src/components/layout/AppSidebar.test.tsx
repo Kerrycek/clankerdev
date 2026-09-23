@@ -111,6 +111,14 @@ describe('buildSidebarNavItems', () => {
     expect(items.find((item) => item.id === 'datasets')?.label).toBe('nav.datasets');
   });
 
+  it('opens the most frequently used incoming payments view from Finance', () => {
+    const items = buildSidebarNavItems({ basePath: '/admin', appMode: 'admin', role: 'admin', t: fakeT });
+    const finance = items.find((item) => item.id === 'finance');
+
+    expect(finance?.to).toBe('/admin/payments/incoming');
+    expect(finance?.activePathPrefix).toBe('/admin/payments');
+  });
+
   it('preserves support role gating inside the grouped admin navigation', () => {
     const items = primarySidebarNavItems(
       buildSidebarNavItems({ basePath: '/admin', appMode: 'admin', role: 'support', t: fakeT }),

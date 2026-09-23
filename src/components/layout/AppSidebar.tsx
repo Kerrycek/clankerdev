@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   Activity,
   ClipboardList,
@@ -34,6 +34,7 @@ import type { UserRole } from '../../lib/roles';
 export interface NavItem {
   id: string;
   to: string;
+  activePathPrefix?: string;
   label: string;
   icon: React.ReactNode;
   group?: AdminSidebarGroupId;
@@ -158,7 +159,8 @@ export function buildSidebarNavItems(opts: {
     if (role === 'admin') {
       items.push({
         id: 'finance',
-        to: `${basePath}/payments`,
+        to: `${basePath}/payments/incoming`,
+        activePathPrefix: `${basePath}/payments`,
         label: t('nav.finance'),
         icon: <CreditCard size={18} />,
         group: 'users-finance',
@@ -192,17 +194,23 @@ function NavigationLink(props: {
   onClick?: () => void;
 }) {
   const { item, surface, collapsed = false, compact = false, onClick } = props;
+  const location = useLocation();
+  const prefixActive = Boolean(item.activePathPrefix) && (
+    location.pathname === item.activePathPrefix
+      || location.pathname.startsWith(`${item.activePathPrefix}/`)
+  );
 
   return (
     <NavLink
       to={item.to}
       end={isExactNavItem(item)}
+      aria-current={prefixActive ? 'page' : undefined}
       data-testid={`nav.${surface}.${item.id}`}
       className={({ isActive }) =>
         clsx(
           'flex min-w-0 items-center gap-2 rounded-md px-3 text-sm transition-colors',
           surface === 'drawer' || !compact ? 'py-2' : 'py-1.5',
-          isActive ? 'bg-accent/15 text-fg' : 'text-muted hover:bg-surface-2 hover:text-fg'
+          isActive || prefixActive ? 'bg-accent/15 text-fg' : 'text-muted hover:bg-surface-2 hover:text-fg'
         )
       }
       title={collapsed ? item.label : undefined}
