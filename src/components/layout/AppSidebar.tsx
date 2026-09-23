@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { Link, useMatch } from 'react-router-dom';
 import {
   Activity,
   ClipboardList,
@@ -34,6 +34,7 @@ import type { UserRole } from '../../lib/roles';
 export interface NavItem {
   id: string;
   to: string;
+  activePathPrefix?: string;
   label: string;
   icon: React.ReactNode;
   group?: AdminSidebarGroupId;
@@ -160,7 +161,8 @@ export function buildSidebarNavItems(opts: {
     if (role === 'admin') {
       items.push({
         id: 'finance',
-        to: `${basePath}/payments`,
+        to: `${basePath}/payments/incoming`,
+        activePathPrefix: `${basePath}/payments`,
         label: t('nav.finance'),
         icon: <CreditCard size={18} />,
         group: 'users-finance',
@@ -194,13 +196,17 @@ function NavigationLink(props: {
   onClick?: () => void;
 }) {
   const { item, surface, collapsed = false, compact = false, onClick } = props;
+  const isActive = Boolean(useMatch({
+    path: item.activePathPrefix ?? item.to,
+    end: isExactNavItem(item),
+  }));
 
   return (
-    <NavLink
+    <Link
       to={item.to}
-      end={isExactNavItem(item)}
+      aria-current={isActive ? 'page' : undefined}
       data-testid={`nav.${surface}.${item.id}`}
-      className={({ isActive }) =>
+      className={
         clsx(
           'flex min-w-0 items-center gap-2 rounded-md px-3 text-sm transition-colors',
           surface === 'drawer' || !compact ? 'py-2' : 'py-1.5',
@@ -212,7 +218,7 @@ function NavigationLink(props: {
     >
       <span className="shrink-0">{item.icon}</span>
       {collapsed ? null : <span className="min-w-0 truncate">{item.label}</span>}
-    </NavLink>
+    </Link>
   );
 }
 

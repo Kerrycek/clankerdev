@@ -16,6 +16,12 @@ export function AdminFinanceTabs() {
     <TabsNav
       testId="admin.finance.tabs"
       items={[
+        {
+          to: `${basePath}/payments/incoming`,
+          label: t('finance.tabs.incoming'),
+          end: true,
+          testId: 'admin.finance.tabs.incoming',
+        },
         ...(canViewGlobal ? [{
           to: `${basePath}/payments`,
           label: t('finance.tabs.overview'),
@@ -27,12 +33,6 @@ export function AdminFinanceTabs() {
           end: true,
           testId: 'admin.finance.tabs.history',
         }] : []),
-        {
-          to: `${basePath}/payments/incoming`,
-          label: t('finance.tabs.incoming'),
-          end: true,
-          testId: 'admin.finance.tabs.incoming',
-        },
         {
           to: `${basePath}/payments/forecast`,
           label: t('finance.tabs.forecast'),

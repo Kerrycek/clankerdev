@@ -253,8 +253,17 @@ test('@pr-smoke @pr-smoke-mobile admin Finance reuses a complete large snapshot 
 
   await page.getByTestId('nav.sidebar.nodes').evaluate((element: HTMLElement) => element.click());
   await expect(page).toHaveURL(/\/admin\/nodes$/);
+  await expect(page.getByTestId('nav.sidebar.finance')).not.toHaveAttribute('aria-current');
   await page.getByTestId('nav.sidebar.finance').evaluate((element: HTMLElement) => element.click());
+  await expect(page).toHaveURL(/\/admin\/payments\/incoming$/);
+  await expect(page.getByTestId('nav.sidebar.finance')).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByTestId('admin.finance.tabs').getByRole('link').first()).toHaveAttribute(
+    'href',
+    '/admin/payments/incoming',
+  );
+  await page.getByTestId('admin.finance.tabs.overview').click();
   await expect(page).toHaveURL(/\/admin\/payments$/);
+  await expect(page.getByTestId('nav.sidebar.finance')).toHaveAttribute('aria-current', 'page');
 
   await expect(page.getByTestId('admin.finance.overview.loading')).toHaveCount(0);
   await expect(page.getByTestId('admin.finance.overview.scope')).toContainText(/1[,.\s]?650/);
