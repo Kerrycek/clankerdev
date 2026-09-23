@@ -75,6 +75,48 @@ test('@smoke profile: MFA recovery readiness summary', async ({ page }) => {
   await expect(page.getByTestId('profile.mfa.mfa_master.status')).toContainText('Active');
 });
 
+test('profile: disabling MFA requires explicit confirmation', async ({ page }) => {
+  const user = {
+    id: 1,
+    login: 'e2e',
+    level: 1,
+    enable_multi_factor_auth: true,
+  };
+  const updates: unknown[] = [];
+
+  await setUiSettingsLocalStorage(page, { language: 'en' });
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+  await installHaveApiMock(page, {
+    handlers: {
+      'GET users/current': () => ({ user }),
+      'GET users/1/totp_devices': () => ({ totp_devices: [] }),
+      'GET users/1/webauthn_credentials': () => ({ webauthn_credentials: [] }),
+      'GET users/1/known_devices': () => ({ known_devices: [] }),
+      'PUT users/1': ({ reqJson }) => {
+        updates.push(reqJson);
+        user.enable_multi_factor_auth = false;
+        return { user };
+      },
+    },
+  });
+
+  await page.goto('/app/profile/mfa');
+  await page.getByTestId('profile.mfa.mfa_master.switch').getByRole('checkbox').click();
+  await expect(page.getByTestId('profile.mfa.mfa_master.disable_confirm')).toBeVisible();
+  expect(updates).toEqual([]);
+
+  await page.getByTestId('profile.mfa.mfa_master.disable_confirm.cancel').click();
+  await expect(page.getByTestId('profile.mfa.mfa_master.disable_confirm')).toBeHidden();
+  expect(updates).toEqual([]);
+
+  await page.getByTestId('profile.mfa.mfa_master.switch').getByRole('checkbox').click();
+  await page.getByTestId('profile.mfa.mfa_master.disable_confirm.confirm').click();
+
+  await expect.poll(() => updates).toEqual([{ user: { enable_multi_factor_auth: false } }]);
+  await expect(page.getByTestId('profile.mfa.mfa_master.disable_confirm')).toBeHidden();
+  await expect(page.getByTestId('profile.mfa.mfa_master.status')).toContainText('Disabled');
+});
+
 test('@pr-smoke @pr-smoke-mobile profile: unexpected TOTP provisioning URI is never clickable', async ({ page }) => {
   const user = {
     id: 1,
