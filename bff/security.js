@@ -6,8 +6,19 @@ const DEFAULT_OAUTH_STATE_MAX_AGE_MS = 10 * 60 * 1000;
 const DEFAULT_LOGIN_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const DEFAULT_LOGIN_RATE_LIMIT_MAX = 20;
 const DEFAULT_LOGIN_RATE_LIMIT_MAX_ENTRIES = 10_000;
+const MIN_SESSION_SECRET_BYTES = 32;
 const DEFAULT_OAUTH_FETCH_TIMEOUT_MS = 10_000;
 const DEFAULT_OAUTH_RESPONSE_MAX_BYTES = 64 * 1024;
+
+function validateSessionSecret(value) {
+  if (typeof value !== 'string' || Buffer.byteLength(value, 'utf8') < MIN_SESSION_SECRET_BYTES) {
+    throw new Error(
+      `SESSION_SECRET must contain at least ${MIN_SESSION_SECRET_BYTES} bytes from a cryptographically secure random source`,
+    );
+  }
+
+  return value;
+}
 
 function randomState() {
   return crypto.randomBytes(24).toString('base64url');
@@ -328,6 +339,7 @@ module.exports = {
   DEFAULT_OAUTH_FETCH_TIMEOUT_MS,
   DEFAULT_OAUTH_RESPONSE_MAX_BYTES,
   DEFAULT_OAUTH_STATE_MAX_AGE_MS,
+  MIN_SESSION_SECRET_BYTES,
   clearSessionCookie,
   consumeOAuthState,
   createFixedWindowRateLimiter,
@@ -341,5 +353,6 @@ module.exports = {
   saveSession,
   setRuntimeConfigSecurityHeaders,
   setRuntimeSessionSecurityHeaders,
+  validateSessionSecret,
   validateOAuthTokenResponse,
 };
