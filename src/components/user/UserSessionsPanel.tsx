@@ -366,7 +366,10 @@ export function UserSessionsPanel(props: {
               testIdPrefix={prefix}
               detailedOutput={detailedOutput}
               onRename={startRename}
-              onClose={setCloseSession}
+              onClose={(session) => {
+                closeM.reset();
+                setCloseSession(session);
+              }}
             />
           )}
         </CardBody>
@@ -402,10 +405,12 @@ export function UserSessionsPanel(props: {
 
       <UserSessionCloseDialog
         session={closeSession}
+        error={closeM.isError ? formatErrorMessage(closeM.error) : null}
         closing={closeM.isPending}
         testIdPrefix={prefix}
         onCancel={() => {
           if (closeM.isPending) return;
+          closeM.reset();
           setCloseSession(null);
         }}
         onConfirm={() => {
