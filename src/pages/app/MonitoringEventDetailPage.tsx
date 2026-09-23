@@ -24,6 +24,7 @@ import { dotVariantFromRowVariant } from '../../lib/variantMap';
 
 import { PageContainer } from '../../components/layout/PageContainer';
 import { PageHeader } from '../../components/layout/PageHeader';
+import { Alert } from '../../components/ui/Alert';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { LinkButton } from '../../components/ui/LinkButton';
@@ -194,14 +195,6 @@ export function MonitoringEventDetailPage() {
       toasts.pushToast({ variant: 'ok', title: t('monitoring.ack.success.title'), body: t('monitoring.ack.success.body') });
       void qc.invalidateQueries({ queryKey: ['monitored_events'] });
     },
-    onError: (err) => {
-      toasts.pushToast({
-        variant: 'danger',
-        title: t('monitoring.ack.error.title'),
-        body: formatErrorMessage(err),
-        autoDismissMs: false,
-      });
-    },
   });
 
   const ignoreMut = useMutation({
@@ -213,14 +206,6 @@ export function MonitoringEventDetailPage() {
       setIgnoreOpen(false);
       toasts.pushToast({ variant: 'ok', title: t('monitoring.ignore.success.title'), body: t('monitoring.ignore.success.body') });
       void qc.invalidateQueries({ queryKey: ['monitored_events'] });
-    },
-    onError: (err) => {
-      toasts.pushToast({
-        variant: 'danger',
-        title: t('monitoring.ignore.error.title'),
-        body: formatErrorMessage(err),
-        autoDismissMs: false,
-      });
     },
   });
 
@@ -277,6 +262,7 @@ export function MonitoringEventDetailPage() {
                   variant="warn"
                   size="sm"
                   onClick={() => {
+                    ackMut.reset();
                     setUntilPreset('1d');
                     setUntilCustom('');
                     setAckOpen(true);
@@ -289,6 +275,7 @@ export function MonitoringEventDetailPage() {
                   variant="secondary"
                   size="sm"
                   onClick={() => {
+                    ignoreMut.reset();
                     setUntilPreset('1w');
                     setUntilCustom('');
                     setIgnoreOpen(true);
@@ -554,7 +541,10 @@ export function MonitoringEventDetailPage() {
         confirmLabel={t('monitoring.action.acknowledge')}
         confirmLoading={ackMut.isPending}
         confirmDisabled={!until.valid}
-        onCancel={() => setAckOpen(false)}
+        onCancel={() => {
+          ackMut.reset();
+          setAckOpen(false);
+        }}
         onConfirm={() => ackMut.mutate()}
         testId="monitoring.event.ack"
       >
@@ -591,6 +581,12 @@ export function MonitoringEventDetailPage() {
           ) : (
             <div className="text-xs text-muted">{t('monitoring.until.preview_forever')}</div>
           )}
+
+          {ackMut.isError ? (
+            <Alert title={t('monitoring.ack.error.title')} variant="danger" testId="monitoring.event.ack.error">
+              {formatErrorMessage(ackMut.error)}
+            </Alert>
+          ) : null}
         </div>
       </ConfirmDialog>
 
@@ -602,7 +598,10 @@ export function MonitoringEventDetailPage() {
         confirmLoading={ignoreMut.isPending}
         confirmDisabled={!until.valid}
         danger
-        onCancel={() => setIgnoreOpen(false)}
+        onCancel={() => {
+          ignoreMut.reset();
+          setIgnoreOpen(false);
+        }}
         onConfirm={() => ignoreMut.mutate()}
         testId="monitoring.event.ignore"
       >
@@ -639,6 +638,12 @@ export function MonitoringEventDetailPage() {
           ) : (
             <div className="text-xs text-muted">{t('monitoring.until.preview_forever')}</div>
           )}
+
+          {ignoreMut.isError ? (
+            <Alert title={t('monitoring.ignore.error.title')} variant="danger" testId="monitoring.event.ignore.error">
+              {formatErrorMessage(ignoreMut.error)}
+            </Alert>
+          ) : null}
         </div>
       </ConfirmDialog>
     </PageContainer>

@@ -24,6 +24,7 @@ import {
   updateHostIpAddress,
   type HostIpAddress,
 } from '../../../lib/api/networking';
+import { formatErrorMessage } from '../../../lib/errors';
 import { formatDateTime } from '../../../lib/format';
 
 import { ActionButton } from '../../../components/ui/ActionButton';
@@ -297,7 +298,7 @@ export function IpAddressDetailPage() {
     },
   });
 
-  const anyMutationError = assignRouteM.error || freeRouteM.error || updateOwnerM.error || createHostsM.error || updatePtrM.error || hostAssignM.error || hostFreeM.error || hostDeleteM.error;
+  const anyMutationError = assignRouteM.error || updateOwnerM.error || createHostsM.error || updatePtrM.error || hostAssignM.error || hostFreeM.error;
 
   return (
     <DetailShell testId="admin.ip_address.page">
@@ -448,7 +449,10 @@ export function IpAddressDetailPage() {
                             variant="danger"
                             testId="admin.ip.route.free"
                             loading={freeRouteM.isPending}
-                            onClick={() => setConfirmFreeRoute(true)}
+                            onClick={() => {
+                              freeRouteM.reset();
+                              setConfirmFreeRoute(true);
+                            }}
                           >
                             {t('admin.ip.route.free')}
                           </ActionButton>
@@ -574,7 +578,10 @@ export function IpAddressDetailPage() {
                                     setAssignHostInterface('');
                                   }}
                                   onFree={() => hostFreeM.mutate(host.id)}
-                                  onDelete={() => setDeleteHost(host)}
+                                  onDelete={() => {
+                                    hostDeleteM.reset();
+                                    setDeleteHost(host);
+                                  }}
                                 />
                               </td>
                             </tr>
@@ -718,26 +725,46 @@ export function IpAddressDetailPage() {
                 </Modal>
 
                 <ConfirmDialog
+                  testId="admin.ip.route.free_confirm"
                   open={confirmFreeRoute}
                   title={t('admin.ip.route.free_confirm.title')}
                   description={t('admin.ip.route.free_confirm.desc', { ip: title })}
                   danger
                   confirmLabel={t('admin.ip.route.free')}
                   confirmLoading={freeRouteM.isPending}
-                  onCancel={() => setConfirmFreeRoute(false)}
+                  onCancel={() => {
+                    freeRouteM.reset();
+                    setConfirmFreeRoute(false);
+                  }}
                   onConfirm={() => freeRouteM.mutate()}
-                />
+                >
+                  {freeRouteM.isError ? (
+                    <Alert variant="danger" title={t('common.error')} testId="admin.ip.route.free_confirm.error">
+                      {formatErrorMessage(freeRouteM.error)}
+                    </Alert>
+                  ) : null}
+                </ConfirmDialog>
 
                 <ConfirmDialog
+                  testId="admin.ip.hosts.delete_confirm"
                   open={Boolean(deleteHost)}
                   title={t('admin.ip.hosts.delete_confirm.title')}
                   description={deleteHost ? t('admin.ip.hosts.delete_confirm.desc', { host: hostAddr(deleteHost) }) : undefined}
                   danger
                   confirmLabel={t('common.delete')}
                   confirmLoading={hostDeleteM.isPending}
-                  onCancel={() => setDeleteHost(null)}
+                  onCancel={() => {
+                    hostDeleteM.reset();
+                    setDeleteHost(null);
+                  }}
                   onConfirm={() => hostDeleteM.mutate()}
-                />
+                >
+                  {hostDeleteM.isError ? (
+                    <Alert variant="danger" title={t('common.error')} testId="admin.ip.hosts.delete_confirm.error">
+                      {formatErrorMessage(hostDeleteM.error)}
+                    </Alert>
+                  ) : null}
+                </ConfirmDialog>
               </>
             );
           })()}

@@ -158,6 +158,7 @@ export function ExportDetailPage() {
   };
 
   const openDeleteExport = () => {
+    deleteExportM.reset();
     setDeleteOpen(true);
   };
 
@@ -166,6 +167,7 @@ export function ExportDetailPage() {
   };
 
   const openDeleteHost = (host: ExportHost) => {
+    deleteHostM.reset();
     setDeleteHost(host);
   };
 
@@ -500,11 +502,19 @@ export function ExportDetailPage() {
         exportOpen={deleteOpen}
         exportItem={ex}
         exportPending={deleteExportM.isPending}
-        onCancelExport={closeDeleteExport}
+        exportError={deleteExportM.isError ? errorMessage(deleteExportM.error) : null}
+        onCancelExport={() => {
+          deleteExportM.reset();
+          closeDeleteExport();
+        }}
         onConfirmExport={() => void deleteExportM.mutateAsync()}
         host={deleteHost}
         hostPending={deleteHostM.isPending}
-        onCancelHost={closeDeleteHost}
+        hostError={deleteHostM.isError ? errorMessage(deleteHostM.error) : null}
+        onCancelHost={() => {
+          deleteHostM.reset();
+          closeDeleteHost();
+        }}
         onConfirmHost={() => void deleteHostM.mutateAsync()}
       />
     </DetailShell>

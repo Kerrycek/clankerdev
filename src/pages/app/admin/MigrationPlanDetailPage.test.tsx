@@ -141,6 +141,37 @@ describe('MigrationPlanDetailPage durable mutation snapshots', () => {
     ));
   });
 
+  it('keeps a failed start in the confirmation dialog and allows retry', async () => {
+    const user = userEvent.setup();
+    startMock
+      .mockRejectedValueOnce(new Error('start refused'))
+      .mockResolvedValueOnce({ data: { id: 101 }, meta: { action_state_id: 602 } } as never);
+
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const router = createMemoryRouter([
+      { path: '/admin/migration-plans/:planId', element: <MigrationPlanDetailPageRoute /> },
+    ], { initialEntries: ['/admin/migration-plans/101'] });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    );
+
+    await user.click(await screen.findByTestId('admin.migration_plan.start'));
+    const dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'common.start' }));
+
+    expect(await within(dialog).findByText('start refused')).toBeVisible();
+    expect(screen.getByRole('dialog')).toBe(dialog);
+
+    await user.click(within(dialog).getByRole('button', { name: 'common.start' }));
+    await waitFor(() => expect(startMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
   it('drops an unsubmitted source-plan dialog and scheduling draft when the route id changes', async () => {
     const user = userEvent.setup();
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
