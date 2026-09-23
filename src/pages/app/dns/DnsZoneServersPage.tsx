@@ -203,7 +203,7 @@ export function DnsZoneServersPage() {
                     <td className="py-2 pr-3">{(row as any).refresh_at ? formatDateTime(String((row as any).refresh_at)) : t('common.na')}</td>
                     <td className="py-2 pr-3">{(row as any).expires_at ? formatDateTime(String((row as any).expires_at)) : t('common.na')}</td>
                     <td className="py-2 pr-3">{(row as any).last_check_at ? formatDateTime(String((row as any).last_check_at)) : t('common.na')}</td>
-                    {isAdmin ? <td className="py-2 pr-4 text-right"><ActionButton variant="danger" size="sm" onClick={() => setConfirmDelete(row)}>{t('common.delete')}</ActionButton></td> : null}
+                    {isAdmin ? <td className="py-2 pr-4 text-right"><ActionButton variant="danger" size="sm" onClick={() => { deleteM.reset(); setConfirmDelete(row); }} testId={`dns.servers.row.${row.id}.delete`}>{t('common.delete')}</ActionButton></td> : null}
                   </tr>
                 ))}
               </tbody>
@@ -231,7 +231,23 @@ export function DnsZoneServersPage() {
         </div>
       </Modal>
 
-      <ConfirmDialog open={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title={t('dns.zone.servers.delete.title')} description={confirmDelete ? t('dns.zone.servers.delete.description', { server: serverName(confirmDelete as any) }) : ''} confirmLabel={t('common.delete')} confirmVariant="danger" onConfirm={() => deleteM.mutate()} loading={deleteM.isPending} />
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        onClose={() => { deleteM.reset(); setConfirmDelete(null); }}
+        title={t('dns.zone.servers.delete.title')}
+        description={confirmDelete ? t('dns.zone.servers.delete.description', { server: serverName(confirmDelete as any) }) : ''}
+        confirmLabel={t('common.delete')}
+        confirmVariant="danger"
+        onConfirm={() => deleteM.mutate()}
+        loading={deleteM.isPending}
+        testId="dns.servers.delete"
+      >
+        {deleteM.isError ? (
+          <Alert variant="danger" title={t('common.action_failed')} testId="dns.servers.delete.error">
+            {formatErrorMessage(deleteM.error)}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
     </div>
   );
 }

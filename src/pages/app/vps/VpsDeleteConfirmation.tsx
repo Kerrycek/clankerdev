@@ -118,6 +118,7 @@ export function VpsDeleteConfirmDialog(props: {
   form: VpsDeleteDangerForm;
   onChange: Dispatch<SetStateAction<VpsDeleteDangerForm>>;
   loading?: boolean;
+  error?: { title: string; body?: string } | null;
   onCancel: () => void;
   onConfirm: (vars: { vpsId: number; lazy: boolean; objectLabel: string }) => void;
 }) {
@@ -157,6 +158,11 @@ export function VpsDeleteConfirmDialog(props: {
           lazyTestId="vps.list.delete_confirm.lazy"
           confirmTestId="vps.list.delete_confirm.confirm_text"
         />
+        {props.error ? (
+          <Alert variant="danger" title={props.error.title} testId="vps.list.delete_confirm.error">
+            {props.error.body}
+          </Alert>
+        ) : null}
       </div>
     </ConfirmDialog>
   );

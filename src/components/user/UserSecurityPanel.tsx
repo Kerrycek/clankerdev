@@ -51,6 +51,7 @@ export function UserSecurityPanel(props: {
 
   const [lockout, setLockout] = useState(false);
   const [passwordReset, setPasswordReset] = useState(false);
+  const [lockoutError, setLockoutError] = useState<string | null>(null);
 
   const storedLockout = userBooleanField(user, 'lockout', false);
   const storedPasswordReset = userBooleanField(user, 'password_reset', false);
@@ -65,12 +66,17 @@ export function UserSecurityPanel(props: {
       await updateUser(props.userId, { [change.field]: change.value });
     },
     onMutate: (change) => {
+      if (change.field === 'lockout' && change.value) setLockoutError(null);
       const previous = change.field === 'lockout' ? lockout : passwordReset;
       if (change.field === 'lockout') setLockout(change.value);
       else setPasswordReset(change.value);
       return { previous };
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, change) => {
+      if (change.field === 'lockout' && change.value) {
+        setConfirmLockout(false);
+        setLockoutError(null);
+      }
       await qc.invalidateQueries({ queryKey: ['users', props.userId] });
       await qc.invalidateQueries({ queryKey: ['user', 'current'] });
       toasts.pushToast({ variant: 'ok', title: t('security.flags.toast.saved.title'), body: t('security.flags.toast.saved.body') });
@@ -80,6 +86,7 @@ export function UserSecurityPanel(props: {
         if (change.field === 'lockout') setLockout(context.previous);
         else setPasswordReset(context.previous);
       }
+      if (change.field === 'lockout' && change.value) setLockoutError(formatErrorMessage(e));
       toasts.pushToast({ variant: 'danger', title: t('security.flags.toast.failed.title'), body: formatErrorMessage(e) });
     },
   });
@@ -182,6 +189,7 @@ export function UserSecurityPanel(props: {
                 checked={lockout}
                 onChange={(v) => {
                   if (v) {
+                    setLockoutError(null);
                     setConfirmLockout(true);
                   } else {
                     flagM.mutate({ field: 'lockout', value: false });
@@ -241,14 +249,20 @@ export function UserSecurityPanel(props: {
         confirmLoading={flagM.isPending}
         onCancel={() => {
           setConfirmLockout(false);
+          setLockoutError(null);
           setLockout(storedLockout);
         }}
         onConfirm={() => {
-          setConfirmLockout(false);
           flagM.mutate({ field: 'lockout', value: true });
         }}
         testId={`${prefix}.flags.lockout.confirm`}
-      />
+      >
+        {lockoutError ? (
+          <Alert variant="danger" testId={`${prefix}.flags.lockout.confirm.error`}>
+            {lockoutError}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
 
       <Modal
         open={impOpen}

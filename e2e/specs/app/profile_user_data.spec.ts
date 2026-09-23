@@ -160,6 +160,63 @@ test.describe('Profile: user data templates', () => {
     await expect(page.getByTestId('profile.user_data.row.102')).toHaveCount(0);
   });
 
+  test('@pr-smoke @pr-smoke-mobile failed deletion stays in context and can be retried', async ({ page }) => {
+    let deleteAttempts = 0;
+    let templates = [
+      {
+        id: 101,
+        label: 'Base cloud-init',
+        format: 'cloudinit_config',
+        content: '#cloud-config\n',
+        created_at: nowIso(),
+        updated_at: nowIso(),
+      },
+    ];
+
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST_SESSION' });
+    await installHaveApiMock(page, {
+      authorize: {
+        user: { id: 1, login: 'e2e', level: 1 },
+        identity: { id: 1, provider: 'mock' },
+      },
+      handlers: {
+        'GET vps_user_data': () => templates,
+        'DELETE vps_user_data/101': () => {
+          deleteAttempts += 1;
+          if (deleteAttempts === 1) {
+            return {
+              status: 409,
+              contentType: 'application/json',
+              body: JSON.stringify({ status: false, message: 'Template is still assigned' }),
+            };
+          }
+
+          templates = [];
+          return null;
+        },
+      },
+    });
+
+    await page.goto('/app/profile/user-data');
+    await page.locator('[data-testid="profile.user_data.row.101.delete"]:visible').click();
+
+    const dialog = page.getByTestId('profile.user_data.delete.confirm');
+    await expect(dialog).toBeVisible();
+    await dialog.getByTestId('profile.user_data.delete.confirm.confirm').click();
+
+    const error = dialog.getByTestId('profile.user_data.delete.confirm.error');
+    await expect(error).toBeVisible();
+    await expect(error).toContainText('Template is still assigned');
+    await expect(dialog).toBeVisible();
+    await expect(page.locator('[data-testid="profile.user_data.row.101"]:visible')).toBeVisible();
+
+    await dialog.getByTestId('profile.user_data.delete.confirm.confirm').click();
+
+    await expect(dialog).toBeHidden();
+    await expect(page.getByTestId('profile.user_data.row.101')).toHaveCount(0);
+    expect(deleteAttempts).toBe(2);
+  });
+
   for (const failure of ['missing action-state', 'transport loss'] as const) {
     test(`deploy fails closed after ${failure} and does not repeat through reload`, async ({ page }) => {
       test.setTimeout(90_000);
