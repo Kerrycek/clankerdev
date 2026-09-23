@@ -10,6 +10,7 @@ export interface DatasetContextValue {
 
   section: 'datasets' | 'nas';
   listPath: string;
+  returnPath: string;
   detailPath: string;
 
   datasetRef: ObjectRef;

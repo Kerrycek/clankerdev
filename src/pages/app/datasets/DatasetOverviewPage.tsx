@@ -185,7 +185,7 @@ function DatasetManagementCard() {
   const chrome = useChrome();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { dataset, refetch, refetchChains, datasetRef, busyLocalLock, busyTransaction, listPath } = useDatasetContext();
+  const { dataset, refetch, refetchChains, datasetRef, busyLocalLock, busyTransaction, listPath, returnPath } = useDatasetContext();
   const capabilities = datasetCapabilities(dataset, {
     role,
     scope: scope.scope,
@@ -298,7 +298,7 @@ function DatasetManagementCard() {
     onSuccess: (res) => {
       track(res.meta, 'action.dataset.delete.label');
       setDeleteOpen(false);
-      navigate(listPath);
+      navigate(returnPath);
     },
     onError: (e: any) => {
       if (e?.code === 'BUSY') chrome.openTasks();

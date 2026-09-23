@@ -38,13 +38,15 @@ export function DashboardSummaryCards(props: {
       value: props.vps.isLoading ? '…' : props.vps.isError ? '—' : formatDashboardNumber(props.vps.totalCount),
       to: `${props.basePath}/vps`,
     },
-    {
-      testId: 'app.dashboard.kpi.datasets',
-      openTestId: 'app.dashboard.kpi.datasets.open',
-      label: t(props.appMode === 'user' ? 'nav.vps_disks' : 'nav.datasets'),
-      value: props.datasets.isLoading ? '…' : props.datasets.isError ? '—' : formatDashboardNumber(props.datasets.totalCount),
-      to: `${props.basePath}/datasets`,
-    },
+    ...(props.appMode === 'admin'
+      ? [{
+          testId: 'app.dashboard.kpi.datasets',
+          openTestId: 'app.dashboard.kpi.datasets.open',
+          label: t('nav.datasets'),
+          value: props.datasets.isLoading ? '…' : props.datasets.isError ? '—' : formatDashboardNumber(props.datasets.totalCount),
+          to: `${props.basePath}/datasets`,
+        }]
+      : []),
     {
       testId: 'app.dashboard.kpi.dns',
       openTestId: 'app.dashboard.kpi.dns.open',
@@ -57,7 +59,7 @@ export function DashboardSummaryCards(props: {
   return (
     <Card testId="app.dashboard.summary-grid" className="shadow-none">
       <CardBody className={compact ? 'p-2' : 'p-3'}>
-        <div className="grid gap-2 md:grid-cols-3">
+        <div className={`grid gap-2 ${props.appMode === 'admin' ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
           {items.map((item) => (
             <div
               key={item.testId}

@@ -92,6 +92,7 @@ function renderPage(options: {
             refetch: vi.fn(),
             section: 'datasets',
             listPath: '/datasets',
+            returnPath: '/datasets',
             detailPath: '/datasets/10402',
             datasetRef: { kind: 'Dataset', id: dataset.id },
             busyLocalLock: false,

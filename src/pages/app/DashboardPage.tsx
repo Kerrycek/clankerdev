@@ -79,6 +79,7 @@ export function DashboardPage() {
       );
       return { totalCount };
     },
+    enabled: mode === "admin",
   });
 
   const dnsZonesQ = useQuery({

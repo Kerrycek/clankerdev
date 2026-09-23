@@ -43,7 +43,7 @@ export function DatasetLayout() {
   const location = useLocation();
   const online = useNetworkStatus();
   const section = location.pathname.includes('/nas/') ? 'nas' : 'datasets';
-  const listPath = `${basePath}/${section}`;
+  const routeListPath = `${basePath}/${section}`;
 
   const datasetRef = React.useMemo(() => {
     if (!Number.isFinite(id) || id <= 0) return null;
@@ -76,7 +76,7 @@ export function DatasetLayout() {
         kindOverride="not_found"
         title={t('dataset.layout.invalid_id')}
         body={t('error.not_found.body')}
-        backTo={listPath}
+        backTo={routeListPath}
         showStatusLink={false}
         showDetails={false}
         detailsExtra={{ page: 'dataset.detail', datasetId }}
@@ -93,7 +93,7 @@ export function DatasetLayout() {
         title={t('dataset.layout.load_error.title')}
         error={q.error}
         onRetry={() => void q.refetch()}
-        backTo={listPath}
+        backTo={routeListPath}
         detailsExtra={{ page: 'dataset.detail', datasetId: id, scope: scope.scope }}
       />
     );
@@ -101,6 +101,11 @@ export function DatasetLayout() {
 
   const ds = q.data!;
   const name = datasetTitle(ds, id);
+  const vpsId = resourceId(ds.vps);
+  const vpsHostname = ds.vps && typeof ds.vps === 'object' ? String((ds.vps as any).hostname ?? '') : '';
+  const returnPath = mode === 'user' && section === 'datasets' && vpsId !== undefined
+    ? `${basePath}/vps/${vpsId}/storage`
+    : routeListPath;
 
   const chains = chainsQ.data ?? [];
   const chainLock = deriveChainLockState({
@@ -131,16 +136,13 @@ export function DatasetLayout() {
         objectLabel={name}
         ownerUserId={ownerId}
         adminHref={adminHref}
-        backHref={listPath}
+        backHref={returnPath}
         testId="datasets.scope-mismatch"
       />
     );
   }
 
-  const vpsId = resourceId(ds.vps);
-  const vpsHostname = ds.vps && typeof ds.vps === 'object' ? String((ds.vps as any).hostname ?? '') : '';
-
-  const detailPath = `${listPath}/${ds.id}`;
+  const detailPath = `${routeListPath}/${ds.id}`;
   const hasExpansion = resourceId((ds as any).dataset_expansion) !== undefined;
   const expansionCapabilities = datasetExpansionCapabilities({
     mode,
@@ -170,7 +172,8 @@ export function DatasetLayout() {
         dataset: ds,
         refetch: () => q.refetch(),
         section,
-        listPath,
+        listPath: routeListPath,
+        returnPath,
         detailPath,
         datasetRef: datasetRef!,
         busyLocalLock,
@@ -188,8 +191,12 @@ export function DatasetLayout() {
           testId="dataset.header"
           kicker={
             <>
-              <Link className="text-accent hover:underline" to={listPath}>
-                {section === 'nas' ? t('nav.nas') : t(mode === 'user' ? 'nav.vps_disks' : 'nav.datasets')}
+              <Link className="text-accent hover:underline" to={returnPath}>
+                {section === 'nas'
+                  ? t('nav.nas')
+                  : mode === 'user' && vpsId !== undefined
+                    ? t('vps.tabs.storage')
+                    : t('nav.datasets')}
               </Link>
               <span className="text-faint"> · </span>
               <span>#{ds.id}</span>

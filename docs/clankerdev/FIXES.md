@@ -1,6 +1,8 @@
-# clankerdev.vpsfree.cz – Change Log
+# clankerdev.vpsfree.cz – Change and decision log
 
 Imported from `/root/FIXES.md` on `clankerdev.vpsfree.cz` (2026-01-24) and lightly tidied (removed an accidental duplicate block).
+
+This file is the human-readable index of notable fixes and product decisions. Git commits, bilingual pull-request descriptions and regression tests remain the detailed source of truth for the exact diff, rationale and verification. New entries must describe both the visible change and why that design was chosen, so a later maintainer can reconstruct the decision without relying on chat history.
 
 ## Template (for new entries)
 - Date (UTC/CET): YYYY-MM-DD
@@ -11,6 +13,18 @@ Imported from `/root/FIXES.md` on `clankerdev.vpsfree.cz` (2026-01-24) and light
 - Notes/Follow-up: tests, manual checks, open items
 
 ## Entries
+
+### 2026-09-23 — Keep VPS disks in the VPS detail
+- **Scope:** `src/components/layout/AppSidebar.tsx`, `src/pages/app/DashboardPage.tsx`, `src/pages/app/DashboardSummaryCards.tsx`, `src/pages/app/datasets/DatasetLayout.tsx`, `src/routes/router.tsx`, related unit and Playwright tests.
+- **Change:**
+  - Removed the standalone **VPS disks** item from the user sidebar and its duplicate dashboard KPI.
+  - Kept the global **Datasets** inventory in the administrator UI.
+  - Redirected the legacy user route `/app/datasets` to `/app/vps`, while preserving `/app/datasets/:datasetId/*` as the advanced detail routes used by snapshots, subdatasets, downloads and exports.
+  - Made a VPS-backed dataset detail return to `/app/vps/:vpsId/storage`, so advanced work stays anchored in the VPS from which it was opened.
+  - Stopped the user dashboard from issuing the now-unneeded global dataset-count request.
+- **Why:** VPS disks are subordinate to a concrete VPS. A separate user module duplicated the information architecture and made storage feel detached from the server it belongs to. The VPS **Storage** tab already contains capacity, root-dataset actions and mounts, so it is the natural entry point. Admins still need the cross-user inventory for operational work.
+- **Commands:** TypeScript typecheck; focused sidebar unit tests; focused Playwright coverage for the dashboard, legacy redirect, VPS storage entry point, dataset return path, NAS separation, backups and the retained admin list on desktop and mobile.
+- **Notes/Follow-up:** Deep links remain compatible. No API contract, stored data or administrator route is removed. The old list page component was removed only after its advanced detail routes were kept reachable from the VPS detail.
 
 ### 2026-01-24 (later)
 - **Scope:** `/opt/webui-next/current-release/vpsadmin/webui-next/bff/server.js`
