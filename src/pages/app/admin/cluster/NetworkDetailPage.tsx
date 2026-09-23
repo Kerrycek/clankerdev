@@ -173,11 +173,13 @@ export function NetworkDetailPage() {
   const [addAddressesForm, setAddAddressesForm] = useState({ count: '1', user: '', environment: '' });
 
   const openCreate = () => {
+    createM.reset();
     setForm(initLnForm());
     setEditor({ mode: 'create' });
   };
 
   const openEdit = (ln: LocationNetwork) => {
+    updateM.reset();
     setForm(initLnForm(ln));
     setEditor({ mode: 'edit', ln });
   };
@@ -205,7 +207,6 @@ export function NetworkDetailPage() {
       pushToast({ variant: 'ok', title: t('admin.cluster.network_detail.toast.added') });
       setEditor(null);
     },
-    onError: (e) => pushToast({ variant: 'danger', title: t('common.error'), body: formatErrorMessage(e) }),
   });
 
   const updateM = useMutation({
@@ -230,7 +231,6 @@ export function NetworkDetailPage() {
       pushToast({ variant: 'ok', title: t('admin.cluster.network_detail.toast.saved') });
       setEditor(null);
     },
-    onError: (e) => pushToast({ variant: 'danger', title: t('common.error'), body: formatErrorMessage(e) }),
   });
 
   const deleteM = useMutation({
@@ -246,7 +246,6 @@ export function NetworkDetailPage() {
       pushToast({ variant: 'ok', title: t('admin.cluster.network_detail.toast.removed') });
       setDeleteState({ open: false });
     },
-    onError: (e) => pushToast({ variant: 'danger', title: t('common.error'), body: formatErrorMessage(e) }),
   });
 
   const addAddressesM = useMutation({
@@ -273,7 +272,6 @@ export function NetworkDetailPage() {
       });
       setAddAddressesOpen(false);
     },
-    onError: (e) => pushToast({ variant: 'danger', title: t('common.error'), body: formatErrorMessage(e) }),
   });
 
   const busy = createM.isPending || updateM.isPending;
@@ -354,7 +352,15 @@ export function NetworkDetailPage() {
             <Button variant="secondary" onClick={() => lnQ.refetch()}>
               {t('common.refresh')}
             </Button>
-            <Button variant="secondary" onClick={() => setAddAddressesOpen(true)} testId="admin.cluster.network_detail.add_addresses">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                addAddressesM.reset();
+                setAddAddressesForm({ count: '1', user: '', environment: '' });
+                setAddAddressesOpen(true);
+              }}
+              testId="admin.cluster.network_detail.add_addresses"
+            >
               {t('admin.cluster.network_detail.add_addresses.action')}
             </Button>
             <Button variant="primary" onClick={openCreate} testId="admin.cluster.network_detail.add_location">
@@ -469,7 +475,10 @@ export function NetworkDetailPage() {
                           <Button
                             size="sm"
                             variant="danger"
-                            onClick={() => setDeleteState({ open: true, ln })}
+                            onClick={() => {
+                              deleteM.reset();
+                              setDeleteState({ open: true, ln });
+                            }}
                             testId={`admin.cluster.network_detail.ln.${ln.id}.remove`}
                           >
                             {t('common.remove')}
@@ -488,11 +497,24 @@ export function NetworkDetailPage() {
       <Modal
         open={Boolean(editor)}
         title={editor?.mode === 'edit' ? t('admin.cluster.network_detail.editor.edit_title') : t('admin.cluster.network_detail.editor.add_title')}
-        onClose={() => (busy ? null : setEditor(null))}
+        onClose={() => {
+          if (busy) return;
+          if (editor?.mode === 'edit') updateM.reset();
+          else createM.reset();
+          setEditor(null);
+        }}
         testId="admin.cluster.network_detail.editor"
         footer={
           <div className="flex items-center justify-end gap-2">
-            <Button variant="secondary" onClick={() => setEditor(null)} disabled={busy}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                if (editor?.mode === 'edit') updateM.reset();
+                else createM.reset();
+                setEditor(null);
+              }}
+              disabled={busy}
+            >
               {t('common.cancel')}
             </Button>
             <Button
@@ -567,6 +589,12 @@ export function NetworkDetailPage() {
             label={t('admin.cluster.network_detail.field.userpick')}
             description={t('admin.cluster.network_detail.field.userpick_desc')}
           />
+
+          {(editor?.mode === 'edit' ? updateM.isError : createM.isError) ? (
+            <Alert variant="danger" title={t('common.error')} testId="admin.cluster.network_detail.editor.error">
+              {formatErrorMessage(editor?.mode === 'edit' ? updateM.error : createM.error)}
+            </Alert>
+          ) : null}
         </div>
       </Modal>
 
@@ -576,21 +604,42 @@ export function NetworkDetailPage() {
         message={t('admin.cluster.network_detail.remove.body', {
           location: locLabel((deleteState.ln as any)?.location ?? null),
         })}
-        onClose={() => (deleteM.isPending ? null : setDeleteState({ open: false }))}
+        onClose={() => {
+          if (deleteM.isPending) return;
+          deleteM.reset();
+          setDeleteState({ open: false });
+        }}
         confirmLabel={t('common.remove')}
         onConfirm={() => deleteM.mutate()}
         loading={deleteM.isPending}
         testId="admin.cluster.network_detail.remove.confirm"
-      />
+      >
+        {deleteM.isError ? (
+          <Alert variant="danger" title={t('common.error')} testId="admin.cluster.network_detail.remove.error">
+            {formatErrorMessage(deleteM.error)}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
 
       <Modal
         open={addAddressesOpen}
         title={t('admin.cluster.network_detail.add_addresses.title')}
-        onClose={() => (addAddressesM.isPending ? null : setAddAddressesOpen(false))}
+        onClose={() => {
+          if (addAddressesM.isPending) return;
+          addAddressesM.reset();
+          setAddAddressesOpen(false);
+        }}
         testId="admin.cluster.network_detail.add_addresses.modal"
         footer={
           <div className="flex items-center justify-end gap-2">
-            <Button variant="secondary" onClick={() => setAddAddressesOpen(false)} disabled={addAddressesM.isPending}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                addAddressesM.reset();
+                setAddAddressesOpen(false);
+              }}
+              disabled={addAddressesM.isPending}
+            >
               {t('common.cancel')}
             </Button>
             <Button
@@ -633,6 +682,11 @@ export function NetworkDetailPage() {
               inputMode="numeric"
             />
           </FieldLabel>
+          {addAddressesM.isError ? (
+            <Alert variant="danger" title={t('common.error')} testId="admin.cluster.network_detail.add_addresses.error">
+              {formatErrorMessage(addAddressesM.error)}
+            </Alert>
+          ) : null}
         </div>
       </Modal>
     </div>
