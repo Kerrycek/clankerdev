@@ -6,6 +6,8 @@ import { clsx } from './clsx';
 type SandboxedHtmlVariant = 'default' | 'helpBox';
 type SandboxedHtmlTheme = 'light' | 'dark';
 
+const SANDBOX_CSP_META = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data: blob:; media-src data: blob:; style-src 'unsafe-inline'; font-src data:; form-action 'none'; base-uri 'none'; frame-src 'none'; object-src 'none'" />`;
+
 function isFullDocument(rawHtml: string): boolean {
   const trimmed = rawHtml.trim().toLowerCase();
 
@@ -18,7 +20,7 @@ function isFullDocument(rawHtml: string): boolean {
 }
 
 function buildDefaultSrcDoc(rawHtml: string): string {
-  return `<!doctype html><html><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  return `<!doctype html><html><head><meta charset="utf-8" />${SANDBOX_CSP_META}<meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
   :root { color-scheme: light; }
   html, body { margin: 0; padding: 0; }
@@ -75,7 +77,7 @@ function buildHelpBoxSrcDoc(rawHtml: string, theme: SandboxedHtmlTheme): string 
 
   const colorScheme = theme === 'dark' ? 'dark' : 'light';
 
-  return `<!doctype html><html><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  return `<!doctype html><html><head><meta charset="utf-8" />${SANDBOX_CSP_META}<meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
   :root { color-scheme: ${colorScheme}; }
   * { box-sizing: border-box; }
@@ -196,6 +198,20 @@ function buildHelpBoxSrcDoc(rawHtml: string, theme: SandboxedHtmlTheme): string 
 </head><body><div class="helpbox-shell">${rawHtml}</div></body></html>`;
 }
 
+function fullDocumentPart(rawHtml: string, tagName: 'head' | 'body'): string | null {
+  const match = new RegExp(`<${tagName}\\b[^>]*>([\\s\\S]*?)<\\/${tagName}\\s*>`, 'i').exec(rawHtml);
+  return match?.[1] ?? null;
+}
+
+function buildRestrictedFullDocument(rawHtml: string): string {
+  const head = fullDocumentPart(rawHtml, 'head') ?? '';
+  const body = fullDocumentPart(rawHtml, 'body') ?? rawHtml;
+
+  // Rebuild the outer document so our CSP is parsed before any untrusted
+  // resource-bearing element from the original head or body.
+  return `<!doctype html><html><head><meta charset="utf-8" />${SANDBOX_CSP_META}${head}</head><body>${body}</body></html>`;
+}
+
 function buildSrcDoc(rawHtml: string, opts: { variant: SandboxedHtmlVariant; theme: SandboxedHtmlTheme }): {
   srcDoc: string;
   fullDocument: boolean;
@@ -205,7 +221,7 @@ function buildSrcDoc(rawHtml: string, opts: { variant: SandboxedHtmlVariant; the
 
   if (fullDocument) {
     return {
-      srcDoc: raw,
+      srcDoc: buildRestrictedFullDocument(raw),
       fullDocument,
     };
   }
