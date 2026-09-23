@@ -120,13 +120,6 @@ export function ProfilePage() {
         body: t('profile.personal.change.toast.sent.body'),
       });
     },
-    onError: (e) => {
-      toasts.pushToast({
-        variant: 'danger',
-        title: t('profile.personal.change.toast.failed.title'),
-        body: formatErrorMessage(e),
-      });
-    },
   });
 
   return (
@@ -184,6 +177,17 @@ export function ProfilePage() {
                     {t('profile.personal.change.sent.open')}
                   </LinkButton>
                 </div>
+              </Alert>
+            ) : null}
+
+            {submitChangeM.isError ? (
+              <Alert
+                variant="danger"
+                title={t('profile.personal.change.toast.failed.title')}
+                testId="profile.personal.change.error"
+                className="mb-3"
+              >
+                {formatErrorMessage(submitChangeM.error)}
               </Alert>
             ) : null}
 

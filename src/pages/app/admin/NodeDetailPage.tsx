@@ -23,6 +23,7 @@ import { useNetworkStatus } from '../../../lib/useNetworkStatus';
 import { objectRef } from '../../../lib/objectRef';
 import { gateNodeAction } from '../../../lib/gates/node';
 import { deriveChainLockState } from '../../../lib/lockState';
+import { formatErrorMessage } from '../../../lib/errors';
 import { cursorFromDescendingPage } from '../../../lib/lockIndex';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 import { useTierBIntervalMs, useTierCIntervalMs, useTierSlowIntervalMs } from '../../../lib/refreshTiers';
@@ -549,8 +550,17 @@ export function NodeDetailPage() {
           const target = snapshotNodeTarget();
           if (target) maintenanceM.mutate(Object.freeze({ ...target, lock: true, reason: maintReason.trim() || undefined }));
         }}
-        onCancel={() => setConfirm(null)}
-      />
+        onCancel={() => {
+          setConfirm(null);
+          maintenanceM.reset();
+        }}
+      >
+        {maintenanceM.isError ? (
+          <Alert title={t('common.failed')} variant="danger">
+            {formatErrorMessage(maintenanceM.error)}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={confirm?.kind === 'unlock'}
@@ -563,8 +573,17 @@ export function NodeDetailPage() {
           const target = snapshotNodeTarget();
           if (target) maintenanceM.mutate(Object.freeze({ ...target, lock: false }));
         }}
-        onCancel={() => setConfirm(null)}
-      />
+        onCancel={() => {
+          setConfirm(null);
+          maintenanceM.reset();
+        }}
+      >
+        {maintenanceM.isError ? (
+          <Alert title={t('common.failed')} variant="danger">
+            {formatErrorMessage(maintenanceM.error)}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={confirm?.kind === 'evacuate'}
@@ -586,11 +605,19 @@ export function NodeDetailPage() {
             reason: evReason.trim() || undefined,
           }) }));
         }}
-        onCancel={() => setConfirm(null)}
+        onCancel={() => {
+          setConfirm(null);
+          evacuateM.reset();
+        }}
       >
         <div className="text-sm text-muted">
           {t('admin.node.evacuation.confirm.destination')} <span className="font-medium">{evDst ? `#${evDst}` : '—'}</span>
         </div>
+        {evacuateM.isError ? (
+          <Alert title={t('common.failed')} variant="danger">
+            {formatErrorMessage(evacuateM.error)}
+          </Alert>
+        ) : null}
       </ConfirmDialog>
     </DetailShell>
   );

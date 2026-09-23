@@ -94,4 +94,41 @@ describe('UserSecurityPanel account flags', () => {
       body: 'API rejected the flag',
     });
   });
+
+  it('keeps a rejected account lockout in its confirmation and allows an immediate retry', async () => {
+    const rejectedRequest = deferred<{ data: { id: number } }>();
+    const retryRequest = deferred<{ data: { id: number } }>();
+    mocks.updateUser
+      .mockReturnValueOnce(rejectedRequest.promise)
+      .mockReturnValueOnce(retryRequest.promise);
+    renderPanel({ id: 42, login: 'member', level: 20, lockout: false, password_reset: false });
+
+    const lockout = screen.getByRole('checkbox', { name: /security\.flags\.lockout\.label/ });
+    fireEvent.click(lockout);
+    const dialog = screen.getByTestId('admin.user.security.flags.lockout.confirm');
+    expect(dialog).toBeVisible();
+
+    fireEvent.click(screen.getByTestId('admin.user.security.flags.lockout.confirm.confirm'));
+    await waitFor(() => expect(mocks.updateUser).toHaveBeenCalledWith(42, { lockout: true }));
+
+    await act(async () => {
+      rejectedRequest.reject(new Error('Account is protected'));
+    });
+
+    await waitFor(() => expect(lockout).not.toBeChecked());
+    expect(dialog).toBeVisible();
+    expect(screen.getByTestId('admin.user.security.flags.lockout.confirm.error')).toHaveTextContent(
+      'Account is protected'
+    );
+
+    fireEvent.click(screen.getByTestId('admin.user.security.flags.lockout.confirm.confirm'));
+    await waitFor(() => expect(mocks.updateUser).toHaveBeenCalledTimes(2));
+
+    await act(async () => {
+      retryRequest.resolve({ data: { id: 42 } });
+    });
+
+    await waitFor(() => expect(screen.queryByTestId('admin.user.security.flags.lockout.confirm')).not.toBeInTheDocument());
+    expect(lockout).toBeChecked();
+  });
 });

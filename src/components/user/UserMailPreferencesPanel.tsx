@@ -52,6 +52,7 @@ export function UserMailPreferencesPanel(props: { userId: number; user?: User })
   const [languageId, setLanguageId] = useState<string>('');
   const [tplView, setTplView] = useState<MailTemplateView>('all');
   const [tplNeedle, setTplNeedle] = useState('');
+  const [settingsSaveError, setSettingsSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -76,17 +77,17 @@ export function UserMailPreferencesPanel(props: { userId: number; user?: User })
 
       return updateUser(props.userId, payload);
     },
+    onMutate: () => {
+      setSettingsSaveError(null);
+    },
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['users', props.userId] });
       await qc.invalidateQueries({ queryKey: ['user', 'current'] });
+      setSettingsSaveError(null);
       toasts.pushToast({ variant: 'ok', title: t('mail.prefs.toast.saved.title'), body: t('mail.prefs.toast.saved.body') });
     },
     onError: (error: unknown) => {
-      toasts.pushToast({
-        variant: 'danger',
-        title: t('mail.prefs.toast.save_failed.title'),
-        body: formatErrorMessage(error) || t('mail.prefs.toast.save_failed.body'),
-      });
+      setSettingsSaveError(formatErrorMessage(error) || t('mail.prefs.toast.save_failed.body'));
     },
   });
 
@@ -118,14 +119,21 @@ export function UserMailPreferencesPanel(props: { userId: number; user?: User })
 
       <UserMailSettingsCard
         mailerEnabled={mailerEnabled}
-        onMailerEnabledChange={setMailerEnabled}
+        onMailerEnabledChange={(value) => {
+          setSettingsSaveError(null);
+          setMailerEnabled(value);
+        }}
         languageId={languageId}
-        onLanguageIdChange={setLanguageId}
+        onLanguageIdChange={(value) => {
+          setSettingsSaveError(null);
+          setLanguageId(value);
+        }}
         languages={languagesQ.data ?? []}
         languagesLoading={languagesQ.isLoading}
         languagesError={languagesQ.isError}
         settingsDirty={settingsDirty}
         savePending={updateSettings.isPending}
+        saveError={settingsSaveError}
         onSave={() => updateSettings.mutate()}
         userEmail={userEmail}
       />

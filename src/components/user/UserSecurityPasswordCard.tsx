@@ -8,6 +8,7 @@ import { copyTextToClipboard } from '../../lib/clipboard';
 import { formatErrorMessage } from '../../lib/errors';
 import { generateSecurePassword } from '../../lib/passwordGeneration';
 
+import { Alert } from '../ui/Alert';
 import { Button } from '../ui/Button';
 import { Card, CardBody, CardHeader } from '../ui/Card';
 import { Checkbox } from '../ui/Checkbox';
@@ -30,6 +31,7 @@ export function UserSecurityPasswordCard(props: {
   const [newPassword2, setNewPassword2] = useState('');
   const [logoutSessions, setLogoutSessions] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const draft = useMemo(
     () => ({ currentPassword, newPassword, newPassword2, logoutSessions }),
@@ -38,6 +40,7 @@ export function UserSecurityPasswordCard(props: {
   const review = useMemo(() => buildPasswordChangeReview(props.variant, draft), [draft, props.variant]);
 
   const reset = () => {
+    setPasswordError(null);
     setCurrentPassword('');
     setNewPassword('');
     setNewPassword2('');
@@ -53,6 +56,9 @@ export function UserSecurityPasswordCard(props: {
 
       await updateUser(props.userId, buildPasswordPayload(props.variant, draft));
     },
+    onMutate: () => {
+      setPasswordError(null);
+    },
     onSuccess: async () => {
       reset();
       await qc.invalidateQueries({ queryKey: ['users', props.userId] });
@@ -60,7 +66,7 @@ export function UserSecurityPasswordCard(props: {
       toasts.pushToast({ variant: 'ok', title: t('security.password.toast.saved.title'), body: t('security.password.toast.saved.body') });
     },
     onError: (e) => {
-      toasts.pushToast({ variant: 'danger', title: t('security.password.toast.failed.title'), body: formatErrorMessage(e) });
+      setPasswordError(formatErrorMessage(e));
     },
   });
 
@@ -71,6 +77,7 @@ export function UserSecurityPasswordCard(props: {
 
     try {
       const generatedPassword = generateSecurePassword();
+      setPasswordError(null);
       setNewPassword(generatedPassword);
       setNewPassword2(generatedPassword);
 
@@ -114,7 +121,10 @@ export function UserSecurityPasswordCard(props: {
                 type="password"
                 autoComplete="current-password"
                 value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
+                onChange={(e) => {
+                  setPasswordError(null);
+                  setCurrentPassword(e.target.value);
+                }}
                 testId={`${prefix}.password.current`}
               />
             </div>
@@ -126,7 +136,10 @@ export function UserSecurityPasswordCard(props: {
               type="password"
               autoComplete="new-password"
               value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
+              onChange={(e) => {
+                setPasswordError(null);
+                setNewPassword(e.target.value);
+              }}
               testId={`${prefix}.password.new`}
             />
           </div>
@@ -137,7 +150,10 @@ export function UserSecurityPasswordCard(props: {
               type="password"
               autoComplete="new-password"
               value={newPassword2}
-              onChange={(e) => setNewPassword2(e.target.value)}
+              onChange={(e) => {
+                setPasswordError(null);
+                setNewPassword2(e.target.value);
+              }}
               testId={`${prefix}.password.new2`}
             />
           </div>
@@ -168,11 +184,29 @@ export function UserSecurityPasswordCard(props: {
 
           <div className="md:col-span-2">
             <label className="flex items-center gap-2 text-sm" data-testid={`${prefix}.password.logout_sessions`}>
-              <Checkbox checked={logoutSessions} onCheckedChange={(v) => setLogoutSessions(Boolean(v))} />
+              <Checkbox
+                checked={logoutSessions}
+                onCheckedChange={(v) => {
+                  setPasswordError(null);
+                  setLogoutSessions(Boolean(v));
+                }}
+              />
               <span>{t('security.password.logout_sessions')}</span>
             </label>
             <div className="mt-1 text-xs text-faint">{t('security.password.logout_sessions.hint')}</div>
           </div>
+
+          {passwordError ? (
+            <div className="md:col-span-2">
+              <Alert
+                variant="danger"
+                title={t('security.password.toast.failed.title')}
+                testId={`${prefix}.password.save_error`}
+              >
+                {passwordError}
+              </Alert>
+            </div>
+          ) : null}
 
           <div className="md:col-span-2 flex items-center gap-2">
             <Button

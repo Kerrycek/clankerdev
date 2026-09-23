@@ -11,6 +11,7 @@ import {
   type UserMailTemplateRecipient,
 } from '../../lib/api/userMail';
 
+import { Alert } from '../ui/Alert';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
@@ -98,13 +99,6 @@ function RoleRecipientRow(props: {
       await qc.invalidateQueries({ queryKey: ['users', props.userId, 'mail_template_recipients'] });
       toasts.pushToast({ variant: 'ok', title: t('mail.prefs.toast.saved.title'), body: t('mail.prefs.toast.saved.body') });
     },
-    onError: (error: unknown) => {
-      toasts.pushToast({
-        variant: 'danger',
-        title: t('mail.prefs.toast.save_failed.title'),
-        body: formatErrorMessage(error) || t('mail.prefs.toast.save_failed.body'),
-      });
-    },
   });
 
   return (
@@ -122,7 +116,10 @@ function RoleRecipientRow(props: {
           ariaLabel={t('mail.prefs.roles.to_aria', { recipient })}
           ariaDescribedBy={props.recp.description ? descriptionId : undefined}
           value={value}
-          onChange={(e) => setValue(e.target.value)}
+          onChange={(e) => {
+            mut.reset();
+            setValue(e.target.value);
+          }}
           rows={3}
           placeholder={t('mail.prefs.email_list.placeholder')}
         />
@@ -142,7 +139,10 @@ function RoleRecipientRow(props: {
             <Button
               size="sm"
               variant="secondary"
-              onClick={() => setValue(formatEmailsForTextarea(props.recp.to))}
+              onClick={() => {
+                mut.reset();
+                setValue(formatEmailsForTextarea(props.recp.to));
+              }}
               testId={`mail.roles.reset.${props.recp.id}`}
               ariaLabel={t('mail.prefs.roles.reset_aria', { recipient })}
               className="min-h-11 md:min-h-0"
@@ -151,6 +151,16 @@ function RoleRecipientRow(props: {
             </Button>
           ) : null}
         </div>
+        {mut.isError ? (
+          <Alert
+            variant="danger"
+            title={t('mail.prefs.toast.save_failed.title')}
+            className="mt-2"
+            testId={`mail.roles.save_error.${props.recp.id}`}
+          >
+            {formatErrorMessage(mut.error) || t('mail.prefs.toast.save_failed.body')}
+          </Alert>
+        ) : null}
       </td>
 
       <td className="block px-4 pb-4 pt-2 align-top md:table-cell md:py-3">
@@ -220,13 +230,6 @@ function TemplateRecipientRow(props: {
       await qc.invalidateQueries({ queryKey: ['users', props.userId, 'mail_template_recipients'] });
       toasts.pushToast({ variant: 'ok', title: t('mail.prefs.toast.saved.title'), body: t('mail.prefs.toast.saved.body') });
     },
-    onError: (error: unknown) => {
-      toasts.pushToast({
-        variant: 'danger',
-        title: t('mail.prefs.toast.save_failed.title'),
-        body: formatErrorMessage(error) || t('mail.prefs.toast.save_failed.body'),
-      });
-    },
   });
 
   const rowVariant = enabled ? '' : 'bg-danger-row';
@@ -247,7 +250,10 @@ function TemplateRecipientRow(props: {
         <MobileCellLabel>{t('mail.prefs.templates.col.enabled')}</MobileCellLabel>
         <Checkbox
           checked={!enabled}
-          onChange={(checked) => setEnabled(!checked)}
+          onChange={(checked) => {
+            mut.reset();
+            setEnabled(!checked);
+          }}
           label={t('mail.prefs.templates.disable_label')}
           description={t('mail.prefs.templates.disable_desc')}
           testId={`mail.templates.disable.${props.recp.id}`}
@@ -261,7 +267,10 @@ function TemplateRecipientRow(props: {
           ariaLabel={t('mail.prefs.templates.to_aria', { recipient })}
           ariaDescribedBy={props.recp.description ? descriptionId : undefined}
           value={toValue}
-          onChange={(e) => setToValue(e.target.value)}
+          onChange={(e) => {
+            mut.reset();
+            setToValue(e.target.value);
+          }}
           rows={3}
           placeholder={t('mail.prefs.email_list.placeholder')}
           disabled={!enabled}
@@ -311,6 +320,7 @@ function TemplateRecipientRow(props: {
               size="sm"
               variant="secondary"
               onClick={() => {
+                mut.reset();
                 setToValue(formatEmailsForTextarea(props.recp.to));
                 setEnabled(props.recp.enabled !== false);
               }}
@@ -322,6 +332,16 @@ function TemplateRecipientRow(props: {
             </Button>
           ) : null}
         </div>
+        {mut.isError ? (
+          <Alert
+            variant="danger"
+            title={t('mail.prefs.toast.save_failed.title')}
+            className="mt-2"
+            testId={`mail.templates.save_error.${props.recp.id}`}
+          >
+            {formatErrorMessage(mut.error) || t('mail.prefs.toast.save_failed.body')}
+          </Alert>
+        ) : null}
       </td>
     </tr>
   );
