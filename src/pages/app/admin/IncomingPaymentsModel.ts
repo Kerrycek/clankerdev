@@ -2,6 +2,7 @@ import type { IncomingPayment, IncomingPaymentState } from '../../../lib/api/pay
 
 export const INCOMING_PAYMENT_STATES = ['queued', 'unmatched', 'processed', 'ignored'] as const;
 export type KnownIncomingPaymentState = (typeof INCOMING_PAYMENT_STATES)[number];
+export const INCOMING_PAYMENT_REVIEW_STATE = 'unmatched' as const;
 
 export type IncomingPaymentSmartKey = 'id' | 'state' | 'user' | 'q';
 
@@ -39,6 +40,47 @@ export function parsePositiveIntInput(value: string | undefined | null): number 
 
 export function parsePositivePaymentId(value: string | undefined | null): number | undefined {
   return parsePositiveIntInput(value);
+}
+
+export function incomingPaymentNeedsReview(payment: IncomingPayment | null | undefined): boolean {
+  return normalizeIncomingPaymentState(payment?.state) === INCOMING_PAYMENT_REVIEW_STATE;
+}
+
+export function parseIncomingPaymentReviewQueue(value: unknown): number[] {
+  if (!Array.isArray(value)) return [];
+  const ids: number[] = [];
+  const seen = new Set<number>();
+
+  for (const candidate of value.slice(0, 200)) {
+    if (typeof candidate !== 'number' && !(typeof candidate === 'string' && /^\d+$/.test(candidate.trim()))) continue;
+    const id = Number(candidate);
+    if (!Number.isSafeInteger(id) || id <= 0 || seen.has(id)) continue;
+    seen.add(id);
+    ids.push(id);
+  }
+
+  return ids;
+}
+
+export function incomingPaymentMatchesReviewTarget(value: unknown, expectedId: number): boolean {
+  if (!value || typeof value !== 'object' || !Number.isSafeInteger(expectedId) || expectedId <= 0) return false;
+  const payment = value as IncomingPayment;
+  return payment.id === expectedId && incomingPaymentNeedsReview(payment);
+}
+
+export function safeIncomingPaymentsReturnTo(value: unknown, basePath: string): string {
+  const overviewPath = `${basePath.replace(/\/+$/, '')}/payments/incoming`;
+  if (typeof value !== 'string' || !value || value.length > 2_048) return overviewPath;
+
+  try {
+    const origin = 'https://vpsadmin.invalid';
+    const parsed = new URL(value, origin);
+    if (parsed.origin !== origin) return overviewPath;
+    if (parsed.pathname !== overviewPath && parsed.pathname !== `${overviewPath}/`) return overviewPath;
+    return `${overviewPath}${parsed.search}${parsed.hash}`;
+  } catch {
+    return overviewPath;
+  }
 }
 
 export function canonicalIncomingPaymentSmartKey(raw: string): IncomingPaymentSmartKey | null {

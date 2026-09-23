@@ -147,7 +147,12 @@ export function VpsListPage() {
       ).data,
   });
 
-  const [actionError, setActionError] = useState<null | { title: string; body?: string }>(null);
+  const [actionError, setActionError] = useState<null | {
+    title: string;
+    body?: string;
+    vpsId: number;
+    kind: VpsListMutationKind;
+  }>(null);
   const [confirm, setConfirm] = useState<VpsListActionConfirm | null>(null);
   const [inFlight, setInFlight] = useState<Record<number, VpsListMutationKind>>({});
 
@@ -194,6 +199,10 @@ export function VpsListPage() {
     vars: { vpsId: number; kind: VpsListMutationKind; objectLabel?: string },
     context?: DurableVpsLockContext
   ) {
+    setActionError(null);
+    setConfirm((current) => (
+      current && current.vpsId === vars.vpsId && current.kind === vars.kind ? null : current
+    ));
     const asId = getMetaActionStateId(res.meta);
     if (asId !== undefined) {
       const actionLabelKey =
@@ -218,14 +227,21 @@ export function VpsListPage() {
     void qc.invalidateQueries({ queryKey: ['transaction_chain', 'recent-failed'] });
   }
 
-  function handleMutationError(error: unknown) {
+  function handleMutationError(
+    error: unknown,
+    target: { vpsId: number; kind: VpsListMutationKind }
+  ) {
     if (isBusyError(error)) {
       chrome.openTasks();
-      setActionError({ title: t('toast.action_blocked.title'), body: t('toast.action_blocked.body') });
+      setActionError({
+        ...target,
+        title: t('toast.action_blocked.title'),
+        body: t('toast.action_blocked.body'),
+      });
       return;
     }
 
-    setActionError({ title: t('common.action_failed'), body: describeError(error) });
+    setActionError({ ...target, title: t('common.action_failed'), body: describeError(error) });
   }
 
   function settleMutationLock(
@@ -259,7 +275,7 @@ export function VpsListPage() {
         .then((mutationGeneration) => ({ lockRef, mutationGeneration }));
     },
     onSuccess: (res, vars, context) => handleMutationSuccess(res, vars, context),
-    onError: handleMutationError,
+    onError: (error, vars) => handleMutationError(error, vars),
     onSettled: (_res, error, vars, context) => settleMutationLock(vars, error, context),
   });
 
@@ -277,7 +293,7 @@ export function VpsListPage() {
         .then((mutationGeneration) => ({ lockRef, mutationGeneration }));
     },
     onSuccess: (res, vars, context) => handleMutationSuccess(res, { ...vars, kind: 'delete' }, context),
-    onError: handleMutationError,
+    onError: (error, vars) => handleMutationError(error, { vpsId: vars.vpsId, kind: 'delete' }),
     onSettled: (_res, error, vars, context) => settleMutationLock(vars, error, context),
   });
 
@@ -337,6 +353,17 @@ export function VpsListPage() {
       objectLabel: String(row.vps.hostname ?? t('common.vps_ref', { id: row.vps.id })),
     });
 
+  const requestConfirm = (next: VpsListActionConfirm) => {
+    setActionError(null);
+    setConfirm(next);
+  };
+
+  const confirmError = confirm && actionError
+    && confirm.vpsId === actionError.vpsId
+    && confirm.kind === actionError.kind
+    ? actionError
+    : null;
+
   return (
     <ListShell
       variant="wide"
@@ -357,7 +384,7 @@ export function VpsListPage() {
       }
       filters={<VpsListFilters {...listFilters.filterProps} />}
     >
-      {actionError ? (
+      {actionError && !confirmError ? (
         <Alert
           variant="warn"
           title={
@@ -417,9 +444,9 @@ export function VpsListPage() {
             pageCursor={pageCursor}
             showOwnerContext={showOwnerContext}
             onStart={onStart}
-            onRequestStop={(row) => setConfirm({ vpsId: row.vps.id, kind: 'stop', force: false })}
-            onRequestRestart={(row) => setConfirm({ vpsId: row.vps.id, kind: 'restart', force: false })}
-            onRequestDelete={(row) => setConfirm({ vpsId: row.vps.id, kind: 'delete', force: false, lazy: true })}
+            onRequestStop={(row) => requestConfirm({ vpsId: row.vps.id, kind: 'stop', force: false })}
+            onRequestRestart={(row) => requestConfirm({ vpsId: row.vps.id, kind: 'restart', force: false })}
+            onRequestDelete={(row) => requestConfirm({ vpsId: row.vps.id, kind: 'delete', force: false, lazy: true })}
           />
 
           <VpsListTable
@@ -433,9 +460,9 @@ export function VpsListPage() {
             pageCursor={pageCursor}
             showOwnerContext={showOwnerContext}
             onStart={onStart}
-            onRequestStop={(row) => setConfirm({ vpsId: row.vps.id, kind: 'stop', force: false })}
-            onRequestRestart={(row) => setConfirm({ vpsId: row.vps.id, kind: 'restart', force: false })}
-            onRequestDelete={(row) => setConfirm({ vpsId: row.vps.id, kind: 'delete', force: false, lazy: true })}
+            onRequestStop={(row) => requestConfirm({ vpsId: row.vps.id, kind: 'stop', force: false })}
+            onRequestRestart={(row) => requestConfirm({ vpsId: row.vps.id, kind: 'restart', force: false })}
+            onRequestDelete={(row) => requestConfirm({ vpsId: row.vps.id, kind: 'delete', force: false, lazy: true })}
           />
         </>
       )}
@@ -445,15 +472,18 @@ export function VpsListPage() {
           confirm={confirm}
           vps={rows.find((v) => Number(v.id) === Number(confirm.vpsId))}
           isAdminMode={mode === 'admin'}
+          error={confirmError}
+          powerLoading={powerM.isPending}
           deleteLoading={deleteM.isPending}
           onChange={setConfirm}
-          onCancel={() => setConfirm(null)}
-          onConfirmPower={(vars) => {
+          onCancel={() => {
+            setActionError(null);
             setConfirm(null);
+          }}
+          onConfirmPower={(vars) => {
             powerM.mutate(vars);
           }}
           onConfirmDelete={(vars) => {
-            setConfirm(null);
             deleteM.mutate({
               vpsId: vars.vpsId,
               objectLabel: vars.objectLabel,

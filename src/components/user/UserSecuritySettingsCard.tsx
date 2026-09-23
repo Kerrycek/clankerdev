@@ -39,6 +39,7 @@ export function UserSecuritySettingsCard(props: {
   const [enableNewLoginNotif, setEnableNewLoginNotif] = useState(stored.notif);
   const [preferredSessionMin, setPreferredSessionMin] = useState(stored.sessMin);
   const [preferredLogoutAll, setPreferredLogoutAll] = useState(stored.logoutAll);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
   const sessionLengthInputId = useId();
   const sessionLengthLabelId = useId();
   const sessionLengthDescriptionId = useId();
@@ -69,6 +70,7 @@ export function UserSecuritySettingsCard(props: {
 
   const reset = () => {
     const next = draftFromStoredSecuritySettings(stored);
+    setSettingsError(null);
     setEnableBasicAuth(next.basic);
     setEnableTokenAuth(next.token);
     setEnableSingleSignOn(next.sso);
@@ -84,13 +86,17 @@ export function UserSecuritySettingsCard(props: {
       if (Object.keys(result.payload).length === 0) return;
       await updateUser(props.userId, result.payload);
     },
+    onMutate: () => {
+      setSettingsError(null);
+    },
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['users', props.userId] });
       await qc.invalidateQueries({ queryKey: ['user', 'current'] });
+      setSettingsError(null);
       toasts.pushToast({ variant: 'ok', title: t('security.settings.toast.saved.title'), body: t('security.settings.toast.saved.body') });
     },
     onError: (e) => {
-      toasts.pushToast({ variant: 'danger', title: t('security.settings.toast.failed.title'), body: formatErrorMessage(e) });
+      setSettingsError(formatErrorMessage(e));
     },
   });
 
@@ -102,9 +108,6 @@ export function UserSecuritySettingsCard(props: {
       await qc.invalidateQueries({ queryKey: ['users', props.userId] });
       await qc.invalidateQueries({ queryKey: ['user', 'current'] });
       toasts.pushToast({ variant: 'ok', title: t('security.settings.oauth2.enabled.title'), body: t('security.settings.oauth2.enabled.body') });
-    },
-    onError: (e) => {
-      toasts.pushToast({ variant: 'danger', title: t('security.settings.oauth2.enable_failed.title'), body: formatErrorMessage(e) });
     },
   });
 
@@ -119,7 +122,10 @@ export function UserSecuritySettingsCard(props: {
             label={t('security.settings.auth.basic.label')}
             description={t('security.settings.auth.basic.desc')}
             checked={enableBasicAuth}
-            onChange={setEnableBasicAuth}
+            onChange={(value) => {
+              setSettingsError(null);
+              setEnableBasicAuth(value);
+            }}
             testId={`${prefix}.settings.basic`}
           />
 
@@ -127,7 +133,10 @@ export function UserSecuritySettingsCard(props: {
             label={t('security.settings.auth.token.label')}
             description={t('security.settings.auth.token.desc')}
             checked={enableTokenAuth}
-            onChange={setEnableTokenAuth}
+            onChange={(value) => {
+              setSettingsError(null);
+              setEnableTokenAuth(value);
+            }}
             testId={`${prefix}.settings.token`}
           />
 
@@ -154,13 +163,26 @@ export function UserSecuritySettingsCard(props: {
                 ) : null}
               </div>
             </div>
+            {oauth2EnableM.isError ? (
+              <Alert
+                variant="danger"
+                title={t('security.settings.oauth2.enable_failed.title')}
+                className="mt-3"
+                testId={`${prefix}.settings.oauth2.error`}
+              >
+                {formatErrorMessage(oauth2EnableM.error)}
+              </Alert>
+            ) : null}
           </div>
 
           <SwitchRow
             label={t('security.settings.sso.label')}
             description={t('security.settings.sso.desc')}
             checked={enableSingleSignOn}
-            onChange={setEnableSingleSignOn}
+            onChange={(value) => {
+              setSettingsError(null);
+              setEnableSingleSignOn(value);
+            }}
             testId={`${prefix}.settings.sso`}
           />
 
@@ -168,7 +190,10 @@ export function UserSecuritySettingsCard(props: {
             label={t('security.settings.new_login.label')}
             description={t('security.settings.new_login.desc')}
             checked={enableNewLoginNotif}
-            onChange={setEnableNewLoginNotif}
+            onChange={(value) => {
+              setSettingsError(null);
+              setEnableNewLoginNotif(value);
+            }}
             testId={`${prefix}.settings.new_login`}
           />
 
@@ -192,7 +217,10 @@ export function UserSecuritySettingsCard(props: {
                   inputId={sessionLengthInputId}
                   type="number"
                   value={preferredSessionMin}
-                  onChange={(e) => setPreferredSessionMin(e.target.value)}
+                  onChange={(e) => {
+                    setSettingsError(null);
+                    setPreferredSessionMin(e.target.value);
+                  }}
                   ariaInvalid={!review.sessionParse.valid}
                   ariaDescribedBy={[
                     sessionLengthDescriptionId,
@@ -222,7 +250,10 @@ export function UserSecuritySettingsCard(props: {
                   variant="secondary"
                   className="min-h-11 sm:min-h-8"
                   aria-pressed={preferredSessionMin === String(m)}
-                  onClick={() => setPreferredSessionMin(String(m))}
+                  onClick={() => {
+                    setSettingsError(null);
+                    setPreferredSessionMin(String(m));
+                  }}
                   testId={`${prefix}.settings.session_length.preset.${m}`}
                 >
                   {m === 0 ? t('security.settings.session_length.preset.never') : t('security.settings.session_length.preset.minutes', { m })}
@@ -235,7 +266,10 @@ export function UserSecuritySettingsCard(props: {
             label={t('security.settings.logout_all.label')}
             description={t('security.settings.logout_all.desc')}
             checked={preferredLogoutAll}
-            onChange={setPreferredLogoutAll}
+            onChange={(value) => {
+              setSettingsError(null);
+              setPreferredLogoutAll(value);
+            }}
             testId={`${prefix}.settings.logout_all`}
           />
 
@@ -251,6 +285,16 @@ export function UserSecuritySettingsCard(props: {
                 {t(review.sessionParse.validationKey)}
               </Alert>
             </div>
+          ) : null}
+
+          {settingsError ? (
+            <Alert
+              variant="danger"
+              title={t('security.settings.toast.failed.title')}
+              testId={`${prefix}.settings.save_error`}
+            >
+              {settingsError}
+            </Alert>
           ) : null}
 
           <div className="flex items-center gap-2 pt-2">
