@@ -1,8 +1,8 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router-dom';
+import { createMemoryRouter, MemoryRouter, RouterProvider } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BackupCenterPage } from './BackupCenterPage';
@@ -227,6 +227,34 @@ describe('BackupCenterPage', () => {
     expect(downloadsMock).toHaveBeenCalledTimes(1);
     expect(downloadsMock.mock.calls[0]?.[0]).not.toHaveProperty('dataset');
     expect(datasetsMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['tab-first', 'filter-first'])('preserves tab and filter during overlapping navigation (%s)', async (order) => {
+    downloadsMock.mockResolvedValue({
+      data: [{ id: 42, state: 'ready', snapshot: { id: 32, name: 'monthly', dataset: { id: 11 } } }],
+      meta: { total_count: 1 },
+    } as never);
+    const router = createMemoryRouter([
+      { path: '/app/backups', element: <BackupCenterPage /> },
+    ], { initialEntries: ['/app/backups?tab=snapshots&q=archive'] });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={queryClient}><RouterProvider router={router} /></QueryClientProvider>);
+    await screen.findByTestId('backups.snapshots.row.11');
+
+    act(() => {
+      if (order === 'filter-first') {
+        fireEvent.change(screen.getByTestId('backups.filter'), { target: { value: 'monthly' } });
+      }
+      fireEvent.click(screen.getByTestId('backups.tab.downloads'));
+      if (order === 'tab-first') {
+        fireEvent.change(screen.getByTestId('backups.filter'), { target: { value: 'monthly' } });
+      }
+    });
+
+    expect(await screen.findByTestId('backups.downloads.row.42')).toBeVisible();
+    expect(new URLSearchParams(router.state.location.search).get('tab')).toBe('downloads');
+    expect(new URLSearchParams(router.state.location.search).get('q')).toBe('monthly');
+    expect(downloadsMock).toHaveBeenCalledTimes(1);
   });
 
   it('keeps user downloads usable when dataset metadata cannot be loaded', async () => {

@@ -167,26 +167,28 @@ export function BackupCenterPage() {
     [datasets, downloads, hrefOptions],
   );
 
+  // Commit URL edits before another control reads the current tab/filter.
+  // Deferred router transitions can otherwise overwrite each other.
   function changeTab(nextTab: BackupCenterTab) {
     const next = new URLSearchParams(searchParams);
     if (nextTab === 'overview') next.delete('tab');
     else next.set('tab', nextTab);
     next.delete('intent');
-    setSearchParams(next, { replace: true });
+    setSearchParams(next, { replace: true, flushSync: true });
   }
 
   function beginRestore() {
     const next = new URLSearchParams(searchParams);
     next.set('tab', 'snapshots');
     next.set('intent', 'restore');
-    setSearchParams(next, { replace: true });
+    setSearchParams(next, { replace: true, flushSync: true });
   }
 
   function changeQuery(nextQuery: string) {
     const next = new URLSearchParams(searchParams);
     if (nextQuery.trim()) next.set('q', nextQuery);
     else next.delete('q');
-    setSearchParams(next, { replace: true });
+    setSearchParams(next, { replace: true, flushSync: true });
   }
 
   function clearEmbeddedSnapshotParams(next: URLSearchParams) {
@@ -199,14 +201,14 @@ export function BackupCenterPage() {
     const next = new URLSearchParams(searchParams);
     next.set('dataset', String(dataset.id));
     clearEmbeddedSnapshotParams(next);
-    setSearchParams(next, { replace: true });
+    setSearchParams(next, { replace: true, flushSync: true });
   }
 
   function clearDatasetSelection() {
     const next = new URLSearchParams(searchParams);
     next.delete('dataset');
     clearEmbeddedSnapshotParams(next);
-    setSearchParams(next, { replace: true });
+    setSearchParams(next, { replace: true, flushSync: true });
   }
 
   const datasetTotal = datasetsQ.data?.totalCount;
