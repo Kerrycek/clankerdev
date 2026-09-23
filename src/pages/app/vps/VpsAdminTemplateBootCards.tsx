@@ -72,6 +72,7 @@ export function VpsAdminTemplateCard(props: {
           disabled={!props.form.osTemplate}
           gate={props.gate}
           loading={props.pending}
+          errorMessage={props.errorMessage}
           onClick={props.onSubmit}
           confirmation={{
             title: t('vps.lifecycle.template.submit'),
@@ -173,6 +174,7 @@ export function VpsAdminBootCard(props: {
           disabled={!props.form.osTemplate}
           gate={props.gate}
           loading={props.pending}
+          errorMessage={props.errorMessage}
           onClick={props.onSubmit}
           confirmation={{
             title: t('vps.lifecycle.boot.submit'),
