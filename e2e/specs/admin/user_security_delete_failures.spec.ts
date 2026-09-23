@@ -82,7 +82,10 @@ test('@pr-smoke @pr-smoke-mobile admin user security removals keep failures in c
   expect(keyDeleteCalls).toBe(2);
 
   await page.goto('/admin/users/1/metrics');
-  await page.locator('[data-testid="admin.user.metrics.row.3.delete"]:visible').click();
+  const metricsDeleteAction = mobile
+    ? page.getByTestId('admin.user.metrics.card.3.delete')
+    : page.getByTestId('admin.user.metrics.row.3.delete');
+  await metricsDeleteAction.click();
   const tokenDialog = page.getByTestId('admin.user.metrics.delete_dialog');
   await tokenDialog.getByTestId('admin.user.metrics.delete_dialog.confirm').click();
   await expect(tokenDialog.getByTestId('admin.user.metrics.delete_dialog.error')).toContainText('Metrics token revoke was denied');
