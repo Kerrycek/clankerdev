@@ -35,6 +35,7 @@ import { Button } from '../../../components/ui/Button';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { ErrorState } from '../../../components/ui/ErrorState';
 import { LinkButton } from '../../../components/ui/LinkButton';
+import { buttonClassName } from '../../../components/ui/buttonStyles';
 import { LoadingState } from '../../../components/ui/LoadingState';
 import { LockStateStaleAlert } from '../../../components/ui/LockStateStaleAlert';
 import { ObjectHeader } from '../../../components/ui/ObjectHeader';
@@ -369,6 +370,7 @@ export function NodeDetailPage() {
         meta={loc ? t('admin.node.meta.location', { location: loc }) : ' '}
         actions={
           <>
+            {Number.isSafeInteger(nodeId) && nodeId > 0 ? <Link to={`${basePath}/nodes/${nodeId}/history`} className={buttonClassName({ variant: 'secondary' })} data-vpsadmin-doc-id="node.kernel-history">{t('admin.node.history.section.kernel')}</Link> : null}
             {node ? <NodeLifecycleHeaderActions node={node} busyTransaction={busyTransaction} onUpdated={() => { setNotice(t('admin.node.editor.notice.updated')); refreshAfterNodeMutation(nodeId); }} /> : null}
             {typeof nodeId === 'number' && Number.isFinite(nodeId) && nodeId > 0 ? (
               <LinkButton to={`${basePath}/vps?node=${nodeId}`} variant="secondary" title={t('admin.node.action.show_vps.title')}>
