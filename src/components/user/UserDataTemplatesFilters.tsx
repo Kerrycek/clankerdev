@@ -42,6 +42,7 @@ export function UserDataTemplatesFilters(props: {
   const smartInputRef = useRef<HTMLInputElement | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [draft, setDraft] = useState<UserDataFilterValues>({});
 
   function focusSmartInput() {
     window.requestAnimationFrame(() => smartInputRef.current?.focus());
@@ -106,7 +107,7 @@ export function UserDataTemplatesFilters(props: {
   return (
     <>
       <FilterBar testId={`${props.prefix}.filters`}>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 basis-full sm:flex-1">
           <SmartFilterInput
             ref={smartInputRef}
             testId={`${props.prefix}.filters.q`}
@@ -131,8 +132,11 @@ export function UserDataTemplatesFilters(props: {
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button type="button" variant="secondary" size="sm" onClick={() => setAdvancedOpen(true)} testId={`${props.prefix}.filters.advanced`}>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <Button type="button" variant="secondary" size="sm" onClick={() => {
+            setDraft({ q: props.qRaw, format: props.formatFilter });
+            setAdvancedOpen(true);
+          }} testId={`${props.prefix}.filters.advanced`}>
             <SlidersHorizontal className="mr-1 h-4 w-4" />
             {t('filters.advanced.label')}
           </Button>
@@ -180,8 +184,9 @@ export function UserDataTemplatesFilters(props: {
             <div className="text-xs font-semibold text-muted">{t('common.search')}</div>
             <div className="mt-1">
               <Input
-                value={props.qRaw}
-                onChange={(e) => props.onSetFilters({ q: e.target.value, format: props.formatFilter })}
+                value={draft.q ?? ''}
+                ariaLabel={t('common.search')}
+                onChange={(e) => setDraft((current) => ({ ...current, q: e.target.value }))}
                 placeholder={t('user_data.filters.search.placeholder')}
                 autoComplete="off"
                 testId={`${props.prefix}.filters.q.advanced`}
@@ -193,8 +198,9 @@ export function UserDataTemplatesFilters(props: {
             <div className="text-xs font-semibold text-muted">{t('user_data.filters.format')}</div>
             <div className="mt-1">
               <Select
-                value={props.formatFilter}
-                onChange={(e) => props.onSetFilters({ q: props.qTrim, format: e.target.value })}
+                value={draft.format ?? ''}
+                ariaLabel={t('user_data.filters.format')}
+                onChange={(e) => setDraft((current) => ({ ...current, format: e.target.value }))}
                 options={props.formatOptions}
                 testId={`${props.prefix}.filters.format`}
               />
@@ -202,8 +208,11 @@ export function UserDataTemplatesFilters(props: {
           </div>
 
           <div className="flex items-center justify-end gap-2">
-            <Button variant="secondary" size="sm" onClick={props.onClearFilters}>{t('common.clear_filters')}</Button>
-            <Button variant="primary" size="sm" onClick={() => setAdvancedOpen(false)}>{t('common.done')}</Button>
+            <Button variant="secondary" size="sm" onClick={() => setDraft({ q: '', format: '' })}>{t('common.clear_filters')}</Button>
+            <Button variant="primary" size="sm" testId={`${props.prefix}.filters.apply`} onClick={() => {
+              props.onSetFilters(draft);
+              setAdvancedOpen(false);
+            }}>{t('filters.smart.suggest.apply.primary')}</Button>
           </div>
         </div>
       </Drawer>

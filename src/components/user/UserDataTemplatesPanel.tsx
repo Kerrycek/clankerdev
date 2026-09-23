@@ -10,14 +10,13 @@ import {
   createVpsUserData,
   deleteVpsUserData,
   deployVpsUserData,
-  fetchVpsUserDataList,
   updateVpsUserData,
   type VpsUserData,
 } from '../../lib/api/vpsUserData';
+import { fetchVpsUserDataPage } from '../../lib/api/vpsUserDataPaging';
 import { getMetaActionStateId } from '../../lib/api/haveapi';
 import { objectRef } from '../../lib/objectRef';
 import { formatErrorMessage } from '../../lib/errors';
-import { cursorFromDescendingPage } from '../../lib/lockIndex';
 import { useKeysetPagination } from '../../lib/hooks/useKeysetPagination';
 import { parseNumericToken, splitKeyValueToken, tokenizeSmartInput, unquoteSmartValue } from '../../lib/smartFilter';
 
@@ -78,6 +77,8 @@ export function UserDataTemplatesPanel(props: {
     if (nextVals.format && nextVals.format.trim()) next.set('format', nextVals.format.trim());
     else next.delete('format');
     next.delete('from');
+    next.delete('from_id');
+    next.delete('page');
     setSearchParams(next, { replace: true });
   }
 
@@ -156,11 +157,12 @@ export function UserDataTemplatesPanel(props: {
 
   const pagination = useKeysetPagination({
     id: props.testIdPrefix,
-    filterKey: JSON.stringify({ q: qTrim, f: formatFilter, u: props.userIdForAdmin ?? null }),
+    filterKey: JSON.stringify({ q: qTrim, f: formatFilter, u: props.userIdForAdmin ?? null, viewer: auth.user?.id, role: auth.role }),
     searchParams,
     setSearchParams,
     defaultLimit: 50,
     allowedLimits: [25, 50, 100, 200],
+    restoreUrlCursorOnSignatureChange: true,
   });
 
   const listQ = useQuery({
@@ -173,24 +175,31 @@ export function UserDataTemplatesPanel(props: {
         q: qTrim,
         format: formatFilter,
         user: isAdmin ? props.userIdForAdmin ?? null : null,
+        viewer: auth.user?.id,
+        role: auth.role,
       },
     ],
-    queryFn: async () =>
-      (
-        await fetchVpsUserDataList({
-          limit: pagination.limit,
-          fromId: pagination.fromId,
-          q: qTrim || undefined,
-          format: formatFilter || undefined,
-          user: isAdmin ? props.userIdForAdmin : undefined,
-        })
-      ).data,
+    queryFn: ({ signal }) => fetchVpsUserDataPage({
+      limit: pagination.limit,
+      fromId: pagination.fromId,
+      q: qTrim || undefined,
+      format: formatFilter || undefined,
+      user: isAdmin ? props.userIdForAdmin : undefined,
+      signal,
+    }),
     staleTime: 10_000,
+    retry: false,
   });
 
-  const rows = listQ.data ?? [];
-  const canNext = rows.length >= pagination.limit;
-  const cursor = useMemo(() => cursorFromDescendingPage(rows, (row) => row.id), [rows]);
+  const rows = listQ.data?.data ?? [];
+  const canNext = Boolean(listQ.data?.hasNext) && !listQ.isFetching;
+  const cursor = listQ.data?.nextCursor;
+
+  React.useEffect(() => {
+    if (listQ.isSuccess && !listQ.isFetching && rows.length === 0 && pagination.canPrev) {
+      pagination.goPrev();
+    }
+  }, [listQ.isSuccess, listQ.isFetching, rows.length, pagination]);
 
   const formatOptions = useMemo<SelectOption[]>(() => [
     { value: '', label: t('common.all') },
@@ -344,12 +353,17 @@ export function UserDataTemplatesPanel(props: {
           isLoading={listQ.isLoading}
           isError={listQ.isError}
           error={listQ.error}
+          onRetry={() => void listQ.refetch()}
           filtersActive={filtersActive}
           limit={pagination.limit}
-          canPrev={pagination.canPrev}
+          page={pagination.page}
+          canPrev={pagination.canPrev && !listQ.isFetching}
           canNext={canNext}
           onPrev={() => pagination.goPrev()}
-          onNext={() => pagination.goNext(cursor)}
+          onNext={() => {
+            if (!canNext || !cursor) return;
+            pagination.goToPageWithStack(pagination.page + 1, [...pagination.stack.slice(0, pagination.index + 1), cursor]);
+          }}
           onLimitChange={(n) => pagination.setLimit(n)}
           onCreate={openCreate}
           onDeploy={openDeploy}
