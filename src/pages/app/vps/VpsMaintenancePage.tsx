@@ -11,6 +11,7 @@ import { Select } from '../../../components/ui/Select';
 import { Spinner } from '../../../components/ui/Spinner';
 import { fetchVpsMaintenanceWindows, updateVpsMaintenanceWindow, type VpsMaintenanceWindow } from '../../../lib/api/vpsMaintenance';
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
+import { formatErrorMessage } from '../../../lib/errors';
 import { gateVpsMutation } from '../../../lib/gates/vps';
 import { preflightVpsNotBusy } from './vpsPreflight';
 import { useVps } from './VpsContext';
@@ -163,10 +164,12 @@ export function VpsMaintenancePage() {
   }, [baselineByWeekday]);
 
   const [draft, setDraft] = useState<DraftDay[] | null>(null);
+  const [lastSavedCount, setLastSavedCount] = useState<number | null>(null);
 
   useEffect(() => {
     // Reset draft when switching VPS
     setDraft(null);
+    setLastSavedCount(null);
   }, [vpsId]);
 
   useEffect(() => {
@@ -216,11 +219,15 @@ export function VpsMaintenancePage() {
       return results;
     },
     onMutate: () => {
+      setLastSavedCount(null);
       chrome.acquireLocalLock(vpsRef);
     },
-    onSuccess: (results) => {
-      qc.invalidateQueries({ queryKey: ['vps', vpsId, 'maintenance_windows'] });
+    onSuccess: async (results) => {
+      // Keep the submitted draft visible until fresh server state is available.
+      // Otherwise an older cached response can briefly make saved days look dirty again.
+      await qc.refetchQueries({ queryKey: ['vps', vpsId, 'maintenance_windows'], exact: true });
       setDraft(null);
+      setLastSavedCount(results.length);
 
       for (const r of results) {
         const asId = getMetaActionStateId(r.meta);
@@ -235,8 +242,13 @@ export function VpsMaintenancePage() {
 
       refetchChains();
     },
-    onError: (e: any) => {
+    onError: async (e: any) => {
       if (e?.code === 'BUSY') chrome.openTasks();
+
+      // Updates are sent one weekday at a time. If a later request fails, refresh
+      // the baseline so already persisted weekdays stop being marked as dirty and
+      // a retry submits only the remaining changes.
+      await qc.refetchQueries({ queryKey: ['vps', vpsId, 'maintenance_windows'], exact: true });
     },
     onSettled: () => {
       chrome.releaseLocalLock(vpsRef);
@@ -247,16 +259,22 @@ export function VpsMaintenancePage() {
   const gate = gateVpsMutation({ vps, busyLocal, busyTransaction });
 
   const setAllOpen = () => {
+    saveM.reset();
+    setLastSavedCount(null);
     setDraft((prev) =>
       (prev ?? baselineDraft).map((d) => ({ ...d, is_open: true, opens_at: 0, closes_at: 24 * 60 }))
     );
   };
 
   const setAllClosed = () => {
+    saveM.reset();
+    setLastSavedCount(null);
     setDraft((prev) => (prev ?? baselineDraft).map((d) => ({ ...d, is_open: false })));
   };
 
   const updateDay = (weekday: number, patch: Partial<DraftDay>) => {
+    saveM.reset();
+    setLastSavedCount(null);
     setDraft((prev) => {
       const base = prev ?? baselineDraft;
       return base.map((d) => (d.weekday === weekday ? { ...d, ...patch } : d));
@@ -312,6 +330,14 @@ export function VpsMaintenancePage() {
                 </div>
               </div>
             </Alert>
+          ) : null}
+
+          {lastSavedCount !== null ? (
+            <div className="mt-4" role="status" aria-live="polite" aria-atomic="true">
+              <Alert testId="vps.maintenance.save_success" title={t('vps.maintenance.save_success')} variant="ok">
+                {t('vps.maintenance.save_success_body', { n: lastSavedCount })}
+              </Alert>
+            </div>
           ) : null}
 
           <div className={!gate.allowed ? 'mt-4' : ''}>
@@ -434,9 +460,12 @@ export function VpsMaintenancePage() {
             )}
 
             {saveM.error ? (
-              <Alert title={t('vps.maintenance.save_error')} variant="danger" className="mt-4">
-                {String((saveM.error as any)?.message ?? saveM.error)}
-              </Alert>
+              <div className="mt-4" role="alert" aria-live="assertive" aria-atomic="true">
+                <Alert testId="vps.maintenance.save_error" title={t('vps.maintenance.save_error')} variant="danger">
+                  <div>{t('vps.maintenance.save_error_recovery')}</div>
+                  <div className="mt-2">{formatErrorMessage(saveM.error)}</div>
+                </Alert>
+              </div>
             ) : null}
           </div>
         </CardBody>

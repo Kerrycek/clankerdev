@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { bootstrapVpsAdminWindow, installHaveApiMock } from '../../fixtures';
+import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock } from '../../fixtures';
 
 const vps = {
   id: 123,
@@ -25,6 +25,7 @@ const vps = {
 test.describe('VPS maintenance tab', () => {
   test('opens a weekday and saves it via PUT', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    const maintenanceWindows: Array<{ weekday: number; is_open: boolean; opens_at: number; closes_at: number }> = [];
 
     await installHaveApiMock(page, {
       user: { id: 1, login: 'user', level: 1 },
@@ -32,8 +33,12 @@ test.describe('VPS maintenance tab', () => {
         'GET vpses/123': () => ({ vps }),
         'GET ip_addresses': () => ({ ip_addresses: [] }),
         'GET transaction_chains': () => ({ transaction_chains: [] }),
-        'GET vpses/123/maintenance_windows': () => ({ maintenance_windows: [] }),
-        'PUT vpses/123/maintenance_windows/1': () => ({ maintenance_window: { weekday: 1, is_open: true, opens_at: 0, closes_at: 1440 } }),
+        'GET vpses/123/maintenance_windows': () => ({ maintenance_windows: [...maintenanceWindows] }),
+        'PUT vpses/123/maintenance_windows/1': () => {
+          const saved = { weekday: 1, is_open: true, opens_at: 0, closes_at: 1440 };
+          maintenanceWindows.push(saved);
+          return { maintenance_window: saved };
+        },
       },
     });
 
@@ -58,5 +63,59 @@ test.describe('VPS maintenance tab', () => {
         closes_at: 24 * 60,
       },
     });
+    await expect(page.getByTestId('vps.maintenance.save_success')).toBeVisible();
+    await expect(page.getByTestId('vps.maintenance.save')).toBeDisabled();
+  });
+
+  test('reconciles a partial save and retries only the remaining weekday', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+
+    const maintenanceWindows: Array<{ weekday: number; is_open: boolean; opens_at: number; closes_at: number }> = [];
+    let mondayCalls = 0;
+    let tuesdayCalls = 0;
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'user', level: 1 },
+      handlers: {
+        'GET vpses/123': () => ({ vps }),
+        'GET ip_addresses': () => ({ ip_addresses: [] }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'GET vpses/123/maintenance_windows': () => ({ maintenance_windows: [...maintenanceWindows] }),
+        'PUT vpses/123/maintenance_windows/1': () => {
+          mondayCalls += 1;
+          const saved = { weekday: 1, is_open: true, opens_at: 0, closes_at: 1440 };
+          maintenanceWindows.push(saved);
+          return { maintenance_window: saved };
+        },
+        'PUT vpses/123/maintenance_windows/2': () => {
+          tuesdayCalls += 1;
+          if (tuesdayCalls === 1) return failEnvelope('Temporary Tuesday failure');
+
+          const saved = { weekday: 2, is_open: true, opens_at: 0, closes_at: 1440 };
+          maintenanceWindows.push(saved);
+          return { maintenance_window: saved };
+        },
+      },
+    });
+
+    await page.goto('/app/vps/123/maintenance');
+    await page.getByTestId('vps.maintenance.day.1.open').check();
+    await page.getByTestId('vps.maintenance.day.2.open').check();
+    await expect(page.getByTestId('vps.maintenance.save')).toContainText('(2)');
+
+    await page.getByTestId('vps.maintenance.save').click();
+
+    const error = page.getByTestId('vps.maintenance.save_error');
+    await expect(error).toBeVisible();
+    await expect(error).toContainText('Temporary Tuesday failure');
+    await expect(page.getByTestId('vps.maintenance.save')).toContainText('(1)');
+    expect(mondayCalls).toBe(1);
+    expect(tuesdayCalls).toBe(1);
+
+    await page.getByTestId('vps.maintenance.save').click();
+    await expect(page.getByTestId('vps.maintenance.save_success')).toBeVisible();
+    await expect(page.getByTestId('vps.maintenance.save')).toBeDisabled();
+    expect(mondayCalls).toBe(1);
+    expect(tuesdayCalls).toBe(2);
   });
 });
