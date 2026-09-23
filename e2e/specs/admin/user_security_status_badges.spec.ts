@@ -131,3 +131,54 @@ test('@pr-smoke @pr-smoke-mobile failed admin account-flag updates restore the s
   await expect(passwordReset).not.toBeChecked();
   await expect(page.getByTestId('toast.viewport').getByText('Failed to update flags')).toBeVisible();
 });
+
+test('@pr-smoke @pr-smoke-mobile rejected account lockout stays in context and can be retried', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+
+  const user = {
+    id: 42,
+    login: 'flag-user',
+    level: 1,
+    lockout: false,
+    password_reset: false,
+  };
+  let updates = 0;
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100 },
+    handlers: {
+      'GET users/42': () => ({ user }),
+      'PUT users/42': () => {
+        updates += 1;
+        if (updates === 1) {
+          return {
+            status: 409,
+            contentType: 'application/json',
+            body: JSON.stringify({ status: false, message: 'Account is protected' }),
+          };
+        }
+        user.lockout = true;
+        return { user };
+      },
+    },
+  });
+
+  await page.goto('/admin/users/42/security');
+
+  const lockout = page.getByTestId('admin.user.security.flags.lockout').locator('input');
+  await lockout.click();
+  const dialog = page.getByTestId('admin.user.security.flags.lockout.confirm');
+  await dialog.getByTestId('admin.user.security.flags.lockout.confirm.confirm').click();
+
+  await expect(dialog.getByTestId('admin.user.security.flags.lockout.confirm.error')).toContainText(
+    'Account is protected'
+  );
+  await expect(dialog).toBeVisible();
+  await expect(lockout).not.toBeChecked();
+
+  await dialog.getByTestId('admin.user.security.flags.lockout.confirm.confirm').click();
+
+  await expect(dialog).toBeHidden();
+  await expect(lockout).toBeChecked();
+  expect(updates).toBe(2);
+});
