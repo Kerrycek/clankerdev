@@ -5,6 +5,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useI18n } from '../../../app/i18n';
 import { useAppMode } from '../../../app/appMode';
 import { useChrome } from '../../../components/layout/ChromeContext';
+import { Alert } from '../../../components/ui/Alert';
 import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
@@ -18,6 +19,7 @@ import { formatDateTime } from '../../../lib/format';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
 import { cursorFromDescendingPage } from '../../../lib/lockIndex';
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
+import { formatErrorMessage } from '../../../lib/errors';
 import {
   fetchDnsServerZones,
   fetchDnsServerZoneTransferLogs,
@@ -263,7 +265,7 @@ export function DnsZoneTransfersPage() {
           canNext={hasMore}
           onPrev={pagination.goPrev}
           onNext={() => pagination.goNext(cursor)}
-          onDelete={setConfirmDelete}
+          onDelete={(transfer) => { deleteM.reset(); setConfirmDelete(transfer); }}
         />
       )}
 
@@ -412,7 +414,23 @@ export function DnsZoneTransfersPage() {
         onSubmit={() => createM.mutate()}
       />
 
-      <ConfirmDialog open={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title={t('dns.zone.transfers.delete.title')} description={confirmDelete ? t('dns.zone.transfers.delete.description', { peer: dnsZoneTransferPeerLabel(confirmDelete) }) : ''} confirmLabel={t('common.delete')} confirmVariant="danger" onConfirm={() => deleteM.mutate()} loading={deleteM.isPending} testId="dns.transfers.delete" />
+      <ConfirmDialog
+        open={confirmDelete !== null}
+        onClose={() => { deleteM.reset(); setConfirmDelete(null); }}
+        title={t('dns.zone.transfers.delete.title')}
+        description={confirmDelete ? t('dns.zone.transfers.delete.description', { peer: dnsZoneTransferPeerLabel(confirmDelete) }) : ''}
+        confirmLabel={t('common.delete')}
+        confirmVariant="danger"
+        onConfirm={() => deleteM.mutate()}
+        loading={deleteM.isPending}
+        testId="dns.transfers.delete"
+      >
+        {deleteM.isError ? (
+          <Alert variant="danger" title={t('common.action_failed')} testId="dns.transfers.delete.error">
+            {formatErrorMessage(deleteM.error)}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
     </div>
   );
 }
