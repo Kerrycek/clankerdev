@@ -67,10 +67,10 @@ export function VpsStorageRootDatasetCard(props: {
         <div className="mb-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4" data-testid="vps.storage.root_dataset.metadata">
           <MetadataItem label={t('dataset.field.used')} value={formatMiB(root.used)} />
           <MetadataItem label={t('dataset.field.available')} value={formatMiB(root.available)} />
-          <MetadataItem label={t('dataset.field.reference_quota')} value={root.referenceQuota !== null ? formatMiB(root.referenceQuota) : '∞'} />
-          <MetadataItem label={t('dataset.field.quota')} value={formatMiB(root.quota)} />
-          <MetadataItem label={t('dataset.field.referenced')} value={formatMiB(root.referenced)} />
-          <MetadataItem label={t('common.state')} value={root.state ?? t('common.na')} />
+          <MetadataItem
+            label={t('vps.storage.root_dataset.effective_limit')}
+            value={root.referenceQuota !== null ? formatMiB(root.referenceQuota) : formatMiB(root.quota)}
+          />
           <MetadataItem
             label={t('vps.storage.root_dataset.capacity')}
             value={root.capacityPercent !== null ? t('vps.storage.root_dataset.capacity_percent', { percent: root.capacityPercent }) : t('common.na')}
@@ -105,24 +105,33 @@ export function VpsStorageRootDatasetCard(props: {
           </ChipLink>
         </div>
 
-        <div className="mt-3 text-xs text-muted">{t('vps.storage.root_dataset.no_backup_note')}</div>
         {!props.loading && !props.canCreateSubdataset ? (
           <div className="mt-1 text-xs text-muted">{t('vps.storage.root_dataset.create_subdataset_user_note')}</div>
         ) : null}
 
-        {props.canAdmin ? (
-          <details className="mt-4 rounded-md border border-border bg-surface-2 p-3 text-xs text-muted" data-testid="vps.storage.root_dataset.system_context">
-            <summary className="cursor-pointer font-medium text-fg">{t('vps.storage.root_dataset.system_context.title')}</summary>
-            <div className="mt-2">
-              {t('vps.storage.root_dataset.related_counts', {
-                snapshots: countLabel(root.snapshotCount),
-                mounts: countLabel(root.mountCount),
-                exports: countLabel(root.exportCount),
-              })}
+        <details className="mt-4 rounded-md border border-border bg-surface-2 p-3 text-xs text-muted" data-testid="vps.storage.root_dataset.details">
+          <summary className="cursor-pointer font-medium text-fg">
+            {t(props.canAdmin ? 'vps.storage.root_dataset.details.title_admin' : 'vps.storage.root_dataset.details.title')}
+          </summary>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <MetadataItem label={t('dataset.field.referenced')} value={formatMiB(root.referenced)} />
+            <MetadataItem label={t('dataset.field.reference_quota')} value={root.referenceQuota !== null ? formatMiB(root.referenceQuota) : '∞'} />
+            <MetadataItem label={t('dataset.field.quota')} value={formatMiB(root.quota)} />
+            <MetadataItem label={t('common.state')} value={root.state ?? t('common.na')} />
+          </div>
+          {props.canAdmin ? (
+            <div className="mt-3 border-t border-border pt-3" data-testid="vps.storage.root_dataset.system_context">
+              <div>
+                {t('vps.storage.root_dataset.related_counts', {
+                  snapshots: countLabel(root.snapshotCount),
+                  mounts: countLabel(root.mountCount),
+                  exports: countLabel(root.exportCount),
+                })}
+              </div>
+              <div className="mt-1">{t('vps.storage.root_dataset.system_context.body')}</div>
             </div>
-            <div className="mt-1">{t('vps.storage.root_dataset.system_context.body')}</div>
-          </details>
-        ) : null}
+          ) : null}
+        </details>
       </CardBody>
     </Card>
   );

@@ -61,7 +61,7 @@ export const csVps_core = {
   'vps.mutation.pending.body': 'Tuto operaci neopakuj. Bezpečnostní marker probíhajícího požadavku nelze potvrzením odstranit; před kontrolou výsledku počkej na dokončení nebo obnovení.',
   'vps.tabs.overview': 'Přehled',
   'vps.tabs.network': 'Síť',
-  'vps.tabs.storage': 'Úložiště a zálohy',
+  'vps.tabs.storage': 'Úložiště',
   'vps.tabs.features': 'Funkce',
   'vps.tabs.maintenance': 'Údržba',
   'vps.tabs.history': 'Historie',
