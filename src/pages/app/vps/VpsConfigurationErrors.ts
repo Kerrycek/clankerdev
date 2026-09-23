@@ -18,6 +18,7 @@ const CONFIG_FIELD_ERROR_ALIASES: Record<VpsConfigReviewKey, readonly string[]> 
   swap: ['swap'],
   dns_resolver: ['dns_resolver', 'resolver', 'dns'],
   user_namespace_map: ['user_namespace_map', 'namespace_map'],
+  map_mode: ['map_mode'],
   autostart_priority: ['autostart_priority'],
   start_menu_timeout: ['start_menu_timeout'],
   cgroup_version: ['cgroup_version'],

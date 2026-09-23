@@ -57,6 +57,14 @@ export interface StorageOverviewSummary {
   failedMountCount: number;
 }
 
+export type SsdResizeValidationIssue = 'required' | 'invalid' | 'unchanged' | 'below_used';
+
+export interface SsdResizeValidationResult {
+  ok: boolean;
+  valueMiB: number | null;
+  issue: SsdResizeValidationIssue | null;
+}
+
 type DatasetLike = (StorageDataset | Dataset | ResourceRef | Record<string, unknown>) & { id?: number };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -107,6 +115,37 @@ export function finiteNumber(value: unknown): number | null {
 export function positiveNumber(value: unknown): number | null {
   const n = finiteNumber(value);
   return n !== null && n > 0 ? n : null;
+}
+
+export function ssdSizeGiBInput(valueMiB: unknown): string {
+  const value = positiveNumber(valueMiB);
+  if (value === null) return '';
+  return String(Number((value / 1024).toFixed(2)));
+}
+
+export function validateSsdResize(
+  rawGiB: string,
+  currentMiB: number | null,
+  usedMiB: number | null
+): SsdResizeValidationResult {
+  const normalized = rawGiB.trim().replace(',', '.');
+  if (!normalized) return { ok: false, valueMiB: null, issue: 'required' };
+
+  const valueGiB = Number(normalized);
+  if (!Number.isFinite(valueGiB) || valueGiB <= 0) {
+    return { ok: false, valueMiB: null, issue: 'invalid' };
+  }
+
+  const valueMiB = Math.round(valueGiB * 1024);
+  if (valueMiB <= 0) return { ok: false, valueMiB: null, issue: 'invalid' };
+  if (currentMiB !== null && valueMiB === currentMiB) {
+    return { ok: false, valueMiB, issue: 'unchanged' };
+  }
+  if (usedMiB !== null && valueMiB < Math.ceil(usedMiB)) {
+    return { ok: false, valueMiB, issue: 'below_used' };
+  }
+
+  return { ok: true, valueMiB, issue: null };
 }
 
 export function datasetId(dataset: unknown): number | null {

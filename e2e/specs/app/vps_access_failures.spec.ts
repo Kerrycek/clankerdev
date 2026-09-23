@@ -135,7 +135,7 @@ test.describe('@workflow-matrix VPS access failure regressions', () => {
     await submitPasswordReset(page);
 
     expect((await requestPromise).postDataJSON()).toEqual({ vps: { type: 'secure' } });
-    await expect(page.getByText(/server did not return a task identifier/i)).toBeVisible();
+    await expect(page.getByTestId('vps.access.password.confirm.error')).toContainText(/server did not return a task identifier/i);
     await expect(page.getByTestId('vps.access.generated_password')).toHaveCount(0);
     await expect(page.getByText(secret, { exact: true })).toHaveCount(0);
     await expect(page.getByTestId('modal.action_progress')).toBeHidden();
@@ -167,9 +167,10 @@ test.describe('@workflow-matrix VPS access failure regressions', () => {
     await page.getByTestId('vps.action.root_password_confirm.confirm').click();
 
     expect((await requestPromise).postDataJSON()).toEqual({ vps: { type: 'secure' } });
-    await expect(page.getByText(/server did not return a task identifier/i)).toBeVisible();
+    await expect(page.getByTestId('vps.action.root_password_confirm')).toBeVisible();
+    await expect(page.getByTestId('vps.action.root_password_confirm.error')).toContainText(/server did not return a task identifier/i);
+    await expect(page.getByTestId('vps.action.root_password_confirm.confirm')).toBeDisabled();
     await expect(page.getByText(secret, { exact: true })).toHaveCount(0);
-    await expect(page.getByText('New root password')).toHaveCount(0);
     await expect(page.getByTestId('vps.actions.menu').locator('option[value="action:root_password"]')).toBeDisabled();
   });
 
@@ -225,10 +226,42 @@ test.describe('@workflow-matrix VPS access failure regressions', () => {
     await expect(page.getByText(/server did not return a task identifier/i)).toHaveCount(0);
   });
 
-  test('surfaces an immediate SSH deployment error without reporting success', async ({ page }) => {
+  test('keeps an immediate password reset error in its confirmation and supports retry', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    let postCount = 0;
     await installAccessMock(page, {
-      'POST vpses/123/deploy_public_key': () => failEnvelope('SSH deploy denied immediately'),
+      'POST vpses/123/passwd': () => {
+        postCount += 1;
+        if (postCount === 1) return failEnvelope('Password reset denied immediately');
+        return { vps: { password: 'RETRY-SECRET' }, _meta: { action_state_id: 712 } };
+      },
+      'GET action_states/712': () => ({ action_state: { id: 712, finished: false, status: true, current: 0, total: 1 } }),
+    });
+
+    await page.goto('/app/vps/123/access');
+    await page.getByTestId('vps.access.password.generate').click();
+
+    const dialog = page.getByTestId('vps.access.password.confirm');
+    await expect(dialog).toContainText('vps123.example');
+    await page.getByTestId('vps.access.password.confirm.confirm').click();
+    await expect(page.getByTestId('vps.access.password.confirm.error')).toContainText('Password reset denied immediately');
+    await expect(dialog).toContainText('vps123.example');
+
+    await page.getByTestId('vps.access.password.confirm.confirm').click();
+    await expect(dialog).toBeHidden();
+    expect(postCount).toBe(2);
+  });
+
+  test('keeps an immediate SSH deployment error in its confirmation and supports retry', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    let postCount = 0;
+    await installAccessMock(page, {
+      'POST vpses/123/deploy_public_key': () => {
+        postCount += 1;
+        if (postCount === 1) return failEnvelope('SSH deploy denied immediately');
+        return { vps: {}, _meta: { action_state_id: 713 } };
+      },
+      'GET action_states/713': () => ({ action_state: { id: 713, finished: false, status: true, current: 0, total: 1 } }),
     });
 
     await page.goto('/app/vps/123/access');
@@ -239,8 +272,14 @@ test.describe('@workflow-matrix VPS access failure regressions', () => {
     await page.getByTestId('vps.access.ssh.confirm.confirm').click();
 
     expect((await requestPromise).postDataJSON()).toEqual({ vps: { public_key: 8 } });
-    await expect(page.getByText('SSH deploy denied immediately')).toBeVisible();
+    const dialog = page.getByTestId('vps.access.ssh.confirm');
+    await expect(page.getByTestId('vps.access.ssh.confirm.error')).toContainText('SSH deploy denied immediately');
+    await expect(dialog).toContainText('vps123.example');
     await expect(page.getByText(/Public key deployed:/)).toHaveCount(0);
+
+    await page.getByTestId('vps.access.ssh.confirm.confirm').click();
+    await expect(dialog).toBeHidden();
+    expect(postCount).toBe(2);
   });
 
   test('fails closed when SSH deployment has no action-state id and keeps the safety lock', async ({ page }) => {
@@ -261,7 +300,7 @@ test.describe('@workflow-matrix VPS access failure regressions', () => {
     await page.getByTestId('vps.access.ssh.confirm.confirm').click();
 
     expect((await requestPromise).postDataJSON()).toEqual({ vps: { public_key: 8 } });
-    await expect(page.getByText(/server did not return a task identifier/i)).toBeVisible();
+    await expect(page.getByTestId('vps.access.ssh.confirm.error')).toContainText(/server did not return a task identifier/i);
     await expect(page.getByText(/Public key deployed:/)).toHaveCount(0);
     await expect(page.getByTestId('vps.mutation.uncertain')).toBeVisible();
     await expect(page.getByTestId('vps.access.ssh.deploy')).toBeDisabled();

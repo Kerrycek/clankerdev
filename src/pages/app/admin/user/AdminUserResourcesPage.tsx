@@ -3,6 +3,7 @@ import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/rea
 
 import { useI18n } from '../../../../app/i18n';
 import { useToasts } from '../../../../app/toasts';
+import { Alert } from '../../../../components/ui/Alert';
 import { Badge } from '../../../../components/ui/Badge';
 import { Button } from '../../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../../components/ui/Card';
@@ -21,6 +22,7 @@ import {
   type UserClusterResourcePackage,
 } from '../../../../lib/api/clusterResourcePackages';
 import { fetchEnvironments } from '../../../../lib/api/infra';
+import { formatErrorMessage } from '../../../../lib/errors';
 import { useAdminUserContext } from './AdminUserLayout';
 
 function label(value: unknown, fallback = '—') {
@@ -154,7 +156,6 @@ export function AdminUserResourcesPage() {
     },
     onError: (error) => {
       if (String((error as Error).message) === 'validation') setValidationError(true);
-      else pushToast({ variant: 'danger', title: t('common.error'), body: String(error) });
     },
   });
   const removeM = useMutation({
@@ -172,7 +173,17 @@ export function AdminUserResourcesPage() {
           <h1 className="text-xl font-semibold">{t('admin.user.resources.title')}</h1>
           <p className="mt-1 text-sm text-muted">{t('admin.user.resources.subtitle')}</p>
         </div>
-        <Button variant="primary" onClick={() => setAddOpen(true)} testId="admin.user.resources.add">{t('admin.user.resources.add')}</Button>
+        <Button
+          variant="primary"
+          onClick={() => {
+            addM.reset();
+            setValidationError(false);
+            setAddOpen(true);
+          }}
+          testId="admin.user.resources.add"
+        >
+          {t('admin.user.resources.add')}
+        </Button>
       </div>
       {assignmentsQ.isLoading ? <div className="text-sm text-muted">{t('common.loading')}</div> : null}
       {!assignmentsQ.isLoading && grouped.length === 0 ? <EmptyState title={t('admin.user.resources.empty.title')} body={t('admin.user.resources.empty.body')} /> : null}
@@ -231,7 +242,16 @@ export function AdminUserResourcesPage() {
                   {personal ? (
                     <Button size="sm" variant="secondary" to={`/admin/cluster/resource-packages/${pkg?.id}`}>{t('admin.user.resources.open')}</Button>
                   ) : (
-                    <Button size="sm" variant="danger" onClick={() => setRemoveRecord(row)}>{t('admin.user.resources.remove')}</Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={() => {
+                        removeM.reset();
+                        setRemoveRecord(row);
+                      }}
+                    >
+                      {t('admin.user.resources.remove')}
+                    </Button>
                   )}
                 </div>
               </div>;
@@ -240,7 +260,35 @@ export function AdminUserResourcesPage() {
           </CardBody>
         </Card>
       ))}
-      <Modal open={addOpen} onClose={() => !addM.isPending && setAddOpen(false)} title={t('admin.user.resources.add.title')} testId="admin.user.resources.add.modal" footer={<><Button variant="secondary" onClick={() => setAddOpen(false)}>{t('common.cancel')}</Button><Button variant="primary" loading={addM.isPending} onClick={() => addM.mutate()}>{t('admin.user.resources.add.save')}</Button></>}>
+      <Modal
+        open={addOpen}
+        onClose={() => {
+          if (addM.isPending) return;
+          addM.reset();
+          setValidationError(false);
+          setAddOpen(false);
+        }}
+        title={t('admin.user.resources.add.title')}
+        testId="admin.user.resources.add.modal"
+        footer={(
+          <>
+            <Button
+              variant="secondary"
+              disabled={addM.isPending}
+              onClick={() => {
+                addM.reset();
+                setValidationError(false);
+                setAddOpen(false);
+              }}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button variant="primary" loading={addM.isPending} onClick={() => addM.mutate()}>
+              {t('admin.user.resources.add.save')}
+            </Button>
+          </>
+        )}
+      >
         <div className="space-y-3">
           <label className="block text-sm font-medium">
             <span className="mb-1 block">{t('admin.user.resources.add.environment')}</span>
@@ -255,9 +303,37 @@ export function AdminUserResourcesPage() {
             <Input ariaLabel={t('admin.user.resources.add.comment')} value={comment} onChange={(e) => setComment(e.target.value)} />
           </label>
           {validationError ? <div className="text-sm text-danger">{t('admin.user.resources.add.validation')}</div> : null}
+          {addM.isError && String((addM.error as Error).message) !== 'validation' ? (
+            <div role="alert" aria-live="assertive" aria-atomic="true">
+              <Alert variant="danger" title={t('common.error')} testId="admin.user.resources.add.error">
+                {formatErrorMessage(addM.error)}
+              </Alert>
+            </div>
+          ) : null}
         </div>
       </Modal>
-      <ConfirmDialog open={Boolean(removeRecord)} onCancel={() => setRemoveRecord(null)} onConfirm={() => removeM.mutate()} confirmLoading={removeM.isPending} danger title={t('admin.user.resources.remove.title')} description={t('admin.user.resources.remove.body')} confirmLabel={t('admin.user.resources.remove')} />
+      <ConfirmDialog
+        open={Boolean(removeRecord)}
+        onCancel={() => {
+          removeM.reset();
+          setRemoveRecord(null);
+        }}
+        onConfirm={() => removeM.mutate()}
+        confirmLoading={removeM.isPending}
+        danger
+        title={t('admin.user.resources.remove.title')}
+        description={t('admin.user.resources.remove.body')}
+        confirmLabel={t('admin.user.resources.remove')}
+        testId="admin.user.resources.remove.confirm"
+      >
+        {removeM.error ? (
+          <div role="alert" aria-live="assertive" aria-atomic="true">
+            <Alert variant="danger" title={t('common.error')} testId="admin.user.resources.remove.error">
+              {formatErrorMessage(removeM.error)}
+            </Alert>
+          </div>
+        ) : null}
+      </ConfirmDialog>
     </div>
   );
 }

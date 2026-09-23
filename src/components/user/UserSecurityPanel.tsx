@@ -61,15 +61,25 @@ export function UserSecurityPanel(props: {
   }, [storedLockout, storedPasswordReset]);
 
   const flagM = useMutation({
-    mutationFn: async (payload: Record<string, unknown>) => {
-      await updateUser(props.userId, payload);
+    mutationFn: async (change: { field: 'lockout' | 'password_reset'; value: boolean }) => {
+      await updateUser(props.userId, { [change.field]: change.value });
+    },
+    onMutate: (change) => {
+      const previous = change.field === 'lockout' ? lockout : passwordReset;
+      if (change.field === 'lockout') setLockout(change.value);
+      else setPasswordReset(change.value);
+      return { previous };
     },
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['users', props.userId] });
       await qc.invalidateQueries({ queryKey: ['user', 'current'] });
       toasts.pushToast({ variant: 'ok', title: t('security.flags.toast.saved.title'), body: t('security.flags.toast.saved.body') });
     },
-    onError: (e) => {
+    onError: (e, change, context) => {
+      if (context) {
+        if (change.field === 'lockout') setLockout(context.previous);
+        else setPasswordReset(context.previous);
+      }
       toasts.pushToast({ variant: 'danger', title: t('security.flags.toast.failed.title'), body: formatErrorMessage(e) });
     },
   });
@@ -160,8 +170,7 @@ export function UserSecurityPanel(props: {
                 description={t('security.flags.password_reset.desc')}
                 checked={passwordReset}
                 onChange={(v) => {
-                  setPasswordReset(v);
-                  flagM.mutate({ password_reset: v });
+                  flagM.mutate({ field: 'password_reset', value: v });
                 }}
                 disabled={flagM.isPending}
                 testId={`${prefix}.flags.password_reset`}
@@ -175,8 +184,7 @@ export function UserSecurityPanel(props: {
                   if (v) {
                     setConfirmLockout(true);
                   } else {
-                    setLockout(false);
-                    flagM.mutate({ lockout: false });
+                    flagM.mutate({ field: 'lockout', value: false });
                   }
                 }}
                 disabled={flagM.isPending}
@@ -237,8 +245,7 @@ export function UserSecurityPanel(props: {
         }}
         onConfirm={() => {
           setConfirmLockout(false);
-          setLockout(true);
-          flagM.mutate({ lockout: true });
+          flagM.mutate({ field: 'lockout', value: true });
         }}
         testId={`${prefix}.flags.lockout.confirm`}
       />

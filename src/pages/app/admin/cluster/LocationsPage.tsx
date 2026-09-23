@@ -7,7 +7,7 @@ import { useI18n } from '../../../../app/i18n';
 import { useToasts } from '../../../../app/toasts';
 import { formatErrorMessage } from '../../../../lib/errors';
 import { parseBoolParam, parsePositiveInt } from '../../../../lib/parse';
-import { safeAbsoluteHttpUrl } from '../../../../lib/safeUrl';
+import { normalizeRemoteConsoleServer } from '../../../../lib/consoleToken';
 import { parseNumericToken, splitKeyValueToken, tokenizeSmartInput, unquoteSmartValue } from '../../../../lib/smartFilter';
 import {
   createLocation,
@@ -87,6 +87,7 @@ function buildPayload(form: FormState): { payload: Record<string, unknown>; erro
   const domain = form.domain.trim();
   const description = form.description.trim();
   const remoteConsoleServer = form.remoteConsoleServer.trim();
+  const normalizedRemoteConsoleServer = normalizeRemoteConsoleServer(remoteConsoleServer);
 
   if (!label) errors.push('label');
   const envId = parsePositiveInt(form.environmentId);
@@ -94,6 +95,7 @@ function buildPayload(form: FormState): { payload: Record<string, unknown>; erro
 
   // `domain` may be optional on backend, but it is a core identifier for operators.
   if (!domain) errors.push('domain');
+  if (remoteConsoleServer && !normalizedRemoteConsoleServer) errors.push('remote_console_server');
 
   const payload: Record<string, unknown> = {
     label,
@@ -101,7 +103,7 @@ function buildPayload(form: FormState): { payload: Record<string, unknown>; erro
     environment: envId,
     domain,
     has_ipv6: form.hasIpv6,
-    remote_console_server: remoteConsoleServer || undefined,
+    remote_console_server: normalizedRemoteConsoleServer || undefined,
   };
 
   return { payload, errors };
@@ -816,7 +818,7 @@ export function LocationsPage() {
             {locations.map((loc) => {
               const desc = typeof loc.description === 'string' ? loc.description.trim() : '';
               const remote = typeof (loc as any).remote_console_server === 'string' ? String((loc as any).remote_console_server).trim() : '';
-              const remoteHref = safeAbsoluteHttpUrl(remote);
+              const remoteHref = normalizeRemoteConsoleServer(remote);
               const hasIpv6 = Boolean((loc as any).has_ipv6);
               return (
                 <tr key={loc.id} data-testid={`admin.cluster.locations.row.${loc.id}`}>
@@ -917,6 +919,11 @@ export function LocationsPage() {
                 }}
                 placeholder="https://…"
               />
+              {formTouched && payloadInfo.errors.includes('remote_console_server') ? (
+                <div className="mt-1 text-xs text-danger" data-testid="admin.cluster.locations.editor.remote_console_error">
+                  {t('admin.cluster.locations.editor.remote_console_error')}
+                </div>
+              ) : null}
             </div>
           </div>
 

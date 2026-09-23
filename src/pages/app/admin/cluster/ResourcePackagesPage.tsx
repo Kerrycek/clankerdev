@@ -11,6 +11,7 @@ import { parsePositiveInt } from '../../../../lib/parse';
 import { parseNumericToken, splitKeyValueToken, tokenizeSmartInput, unquoteSmartValue } from '../../../../lib/smartFilter';
 
 import { FilterBar } from '../../../../components/layout/FilterBar';
+import { Alert } from '../../../../components/ui/Alert';
 import { Badge } from '../../../../components/ui/Badge';
 import { Button } from '../../../../components/ui/Button';
 import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog';
@@ -330,11 +331,13 @@ export function ResourcePackagesPage() {
   const [label, setLabel] = useState('');
 
   function openCreate() {
+    createM.reset();
     setEditor({ mode: 'create' });
     setLabel('');
   }
 
   function openEdit(pkg: ClusterResourcePackage) {
+    updateM.reset();
     setEditor({ mode: 'edit', pkg });
     setLabel(typeof pkg.label === 'string' ? pkg.label : '');
   }
@@ -347,7 +350,6 @@ export function ResourcePackagesPage() {
       await qc.invalidateQueries({ queryKey: ['cluster_resource_packages'] });
       pushToast({ variant: 'ok', title: t('admin.cluster.resource_packages.toast.created') });
     },
-    onError: (err) => pushToast({ variant: 'danger', title: t('common.error'), body: formatErrorMessage(err) }),
   });
 
   const updateM = useMutation({
@@ -362,7 +364,6 @@ export function ResourcePackagesPage() {
       await qc.invalidateQueries({ queryKey: ['cluster_resource_packages'] });
       pushToast({ variant: 'ok', title: t('admin.cluster.resource_packages.toast.updated') });
     },
-    onError: (err) => pushToast({ variant: 'danger', title: t('common.error'), body: formatErrorMessage(err) }),
   });
 
   const [deleteState, setDeleteState] = useState<{ open: boolean; pkg: ClusterResourcePackage | null }>({
@@ -565,6 +566,7 @@ export function ResourcePackagesPage() {
                         disabled={personal}
                         disabledReason={personal ? t('admin.cluster.resource_packages.delete_disabled.personal') : undefined}
                         onClick={() => {
+                          deleteM.reset();
                           setDeleteState({ open: true, pkg: p });
                         }}
                         testId={`admin.cluster.resource_packages.row.${id}.delete`}
@@ -583,12 +585,25 @@ export function ResourcePackagesPage() {
       <Modal
         open={Boolean(editor)}
         title={editor?.mode === 'edit' ? t('admin.cluster.resource_packages.edit.title') : t('admin.cluster.resource_packages.create.title')}
-        onClose={() => (editorBusy ? null : setEditor(null))}
+        onClose={() => {
+          if (editorBusy) return;
+          if (editor?.mode === 'edit') updateM.reset();
+          else createM.reset();
+          setEditor(null);
+        }}
         testId="admin.cluster.resource_packages.editor"
         size="sm"
         footer={
           <div className="flex items-center justify-end gap-2">
-            <Button variant="secondary" onClick={() => setEditor(null)} disabled={editorBusy}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                if (editor?.mode === 'edit') updateM.reset();
+                else createM.reset();
+                setEditor(null);
+              }}
+              disabled={editorBusy}
+            >
               {t('common.cancel')}
             </Button>
             <Button
@@ -623,12 +638,18 @@ export function ResourcePackagesPage() {
               <div className="mt-2 text-xs text-muted">{t('admin.cluster.resource_packages.form.scope_hint')}</div>
             ) : null}
           </div>
+          {(editor?.mode === 'edit' ? updateM.isError : createM.isError) ? (
+            <Alert variant="danger" title={t('common.error')} testId="admin.cluster.resource_packages.editor.error">
+              {formatErrorMessage(editor?.mode === 'edit' ? updateM.error : createM.error)}
+            </Alert>
+          ) : null}
         </div>
       </Modal>
 
       <ConfirmDialog
         open={deleteState.open}
         onCancel={() => {
+          deleteM.reset();
           setDeleteState({ open: false, pkg: null });
         }}
         onConfirm={() => deleteM.mutate()}
@@ -642,11 +663,27 @@ export function ResourcePackagesPage() {
       >
         {deletePkg ? (
           <div className="space-y-3">
+            <div className="rounded-md border border-border bg-surface-subtle px-3 py-2">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted">
+                {t('admin.cluster.resource_packages.delete_confirm.target')}
+              </div>
+              <div className="mt-1 font-medium text-fg">
+                {typeof deletePkg.label === 'string' && deletePkg.label.trim() ? deletePkg.label.trim() : `#${deletePkg.id}`}
+                {typeof deletePkg.label === 'string' && deletePkg.label.trim() ? (
+                  <span className="ml-2 text-sm font-normal text-muted">#{deletePkg.id}</span>
+                ) : null}
+              </div>
+            </div>
             <div className="text-sm text-muted">
               {t('admin.cluster.resource_packages.delete_confirm.impact', {
                 count: deleteImpactQ.isLoading || deleteImpactQ.isError ? '—' : String(deleteImpactQ.data ?? 0),
               })}
             </div>
+            {deleteM.isError ? (
+              <Alert variant="danger" title={t('common.error')} testId="admin.cluster.resource_packages.delete_confirm.error">
+                {formatErrorMessage(deleteM.error)}
+              </Alert>
+            ) : null}
           </div>
         ) : null}
       </ConfirmDialog>

@@ -188,7 +188,7 @@ export function DnsServersPage() {
 
                   <div className="mt-4 grid grid-cols-2 gap-2 border-t border-border pt-3" role="group" aria-label={t('common.actions')}>
                     <ActionButton size="sm" variant="ghost" className="min-h-11 min-w-0 px-3" title={t('common.edit')} ariaLabel={t('common.edit')} testId={`admin.cluster.dns_servers.card.${row.id}.edit`} onClick={() => setEditor({ mode: 'edit', server: row })}><Pencil className="h-4 w-4" aria-hidden />{t('common.edit')}</ActionButton>
-                    <ActionButton size="sm" variant="danger" className="min-h-11 min-w-0 px-3" title={t('common.delete')} ariaLabel={t('common.delete')} testId={`admin.cluster.dns_servers.card.${row.id}.delete`} onClick={() => setConfirmDelete(row)}><Trash2 className="h-4 w-4" aria-hidden />{t('common.delete')}</ActionButton>
+                    <ActionButton size="sm" variant="danger" className="min-h-11 min-w-0 px-3" title={t('common.delete')} ariaLabel={t('common.delete')} testId={`admin.cluster.dns_servers.card.${row.id}.delete`} onClick={() => { deleteM.reset(); setConfirmDelete(row); }}><Trash2 className="h-4 w-4" aria-hidden />{t('common.delete')}</ActionButton>
                   </div>
                 </div>
               </Card>
@@ -238,7 +238,7 @@ export function DnsServersPage() {
             }
           >
               <thead><tr className="text-left text-xs uppercase tracking-wide text-faint"><th className="py-2 pl-4 pr-3">{t('common.name')}</th><th className="py-2 pr-3">{t('common.node')}</th><th className="py-2 pr-3">{t('common.ipv4')}</th><th className="py-2 pr-3">{t('common.ipv6')}</th><th className="py-2 pr-3">{t('common.flags')}</th><th className="py-2 pr-4">{t('common.actions')}</th></tr></thead>
-              <tbody>{rows.map((row) => <tr key={row.id} className="border-t border-border" data-testid={`admin.cluster.dns_servers.row.${row.id}`}><td className="py-2 pl-4 pr-3 font-medium text-fg">{String(row.name ?? `#${row.id}`)}</td><td className="py-2 pr-3">{nodeLabel(row)}</td><td className="py-2 pr-3">{row.ipv4_addr || t('common.na')}</td><td className="py-2 pr-3">{row.ipv6_addr || t('common.na')}</td><td className="py-2 pr-3"><div className="flex flex-wrap gap-2">{row.hidden ? <Badge variant="warn">{t('common.hidden')}</Badge> : null}{row.enable_user_dns_zones ? <Badge variant="ok">{t('admin.cluster.dns_servers.badge.user_zones')}</Badge> : <Badge variant="neutral">{t('admin.cluster.dns_servers.badge.no_user_zones')}</Badge>}</div></td><td className="py-2 pr-4 text-right"><div className="inline-flex items-center justify-end gap-1" role="group" aria-label={t('common.actions')}><ActionButton size="sm" variant="ghost" className="h-8 w-8 min-w-8 px-0" title={t('common.edit')} ariaLabel={t('common.edit')} testId={`admin.cluster.dns_servers.row.${row.id}.edit`} onClick={() => setEditor({ mode: 'edit', server: row })}><Pencil className="h-4 w-4" aria-hidden /></ActionButton><ActionButton size="sm" variant="danger" className="h-8 w-8 min-w-8 px-0" title={t('common.delete')} ariaLabel={t('common.delete')} testId={`admin.cluster.dns_servers.row.${row.id}.delete`} onClick={() => setConfirmDelete(row)}><Trash2 className="h-4 w-4" aria-hidden /></ActionButton></div></td></tr>)}</tbody>
+              <tbody>{rows.map((row) => <tr key={row.id} className="border-t border-border" data-testid={`admin.cluster.dns_servers.row.${row.id}`}><td className="py-2 pl-4 pr-3 font-medium text-fg">{String(row.name ?? `#${row.id}`)}</td><td className="py-2 pr-3">{nodeLabel(row)}</td><td className="py-2 pr-3">{row.ipv4_addr || t('common.na')}</td><td className="py-2 pr-3">{row.ipv6_addr || t('common.na')}</td><td className="py-2 pr-3"><div className="flex flex-wrap gap-2">{row.hidden ? <Badge variant="warn">{t('common.hidden')}</Badge> : null}{row.enable_user_dns_zones ? <Badge variant="ok">{t('admin.cluster.dns_servers.badge.user_zones')}</Badge> : <Badge variant="neutral">{t('admin.cluster.dns_servers.badge.no_user_zones')}</Badge>}</div></td><td className="py-2 pr-4 text-right"><div className="inline-flex items-center justify-end gap-1" role="group" aria-label={t('common.actions')}><ActionButton size="sm" variant="ghost" className="h-8 w-8 min-w-8 px-0" title={t('common.edit')} ariaLabel={t('common.edit')} testId={`admin.cluster.dns_servers.row.${row.id}.edit`} onClick={() => setEditor({ mode: 'edit', server: row })}><Pencil className="h-4 w-4" aria-hidden /></ActionButton><ActionButton size="sm" variant="danger" className="h-8 w-8 min-w-8 px-0" title={t('common.delete')} ariaLabel={t('common.delete')} testId={`admin.cluster.dns_servers.row.${row.id}.delete`} onClick={() => { deleteM.reset(); setConfirmDelete(row); }}><Trash2 className="h-4 w-4" aria-hidden /></ActionButton></div></td></tr>)}</tbody>
           </TableCard>
         </>
       )}
@@ -255,7 +255,23 @@ export function DnsServersPage() {
         </div>
       </Modal>
 
-      <ConfirmDialog testId="admin.cluster.dns_servers.delete_confirm" open={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title={t('admin.cluster.dns_servers.delete.title')} description={confirmDelete ? t('admin.cluster.dns_servers.delete.description', { name: String(confirmDelete.name ?? `#${confirmDelete.id}`) }) : ''} confirmLabel={t('common.delete')} confirmVariant="danger" onConfirm={() => deleteM.mutate()} loading={deleteM.isPending} />
+      <ConfirmDialog
+        testId="admin.cluster.dns_servers.delete_confirm"
+        open={confirmDelete !== null}
+        onClose={() => { deleteM.reset(); setConfirmDelete(null); }}
+        title={t('admin.cluster.dns_servers.delete.title')}
+        description={confirmDelete ? t('admin.cluster.dns_servers.delete.description', { name: String(confirmDelete.name ?? `#${confirmDelete.id}`) }) : ''}
+        confirmLabel={t('common.delete')}
+        confirmVariant="danger"
+        onConfirm={() => deleteM.mutate()}
+        loading={deleteM.isPending}
+      >
+        {deleteM.isError ? (
+          <Alert variant="danger" title={t('common.error')} testId="admin.cluster.dns_servers.delete_error">
+            {formatErrorMessage(deleteM.error)}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
     </div>
   );
 }

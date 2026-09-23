@@ -76,3 +76,68 @@ test('@smoke profile: WebAuthn credentials edit and delete flows', async ({ page
 
   await expect(page.getByTestId('profile.mfa.webauthn.empty')).toBeVisible();
 });
+
+test('@pr-smoke @pr-smoke-mobile profile: security dialogs do not retain errors from a previous target', async ({
+  page,
+}) => {
+  const user = {
+    id: 1,
+    login: 'e2e',
+    level: 1,
+    enable_multi_factor_auth: true,
+  };
+  const webauthnCredential = {
+    id: 20,
+    label: 'Security key',
+    enabled: true,
+    use_count: 1,
+  };
+  const knownDevice = {
+    id: 30,
+    api_ip_addr: '203.0.113.10',
+    client_ip_addr: '203.0.113.10',
+    user_agent: 'Mozilla/5.0 Chrome/120.0.0.0',
+  };
+
+  await setUiSettingsLocalStorage(page, { language: 'en' });
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+  await installHaveApiMock(page, {
+    handlers: {
+      'GET users/current': () => ({ user }),
+      'GET users/1/totp_devices': () => ({ totp_devices: [] }),
+      'GET users/1/webauthn_credentials': () => ({ webauthn_credentials: [webauthnCredential] }),
+      'GET users/1/known_devices': () => ({ known_devices: [knownDevice] }),
+      'PUT users/1/webauthn_credentials/20': () => ({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: false, message: 'Credential update rejected' }),
+      }),
+      'DELETE users/1/known_devices/30': () => ({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: false, message: 'Device removal rejected' }),
+      }),
+    },
+  });
+
+  await page.goto('/app/profile/mfa');
+
+  const editCredential = page.locator('[data-testid="profile.mfa.webauthn.row.20.edit"]:visible');
+  await editCredential.click();
+  await page.getByTestId('profile.mfa.webauthn.edit.save').click();
+  await expect(page.getByTestId('profile.mfa.webauthn.edit.error')).toBeVisible();
+  await page.getByTestId('profile.mfa.webauthn.edit.cancel').click();
+
+  await editCredential.click();
+  await expect(page.getByTestId('profile.mfa.webauthn.edit.error')).toHaveCount(0);
+  await page.getByTestId('profile.mfa.webauthn.edit.cancel').click();
+
+  const forgetDevice = page.locator('[data-testid="profile.mfa.known_devices.forget.30"]:visible');
+  await forgetDevice.click();
+  await page.getByTestId('profile.mfa.known_devices.forget.confirm.confirm').click();
+  await expect(page.getByTestId('profile.mfa.known_devices.forget.error')).toBeVisible();
+  await page.getByTestId('profile.mfa.known_devices.forget.confirm.cancel').click();
+
+  await forgetDevice.click();
+  await expect(page.getByTestId('profile.mfa.known_devices.forget.error')).toHaveCount(0);
+});

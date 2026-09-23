@@ -7,6 +7,7 @@ import { useI18n } from '../../../app/i18n';
 import { useChrome } from '../../../components/layout/ChromeContext';
 import { ActionButton } from '../../../components/ui/ActionButton';
 import { Alert } from '../../../components/ui/Alert';
+import { Badge } from '../../../components/ui/Badge';
 import { Button } from '../../../components/ui/Button';
 import { Card, CardHeader } from '../../../components/ui/Card';
 import { Checkbox } from '../../../components/ui/Checkbox';
@@ -21,6 +22,7 @@ import { explicitUserNamespaceOwnerId, fetchUserNamespaceMaps } from '../../../l
 import { updateVps } from '../../../lib/api/vps';
 import { gateVpsMutation } from '../../../lib/gates/vps';
 import { objectRef } from '../../../lib/objectRef';
+import { formatMiB } from '../../../lib/format';
 import { preflightVpsNotBusy } from './vpsPreflight';
 import { useVps } from './VpsContext';
 import { freezeVpsMutationSnapshot, type VpsMutationSnapshot } from './VpsMutationSnapshot';
@@ -28,6 +30,7 @@ import {
   ADMIN_LOCK_TYPES,
   CONFIG_FIELD_META,
   START_MENU_TIMEOUT_MAX,
+  VPS_MAP_MODES,
   buildPayload,
   createBuildErrorResult,
   currentResourceLabel,
@@ -37,6 +40,7 @@ import {
   resourceId,
   userNamespaceMapLabel,
   type CgroupVersion,
+  type VpsMapMode,
   type VpsConfigDraft,
   type VpsConfigReviewKey,
 } from './VpsConfigurationModel';
@@ -75,7 +79,7 @@ function mergeFieldErrorMessages(args: {
 
 export function VpsConfigurationPage() {
   const auth = useAuth();
-  const { mode } = useAppMode();
+  const { basePath, mode } = useAppMode();
   const isAdminMode = mode === 'admin';
   const canEditAdminConfig = isAdminMode && auth.role === 'admin';
   const canMutateVps = !isAdminMode || canEditAdminConfig;
@@ -186,6 +190,8 @@ export function VpsConfigurationPage() {
         return optionLabel(dnsOptions, item.dnsResolver, t('vps.config.option.dns_unmanaged'));
       case 'user_namespace_map':
         return optionLabel(userNamespaceMapOptions, item.userNamespaceMap, t('vps.config.option.no_user_namespace_maps_available'));
+      case 'map_mode':
+        return t(`vps.config.option.map_mode.${item.mapMode}`);
       case 'cgroup_version':
         return item.cgroupVersion === 'cgroup_any' ? t('vps.config.option.cgroup_any') : item.cgroupVersion.replace('_', ' ');
       case 'allow_admin_modifications':
@@ -225,6 +231,7 @@ export function VpsConfigurationPage() {
 
   const applySave = () => {
     if (saveDisabled) return;
+    saveM.reset();
     setConfirmOpen(true);
   };
 
@@ -344,6 +351,26 @@ export function VpsConfigurationPage() {
         <Field label={t('vps.config.field.swap')} help={t('vps.config.help.mib')} errors={fieldMessages('swap')}>
           <Input value={effective.swap} type="number" min={0} step={1} onChange={(e) => patchDraft({ swap: e.target.value })} disabled={saveM.isPending} />
         </Field>
+        {canEditAdminConfig ? (
+          <div className="md:col-span-3 flex flex-col gap-3 rounded-md border border-border bg-surface-2 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="text-sm font-semibold text-fg">{t('vps.config.field.ssd')}</div>
+              <div className="mt-1 text-xs text-muted">
+                {t('vps.config.help.ssd', { size: typeof vps.diskspace === 'number' ? formatMiB(vps.diskspace) : t('common.na') })}
+              </div>
+            </div>
+            <Button
+              to={`${basePath}/vps/${vpsId}/storage?resize=ssd`}
+              variant="secondary"
+              disabled={dirty || saveM.isPending}
+              disabledReason={dirty ? t('vps.config.help.ssd_unsaved') : undefined}
+              testId="vps.config.ssd.resize"
+              className="shrink-0"
+            >
+              {t('vps.storage.resize.open')}
+            </Button>
+          </div>
+        ) : null}
       </VpsConfigSectionCard>
 
       <VpsConfigSectionCard
@@ -383,6 +410,20 @@ export function VpsConfigurationPage() {
             />
           )}
         </Field>
+        {canEditAdminConfig ? (
+          <Field label={t('vps.config.field.map_mode')} help={t('vps.config.help.map_mode')} errors={fieldMessages('map_mode')}>
+            <Select
+              value={effective.mapMode}
+              onChange={(e) => patchDraft({ mapMode: e.target.value as VpsMapMode })}
+              disabled={saveM.isPending}
+              options={VPS_MAP_MODES.map((mode) => ({
+                value: mode,
+                label: t(`vps.config.option.map_mode.${mode}`),
+              }))}
+              testId="vps.config.map_mode"
+            />
+          </Field>
+        ) : null}
       </VpsConfigSectionCard>
 
       <VpsConfigSectionCard
@@ -454,7 +495,21 @@ export function VpsConfigurationPage() {
           <Field label={t('vps.config.field.cpu_limit')} help={t('vps.config.help.cpu_limit_nullable')} errors={fieldMessages('cpu_limit')}>
             <Input value={effective.cpuLimit} type="number" min={0} step={1} onChange={(e) => patchDraft({ cpuLimit: e.target.value })} disabled={saveM.isPending} />
           </Field>
-          <Field label={t('vps.config.field.autostart_priority')} help={t('vps.config.help.autostart_priority')} errors={fieldMessages('autostart_priority')}>
+          <Field
+            label={(
+              <span className="flex flex-wrap items-center gap-2">
+                <span>{t('vps.config.field.autostart_priority')}</span>
+                <Badge
+                  variant={vps.autostart_enable === true ? 'ok' : 'neutral'}
+                  testId="vps.config.autostart_status"
+                >
+                  {t(vps.autostart_enable === true ? 'vps.config.autostart.enabled' : 'vps.config.autostart.disabled')}
+                </Badge>
+              </span>
+            )}
+            help={t('vps.config.help.autostart_priority')}
+            errors={fieldMessages('autostart_priority')}
+          >
             <Input
               value={effective.autostartPriority}
               type="number"
@@ -504,8 +559,22 @@ export function VpsConfigurationPage() {
           vpsId, payload: Object.freeze({ ...result.payload }), canMutate: canMutateVps,
           knownBusy: busyTransaction || busyLocalLock, objectLabel,
         }))}
+        testId="vps.config.confirm"
       >
         <div className="space-y-3">
+          {saveM.error ? (
+            <div data-testid="vps.config.confirm.error">
+              {fieldErrors.length > 0 ? (
+                <VpsConfigFieldErrorsAlert errors={fieldErrors} labelForKey={labelForKey} />
+              ) : (
+                <Alert variant="danger">
+                  {isMissingActionStateError(saveM.error)
+                    ? t('vps.mutation.error.missing_action_state')
+                    : String((saveM.error as Error)?.message ?? saveM.error)}
+                </Alert>
+              )}
+            </div>
+          ) : null}
           <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.config.confirm.target" />
           <VpsConfigChangesList changes={changes} compact />
         </div>

@@ -20,6 +20,7 @@ export interface Vps {
   pool?: ResourceRef;
   manage_hostname?: boolean;
   cgroup_version?: number | string;
+  map_mode?: 'native' | 'zfs' | string;
   allow_admin_modifications?: boolean;
   enable_network?: boolean;
   autostart_enable?: boolean;
