@@ -172,14 +172,78 @@ test('@workflow-matrix @smoke admin requests: one list row opens the canonical d
     /https:\/\/www\.openstreetmap\.org\/export\/embed\.html\?.*marker=49\.835644%2C18\.284343/
   );
   const mapLink = page.getByTestId('admin.requests.detail.registration.address.map.link');
+  const copyAddress = page.getByTestId('admin.requests.detail.registration.address.map.copy');
+  await expect(copyAddress).toHaveAccessibleName(/copy applicant address/i);
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (text: string) => {
+          (window as typeof window & { __copiedRequestAddress?: string }).__copiedRequestAddress = text;
+        },
+      },
+    });
+  });
+  await copyAddress.click();
+  await expect.poll(() => page.evaluate(
+    () => (window as typeof window & { __copiedRequestAddress?: string }).__copiedRequestAddress,
+  )).toBe('Stodolní 138/44, 14400 Ostrava, Česko');
+  await expect(copyAddress).toContainText(/copied|zkopírováno/i);
   await expect(mapLink).toHaveAttribute('target', '_blank');
   await expect(mapLink).toHaveAttribute('rel', 'noopener noreferrer');
   await expect(mapLink).toHaveAttribute(
     'href',
     'https://www.openstreetmap.org/search?query=Stodoln%C3%AD+138%2F44%2C+14400+Ostrava%2C+%C4%8Cesko'
   );
+  const riskSummary = page.getByTestId('admin.requests.detail.risk.summary');
+  await expect(riskSummary).toContainText(/high-risk registration|vysoce riziková přihláška/i);
+  await expect(page.getByTestId('admin.requests.detail.risk.summary.score')).toContainText('100');
+  await expect(page.getByTestId('admin.requests.detail.risk.ip.score')).toContainText('87');
+  await expect(page.getByTestId('admin.requests.detail.risk.mail.score')).toContainText('100');
   await expect(page.getByTestId('admin.requests.resolve.in_progress')).toBeVisible();
   await expect(page.getByTestId('admin.requests.resolve.action.deny')).toHaveCount(0);
+});
+
+test('@workflow-matrix @pr-smoke @pr-smoke-mobile admin requests: address copy and risk emphasis work across breakpoints', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+  await installOsmMapMock(page);
+  const current = registration(124);
+
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (text: string) => {
+          (window as typeof window & { __copiedRequestAddress?: string }).__copiedRequestAddress = text;
+        },
+      },
+    });
+  });
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100 },
+    handlers: {
+      'GET user_request/registrations/124': () => ({ registration: current }),
+    },
+  });
+
+  await page.goto('/admin/requests/registration/124');
+
+  const copyAddress = page.getByTestId('admin.requests.detail.registration.address.map.copy');
+  await expect(copyAddress).toBeVisible();
+  await expect(copyAddress).toHaveAccessibleName(/copy applicant address/i);
+  await copyAddress.click();
+  await expect.poll(() => page.evaluate(
+    () => (window as typeof window & { __copiedRequestAddress?: string }).__copiedRequestAddress,
+  )).toBe('Stodolní 138/44, 14400 Ostrava, Česko');
+  await expect(copyAddress).toContainText(/copied|zkopírováno/i);
+
+  const riskSummary = page.getByTestId('admin.requests.detail.risk.summary');
+  await expect(riskSummary).toBeVisible();
+  await expect(riskSummary).toContainText(/high-risk registration|vysoce riziková přihláška/i);
+  await expect(page.getByTestId('admin.requests.detail.risk.summary.score')).toContainText('100');
+  await expect(page.getByTestId('admin.requests.detail.risk.ip.score')).toContainText('87');
+  await expect(page.getByTestId('admin.requests.detail.risk.mail.score')).toContainText('100');
 });
 
 test('@workflow-matrix @pr-smoke @pr-smoke-mobile @smoke admin requests: successful detail review returns to the overview', async ({ page }) => {

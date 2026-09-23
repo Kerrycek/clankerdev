@@ -1,9 +1,11 @@
 import React from 'react';
+import { Clock3, ShieldAlert, ShieldCheck } from 'lucide-react';
 
 import { useI18n } from '../../../app/i18n';
 import type { RegistrationRequest } from '../../../lib/api/requests';
 import { Badge } from '../../../components/ui/Badge';
 import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
+import { clsx } from '../../../components/ui/clsx';
 
 import { fraudCheckStatus, type FraudCheckStatus } from './RequestDetailModel';
 
@@ -65,6 +67,46 @@ function statusVariant(status: FraudCheckStatus): 'warn' | 'danger' | 'ok' {
   return 'warn';
 }
 
+type RiskEmphasis = 'clear' | 'elevated' | 'high' | 'pending' | 'failed';
+
+export type RequestFraudRiskSummary = {
+  state: RiskEmphasis;
+  variant: 'ok' | 'warn' | 'danger';
+  maxScore: number | null;
+};
+
+function numericScore(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+export function requestFraudRiskSummary(request: RegistrationRequest): RequestFraudRiskSummary {
+  const ipStatus = fraudCheckStatus(request.ip_checked, request.ip_success);
+  const mailStatus = fraudCheckStatus(request.mail_checked, request.mail_success);
+  const scores = [numericScore(request.ip_fraud_score), numericScore(request.mail_fraud_score)]
+    .filter((score): score is number => score !== null);
+  const maxScore = scores.length > 0 ? Math.max(...scores) : null;
+
+  if (maxScore !== null && maxScore >= 80) return { state: 'high', variant: 'danger', maxScore };
+  if (ipStatus === 'failed' || mailStatus === 'failed') return { state: 'failed', variant: 'danger', maxScore };
+  if (ipStatus === 'pending' || mailStatus === 'pending') return { state: 'pending', variant: 'warn', maxScore };
+  if (maxScore !== null && maxScore >= 50) return { state: 'elevated', variant: 'warn', maxScore };
+  return { state: 'clear', variant: 'ok', maxScore };
+}
+
+function checkVariant(status: FraudCheckStatus, score: unknown): 'ok' | 'warn' | 'danger' {
+  const normalizedScore = numericScore(score);
+  if (normalizedScore !== null && normalizedScore >= 80) return 'danger';
+  if (status === 'failed') return 'danger';
+  if (status === 'pending' || (normalizedScore !== null && normalizedScore >= 50)) return 'warn';
+  return 'ok';
+}
+
+function emphasisClasses(variant: RequestFraudRiskSummary['variant']): string {
+  if (variant === 'danger') return 'border-danger-border bg-danger-bg';
+  if (variant === 'warn') return 'border-warn-border bg-warn-bg';
+  return 'border-ok-border bg-ok-bg';
+}
+
 function signalValue(value: unknown, yes: string, no: string): string {
   if (value === true) return yes;
   if (value === false) return no;
@@ -84,19 +126,35 @@ function CheckCard(props: {
   const { t } = useI18n();
   const message = props.request[`${props.kind}_message` as keyof RegistrationRequest];
   const errors = props.request[`${props.kind}_errors` as keyof RegistrationRequest];
+  const resultVariant = checkVariant(props.status, props.score);
 
   return (
-    <Card testId={`admin.requests.detail.risk.${props.kind}`}>
+    <Card
+      testId={`admin.requests.detail.risk.${props.kind}`}
+      className={clsx('border-2', resultVariant === 'danger'
+        ? 'border-danger-border'
+        : resultVariant === 'warn'
+          ? 'border-warn-border'
+          : 'border-ok-border')}
+    >
       <CardHeader
         title={props.title}
-        subtitle={t('requests.detail.risk.score', { score: props.score ?? '—' })}
         actions={(
-          <Badge
-            variant={statusVariant(props.status)}
-            testId={`admin.requests.detail.risk.${props.kind}.status`}
-          >
-            {t(`requests.detail.risk.status.${props.status}`)}
-          </Badge>
+          <>
+            <Badge
+              variant={resultVariant}
+              className="text-sm font-semibold"
+              testId={`admin.requests.detail.risk.${props.kind}.score`}
+            >
+              {t('requests.detail.risk.score', { score: props.score ?? '—' })}
+            </Badge>
+            <Badge
+              variant={statusVariant(props.status)}
+              testId={`admin.requests.detail.risk.${props.kind}.status`}
+            >
+              {t(`requests.detail.risk.status.${props.status}`)}
+            </Badge>
+          </>
         )}
       />
       <CardBody className="space-y-3">
@@ -139,12 +197,48 @@ export function RequestFraudChecks(props: { request: RegistrationRequest }) {
   const { t } = useI18n();
   const ipStatus = fraudCheckStatus(props.request.ip_checked, props.request.ip_success);
   const mailStatus = fraudCheckStatus(props.request.mail_checked, props.request.mail_success);
+  const summary = requestFraudRiskSummary(props.request);
+  const SummaryIcon = summary.state === 'clear'
+    ? ShieldCheck
+    : summary.state === 'pending'
+      ? Clock3
+      : ShieldAlert;
 
   return (
     <section className="space-y-3" aria-label={t('requests.detail.risk.title')}>
       <div>
         <h2 className="font-semibold">{t('requests.detail.risk.title')}</h2>
         <p className="mt-0.5 text-sm text-muted">{t('requests.detail.risk.subtitle')}</p>
+      </div>
+      <div
+        className={clsx(
+          'flex flex-col gap-3 rounded-lg border-2 px-4 py-3 sm:flex-row sm:items-center',
+          emphasisClasses(summary.variant),
+        )}
+        data-testid="admin.requests.detail.risk.summary"
+      >
+        <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-surface/70">
+            <SummaryIcon className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold" data-testid="admin.requests.detail.risk.summary.title">
+              {t(`requests.detail.risk.summary.${summary.state}.title`)}
+            </div>
+            <div className="mt-0.5 text-sm text-muted">
+              {t(`requests.detail.risk.summary.${summary.state}.body`)}
+            </div>
+          </div>
+        </div>
+        {summary.maxScore !== null ? (
+          <Badge
+            variant={summary.variant}
+            className="shrink-0 px-3 py-1 text-sm font-semibold"
+            testId="admin.requests.detail.risk.summary.score"
+          >
+            {t('requests.detail.risk.summary.max_score', { score: summary.maxScore })}
+          </Badge>
+        ) : null}
       </div>
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         <CheckCard

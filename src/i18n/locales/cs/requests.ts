@@ -106,6 +106,8 @@ export const csRequests = {
   'requests.detail.client_ip': 'Klient IP',
   'requests.detail.address_map.open': 'Otevřít v OpenStreetMap',
   'requests.detail.address_map.aria': 'Otevřít adresu v OpenStreetMap: {address}',
+  'requests.detail.address_map.copy': 'Kopírovat adresu',
+  'requests.detail.address_map.copy_aria': 'Kopírovat adresu žadatele: {address}',
   'requests.detail.address_map.loading': 'Hledám adresu v OpenStreetMap…',
   'requests.detail.address_map.retry': 'Zkusit znovu',
   'requests.detail.address_map.preview_title': 'Náhled adresy v OpenStreetMap',

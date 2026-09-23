@@ -106,6 +106,8 @@ export const enRequests = {
   'requests.detail.client_ip': 'Client IP',
   'requests.detail.address_map.open': 'Open in OpenStreetMap',
   'requests.detail.address_map.aria': 'Open address in OpenStreetMap: {address}',
+  'requests.detail.address_map.copy': 'Copy address',
+  'requests.detail.address_map.copy_aria': 'Copy applicant address: {address}',
   'requests.detail.address_map.loading': 'Looking up the address in OpenStreetMap…',
   'requests.detail.address_map.retry': 'Try again',
   'requests.detail.address_map.preview_title': 'OpenStreetMap address preview',

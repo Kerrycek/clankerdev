@@ -3,6 +3,8 @@ import { ExternalLink, Loader2, MapPin } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 
 import { useI18n } from '../../../app/i18n';
+import { Button } from '../../../components/ui/Button';
+import { CopyButton } from '../../../components/ui/CopyButton';
 
 type OsmPoint = {
   lat: number;
@@ -137,25 +139,35 @@ export function RequestAddressMapLink(props: { address: unknown; testId?: string
           ) : null}
         </div>
       )}
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={t('requests.detail.address_map.aria', { address })}
-        data-testid={`${props.testId ?? 'requests.detail.address_map'}.link`}
-        className="group flex items-center gap-3 px-3 py-2.5 transition hover:bg-accent-soft/60 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-focus/35"
-      >
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-accent-soft text-accent">
-          <MapPin className="h-4 w-4" aria-hidden="true" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block whitespace-pre-line text-sm font-medium text-fg">{address}</span>
-          <span className="mt-0.5 block text-xs text-muted group-hover:text-accent">
-            {t('requests.detail.address_map.open')}
+      <div className="flex flex-col gap-3 px-3 py-2.5 sm:flex-row sm:items-center">
+        <span className="flex min-w-0 flex-1 items-center gap-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-accent-soft text-accent">
+            <MapPin className="h-4 w-4" aria-hidden="true" />
           </span>
+          <span className="min-w-0 whitespace-pre-line text-sm font-medium text-fg">{address}</span>
         </span>
-        <ExternalLink className="h-4 w-4 shrink-0 text-faint group-hover:text-accent" aria-hidden="true" />
-      </a>
+        <span className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0">
+          <CopyButton
+            text={address}
+            label={t('requests.detail.address_map.copy')}
+            ariaLabel={t('requests.detail.address_map.copy_aria', { address })}
+            testId={`${props.testId ?? 'requests.detail.address_map'}.copy`}
+          />
+          <Button
+            as="a"
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            ariaLabel={t('requests.detail.address_map.aria', { address })}
+            testId={`${props.testId ?? 'requests.detail.address_map'}.link`}
+            variant="secondary"
+            size="sm"
+          >
+            {t('requests.detail.address_map.open')}
+            <ExternalLink className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        </span>
+      </div>
     </div>
   );
 }
