@@ -214,7 +214,12 @@ export function DatasetDownloadCreateDialog(props: {
         ) : null}
 
         <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={props.onClose} testId="dataset.downloads.create.cancel">
+          <Button
+            variant="secondary"
+            onClick={props.onClose}
+            disabled={props.createPending}
+            testId="dataset.downloads.create.cancel"
+          >
             {t('common.cancel')}
           </Button>
           <ActionButton

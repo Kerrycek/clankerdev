@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useAccountTimeZone } from '../../../app/accountTimeZone';
 import { useI18n } from '../../../app/i18n';
 import { Badge } from '../../../components/ui/Badge';
+import { Button } from '../../../components/ui/Button';
 import { Card } from '../../../components/ui/Card';
 import { KeysetPagination } from '../../../components/ui/KeysetPagination';
 import { StatusDot } from '../../../components/ui/StatusDot';
@@ -25,9 +26,17 @@ import {
 
 type PaginationController = ReturnType<typeof useKeysetPagination>;
 
+function incomingPaymentDetailHref(basePath: string, paymentId: number, returnTo: string): string {
+  const params = new URLSearchParams({ returnTo });
+  return `${basePath}/payments/incoming/${paymentId}?${params.toString()}`;
+}
+
 export function IncomingPaymentsListContent(props: {
   rows: IncomingPayment[];
   basePath: string;
+  returnTo: string;
+  reviewableCount: number;
+  onStartReview: () => void;
   pagination: PaginationController;
   pageCount?: number;
   totalPagesKnown?: boolean;
@@ -47,6 +56,13 @@ export function IncomingPaymentsListContent(props: {
 
   return (
     <>
+      {props.reviewableCount > 0 ? (
+        <div className="mb-3 flex flex-wrap items-center justify-end gap-2" data-testid="admin.payments.incoming.list_actions">
+          <Button variant="primary" size="sm" onClick={props.onStartReview} testId="admin.payments.incoming.review.start">
+            {t('payments.incoming.review_queue.start')} ({props.reviewableCount})
+          </Button>
+        </div>
+      ) : null}
       <div className="space-y-2 md:hidden">
         {props.rows.map((p) => {
           const st = String(p.state ?? '').trim();
@@ -90,7 +106,7 @@ export function IncomingPaymentsListContent(props: {
                     <span className="text-faint">TX:</span> {String(p.transaction_id ?? '—')}
                   </div>
                 </div>
-                <Link className="text-xs font-medium text-accent hover:underline" to={`${props.basePath}/payments/incoming/${p.id}`}>
+                <Link className="text-xs font-medium text-accent hover:underline" to={incomingPaymentDetailHref(props.basePath, p.id, props.returnTo)}>
                   {t('common.open')}
                 </Link>
               </div>
@@ -175,7 +191,7 @@ export function IncomingPaymentsListContent(props: {
               <TableRowLink
                 key={p.id}
                 testId={`admin.payments.incoming.row.${p.id}`}
-                to={`${props.basePath}/payments/incoming/${p.id}`}
+                to={incomingPaymentDetailHref(props.basePath, p.id, props.returnTo)}
                 variant={rowVar}
                 className="border-b border-border/60 last:border-b-0"
               >
