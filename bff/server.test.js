@@ -255,7 +255,7 @@ test('OAuth error page is bilingual, actionable, defensive and never reflects it
   assert.match(czechResponse.headers.get('content-security-policy') || '', /frame-ancestors 'none'/);
   assert.match(czechResponse.headers.get('vary') || '', /Accept-Language/i);
   assert.match(czechBody, /<html lang="cs">/);
-  assert.match(czechBody, /Přihlášení se nezdařilo/);
+  assert.match(czechBody, /<title>vpsAdmin · Přihlášení se nezdařilo<\/title>/);
   assert.match(czechBody, /href="\/oauth\/login\?next=%2Fapp"/);
   assert.match(czechBody, /href="\/"/);
   for (const secret of [querySecret, 'state-secret', 'description-secret']) {
@@ -264,5 +264,5 @@ test('OAuth error page is bilingual, actionable, defensive and never reflects it
 
   const englishResponse = await request('/oauth/error', { acceptLanguage: 'en-US' });
   assert.equal(englishResponse.headers.get('content-language'), 'en');
-  assert.match(await englishResponse.text(), /Sign-in failed/);
+  assert.match(await englishResponse.text(), /<title>vpsAdmin · Sign-in failed<\/title>/);
 });
