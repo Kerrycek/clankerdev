@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link, useMatch } from 'react-router-dom';
 import {
   Activity,
   ClipboardList,
@@ -194,23 +194,21 @@ function NavigationLink(props: {
   onClick?: () => void;
 }) {
   const { item, surface, collapsed = false, compact = false, onClick } = props;
-  const location = useLocation();
-  const prefixActive = Boolean(item.activePathPrefix) && (
-    location.pathname === item.activePathPrefix
-      || location.pathname.startsWith(`${item.activePathPrefix}/`)
-  );
+  const isActive = Boolean(useMatch({
+    path: item.activePathPrefix ?? item.to,
+    end: isExactNavItem(item),
+  }));
 
   return (
-    <NavLink
+    <Link
       to={item.to}
-      end={isExactNavItem(item)}
-      aria-current={prefixActive ? 'page' : undefined}
+      aria-current={isActive ? 'page' : undefined}
       data-testid={`nav.${surface}.${item.id}`}
-      className={({ isActive }) =>
+      className={
         clsx(
           'flex min-w-0 items-center gap-2 rounded-md px-3 text-sm transition-colors',
           surface === 'drawer' || !compact ? 'py-2' : 'py-1.5',
-          isActive || prefixActive ? 'bg-accent/15 text-fg' : 'text-muted hover:bg-surface-2 hover:text-fg'
+          isActive ? 'bg-accent/15 text-fg' : 'text-muted hover:bg-surface-2 hover:text-fg'
         )
       }
       title={collapsed ? item.label : undefined}
@@ -218,7 +216,7 @@ function NavigationLink(props: {
     >
       <span className="shrink-0">{item.icon}</span>
       {collapsed ? null : <span className="min-w-0 truncate">{item.label}</span>}
-    </NavLink>
+    </Link>
   );
 }
 
