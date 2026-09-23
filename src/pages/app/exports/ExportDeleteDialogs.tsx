@@ -10,10 +10,12 @@ export function ExportDeleteDialogs(props: {
   exportOpen: boolean;
   exportItem: ExportItem;
   exportPending: boolean;
+  exportError?: string | null;
   onCancelExport: () => void;
   onConfirmExport: () => void;
   host: ExportHost | null;
   hostPending: boolean;
+  hostError?: string | null;
   onCancelHost: () => void;
   onConfirmHost: () => void;
 }) {
@@ -35,6 +37,11 @@ export function ExportDeleteDialogs(props: {
         <Alert title={t('exports.delete.review.title')} variant="danger">
           {t('exports.delete.review.body')}
         </Alert>
+        {props.exportError ? (
+          <Alert title={t('exports.delete.error')} variant="danger" testId="exports.detail.delete.dialog.error">
+            {props.exportError}
+          </Alert>
+        ) : null}
       </ConfirmDialog>
 
       <ConfirmDialog
@@ -51,6 +58,11 @@ export function ExportDeleteDialogs(props: {
         <Alert title={t('exports.host.delete.review.title')} variant="danger">
           {t('exports.host.delete.review.body')}
         </Alert>
+        {props.hostError ? (
+          <Alert title={t('exports.host.delete.error')} variant="danger" testId="exports.detail.host.delete.dialog.error">
+            {props.hostError}
+          </Alert>
+        ) : null}
       </ConfirmDialog>
     </>
   );

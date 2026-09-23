@@ -9,11 +9,15 @@ import {
   describeIncomingPaymentState,
   formatIncomingPaymentMoney,
   incomingPaymentAccountedAmountLabel,
+  incomingPaymentMatchesReviewTarget,
+  incomingPaymentNeedsReview,
   incomingPaymentReceivedAmountLabel,
   incomingPaymentStateFilterOptions,
   normalizeIncomingPaymentState,
+  parseIncomingPaymentReviewQueue,
   parseIncomingPaymentStateValue,
   parsePositivePaymentId,
+  safeIncomingPaymentsReturnTo,
 } from './IncomingPaymentsModel';
 
 const payment = {
@@ -48,6 +52,24 @@ describe('IncomingPaymentsModel', () => {
     expect(parsePositivePaymentId('42.9')).toBe(42);
     expect(parsePositivePaymentId('0')).toBeUndefined();
     expect(parsePositivePaymentId('abc')).toBeUndefined();
+  });
+
+  test('keeps sequential review targets bounded, unique and unmatched', () => {
+    expect(parseIncomingPaymentReviewQueue([302, '301', 302, 0, -1, 'bad', 300])).toEqual([302, 301, 300]);
+    expect(parseIncomingPaymentReviewQueue('302')).toEqual([]);
+    expect(incomingPaymentNeedsReview(payment)).toBe(true);
+    expect(incomingPaymentNeedsReview({ ...payment, state: 'processed' })).toBe(false);
+    expect(incomingPaymentMatchesReviewTarget(payment, 300)).toBe(true);
+    expect(incomingPaymentMatchesReviewTarget({ ...payment, id: 301 }, 300)).toBe(false);
+    expect(incomingPaymentMatchesReviewTarget({ ...payment, state: 'processed' }, 300)).toBe(false);
+  });
+
+  test('accepts only the incoming-payments list as a review return target', () => {
+    expect(safeIncomingPaymentsReturnTo('/admin/payments/incoming?state=unmatched&page=2', '/admin')).toBe(
+      '/admin/payments/incoming?state=unmatched&page=2',
+    );
+    expect(safeIncomingPaymentsReturnTo('/admin/payments/incoming/300', '/admin')).toBe('/admin/payments/incoming');
+    expect(safeIncomingPaymentsReturnTo('https://evil.example/admin/payments/incoming', '/admin')).toBe('/admin/payments/incoming');
   });
 
   test('formats incoming payment labels', () => {

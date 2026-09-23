@@ -1,6 +1,7 @@
 import type { Dispatch, SetStateAction } from 'react';
 
 import { useI18n } from '../../../app/i18n';
+import { Alert } from '../../../components/ui/Alert';
 import { Checkbox } from '../../../components/ui/Checkbox';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import type { Vps } from '../../../lib/api/vps';
@@ -20,6 +21,8 @@ export function VpsListActionConfirmDialog(props: {
   confirm: VpsListActionConfirm;
   vps?: Vps;
   isAdminMode: boolean;
+  error?: { title: string; body?: string } | null;
+  powerLoading?: boolean;
   deleteLoading?: boolean;
   onChange: Dispatch<SetStateAction<VpsListActionConfirm | null>>;
   onCancel: () => void;
@@ -48,6 +51,7 @@ export function VpsListActionConfirmDialog(props: {
           });
         }}
         loading={props.deleteLoading}
+        error={props.error}
         onCancel={props.onCancel}
         onConfirm={props.onConfirmDelete}
       />
@@ -62,6 +66,7 @@ export function VpsListActionConfirmDialog(props: {
       description={confirm.kind === 'stop' ? t('vps.power.stop.confirm_desc_basic') : t('vps.power.restart.confirm_desc_basic')}
       danger={confirm.kind === 'stop'}
       confirmLabel={confirm.kind === 'stop' ? t('action.vps.stop.label') : t('action.vps.restart.label')}
+      confirmLoading={props.powerLoading}
       onCancel={props.onCancel}
       onConfirm={() => props.onConfirmPower({
         vpsId: confirm.vpsId,
@@ -76,6 +81,11 @@ export function VpsListActionConfirmDialog(props: {
           objectLabel={objectLabel}
           testId="vps.list.power_confirm.target"
         />
+        {props.error ? (
+          <Alert variant="danger" title={props.error.title} testId="vps.list.power_confirm.error">
+            {props.error.body}
+          </Alert>
+        ) : null}
         <Checkbox
           checked={confirm.force}
           onChange={(checked) => props.onChange((prev) => (prev && prev.kind !== 'delete' ? { ...prev, force: checked } : prev))}

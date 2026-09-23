@@ -369,7 +369,10 @@ export function DatasetSnapshotsPage({ queryParamPrefix = '' }: DatasetSnapshots
             {t('common.refresh')}
           </Button>
           <ActionButton
-            onClick={() => setCreateOpen(true)}
+            onClick={() => {
+              createSnap.reset();
+              setCreateOpen(true);
+            }}
             disabled={!createGate.allowed}
             disabledReason={!createGate.allowed ? createGate.reason : undefined}
             testId="dataset.snapshots.create.open"
@@ -571,7 +574,15 @@ export function DatasetSnapshotsPage({ queryParamPrefix = '' }: DatasetSnapshots
         </>
       )}
 
-      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title={t('dataset.snapshots.create.modal_title')}>
+      <Modal
+        open={createOpen}
+        onClose={() => {
+          if (createSnap.isPending) return;
+          createSnap.reset();
+          setCreateOpen(false);
+        }}
+        title={t('dataset.snapshots.create.modal_title')}
+      >
         <div className="space-y-4" data-testid="dataset.snapshots.create.modal">
           <div className="text-sm text-muted">{t('dataset.snapshots.create.help')}</div>
           <div className="rounded-md border border-border bg-surface-2 p-3 text-xs text-muted">
@@ -595,7 +606,15 @@ export function DatasetSnapshotsPage({ queryParamPrefix = '' }: DatasetSnapshots
           ) : null}
 
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setCreateOpen(false)} testId="dataset.snapshots.create.cancel">
+            <Button
+              variant="secondary"
+              onClick={() => {
+                createSnap.reset();
+                setCreateOpen(false);
+              }}
+              disabled={createSnap.isPending}
+              testId="dataset.snapshots.create.cancel"
+            >
               {t('common.cancel')}
             </Button>
             <ActionButton

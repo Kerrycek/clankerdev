@@ -3,6 +3,7 @@ import React from 'react';
 import { useI18n } from '../../app/i18n';
 import type { Language } from '../../lib/api/languages';
 
+import { Alert } from '../ui/Alert';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Checkbox } from '../ui/Checkbox';
@@ -19,6 +20,7 @@ export function UserMailSettingsCard(props: {
   languagesError: boolean;
   settingsDirty: boolean;
   savePending: boolean;
+  saveError: string | null;
   onSave: () => void;
   userEmail: string;
 }) {
@@ -68,6 +70,17 @@ export function UserMailSettingsCard(props: {
             </div>
           </div>
         </div>
+
+        {props.saveError ? (
+          <Alert
+            variant="danger"
+            title={t('mail.prefs.toast.save_failed.title')}
+            className="mt-4"
+            testId="mail.settings.save_error"
+          >
+            {props.saveError}
+          </Alert>
+        ) : null}
 
         <div className="mt-4 text-xs text-faint">
           {t('mail.prefs.settings.primary_email')}: <span className="tabular-nums text-fg">{props.userEmail || t('common.na')}</span>
