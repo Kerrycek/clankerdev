@@ -261,6 +261,7 @@ test.describe('@smoke Admin outage workflow', () => {
     await expect(page.getByTestId('admin.outages.update.confirm')).toBeVisible();
     await page.getByTestId('admin.outages.update.confirm.confirm').click();
     await expect(page.getByTestId('admin.outages.update.confirm')).toBeVisible();
+    await expect(page.getByTestId('admin.outages.update.confirm.error')).toContainText('Update delivery failed');
 
     updateFails = false;
     await page.getByTestId('admin.outages.update.confirm.confirm').click();

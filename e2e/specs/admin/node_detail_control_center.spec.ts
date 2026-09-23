@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 
 import {
   bootstrapVpsAdminWindow,
+  failEnvelope,
   installHaveApiMock,
   setUiSettingsLocalStorage,
   type HaveApiHandler,
@@ -251,5 +252,33 @@ test.describe('Admin node detail control center', () => {
     }
 
     await expect(dialog).toBeHidden();
+  });
+
+  test('@pr-smoke @pr-smoke-mobile keeps a rejected node lock in its dialog for retry', async ({ page }) => {
+    let maintenanceCalls = 0;
+
+    await installNodeHandlers(
+      page,
+      () => ({ pools: [] }),
+      {
+        'POST nodes/5/set_maintenance': () => {
+          maintenanceCalls += 1;
+          if (maintenanceCalls === 1) return failEnvelope('Node maintenance lock was rejected');
+          return {};
+        },
+      },
+    );
+
+    await page.goto('/admin/nodes/5?section=maintenance');
+    await page.getByTestId('admin.node.maintenance.lock').click();
+
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: 'Lock', exact: true }).click();
+    await expect(dialog).toContainText('Node maintenance lock was rejected');
+    await expect(dialog).toBeVisible();
+
+    await dialog.getByRole('button', { name: 'Lock', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    expect(maintenanceCalls).toBe(2);
   });
 });
