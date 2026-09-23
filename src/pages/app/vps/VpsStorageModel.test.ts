@@ -10,7 +10,9 @@ import {
   mountDeleteConfirmation,
   mountDraftFromMount,
   rootDatasetSummary,
+  ssdSizeGiBInput,
   storageOverviewSummary,
+  validateSsdResize,
   validateMountDraft,
 } from './VpsStorageModel';
 import type { VpsMount } from '../../../lib/api/vpsMounts';
@@ -133,5 +135,17 @@ describe('VpsStorageModel', () => {
     expect(mountDeleteConfirmation(mounts[0]!)).toBe('/srv/a');
     expect(computeCapacityPercent(50, 50, null)).toBe(50);
     expect(capacityTone(96, 100)).toBe('danger');
+  });
+
+  it('validates root SSD resize values in GiB and converts them to refquota MiB', () => {
+    expect(ssdSizeGiBInput(20 * 1024)).toBe('20');
+    expect(validateSsdResize('32', 20 * 1024, 5 * 1024)).toEqual({
+      ok: true,
+      valueMiB: 32 * 1024,
+      issue: null,
+    });
+    expect(validateSsdResize('20', 20 * 1024, 5 * 1024).issue).toBe('unchanged');
+    expect(validateSsdResize('4,5', 20 * 1024, 5 * 1024).issue).toBe('below_used');
+    expect(validateSsdResize('not-a-size', 20 * 1024, 5 * 1024).issue).toBe('invalid');
   });
 });

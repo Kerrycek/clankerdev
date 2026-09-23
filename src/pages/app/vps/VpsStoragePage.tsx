@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAppMode } from '../../../app/appMode';
@@ -7,9 +8,9 @@ import { useI18n } from '../../../app/i18n';
 import { useObjectScope } from '../../../app/objectScope';
 import { useChrome } from '../../../components/layout/ChromeContext';
 import { Alert } from '../../../components/ui/Alert';
-import { fetchDataset } from '../../../lib/api/datasets';
+import { fetchDataset, updateDataset } from '../../../lib/api/datasets';
 import { getMetaActionStateId, isMissingActionStateError } from '../../../lib/api/haveapi';
-import { datasetCapabilities } from '../../../lib/gates/dataset';
+import { datasetCapabilities, gateDatasetAction } from '../../../lib/gates/dataset';
 import { createVpsMount, deleteVpsMount, fetchVpsMounts, findDatasetByName, updateVpsMount, type Dataset, type VpsMount } from '../../../lib/api/vpsMounts';
 import { gateVpsMutation } from '../../../lib/gates/vps';
 import { objectRef } from '../../../lib/objectRef';
@@ -34,6 +35,7 @@ import { VpsStorageMountCreateModal, VpsStorageMountDeleteDialog, VpsStorageMoun
 import { VpsStorageMountsCard } from './VpsStorageMountsCard';
 import { VpsStorageOverviewCard } from './VpsStorageOverviewCard';
 import { VpsStorageRootDatasetCard } from './VpsStorageRootDatasetCard';
+import { VpsStorageResizeDialog } from './VpsStorageResizeDialog';
 
 function validationIssueKey(issue: MountValidationIssue): string {
   switch (issue) {
@@ -61,6 +63,7 @@ export function VpsStoragePage() {
   const qc = useQueryClient();
   const { t } = useI18n();
   const { vps, canMutateVps, busyTransaction, busyLocalLock } = useVps();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const canAdmin = mode === 'admin' && auth.role === 'admin';
   const vpsId = vps.id;
@@ -324,6 +327,65 @@ export function VpsStoragePage() {
         userId: auth.user?.id,
       })
     : null;
+  const rootRef = rootDatasetId !== null ? objectRef('Dataset', rootDatasetId) : null;
+  const rootBusyLocal = rootRef ? chrome.isLocallyLocked(rootRef) : false;
+  const [resizeOpen, setResizeOpen] = useState(false);
+  const [resizeError, setResizeError] = useState<string | null>(null);
+  const resizeGate = rootDatasetQ.data
+    ? gateDatasetAction('dataset.update', {
+        dataset: rootDatasetQ.data,
+        busyLocal: rootBusyLocal,
+        busyTransaction,
+        role: auth.role,
+        permission: canAdmin && rootCapabilities?.canUpdate === true,
+      })
+    : null;
+
+  const resizeM = useMutation({
+    mutationFn: async (variables: { datasetId: number; valueMiB: number; adminOverride: boolean }) =>
+      updateDataset(variables.datasetId, {
+        refquota: variables.valueMiB,
+        ...(variables.adminOverride ? { admin_override: true } : {}),
+      }),
+    onMutate: async (variables) => {
+      const lockRef = objectRef('Dataset', variables.datasetId);
+      return { lockRef, mutationGeneration: await chrome.acquireLocalLock(lockRef, { durable: true }) };
+    },
+    onSuccess: (response, variables, context) => {
+      setResizeOpen(false);
+      setResizeError(null);
+      void qc.invalidateQueries({ queryKey: ['datasets', 'show', variables.datasetId] });
+      const actionStateId = getMetaActionStateId(response.meta);
+      if (actionStateId !== undefined) {
+        chrome.trackActionState(actionStateId, {
+          actionLabelKey: 'action.dataset.update.label',
+          objectLabel,
+          object: context?.lockRef,
+          mutationGeneration: context?.mutationGeneration,
+          progressTitleKey: 'modal.dataset.update.title',
+        });
+      }
+    },
+    onError: (error) => {
+      setResizeError(mutationErrorMessage(error));
+      if (errorMessage(error).includes('BUSY')) chrome.openTasks();
+    },
+    onSettled: (_data, error, _variables, context) =>
+      context && chrome.settleLocalLock(context.lockRef, error, context.mutationGeneration),
+  });
+
+  const openResize = () => {
+    setResizeError(null);
+    setResizeOpen(true);
+  };
+
+  useEffect(() => {
+    if (searchParams.get('resize') !== 'ssd' || !canAdmin || !rootDatasetQ.data) return;
+    openResize();
+    const next = new URLSearchParams(searchParams);
+    next.delete('resize');
+    setSearchParams(next, { replace: true });
+  }, [canAdmin, rootDatasetQ.data, searchParams, setSearchParams]);
   const overview = storageOverviewSummary(mounts);
 
   return (
@@ -353,6 +415,10 @@ export function VpsStoragePage() {
         root={root}
         loading={rootDatasetQ.isLoading}
         error={rootDatasetQ.isError ? errorMessage(rootDatasetQ.error) : null}
+        canResize={Boolean(resizeGate?.allowed)}
+        resizeDisabledReason={resizeGate && !resizeGate.allowed ? resizeGate.reason : undefined}
+        resizeLoading={resizeM.isPending}
+        onResize={openResize}
       />
 
       <VpsStorageMountsCard
@@ -413,6 +479,26 @@ export function VpsStoragePage() {
         }}
         onConfirm={() => void submitDelete()}
       /> : null}
+
+      {canAdmin && resizeGate ? (
+        <VpsStorageResizeDialog
+          open={resizeOpen}
+          objectLabel={objectLabel}
+          currentMiB={root.referenceQuota}
+          usedMiB={root.used}
+          gate={resizeGate}
+          pending={resizeM.isPending}
+          error={resizeError}
+          onClose={() => {
+            if (!resizeM.isPending) setResizeOpen(false);
+          }}
+          onSubmit={(valueMiB, adminOverride) => {
+            if (rootDatasetId === null) return;
+            setResizeError(null);
+            resizeM.mutate({ datasetId: rootDatasetId, valueMiB, adminOverride });
+          }}
+        />
+      ) : null}
     </div>
   );
 }

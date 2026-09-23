@@ -50,6 +50,73 @@ function mountItemControl(page: Page, mountId: number, control: 'dataset' | 'del
 }
 
 test.describe('@smoke VPS storage tab mounts', () => {
+  test('lets an admin resize the VPS root SSD live from the configuration entrypoint', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    let vpsUpdateCount = 0;
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
+      handlers: {
+        'GET vpses/123': () => ({ vps }),
+        'GET datasets/10': () => ({ dataset }),
+        'GET ip_addresses': () => ({ ip_addresses: [] }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'GET vpses/123/mounts': () => ({ mounts: [] }),
+        'GET dns_resolvers': () => ({ dns_resolvers: [] }),
+        'GET user_namespace_maps': () => ({ user_namespace_maps: [] }),
+        'PUT vpses/123': () => {
+          vpsUpdateCount += 1;
+          return { vps };
+        },
+        'PUT datasets/10': () => ({ _meta: { action_state_id: 905 } }),
+        'GET action_states/905': () => ({
+          action_state: {
+            id: 905,
+            label: 'Resize root dataset',
+            status: true,
+            finished: false,
+            current: 0,
+            total: 1,
+          },
+        }),
+      },
+    });
+
+    await page.goto('/admin/vps/123/config');
+    const resizeEntry = page.getByTestId('vps.config.ssd.resize');
+    await expect(resizeEntry).toBeVisible();
+    await expect(resizeEntry).toHaveAttribute('href', '/admin/vps/123/storage?resize=ssd');
+    await expect(resizeEntry.locator('..')).toContainText('20 GiB');
+
+    await resizeEntry.click();
+    await expect(page).toHaveURL(/\/admin\/vps\/123\/storage$/);
+    const modal = page.getByTestId('vps.storage.resize.modal');
+    await expect(modal).toBeVisible();
+    await expect(modal).toContainText('No VPS restart');
+    await expect(modal).toContainText('Current size: 20 GiB');
+    await expect(modal.getByTestId('vps.storage.resize.submit')).toBeDisabled();
+
+    await modal.getByTestId('vps.storage.resize.size').fill('4');
+    await expect(modal).toContainText('cannot be smaller than the currently used space');
+    await expect(modal.getByTestId('vps.storage.resize.submit')).toBeDisabled();
+
+    await modal.getByTestId('vps.storage.resize.size').fill('32');
+    const requestPromise = page.waitForRequest(
+      (request) => request.method() === 'PUT' && request.url().includes('/api/v7.0/datasets/10')
+    );
+    await modal.getByTestId('vps.storage.resize.submit').click();
+
+    expect((await requestPromise).postDataJSON()).toEqual({ dataset: { refquota: 32 * 1024 } });
+    expect(vpsUpdateCount).toBe(0);
+    await expect(modal).toBeHidden();
+    await expect(page.getByTestId('vps.storage.root_dataset.resize')).toBeVisible();
+
+    await page.goto('/app/vps/123/config');
+    await expect(page.getByTestId('vps.config.ssd.resize')).toHaveCount(0);
+    await page.goto('/app/vps/123/storage');
+    await expect(page.getByTestId('vps.storage.root_dataset.resize')).toHaveCount(0);
+  });
+
   test('resets a mount deletion confirm when the VPS route changes', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     const mounts = [{

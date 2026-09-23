@@ -2,6 +2,7 @@ import React from 'react';
 
 import { useI18n } from '../../../app/i18n';
 import { Alert } from '../../../components/ui/Alert';
+import { ActionButton } from '../../../components/ui/ActionButton';
 import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
 import { ChipLink } from '../../../components/ui/ChipLink';
 import { Spinner } from '../../../components/ui/Spinner';
@@ -27,6 +28,10 @@ export function VpsStorageRootDatasetCard(props: {
   root: RootDatasetSummary;
   loading: boolean;
   error: string | null;
+  canResize: boolean;
+  resizeDisabledReason?: Parameters<typeof ActionButton>[0]['disabledReason'];
+  resizeLoading: boolean;
+  onResize: () => void;
 }) {
   const { t } = useI18n();
   const root = props.root;
@@ -73,6 +78,17 @@ export function VpsStorageRootDatasetCard(props: {
         </div>
 
         <div className="flex flex-wrap gap-2">
+          {props.canAdmin ? (
+            <ActionButton
+              onClick={props.onResize}
+              loading={props.resizeLoading}
+              disabled={!props.canResize}
+              disabledReason={props.resizeDisabledReason}
+              testId="vps.storage.root_dataset.resize"
+            >
+              {t('vps.storage.resize.open')}
+            </ActionButton>
+          ) : null}
           <ChipLink to={`${props.basePath}/datasets/${root.id}`} data-testid="vps.storage.root_dataset.open">
             {t('vps.storage.root_dataset.open')}
           </ChipLink>
