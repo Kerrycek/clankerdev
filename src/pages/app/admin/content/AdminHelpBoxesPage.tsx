@@ -9,6 +9,7 @@ import { useToasts } from '../../../../app/toasts';
 import { Alert } from '../../../../components/ui/Alert';
 import { Badge } from '../../../../components/ui/Badge';
 import { Button } from '../../../../components/ui/Button';
+import { Card } from '../../../../components/ui/Card';
 import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog';
 import { Input } from '../../../../components/ui/Input';
 import { Modal } from '../../../../components/ui/Modal';
@@ -291,80 +292,163 @@ export function AdminHelpBoxesPage() {
           {t('admin.help_boxes.empty.body')}
         </Alert>
       ) : (
-        <TableCard testId="admin.help_boxes.table" minWidth="lg">
-          <thead>
-            <tr>
-              <th className="px-4 py-2 text-left text-xs font-semibold text-faint">{t('admin.help_boxes.table.order')}</th>
-              <th className="px-4 py-2 text-left text-xs font-semibold text-faint">{t('admin.help_boxes.table.page')}</th>
-              <th className="px-4 py-2 text-left text-xs font-semibold text-faint">{t('admin.help_boxes.table.action')}</th>
-              <th className="px-4 py-2 text-left text-xs font-semibold text-faint">{t('admin.help_boxes.table.language')}</th>
-              <th className="px-4 py-2 text-left text-xs font-semibold text-faint">{t('admin.help_boxes.table.content')}</th>
-              <th className="px-4 py-2 text-right text-xs font-semibold text-faint">{t('common.actions')}</th>
-            </tr>
-          </thead>
-          <tbody>
+        <>
+          <div className="space-y-3 md:hidden" data-testid="admin.help_boxes.cards">
             {rows.map((b) => {
               const page = String(b.page ?? '');
               const action = String(b.action ?? '');
               const lang = b.language ? String(b.language.label ?? b.language.code ?? b.language.id) : t('common.default');
-              const pageBadge = page === '*' ? <Badge variant="info">*</Badge> : null;
-              const actionBadge = action === '*' ? <Badge variant="info">*</Badge> : null;
 
               return (
-                <tr key={b.id} className="table-row-tone">
-                  <td className="px-4 py-2 text-xs text-muted">{typeof b.order === 'number' ? b.order : '—'}</td>
-                  <td className="px-4 py-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs text-fg">{page || '—'}</span>
-                      {pageBadge}
+                <Card key={b.id} testId={`admin.help_boxes.card.${b.id}`}>
+                  <div className="min-w-0 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="text-sm font-semibold text-fg">#{b.id}</div>
+                      <Badge variant="neutral">{t('admin.help_boxes.table.order')}: {typeof b.order === 'number' ? b.order : '—'}</Badge>
                     </div>
-                  </td>
-                  <td className="px-4 py-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs text-fg">{action || '—'}</span>
-                      {actionBadge}
+                    <dl className="mt-4 space-y-3 text-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <dt className="shrink-0 text-faint">{t('admin.help_boxes.table.page')}</dt>
+                        <dd className="flex min-w-0 items-center justify-end gap-2 text-right">
+                          <span className="break-all font-mono text-xs text-fg">{page || '—'}</span>
+                          {page === '*' ? <Badge variant="info">*</Badge> : null}
+                        </dd>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <dt className="shrink-0 text-faint">{t('admin.help_boxes.table.action')}</dt>
+                        <dd className="flex min-w-0 items-center justify-end gap-2 text-right">
+                          <span className="break-all font-mono text-xs text-fg">{action || '—'}</span>
+                          {action === '*' ? <Badge variant="info">*</Badge> : null}
+                        </dd>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <dt className="shrink-0 text-faint">{t('admin.help_boxes.table.language')}</dt>
+                        <dd className="min-w-0 break-words text-right text-muted">{lang}</dd>
+                      </div>
+                    </dl>
+                    <div className="mt-4 border-t border-border pt-3">
+                      <div className="text-xs text-faint">{t('admin.help_boxes.table.content')}</div>
+                      <div className="mt-1 break-words text-sm text-fg">{snippet(b.content) || '—'}</div>
                     </div>
-                  </td>
-                  <td className="px-4 py-2 text-xs text-muted">{lang}</td>
-                  <td className="px-4 py-2">
-                    <div className="text-sm text-fg">{snippet(b.content)}</div>
-                    <div className="mt-0.5 text-xs text-faint">#{b.id}</div>
-                  </td>
-                  <td className="px-4 py-2 text-right">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="mt-4 grid grid-cols-2 gap-2 border-t border-border pt-3">
                       <Button
-                        size="sm"
+                        size="lg"
                         variant="secondary"
+                        className="col-span-2 w-full min-w-0"
+                        ariaLabel={`${t('admin.help_boxes.action.preview')}: #${b.id}`}
                         onClick={() => {
                           setPreviewTarget(b);
                           setPreviewOpen(true);
                         }}
-                        testId={`admin.help_boxes.preview.${b.id}`}
+                        testId={`admin.help_boxes.card.${b.id}.preview`}
                       >
                         {t('admin.help_boxes.action.preview')}
                       </Button>
-                      <Button size="sm" variant="secondary" onClick={() => openEdit(b)} testId={`admin.help_boxes.edit.${b.id}`}>
+                      <Button
+                        size="lg"
+                        variant="secondary"
+                        className="w-full min-w-0"
+                        ariaLabel={`${t('admin.help_boxes.action.edit')}: #${b.id}`}
+                        onClick={() => openEdit(b)}
+                        testId={`admin.help_boxes.card.${b.id}.edit`}
+                      >
                         {t('admin.help_boxes.action.edit')}
                       </Button>
                       <Button
-                        size="sm"
+                        size="lg"
                         variant="danger"
+                        className="w-full min-w-0"
+                        ariaLabel={`${t('admin.help_boxes.action.delete')}: #${b.id}`}
                         onClick={() => {
                           delM.reset();
                           setDeleteTarget(b);
                           setDeleteOpen(true);
                         }}
-                        testId={`admin.help_boxes.delete.${b.id}`}
+                        testId={`admin.help_boxes.card.${b.id}.delete`}
                       >
                         {t('admin.help_boxes.action.delete')}
                       </Button>
                     </div>
-                  </td>
-                </tr>
+                  </div>
+                </Card>
               );
             })}
-          </tbody>
-        </TableCard>
+          </div>
+
+          <TableCard className="hidden md:block" testId="admin.help_boxes.table" minWidth="lg">
+            <thead>
+              <tr>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-faint">{t('admin.help_boxes.table.order')}</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-faint">{t('admin.help_boxes.table.page')}</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-faint">{t('admin.help_boxes.table.action')}</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-faint">{t('admin.help_boxes.table.language')}</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-faint">{t('admin.help_boxes.table.content')}</th>
+                <th className="px-4 py-2 text-right text-xs font-semibold text-faint">{t('common.actions')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((b) => {
+                const page = String(b.page ?? '');
+                const action = String(b.action ?? '');
+                const lang = b.language ? String(b.language.label ?? b.language.code ?? b.language.id) : t('common.default');
+                const pageBadge = page === '*' ? <Badge variant="info">*</Badge> : null;
+                const actionBadge = action === '*' ? <Badge variant="info">*</Badge> : null;
+
+                return (
+                  <tr key={b.id} className="table-row-tone">
+                    <td className="px-4 py-2 text-xs text-muted">{typeof b.order === 'number' ? b.order : '—'}</td>
+                    <td className="px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs text-fg">{page || '—'}</span>
+                        {pageBadge}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs text-fg">{action || '—'}</span>
+                        {actionBadge}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2 text-xs text-muted">{lang}</td>
+                    <td className="px-4 py-2">
+                      <div className="text-sm text-fg">{snippet(b.content)}</div>
+                      <div className="mt-0.5 text-xs text-faint">#{b.id}</div>
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => {
+                            setPreviewTarget(b);
+                            setPreviewOpen(true);
+                          }}
+                          testId={`admin.help_boxes.preview.${b.id}`}
+                        >
+                          {t('admin.help_boxes.action.preview')}
+                        </Button>
+                        <Button size="sm" variant="secondary" onClick={() => openEdit(b)} testId={`admin.help_boxes.edit.${b.id}`}>
+                          {t('admin.help_boxes.action.edit')}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          onClick={() => {
+                            setDeleteTarget(b);
+                            setDeleteOpen(true);
+                          }}
+                          testId={`admin.help_boxes.delete.${b.id}`}
+                        >
+                          {t('admin.help_boxes.action.delete')}
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </TableCard>
+        </>
       )}
 
       <Modal
