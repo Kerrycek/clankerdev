@@ -116,6 +116,7 @@ export function UserEnvironmentConfigsPanel(props: {
   const rows = useMemo(() => sortConfigs(q.data ?? []), [q.data]);
 
   const [drafts, setDrafts] = useState<Record<number, EnvConfigDraft>>({});
+  const [saveError, setSaveError] = useState<{ configId: number; message: string } | null>(null);
 
   const prefix = props.testIdPrefix;
 
@@ -143,6 +144,9 @@ export function UserEnvironmentConfigsPanel(props: {
         max_vps_count: Math.floor(max),
       });
     },
+    onMutate: (vars) => {
+      setSaveError((current) => (current?.configId === vars.cfg.id ? null : current));
+    },
     onSuccess: async (_data, vars) => {
       await qc.invalidateQueries({ queryKey: ['user_environment_configs', props.userId] });
       setDrafts((prev) => {
@@ -150,9 +154,12 @@ export function UserEnvironmentConfigsPanel(props: {
         delete next[vars.cfg.id];
         return next;
       });
+      setSaveError((current) => (current?.configId === vars.cfg.id ? null : current));
       pushToast({ variant: 'ok', title: t('admin.user.env_configs.toast.saved') });
     },
-    onError: (err) => pushToast({ variant: 'danger', title: t('common.error'), body: formatErrorMessage(err) }),
+    onError: (err, vars) => {
+      setSaveError({ configId: vars.cfg.id, message: formatErrorMessage(err) });
+    },
   });
 
   function draftFor(cfg: UserEnvironmentConfig): EnvConfigDraft {
@@ -160,6 +167,7 @@ export function UserEnvironmentConfigsPanel(props: {
   }
 
   function updateDraft<K extends keyof EnvConfigDraft>(cfg: UserEnvironmentConfig, key: K, value: EnvConfigDraft[K]) {
+    setSaveError((current) => (current?.configId === cfg.id ? null : current));
     setDrafts((prev) => ({
       ...prev,
       [cfg.id]: {
@@ -343,6 +351,15 @@ export function UserEnvironmentConfigsPanel(props: {
                                 >
                                   {t('common.save')}
                                 </Button>
+                                {saveError?.configId === cfg.id ? (
+                                  <Alert
+                                    variant="danger"
+                                    title={t('admin.user.env_configs.modal.save_failed')}
+                                    testId={`${prefix}.row.${cfg.id}.save_error`}
+                                  >
+                                    {saveError.message}
+                                  </Alert>
+                                ) : null}
                               </>
                             );
                           })()}
@@ -457,16 +474,28 @@ export function UserEnvironmentConfigsPanel(props: {
                           </td>
                           {props.editable ? (
                             <td className="px-4 py-2 text-right">
-                              <Button
-                                variant="primary"
-                                size="sm"
-                                onClick={() => saveM.mutate({ cfg, draft })}
-                                loading={saveM.isPending}
-                                disabled={saveDisabled(cfg, draft)}
-                                testId={`${prefix}.row.${cfg.id}.save`}
-                              >
-                                {t('common.save')}
-                              </Button>
+                              <div className="flex flex-col items-end gap-2">
+                                <Button
+                                  variant="primary"
+                                  size="sm"
+                                  onClick={() => saveM.mutate({ cfg, draft })}
+                                  loading={saveM.isPending}
+                                  disabled={saveDisabled(cfg, draft)}
+                                  testId={`${prefix}.row.${cfg.id}.save`}
+                                >
+                                  {t('common.save')}
+                                </Button>
+                                {saveError?.configId === cfg.id ? (
+                                  <Alert
+                                    variant="danger"
+                                    title={t('admin.user.env_configs.modal.save_failed')}
+                                    className="max-w-xs text-left"
+                                    testId={`${prefix}.row.${cfg.id}.save_error`}
+                                  >
+                                    {saveError.message}
+                                  </Alert>
+                                ) : null}
+                              </div>
                             </td>
                           ) : null}
                         </tr>

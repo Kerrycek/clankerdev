@@ -138,6 +138,79 @@ test('@pr-smoke @pr-smoke-mobile admin incoming payment: assign to user', async 
   expect(stateUpdateRequests).toBe(0);
 });
 
+test('@pr-smoke @pr-smoke-mobile admin incoming payments: sequential review opens the next unmatched payment', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+
+  const states = new Map<number, string>([
+    [302, 'unmatched'],
+    [301, 'unmatched'],
+    [300, 'unmatched'],
+  ]);
+  const assignments: number[] = [];
+  const payment = (id: number) => ({
+    id,
+    state: states.get(id),
+    date: `2026-02-${id - 288}T09:00:00Z`,
+    transaction_id: `TX-${id}`,
+    amount: 1_000,
+    currency: 'CZK',
+    account_name: 'Test account',
+    vs: String(id),
+    created_at: `2026-02-${id - 288}T09:00:00Z`,
+  });
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100 },
+    handlers: {
+      'GET incoming_payments': ({ searchParams }) => {
+        const requestedState = String(searchParams.get('incoming_payment[state]') ?? '');
+        const rows = [302, 301, 300]
+          .map(payment)
+          .filter((row) => !requestedState || row.state === requestedState);
+        return { incoming_payments: rows, _meta: { total_count: rows.length } };
+      },
+      'GET incoming_payments/302': () => ({ incoming_payment: payment(302) }),
+      'GET incoming_payments/301': () => ({ incoming_payment: payment(301) }),
+      'GET incoming_payments/300': () => ({ incoming_payment: payment(300) }),
+      'GET users/123': () => ({ user: { id: 123, login: 'alice', full_name: 'Alice Example' } }),
+      'PUT incoming_payments/301': ({ reqJson }) => {
+        states.set(301, String(reqJson?.incoming_payment?.state ?? states.get(301)));
+        return { incoming_payment: payment(301) };
+      },
+      'POST user_payments': ({ reqJson }) => {
+        const incomingPaymentId = Number(reqJson?.user_payment?.incoming_payment);
+        assignments.push(incomingPaymentId);
+        states.set(incomingPaymentId, 'processed');
+        return {
+          user_payment: { id: 7_000 + incomingPaymentId, incoming_payment: { id: incomingPaymentId } },
+          _meta: { action_state_id: 9_000 + incomingPaymentId },
+        };
+      },
+    },
+  });
+
+  await page.goto(withAppUrl('/admin/payments/incoming?state=unmatched'));
+  await expect(page.getByTestId('admin.payments.incoming.review.start')).toContainText('3');
+  await page.getByTestId('admin.payments.incoming.review.start').click();
+
+  await expect(page).toHaveURL(/\/admin\/payments\/incoming\/302/);
+  await expect(page.getByTestId('admin.payments.incoming.review.continue')).toBeChecked();
+  await expect(page.getByTestId('admin.payments.incoming.review.queue')).toContainText('3');
+
+  await page.getByTestId('admin.payments.incoming.assign.user_id').fill('123');
+  await page.getByTestId('admin.payments.incoming.assign.submit').click();
+
+  await expect(page).toHaveURL(/\/admin\/payments\/incoming\/301/);
+  await expect(page.getByTestId('admin.payments.incoming.review.queue')).toContainText('2');
+  await expect(page.getByTestId('admin.payments.incoming.assign.user_id')).toHaveValue('');
+  expect(assignments).toEqual([302]);
+
+  await page.getByTestId('admin.payments.incoming.review.continue').uncheck();
+  await page.getByTestId('admin.payments.incoming.state.select').selectOption('ignored');
+  await page.getByTestId('admin.payments.incoming.state.save').click();
+  await expect(page).toHaveURL(/\/admin\/payments\/incoming\?state=unmatched/);
+});
+
 test('admin incoming payment: route change drops the previous payment edits without writing', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
 

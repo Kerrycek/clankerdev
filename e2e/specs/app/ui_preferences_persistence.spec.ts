@@ -122,3 +122,65 @@ test('public pages do not call webui_user_settings', async ({ page }) => {
 
   expect(settingsCalls).toBe(0);
 });
+
+test('@pr-smoke @pr-smoke-mobile profile preferences: reset uses a retryable in-app confirmation', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page, {
+    sessionToken: 'TEST_USER_SESSION',
+    webuiNext: serverUiSettingsConfig(),
+  });
+
+  const user = { id: 10, login: 'alice', level: 1 };
+  let resetAttempts = 0;
+  const storedSetting: MockSetting = {
+    id: 1,
+    namespace: SETTINGS_NAMESPACE,
+    key: SETTINGS_KEY,
+    value: encodeSettings({
+      sidebarCollapsed: true,
+      theme: 'dark',
+      language: 'en',
+      tips: { sidebarTimeZone: 'dismissed' },
+    }),
+  };
+
+  await installHaveApiMock(page, {
+    user,
+    handlers: {
+      'GET users/current': () => ({ user }),
+      'GET users/10': () => ({ user }),
+      'GET webui_user_settings': () => ({ webui_user_settings: [storedSetting] }),
+      'PUT webui_user_settings': ({ reqJson }) => {
+        resetAttempts += 1;
+        if (resetAttempts === 1) return jsonFulfill(failEnvelope('Reset temporarily unavailable'), 503);
+
+        const payload = (reqJson as any).webui_user_setting;
+        storedSetting.value = payload.value;
+        return { webui_user_setting: storedSetting };
+      },
+    },
+  });
+
+  await page.goto('/app/profile');
+  await expect(page.getByTestId('profile.prefs.card')).toBeVisible();
+  await page.getByTestId('profile.prefs.diagnostics').locator('summary').click();
+  await page.getByTestId('profile.prefs.reset.include_tips').check();
+
+  await page.getByTestId('profile.prefs.reset').click();
+  await expect(page.getByTestId('profile.prefs.reset.confirmation')).toBeVisible();
+  await expect(page.getByTestId('profile.prefs.reset.confirmation')).toContainText('dismissed tips');
+  expect(resetAttempts).toBe(0);
+
+  await page.getByTestId('profile.prefs.reset.confirmation.confirm').click();
+  await expect.poll(() => resetAttempts).toBe(1);
+  await expect(page.getByTestId('profile.prefs.reset.confirmation')).toContainText('Reset temporarily unavailable');
+  await expect(page.getByTestId('profile.prefs.reset.confirmation.confirm')).toBeEnabled();
+
+  await page.getByTestId('profile.prefs.reset.confirmation.confirm').click();
+  await expect.poll(() => resetAttempts).toBe(2);
+  await expect(page.getByTestId('profile.prefs.reset.confirmation')).toHaveCount(0);
+
+  const saved = JSON.parse(storedSetting.value);
+  expect(saved.theme).toBe('system');
+  expect(saved.sidebarCollapsed).toBe(false);
+  expect(saved.tips.sidebarTimeZone).toBe('visible');
+});
