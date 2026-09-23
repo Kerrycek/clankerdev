@@ -1,4 +1,5 @@
 import { Link2 } from 'lucide-react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 
 import { useI18n } from '../../../../app/i18n';
@@ -14,6 +15,10 @@ import { formatDateTime } from '../../../../lib/format';
 import { pickLocalizedField } from '../../../../lib/translations';
 import { resourceId, resourceLabel } from './securityAdvisoryAdminModel';
 import { securityAdvisoryOutageObject } from './securityAdvisoryDetailViewModel';
+
+function MobileCellLabel(props: { children: React.ReactNode }) {
+  return <span className="text-xs font-medium text-faint @4xl:hidden">{props.children}</span>;
+}
 
 export function SecurityAdvisoryOutagesPanel(props: {
   links: SecurityAdvisoryOutageLink[];
@@ -31,7 +36,7 @@ export function SecurityAdvisoryOutagesPanel(props: {
 
   return (
     <div className="space-y-4">
-      <Card>
+      <Card className="@container">
         <CardHeader
           title={t('admin.security_advisories.outages.link_title')}
           subtitle={t('admin.security_advisories.outages.link_subtitle')}
@@ -56,6 +61,7 @@ export function SecurityAdvisoryOutagesPanel(props: {
             />
             <Button
               variant="primary"
+              className="min-h-11 whitespace-nowrap @4xl:min-h-9"
               onClick={props.onLink}
               loading={props.linking}
               disabled={!props.outageId.trim()}
@@ -72,8 +78,12 @@ export function SecurityAdvisoryOutagesPanel(props: {
       ) : props.links.length === 0 ? (
         <Alert variant="neutral" title={t('admin.security_advisories.outages.empty')} />
       ) : (
-        <TableCard minWidth="lg">
-          <thead>
+        <TableCard
+          className="@container"
+          testId="admin.security_advisories.outages.table"
+          tableClassName="block @4xl:table @4xl:min-w-table-lg"
+        >
+          <thead className="hidden @4xl:table-header-group">
             <tr>
               <th>{t('admin.security_advisories.outages.outage')}</th>
               <th>{t('admin.security_advisories.outages.begins_at')}</th>
@@ -81,7 +91,7 @@ export function SecurityAdvisoryOutagesPanel(props: {
               <th className="text-right">{t('common.actions')}</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="block @4xl:table-row-group">
             {props.links.map((link) => {
               const outage = securityAdvisoryOutageObject(link);
               const id = resourceId(link.outage, link.outage_id);
@@ -89,20 +99,40 @@ export function SecurityAdvisoryOutagesPanel(props: {
                 ? pickLocalizedField(outage, 'summary', i18n.preferredLanguageCodes)
                 : undefined;
               return (
-                <tr key={link.id} className="table-row-tone">
-                  <td>
+                <tr
+                  key={link.id}
+                  className="table-row-tone block border-b border-border last:border-b-0 @4xl:table-row @4xl:border-0"
+                  data-testid={`admin.security_advisories.outages.row.${link.id}`}
+                >
+                  <td className="grid min-w-0 grid-cols-[minmax(6rem,0.38fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 @4xl:table-cell @4xl:p-0">
+                    <MobileCellLabel>{t('admin.security_advisories.outages.outage')}</MobileCellLabel>
                     {id ? (
-                      <Link to={`/admin/outages/${id}`} className="font-medium text-accent hover:underline">
+                      <Link
+                        to={`/admin/outages/${id}`}
+                        className="inline-flex min-h-11 min-w-0 items-center break-words font-medium text-accent hover:underline @4xl:min-h-0"
+                      >
                         #{id}
                       </Link>
-                    ) : resourceLabel(link.outage)}
+                    ) : (
+                      <span className="min-w-0 break-words">{resourceLabel(link.outage)}</span>
+                    )}
                   </td>
-                  <td>{outage?.['begins_at'] ? formatDateTime(String(outage['begins_at'])) : '—'}</td>
-                  <td>{summary ?? '—'}</td>
-                  <td className="text-right">
+                  <td className="grid min-w-0 grid-cols-[minmax(6rem,0.38fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 @4xl:table-cell @4xl:p-0">
+                    <MobileCellLabel>{t('admin.security_advisories.outages.begins_at')}</MobileCellLabel>
+                    <span className="min-w-0 break-words">
+                      {outage?.['begins_at'] ? formatDateTime(String(outage['begins_at'])) : '—'}
+                    </span>
+                  </td>
+                  <td className="grid min-w-0 grid-cols-[minmax(6rem,0.38fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 @4xl:table-cell @4xl:p-0">
+                    <MobileCellLabel>{t('admin.security_advisories.outages.summary')}</MobileCellLabel>
+                    <span className="min-w-0 break-words">{summary ?? '—'}</span>
+                  </td>
+                  <td className="grid min-w-0 grid-cols-[minmax(6rem,0.38fr)_minmax(0,1fr)] items-start gap-3 px-3 py-2 @4xl:table-cell @4xl:p-0 @4xl:text-right">
+                    <MobileCellLabel>{t('common.actions')}</MobileCellLabel>
                     <Button
                       size="sm"
                       variant="danger"
+                      className="min-h-11 w-full whitespace-nowrap @4xl:min-h-8 @4xl:w-auto"
                       onClick={() => props.onUnlink(link)}
                       testId={`admin.security_advisory.outages.unlink.${link.id}`}
                     >
