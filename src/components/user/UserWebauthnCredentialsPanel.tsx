@@ -62,17 +62,26 @@ export function UserWebauthnCredentialsPanel(props: {
   });
 
   const closeCreate = () => {
+    registerM.reset();
     setCreateOpen(false);
     setCreateLabel('');
   };
 
+  const openCreate = () => {
+    registerM.reset();
+    setCreateLabel('');
+    setCreateOpen(true);
+  };
+
   const openEdit = (credential: UserWebauthnCredential) => {
+    saveEditM.reset();
     setEditing(credential);
     setEditLabel(String(credential.label ?? ''));
     setEditEnabled(Boolean(credential.enabled));
   };
 
   const closeEdit = () => {
+    saveEditM.reset();
     setEditing(null);
     setEditLabel('');
     setEditEnabled(true);
@@ -155,6 +164,16 @@ export function UserWebauthnCredentialsPanel(props: {
     },
   });
 
+  const openDelete = (id: number) => {
+    delM.reset();
+    setDeleteId(id);
+  };
+
+  const closeDelete = () => {
+    delM.reset();
+    setDeleteId(null);
+  };
+
   const prefix = props.testIdPrefix;
 
   return (
@@ -165,7 +184,7 @@ export function UserWebauthnCredentialsPanel(props: {
           subtitle={props.allowRegistration ? t('profile.mfa.webauthn.subtitle') : t('profile.mfa.webauthn.subtitle_admin')}
           actions={
             props.allowRegistration ? (
-              <Button onClick={() => setCreateOpen(true)} disabled={!canRegister} testId={`${prefix}.webauthn.add`}>
+              <Button onClick={openCreate} disabled={!canRegister} testId={`${prefix}.webauthn.add`}>
                 {t('profile.mfa.webauthn.add')}
               </Button>
             ) : null
@@ -196,7 +215,7 @@ export function UserWebauthnCredentialsPanel(props: {
               credentials={credsSorted}
               testIdPrefix={prefix}
               onEdit={openEdit}
-              onDelete={setDeleteId}
+              onDelete={openDelete}
             />
           )}
         </CardBody>
@@ -235,7 +254,7 @@ export function UserWebauthnCredentialsPanel(props: {
         isError={delM.isError}
         error={delM.error}
         testIdPrefix={prefix}
-        onCancel={() => setDeleteId(null)}
+        onCancel={closeDelete}
         onConfirm={() => {
           if (deleteId === null) return;
           delM.mutate(deleteId);

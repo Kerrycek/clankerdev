@@ -450,6 +450,7 @@ export function ResourcePackageDetailPage() {
             <Button
               variant="danger"
               onClick={() => {
+                deletePkgM.reset();
                 setDeleteOpen(true);
               }}
               disabled={personal}
@@ -528,7 +529,10 @@ export function ResourcePackageDetailPage() {
                           <Button
                             size="sm"
                             variant="danger"
-                            onClick={() => setDeleteItemOpen({ open: true, item: it })}
+                            onClick={() => {
+                              deleteItemM.reset();
+                              setDeleteItemOpen({ open: true, item: it });
+                            }}
                             testId={`admin.cluster.resource_package_detail.items.row.${itemId}.delete`}
                           >
                             {t('common.delete')}
@@ -622,7 +626,10 @@ export function ResourcePackageDetailPage() {
                             <Button
                               size="sm"
                               variant="danger"
-                              onClick={() => setDeleteAssignState({ open: true, rec })}
+                              onClick={() => {
+                                deleteAssignM.reset();
+                                setDeleteAssignState({ open: true, rec });
+                              }}
                               testId={`admin.cluster.resource_package_detail.assign.row.${recId}.delete`}
                             >
                               {t('common.delete')}
@@ -679,6 +686,7 @@ export function ResourcePackageDetailPage() {
       <ConfirmDialog
         open={deleteOpen}
         onCancel={() => {
+          deletePkgM.reset();
           setDeleteOpen(false);
         }}
         onConfirm={() => deletePkgM.mutate()}
@@ -691,9 +699,23 @@ export function ResourcePackageDetailPage() {
         testId="admin.cluster.resource_package_detail.delete_confirm"
       >
         <div className="space-y-3">
+          <div className="rounded-md border border-border bg-surface-subtle px-3 py-2">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted">
+              {t('admin.cluster.resource_packages.delete_confirm.target')}
+            </div>
+            <div className="mt-1 font-medium text-fg">
+              {label}
+              <span className="ml-2 text-sm font-normal text-muted">#{id}</span>
+            </div>
+          </div>
           <div className="text-sm text-muted">
             {t('admin.cluster.resource_packages.delete_confirm.impact', { count: String(assignmentTotal) })}
           </div>
+          {deletePkgM.isError ? (
+            <Alert variant="danger" title={t('common.error')} testId="admin.cluster.resource_package_detail.delete_confirm.error">
+              {formatErrorMessage(deletePkgM.error)}
+            </Alert>
+          ) : null}
         </div>
       </ConfirmDialog>
 
@@ -757,7 +779,10 @@ export function ResourcePackageDetailPage() {
       {/* Delete item */}
       <ConfirmDialog
         open={deleteItemOpen.open}
-        onCancel={() => setDeleteItemOpen({ open: false, item: undefined })}
+        onCancel={() => {
+          deleteItemM.reset();
+          setDeleteItemOpen({ open: false, item: undefined });
+        }}
         onConfirm={() => deleteItemM.mutate()}
         danger
         title={t('admin.cluster.resource_packages.items.delete_confirm.title')}
@@ -766,8 +791,26 @@ export function ResourcePackageDetailPage() {
         confirmLoading={deleteItemM.isPending}
         testId="admin.cluster.resource_package_detail.item_delete_confirm"
       >
-        <div className="text-sm text-muted">
-          {t('admin.cluster.resource_packages.items.delete_confirm.impact', { count: personal ? '1' : String(assignmentTotal) })}
+        <div className="space-y-3">
+          {deleteItemOpen.item ? (
+            <div className="rounded-md border border-border bg-surface-subtle px-3 py-2">
+              <div className="font-medium text-fg">
+                {crLabel((deleteItemOpen.item as any).cluster_resource)}
+                <span className="ml-2 text-sm font-normal text-muted">#{deleteItemOpen.item.id}</span>
+              </div>
+              <div className="mt-1 text-sm text-muted">
+                {t('admin.cluster.resource_packages.items.field.value')}: {String(deleteItemOpen.item.value ?? '—')}
+              </div>
+            </div>
+          ) : null}
+          <div className="text-sm text-muted">
+            {t('admin.cluster.resource_packages.items.delete_confirm.impact', { count: personal ? '1' : String(assignmentTotal) })}
+          </div>
+          {deleteItemM.isError ? (
+            <Alert variant="danger" title={t('common.error')} testId="admin.cluster.resource_package_detail.item_delete_confirm.error">
+              {formatErrorMessage(deleteItemM.error)}
+            </Alert>
+          ) : null}
         </div>
       </ConfirmDialog>
 
@@ -867,7 +910,10 @@ export function ResourcePackageDetailPage() {
       {/* Delete assignment */}
       <ConfirmDialog
         open={deleteAssignState.open}
-        onCancel={() => setDeleteAssignState({ open: false, rec: undefined })}
+        onCancel={() => {
+          deleteAssignM.reset();
+          setDeleteAssignState({ open: false, rec: undefined });
+        }}
         onConfirm={() => deleteAssignM.mutate()}
         danger
         title={t('admin.cluster.resource_packages.assign.delete_confirm.title')}
@@ -876,11 +922,19 @@ export function ResourcePackageDetailPage() {
         confirmLoading={deleteAssignM.isPending}
         testId="admin.cluster.resource_package_detail.assign_delete_confirm"
       >
-        <div className="text-sm text-muted">
-          {t('admin.cluster.resource_packages.assign.delete_confirm.hint', {
-            user: userLabel((deleteAssignState.rec as any)?.user),
-            environment: envLabel((deleteAssignState.rec as any)?.environment),
-          })}
+        <div className="space-y-3">
+          <div className="text-sm text-muted">
+            {t('admin.cluster.resource_packages.assign.delete_confirm.hint', {
+              user: userLabel((deleteAssignState.rec as any)?.user),
+              environment: envLabel((deleteAssignState.rec as any)?.environment),
+            })}
+            {deleteAssignState.rec?.id ? <span className="ml-2">#{deleteAssignState.rec.id}</span> : null}
+          </div>
+          {deleteAssignM.isError ? (
+            <Alert variant="danger" title={t('common.error')} testId="admin.cluster.resource_package_detail.assign_delete_confirm.error">
+              {formatErrorMessage(deleteAssignM.error)}
+            </Alert>
+          ) : null}
         </div>
       </ConfirmDialog>
     </div>

@@ -48,6 +48,7 @@ export function SecurityAdvisoryDetailDialogs(props: {
   onPublishConfirm: () => void;
   rebuildOpen: boolean;
   rebuildSaving: boolean;
+  rebuildError: string | null;
   onRebuildClose: () => void;
   onRebuildConfirm: () => void;
   updateEditorOpen: boolean;
@@ -68,6 +69,7 @@ export function SecurityAdvisoryDetailDialogs(props: {
   onUpdateConfirm: () => void;
   unlinkTarget: SecurityAdvisoryOutageLink | null;
   unlinkSaving: boolean;
+  unlinkError: string | null;
   onUnlinkClose: () => void;
   onUnlinkConfirm: () => void;
 }) {
@@ -145,7 +147,17 @@ export function SecurityAdvisoryDetailDialogs(props: {
         confirmLabel={t('admin.security_advisories.action.rebuild')}
         confirmLoading={props.rebuildSaving}
         testId="admin.security_advisory.rebuild_dialog"
-      />
+      >
+        {props.rebuildError ? (
+          <Alert
+            variant="danger"
+            title={t('admin.security_advisories.toast.rebuild_failed')}
+            testId="admin.security_advisory.rebuild_dialog.error"
+          >
+            {props.rebuildError}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
 
       <SecurityAdvisoryUpdateModal
         open={props.updateEditorOpen && props.canPostUpdate}
@@ -214,7 +226,17 @@ export function SecurityAdvisoryDetailDialogs(props: {
         danger
         confirmLoading={props.unlinkSaving}
         testId="admin.security_advisory.outages.unlink"
-      />
+      >
+        {props.unlinkError ? (
+          <Alert
+            variant="danger"
+            title={t('common.error')}
+            testId="admin.security_advisory.outages.unlink.error"
+          >
+            {props.unlinkError}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
     </>
   );
 }

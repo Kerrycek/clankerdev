@@ -10,8 +10,10 @@ import { PageContainer } from '../../../components/layout/PageContainer';
 import { fetchVps, type Vps } from '../../../lib/api/vps';
 import { createIncidentReport, fetchIpAddressAssignments, type IpAddressAssignment } from '../../../lib/api/incidents';
 import { getMetaActionStateId } from '../../../lib/api/haveapi';
+import { formatErrorMessage } from '../../../lib/errors';
 import { objectRef } from '../../../lib/objectRef';
 
+import { Alert } from '../../../components/ui/Alert';
 import { Button } from '../../../components/ui/Button';
 import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
 import { ErrorState } from '../../../components/ui/ErrorState';
@@ -175,13 +177,6 @@ export function IncidentReportNewPage() {
       // Back to VPS dossier (parity with legacy UI).
       nav(`${basePath}/vps/${vpsId}`);
     },
-    onError: (err) => {
-      pushToast({
-        variant: 'danger',
-        title: t('incidents.new.error.title'),
-        body: err instanceof Error ? err.message : t('incidents.new.error.generic'),
-      });
-    },
   });
 
   if (mode !== 'admin') {
@@ -311,6 +306,18 @@ export function IncidentReportNewPage() {
                 />
               </div>
             </div>
+
+            {mutation.isError ? (
+              <div className="mt-4">
+                <Alert
+                  variant="danger"
+                  title={t('incidents.new.error.title')}
+                  testId="incidents.new.submit.error"
+                >
+                  {formatErrorMessage(mutation.error)}
+                </Alert>
+              </div>
+            ) : null}
 
             <div className="mt-6 flex items-center gap-2">
               <Button disabled={mutation.isPending} onClick={() => mutation.mutate()} testId="incidents.new.submit">

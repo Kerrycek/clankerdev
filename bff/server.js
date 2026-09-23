@@ -29,6 +29,7 @@ const {
   saveSession,
   setRuntimeConfigSecurityHeaders,
   setRuntimeSessionSecurityHeaders,
+  validateSessionSecret,
   validateOAuthTokenResponse,
 } = require('./security');
 
@@ -78,7 +79,7 @@ const PASSWORD_RECOVERY_URL = passwordRecoveryUrl();
 const OAUTH_REDIRECT_URI =
   process.env.OAUTH_REDIRECT_URI || `https://${DOMAIN}/oauth/callback`;
 
-const SESSION_SECRET = required('SESSION_SECRET');
+const SESSION_SECRET = validateSessionSecret(required('SESSION_SECRET'));
 const SESSION_STORE_PATH = process.env.SESSION_STORE_PATH || '/var/lib/webui-next-bff/sessions';
 const SESSION_COOKIE_NAME = process.env.SESSION_COOKIE_NAME || 'webui_next_sess';
 

@@ -134,6 +134,35 @@ describe('runtimeBootstrap', () => {
     expect(target.vpsAdmin?.sessionToken).toBe('detached-legacy-session');
   });
 
+  it('treats a valid BFF session response as authoritative over stale standalone OAuth tokens', async () => {
+    const storageKey = 'vpsadmin_ui_next.oauth2';
+    window.sessionStorage.setItem(storageKey, JSON.stringify({ accessToken: 'stale-session-token' }));
+    window.localStorage.setItem(storageKey, JSON.stringify({ accessToken: 'stale-local-token' }));
+
+    const target: RuntimeSessionTarget = {
+      vpsAdmin: {
+        api: { url: 'https://api.example.test', version: '7.0' },
+        webuiNext: { basePath: '' },
+      },
+    };
+    const fetchImpl = vi.fn(async () => new Response(
+      JSON.stringify({ accessToken: null, sessionExpiresAt: null }),
+      { headers: { 'content-type': 'application/json' } },
+    ));
+
+    expect(await loadBffRuntimeSession({
+      origin: 'https://example.test',
+      baseUrl: '/',
+      fetchImpl,
+      target,
+    })).toBe('https://example.test/session.json');
+
+    expect(window.sessionStorage.getItem(storageKey)).toBeNull();
+    expect(window.localStorage.getItem(storageKey)).toBeNull();
+    expect(target.vpsAdmin?.accessToken).toBeUndefined();
+    expect(target.vpsAdmin?.webuiNext?.sessionExpiresAt).toBeNull();
+  });
+
   it('ignores non-JSON session responses from static SPA fallbacks', async () => {
     const target: RuntimeSessionTarget = {
       vpsAdmin: {

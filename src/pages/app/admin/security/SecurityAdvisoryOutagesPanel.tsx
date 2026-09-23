@@ -20,6 +20,7 @@ export function SecurityAdvisoryOutagesPanel(props: {
   outageId: string;
   loading: boolean;
   linking: boolean;
+  linkError: string | null;
   error?: unknown;
   onOutageIdChange: (value: string) => void;
   onLink: () => void;
@@ -36,6 +37,15 @@ export function SecurityAdvisoryOutagesPanel(props: {
           subtitle={t('admin.security_advisories.outages.link_subtitle')}
         />
         <CardBody>
+          {props.linkError ? (
+            <Alert
+              variant="danger"
+              title={t('admin.security_advisories.toast.outage_link_failed')}
+              testId="admin.security_advisory.outages.link_error"
+            >
+              {props.linkError}
+            </Alert>
+          ) : null}
           <div className="flex max-w-lg flex-col gap-2 sm:flex-row">
             <Input
               value={props.outageId}
@@ -49,6 +59,7 @@ export function SecurityAdvisoryOutagesPanel(props: {
               onClick={props.onLink}
               loading={props.linking}
               disabled={!props.outageId.trim()}
+              testId="admin.security_advisory.outages.link"
             >
               <Link2 size={16} /> {t('admin.security_advisories.action.link_outage')}
             </Button>
@@ -89,7 +100,12 @@ export function SecurityAdvisoryOutagesPanel(props: {
                   <td>{outage?.['begins_at'] ? formatDateTime(String(outage['begins_at'])) : '—'}</td>
                   <td>{summary ?? '—'}</td>
                   <td className="text-right">
-                    <Button size="sm" variant="danger" onClick={() => props.onUnlink(link)}>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      onClick={() => props.onUnlink(link)}
+                      testId={`admin.security_advisory.outages.unlink.${link.id}`}
+                    >
                       {t('admin.security_advisories.action.unlink')}
                     </Button>
                   </td>

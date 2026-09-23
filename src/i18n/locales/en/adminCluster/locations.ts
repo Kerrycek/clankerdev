@@ -10,6 +10,7 @@ export const enAdminCluster_locations = {
   "admin.cluster.locations.editor.has_ipv6": "IPv6 available in this location",
   "admin.cluster.locations.editor.label_placeholder": "e.g. prg1",
   "admin.cluster.locations.editor.remote_console": "Remote console server URL",
+  "admin.cluster.locations.editor.remote_console_error": "Use an HTTPS URL or a same-origin path. Plain HTTP is allowed only for local loopback development.",
   "admin.cluster.locations.editor.validation_body": "Please fill all required fields and fix invalid values.",
   "admin.cluster.locations.empty.body": "No locations matched your filters.",
   "admin.cluster.locations.empty.title": "No locations",

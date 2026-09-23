@@ -113,3 +113,83 @@ test('@pr-smoke-mobile @smoke-mobile admin DNS server actions stay reachable at 
   await expect(confirmation).toBeVisible();
   await expect(confirmation.getByTestId('admin.cluster.dns_servers.delete_confirm.confirm')).toBeVisible();
 });
+
+test('@pr-smoke @pr-smoke-mobile failed admin DNS deletions stay in context and can be retried', async ({ page }, testInfo) => {
+  const mobile = testInfo.project.name === 'mobile-chrome';
+  let serverDeleteCalls = 0;
+  let tsigDeleteCalls = 0;
+  if (mobile) await page.setViewportSize({ width: 320, height: 900 });
+
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 90 },
+    handlers: {
+      'GET dns_servers': () => ({
+        dns_servers: [{
+          id: 1,
+          name: 'ns1.example.test',
+          node: { id: 11, domain_name: 'node1.example.test' },
+          ipv4_addr: '192.0.2.1',
+          enable_user_dns_zones: true,
+        }],
+        _meta: { total_count: 1 },
+      }),
+      'GET nodes': () => ({ nodes: [{ id: 11, domain_name: 'node1.example.test' }] }),
+      'DELETE dns_servers/1': () => {
+        serverDeleteCalls += 1;
+        if (serverDeleteCalls === 1) {
+          return {
+            status: 409,
+            contentType: 'application/json',
+            body: JSON.stringify({ status: false, message: 'DNS server is still in use', response: null }),
+          };
+        }
+        return {};
+      },
+      'GET dns_tsig_keys': () => ({
+        dns_tsig_keys: [{
+          id: 7,
+          name: 'transfer-key',
+          algorithm: 'hmac-sha256',
+          user: { id: 10, login: 'alice' },
+        }],
+        _meta: { total_count: 1 },
+      }),
+      'DELETE dns_tsig_keys/7': () => {
+        tsigDeleteCalls += 1;
+        if (tsigDeleteCalls === 1) {
+          return {
+            status: 409,
+            contentType: 'application/json',
+            body: JSON.stringify({ status: false, message: 'TSIG key is referenced by a zone', response: null }),
+          };
+        }
+        return {};
+      },
+    },
+  });
+
+  await page.goto('/admin/cluster/dns-servers');
+  await page.getByTestId(
+    mobile ? 'admin.cluster.dns_servers.card.1.delete' : 'admin.cluster.dns_servers.row.1.delete',
+  ).click();
+  const serverDialog = page.getByTestId('admin.cluster.dns_servers.delete_confirm');
+  await serverDialog.getByTestId('admin.cluster.dns_servers.delete_confirm.confirm').click();
+  await expect(serverDialog.getByTestId('admin.cluster.dns_servers.delete_error')).toContainText('DNS server is still in use');
+  await expect(serverDialog).toBeVisible();
+  await serverDialog.getByTestId('admin.cluster.dns_servers.delete_confirm.confirm').click();
+  await expect(serverDialog).toBeHidden();
+  expect(serverDeleteCalls).toBe(2);
+
+  await page.goto('/admin/cluster/dns-tsig-keys');
+  await page.getByTestId(
+    mobile ? 'admin.cluster.dns_tsig.card.7.delete' : 'admin.cluster.dns_tsig.row.7.delete',
+  ).click();
+  const tsigDialog = page.getByTestId('admin.cluster.dns_tsig.delete_confirm');
+  await tsigDialog.getByTestId('admin.cluster.dns_tsig.delete_confirm.confirm').click();
+  await expect(tsigDialog.getByTestId('admin.cluster.dns_tsig.delete_error')).toContainText('TSIG key is referenced by a zone');
+  await expect(tsigDialog).toBeVisible();
+  await tsigDialog.getByTestId('admin.cluster.dns_tsig.delete_confirm.confirm').click();
+  await expect(tsigDialog).toBeHidden();
+  expect(tsigDeleteCalls).toBe(2);
+});

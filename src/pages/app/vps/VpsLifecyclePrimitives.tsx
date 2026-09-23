@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { useI18n, type TranslationKey } from '../../../app/i18n';
 import { ActionButton } from '../../../components/ui/ActionButton';
@@ -143,6 +143,7 @@ export function LifecycleSubmitButton(props: {
   disabled: boolean;
   gate: GateDecision;
   loading: boolean;
+  errorMessage?: string;
   onClick: () => void;
   children: ReactNode;
   confirmation?: {
@@ -155,7 +156,33 @@ export function LifecycleSubmitButton(props: {
   };
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [attempted, setAttempted] = useState(false);
+  const sawPendingRef = useRef(false);
   const disabled = props.disabled || !props.gate.allowed;
+
+  useEffect(() => {
+    if (!confirmOpen) {
+      sawPendingRef.current = false;
+      return;
+    }
+    if (props.loading) {
+      sawPendingRef.current = true;
+      return;
+    }
+    if (!sawPendingRef.current) return;
+
+    sawPendingRef.current = false;
+    if (!props.errorMessage) {
+      setConfirmOpen(false);
+      setAttempted(false);
+    }
+  }, [confirmOpen, props.errorMessage, props.loading]);
+
+  const closeConfirmation = () => {
+    sawPendingRef.current = false;
+    setAttempted(false);
+    setConfirmOpen(false);
+  };
 
   return (
     <>
@@ -166,7 +193,11 @@ export function LifecycleSubmitButton(props: {
         disabledReason={!props.gate.allowed ? props.gate.reason : undefined}
         loading={props.loading}
         onClick={() => {
-          if (props.confirmation) setConfirmOpen(true);
+          if (props.confirmation) {
+            sawPendingRef.current = false;
+            setAttempted(false);
+            setConfirmOpen(true);
+          }
           else props.onClick();
         }}
       >
@@ -180,9 +211,10 @@ export function LifecycleSubmitButton(props: {
           confirmLabel={props.children as string}
           danger={props.variant === 'danger'}
           confirmLoading={props.loading}
-          onCancel={() => setConfirmOpen(false)}
+          confirmDisabled={disabled || props.loading}
+          onCancel={closeConfirmation}
           onConfirm={() => {
-            setConfirmOpen(false);
+            setAttempted(true);
             props.onClick();
           }}
           testId={`${props.testId}.confirm_dialog`}
@@ -193,6 +225,11 @@ export function LifecycleSubmitButton(props: {
               objectLabel={props.confirmation.target.objectLabel}
               testId={`${props.testId}.confirm_dialog.target`}
             />
+          ) : null}
+          {attempted && props.errorMessage ? (
+            <Alert variant="danger" testId={`${props.testId}.confirm_dialog.error`}>
+              {props.errorMessage}
+            </Alert>
           ) : null}
         </ConfirmDialog>
       ) : null}

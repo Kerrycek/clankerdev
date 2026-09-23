@@ -48,6 +48,7 @@ function runningActionState(id: number, label: string) {
 
 async function installLifecycleMock(page: Page, options?: {
   updateVps?: () => unknown;
+  reinstallVps?: () => unknown;
   user?: { id: number; login: string; level: number };
 }) {
   let ipAddressRequests = 0;
@@ -108,7 +109,7 @@ async function installLifecycleMock(page: Page, options?: {
       'POST vpses/123/swap_with': () => ({ _meta: { action_state_id: 508 } }),
       'POST vpses/123/replace': () => ({ vps: { id: 789, hostname: 'replacement' }, _meta: { action_state_id: 509 } }),
       'POST vpses/123/boot': () => ({ _meta: { action_state_id: 501 } }),
-      'POST vpses/123/reinstall': () => ({ _meta: { action_state_id: 502 } }),
+      'POST vpses/123/reinstall': options?.reinstallVps ?? (() => ({ _meta: { action_state_id: 502 } })),
       'POST vpses/123/migrate': () => ({ _meta: { action_state_id: 510 } }),
       'DELETE vpses/123': () => ({ _meta: { action_state_id: 511 } }),
     },
@@ -118,6 +119,51 @@ async function installLifecycleMock(page: Page, options?: {
 }
 
 test.describe('@pr-smoke VPS lifecycle tab', () => {
+  test('@pr-smoke-mobile keeps rejected VPS configuration saves inside the review dialog and allows retry', async ({ page }) => {
+    let updateCalls = 0;
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installLifecycleMock(page, {
+      updateVps: () => {
+        updateCalls += 1;
+        if (updateCalls === 1) {
+          return {
+            status: 409,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              status: false,
+              message: 'VPS configuration changed on the server. Review and retry.',
+              response: null,
+            }),
+          };
+        }
+        return { vps, _meta: { action_state_id: 506 } };
+      },
+    });
+
+    await page.goto('/admin/vps/123/config');
+    await page.getByRole('textbox', { name: /^Hostname / }).fill('retry-config.example');
+    await page.getByTestId('vps.config.header.save').click();
+
+    const dialog = page.getByTestId('vps.config.confirm');
+    await expect(dialog).toBeVisible();
+    await dialog.getByTestId('vps.config.confirm.confirm').click();
+    await expect.poll(() => updateCalls).toBe(1);
+    await expect(dialog.getByTestId('vps.config.confirm.error')).toContainText(
+      'VPS configuration changed on the server. Review and retry.',
+    );
+    await expect(dialog).toBeVisible();
+
+    await dialog.getByTestId('vps.config.confirm.cancel').click();
+    await expect(dialog).toBeHidden();
+    await page.getByTestId('vps.config.header.save').click();
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByTestId('vps.config.confirm.error')).toHaveCount(0);
+
+    await dialog.getByTestId('vps.config.confirm.confirm').click();
+    await expect.poll(() => updateCalls).toBe(2);
+    await expect(dialog).toBeHidden();
+  });
+
   test('resets configuration review and lifetime editor when the VPS route changes', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installLifecycleMock(page);
@@ -443,6 +489,32 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
         os_template: 7,
       },
     });
+  });
+
+  test('keeps a rejected reinstall in its confirmation dialog and preserves the selected template for retry', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    let attempts = 0;
+    await installLifecycleMock(page, {
+      reinstallVps: () => {
+        attempts += 1;
+        return attempts === 1
+          ? failEnvelope('Reinstall rejected by API')
+          : { _meta: { action_state_id: 502 } };
+      },
+    });
+
+    await page.goto('/admin/vps/123/lifecycle/reinstall');
+    await page.getByTestId('vps.lifecycle.reinstall.os_template').selectOption('7');
+    await page.getByTestId('vps.lifecycle.reinstall.submit').click();
+    await page.getByTestId('vps.lifecycle.reinstall.submit.confirm_dialog.confirm').click();
+
+    await expect(page.getByTestId('vps.lifecycle.reinstall.submit.confirm_dialog')).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.reinstall.submit.confirm_dialog.error')).toContainText('Reinstall rejected by API');
+    await expect(page.getByTestId('vps.lifecycle.reinstall.os_template')).toHaveValue('7');
+
+    await page.getByTestId('vps.lifecycle.reinstall.submit.confirm_dialog.confirm').click();
+    await expect(page.getByTestId('vps.lifecycle.reinstall.submit.confirm_dialog')).toBeHidden();
+    expect(attempts).toBe(2);
   });
 
   test('reinstall can include inline user data when explicitly enabled', async ({ page }) => {

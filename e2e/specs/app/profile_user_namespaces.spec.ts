@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-import { installHaveApiMock } from '../../fixtures/haveapi';
+import { failEnvelope, installHaveApiMock } from '../../fixtures/haveapi';
 
 type EntryKind = 'uid' | 'gid';
 
@@ -184,4 +184,108 @@ test('profile: changing the map route drops stale edits and delete confirmation'
   await expect(page.getByTestId('profile.userns.map.add.vps_id')).toHaveValue('');
   await expect(page.getByTestId('profile.userns.map.delete_map.confirm')).toHaveCount(0);
   expect(mutations).toEqual([]);
+});
+
+test('@pr-smoke @pr-smoke-mobile profile: rejected namespace deletions stay in context for retry', async ({ page }) => {
+  const map = {
+    id: 501,
+    label: 'Retry map',
+    user_namespace: { id: 101, size: 65536 },
+  };
+  let maps = [map];
+  let entries = [{ id: 1001, kind: 'uid', vps_id: 201, ns_id: 1000, count: 100 }];
+  let entryDeleteAttempts = 0;
+  let mapDeleteAttempts = 0;
+
+  await installHaveApiMock({
+    page,
+    authorizeUser: { user: { id: 1, login: 'testuser', level: 1 } },
+    handlers: {
+      'GET user_namespaces': () => ({ user_namespaces: [{ id: 101, size: 65536 }] }),
+      'GET user_namespace_maps': () => ({ user_namespace_maps: maps }),
+      'GET user_namespace_maps/501': () => ({ user_namespace_map: map }),
+      'GET user_namespace_maps/501/entries': () => ({ entries }),
+      'GET vpses': () => ({ vpses: [], _meta: { total_count: 0 } }),
+      'DELETE user_namespace_maps/501/entries/1001': () => {
+        entryDeleteAttempts += 1;
+        if (entryDeleteAttempts === 1) return failEnvelope('Entry deletion was rejected');
+        entries = [];
+        return { ok: true };
+      },
+      'DELETE user_namespace_maps/501': () => {
+        mapDeleteAttempts += 1;
+        if (mapDeleteAttempts === 1) return failEnvelope('Map deletion was rejected');
+        maps = [];
+        return { ok: true };
+      },
+    },
+  });
+
+  await page.goto('/app/profile/user-namespaces/maps/501');
+  await expect(page.getByTestId('profile.userns.map.entry.row.1001')).toBeVisible();
+
+  await page.getByTestId('profile.userns.map.entry.1001.delete').click();
+  await page.getByTestId('profile.userns.map.delete_entry.confirm.confirm').click();
+  await expect(page.getByTestId('profile.userns.map.delete_entry.error')).toContainText(
+    'Entry deletion was rejected',
+  );
+  await expect(page.getByTestId('profile.userns.map.delete_entry.confirm')).toBeVisible();
+  await expect(page.getByTestId('profile.userns.map.entry.row.1001')).toBeVisible();
+
+  await page.getByTestId('profile.userns.map.delete_entry.confirm.confirm').click();
+  await expect(page.getByTestId('profile.userns.map.delete_entry.confirm')).toHaveCount(0);
+  await expect(page.getByTestId('profile.userns.map.entry.row.1001')).toHaveCount(0);
+
+  await page.getByTestId('profile.userns.map.delete').click();
+  await page.getByTestId('profile.userns.map.delete_map.confirm.confirm').click();
+  await expect(page.getByTestId('profile.userns.map.delete_map.error')).toContainText(
+    'Map deletion was rejected',
+  );
+  await expect(page.getByTestId('profile.userns.map.delete_map.confirm')).toBeVisible();
+  await expect(page).toHaveURL(/\/app\/profile\/user-namespaces\/maps\/501$/);
+
+  await page.getByTestId('profile.userns.map.delete_map.confirm.confirm').click();
+  await expect(page).toHaveURL(/\/app\/profile\/user-namespaces\/maps$/);
+  expect(entryDeleteAttempts).toBe(2);
+  expect(mapDeleteAttempts).toBe(2);
+});
+
+test('@pr-smoke @pr-smoke-mobile profile: rejected map-list deletion stays in its confirmation', async ({ page }) => {
+  const map = {
+    id: 501,
+    label: 'List retry map',
+    user_namespace: { id: 101, size: 65536 },
+  };
+  let maps = [map];
+  let deleteAttempts = 0;
+
+  await installHaveApiMock({
+    page,
+    authorizeUser: { user: { id: 1, login: 'testuser', level: 1 } },
+    handlers: {
+      'GET user_namespaces': () => ({ user_namespaces: [{ id: 101, size: 65536 }] }),
+      'GET user_namespace_maps': () => ({ user_namespace_maps: maps }),
+      'DELETE user_namespace_maps/501': () => {
+        deleteAttempts += 1;
+        if (deleteAttempts === 1) return failEnvelope('List deletion was rejected');
+        maps = [];
+        return { ok: true };
+      },
+    },
+  });
+
+  await page.goto('/app/profile/user-namespaces/maps');
+  await page.getByTestId('profile.userns.maps.row.501.delete').click();
+  await page.getByTestId('profile.userns.maps.delete.confirm.confirm').click();
+
+  await expect(page.getByTestId('profile.userns.maps.delete.error')).toContainText(
+    'List deletion was rejected',
+  );
+  await expect(page.getByTestId('profile.userns.maps.delete.confirm')).toBeVisible();
+  await expect(page.getByTestId('profile.userns.maps.row.501')).toBeVisible();
+
+  await page.getByTestId('profile.userns.maps.delete.confirm.confirm').click();
+  await expect(page.getByTestId('profile.userns.maps.delete.confirm')).toHaveCount(0);
+  await expect(page.getByTestId('profile.userns.maps.row.501')).toHaveCount(0);
+  expect(deleteAttempts).toBe(2);
 });

@@ -13,7 +13,12 @@ import { Modal } from '../ui/Modal';
 import { SecretField } from '../ui/SecretField';
 import { SwitchRow } from '../ui/SwitchRow';
 
-import { looksLikeTotpCode, type TotpConfirmExistingStep, type TotpWizardStep } from './UserTotpDevicesModel';
+import {
+  looksLikeTotpCode,
+  safeTotpProvisioningUri,
+  type TotpConfirmExistingStep,
+  type TotpWizardStep,
+} from './UserTotpDevicesModel';
 
 export function UserTotpCreateWizardModal(props: {
   prefix: string;
@@ -38,6 +43,8 @@ export function UserTotpCreateWizardModal(props: {
   onClose: () => void;
 }) {
   const { t } = useI18n();
+  const rawProvisioningUri = props.created?.provisioning_uri;
+  const provisioningUri = safeTotpProvisioningUri(rawProvisioningUri);
 
   return (
     <Modal
@@ -115,12 +122,22 @@ export function UserTotpCreateWizardModal(props: {
               <SecretField value={String(props.created?.provisioning_uri ?? '')} testId={`${props.prefix}.totp.wizard.uri`} />
             </div>
             <div className="mt-1 text-xs text-faint">{t('profile.mfa.totp.wizard.provisioning_uri_hint')}</div>
-            {props.created?.provisioning_uri ? (
+            {provisioningUri ? (
               <div className="mt-2 text-xs">
-                <a className="underline text-accent" href={String(props.created.provisioning_uri)} data-testid={`${props.prefix}.totp.wizard.uri_link`}>
+                <a className="underline text-accent" href={provisioningUri} data-testid={`${props.prefix}.totp.wizard.uri_link`}>
                   {t('profile.mfa.totp.wizard.open_in_authenticator')}
                 </a>
               </div>
+            ) : null}
+            {rawProvisioningUri && !provisioningUri ? (
+              <Alert
+                variant="warn"
+                title={t('profile.mfa.totp.wizard.provisioning_uri_invalid')}
+                testId={`${props.prefix}.totp.wizard.uri_invalid`}
+                className="mt-2"
+              >
+                {t('profile.mfa.totp.wizard.provisioning_uri_invalid_hint')}
+              </Alert>
             ) : null}
           </div>
 

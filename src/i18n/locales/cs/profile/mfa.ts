@@ -45,6 +45,8 @@ export const csProfile_mfa = {
   "profile.mfa.totp.wizard.open_in_authenticator": "Otevřít v autentikátoru",
   "profile.mfa.totp.wizard.provisioning_uri": "Konfigurační URI",
   "profile.mfa.totp.wizard.provisioning_uri_hint": "Pokud aplikace podporuje otpauth:// odkazy, můžeš jej otevřít přímo. Jinak použij tajemství.",
+  "profile.mfa.totp.wizard.provisioning_uri_invalid": "Neplatný odkaz pro autentikátor",
+  "profile.mfa.totp.wizard.provisioning_uri_invalid_hint": "API vrátilo odkaz mimo očekávaný formát otpauth://totp, proto ho prohlížeč neotevře. Pro ruční nastavení použij zobrazené tajemství.",
   "profile.mfa.totp.wizard.recovery_code": "Záložní kód",
   "profile.mfa.totp.wizard.recovery_hint": "Ulož offline (správce hesel, tisk). Zobrazí se pouze jednou.",
   "profile.mfa.totp.wizard.secret": "Tajemství",

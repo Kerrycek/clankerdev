@@ -8,6 +8,7 @@ test('@pr-smoke @pr-smoke-mobile @smoke-mobile admin OS-template actions stay re
 }, testInfo) => {
   const mobile = testInfo.project.name === 'mobile-chrome';
   if (mobile) await page.setViewportSize({ width: 320, height: 900 });
+  let deleteCalls = 0;
 
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
   await installHaveApiMock(page, {
@@ -50,6 +51,21 @@ test('@pr-smoke @pr-smoke-mobile @smoke-mobile admin OS-template actions stay re
           },
         ],
       }),
+      'DELETE os_templates/11': () => {
+        deleteCalls += 1;
+        if (deleteCalls === 1) {
+          return {
+            status: 409,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              status: false,
+              message: 'Template is still in use by a hidden dependency.',
+              response: null,
+            }),
+          };
+        }
+        return {};
+      },
     },
   });
 
@@ -117,6 +133,21 @@ test('@pr-smoke @pr-smoke-mobile @smoke-mobile admin OS-template actions stay re
   await page.getByRole('button', { name: 'Cancel' }).click();
 
   await remove.click();
-  await expect(page.getByTestId('admin.cluster.os_templates.delete')).toBeVisible();
-  await page.getByTestId('admin.cluster.os_templates.delete.cancel').click();
+  const deleteDialog = page.getByTestId('admin.cluster.os_templates.delete');
+  await expect(deleteDialog).toBeVisible();
+  await deleteDialog.getByTestId('admin.cluster.os_templates.delete.confirm').click();
+  await expect.poll(() => deleteCalls).toBe(1);
+  await expect(page.getByTestId('admin.cluster.os_templates.delete.error')).toContainText(
+    'Template is still in use by a hidden dependency.',
+  );
+  await expect(deleteDialog).toBeVisible();
+
+  await deleteDialog.getByTestId('admin.cluster.os_templates.delete.confirm').click();
+  await expect.poll(() => deleteCalls).toBe(2);
+  await expect(deleteDialog).toBeHidden();
+
+  await remove.click();
+  await expect(deleteDialog).toBeVisible();
+  await expect(page.getByTestId('admin.cluster.os_templates.delete.error')).toHaveCount(0);
+  await deleteDialog.getByTestId('admin.cluster.os_templates.delete.cancel').click();
 });

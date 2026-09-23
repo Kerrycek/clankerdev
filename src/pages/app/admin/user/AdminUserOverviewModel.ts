@@ -16,6 +16,29 @@ export interface StateDraft {
   reason: string;
 }
 
+export type EditUserPayload = Record<string, unknown> & {
+  full_name: string;
+  email: string;
+  address: string;
+  level: number;
+  info: string;
+  mailer_enabled: boolean;
+};
+
+export function buildEditUserPayload(draft: EditUserDraft): EditUserPayload | null {
+  const level = Number(draft.level);
+  if (!Number.isFinite(level) || level < 0) return null;
+
+  return {
+    full_name: draft.fullName.trim(),
+    email: draft.email.trim(),
+    address: draft.address.trim(),
+    level,
+    info: draft.info.trim(),
+    mailer_enabled: draft.mailerEnabled,
+  };
+}
+
 export function optionalStringField(record: Record<string, unknown>, key: string): string | undefined {
   const value = record[key];
   if (typeof value !== 'string') return undefined;
