@@ -1,5 +1,5 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { useAccountTimeZone } from '../../../app/accountTimeZone';
@@ -43,9 +43,12 @@ import {
   buildIncomingPaymentAssignReview,
   buildIncomingPaymentStateReview,
   incomingPaymentAccountedAmountLabel,
+  incomingPaymentMatchesReviewTarget,
   incomingPaymentReceivedAmountLabel,
   incomingPaymentStateOptions,
+  parseIncomingPaymentReviewQueue,
   parsePositivePaymentId,
+  safeIncomingPaymentsReturnTo,
 } from './IncomingPaymentsModel';
 
 function detailUserLabel(user: User): string {
@@ -120,9 +123,26 @@ export function IncomingPaymentDetailPage() {
   const toasts = useToasts();
   const chrome = useChrome();
   const qc = useQueryClient();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const params = useParams();
   const paymentId = parsePositivePaymentId(params['paymentId']);
+  const locationState = location.state && typeof location.state === 'object'
+    ? location.state as Record<string, unknown>
+    : undefined;
+  const reviewQueue = useMemo(
+    () => parseIncomingPaymentReviewQueue(locationState?.['incomingPaymentReviewQueue']),
+    [locationState],
+  );
+  const reviewQueueActive = locationState?.['incomingPaymentReviewQueueActive'] === true;
+  const [continueReviewQueue, setContinueReviewQueue] = useState(reviewQueueActive);
+  const queryReturnTo = new URLSearchParams(location.search).get('returnTo');
+  const returnTo = safeIncomingPaymentsReturnTo(locationState?.['returnTo'] ?? queryReturnTo, basePath);
+
+  useEffect(() => {
+    setContinueReviewQueue(reviewQueueActive);
+  }, [paymentId, reviewQueueActive]);
 
   const q = useQuery({
     queryKey: ['incoming_payments', 'show', paymentId],
@@ -177,6 +197,38 @@ export function IncomingPaymentDetailPage() {
     staleTime: 60_000,
   });
 
+  async function afterReviewed() {
+    if (!reviewQueueActive) return false;
+    if (!continueReviewQueue) {
+      navigate(returnTo, { replace: true });
+      return true;
+    }
+
+    for (const [index, targetId] of reviewQueue.entries()) {
+      try {
+        const target = (await fetchIncomingPayment(targetId)).data;
+        if (!incomingPaymentMatchesReviewTarget(target, targetId)) continue;
+      } catch {
+        // Keep transient failures retryable in the next detail instead of
+        // silently discarding the remainder of the review queue.
+      }
+
+      const detailParams = new URLSearchParams({ returnTo });
+      navigate(`${basePath}/payments/incoming/${targetId}?${detailParams.toString()}`, {
+        replace: true,
+        state: {
+          returnTo,
+          incomingPaymentReviewQueueActive: true,
+          incomingPaymentReviewQueue: reviewQueue.slice(index + 1),
+        },
+      });
+      return true;
+    }
+
+    navigate(returnTo, { replace: true });
+    return true;
+  }
+
   async function saveState() {
     if (!paymentId || !stateReview.canSubmit || stateReviewStale || detailStale || stateMutationInFlightRef.current) return;
 
@@ -196,9 +248,9 @@ export function IncomingPaymentDetailPage() {
       });
 
       setStateEdit(null);
-      await q.refetch();
       void qc.invalidateQueries({ queryKey: ['incoming_payments', 'index'] });
       void qc.invalidateQueries({ queryKey: ['incoming_payments', 'reconciliation_totals'] });
+      if (!(await afterReviewed())) await q.refetch();
     } catch (e: unknown) {
       toasts.pushToast({
         variant: 'danger',
@@ -241,10 +293,10 @@ export function IncomingPaymentDetailPage() {
       setAssignUserId('');
       setStateEdit(null);
 
-      await q.refetch();
       void qc.invalidateQueries({ queryKey: ['incoming_payments', 'index'] });
       void qc.invalidateQueries({ queryKey: ['incoming_payments', 'reconciliation_totals'] });
       void qc.invalidateQueries({ predicate: (query) => ['user_payments', 'finance', 'payment_stats'].includes(String(query.queryKey[0])) });
+      if (!(await afterReviewed())) await q.refetch();
     } catch (e: unknown) {
       toasts.pushToast({
         variant: 'danger',
@@ -301,7 +353,7 @@ export function IncomingPaymentDetailPage() {
         }
         actions={
           <div className="flex items-center gap-2">
-            <Link className="text-sm text-accent hover:underline" to={`${basePath}/payments/incoming`}>
+            <Link className="text-sm text-accent hover:underline" to={returnTo}>
               {t('common.back')}
             </Link>
           </div>
@@ -455,6 +507,23 @@ export function IncomingPaymentDetailPage() {
           <Card>
             <CardHeader title={t('payments.incoming.detail.card.state')} />
             <CardBody>
+              {reviewQueueActive ? (
+                <div className="mb-4 rounded-lg border border-border bg-surface-2 p-3" data-testid="admin.payments.incoming.review.queue">
+                  <label className="flex cursor-pointer items-start gap-2 text-sm font-medium">
+                    <input
+                      className="mt-0.5 h-4 w-4 rounded border-border"
+                      type="checkbox"
+                      checked={continueReviewQueue}
+                      onChange={(event) => setContinueReviewQueue(event.target.checked)}
+                      data-testid="admin.payments.incoming.review.continue"
+                    />
+                    <span>{t('payments.incoming.review_queue.continue')}</span>
+                  </label>
+                  <div className="mt-1 text-xs text-muted">
+                    {t('payments.incoming.review_queue.remaining', { count: String(reviewQueue.length + 1) })}
+                  </div>
+                </div>
+              ) : null}
               <div className="flex items-center gap-2">
                 <StatusDot variant={dotVar} />
                 <Badge variant={incomingPaymentBadgeVariant(st)} testId={`admin.payments.incoming.detail.${paymentId}.state.card`}>{t(incomingPaymentStateLabelKey(st))}</Badge>

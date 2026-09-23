@@ -428,7 +428,10 @@ export function AdminSecurityAdvisoryDetailPage() {
             setUpdateError(null);
             setEditingUpdate(update);
           }}
-          onDelete={setDeleteUpdateTarget}
+          onDelete={(update) => {
+            deleteUpdateM.reset();
+            setDeleteUpdateTarget(update);
+          }}
         />
       ) : null}
 
@@ -502,9 +505,14 @@ export function AdminSecurityAdvisoryDetailPage() {
           }
         }}
         onEditUpdateSubmit={(values) => editUpdateM.mutate(values)}
-        onDeleteUpdateClose={() => !deleteUpdateM.isPending && setDeleteUpdateTarget(null)}
+        onDeleteUpdateClose={() => {
+          if (deleteUpdateM.isPending) return;
+          deleteUpdateM.reset();
+          setDeleteUpdateTarget(null);
+        }}
         onDeleteUpdateConfirm={() => deleteUpdateM.mutate()}
         deleteUpdateSaving={deleteUpdateM.isPending}
+        deleteUpdateError={deleteUpdateM.isError ? formatErrorMessage(deleteUpdateM.error) : null}
         updateConfirmOpen={updateConfirmOpen}
         pendingUpdate={pendingUpdate}
         onUpdateConfirmClose={() => {

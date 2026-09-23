@@ -120,3 +120,49 @@ test('@pr-smoke @pr-smoke-mobile host IP actions stay reachable without horizont
 
   expect(mutationRequests).toEqual([]);
 });
+
+test('@pr-smoke @pr-smoke-mobile rejected host IP deletion stays in context and supports retry', async ({ page }) => {
+  await setUiSettingsLocalStorage(page, { language: 'en' });
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'HOST_IP_DELETE_RETRY' });
+
+  let deleteAttempts = 0;
+
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 90 },
+    handlers: {
+      'GET host_ip_addresses': () => ({
+        host_ip_addresses: [{
+          id: 502,
+          addr: '198.51.100.20',
+          assigned: false,
+          user_created: true,
+          ip_address: { id: 302, ip_addr: '198.51.100.20' },
+        }],
+        _meta: { total_count: 1 },
+      }),
+      'DELETE host_ip_addresses/502': () => {
+        deleteAttempts += 1;
+        if (deleteAttempts === 1) {
+          return {
+            status: 409,
+            contentType: 'application/json',
+            body: JSON.stringify({ status: false, message: 'Host address is still assigned', response: null }),
+          };
+        }
+        return { _meta: { action_state_id: 703 } };
+      },
+    },
+  });
+
+  await page.goto('/admin/networking/host-ip-addresses');
+  await page.getByTestId('admin.host_ip_addresses.row.502.delete').click();
+
+  const dialog = page.getByTestId('admin.host_ip_addresses.delete_confirm');
+  await dialog.getByTestId('admin.host_ip_addresses.delete_confirm.confirm').click();
+  await expect(page.getByTestId('admin.host_ip_addresses.delete_confirm.error')).toContainText('Host address is still assigned');
+  await expect(dialog).toContainText('198.51.100.20');
+
+  await dialog.getByTestId('admin.host_ip_addresses.delete_confirm.confirm').click();
+  await expect(dialog).toBeHidden();
+  expect(deleteAttempts).toBe(2);
+});

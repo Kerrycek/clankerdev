@@ -16,9 +16,11 @@ import { fetchNetworkInterfaces } from '../../../../lib/api/networkInterfaces';
 import { useKeysetPagination } from '../../../../lib/hooks/useKeysetPagination';
 import { cursorFromDescendingPage } from '../../../../lib/lockIndex';
 import { parseBoolParam, parsePositiveInt } from '../../../../lib/parse';
+import { formatErrorMessage } from '../../../../lib/errors';
 import { ListShell } from '../../../../components/layout/ListShell';
 import { PageHeader } from '../../../../components/layout/PageHeader';
 import { FilterBar } from '../../../../components/layout/FilterBar';
+import { Alert } from '../../../../components/ui/Alert';
 import { Button } from '../../../../components/ui/Button';
 import { ActionButton } from '../../../../components/ui/ActionButton';
 import { ConfirmDialog } from '../../../../components/ui/ConfirmDialog';
@@ -362,7 +364,10 @@ export function HostIpAddressesPage() {
                         setAssignInterface('');
                       }}
                       onFree={() => freeM.mutate(id)}
-                      onDelete={() => setDeleteHost(row)}
+                      onDelete={() => {
+                        deleteM.reset();
+                        setDeleteHost(row);
+                      }}
                     />
                   </td>
                 </tr>
@@ -372,10 +377,10 @@ export function HostIpAddressesPage() {
         </TableCard>
       )}
 
-      {(updatePtrM.error || assignM.error || freeM.error || deleteM.error) ? (
+      {(updatePtrM.error || assignM.error || freeM.error) ? (
         <ErrorState
           title={t('admin.host_ip_addresses.action.error')}
-          error={updatePtrM.error || assignM.error || freeM.error || deleteM.error}
+          error={updatePtrM.error || assignM.error || freeM.error}
           testId="admin.host_ip_addresses.action.error"
         />
       ) : null}
@@ -442,15 +447,25 @@ export function HostIpAddressesPage() {
       </Modal>
 
       <ConfirmDialog
+        testId="admin.host_ip_addresses.delete_confirm"
         open={Boolean(deleteHost)}
         title={t('admin.host_ip_addresses.delete.title')}
         description={deleteHost ? t('admin.host_ip_addresses.delete.desc', { host: hostAddr(deleteHost) }) : undefined}
         danger
         confirmLabel={t('common.delete')}
         confirmLoading={deleteM.isPending}
-        onCancel={() => setDeleteHost(null)}
+        onCancel={() => {
+          deleteM.reset();
+          setDeleteHost(null);
+        }}
         onConfirm={() => deleteM.mutate()}
-      />
+      >
+        {deleteM.isError ? (
+          <Alert variant="danger" title={t('common.error')} testId="admin.host_ip_addresses.delete_confirm.error">
+            {formatErrorMessage(deleteM.error)}
+          </Alert>
+        ) : null}
+      </ConfirmDialog>
     </ListShell>
   );
 }
