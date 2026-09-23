@@ -218,6 +218,99 @@ test.describe('Admin / Cluster / Networks (smoke)', () => {
     await expect(page.getByTestId('admin.cluster.network_detail.ln.1001')).toBeVisible();
   });
 
+  test('keeps rejected network create and edit forms in context for retry', async ({ page }) => {
+    const locations = [{ id: 1, label: 'Praha' }];
+    let networks = [{
+      id: 101,
+      label: 'Public IPv4',
+      ip_version: 4,
+      address: '192.0.2.0',
+      prefix: 24,
+      role: 'public_access',
+      managed: true,
+      split_access: 'no_access',
+      split_prefix: 24,
+      purpose: 'vps',
+      size: 254,
+      used: 120,
+      assigned: 24,
+      owned: 12,
+      taken: 30,
+      locations_count: 1,
+      primary_location: locations[0],
+    }];
+    let createAttempts = 0;
+    let updateAttempts = 0;
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 100 },
+      handlers: {
+        'GET locations': () => ({ locations, _meta: { total_count: locations.length } }),
+        'GET networks': () => ({ networks: [...networks], _meta: { total_count: networks.length } }),
+        'POST networks': () => {
+          createAttempts += 1;
+          if (createAttempts === 1) return failEnvelope('Network range changed on the server');
+          const created = {
+            id: 201,
+            label: 'Retry network',
+            ip_version: 4,
+            address: '198.51.100.0',
+            prefix: 24,
+            role: 'public_access',
+            managed: true,
+            split_access: 'no_access',
+            split_prefix: 24,
+            purpose: 'any',
+            size: 254,
+            used: 0,
+            assigned: 0,
+            owned: 0,
+            taken: 0,
+            locations_count: 0,
+            primary_location: null,
+          };
+          networks = [created, ...networks];
+          return { network: created };
+        },
+        'PUT networks/201': () => {
+          updateAttempts += 1;
+          if (updateAttempts === 1) return failEnvelope('Network metadata changed on the server');
+          networks = networks.map((row) => row.id === 201 ? { ...row, label: 'Renamed after retry' } : row);
+          return { network: networks.find((row) => row.id === 201) };
+        },
+      },
+    });
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'test-admin-session' });
+    await page.goto('/admin/cluster/networks');
+
+    await page.getByTestId('admin.cluster.networks.create').click();
+    const editor = page.getByTestId('admin.cluster.networks.editor');
+    await page.getByTestId('admin.cluster.networks.editor.label').fill('Retry network');
+    await page.getByTestId('admin.cluster.networks.editor.address').fill('198.51.100.0');
+    await page.getByTestId('admin.cluster.networks.editor.prefix').fill('24');
+    await page.getByTestId('admin.cluster.networks.editor.split_prefix').fill('24');
+    await page.getByTestId('admin.cluster.networks.editor.save').click();
+
+    await expect(page.getByTestId('admin.cluster.networks.editor.error')).toContainText('Network range changed on the server');
+    await expect(page.getByTestId('admin.cluster.networks.editor.label')).toHaveValue('Retry network');
+    await expect(page.getByTestId('admin.cluster.networks.editor.address')).toHaveValue('198.51.100.0');
+    await page.getByTestId('admin.cluster.networks.editor.save').click();
+    await expect(editor).toBeHidden();
+    await expect(page.getByTestId('admin.cluster.networks.row.201')).toBeVisible();
+
+    await page.getByTestId('admin.cluster.networks.row.201.edit').click();
+    await page.getByTestId('admin.cluster.networks.editor.label').fill('Renamed after retry');
+    await page.getByTestId('admin.cluster.networks.editor.save').click();
+
+    await expect(page.getByTestId('admin.cluster.networks.editor.error')).toContainText('Network metadata changed on the server');
+    await expect(page.getByTestId('admin.cluster.networks.editor.label')).toHaveValue('Renamed after retry');
+    await page.getByTestId('admin.cluster.networks.editor.save').click();
+    await expect(editor).toBeHidden();
+    await expect(page.getByTestId('admin.cluster.networks.row.201')).toContainText('Renamed after retry');
+
+    expect({ createAttempts, updateAttempts }).toEqual({ createAttempts: 2, updateAttempts: 2 });
+  });
+
   test('keeps rejected network availability changes in their dialogs for retry', async ({ page }) => {
     const locations = [
       { id: 1, label: 'Praha' },
