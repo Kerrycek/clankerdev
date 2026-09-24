@@ -59,6 +59,43 @@ test.describe('Dataset management actions', () => {
     expect(requestedStates).toContain(null);
   });
 
+  test('retries a quota allocation failure with visible admin controls and no unrelated ZFS changes', async ({ page }) => {
+    let updateCalls = 0;
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
+      handlers: {
+        'GET datasets/10': () => ownedDataset(),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'PUT datasets/10': () => ++updateCalls === 1
+          ? failEnvelope('Resource allocation error: no diskspace left')
+          : { dataset: ownedDataset({ refquota: 20480 }) },
+      },
+    });
+    await page.goto('/admin/datasets/10');
+    const override = page.getByTestId('dataset.manage.admin_override');
+    await expect(override).toBeVisible();
+    await expect(override).not.toBeChecked();
+    await expect(page.getByTestId('dataset.manage.sync')).toBeHidden();
+    await page.getByTestId('dataset.manage.refquota').fill('20');
+    const first = page.waitForRequest(r => r.method() === 'PUT' && r.url().includes('/datasets/10'));
+    await page.getByTestId('dataset.manage.edit.submit').click();
+    expect((await first).postDataJSON()).toEqual({ dataset: { refquota: 20480 } });
+    await expect(page.getByTestId('dataset.manage')).toContainText('no diskspace left');
+    await expect(override).not.toBeChecked();
+    await override.check();
+    await page.getByTestId('dataset.manage.admin_lock_type').selectOption('not_less');
+    expect(updateCalls).toBe(1);
+    const retry = page.waitForRequest(r => r.method() === 'PUT' && r.url().includes('/datasets/10'));
+    await page.getByTestId('dataset.manage.edit.submit').click();
+    expect((await retry).postDataJSON()).toEqual({
+      dataset: { refquota: 20480, admin_override: true, admin_lock_type: 'not_less' },
+    });
+    await expect(override).not.toBeChecked();
+    await expect(page.getByTestId('dataset.manage.admin_lock_type')).toHaveValue('');
+    await expect(page.getByTestId('dataset.manage.sync')).toBeHidden();
+  });
+
   test('creates, edits, and deletes a dataset from the overview', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
@@ -277,7 +314,7 @@ test.describe('Dataset management actions', () => {
     await page.getByTestId('dataset.manage.delete.confirm.confirm').click();
     await deleteReq;
     expect(deleteCalls).toBe(1);
-    await expect(page).toHaveURL(/\/app\/datasets$/);
+    await expect(page).toHaveURL(/\/app\/vps\/300\/storage$/);
   });
 
   test('sends only quota fields and preserves untouched advanced properties on update', async ({ page }) => {
