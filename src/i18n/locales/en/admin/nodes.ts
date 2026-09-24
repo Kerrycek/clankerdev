@@ -1,5 +1,10 @@
 // Admin locale chunk: nodes
 export const enAdmin_nodes = {
+  "nodes.heatmap.action": "Heatmap",
+  "nodes.heatmap.title": "Heatmap · {node}",
+  "nodes.heatmap.external": "Open in new tab",
+  "nodes.heatmap.description": "Live CPU usage (user, system, idle) and disk I/O on this node.",
+  "nodes.heatmap.fallback": "If the charts do not load, open the heatmap in a new tab.",
   "admin.nodes.action.vpses": "VPS",
   "admin.nodes.advanced.hint": "All filters here are reflected in the URL (shareable).",
   "admin.nodes.advanced.issues.hint": "Down or maintenance-locked nodes.",

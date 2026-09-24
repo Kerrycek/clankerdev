@@ -1,5 +1,10 @@
 // Admin locale chunk: nodes
 export const csAdmin_nodes = {
+  "nodes.heatmap.action": "Heatmapa",
+  "nodes.heatmap.title": "Heatmapa · {node}",
+  "nodes.heatmap.external": "Otevřít v nové kartě",
+  "nodes.heatmap.description": "Živé vytížení CPU (user, system, idle) a diskové I/O nodu.",
+  "nodes.heatmap.fallback": "Pokud se grafy nenačtou, otevři heatmapu v nové kartě.",
   "admin.nodes.action.vpses": "VPS",
   "admin.nodes.advanced.hint": "Všechny filtry zde jsou v URL (lze sdílet).",
   "admin.nodes.advanced.issues.hint": "Nedostupné nebo zamčené pro údržbu.",

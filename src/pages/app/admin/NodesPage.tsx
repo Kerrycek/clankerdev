@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 
+import { NodeHeatmapProvider } from '../../../components/cluster/NodeHeatmaps';
 import { useAppMode } from '../../../app/appMode';
 import { useAuth } from '../../../app/auth';
 import { useI18n } from '../../../app/i18n';
@@ -457,26 +458,28 @@ function NodesPageContent() {
           onListRefresh={() => nodesQ.refetch()}
         />
       ) : null}
-      <NodesListContent
-        t={t}
-        basePath={basePath}
-        rows={filtered}
-        stats={stats}
-        statsScopeLabel={statsScopeLabel}
-        filtersActive={filtersActive}
-        onClearFilters={clearFilters}
-        onRetry={refetchAll}
-        isBlockingError={nodesQ.isError && statusQ.isError && rows.length === 0}
-        nodesError={nodesQ.error}
-        statusError={statusQ.error}
-        showAuthIndexUnavailable={nodesQ.isError && Boolean(statusQ.data)}
-        showPublicStatusUnavailable={statusQ.isError && Boolean(nodesQ.data)}
-        isLoading={nodesQ.isLoading && !nodesQ.data && statusQ.isLoading && !statusQ.data}
-        canPaginate={canPaginate}
-        canNext={canNext}
-        pageCursor={pageCursor}
-        pagination={pagination}
-      />
+      <NodeHeatmapProvider>
+        <NodesListContent
+          t={t}
+          basePath={basePath}
+          rows={filtered}
+          stats={stats}
+          statsScopeLabel={statsScopeLabel}
+          filtersActive={filtersActive}
+          onClearFilters={clearFilters}
+          onRetry={refetchAll}
+          isBlockingError={nodesQ.isError && statusQ.isError && rows.length === 0}
+          nodesError={nodesQ.error}
+          statusError={statusQ.error}
+          showAuthIndexUnavailable={nodesQ.isError && Boolean(statusQ.data)}
+          showPublicStatusUnavailable={statusQ.isError && Boolean(nodesQ.data)}
+          isLoading={nodesQ.isLoading && !nodesQ.data && statusQ.isLoading && !statusQ.data}
+          canPaginate={canPaginate}
+          canNext={canNext}
+          pageCursor={pageCursor}
+          pagination={pagination}
+        />
+      </NodeHeatmapProvider>
       <NodeCreateModal
         open={createOpen}
         capabilityAvailable={auth.role === 'admin' && createCapabilityQ.isSuccess}

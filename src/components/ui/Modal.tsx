@@ -22,7 +22,7 @@ export function Modal(props: {
   onClose: () => void;
   children: React.ReactNode;
   footer?: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 
   /**
    * When enabled, the modal becomes full-screen on small viewports.
@@ -62,13 +62,17 @@ export function Modal(props: {
       ? mobileFullScreen
         ? 'max-w-none sm:max-w-sm'
         : 'max-w-sm'
-      : props.size === 'lg'
+      : props.size === 'xl'
         ? mobileFullScreen
-          ? 'max-w-none sm:max-w-3xl'
-          : 'max-w-3xl'
-        : mobileFullScreen
-          ? 'max-w-none sm:max-w-xl'
-          : 'max-w-xl';
+          ? 'max-w-none sm:max-w-6xl'
+          : 'max-w-6xl'
+        : props.size === 'lg'
+          ? mobileFullScreen
+            ? 'max-w-none sm:max-w-3xl'
+            : 'max-w-3xl'
+          : mobileFullScreen
+            ? 'max-w-none sm:max-w-xl'
+            : 'max-w-xl';
 
   return createPortal(
     <div className={clsx('fixed inset-0 z-50 flex items-center justify-center', mobileFullScreen ? 'p-0 sm:p-4' : 'p-4')}>

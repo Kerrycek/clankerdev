@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
+import { NodeHeatmapProvider } from '../../components/cluster/NodeHeatmaps';
 import { getRuntimeConfig } from '../../app/config';
 import { useI18n } from '../../app/i18n';
 import { StatusLandingMark } from '../../components/branding/StatusLandingMark';
@@ -158,7 +159,9 @@ export function OverviewPage() {
         newsError={newsQ.isError}
       />
 
-      <OverviewNodesSection groups={nodesByLocation} summary={nodeSummary} loading={nodesLoading} error={nodesQ.isError} />
+      <NodeHeatmapProvider>
+        <OverviewNodesSection groups={nodesByLocation} summary={nodeSummary} loading={nodesLoading} error={nodesQ.isError} />
+      </NodeHeatmapProvider>
     </div>
   );
 }

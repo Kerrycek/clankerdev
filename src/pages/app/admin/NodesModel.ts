@@ -7,6 +7,7 @@ export interface NodeRow {
   id?: number;
   name: string;
   fqdn?: string;
+  type?: string;
   domain_name?: string;
   locationLabel?: string;
 
@@ -189,7 +190,8 @@ function rowFromNode(node: Node, statusIndex: Map<string, PublicNodeStatus>): No
   return {
     id,
     name,
-    fqdn: stringField(node, 'fqdn'),
+    fqdn: stringField(node, 'fqdn') ?? stringField(status, 'fqdn'),
+    type: stringField(status, 'type') ?? stringField(node, 'type'),
     domain_name: stringField(node, 'domain_name'),
     locationLabel: locationLabel(unknownField(node, 'location')),
 
@@ -214,6 +216,7 @@ function rowFromPublicStatus(status: PublicNodeStatus): NodeRow {
     id,
     name,
     fqdn: stringField(status, 'fqdn'),
+    type: stringField(status, 'type'),
     domain_name: stringField(status, 'domain_name'),
     locationLabel: locationLabel(unknownField(status, 'location')),
 
