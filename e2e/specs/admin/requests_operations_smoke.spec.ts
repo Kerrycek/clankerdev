@@ -251,6 +251,17 @@ for (const language of ['en', 'cs'] as const) {
       const box = await check.boundingBox();
       expect(box!.y).toBeGreaterThan(summaryBox!.y + summaryBox!.height);
     }
+    if (page.viewportSize()!.width >= 1024) {
+      const ipBox = await page.getByTestId('admin.requests.detail.risk.ip').boundingBox();
+      const mailBox = await page.getByTestId('admin.requests.detail.risk.mail').boundingBox();
+      expect(Math.abs(ipBox!.y - mailBox!.y)).toBeLessThan(1);
+      expect(mailBox!.x).toBeGreaterThan(ipBox!.x);
+    }
+    for (const kind of ['ip', 'mail']) {
+      await expect(page.getByTestId(`admin.requests.detail.risk.${kind}.details`)).not.toHaveAttribute('open');
+    }
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: testInfo.outputPath('request-default-layout.png'), fullPage: true });
     for (const kind of ['ip', 'mail']) {
       await page.getByTestId(`admin.requests.detail.risk.${kind}.details`).locator('summary').click();
     }
@@ -561,7 +572,7 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile @smoke admin requests: automat
   await expect.poll(osm.requestCount).toBe(2);
 });
 
-test('@workflow-matrix @pr-smoke @smoke admin requests: automatic address map distinguishes an unknown address', async ({ page }) => {
+test('@workflow-matrix @pr-smoke @smoke admin requests: automatic address map distinguishes an unknown address', async ({ page }, testInfo) => {
   await bootstrapVpsAdminWindow(page);
   const osm = await installOsmMapMock(page, { empty: true });
 
@@ -579,6 +590,8 @@ test('@workflow-matrix @pr-smoke @smoke admin requests: automatic address map di
   await expect(mapCard.getByTestId('admin.requests.detail.registration.address.map.retry')).toHaveCount(0);
   await expect(mapCard.getByTestId('admin.requests.detail.registration.address.map.preview')).toHaveCount(0);
   await expect.poll(osm.requestCount).toBe(1);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: testInfo.outputPath('request-unknown-address.png'), fullPage: true });
 });
 
 test('@workflow-matrix @smoke admin requests: rejected action error is visible', async ({ page }) => {
