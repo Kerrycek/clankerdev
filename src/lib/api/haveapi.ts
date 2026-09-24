@@ -1,3 +1,4 @@
+import { staticTForDocument } from '../staticI18n';
 import { recoverBffSession } from '../auth/bffSession';
 import { getRuntimeConfig } from '../../app/config';
 import { MALFORMED_HAVEAPI_ENVELOPE_ERROR_CODE, parseHaveApiEnvelope } from './haveapiEnvelope';
@@ -466,18 +467,27 @@ export async function haveApiCall<T>(opts: CallOpts): Promise<{ data: T; meta?: 
 
 
   let res = await fetch(url, init);
-  // Retry only safe reads rejected by HTTP authentication. Never replay writes,
+  let envelope = res.status === 401 && !paramsInQuery ? await parseHaveApiEnvelope(res) : undefined;
+  const explicitRejection = !envelope || (envelope.status === false
+    && envelope.errors !== 'INVALID_JSON_RESPONSE'
+    && envelope.errors !== MALFORMED_HAVEAPI_ENVELOPE_ERROR_CODE);
+  // Recover only explicit HTTP authentication rejections. Never replay writes,
   // network failures, 403s, or ambiguous HaveAPI status:false responses.
-  if (res.status === 401 && paramsInQuery && cfg.auth.kind === 'oauth2') {
+  if (res.status === 401 && explicitRejection && cfg.auth.kind === 'oauth2') {
     const recovered = await recoverBffSession(cfg.auth.accessToken);
     opts.signal?.throwIfAborted();
     if (recovered) {
+      if (!paramsInQuery) {
+        // Keep the editor mounted, but let the user explicitly submit again.
+        // This is no longer an expired session and must not trigger a redirect.
+        throw new Error(staticTForDocument(typeof document === 'undefined' ? undefined : document, 'errors.session_renewed_retry_action'));
+      }
       await res.body?.cancel();
       init.headers = { Accept: 'application/json', ...authHeaders(desc) };
       res = await fetch(url, init);
     }
   }
-  const envelope = await parseHaveApiEnvelope(res);
+  envelope ??= await parseHaveApiEnvelope(res);
 
   if (!res.ok) {
     // Some failures (e.g. 500) may still return JSON.

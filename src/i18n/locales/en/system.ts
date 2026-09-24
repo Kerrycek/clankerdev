@@ -31,6 +31,7 @@ export const enSystem = {
   'errors.internal.no_record_selected': 'No record selected',
   'errors.internal.no_editor': 'No editor available',
   'errors.internal.storage_unavailable': 'Storage is unavailable',
+  'errors.session_renewed_retry_action': 'Your session was renewed. Review the entered values and submit the action again.',
   'errors.internal.nothing_to_update': 'Nothing to update',
   'errors.internal.invalid': 'Invalid {item}',
   'errors.internal.missing': 'Missing {item}',

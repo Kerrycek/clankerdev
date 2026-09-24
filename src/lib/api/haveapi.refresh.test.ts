@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { loadBffRuntimeSession } from '../../app/runtimeBootstrap';
 import { rememberBffSession } from '../auth/bffSession';
-import { haveApiCall, SESSION_EXPIRED_EVENT } from './haveapi';
+import { haveApiCall, isExpiredSessionError, isAmbiguousMutationError, SESSION_EXPIRED_EVENT } from './haveapi';
 
 const key = 'a'.repeat(64);
 const sessionUrl = new URL('/session.json', window.location.href).href;
@@ -20,10 +20,11 @@ function setup() {
 afterEach(() => {
   rememberBffSession(sessionUrl, null);
   window.vpsAdmin = undefined;
+  document.documentElement.lang = '';
   vi.unstubAllGlobals(); vi.restoreAllMocks();
 });
 
-describe('BFF read recovery', () => {
+describe('BFF request recovery', () => {
   it('uses the session fingerprint registered by actual runtime bootstrap', async () => {
     setup(); rememberBffSession(sessionUrl, null);
     const bootstrapFetch = vi.fn(async () => json({ sessionKey: key, accessToken: 'old' }));
@@ -90,9 +91,71 @@ describe('BFF read recovery', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
-  it.each(['POST', 'PUT', 'PATCH', 'DELETE'] as const)('never replays a %s mutation', async method => {
-    setup(); const fetchMock = vi.fn(async () => denied()); vi.stubGlobal('fetch', fetchMock);
-    await expect(haveApiCall({ method, path: '/things' })).rejects.toMatchObject({ httpStatus: 401 });
+  it.each(['POST', 'PUT', 'PATCH', 'DELETE'] as const)('renews after rejected %s but only repeats on an explicit second call', async method => {
+    setup(); const expired = vi.fn(); window.addEventListener(SESSION_EXPIRED_EVENT, expired);
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url === sessionUrl) return json({ sessionKey: key, accessToken: 'new' });
+      return (init?.headers as Record<string, string>)['X-Token'] === 'old'
+        ? denied() : json({ status: true, response: { thing: { id: 42 } } });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const opts = { method, path: '/things', namespace: 'thing', params: { name: 'original' } };
+    const error = await haveApiCall(opts).catch(error => error);
+    expect(error).toBeInstanceOf(Error);
+    expect(isExpiredSessionError(error)).toBe(false);
+    expect(isAmbiguousMutationError(error)).toBe(false);
+    expect(fetchMock.mock.calls.filter(([url]) => url !== sessionUrl)).toHaveLength(1);
+    expect(expired).not.toHaveBeenCalled();
+    const result = await haveApiCall(opts);
+    expect(result.data).toEqual({ id: 42 });
+    const writes = fetchMock.mock.calls.filter(([url]) => url !== sessionUrl);
+    expect(writes).toHaveLength(2);
+    expect(writes[0]?.[1]?.body).toBe(writes[1]?.[1]?.body);
+    window.removeEventListener(SESSION_EXPIRED_EVENT, expired);
+  });
+
+  it('shares renewal between a read and a write without replaying the write', async () => {
+    setup();
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url === sessionUrl) return json({ sessionKey: key, accessToken: 'new' });
+      return (init?.headers as Record<string, string>)['X-Token'] === 'old'
+        ? denied() : json({ status: true, response: { things: [42] } });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    const [read, write] = await Promise.allSettled([
+      haveApiCall({ path: '/things' }), haveApiCall({ method: 'POST', path: '/things' }),
+    ]);
+    expect(read.status).toBe('fulfilled'); expect(write.status).toBe('rejected');
+    if (write.status === 'rejected') expect(isExpiredSessionError(write.reason)).toBe(false);
+    expect(fetchMock.mock.calls.filter(([url]) => url === sessionUrl)).toHaveLength(1);
+    expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(1);
+  });
+
+  it.each(['cs', 'en'])('localizes the explicit resubmission message in %s', async language => {
+    setup(); document.documentElement.lang = language;
+    const fetchMock = vi.fn(async (url: string) => url === sessionUrl
+      ? json({ sessionKey: key, accessToken: 'new' }) : denied());
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(haveApiCall({ method: 'POST', path: '/things' })).rejects.toThrow(
+      language === 'cs' ? 'Přihlášení bylo obnoveno.' : 'Your session was renewed.');
+  });
+
+  it('still expires a rejected write if the BFF login changed', async () => {
+    setup();
+    const fetchMock = vi.fn(async (url: string) => url === sessionUrl
+      ? json({ sessionKey: 'b'.repeat(64), accessToken: 'new-account' }) : denied());
+    vi.stubGlobal('fetch', fetchMock);
+    const error = await haveApiCall({ method: 'POST', path: '/things' }).catch(error => error);
+    expect(isExpiredSessionError(error)).toBe(true);
+    expect(window.vpsAdmin?.accessToken).toBe('old');
+    expect(fetchMock.mock.calls.filter(([url]) => url !== sessionUrl)).toHaveLength(1);
+  });
+
+  it.each(['<html>proxy failure</html>', '{}'])('preserves ambiguous write handling for malformed 401 %s', async body => {
+    setup(); const fetchMock = vi.fn(async () => new Response(body, { status: 401 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const error = await haveApiCall({ method: 'POST', path: '/things' }).catch(error => error);
+    expect(isAmbiguousMutationError(error)).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 

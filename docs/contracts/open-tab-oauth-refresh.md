@@ -20,18 +20,19 @@ on OAuth login/session regeneration. The signed session cookie is never exposed.
 Anonymous sessions receive null. Existing runtime bootstrap registers the
 same-origin endpoint, fingerprint and token only in memory.
 
-After an HTTP 401 from GET/OPTIONS, the client makes one shared, ten-second
+After an HTTP 401, the client makes one shared, ten-second
 bounded lookup. Only a different token for the exact original BFF session can
-replace the in-memory token. The original read is retried once, preserving its
-parameters and cancellation signal. Rejected recovery follows normal expiry.
+replace the in-memory token. The original GET/OPTIONS is retried once, preserving its
+parameters and cancellation signal. For writes with a valid HaveAPI rejection envelope, a localized rejection keeps
+the editor mounted and asks the user to review and submit again. The transport
+does not resend the write. Rejected recovery follows normal expiry.
 Different logins cannot silently keep the old account's query cache.
 
 No replay of POST/PUT/PATCH/DELETE, 403, transport failures, or ambiguous
 HaveAPI envelopes. No refresh polling, cross-tab token broadcasting or
 persistent browser credentials. Standalone OAuth, HaveAPI tokens,
-impersonation and older BFFs retain their prior behavior. A mutation that is
-itself the first request after rotation retains the existing expiry handling;
-this change does not claim continuous renewal or form preservation in that case.
+impersonation and older BFFs retain their prior behavior. If recovery fails or the BFF login changes, existing expiry handling applies
+to both reads and writes. This does not claim continuous renewal.
 Use with #500 in the integrated candidate to serialize BFF refresh/store writes.
 
 ## Validation
@@ -41,3 +42,14 @@ reads, fingerprint/account changes, anonymous/invalid/failing replies, one-retry
 limit, cancellation, local logout, legacy BFF and no write replay. Real BFF
 HTTP tests check stable/read-only fingerprints and distinct OAuth logins.
 Actual post-fix VM evidence is recorded in the release checklist when complete.
+
+## Mutation-first reproduction
+
+At UI `80956b440` / API `486350466`, a synthetic DNS creation form was filled
+before another tab rotated the token. The original tab still held the old token
+at submission. Its single POST returned 401, followed by document navigation
+and lost form state. No zone was created; fixture client settings were restored.
+The correction recovers the same BFF session after this rejection while keeping
+the form open and reporting a localized resubmission message. A second POST
+must come from a new explicit user action. Network/ambiguous errors and changed
+logins do not get this recovery treatment.
