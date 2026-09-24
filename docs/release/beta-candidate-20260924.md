@@ -4,6 +4,36 @@ This is a local integration candidate, not an approved release or a deployed
 build. The product remains the user/admin interface. Fixture regression and
 the first isolated VM checks are reported separately below.
 
+## Follow-up — 24 September, 19:02 UTC
+
+- [IP history PR507](https://github.com/Kerrycek/clankerdev/pull/507),
+  `7014276a`, is stacked on updated PR496 (`c01f09ff`, merged with current
+  release `67bbb6bb`). It uses the last visible assignment as the API44 tuple
+  anchor, lookahead for the end, and explicit cursor recovery. The shared URL
+  restoration fix in PR496 is necessary: the new browser test exposed a
+  Back-navigation race without it.
+- Combined local verification: 44 unit tests, 20 IP/exact-filter browser cases,
+  14 user-data browser cases, typecheck, lint, i18n audit and build pass.
+  All browser cases use fixtures; actual joint API44/VM pagination is pending.
+  The final browser runs passed without retries. Test-development failures
+  and a dev-server lifecycle failure are retained in the evidence bundle.
+- PR502–506 all have successful static/unit and smoke CI at their recorded
+  heads. Updated PR496 and new PR507 CI are pending; human review is pending.
+- Both old API engine failures reproduce on unchanged `486350466` at seed
+  50084: lazy `IpReleaseCampaign#deadline` in a verifying double and duplicate
+  fixture IP in export creation. This isolated baseline had 1,184 examples,
+  **31 failures and 3 pending**, including additional concurrency and template
+  failures. Its pinned dependencies differ from GitHub CI, so it is not a
+  green full suite or an exact CI reproduction. The two matching failures
+  establish that they are not introduced by cursor code. On the new PR44
+  head, GitHub full/core engine and i18n jobs passed without unrelated edits;
+  other API jobs are still running. The baseline DB process is stopped.
+
+Next implementation: dataset/snapshot/property-history clients still need
+last-visible-row anchors and corresponding scope/error/end tests. Follow with
+actual isolated UI/API44 pagination for these lists, IP history and user-data.
+Do not mark the live integration gate complete from these fixture passes.
+
 ## Current status — 24 September, 18:45 UTC
 
 The evidence below describes the earlier integration candidate and its exact
