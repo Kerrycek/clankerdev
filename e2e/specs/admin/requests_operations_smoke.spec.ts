@@ -237,27 +237,27 @@ for (const language of ['en', 'cs'] as const) {
     await page.goto('/admin/requests/registration/124');
 
     await expect(page.getByTestId('admin.requests.detail.metadata').locator('details')).toHaveAttribute('open', '');
-    await expect(page.getByTestId('admin.requests.detail.registration.preferences')).toBeVisible();
     const review = page.getByTestId('admin.requests.detail.review');
-    const summary = review.getByTestId('admin.requests.detail.risk.summary');
-    await expect(summary).toBeInViewport();
+    const summary = page.getByTestId('admin.requests.detail.risk.summary');
+    await expect(summary).toBeVisible();
     const summaryBox = await summary.boundingBox();
-    const decisionBox = await review.getByTestId('admin.requests.detail.decision').boundingBox();
-    expect(summaryBox!.y + summaryBox!.height).toBeLessThan(decisionBox!.y);
-    await expect(review.getByTestId('admin.requests.detail.risk.ip')).toBeVisible();
-    await expect(review.getByTestId('admin.requests.detail.risk.mail')).toBeVisible();
-    if (page.viewportSize()!.width >= 1024) {
-      const detailsBox = await page.getByTestId('admin.requests.detail.registration.fields').boundingBox();
-      const reviewBox = await review.boundingBox();
-      expect(reviewBox!.x).toBeGreaterThan(detailsBox!.x + detailsBox!.width);
+    const detailsBox = await page.getByTestId('admin.requests.detail.registration.fields').boundingBox();
+    expect(summaryBox!.y).toBeGreaterThan(detailsBox!.y + detailsBox!.height);
+    await expect(review.getByTestId('admin.requests.detail.risk.ip')).toHaveCount(0);
+    await expect(review.getByTestId('admin.requests.detail.risk.mail')).toHaveCount(0);
+    for (const kind of ['ip', 'mail']) {
+      const check = page.getByTestId(`admin.requests.detail.risk.${kind}`);
+      await expect(check).toBeVisible();
+      const box = await check.boundingBox();
+      expect(box!.y).toBeGreaterThan(summaryBox!.y + summaryBox!.height);
     }
     for (const kind of ['ip', 'mail']) {
-      await review.getByTestId(`admin.requests.detail.risk.${kind}.details`).locator('summary').click();
+      await page.getByTestId(`admin.requests.detail.risk.${kind}.details`).locator('summary').click();
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
 
     await page.evaluate(() => window.scrollTo(0, 0));
-    await page.screenshot({ path: testInfo.outputPath('request-risk-sidebar.png'), fullPage: true });
+    await page.screenshot({ path: testInfo.outputPath('request-risk-below-details.png'), fullPage: true });
     const copyAddress = page.getByTestId('admin.requests.detail.registration.address.map.copy');
     await expect(copyAddress).toBeVisible();
     const addressBox = await page.getByTestId('admin.requests.detail.registration.address.map')

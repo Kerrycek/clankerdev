@@ -86,8 +86,6 @@ export const csRequests = {
   'requests.detail.card.request': 'Žádost',
   'requests.detail.admin': 'Administrátor',
   'requests.detail.org_id': 'IČ / identifikátor organizace',
-  'requests.detail.registration.context': 'Doplňující údaje',
-  'requests.detail.registration.preferences': 'Požadované nastavení',
   'requests.detail.registration.title': 'Údaje žadatele',
   'requests.detail.registration.subtitle': 'Úplné údaje odeslané v registrační žádosti.',
   'requests.detail.change.title': 'Požadovaná změna',
