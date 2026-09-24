@@ -49,8 +49,12 @@ atomic snapshot across concurrent writes.
 The minimal backend proposal is an explicit `ORDER BY id ASC` matching the
 existing predicate, with integration tests over multiple limited pages,
 nonmonotonic timestamps, owner/format scope and exact terminal boundaries.
-No upstream PR, shared API deployment or database migration is authorized by
-this frontend change. A real isolated API/VM run remains a beta gate.
+The user subsequently authorized this specific backend work. It is now open
+as [vpsAdmin PR44](https://github.com/vpsfreecz/vpsadmin/pull/44), head
+`320af0e152ed223bf0365e0f1cf4b38cf00d7b1d`, with explicit `ORDER BY id ASC` and
+resource-test coverage. This frontend must be validated together with that
+exact API in the existing isolated cluster before promotion. No shared API
+deployment or database migration is included. The real API/VM gate stays open.
 
 ## Verification checklist
 
