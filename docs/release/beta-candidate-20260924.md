@@ -20,7 +20,7 @@ Initial four-PR integration: `141b92281a232c4c07a73a2c475ef93eba457b60`.
 | [499](https://github.com/Kerrycek/clankerdev/pull/499) | `7c798b332a8edbaa8e5c017031c1e39edb3bb7d2` | Register passkeys on the authentication origin through the BFF |
 | [500](https://github.com/Kerrycek/clankerdev/pull/500) | `2fa71fe9bdd35781bb4c03acae2b445f28a1bad5` | Serialize BFF session refresh and logout through persistence |
 
-PR493–499 have successful static/unit and smoke CI; human review is still
+PR493–500 have successful static/unit and smoke CI; human review is still
 outstanding. Excluded PRs #242, #435 and #433 are not included.
 
 ## Beta gates
@@ -63,8 +63,9 @@ outstanding. Excluded PRs #242, #435 and #433 are not included.
   TOTP-factor login in cs/en desktop/mobile.
 - [x] Fix [confirmed concurrent BFF refresh](../contracts/bff-concurrent-refresh.md):
   actual API token validation and deterministic failure/logout race regressions.
-- [ ] Verify BFF cookie expiry and expired-refresh failure; bootstrap refresh
-  does not certify renewal in an already-open SPA.
+- [x] Verify expired-refresh failure and real BFF cookie/store expiry in
+  cs/en desktop/mobile with short isolated test lifetimes and full restoration.
+- [ ] Verify renewal in an already-open SPA, including later rotation by another tab.
 - [ ] Verify DNS server publication, backup replication and remote restore.
 - [ ] Expand KB navigation contracts/fixtures and remaining live workflow coverage.
 - [ ] Complete human review and obtain approval for a concrete deployment.
@@ -310,5 +311,47 @@ and 120 existing PNGs unchanged. The queue is process-local: one BFF process
 must own each file store. Open-SPA renewal, BFF cookie expiry, expired-refresh
 failure on the actual API and the remaining beta gates are still open.
 
-PR500 static/unit CI passes; smoke CI was still running at evidence capture.
+PR500 static/unit and smoke CI pass; smoke completed on 24 September at 04:40 UTC.
 Human review remains outstanding. No shared service was deployed or PR merged.
+
+## Remaining expiry paths verified against the actual API
+
+Eight additional Playwright workflows pass on UI `4a3ea18b` / API `486350466`:
+expired refresh and BFF cookie expiry, each in cs/en desktop/mobile. No product
+code or API changes were needed. KB runner revision is `4952b54`.
+
+For expired refresh, the dedicated OAuth client temporarily issues a 75-second
+access token and a 10-second refresh token. After 20 real seconds the access
+token still validates, but attempted renewal clears the BFF session. A protected
+route shows login-required content without the authenticated shell. Subsequent
+real OAuth authorization, including valid provider SSO where available, returns
+a different token for the same user. The original client settings are restored
+and verified in every variant.
+
+For cookie expiry, a guarded runtime override sets only the dedicated VM's BFF
+lifetime to 30 seconds. After 35 real seconds the browser cookie is gone; even
+replaying the original signed cookie with valid same-origin metadata yields an
+anonymous BFF response. The protected route denies access, and a new OAuth
+login succeeds. The API token has an independent lifetime and still validates
+before cleanup; the runner explicitly closes its recorded fixture session and
+verifies that token now returns 401.
+
+The driver removes only its marked runtime override and restarts the own BFF
+in an exit trap, including on failed attempts. Final service checks confirm the
+override is absent. A further actual OAuth login verifies the default 30-day
+BFF lifetime has returned. This is real-time coverage with a short test setting,
+not a claim that a browser was observed for 30 days. Shared services, session
+signing secrets and the actual API pin remain unchanged.
+
+Evidence is `auth-expiry/`: eight final receipts and logs, driver/restoration
+proof, fresh default-lifetime proof, and the final pinned KB check. An initial
+refresh test incorrectly waited for a password form after successful provider
+SSO; the runner now accepts both supported authorization paths. Cookie harness
+attempts exposed a wrong cleanup verb (correct API operation is POST) and
+missing Origin on the explicit cookie replay. Their records remain preserved;
+fixture session 145 was reconciled and closed, subsequent cleanup succeeded.
+None of these harness errors is reported as a product defect.
+
+Pinned `bin/check` passes and retains 60 concepts and 120 legacy PNGs. Earlier
+receipts retain their own runtime pins. Open-SPA token renewal, remaining DNS/
+backup/KB workflows, API cursor agreement and human release review remain open.
