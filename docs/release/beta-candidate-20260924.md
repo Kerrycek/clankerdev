@@ -72,7 +72,9 @@ outstanding. Excluded PRs #242, #435 and #433 are not included.
 - [x] Complete updated combined static/unit/build and desktop/mobile smoke
   regression after the auth transport changes in PR499–501.
 - [ ] Verify DNS server publication, backup replication and remote restore.
-- [ ] Expand KB navigation contracts/fixtures and remaining live workflow coverage.
+- [x] Verify prototype member kernel/system-history navigation contracts and
+  actual cs/en desktop/mobile screenshots, preserving semantic control IDs.
+- [ ] Expand remaining KB navigation/page bindings and live workflow coverage.
 - [ ] Complete human review and obtain approval for a concrete deployment.
 
 ## Evidence and limits
@@ -451,3 +453,32 @@ Logs: `combined-regression/clanker-beta-combined-20260924.log` and
 `combined-regression/clanker-beta-outage-mobile.log` in the local evidence bundle.
 Actual VM receipts retain their exact older runtime pins; a docs-only commit
 does not change their provenance.
+
+## KB member-history navigation prototype
+
+The separate KB branch now declares `node.kernel-history` and
+`node.system-history` for the new UI, retaining the legacy semantic control IDs
+while checking the actual React routes and cs/en labels. The contract pins UI
+`eccbcc9202301ca3fdd9b529818f5edfeee9c9f0` and API
+`486350466e8fb6f966add1cde3fa2bc12b4d6b62` independently and rejects source,
+label, pin, duplicated-ID and member-route drift. Whole-file source fingerprints
+are intentionally conservative; every changed fingerprint needs impact review.
+
+Four real VM variants pass, covering two paths each: member OAuth login, visible
+sidebar/drawer node navigation, semantic tab labels and URLs, active state,
+populated API-backed history, absence of admin controls/private requests and
+logout. Eight cropped PNGs with hashes and contract digests are saved in
+`navigation/`. Representative desktop/mobile images in both languages were
+visually checked. Only synthetic fixture data is shown.
+
+The first desktop Czech harness used a non-prefixed API path and assumed that
+system history was a nested endpoint. Its failed receipt and log are retained;
+logout completed. The corrected runner follows the actual client endpoint and
+checks the node filter on `/node_system_states`. All four fresh variants pass.
+No product changes were required. Pinned KB `bin/check` passes, including drift
+rejection tests and the unchanged 60-concept/120-PNG legacy inventory.
+
+This is a separately validated prototype, not a replacement for the production
+wiki navigation contract or a publication-ready page migration. Remaining page
+bindings, bilingual article review, broader workflows and publication approval
+still apply. No upstream KB push or production publication occurred.
