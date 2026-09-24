@@ -707,3 +707,31 @@ assumptions and the known mobile dialog obstruction; it is not a green full
 regression claim. Logs and final screenshots are retained under local evidence
 `clankerdev-registration-layout-20260924/`. Broader mobile failures require
 follow-up in the already planned notification/dialog work.
+
+
+### Dataset/snapshot ordered cursors — 24 September
+
+PR [#509](https://github.com/Kerrycek/clankerdev/pull/509), `e94b920c`, stacks
+on #496 and requires API44 `320af0e15`. Dataset/NAS lists and snapshots now use
+the last visible row in API name/time order, a lookahead for exact end, fresh
+forward boundaries, request cancellation, cursor-error recovery, filter reset
+and browser history restoration. No merge or shared deployment.
+
+21 relevant unit tests, typecheck, lint, translation audit and build passed.
+26 fixture Playwright scenarios passed on desktop/mobile with cs/en and
+admin/member scope; two additional filter-reset/Back regressions passed after
+the final adjustment. Initial two failures came from an incorrect member route
+in the fixture test; corrected to NAS with backend owner scoping. Evidence:
+`clankerdev-storage-cursors-20260924/` (checksums included).
+
+Property history remains outside this PR. Combined real API44/UI496/507/509
+verification in the existing isolated cluster remains an open release gate.
+Do not count these fixtures as live API certification. API44 currently has
+59 successful checks and one running integration check; upstream master is
+still `486350466`.
+
+The broad exploratory PR508 request run finished with 57 passes and 11 mobile
+failures: desktop list/bulk selector assumptions, the subsequently fixed mobile
+link selector, an intermediate HMR detachment, and the known toast/Cancel overlap.
+The scoped final PR508 evidence above remains separate; full mobile request
+regression is not green. Completed logs were archived; no local run remains.
