@@ -1,5 +1,6 @@
 import React from 'react';
 
+import { NodeHeatmapButton, useNodeHeatmapsAvailable } from '../../components/cluster/NodeHeatmaps';
 import { useI18n } from '../../app/i18n';
 import { ClusterLocationPanel } from '../../components/cluster/ClusterLocationPanel';
 import { Alert } from '../../components/ui/Alert';
@@ -104,6 +105,7 @@ function NodeMobileCards(props: { group: PublicNodeLocationGroup; open: boolean 
               <div className="mt-2 text-xs text-muted">
                 {i18n.t('public.overview.nodes.storage')}: <NodeStorageBadge node={node} />
               </div>
+              <div className="mt-2"><NodeHeatmapButton node={node} /></div>
               <div className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted">
                 <div>
                   {i18n.t('public.overview.nodes.vps')}: {typeof node.vps_count === 'number' ? node.vps_count : '—'}
@@ -122,18 +124,15 @@ function NodeMobileCards(props: { group: PublicNodeLocationGroup; open: boolean 
 
 function NodeDesktopTable(props: { group: PublicNodeLocationGroup }) {
   const i18n = useI18n();
+  const hasHeatmaps = useNodeHeatmapsAvailable(props.group.nodes);
 
   return (
     <div className="hidden overflow-auto md:block">
-      <Table className="table-fixed" minWidth="md" testId={`public.nodes.table.${props.group.location}`}>
+      <Table className="table-fixed" minWidth={hasHeatmaps ? 'lg' : 'md'} testId={`public.nodes.table.${props.group.location}`}>
         <colgroup>
-          <col style={{ width: '18%' }} />
-          <col style={{ width: '16%' }} />
-          <col style={{ width: '16%' }} />
-          <col style={{ width: '11%' }} />
-          <col style={{ width: '13%' }} />
-          <col style={{ width: '16%' }} />
-          <col style={{ width: '10%' }} />
+          {(hasHeatmaps ? [17, 13, 13, 8, 12, 15, 9, 13] : [18, 16, 16, 11, 13, 16, 10]).map((width, index) => (
+            <col key={index} style={{ width: `${width}%` }} />
+          ))}
         </colgroup>
         <thead className="bg-surface-2 text-left text-xs text-muted">
           <tr>
@@ -144,6 +143,7 @@ function NodeDesktopTable(props: { group: PublicNodeLocationGroup }) {
             <th className="px-3 py-2 text-center font-medium">{i18n.t('public.overview.nodes.table.cpu_used')}</th>
             <th className="px-3 py-2 text-center font-medium">{i18n.t('public.overview.nodes.table.kernel')}</th>
             <th className="px-3 py-2 text-center font-medium">{i18n.t('public.overview.nodes.table.cgroups')}</th>
+            {hasHeatmaps ? <th className="px-3 py-2 text-center font-medium">{i18n.t('nodes.heatmap.action')}</th> : null}
           </tr>
         </thead>
         <tbody>
@@ -158,6 +158,7 @@ function NodeDesktopTable(props: { group: PublicNodeLocationGroup }) {
               <td className="px-3 py-2 text-center text-muted">{cpuUsedLabel(node)}</td>
               <td className="px-3 py-2 text-center text-muted">{node.kernel ? String(node.kernel) : '—'}</td>
               <td className="px-3 py-2 text-center text-muted">{cgroupVersionLabel(node['cgroup_version'])}</td>
+              {hasHeatmaps ? <td className="px-3 py-2 text-center"><NodeHeatmapButton node={node} /></td> : null}
             </tr>
           ))}
         </tbody>

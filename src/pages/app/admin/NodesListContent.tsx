@@ -1,4 +1,5 @@
 import React from 'react';
+import { NodeHeatmapButton } from '../../../components/cluster/NodeHeatmaps';
 import { Server } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -74,6 +75,7 @@ function NodesRowActions(props: { row: NodeRow; basePath: string; t: NodesPageTr
   if (compact) {
     return (
       <div className="flex items-center justify-end gap-1">
+        <NodeHeatmapButton node={row} />
         {copyValue ? (
           <CopyButton
             text={copyValue}
@@ -103,6 +105,7 @@ function NodesRowActions(props: { row: NodeRow; basePath: string; t: NodesPageTr
 
   return (
     <div className="flex flex-wrap items-center gap-2">
+      <NodeHeatmapButton node={row} />
       {row.fqdn ? <CopyButton text={row.fqdn} /> : row.name ? <CopyButton text={row.name} /> : null}
       {typeof row.id === 'number' ? (
         <LinkButton to={`${basePath}/nodes/${row.id}`} variant="secondary" size="sm">
