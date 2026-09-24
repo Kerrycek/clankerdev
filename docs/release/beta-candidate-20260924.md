@@ -22,8 +22,7 @@ Initial four-PR integration: `141b92281a232c4c07a73a2c475ef93eba457b60`.
 
 | [501](https://github.com/Kerrycek/clankerdev/pull/501) | `116737117996d72080659f34ef2d6809e92b86ba` | Preserve open tabs across OAuth rotation; reads retry once, writes require explicit resubmission |
 
-PR493–500 have successful static/unit and smoke CI. PR501 has successful
-static/unit CI and its updated smoke run is pending. Human review is still
+PR493–501 have successful static/unit and smoke CI on their current heads. Human review is still
 outstanding. Excluded PRs #242, #435 and #433 are not included.
 
 ## Beta gates
@@ -70,7 +69,7 @@ outstanding. Excluded PRs #242, #435 and #433 are not included.
   cs/en desktop/mobile with short isolated test lifetimes and full restoration.
 - [x] Verify request-triggered recovery in an already-open SPA after rotation
   by another tab: read retry and preserved write forms with explicit resubmission.
-- [ ] Complete updated combined static/unit/build and desktop/mobile smoke
+- [x] Complete updated combined static/unit/build and desktop/mobile smoke
   regression after the auth transport changes in PR499–501.
 - [ ] Verify DNS server publication, backup replication and remote restore.
 - [ ] Expand KB navigation contracts/fixtures and remaining live workflow coverage.
@@ -436,3 +435,19 @@ existing PNGs. Older live receipts retain their own source pins. Broader
 combined regression is the next verification step; backend cursor agreement,
 DNS publication, remote backup/restore, KB minimum and human approval remain
 open. No shared service was deployed and no PR was merged.
+
+## Combined regression after PR499–501
+
+Candidate `5655aa501f26617fe4242fba14db842dabff975f` passed `npm run ci:pr`
+(1,478 unit, 131 script and 36 BFF tests plus lint, audits and typecheck),
+production build, and `npm run e2e:broad`: 218 desktop and 77 mobile passes,
+with no retries. One intentionally mobile-only outage layout case was skipped
+in the desktop project; a separate targeted mobile run passed that case.
+These are fixture API tests, not actual VM evidence or the entire E2E suite.
+No failures occurred. The current PR493–501 static and smoke checks are also
+successful; human review is still outstanding.
+
+Logs: `combined-regression/clanker-beta-combined-20260924.log` and
+`combined-regression/clanker-beta-outage-mobile.log` in the local evidence bundle.
+Actual VM receipts retain their exact older runtime pins; a docs-only commit
+does not change their provenance.
