@@ -75,6 +75,8 @@ outstanding. Excluded PRs #242, #435 and #433 are not included.
   including backup-only snapshot placement, restored content and fixture cleanup.
 - [x] Verify prototype member kernel/system-history navigation contracts and
   actual cs/en desktop/mobile screenshots, preserving semantic control IDs.
+- [x] Verify prototype admin kernel-parameter, sysctl and software-version
+  navigation contracts and cs/en desktop/mobile captures.
 - [ ] Expand remaining KB navigation/page bindings and live workflow coverage.
 - [ ] Complete human review and obtain approval for a concrete deployment.
 
@@ -557,3 +559,31 @@ was needed and the previously validated UI/API pins remain unchanged.
 This gate does not certify scheduled backup execution, every restore topology,
 or disaster recovery. API cursor agreement, remaining KB/admin coverage and
 human release review remain open.
+
+
+### Administrator navigation contracts — 24 September
+
+KB commit `56db8e688d3795b5a296e7414d6e1a17f83f9a73` adds three private node
+configuration paths with retained semantic IDs, bilingual labels, reviewed
+source hashes, administrator routes and node/current-source API query checks.
+Actual fixture-admin OAuth, switch to all objects, node-detail/history entry,
+all three tabs, populated results and logout passed in cs/en desktop/mobile on
+the unchanged UI `eccbcc920` / API `486350466` pins. Twelve final PNGs have
+verified hashes and contract provenance. They contain isolated VM data only.
+
+Visual review rejected the first long captures because sticky shell chrome and
+a scope notice overlapped content. Initial evidence is preserved separately.
+The final runner dismisses notices through their controls and hides only the
+sticky shell header during element screenshots. Desktop capture is 1920×1200
+for wide configuration tables; mobile remains 390×844. All twelve corrected
+images were inspected. Tall mobile sysctl captures remain prototype artifacts,
+not cropped or approved publication assets.
+
+Targeted regression of the shared runner passed member desktop-cs and mobile-en
+navigation, including absence of private controls/API requests. Earlier four-way
+member evidence is preserved. Pinned KB `bin/check` passed and all 120 legacy
+PNGs remain unchanged. Evidence: `clankerdev-beta-20260924/admin-navigation/`.
+
+This extends read-only administrator navigation coverage. It does not certify
+administrative mutations or complete wiki page bindings, translated article
+prose or publication. No product/runtime code or shared deployment changed.
