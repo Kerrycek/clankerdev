@@ -112,16 +112,18 @@ test('@workflow-matrix @smoke admin requests: one list row opens the canonical d
   });
 
   await page.goto('/admin/requests');
-  await expect(page.getByTestId('admin.requests.table')).toBeVisible();
-  const desktopRow = page.getByTestId('admin.requests.row.registration.123');
-  await expect(desktopRow).not.toHaveAttribute('tabindex');
-  await expect(desktopRow.getByRole('link', { name: '#123' })).toBeVisible();
+  const mobile = page.viewportSize()!.width < 768;
+  const requestLink = mobile
+    ? page.getByTestId('admin.requests.mobile.row.registration.123').getByRole('link')
+    : page.getByTestId('admin.requests.row.registration.123').getByRole('link', { name: '#123' });
+  await expect(requestLink).toBeVisible();
+  if (!mobile) await expect(page.getByTestId('admin.requests.row.registration.123')).not.toHaveAttribute('tabindex');
 
   await expect.poll(() => states.includes('awaiting')).toBeTruthy();
   expect(new URL(page.url()).searchParams.get('state')).toBeNull();
   await expect(page.getByTestId('admin.requests.quick.awaiting')).toHaveAttribute('aria-pressed', 'true');
 
-  await desktopRow.getByRole('link', { name: '#123' }).press('Enter');
+  await requestLink.press('Enter');
   await expect(page).toHaveURL(/\/admin\/requests\/registration\/123\?returnTo=/);
   const returnTo = new URL(page.url()).searchParams.get('returnTo');
   expect(new URL(returnTo ?? '/', 'https://example.test').pathname).toBe('/admin/requests');
@@ -234,6 +236,8 @@ for (const language of ['en', 'cs'] as const) {
 
     await page.goto('/admin/requests/registration/124');
 
+    await expect(page.getByTestId('admin.requests.detail.metadata').locator('details')).toHaveAttribute('open', '');
+    await expect(page.getByTestId('admin.requests.detail.registration.preferences')).toBeVisible();
     const review = page.getByTestId('admin.requests.detail.review');
     const summary = review.getByTestId('admin.requests.detail.risk.summary');
     await expect(summary).toBeInViewport();
@@ -335,9 +339,11 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile @smoke admin requests: success
   await expect.poll(osm.requestCount).toBe(1);
   const metadataChevron = page.getByTestId('admin.requests.detail.metadata.chevron');
   await expect(metadataChevron).toBeVisible();
-  await expect(metadataChevron).toHaveCSS('rotate', 'none');
-  await page.getByTestId('admin.requests.detail.metadata.toggle').click();
   await expect(page.getByTestId('admin.requests.detail.metadata').locator('details')).toHaveAttribute('open', '');
+  await expect(metadataChevron).toHaveCSS('rotate', '90deg');
+  await page.getByTestId('admin.requests.detail.metadata.toggle').click();
+  await expect(page.getByTestId('admin.requests.detail.metadata').locator('details')).not.toHaveAttribute('open');
+  await page.getByTestId('admin.requests.detail.metadata.toggle').click();
   await expect(metadataChevron).toHaveCSS('rotate', '90deg');
   await page.getByTestId('admin.requests.resolve.action.approve').click();
   await expect(page.getByTestId('admin.requests.resolve.modal')).toContainText(/approve request|schválit žádost/i);

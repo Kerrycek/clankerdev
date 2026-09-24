@@ -86,6 +86,8 @@ export const enRequests = {
   'requests.detail.card.request': 'Request',
   'requests.detail.admin': 'Admin',
   'requests.detail.org_id': 'Organisation ID',
+  'requests.detail.registration.context': 'Additional details',
+  'requests.detail.registration.preferences': 'Requested setup',
   'requests.detail.registration.title': 'Applicant details',
   'requests.detail.registration.subtitle': 'Complete data submitted with the registration request.',
   'requests.detail.change.title': 'Requested change',
