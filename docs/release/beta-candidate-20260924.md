@@ -18,8 +18,8 @@ Initial four-PR integration: `141b92281a232c4c07a73a2c475ef93eba457b60`.
 | [497](https://github.com/Kerrycek/clankerdev/pull/497) | `ff4529c3f6fea1d61d3a1d41502c0b028ce311e2` | Preserve backup tab/filter edits during overlapping navigation |
 | [498](https://github.com/Kerrycek/clankerdev/pull/498) | `4d9cb3f1f045379645dbc52d9b083f616e5a8f87` | Preserve resource choices when asynchronous VPS defaults arrive |
 
-PR493–497 have successful static/unit and smoke CI. PR498 CI is pending;
-human review is still outstanding. Excluded PRs #242, #435 and #433 are not included.
+PR493–498 have successful static/unit and smoke CI; human review is still
+outstanding. Excluded PRs #242, #435 and #433 are not included.
 
 ## Beta gates
 
@@ -38,8 +38,10 @@ human review is still outstanding. Excluded PRs #242, #435 and #433 are not incl
 - [ ] Audit remaining dataset/snapshot cursor contracts from #189.
 - [x] Produce initial actual cs/en VPS list/detail screenshots and navigation
   with independent UI/API pins (prototype evidence, not publication assets).
-- [ ] Expand KB navigation contracts/fixtures and verify the corrected resource
-  submission against a new pinned VM candidate.
+- [x] Verify corrected resource submission and persisted values on the pinned VM.
+- [x] Verify actual member/admin node-history access, foreign VPS denial and logout
+  in Czech and English on the pinned VM.
+- [ ] Expand KB navigation contracts/fixtures and remaining live workflow coverage.
 - [ ] Complete human review and obtain approval for a concrete deployment.
 
 ## Evidence and limits
@@ -93,8 +95,21 @@ PR498 validation: 1,429 unit, 128 script and 24 BFF checks, lint/typecheck/i18n/
 production build and 34 desktop/mobile VPS-create fixture browser cases PASS.
 After integrating PR498, all 1,454 combined unit tests and typecheck pass.
 The previous combined 818 browser cases are not relabeled as tests of PR498.
-Actual VM verification of the corrected submission remains pending; the recorded
-VM images still identify the previous immutable UI revision truthfully.
+The own services VM was updated successfully to UI `22cf9910` / API `486350466`.
+A second dedicated fixture VPS (ID 2, `kb-resources.example.test`) was created
+through the actual UI. The POST body and subsequent API GET agree on 1 CPU,
+1024 MiB memory, 10240 MiB disk and zero swap. The VPS is running; its create
+transaction completed 14/14 steps. New cs/en list/detail PNGs, hashes, resource
+assertions and the durable creation receipt are in `live-vm-resource-fix/`.
+Earlier images remain preserved with their original UI revision.
+
+Real OAuth sessions for member, other member and admin passed in cs/en:
+member kernel-history navigation and API, private node configuration denied
+without fetching private resources, foreign VPS rejected by the actual API,
+admin kernel parameters/software API, and logout clearing the server session.
+`access-cs.json` and `access-en.json` record those results and both immutable
+pins. These desktop checks do not certify MFA, expiry/renewal, live mobile,
+DNS mutations, storage/backup operations or the full admin workflow set.
 
 ## Deployment and rollback boundaries
 
