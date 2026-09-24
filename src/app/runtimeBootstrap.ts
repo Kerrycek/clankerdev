@@ -1,3 +1,4 @@
+import { rememberBffSession } from '../lib/auth/bffSession';
 import { clearStoredOAuthToken } from '../lib/auth/tokenStore';
 
 export type OptionalRuntimeScriptName = 'config.js' | 'config.local.js';
@@ -183,6 +184,9 @@ export async function loadBffRuntimeSession(
         ...target.vpsAdmin.webuiNext,
         sessionExpiresAt,
       };
+      if (typeof window !== 'undefined' && target === window) {
+        rememberBffSession(url, values['sessionKey'], accessToken);
+      }
       return url;
     } catch {
       // Optional BFF session bootstrap. Static/legacy deployments do not expose it.

@@ -1,3 +1,4 @@
+import { recoverBffSession } from '../auth/bffSession';
 import { getRuntimeConfig } from '../../app/config';
 import { MALFORMED_HAVEAPI_ENVELOPE_ERROR_CODE, parseHaveApiEnvelope } from './haveapiEnvelope';
 
@@ -401,8 +402,8 @@ function authHeaders(desc: any): Record<string, string> {
 }
 
 export async function haveApiCall<T>(opts: CallOpts): Promise<{ data: T; meta?: Record<string, unknown>; envelope: HaveApiEnvelope }> {
-  const cfg = getRuntimeConfig();
   const desc = await getHaveApiDescription();
+  const cfg = getRuntimeConfig();
   const metaNs = cfg.haveApi?.metaNamespace ?? getMetaNamespace(desc);
 
   const method = opts.method ?? 'GET';
@@ -464,7 +465,18 @@ export async function haveApiCall<T>(opts: CallOpts): Promise<{ data: T; meta?: 
   };
 
 
-  const res = await fetch(url, init);
+  let res = await fetch(url, init);
+  // Retry only safe reads rejected by HTTP authentication. Never replay writes,
+  // network failures, 403s, or ambiguous HaveAPI status:false responses.
+  if (res.status === 401 && paramsInQuery && cfg.auth.kind === 'oauth2') {
+    const recovered = await recoverBffSession(cfg.auth.accessToken);
+    opts.signal?.throwIfAborted();
+    if (recovered) {
+      await res.body?.cancel();
+      init.headers = { Accept: 'application/json', ...authHeaders(desc) };
+      res = await fetch(url, init);
+    }
+  }
   const envelope = await parseHaveApiEnvelope(res);
 
   if (!res.ok) {

@@ -236,6 +236,28 @@ test('successful callbacks preserve a validated next path and establish the sess
   assert.equal(typeof payload.sessionExpiresAt, 'number');
 });
 
+test('session fingerprints survive reads but change at a fresh login', async () => {
+  const read = async (cookie) => {
+    const res = await fetch(`${bffOrigin}/session.json`, {
+      headers: { ...secureHeaders(cookie), 'sec-fetch-site': 'same-origin' },
+    });
+    assert.equal(res.status, 200);
+    return res.json();
+  };
+  const authenticate = async () => {
+    const { cookie, state } = await startLogin('/app');
+    const res = await request(`/oauth/callback?code=successful-code&state=${state}`, { cookie });
+    const authenticated = responseCookie(res); await res.text();
+    return authenticated;
+  };
+  const cookie = await authenticate();
+  const first = await read(cookie);
+  assert.match(first.sessionKey, /^[a-f0-9]{64}$/);
+  assert.equal((await read(cookie)).sessionKey, first.sessionKey);
+  assert.notEqual((await read(await authenticate())).sessionKey, first.sessionKey);
+  assert.equal((await read(undefined)).sessionKey, null);
+});
+
 test('OAuth error page is bilingual, actionable, defensive and never reflects its query', async () => {
   const querySecret = 'callback-query-secret';
   const czechResponse = await request(

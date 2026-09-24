@@ -8,6 +8,7 @@
  * This service does NOT proxy HaveAPI calls. The SPA calls https://api.vpsfree.cz directly.
  */
 
+const { createHmac } = require('node:crypto');
 const express = require('express');
 const { passkeyDestinations, renderPasskeyPage, setPasskeyHeaders } = require('./passkey-page');
 const session = require('express-session');
@@ -332,6 +333,11 @@ app.get('/session.json', async (req, res) => {
   setRuntimeSessionSecurityHeaders(res);
   return res.send(JSON.stringify({
     accessToken: oauth?.access_token || null,
+    // A non-credential fingerprint: stable across token rotations, different
+    // after login/session regeneration. Never expose the signed session id.
+    sessionKey: oauth?.access_token
+      ? createHmac('sha256', SESSION_SECRET).update(`webui-session:${req.sessionID}`).digest('hex')
+      : null,
     sessionExpiresAt: oauth?.access_token ? currentSessionExpiresAt(req) : null,
   }));
 });
