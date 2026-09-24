@@ -4,6 +4,41 @@ This is a local integration candidate, not an approved release or a deployed
 build. The product remains the user/admin interface. Fixture regression and
 the first isolated VM checks are reported separately below.
 
+## Integrated cursor candidate — 24 September, 20:00 UTC
+
+Exact pending-product candidate: `3ac1be67d9964e1a0d9052b1a43070d704688912`
+on `codex/beta-cursor-integration-20260924`, built from release `67bbb6bb`
+and PR496, PR502–509. This is a test integration branch; the individual PRs
+remain open and shared services still use the approved release.
+
+- Typecheck, lint, build, i18n and CSP audits pass. Full unit suite:
+  **1,498 tests / 269 files**; scripts **131**; BFF **36** pass.
+- Combined fixture Playwright suite: **86/86 pass**, desktop and mobile,
+  covering user-data, IP history, datasets/snapshots, the VPS resource
+  workspace, node heatmaps and route focus. This does not certify real API
+  pagination. The initial missing BFF dependency link was fixed locally;
+  both the initial failure and successful rerun are retained.
+- KB commit `6f2eda6` independently pins this UI and API44
+  `320af0e152ed223bf0365e0f1cf4b38cf00d7b1d`. Pinned `bin/check` passes.
+  The initial source-drift failure identified only heatmap additions in
+  NodesPage/NodesListContent. Their diff preserves the node-history routes,
+  labels, semantic IDs and role scope; both fingerprints were reviewed and
+  updated. Legacy inputs, screenshots and old-pin receipts remain unchanged.
+- The existing isolated cluster's new configuration is building. No new-pin
+  VM activation or real cursor browser verification has occurred yet. Preserve
+  the healthy build and existing synthetic objects; do not launch a second
+  cluster. Evidence: `~/.codex/attachments/clankerdev-cursor-integration-20260924/`.
+- No dataset `property_history` client exists in this UI. API44 still needs
+  direct real-API coverage for that endpoint. Dataset-expansion history is a
+  separate endpoint with a possible ordering mismatch; investigate separately
+  instead of claiming it covered by PR509.
+
+Next: collect the isolated build result, preserve current services generation
+and fixture receipts, update only the owned services VM, verify exact runtime
+pins, then run actual multi-page cursor/owner/error/end tests. Admin lifecycle,
+KB publication preparation and mobile notification/session audit remain open.
+Do not mark beta or live-integration gates complete from the fixture suite.
+
 ## Follow-up — 24 September, 19:02 UTC
 
 - [IP history PR507](https://github.com/Kerrycek/clankerdev/pull/507),
