@@ -687,3 +687,23 @@ creation/deletion and suspension remain unverified against these live pins.
 The broader live-workflow gate stays open; API cursor agreement, KB bindings
 and human review remain outstanding. No product/runtime change, merge, shared
 deployment or upstream PR was made.
+
+
+### Registration review layout — 24 September
+
+PR [#508](https://github.com/Kerrycek/clankerdev/pull/508), head `b53ecd61`,
+now covers both registration and account-change metadata expanded by default,
+and grouped registration cards for applicant context, requested setup and address.
+Risk/decision placement is preserved. Manual collapse and next-request defaults
+remain available. No API or approval-action change; not merged or deployed.
+
+Final source passed typecheck, lint, translation audit, build and nine detail
+unit tests. Twenty-two targeted detail/approval/map/queue browser cases passed
+with synthetic API/map fixtures on desktop/mobile, including cs/en screenshots.
+The responsive keyboard navigation check passed both devices after correcting
+its mobile locator. This is fixture evidence, not live lifecycle certification.
+An exploratory full request file run exposed unrelated mobile list/bulk selector
+assumptions and the known mobile dialog obstruction; it is not a green full
+regression claim. Logs and final screenshots are retained under local evidence
+`clankerdev-registration-layout-20260924/`. Broader mobile failures require
+follow-up in the already planned notification/dialog work.
