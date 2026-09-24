@@ -5,6 +5,7 @@ import { emptyRequestOverrides } from './RequestReviewModel';
 import {
   changeResolvePayload,
   fetchAwaitingReviewTarget,
+  fetchReviewTarget,
   hasInvalidNumericResolveOverride,
   registrationResolvePayload,
 } from './RequestResolveMutation';
@@ -126,4 +127,15 @@ describe('request resolve payloads', () => {
     } as never);
     await expect(fetchAwaitingReviewTarget('registration', 43)).resolves.toMatchObject({ id: 43 });
   });
+  it('rechecks the state actually reviewed, including resolved registrations', async () => {
+    vi.mocked(fetchRegistrationRequest).mockResolvedValue({
+      data: { id: 43, state: 'ignored', login: 'new-user', user: null }, meta: {},
+    } as never);
+    await expect(fetchReviewTarget('registration', 43, 'ignored')).resolves.toMatchObject({ state: 'ignored' });
+    await expect(fetchReviewTarget('registration', 43, 'denied')).rejects.toMatchObject({ reason: 'state_changed' });
+    await expect(fetchAwaitingReviewTarget('registration', 43)).rejects.toMatchObject({ reason: 'state_changed' });
+    vi.mocked(fetchRegistrationRequest).mockRejectedValue(new Error('API unavailable'));
+    await expect(fetchReviewTarget('registration', 43, 'ignored')).rejects.toThrow('API unavailable');
+  });
+
 });

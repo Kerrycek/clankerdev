@@ -10,12 +10,18 @@ import {
 } from './RequestReviewModel';
 
 describe('requestReviewActions', () => {
-  it('fails closed once a request is no longer awaiting review', () => {
-    expect(requestReviewActions('registration', { id: 1, state: 'approved' }, true)).toEqual([]);
-    expect(requestReviewActions('registration', { id: 2, state: 'denied' }, true)).toEqual([]);
-    expect(requestReviewActions('registration', { id: 3, state: 'ignored' }, true)).toEqual([]);
-    expect(requestReviewActions('registration', { id: 4, state: 'pending_correction' }, true)).toEqual([]);
+  it.each([
+    ['approved', ['deny', 'ignore', 'request_correction']],
+    ['denied', ['approve', 'ignore', 'request_correction']],
+    ['ignored', ['approve', 'deny', 'request_correction']],
+    ['pending_correction', ['approve', 'deny', 'ignore']],
+  ])('allows revisiting %s registrations without repeating the same state', (state, actions) => {
+    expect(requestReviewActions('registration', { id: 1, state }, true)).toEqual(actions);
+  });
+
+  it('fails closed for unknown states', () => {
     expect(requestReviewActions('registration', { id: 5 }, true)).toEqual([]);
+    expect(requestReviewActions('registration', { id: 5, state: 'unknown' }, true)).toEqual([]);
   });
 
   it('does not strand change requests in a correction state applicants cannot resubmit', () => {
@@ -44,7 +50,7 @@ describe('requestReviewActions', () => {
     expect(requestReviewActions('change', { ...orphan, user: { id: Number.MAX_SAFE_INTEGER + 1 } }, true)).toEqual([]);
   });
 
-  it('offers the complete registration decision set only while awaiting', () => {
+  it('offers the complete registration decision set while awaiting', () => {
     expect(requestReviewActions('registration', { id: 6, state: 'awaiting' }, true)).toEqual([
       'approve',
       'deny',

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -21,7 +21,7 @@ import { RequestResolveReview } from './RequestResolveReview';
 import { RequestResolveOverridesForm } from './RequestResolveOverridesForm';
 import { RequestMutationUncertainty } from './RequestMutationUncertainty';
 import {
-  fetchAwaitingReviewTarget,
+  fetchReviewTarget,
   invalidNumericResolveOverrideKeys,
   RequestReviewPreconditionError,
   resolveReviewedRequest,
@@ -121,6 +121,7 @@ export function RequestReviewActions(props: {
   );
   const ownerMissing = requestMissingRequiredUser(props.reqType, props.request);
   const historicalUserId = safePositiveInteger(String(props.request.raw_user_id ?? ''));
+  const reviewedState = useRef(String(props.request.state ?? '').trim());
   const [resolveOpen, setResolveOpen] = useState(false);
   const [overridesOpen, setOverridesOpen] = useState(false);
   const [resolveAction, setResolveAction] = useState<ResolveUserRequestAction>('approve');
@@ -169,6 +170,7 @@ export function RequestReviewActions(props: {
   }, [approveNode, resources.nodes]);
 
   function openAction(action: ResolveUserRequestAction) {
+    reviewedState.current = String(props.request.state ?? '').trim();
     const nextOverrides =
       action === 'approve' || action === 'request_correction'
         ? requestOverrides(props.reqType, props.request)
@@ -215,7 +217,7 @@ export function RequestReviewActions(props: {
     let settleError: unknown;
 
     try {
-      await fetchAwaitingReviewTarget(props.reqType, props.reqId);
+      await fetchReviewTarget(props.reqType, props.reqId, reviewedState.current);
       mutationGeneration = await chrome.acquireLocalLock(requestRef, { durable: true });
       mutationStarted = true;
       const res = await resolveReviewedRequest(props.reqType, props.reqId, action, options);

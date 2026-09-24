@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { RequestReviewActions } from './RequestReviewActions';
-import { fetchAwaitingReviewTarget, resolveReviewedRequest } from './RequestResolveMutation';
+import { fetchReviewTarget, resolveReviewedRequest } from './RequestResolveMutation';
 
 const acquireLocalLock = vi.fn();
 const settleLocalLock = vi.fn();
@@ -34,7 +34,7 @@ vi.mock('./RequestResolveMutation', async (importOriginal) => {
   const actual = await importOriginal<typeof import('./RequestResolveMutation')>();
   return {
     ...actual,
-    fetchAwaitingReviewTarget: vi.fn(),
+    fetchReviewTarget: vi.fn(),
     resolveReviewedRequest: vi.fn(),
   };
 });
@@ -54,7 +54,7 @@ vi.mock('./RequestResolveResources', () => ({
   }),
 }));
 
-const fetchTargetMock = vi.mocked(fetchAwaitingReviewTarget);
+const fetchTargetMock = vi.mocked(fetchReviewTarget);
 const resolveMock = vi.mocked(resolveReviewedRequest);
 
 describe('RequestReviewActions behavior', () => {
@@ -94,7 +94,7 @@ describe('RequestReviewActions behavior', () => {
       'ignore',
       expect.objectContaining({ reason: undefined, approveCreateVps: false, approveActivate: false }),
     );
-    expect(fetchTargetMock).toHaveBeenCalledWith('registration', 19327);
+    expect(fetchTargetMock).toHaveBeenCalledWith('registration', 19327, 'awaiting');
     expect(acquireLocalLock).toHaveBeenCalledTimes(1);
   });
 });
