@@ -6,7 +6,6 @@ import { useI18n } from '../../../../app/i18n';
 import { fetchIpAddressAssignments } from '../../../../lib/api/networking';
 import { formatDateTime } from '../../../../lib/format';
 import { useKeysetPagination } from '../../../../lib/hooks/useKeysetPagination';
-import { cursorFromDescendingPage } from '../../../../lib/lockIndex';
 import { parseBoolParam, parsePositiveInt } from '../../../../lib/parse';
 import { ListShell } from '../../../../components/layout/ListShell';
 import { PageHeader } from '../../../../components/layout/PageHeader';
@@ -61,18 +60,31 @@ function IpAssignmentsPageContent() {
     setSearchParams: setSp,
     defaultLimit: limit,
     allowedLimits: [25, 50, 100],
+    restoreUrlCursorOnSignatureChange: true,
   });
 
   const listQ = useQuery({
     queryKey: ['ip_address_assignments', 'list', { ipAddr, userId, vpsId, active, order, limit: paging.limit, fromId: paging.cursor ?? null }],
-    queryFn: async () =>
-      (await fetchIpAddressAssignments({ ipAddr: ipAddr || undefined, user: userId, vps: vpsId, active, order, limit: paging.limit, fromId: paging.cursor ?? undefined })).data,
-    placeholderData: (prev) => prev,
+    queryFn: async ({ signal }) =>
+      (await fetchIpAddressAssignments({ ipAddr: ipAddr || undefined, user: userId, vps: vpsId, active, order, limit: paging.limit + 1, fromId: paging.cursor ?? undefined, signal })).data,
   });
 
-  const rows = listQ.data ?? [];
-  const nextCursor = cursorFromDescendingPage(rows, (r) => Number((r as any).id));
-  const canNext = Boolean(nextCursor);
+  const rows = (listQ.data ?? []).slice(0, paging.limit);
+  // API44 orders by (from_date, id), not ID alone. The lookahead row is
+  // intentionally excluded from the anchor so the next page still displays it.
+  const nextCursor = rows.at(-1)?.id;
+  const canNext = !listQ.isFetching && !listQ.isError
+    && (listQ.data?.length ?? 0) > paging.limit
+    && Number.isSafeInteger(nextCursor) && Number(nextCursor) > 0;
+  const restart = () => paging.goToPageWithStack(1, [null]);
+  const goNext = () => {
+    if (!canNext || nextCursor == null) return;
+    // Rebuild the forward edge after a refetch instead of reusing a stale
+    // visited cursor (e.g. when assignments changed on a previous page).
+    paging.goToPageWithStack(paging.page + 1, [
+      ...paging.stack.slice(0, paging.index + 1), nextCursor,
+    ]);
+  };
 
   const setParam = (key: string, value?: string) => {
     const next = new URLSearchParams(sp);
@@ -109,8 +121,18 @@ function IpAssignmentsPageContent() {
         />
       }
     >
-      {listQ.isLoading ? <LoadingState /> : listQ.isError ? <ErrorState title={t('admin.ip_assignments.load_error')} /> : rows.length === 0 ? <EmptyState title={t('admin.ip_assignments.empty')} /> : (
-        <TableCard testId="admin.ip_assignments.table" footer={<KeysetPagination testId="admin.ip_assignments.pagination" page={paging.page} pageCount={paging.pageCount} canPrev={paging.canPrev} canNext={canNext} onPrev={paging.goPrev} onNext={() => paging.goNext(nextCursor ?? null)} onGoToPage={paging.goToPage} limit={paging.limit} onLimitChange={paging.setLimit} />}>
+      {listQ.isLoading ? <LoadingState /> : listQ.isError ? <ErrorState
+        testId="admin.ip_assignments.error"
+        title={t('admin.ip_assignments.load_error')}
+        error={listQ.error}
+        actions={{
+          primary: { label: t('common.retry'), onClick: () => listQ.refetch() },
+          secondary: paging.cursor != null
+            ? { label: t('admin.ip_assignments.restart'), onClick: restart }
+            : undefined,
+        }}
+      /> : rows.length === 0 ? <EmptyState title={t('admin.ip_assignments.empty')} /> : (
+        <TableCard testId="admin.ip_assignments.table">
           <thead>
             <tr>
               <th aria-label={t('common.state')} />
@@ -151,6 +173,14 @@ function IpAssignmentsPageContent() {
           </tbody>
         </TableCard>
       )}
+      <KeysetPagination
+        testId="admin.ip_assignments.pagination"
+        page={paging.page} pageCount={paging.pageCount}
+        canPrev={paging.canPrev && !listQ.isFetching} canNext={canNext}
+        onPrev={paging.goPrev} onNext={goNext}
+        onGoToPage={paging.goToPage} limit={paging.limit}
+        onLimitChange={paging.setLimit}
+      />
     </ListShell>
   );
 }

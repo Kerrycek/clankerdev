@@ -18,6 +18,7 @@ export const enAdmin_ip_assignments = {
   "admin.ip_assignments.filter.user.placeholder": "User login or ID…",
   "admin.ip_assignments.filter.vps.placeholder": "VPS hostname or ID…",
   "admin.ip_assignments.load_error": "Failed to load IP assignments",
+  "admin.ip_assignments.restart": "Back to first page",
   "admin.ip_assignments.subtitle": "Audit which user/VPS held an address and when.",
   "admin.ip_assignments.title": "IP assignment audit",
 } as const;
