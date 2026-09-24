@@ -1,5 +1,17 @@
 # Dataset and snapshot cursor audit (#189)
 
+## Status update — 24 September 2026
+
+The historical audit below describes API `486350466`. The user subsequently
+approved the specific backend cursor work, now open as
+[vpsAdmin PR44](https://github.com/vpsfreecz/vpsadmin/pull/44), head
+`320af0e152ed223bf0365e0f1cf4b38cf00d7b1d`. Ordered-cursor resource tests pass;
+API/UI integration in the isolated VM and review remain required. This does
+not authorize or record a shared API deployment. Earlier local-only and
+approval statements below apply to the original audit date.
+
+## Original audit
+
 Source audit against API `486350466e8fb6f966add1cde3fa2bc12b4d6b62` and UI
 `22cf991041d421fa60e13339fa41949a3643bdc9`. The original source audit is now
 backed by actual Ruby API resource tests

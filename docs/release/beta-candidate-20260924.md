@@ -4,7 +4,40 @@ This is a local integration candidate, not an approved release or a deployed
 build. The product remains the user/admin interface. Fixture regression and
 the first isolated VM checks are reported separately below.
 
-## Inputs
+## Current status — 24 September, 18:45 UTC
+
+The evidence below describes the earlier integration candidate and its exact
+pins; it does not certify later code. PR493–495 and PR497–501 are now merged
+and deployed as `67bbb6bb8ec5e2598bd076856737027b3189a709`. PR496 remains open
+pending real API/UI cursor integration. The previous approval was consumed by
+that release; new PRs remain subject to review and deployment approval.
+
+- Backend [PR44](https://github.com/vpsfreecz/vpsadmin/pull/44), head
+  `320af0e152ed223bf0365e0f1cf4b38cf00d7b1d`, is authorized and open. Its ordered
+  cursor implementation passed 133 resource examples at `ee81404ca`. The new
+  commit only normalizes English/Czech API descriptions; both i18n update and
+  health pass with the real API and an isolated MariaDB. This is not VM/browser
+  pagination evidence. The database was shut down after validation.
+- CI at the previous API head also reported two engine failures among 1,184
+  examples: missing generated `IpReleaseCampaign#deadline` in a verifying
+  double, and a duplicate fixture IP in export creation (seed 50084). These
+  paths are unchanged by PR44. Baseline/order-dependence still needs diagnosis;
+  do not call API CI green or bypass the checks. New-head CI is running.
+- UI PR502 (timezone, `8cb8b465`), PR503 (resource override, `37a9fe02`),
+  PR504 (heatmaps, `3a8cedee`) and PR506 (main focus outline, `72f36b68`)
+  have successful static/unit and smoke CI. PR505 (`1a42fe28`) has successful
+  static/unit CI with smoke still running. None has a human review decision.
+- PR505 is stacked on PR503; review that dependency before retargeting it to
+  main. These five UI PRs are not yet included in this integration branch.
+
+Next: diagnose the API engine failures without expanding the cursor change
+blindly; align dataset, snapshot and IP-assignment clients to the last visible
+row anchor, then verify PR496 and those clients against the exact API44 pin in
+the existing isolated cluster. Do not mark sorted fixtures as live evidence.
+Remaining admin lifecycle, KB minimum, mobile notification and session audit
+gates are unchanged. No merge or shared deployment was performed in this run.
+
+## Historical integration inputs
 
 Base: `fbb02a065bc65f50f66f5bbcedfc35099a74bfa0`.
 Initial four-PR integration: `141b92281a232c4c07a73a2c475ef93eba457b60`.
@@ -21,8 +54,8 @@ Initial four-PR integration: `141b92281a232c4c07a73a2c475ef93eba457b60`.
 | [500](https://github.com/Kerrycek/clankerdev/pull/500) | `2fa71fe9bdd35781bb4c03acae2b445f28a1bad5` | Serialize BFF session refresh and logout through persistence |
 | [501](https://github.com/Kerrycek/clankerdev/pull/501) | `116737117996d72080659f34ef2d6809e92b86ba` | Preserve open tabs across OAuth rotation; reads retry once, writes require explicit resubmission |
 
-PR493–501 have successful static/unit and smoke CI on their current heads. Human review is still
-outstanding. Excluded PRs #242, #435 and #433 are not included.
+At the original integration checkpoint, PR493–501 had successful static/unit
+and smoke CI; the later release status is recorded above. Excluded PRs #242, #435 and #433 are not included.
 
 ## Beta gates
 

@@ -1,5 +1,17 @@
 # User-data list contract and remaining beta gate
 
+## Status update — 24 September 2026
+
+The historical audit below describes API `486350466`. The user subsequently
+approved the specific backend cursor work, now open as
+[vpsAdmin PR44](https://github.com/vpsfreecz/vpsadmin/pull/44), head
+`320af0e152ed223bf0365e0f1cf4b38cf00d7b1d`. Ordered-cursor resource tests pass;
+API/UI integration in the isolated VM and review remain required. This does
+not authorize or record a shared API deployment. Earlier local-only and
+approval statements below apply to the original audit date.
+
+## Original audit
+
 Reference: vpsAdmin API `486350466e8fb6f966add1cde3fa2bc12b4d6b62`,
 Clankerdev base `fbb02a065bc65f50f66f5bbcedfc35099a74bfa0`, issues #241 and #189.
 This is a fresh implementation; closed PR #242 is not reopened or merged.
