@@ -4,7 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useAppMode } from '../../../../app/appMode';
 import { useAuth } from '../../../../app/auth';
 import { useI18n } from '../../../../app/i18n';
-import { useAccountTimeZone } from '../../../../app/accountTimeZone';
+import { resolveAccountTimeZone, useAccountTimeZone, useServerTimeZone } from '../../../../app/accountTimeZone';
 import { useToasts } from '../../../../app/toasts';
 
 import { Alert } from '../../../../components/ui/Alert';
@@ -99,6 +99,7 @@ export function AdminUserOverviewPage() {
   const { basePath } = useAppMode();
   const { t } = useI18n();
   const accountTimeZone = useAccountTimeZone();
+  const serverTimeZone = useServerTimeZone();
   const toasts = useToasts();
   const { user: u, refetch } = useAdminUserContext();
   const [editOpen, setEditOpen] = useState(false);
@@ -313,7 +314,7 @@ export function AdminUserOverviewPage() {
             </div>
             <div>
               <div className="text-xs text-muted">{t('admin.user.edit.field.time_zone')}</div>
-              <div className="text-sm">{typeof u.time_zone === 'string' && u.time_zone.trim() ? u.time_zone : t('admin.user.edit.field.time_zone.default')}</div>
+              <div className="text-sm" data-testid="admin.user.time_zone">{resolveAccountTimeZone(u.time_zone, serverTimeZone)}</div>
             </div>
             <div>
               <div className="text-xs text-muted">{t('admin.user.field.created')}</div>

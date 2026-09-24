@@ -7,7 +7,7 @@ test('admin user detail: shows header and shortcut links', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);
 
   await installHaveApiMock(page, {
-    user: { id: 1, login: 'admin', level: 100 },
+    user: { id: 1, login: 'admin', level: 100, time_zone: 'Asia/Tokyo' },
     handlers: {
       'GET users/42': () => ({
         user: {
@@ -29,6 +29,7 @@ test('admin user detail: shows header and shortcut links', async ({ page }) => {
 
   await expect(page.getByTestId('admin.user.page')).toBeVisible();
   await expect(page.getByTestId('admin.user.header')).toBeVisible();
+  await expect(page.getByTestId('admin.user.time_zone')).toHaveText('Europe/Prague');
 
   await expect(page.getByTestId('admin.user.action.vps')).toHaveAttribute('href', '/admin/vps?user=42');
   await expect(page.getByTestId('admin.user.action.vps_count')).toHaveText('7');
@@ -142,6 +143,7 @@ test('admin user detail: edit drawer saves safe account fields', async ({ page }
 
   await expect(page.getByTestId('admin.user.edit.drawer')).toHaveCount(0);
   await expect(page.getByTestId('admin.user.details.card').getByText('Alice Renamed')).toBeVisible();
+  await expect(page.getByTestId('admin.user.time_zone')).toHaveText('UTC');
   expect(updates).toEqual([
     {
       user: {
