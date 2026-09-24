@@ -41,6 +41,9 @@ outstanding. Excluded PRs #242, #435 and #433 are not included.
 - [x] Verify corrected resource submission and persisted values on the pinned VM.
 - [x] Verify actual member/admin node-history access, foreign VPS denial and logout
   in Czech and English on desktop and mobile layouts on the pinned VM.
+- [x] Verify actual DNS zone/record CRUD and snapshot create/delete on cs/en
+  desktop/mobile, including persisted reads and completed snapshot transactions.
+- [ ] Verify DNS server publication, backup replication and restore.
 - [ ] Expand KB navigation contracts/fixtures and remaining live workflow coverage.
 - [ ] Complete human review and obtain approval for a concrete deployment.
 
@@ -110,7 +113,25 @@ admin kernel parameters/software API, and logout clearing the server session.
 `access-cs.json`, `access-en.json` and the two `access-mobile-*.json` files
 record those results and both immutable pins. Mobile runs use a 390×844 viewport
 and actual drawer navigation. These checks do not certify MFA, expiry/renewal,
-DNS mutations, storage/backup operations or the full admin workflow set.
+the full admin workflow set. DNS and snapshot operations were subsequently
+verified as described below; backup replication and restore remain open.
+
+Actual DNS and storage checks on the same pins are recorded in
+`live-dns-storage/`: four `dns-*.json` and four `storage-*.json` receipts plus
+logs, for Czech/English and desktop/390×844 mobile. DNS creates a dedicated
+example.test zone and documentation-range A record, edits the address, verifies
+it after reload, deletes the record/zone, and confirms the zone is inaccessible.
+All five mutations per variant return HTTP 200 and API success. The isolated
+cluster has DNS servers disabled, so this proves API/UI persistence and lifecycle,
+not authoritative DNS publication or resolution.
+
+The storage path follows the existing fixture VPS through Storage to its root
+dataset and Snapshots. Each variant creates a labeled snapshot, observes a
+successful finished action state, reloads the saved snapshot, deletes it, observes
+a successful finished delete action, and confirms absence in a fresh API list.
+Durable receipts prevent duplicate mutations after an uncertain result. Only
+these fixture snapshots are removed; the VPS and its data remain. This does not
+prove data restore, backup scheduling or replication to another node.
 
 ## Deployment and rollback boundaries
 
