@@ -4,6 +4,36 @@ This is a local integration candidate, not an approved release or a deployed
 build. The product remains the user/admin interface. Fixture regression and
 the first isolated VM checks are reported separately below.
 
+## Real user-data integration — 24 September, 20:30 UTC
+
+The existing owned services VM now runs the exact candidate `3ac1be67` and
+API44 `320af0e15`. The build and update completed successfully; runtime
+provenance and served build SHA matched before each browser run. The previous
+services generation, provenance, synthetic database and evidence were retained
+privately before the update. No shared frontend/API was updated.
+
+- Real OAuth/API user-data verification: **4/4 configured browser variants**
+  (cs/en, desktop/mobile), each with member and administrator owner-scoped
+  views. Three pages of 25/25/1 rows, local text/format filters, final disabled
+  Next, reload, Previous and browser Back passed. Actual API foreign reads
+  and malformed cursors were rejected. All **212 created templates** were
+  deleted and their absence checked; none was deployed to a VPS.
+- Evidence: `~/.codex/attachments/clankerdev-user-data-live-20260924/`, with
+  exact-pin receipts and SHA256SUMS. KB runner commit `5f616e9` is clean in
+  both local and owned remote mirrors. Pinned `bin/check` passed. All four
+  test processes are complete; do not repeat these successful mutations.
+- PR496 now records this evidence at documentation-only head `3fd3a5dd`.
+  Its runtime source remains the verified `c01f09ff` included in the candidate.
+  PR502–509 CI is green at the previously recorded heads. API44 has 59
+  successful checks and one integration check still running; no human review
+  decision or new merge/deployment authorization is implied.
+
+This closes the basic real user-data UI/API smoke gap, not all of #189.
+Still required: adversarial live timestamp fixtures; actual ordered IP,
+dataset/snapshot/property-history cursor cases; admin lifecycle; KB minimum;
+mobile notification and session audit. The user-data run reverses label order,
+not database timestamps. Configured locales do not certify every translation.
+
 ## Integrated cursor candidate — 24 September, 20:00 UTC
 
 Exact pending-product candidate: `3ac1be67d9964e1a0d9052b1a43070d704688912`
