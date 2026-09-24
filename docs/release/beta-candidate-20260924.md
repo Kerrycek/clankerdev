@@ -19,7 +19,6 @@ Initial four-PR integration: `141b92281a232c4c07a73a2c475ef93eba457b60`.
 | [498](https://github.com/Kerrycek/clankerdev/pull/498) | `4d9cb3f1f045379645dbc52d9b083f616e5a8f87` | Preserve resource choices when asynchronous VPS defaults arrive |
 | [499](https://github.com/Kerrycek/clankerdev/pull/499) | `7c798b332a8edbaa8e5c017031c1e39edb3bb7d2` | Register passkeys on the authentication origin through the BFF |
 | [500](https://github.com/Kerrycek/clankerdev/pull/500) | `2fa71fe9bdd35781bb4c03acae2b445f28a1bad5` | Serialize BFF session refresh and logout through persistence |
-
 | [501](https://github.com/Kerrycek/clankerdev/pull/501) | `116737117996d72080659f34ef2d6809e92b86ba` | Preserve open tabs across OAuth rotation; reads retry once, writes require explicit resubmission |
 
 PR493–501 have successful static/unit and smoke CI on their current heads. Human review is still
@@ -71,7 +70,8 @@ outstanding. Excluded PRs #242, #435 and #433 are not included.
   by another tab: read retry and preserved write forms with explicit resubmission.
 - [x] Complete updated combined static/unit/build and desktop/mobile smoke
   regression after the auth transport changes in PR499–501.
-- [ ] Verify DNS server publication, backup replication and remote restore.
+- [x] Verify DNS publication on both authoritative servers in cs/en desktop/mobile.
+- [ ] Verify backup replication and remote restore.
 - [x] Verify prototype member kernel/system-history navigation contracts and
   actual cs/en desktop/mobile screenshots, preserving semantic control IDs.
 - [ ] Expand remaining KB navigation/page bindings and live workflow coverage.
@@ -482,3 +482,33 @@ This is a separately validated prototype, not a replacement for the production
 wiki navigation contract or a publication-ready page migration. Remaining page
 bindings, bilingual article review, broader workflows and publication approval
 still apply. No upstream KB push or production publication occurred.
+
+
+## Authoritative DNS publication — 24 September, 09:24 UTC
+
+All four actual Playwright workflows passed on UI
+`eccbcc9202301ca3fdd9b529818f5edfeee9c9f0` / API
+`486350466e8fb6f966add1cde3fa2bc12b4d6b62`: cs/en at 1440×1100 and 390×844.
+The fixture member logged in through OAuth and created, edited and deleted
+DNS records through the UI. Direct non-recursive queries to both isolated
+servers verified the authoritative SOA, initial A value, edited A value,
+record absence and zone removal. All 20 UI mutations returned API success;
+all four zones (IDs 13–16) became inaccessible and sessions were logged out.
+Forty server observations are retained in the four immutable-pin receipts
+under `clankerdev-beta-20260924/dns-publication/`, alongside the execution,
+build and readiness logs. No API fixtures or intercepted DNS responses were used.
+
+KB commits `7cb59f7` and `8ac4466` corrected DNS node location mapping in the
+Nix configuration and production-shape seed: daemon identity and supervisor
+queues now both use `.prg`. The pinned KB checks passed; the final module
+follow-up passed Nix parsing/topology checks, Nix build and actual registration
+against API node status. The existing-cluster initialization needed only new
+DNS broker accounts and a supervisor restart after seeding. This affected only
+the dedicated cluster. The temporary `.lab` accounts were removed after confirming that no
+connection used them. The product UI/API pins did not change.
+
+This closes authoritative DNS lifecycle publication. It does not certify
+external delegation, DNSSEC, public resolvers, remote backup replication or
+restore. Human review, outstanding API cursor contracts and remaining KB/admin
+coverage retain their separate open gates. No shared service deployment or
+upstream PR was performed.
