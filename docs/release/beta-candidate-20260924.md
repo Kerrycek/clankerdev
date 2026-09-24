@@ -355,3 +355,38 @@ None of these harness errors is reported as a product defect.
 Pinned `bin/check` passes and retains 60 concepts and 120 legacy PNGs. Earlier
 receipts retain their own runtime pins. Open-SPA token renewal, remaining DNS/
 backup/KB workflows, API cursor agreement and human release review remain open.
+
+## Open-tab read recovery — PR501
+
+Integrated runtime `80956b440bd9df29b4fa29393cbccef077d6d4b7` adds
+[PR501](https://github.com/Kerrycek/clankerdev/pull/501) to PR493–500.
+The API remains `486350466`. The prior runtime `4a3ea18b1` reproduced a real
+regression: a later token rotation in tab two caused tab one to reload its
+entire document after an API 401. Its in-memory marker was lost. The retained
+baseline receipt says `regressionConfirmed: true`; diagnostic completion is
+not a passing beta gate. Its mutable event arrays also include cleanup events.
+
+The correction exposes a non-credential BFF session fingerprint and permits
+one bounded recovery/retry for GET/OPTIONS only, for the same session. See
+[the contract and limits](../contracts/open-tab-oauth-refresh.md).
+
+All four actual Playwright variants now pass (cs/en, desktop/mobile), with
+real OAuth login, 20 seconds of elapsed time and a later second-tab rotation.
+The original token returns 401 and the replacement returns 200. The original
+SPA keeps its marker, emits no document navigation, reaches the DNS route and
+sends successful API reads using the replacement token. Logout revokes that
+token and clears the BFF session. Each run verifies restoration of the owned
+OAuth client's original settings. No synthetic 401s, token injection or
+production data are used. Evidence is `open-tab-refresh/`, with exact pins in
+every receipt, original baseline, four final receipts, logs and runner/driver.
+
+Standalone validation: 1,445 unit, 128 script and 25 BFF tests, lint, i18n/CSP,
+typecheck and production build. Integrated targeted validation: 43 unit tests,
+36 BFF tests and typecheck, followed by successful Nix UI/BFF/services build.
+
+This closes the read-recovery gate, not continuous renewal. A write as the
+first request after rotation still uses existing expiry handling; writes are
+never automatically replayed. Further work must preserve that safety property.
+Other remaining gates include authoritative DNS publication, remote backup
+replication/restore, KB navigation minimum, backend cursor agreement and human
+release review. No PR was merged, shared service deployed or upstream PR opened.
