@@ -158,6 +158,8 @@ export function VpsResourcesCard(props: {
   const { t } = useI18n();
   const cpu = usageValue(props.vps.cpu ?? props.vps['cpus']);
   const swap = usageValue(props.vps.swap);
+  const resourceSearch = new URLSearchParams(props.contextSearch ?? '');
+  resourceSearch.set('section', 'resources');
 
   return (
     <Card className={props.className ?? 'lg:col-span-7'} testId="vps.overview.resources_usage.card">
@@ -165,7 +167,7 @@ export function VpsResourcesCard(props: {
         title={<SectionTitle icon={<Server className={iconClass} />}>{t('vps.control.resources.title')}</SectionTitle>}
         subtitle={t('vps.control.resources.subtitle')}
         actions={(
-          <ChipLink to={`${props.basePath}/vps/${props.vps.id}/config${props.contextSearch ?? ''}`}>
+          <ChipLink to={`${props.basePath}/vps/${props.vps.id}/config?${resourceSearch.toString()}`}>
             {t('vps.control.resources.edit')}
           </ChipLink>
         )}
