@@ -53,7 +53,9 @@ outstanding. Excluded PRs #242, #435 and #433 are not included.
   reauthentication in cs/en desktop/mobile with two independent OAuth sessions.
 - [x] Verify TOTP enrollment, password-only challenge, invalid/valid codes and
   fixture cleanup against real OAuth in cs/en desktop/mobile.
-- [ ] Verify timed session expiry/token refresh, WebAuthn and recovery codes.
+- [ ] Fix confirmed WebAuthn registration origin mismatch and verify enrollment
+  and login; see [actual reproduction and existing hosted contract](../contracts/webauthn-registration-origin.md).
+- [ ] Verify timed session expiry/token refresh and recovery codes.
 - [ ] Verify DNS server publication, backup replication and remote restore.
 - [ ] Expand KB navigation contracts/fixtures and remaining live workflow coverage.
 - [ ] Complete human review and obtain approval for a concrete deployment.
