@@ -17,6 +17,7 @@ Initial four-PR integration: `141b92281a232c4c07a73a2c475ef93eba457b60`.
 | [496](https://github.com/Kerrycek/clankerdev/pull/496) | `67b0c2d3db9aa8e2f8c0b3e2091ecd1443f9c8aa` | Supported user-data filters, bounded search and cursor navigation |
 | [497](https://github.com/Kerrycek/clankerdev/pull/497) | `ff4529c3f6fea1d61d3a1d41502c0b028ce311e2` | Preserve backup tab/filter edits during overlapping navigation |
 | [498](https://github.com/Kerrycek/clankerdev/pull/498) | `4d9cb3f1f045379645dbc52d9b083f616e5a8f87` | Preserve resource choices when asynchronous VPS defaults arrive |
+| [499](https://github.com/Kerrycek/clankerdev/pull/499) | `7c798b332a8edbaa8e5c017031c1e39edb3bb7d2` | Register passkeys on the authentication origin through the BFF |
 
 PR493–498 have successful static/unit and smoke CI; human review is still
 outstanding. Excluded PRs #242, #435 and #433 are not included.
@@ -53,8 +54,8 @@ outstanding. Excluded PRs #242, #435 and #433 are not included.
   reauthentication in cs/en desktop/mobile with two independent OAuth sessions.
 - [x] Verify TOTP enrollment, password-only challenge, invalid/valid codes and
   fixture cleanup against real OAuth in cs/en desktop/mobile.
-- [ ] Fix confirmed WebAuthn registration origin mismatch and verify enrollment
-  and login; see [actual reproduction and existing hosted contract](../contracts/webauthn-registration-origin.md).
+- [x] Fix confirmed WebAuthn registration origin mismatch and verify enrollment
+  and login with a browser virtual authenticator; see [actual reproduction and existing hosted contract](../contracts/webauthn-registration-origin.md).
 - [ ] Verify timed session expiry/token refresh and recovery codes.
 - [ ] Verify DNS server publication, backup replication and remote restore.
 - [ ] Expand KB navigation contracts/fixtures and remaining live workflow coverage.
@@ -203,3 +204,35 @@ Keep backend promotion separate: this candidate contains no database migration
 and does not authorize an API update. Do not deploy a UI that depends on a new
 cursor contract until the target API supports that exact contract. Production
 KB publication likewise requires its own reviewed bilingual candidate and approval.
+
+
+## Hosted WebAuthn correction — PR499
+
+Integrated runtime pin `e50b8e70ec659659f6d2898d2fe1a72f9953ef5f` adds PR499 to
+PR493–498. The isolated API remains `486350466`. No shared deployment occurred.
+The combined candidate passed 1,454 unit tests, 28 BFF tests and typecheck;
+PR499 standalone passed ci:pr (1,427 unit, 131 script, 28 BFF), build and six
+new fixture Playwright tests across cs/en desktop/mobile.
+
+The updated own VM passed four real WebAuthn workflow variants: cs/en on desktop
+and mobile. They verify effective nginx+BFF CSP, a localized handoff, hosted
+cancellation, clean return URLs, enrollment on the authentication origin,
+a fresh API credential list, password-only MFA challenge, passkey authentication
+in a separate OAuth context, deletion of the fixture credential, and restoration
+of the account's original MFA setting. Key material stays only in browser/test
+memory; no provisioning screenshots or traces are recorded. This uses a browser
+virtual authenticator and does not certify physical hardware. The provider's
+registration page remains English, as explained on the bilingual handoff.
+
+Evidence is in `passkey-fix/live/webauthn-{desktop,mobile}-{cs,en}.json` and logs.
+Two initial harness attempts registered successfully but could not read the
+finish response body after the immediate cross-origin redirect. Their exact
+fixture keys (2 and 3) were reconciled and deleted before retrying. Final tests
+verify persisted API state and actual subsequent authentication rather than
+relying on that discarded body; keys 4–7 were removed by normal test cleanup.
+An initial nginx build failed its header-inheritance audit; explicit policy
+forwarding resolved it with the audit retained. Final KB `bin/check` passed;
+the existing 60 concepts and 120 legacy PNGs were unchanged.
+
+Earlier unrelated workflow receipts retain their original UI pins. This section
+does not re-label those checks as executions against the new runtime pin.

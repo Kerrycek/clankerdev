@@ -41,7 +41,7 @@ the current product does not yet provide. The hosted page is currently English.
 Evidence: `live-webauthn/webauthn-probe.json`, `webauthn-hosted-probe.json`, logs,
 and the two diagnostic scripts in the local beta evidence bundle.
 
-## Required product follow-up
+## Product requirements established by the reproduction
 
 - Use the existing authentication-origin registration page. Do not broaden the
   backend origin/RP configuration merely to make the failing test pass.
@@ -62,6 +62,9 @@ and the two diagnostic scripts in the local beta evidence bundle.
   secrecy, and actual enrollment, return, login and cleanup on the pinned VM.
   A browser virtual authenticator proves integration, not physical hardware.
 
-The beta WebAuthn gate remains open. This correction can use the existing API;
-it is separate from the pending upstream cursor proposals and does not require
-an upstream PR just to add another allowed origin.
+PR499 implements these requirements without an upstream API change. Integrated
+UI `e50b8e70` / API `486350466` subsequently passed actual hosted enrollment,
+fresh-session passkey login and cleanup in cs/en desktop/mobile using a browser
+virtual authenticator. See the versioned beta candidate checklist for exact
+pins, evidence, initial harness failures and hardware/language limitations.
+The independent upstream cursor proposals remain pending.
