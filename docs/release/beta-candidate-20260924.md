@@ -35,7 +35,9 @@ outstanding. Excluded PRs #242, #435 and #433 are not included.
   [user-data contract](../contracts/user-data-pagination.md).
 - [ ] Agree and apply the IP history server/client cursor contract, including
   tied timestamps, scope, invalid cursor errors and the terminal page.
-- [ ] Audit remaining dataset/snapshot cursor contracts from #189.
+- [x] Audit dataset/snapshot cursor source contracts from #189; see
+  [remaining mismatches](../contracts/dataset-snapshot-pagination.md).
+- [ ] Resolve those contracts and verify actual multi-page traversal.
 - [x] Produce initial actual cs/en VPS list/detail screenshots and navigation
   with independent UI/API pins (prototype evidence, not publication assets).
 - [x] Verify corrected resource submission and persisted values on the pinned VM.
@@ -43,7 +45,8 @@ outstanding. Excluded PRs #242, #435 and #433 are not included.
   in Czech and English on desktop and mobile layouts on the pinned VM.
 - [x] Verify actual DNS zone/record CRUD and snapshot create/delete on cs/en
   desktop/mobile, including persisted reads and completed snapshot transactions.
-- [ ] Verify DNS server publication, backup replication and restore.
+- [x] Verify local snapshot data restoration through the UI in cs/en desktop/mobile.
+- [ ] Verify DNS server publication, backup replication and remote restore.
 - [ ] Expand KB navigation contracts/fixtures and remaining live workflow coverage.
 - [ ] Complete human review and obtain approval for a concrete deployment.
 
@@ -132,6 +135,18 @@ a successful finished delete action, and confirms absence in a fresh API list.
 Durable receipts prevent duplicate mutations after an uncertain result. Only
 these fixture snapshots are removed; the VPS and its data remain. This does not
 prove data restore, backup scheduling or replication to another node.
+
+The subsequent `restore-*.json` receipts and logs in `live-restore/` cover
+actual local data restoration in all four locale/layout combinations. A guarded
+helper verifies the container ID and hostname, writes a dedicated synthetic
+marker, and reads it back inside fixture VPS 2. The UI creates a snapshot, the
+helper changes the marker, and the UI confirms rollback by typing the snapshot
+label. Each restore action completes successfully (4/4 steps), and the marker
+returns to its original content inside the restarted VPS. The helper removes
+only its marker; the UI deletes its snapshot and a fresh API list confirms
+cleanup. The runner refuses to roll back when other snapshots are present.
+This verifies local snapshot restoration, not backup replication or recovery
+from a remote-only snapshot. No shared VPS or user data participates.
 
 ## Deployment and rollback boundaries
 
