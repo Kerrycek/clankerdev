@@ -21,7 +21,9 @@ type MainContentProps = Omit<React.ComponentPropsWithoutRef<'main'>, 'id' | 'tab
 /**
  * Shared focus target for skip links and client-side route changes. The scroll
  * margin keeps the destination clear of the sticky public and app headers.
+ * Keep this non-interactive landmark focusable without outlining the entire
+ * page; keyboard focus indicators on the skip link and controls remain intact.
  */
 export function MainContent({ className, ...mainProps }: MainContentProps) {
-  return <main {...mainProps} id={MAIN_CONTENT_ID} className={clsx('scroll-mt-24', className)} tabIndex={-1} />;
+  return <main {...mainProps} id={MAIN_CONTENT_ID} className={clsx('scroll-mt-24 focus:outline-none', className)} tabIndex={-1} />;
 }
