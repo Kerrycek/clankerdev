@@ -54,7 +54,7 @@ as [vpsAdmin PR44](https://github.com/vpsfreecz/vpsadmin/pull/44), head
 `320af0e152ed223bf0365e0f1cf4b38cf00d7b1d`, with explicit `ORDER BY id ASC` and
 resource-test coverage. This frontend must be validated together with that
 exact API in the existing isolated cluster before promotion. No shared API
-deployment or database migration is included. The real API/VM gate stays open.
+deployment or database migration is included. The shared API deployment gate stays open. See the isolated verification below.
 
 ## Verification checklist
 
@@ -65,7 +65,8 @@ deployment or database migration is included. The real API/VM gate stays open.
   exact terminal page, URL refresh/history, rebuilt forward cursor, advanced
   filter labels and request count, cap/error/retry, last-row deletion.
 - [x] Existing create/edit/deploy/delete and editor/lookup accessibility tests.
-- [ ] Real isolated API ordering and permissions verification.
+- [x] Real isolated API/UI three-page smoke and owner permissions; see exact pins below.
+- [ ] Additional live adversarial timestamp fixtures and broader #189 cursor resources.
 - [ ] Explicit upstream ordering guarantee (#189).
 
 Fixture tests record every POST/PUT/PATCH/DELETE on every origin. Read tests
@@ -78,3 +79,29 @@ The structural audit also fails on the unchanged base revision: 62 files over
 500 lines versus the stored budget of 53, plus existing assertions/type-cast
 regressions in other files. Reproduced from a clean `git archive HEAD src
 scripts`; this change does not alter the baseline or bypass that audit.
+
+
+## Isolated VM evidence — 24 September 2026
+
+Integrated UI `3ac1be67d9964e1a0d9052b1a43070d704688912` includes this PR at
+`c01f09ff`. It runs against API44 `320af0e152ed223bf0365e0f1cf4b38cf00d7b1d`
+in the existing dedicated `clanker-beta-20260924` cluster. The runtime
+provenance and served build commit are checked before every test. The KB
+runner is versioned at `5f616e9` in the local `codex/clankerdev-kb` branch.
+
+Four configured browser variants (Czech/English, desktop/mobile) each use real
+member and administrator OAuth logins and the actual API. Each variant creates
+51 script templates, one excluded cloud-config template and one foreign-owner
+script. Both views return exactly 25, 25 and 1 matching rows, in ascending ID
+order despite reversed labels. Next is disabled at the end; reload, Previous
+and browser Back preserve the expected rows. Observed API requests retain
+format and administrator owner scope and never contain unsupported `q`.
+Foreign-object reads and malformed cursors are rejected by the actual API.
+All 212 disposable templates are deleted and each deletion is verified.
+
+This is live VM evidence, separate from the fixture suite. It covers label
+order, basic end-of-list and real owner boundaries. It does not exercise
+nonmonotonic database timestamps, the search-cap/outage cases against a live
+server, or the other #189 resources. Those claims still rely on the explicitly
+identified resource/unit/fixture tests or remain pending. No template was
+deployed to a VPS, and no shared API or frontend was updated.
