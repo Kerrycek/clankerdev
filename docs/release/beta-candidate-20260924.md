@@ -18,6 +18,7 @@ Initial four-PR integration: `141b92281a232c4c07a73a2c475ef93eba457b60`.
 | [497](https://github.com/Kerrycek/clankerdev/pull/497) | `ff4529c3f6fea1d61d3a1d41502c0b028ce311e2` | Preserve backup tab/filter edits during overlapping navigation |
 | [498](https://github.com/Kerrycek/clankerdev/pull/498) | `4d9cb3f1f045379645dbc52d9b083f616e5a8f87` | Preserve resource choices when asynchronous VPS defaults arrive |
 | [499](https://github.com/Kerrycek/clankerdev/pull/499) | `7c798b332a8edbaa8e5c017031c1e39edb3bb7d2` | Register passkeys on the authentication origin through the BFF |
+| [500](https://github.com/Kerrycek/clankerdev/pull/500) | `2fa71fe9bdd35781bb4c03acae2b445f28a1bad5` | Serialize BFF session refresh and logout through persistence |
 
 PR493–499 have successful static/unit and smoke CI; human review is still
 outstanding. Excluded PRs #242, #435 and #433 are not included.
@@ -60,8 +61,8 @@ outstanding. Excluded PRs #242, #435 and #433 are not included.
   cs/en desktop/mobile.
 - [x] Verify recovery-code login, disabled-factor replay rejection and remaining
   TOTP-factor login in cs/en desktop/mobile.
-- [ ] Fix [confirmed concurrent BFF refresh](../contracts/bff-concurrent-refresh.md)
-  and verify failure/logout races.
+- [x] Fix [confirmed concurrent BFF refresh](../contracts/bff-concurrent-refresh.md):
+  actual API token validation and deterministic failure/logout race regressions.
 - [ ] Verify BFF cookie expiry and expired-refresh failure; bootstrap refresh
   does not certify renewal in an already-open SPA.
 - [ ] Verify DNS server publication, backup replication and remote restore.
@@ -286,3 +287,28 @@ A further actual-API concurrency probe found a new refresh-enabled defect:
 eight parallel BFF requests returned tokens, but seven immediately failed API
 validation with 401. The later stored token remained valid. This gate remains
 open; see the [reproduction and fix requirements](../contracts/bff-concurrent-refresh.md).
+
+## Concurrent BFF refresh correction — PR500
+
+Integrated runtime pin `4a3ea18b1870a86ab47c48e4a3ffa45c37248d0c` adds PR500.
+The isolated API stays `486350466`. Its Nix production UI/BFF build and all
+35 integrated BFF tests pass. Standalone checks passed 1,427 unit, 128 script
+and final 31 BFF tests plus lint, i18n/CSP and typecheck. Three concurrency
+regressions fail with the queue disabled.
+
+Four actual Playwright variants pass (cs/en desktop/mobile): eight parallel
+bootstraps plus passkey handoff return the same valid token; all nine API
+validations return 200. Logout makes the latest token return 401 and leaves
+the BFF session anonymous. Every run restores the dedicated OAuth client.
+Receipts and logs are in `session-fix/`; earlier failed probes retain their
+original pin under `session-gates/`. The earlier failure is corrected by this
+candidate, not erased from the evidence.
+
+KB branch `7658225` contains the guarded refresh runner, independent UI/API
+pins and updated BFF dependency hash. Pinned `bin/check` passes with 60 concepts
+and 120 existing PNGs unchanged. The queue is process-local: one BFF process
+must own each file store. Open-SPA renewal, BFF cookie expiry, expired-refresh
+failure on the actual API and the remaining beta gates are still open.
+
+PR500 static/unit CI passes; smoke CI was still running at evidence capture.
+Human review remains outstanding. No shared service was deployed or PR merged.

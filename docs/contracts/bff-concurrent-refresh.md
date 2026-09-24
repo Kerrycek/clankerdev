@@ -57,3 +57,38 @@ No backend change or upstream PR is required merely to serialize BFF requests.
 records both immutable pins, status codes and verified client restoration.
 The bundle also contains initial probes, sanitized logs and both reproduction
 scripts. Tokens, passwords and MFA provisioning artifacts are not captured.
+
+## Correction prepared in PR500
+
+[PR500](https://github.com/Kerrycek/clankerdev/pull/500), head
+`2fa71fe9bdd35781bb4c03acae2b445f28a1bad5`, queues requests by the verified
+session cookie before Express reads the store. The queue is released from the
+underlying response end, after Express completes its store save/touch. This
+covers bootstrap, the PR499 passkey handoff, login/callback and logout together.
+Socket closure does not release an unfinished operation; queued disconnected
+requests are skipped. A bounded queue returns 503 above 32 requests per session.
+Different users are independent.
+
+The mechanism assumes one BFF process per file store; it does not provide
+distributed locking or refresh a token already held in an open SPA after a later
+rotation. These limits are documented in `bff/README.md`. No API change is made.
+
+Standalone `ci:pr` passes (1,427 unit, 128 script tests, lint/audits/typecheck),
+and the final BFF suite passes 31 tests. Three new regressions fail with the
+queue disabled. Tests cover simultaneous refresh, provider failure, logout,
+active/queued client disconnect, independent users, delayed store persistence
+and queue capacity. Integrated candidate `4a3ea18b` passes 35 BFF tests locally
+and during the actual Nix package installation check.
+
+The corrected isolated VM passed four real Playwright variants, cs/en on
+desktop and 390×844 mobile, at UI `4a3ea18b1870a86ab47c48e4a3ffa45c37248d0c`
+and API `486350466`. Each variant sends eight simultaneous bootstraps plus a
+passkey handoff. All nine return the same token and validate through actual API
+requests with 200. Logout then revokes the latest token (API 401) and clears
+the BFF session. Each run restores and verifies the dedicated OAuth client's
+original settings. No token or provisioning artifact is serialized.
+
+Evidence: `session-fix/refresh-{desktop,mobile}-{cs,en}.json`, matching logs,
+Nix build/install-check log and pinned KB check log. All four receipts record
+completion and restoration. Precise failed-refresh/disconnect/logout overlaps
+are covered by deterministic BFF tests, not claimed as VM timing evidence.
