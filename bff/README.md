@@ -69,3 +69,19 @@ SESSION_SECRET="$(openssl rand -base64 48)" OAUTH_CLIENT_ID=... OAUTH_CLIENT_SEC
 The BFF refuses to start with a shorter session signing secret. This prevents a
 placeholder or otherwise trivially guessable value from silently signing login
 sessions.
+
+### Concurrent session requests
+
+The BFF serializes requests carrying the same verified session cookie before
+`express-session` reads the store, until its response-time save/touch completes.
+This prevents overlapping bootstraps from rotating the same refresh token and
+returning access tokens invalidated by another request. Logout runs in the same
+queue and revokes the latest stored tokens. Disconnecting a client does not
+release a refresh that is still saving; disconnected queued requests are skipped.
+Other sessions remain independent. At most 32 requests per session are admitted;
+excess requests receive HTTP 503 with `Retry-After: 1` and no session mutation.
+
+This queue is process-local. Run one BFF process per file session store. Multiple
+workers/replicas sharing a store require distributed serialization and are not
+supported by this mechanism. It also does not renew access tokens already held
+by an open SPA after another tab performs a later rotation.
