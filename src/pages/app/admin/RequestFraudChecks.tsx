@@ -139,8 +139,8 @@ function CheckCard(props: {
     >
       <CardHeader
         title={props.title}
-        actions={(
-          <>
+        subtitle={(
+          <span className="mt-2 flex flex-wrap gap-2">
             <Badge
               variant={resultVariant}
               className="text-sm font-semibold"
@@ -154,7 +154,7 @@ function CheckCard(props: {
             >
               {t(`requests.detail.risk.status.${props.status}`)}
             </Badge>
-          </>
+          </span>
         )}
       />
       <CardBody className="space-y-3">
@@ -240,7 +240,7 @@ export function RequestFraudChecks(props: { request: RegistrationRequest }) {
           </Badge>
         ) : null}
       </div>
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <CheckCard
           request={props.request}
           kind="ip"

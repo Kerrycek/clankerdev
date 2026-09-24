@@ -111,7 +111,7 @@ export function RequestAddressMapLink(props: { address: unknown; testId?: string
         />
       ) : (
         <div
-          className="flex min-h-24 flex-col items-center justify-center gap-2 bg-surface-1 px-4 py-3 text-center text-xs text-muted"
+          className="flex flex-wrap items-center gap-2 bg-surface-1 px-3 py-2 text-xs text-muted"
           aria-busy={loading}
           aria-live="polite"
         >

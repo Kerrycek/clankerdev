@@ -83,7 +83,7 @@ function RegistrationDetails(props: { request: RegistrationRequest }) {
   const request = props.request;
 
   return (
-    <dl className="grid grid-cols-1 gap-4 md:grid-cols-2" data-testid="admin.requests.detail.registration.fields">
+    <dl className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2" data-testid="admin.requests.detail.registration.fields">
       <DetailField label={t('requests.field.login')} value={request.login} />
       <DetailField label={t('requests.field.full_name')} value={request.full_name} />
       <DetailField label={t('requests.field.org')} value={request.org_name} />
@@ -448,6 +448,9 @@ export function RequestDetailPage() {
             </CardBody>
           </Card>
 
+        </section>
+
+        <section className={reqType === 'registration' ? 'min-w-0 space-y-3 lg:col-span-3' : 'min-w-0 space-y-3 lg:col-span-2'}>
           {reqType === 'registration' ? <RequestFraudChecks request={request as RegistrationRequest} /> : null}
 
           <Card testId="admin.requests.detail.metadata">
