@@ -49,6 +49,9 @@ outstanding. Excluded PRs #242, #435 and #433 are not included.
 - [x] Verify actual DNS zone/record CRUD and snapshot create/delete on cs/en
   desktop/mobile, including persisted reads and completed snapshot transactions.
 - [x] Verify local snapshot data restoration through the UI in cs/en desktop/mobile.
+- [x] Verify server session revocation, protected-content removal and real
+  reauthentication in cs/en desktop/mobile with two independent OAuth sessions.
+- [ ] Verify timed session expiry/token refresh and MFA against the isolated API.
 - [ ] Verify DNS server publication, backup replication and remote restore.
 - [ ] Expand KB navigation contracts/fixtures and remaining live workflow coverage.
 - [ ] Complete human review and obtain approval for a concrete deployment.
@@ -150,6 +153,21 @@ only its marker; the UI deletes its snapshot and a fresh API list confirms
 cleanup. The runner refuses to roll back when other snapshots are present.
 This verifies local snapshot restoration, not backup replication or recovery
 from a remote-only snapshot. No shared VPS or user data participates.
+
+The `live-session/` evidence covers four actual OAuth session-revocation runs
+(cs/en, desktop 1440x1100 and mobile 390x844). A second independently logged-in
+browser session closes the first through the profile UI. The revoked session
+receives API HTTP 401, redirects to the public expiry notice, and displays no
+protected shell or VPS list. The controller session remains valid; a new real
+login creates a different session. Tests use only `test-user2@example.test`
+in the isolated cluster. Session IDs are recorded; tokens, fragments, login
+screens and traces are not stored. This exercises server revocation, not
+clock-driven expiry, refresh-token rotation or MFA.
+
+KB runner commit `e8c93d4a38e77ec7e454d3283036b4e3e96213dd` adds
+`bin/capture --ui clankerdev --scenario session` with optional `--mobile`.
+The pinned `bin/check` passed and the 120 legacy PNGs remain unchanged.
+UI/API pins remain `22cf9910` / `486350466`.
 
 ## Deployment and rollback boundaries
 
