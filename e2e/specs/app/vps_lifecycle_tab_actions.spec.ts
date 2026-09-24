@@ -119,6 +119,51 @@ async function installLifecycleMock(page: Page, options?: {
 }
 
 test.describe('@pr-smoke VPS lifecycle tab', () => {
+  test('retries a resource allocation failure only after an admin explicitly enables override', async ({ page }) => {
+    let updateCalls = 0;
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installLifecycleMock(page, {
+      updateVps: () => ++updateCalls === 1
+        ? failEnvelope('Resource allocation error: no Memory left')
+        : { vps, _meta: { action_state_id: 506 } },
+    });
+    await page.goto('/admin/vps/123/config');
+    await expect(page.getByTestId('vps.config.admin_override')).toBeVisible();
+    await expect(page.getByTestId('vps.config.admin_override')).not.toBeChecked();
+    await page.getByRole('spinbutton', { name: /^Memory/ }).fill('8192');
+    await page.getByTestId('vps.config.header.save').click();
+    const dialog = page.getByTestId('vps.config.confirm');
+    const first = page.waitForRequest(r => r.method() === 'PUT' && r.url().includes('/vpses/123'));
+    await dialog.getByTestId('vps.config.confirm.confirm').click();
+    expect((await first).postDataJSON()).toEqual({ vps: { memory: 8192 } });
+    await expect(dialog.getByTestId('vps.config.confirm.error')).toContainText('no Memory left');
+    await expect(dialog.getByTestId('vps.config.confirm.admin_override')).not.toBeChecked();
+    await dialog.getByTestId('vps.config.confirm.admin_override').check();
+    await expect(dialog.getByTestId('vps.config.confirm.error')).toHaveCount(0);
+    expect(updateCalls).toBe(1);
+    await page.screenshot({ path: test.info().outputPath('resource-review.png') });
+    const retry = page.waitForRequest(r => r.method() === 'PUT' && r.url().includes('/vpses/123'));
+    await dialog.getByTestId('vps.config.confirm.confirm').click();
+    expect((await retry).postDataJSON()).toEqual({ vps: { memory: 8192, admin_override: true } });
+    await expect(dialog).toBeHidden();
+    await expect(page.getByTestId('vps.config.admin_override')).not.toBeChecked();
+  });
+
+  test('does not expose resource override to a member', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installLifecycleMock(page, { user: { id: 7, login: 'owner', level: 1 } });
+    await page.goto('/app/vps/123/config');
+    await page.getByRole('spinbutton', { name: /^Memory/ }).fill('4096');
+    await expect(page.getByTestId('vps.config.admin_override')).toHaveCount(0);
+    await page.getByTestId('vps.config.header.save').click();
+    const dialog = page.getByTestId('vps.config.confirm');
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByTestId('vps.config.confirm.admin_override')).toHaveCount(0);
+    const request = page.waitForRequest(r => r.method() === 'PUT' && r.url().includes('/vpses/123'));
+    await dialog.getByTestId('vps.config.confirm.confirm').click();
+    expect((await request).postDataJSON()).toEqual({ vps: { memory: 4096 } });
+  });
+
   test('@pr-smoke-mobile keeps rejected VPS configuration saves inside the review dialog and allows retry', async ({ page }) => {
     let updateCalls = 0;
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });

@@ -161,7 +161,7 @@ test('@workflow-matrix @smoke VPS detail tabs expose storage, access, lifecycle,
   await expect(page.getByText('Autostart priority', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Change reason', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Admin lock type', { exact: true })).toHaveCount(0);
-  await expect(page.getByText('Admin override', { exact: true })).toHaveCount(0);
+  await expect(page.getByTestId('vps.config.admin_override')).toHaveCount(0);
 
   await page.getByRole('link', { name: /^Storage$/ }).click();
   await expect(page).toHaveURL(/\/app\/vps\/123\/storage$/);
@@ -432,5 +432,5 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile VPS admin overview keeps each 
   await expect(page.getByText('Autostart priority', { exact: true })).toBeVisible();
   await expect(page.getByText('Change reason', { exact: true })).toBeVisible();
   await expect(page.getByText('Admin lock type', { exact: true })).toBeVisible();
-  await expect(page.getByText('Admin override', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('vps.config.admin_override')).toBeVisible();
 });

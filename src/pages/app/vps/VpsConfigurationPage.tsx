@@ -352,6 +352,31 @@ export function VpsConfigurationPage() {
           <Input value={effective.swap} type="number" min={0} step={1} onChange={(e) => patchDraft({ swap: e.target.value })} disabled={saveM.isPending} />
         </Field>
         {canEditAdminConfig ? (
+          <div className="md:col-span-3 grid gap-4 rounded-md border border-border bg-surface-2 p-3 md:grid-cols-2">
+            <Field label={t('vps.config.field.admin_lock_type')} help={t('vps.config.help.admin_lock_type')} errors={fieldMessages('admin_lock_type')}>
+              <Select
+                value={effective.adminLockType}
+                onChange={(e) => patchDraft({ adminLockType: e.target.value })}
+                disabled={saveM.isPending}
+                options={[
+                  { value: '', label: t('vps.config.option.admin_lock_type_none') },
+                  ...ADMIN_LOCK_TYPES.map((lockType) => ({ value: lockType, label: t(`vps.config.option.admin_lock_type.${lockType}`) })),
+                ]}
+              />
+            </Field>
+            <div className="flex items-end">
+              <Checkbox
+                checked={effective.adminOverride}
+                onChange={(checked) => patchDraft({ adminOverride: checked })}
+                label={t('vps.config.field.admin_override')}
+                description={t('vps.config.help.admin_override')}
+                disabled={saveM.isPending}
+                testId="vps.config.admin_override"
+              />
+            </div>
+          </div>
+        ) : null}
+        {canEditAdminConfig ? (
           <div className="md:col-span-3 flex flex-col gap-3 rounded-md border border-border bg-surface-2 p-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="text-sm font-semibold text-fg">{t('vps.config.field.ssd')}</div>
@@ -522,26 +547,6 @@ export function VpsConfigurationPage() {
           <Field label={t('vps.config.field.change_reason')} help={t('vps.config.help.change_reason')} errors={fieldMessages('change_reason')}>
             <Input value={effective.changeReason} onChange={(e) => patchDraft({ changeReason: e.target.value })} disabled={saveM.isPending} autoComplete="off" />
           </Field>
-          <Field label={t('vps.config.field.admin_lock_type')} help={t('vps.config.help.admin_lock_type')} errors={fieldMessages('admin_lock_type')}>
-            <Select
-              value={effective.adminLockType}
-              onChange={(e) => patchDraft({ adminLockType: e.target.value })}
-              disabled={saveM.isPending}
-              options={[
-                { value: '', label: t('vps.config.option.admin_lock_type_none') },
-                ...ADMIN_LOCK_TYPES.map((lockType) => ({ value: lockType, label: t(`vps.config.option.admin_lock_type.${lockType}`) })),
-              ]}
-            />
-          </Field>
-          <div className="flex items-end">
-            <Checkbox
-              checked={effective.adminOverride}
-              onChange={(checked) => patchDraft({ adminOverride: checked })}
-              label={t('vps.config.field.admin_override')}
-              description={t('vps.config.help.admin_override')}
-              disabled={saveM.isPending}
-            />
-          </div>
         </VpsConfigSectionCard>
       ) : null}
 
@@ -576,6 +581,16 @@ export function VpsConfigurationPage() {
             </div>
           ) : null}
           <VpsConfirmTarget vpsId={vpsId} objectLabel={objectLabel} testId="vps.config.confirm.target" />
+          {canEditAdminConfig && result.changedKeys.some((key) => ['cpu', 'memory', 'swap'].includes(key)) ? (
+            <Checkbox
+              checked={effective.adminOverride}
+              onChange={(checked) => patchDraft({ adminOverride: checked })}
+              label={t('vps.config.field.admin_override')}
+              description={t('vps.config.help.admin_override')}
+              disabled={saveM.isPending}
+              testId="vps.config.confirm.admin_override"
+            />
+          ) : null}
           <VpsConfigChangesList changes={changes} compact />
         </div>
       </ConfirmDialog>
