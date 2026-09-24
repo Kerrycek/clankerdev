@@ -51,7 +51,7 @@ function mountItemControl(page: Page, mountId: number, control: 'dataset' | 'del
 
 test.describe('@smoke VPS storage tab mounts', () => {
   for (const override of [false, true]) {
-    test(`lets an admin resize the VPS root SSD live from the configuration entrypoint (override: ${override})`, async ({ page }) => {
+    test(`lets an admin resize the VPS root SSD live from the storage entrypoint (override: ${override})`, async ({ page }) => {
       await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
       let vpsUpdateCount = 0;
 
@@ -83,13 +83,7 @@ test.describe('@smoke VPS storage tab mounts', () => {
         },
       });
 
-      await page.goto('/admin/vps/123/config');
-      const resizeEntry = page.getByTestId('vps.config.ssd.resize');
-      await expect(resizeEntry).toBeVisible();
-      await expect(resizeEntry).toHaveAttribute('href', '/admin/vps/123/storage?resize=ssd');
-      await expect(resizeEntry.locator('..')).toContainText('20 GiB');
-
-      await resizeEntry.click();
+      await page.goto('/admin/vps/123/storage?resize=ssd');
       await expect(page).toHaveURL(/\/admin\/vps\/123\/storage$/);
       const modal = page.getByTestId('vps.storage.resize.modal');
       await expect(modal).toBeVisible();
@@ -115,7 +109,7 @@ test.describe('@smoke VPS storage tab mounts', () => {
       await expect(page.getByTestId('vps.storage.root_dataset.resize')).toBeVisible();
 
       await page.goto('/app/vps/123/config');
-      await expect(page.getByTestId('vps.config.ssd.resize')).toHaveCount(0);
+      await expect(page.getByTestId('vps.resources.disk')).toHaveCount(0);
       await page.goto('/app/vps/123/storage');
       await expect(page.getByTestId('vps.storage.root_dataset.resize')).toHaveCount(0);
     });

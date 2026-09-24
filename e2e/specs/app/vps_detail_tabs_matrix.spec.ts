@@ -319,7 +319,7 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile VPS admin overview keeps each 
   await expect(resources).toBeVisible();
   await expect(resources.getByRole('link', { name: 'Edit resources' })).toHaveAttribute(
     'href',
-    '/admin/vps/123/config?user=10',
+    '/admin/vps/123/config?user=10&section=resources',
   );
   await expect(page.getByTestId('vps.overview.resources_usage.runtime')).toBeVisible();
   await expect(page.getByTestId('vps.overview.status_access.card')).toHaveCount(0);
