@@ -9,6 +9,7 @@
  */
 
 const express = require('express');
+const { passkeyDestinations, renderPasskeyPage, setPasskeyHeaders } = require('./passkey-page');
 const session = require('express-session');
 const FileStoreFactory = require('session-file-store');
 const {
@@ -78,6 +79,8 @@ const PASSWORD_RECOVERY_URL = passwordRecoveryUrl();
 // Must match the OAuth client registration exactly
 const OAUTH_REDIRECT_URI =
   process.env.OAUTH_REDIRECT_URI || `https://${DOMAIN}/oauth/callback`;
+
+const PASSKEY_DESTINATIONS = passkeyDestinations(OAUTH_AUTHORIZE_URL, OAUTH_REDIRECT_URI);
 
 const SESSION_SECRET = validateSessionSecret(required('SESSION_SECRET'));
 const SESSION_STORE_PATH = process.env.SESSION_STORE_PATH || '/var/lib/webui-next-bff/sessions';
@@ -279,6 +282,7 @@ app.get('/config.js', (_req, res) => {
       loginUrl: '/oauth/login',
       logoutUrl: '/oauth/logout',
       passwordRecoveryUrl: PASSWORD_RECOVERY_URL,
+      passkeyRegistrationUrl: '/oauth/passkey',
       basePath: '',
       haveApi: {
         authHeader: HAVEAPI_AUTH_HEADER,
@@ -296,6 +300,19 @@ app.get('/config.js', (_req, res) => {
 
   setRuntimeConfigSecurityHeaders(res);
   res.send(js);
+});
+
+// The API validates WebAuthn against its authentication origin, not the SPA.
+app.get('/oauth/passkey', async (req, res) => {
+  setPasskeyHeaders(res, PASSKEY_DESTINATIONS.origin);
+  if (!isSameOriginRequest(req, new URL(OAUTH_REDIRECT_URI).origin)) {
+    return res.status(403).type('text/plain').send('Forbidden');
+  }
+  const oauth = await ensureFreshToken(req);
+  if (!oauth) return res.redirect(303, '/oauth/login?next=%2Fapp%2Fprofile%2Fmfa');
+  const language = ['cs', 'en'].includes(req.query.lang)
+    ? req.query.lang : preferredLanguage(req.get('accept-language'));
+  res.type('html').send(renderPasskeyPage(language, oauth.access_token, PASSKEY_DESTINATIONS));
 });
 
 // Same-origin JSON is deliberately separate from executable runtime config.
