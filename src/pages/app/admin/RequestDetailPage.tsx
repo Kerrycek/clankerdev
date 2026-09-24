@@ -451,7 +451,7 @@ export function RequestDetailPage() {
           </Card>
 
           <Card testId="admin.requests.detail.metadata">
-            <details className="group">
+            <details key={`${reqType}:${reqId}`} className="group" open={reqType === 'change'}>
               <summary
                 className="flex cursor-pointer list-none items-center gap-2 p-4 font-semibold"
                 data-testid="admin.requests.detail.metadata.toggle"
