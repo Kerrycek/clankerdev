@@ -8,8 +8,11 @@
  * This service does NOT proxy HaveAPI calls. The SPA calls https://api.vpsfree.cz directly.
  */
 
+const { createHmac } = require('node:crypto');
 const express = require('express');
+const { passkeyDestinations, renderPasskeyPage, setPasskeyHeaders } = require('./passkey-page');
 const session = require('express-session');
+const { createSessionQueue } = require('./session-queue');
 const FileStoreFactory = require('session-file-store');
 const {
   preferredLanguage,
@@ -78,6 +81,8 @@ const PASSWORD_RECOVERY_URL = passwordRecoveryUrl();
 // Must match the OAuth client registration exactly
 const OAUTH_REDIRECT_URI =
   process.env.OAUTH_REDIRECT_URI || `https://${DOMAIN}/oauth/callback`;
+
+const PASSKEY_DESTINATIONS = passkeyDestinations(OAUTH_AUTHORIZE_URL, OAUTH_REDIRECT_URI);
 
 const SESSION_SECRET = validateSessionSecret(required('SESSION_SECRET'));
 const SESSION_STORE_PATH = process.env.SESSION_STORE_PATH || '/var/lib/webui-next-bff/sessions';
@@ -243,6 +248,9 @@ app.disable('x-powered-by');
 // We're behind nginx, so trust X-Forwarded-* for secure cookies & redirect building if needed
 app.set('trust proxy', 1);
 
+// Serialize before loading session snapshots, through the final store write.
+app.use(createSessionQueue({ name: SESSION_COOKIE_NAME, secret: SESSION_SECRET }));
+
 // sessions
 app.use(
   session({
@@ -279,6 +287,7 @@ app.get('/config.js', (_req, res) => {
       loginUrl: '/oauth/login',
       logoutUrl: '/oauth/logout',
       passwordRecoveryUrl: PASSWORD_RECOVERY_URL,
+      passkeyRegistrationUrl: '/oauth/passkey',
       basePath: '',
       haveApi: {
         authHeader: HAVEAPI_AUTH_HEADER,
@@ -298,6 +307,19 @@ app.get('/config.js', (_req, res) => {
   res.send(js);
 });
 
+// The API validates WebAuthn against its authentication origin, not the SPA.
+app.get('/oauth/passkey', async (req, res) => {
+  setPasskeyHeaders(res, PASSKEY_DESTINATIONS.origin);
+  if (!isSameOriginRequest(req, new URL(OAUTH_REDIRECT_URI).origin)) {
+    return res.status(403).type('text/plain').send('Forbidden');
+  }
+  const oauth = await ensureFreshToken(req);
+  if (!oauth) return res.redirect(303, '/oauth/login?next=%2Fapp%2Fprofile%2Fmfa');
+  const language = ['cs', 'en'].includes(req.query.lang)
+    ? req.query.lang : preferredLanguage(req.get('accept-language'));
+  res.type('html').send(renderPasskeyPage(language, oauth.access_token, PASSKEY_DESTINATIONS));
+});
+
 // Same-origin JSON is deliberately separate from executable runtime config.
 // This prevents a sibling origin from stealing the token with a script tag.
 app.get('/session.json', async (req, res) => {
@@ -311,6 +333,11 @@ app.get('/session.json', async (req, res) => {
   setRuntimeSessionSecurityHeaders(res);
   return res.send(JSON.stringify({
     accessToken: oauth?.access_token || null,
+    // A non-credential fingerprint: stable across token rotations, different
+    // after login/session regeneration. Never expose the signed session id.
+    sessionKey: oauth?.access_token
+      ? createHmac('sha256', SESSION_SECRET).update(`webui-session:${req.sessionID}`).digest('hex')
+      : null,
     sessionExpiresAt: oauth?.access_token ? currentSessionExpiresAt(req) : null,
   }));
 });

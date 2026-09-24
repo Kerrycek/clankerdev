@@ -236,6 +236,28 @@ test('successful callbacks preserve a validated next path and establish the sess
   assert.equal(typeof payload.sessionExpiresAt, 'number');
 });
 
+test('session fingerprints survive reads but change at a fresh login', async () => {
+  const read = async (cookie) => {
+    const res = await fetch(`${bffOrigin}/session.json`, {
+      headers: { ...secureHeaders(cookie), 'sec-fetch-site': 'same-origin' },
+    });
+    assert.equal(res.status, 200);
+    return res.json();
+  };
+  const authenticate = async () => {
+    const { cookie, state } = await startLogin('/app');
+    const res = await request(`/oauth/callback?code=successful-code&state=${state}`, { cookie });
+    const authenticated = responseCookie(res); await res.text();
+    return authenticated;
+  };
+  const cookie = await authenticate();
+  const first = await read(cookie);
+  assert.match(first.sessionKey, /^[a-f0-9]{64}$/);
+  assert.equal((await read(cookie)).sessionKey, first.sessionKey);
+  assert.notEqual((await read(await authenticate())).sessionKey, first.sessionKey);
+  assert.equal((await read(undefined)).sessionKey, null);
+});
+
 test('OAuth error page is bilingual, actionable, defensive and never reflects its query', async () => {
   const querySecret = 'callback-query-secret';
   const czechResponse = await request(
@@ -255,7 +277,7 @@ test('OAuth error page is bilingual, actionable, defensive and never reflects it
   assert.match(czechResponse.headers.get('content-security-policy') || '', /frame-ancestors 'none'/);
   assert.match(czechResponse.headers.get('vary') || '', /Accept-Language/i);
   assert.match(czechBody, /<html lang="cs">/);
-  assert.match(czechBody, /Přihlášení se nezdařilo/);
+  assert.match(czechBody, /<title>vpsAdmin · Přihlášení se nezdařilo<\/title>/);
   assert.match(czechBody, /href="\/oauth\/login\?next=%2Fapp"/);
   assert.match(czechBody, /href="\/"/);
   for (const secret of [querySecret, 'state-secret', 'description-secret']) {
@@ -264,5 +286,54 @@ test('OAuth error page is bilingual, actionable, defensive and never reflects it
 
   const englishResponse = await request('/oauth/error', { acceptLanguage: 'en-US' });
   assert.equal(englishResponse.headers.get('content-language'), 'en');
-  assert.match(await englishResponse.text(), /Sign-in failed/);
+  assert.match(await englishResponse.text(), /<title>vpsAdmin · Sign-in failed<\/title>/);
+});
+
+async function passkeySession() {
+  const { cookie, state } = await startLogin('/app/profile/mfa');
+  const callback = await request(`/oauth/callback?code=passkey-test-code&state=${state}`, { cookie });
+  assert.equal(callback.status, 302);
+  await callback.arrayBuffer();
+  return responseCookie(callback);
+}
+
+test('passkey handoff requires same-origin navigation and an authenticated session', async () => {
+  const cookie = await passkeySession();
+  for (const site of ['cross-site', 'same-site']) {
+    const response = await fetch(`${bffOrigin}/oauth/passkey`, {
+      headers: { ...secureHeaders(cookie), 'sec-fetch-site': site }, redirect: 'manual',
+    });
+    assert.equal(response.status, 403);
+    assert.ok(!(await response.text()).includes('test-access-token'));
+    assert.match(response.headers.get('cache-control'), /no-store/);
+  }
+  const anonymous = await fetch(`${bffOrigin}/oauth/passkey`, {
+    headers: { ...secureHeaders(), 'sec-fetch-site': 'same-origin' }, redirect: 'manual',
+  });
+  assert.equal(anonymous.status, 303);
+  assert.equal(anonymous.headers.get('location'), '/oauth/login?next=%2Fapp%2Fprofile%2Fmfa');
+  assert.ok(!(await anonymous.text()).includes('test-access-token'));
+});
+
+test('passkey form uses only trusted destinations, localized copy and restrictive headers', async () => {
+  const cookie = await passkeySession();
+  for (const language of ['cs', 'en']) {
+    const response = await fetch(`${bffOrigin}/oauth/passkey?lang=${language}&access_token=evil-token&redirect_uri=https://evil.test&action=https://evil.test`, {
+      headers: { ...secureHeaders(cookie), 'sec-fetch-site': 'same-origin' }, redirect: 'manual',
+    });
+    assert.equal(response.status, 200);
+    const html = await response.text();
+    assert.match(html, new RegExp(`<html lang="${language}">`));
+    assert.match(html, /method="post" action="https:\/\/identity.test\/webauthn\/registration\/new"/);
+    assert.match(html, /name="redirect_uri" value="https:\/\/webui.test\/app\/profile\/mfa"/);
+    assert.match(html, /name="access_token" value="test-access-token"/);
+    assert.ok(!html.includes('test-refresh-token'));
+    assert.ok(!html.includes('evil'));
+    assert.equal(response.headers.get('location'), null);
+    assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
+    assert.equal(response.headers.get('x-frame-options'), 'DENY');
+    assert.equal(response.headers.get('cross-origin-resource-policy'), 'same-origin');
+    assert.match(response.headers.get('cache-control'), /no-store/);
+    assert.equal(response.headers.get('content-security-policy'), "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action https://identity.test; frame-ancestors 'none'");
+  }
 });

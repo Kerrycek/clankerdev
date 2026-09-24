@@ -139,14 +139,14 @@ export function RequestAddressMapLink(props: { address: unknown; testId?: string
           ) : null}
         </div>
       )}
-      <div className="flex flex-col gap-3 px-3 py-2.5 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 px-3 py-2.5">
         <span className="flex min-w-0 flex-1 items-center gap-3">
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-accent-soft text-accent">
             <MapPin className="h-4 w-4" aria-hidden="true" />
           </span>
-          <span className="min-w-0 whitespace-pre-line text-sm font-medium text-fg">{address}</span>
+          <span className="min-w-0 whitespace-pre-line break-words text-sm font-medium text-fg">{address}</span>
         </span>
-        <span className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0">
+        <span className="flex w-full flex-wrap gap-2">
           <CopyButton
             text={address}
             label={t('requests.detail.address_map.copy')}

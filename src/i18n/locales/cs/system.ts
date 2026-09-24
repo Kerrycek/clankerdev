@@ -31,6 +31,7 @@ export const csSystem = {
   'errors.internal.no_record_selected': 'Nebyl vybrán žádný záznam',
   'errors.internal.no_editor': 'Editor není k dispozici',
   'errors.internal.storage_unavailable': 'Úložiště není k dispozici',
+  'errors.session_renewed_retry_action': 'Přihlášení bylo obnoveno. Zkontroluj zadané údaje a spusť akci znovu.',
   'errors.internal.nothing_to_update': 'Není co aktualizovat',
   'errors.internal.invalid': 'Neplatné {item}',
   'errors.internal.missing': 'Chybí {item}',

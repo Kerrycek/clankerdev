@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock } from '../../fixtures';
+import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock, setUiSettingsLocalStorage } from '../../fixtures';
 
 function registration(id: number, state = 'awaiting') {
   return {
@@ -204,47 +204,77 @@ test('@workflow-matrix @smoke admin requests: one list row opens the canonical d
   await expect(page.getByTestId('admin.requests.resolve.action.deny')).toHaveCount(0);
 });
 
-test('@workflow-matrix @pr-smoke @pr-smoke-mobile admin requests: address copy and risk emphasis work across breakpoints', async ({ page }) => {
-  await bootstrapVpsAdminWindow(page);
-  await installOsmMapMock(page);
-  const current = registration(124);
+for (const language of ['en', 'cs'] as const) {
+  test(`@workflow-matrix @pr-smoke @pr-smoke-mobile admin requests: address copy and risk emphasis work across breakpoints in ${language}`, async ({ page }, testInfo) => {
+    await setUiSettingsLocalStorage(page, { language });
+    if (language === 'cs' && page.viewportSize()!.width >= 1024) {
+      await page.setViewportSize({ width: 1024, height: 900 });
+    }
+    await bootstrapVpsAdminWindow(page);
+    await installOsmMapMock(page);
+    const current = registration(124);
 
-  await page.addInitScript(() => {
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: {
-        writeText: async (text: string) => {
-          (window as typeof window & { __copiedRequestAddress?: string }).__copiedRequestAddress = text;
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          writeText: async (text: string) => {
+            (window as typeof window & { __copiedRequestAddress?: string }).__copiedRequestAddress = text;
+          },
         },
+      });
+    });
+
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 100 },
+      handlers: {
+        'GET user_request/registrations/124': () => ({ registration: current }),
       },
     });
+
+    await page.goto('/admin/requests/registration/124');
+
+    const review = page.getByTestId('admin.requests.detail.review');
+    const summary = review.getByTestId('admin.requests.detail.risk.summary');
+    await expect(summary).toBeInViewport();
+    const summaryBox = await summary.boundingBox();
+    const decisionBox = await review.getByTestId('admin.requests.detail.decision').boundingBox();
+    expect(summaryBox!.y + summaryBox!.height).toBeLessThan(decisionBox!.y);
+    await expect(review.getByTestId('admin.requests.detail.risk.ip')).toBeVisible();
+    await expect(review.getByTestId('admin.requests.detail.risk.mail')).toBeVisible();
+    if (page.viewportSize()!.width >= 1024) {
+      const detailsBox = await page.getByTestId('admin.requests.detail.registration.fields').boundingBox();
+      const reviewBox = await review.boundingBox();
+      expect(reviewBox!.x).toBeGreaterThan(detailsBox!.x + detailsBox!.width);
+    }
+    for (const kind of ['ip', 'mail']) {
+      await review.getByTestId(`admin.requests.detail.risk.${kind}.details`).locator('summary').click();
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
+
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.screenshot({ path: testInfo.outputPath('request-risk-sidebar.png'), fullPage: true });
+    const copyAddress = page.getByTestId('admin.requests.detail.registration.address.map.copy');
+    await expect(copyAddress).toBeVisible();
+    const addressBox = await page.getByTestId('admin.requests.detail.registration.address.map')
+      .getByText(current.address, { exact: true }).boundingBox();
+    const copyBox = await copyAddress.boundingBox();
+    expect(addressBox!.y + addressBox!.height).toBeLessThanOrEqual(copyBox!.y);
+    await expect(copyAddress).toHaveAccessibleName(/copy applicant address|kopírovat adresu žadatele/i);
+    await copyAddress.click();
+    await expect.poll(() => page.evaluate(
+      () => (window as typeof window & { __copiedRequestAddress?: string }).__copiedRequestAddress,
+    )).toBe('Stodolní 138/44, 14400 Ostrava, Česko');
+    await expect(copyAddress).toContainText(/copied|zkopírováno/i);
+
+    const riskSummary = page.getByTestId('admin.requests.detail.risk.summary');
+    await expect(riskSummary).toBeVisible();
+    await expect(riskSummary).toContainText(/high-risk registration|vysoce riziková přihláška/i);
+    await expect(page.getByTestId('admin.requests.detail.risk.summary.score')).toContainText('100');
+    await expect(page.getByTestId('admin.requests.detail.risk.ip.score')).toContainText('87');
+    await expect(page.getByTestId('admin.requests.detail.risk.mail.score')).toContainText('100');
   });
-
-  await installHaveApiMock(page, {
-    user: { id: 1, login: 'admin', level: 100 },
-    handlers: {
-      'GET user_request/registrations/124': () => ({ registration: current }),
-    },
-  });
-
-  await page.goto('/admin/requests/registration/124');
-
-  const copyAddress = page.getByTestId('admin.requests.detail.registration.address.map.copy');
-  await expect(copyAddress).toBeVisible();
-  await expect(copyAddress).toHaveAccessibleName(/copy applicant address/i);
-  await copyAddress.click();
-  await expect.poll(() => page.evaluate(
-    () => (window as typeof window & { __copiedRequestAddress?: string }).__copiedRequestAddress,
-  )).toBe('Stodolní 138/44, 14400 Ostrava, Česko');
-  await expect(copyAddress).toContainText(/copied|zkopírováno/i);
-
-  const riskSummary = page.getByTestId('admin.requests.detail.risk.summary');
-  await expect(riskSummary).toBeVisible();
-  await expect(riskSummary).toContainText(/high-risk registration|vysoce riziková přihláška/i);
-  await expect(page.getByTestId('admin.requests.detail.risk.summary.score')).toContainText('100');
-  await expect(page.getByTestId('admin.requests.detail.risk.ip.score')).toContainText('87');
-  await expect(page.getByTestId('admin.requests.detail.risk.mail.score')).toContainText('100');
-});
+}
 
 test('@workflow-matrix @pr-smoke @pr-smoke-mobile @smoke admin requests: successful detail review returns to the overview', async ({ page }) => {
   await bootstrapVpsAdminWindow(page);

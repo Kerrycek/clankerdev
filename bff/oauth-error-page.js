@@ -68,7 +68,7 @@ function renderOAuthErrorPage(language) {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light dark">
-    <title>${copy.title} · vpsAdmin</title>
+    <title>vpsAdmin · ${copy.title}</title>
     <style>
       :root {
         color-scheme: light dark;

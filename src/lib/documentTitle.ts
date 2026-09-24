@@ -17,10 +17,10 @@ export function pushUniqueDocumentTitlePart(parts: string[], value: string | nul
 
 export function formatDocumentTitle(parts: string[], appName: string, scopeLabel?: string | null): string {
   const cleaned: string[] = [];
+  pushUniqueDocumentTitlePart(cleaned, appName);
   for (const part of parts) {
     pushUniqueDocumentTitlePart(cleaned, part);
   }
-
-  const suffix = scopeLabel ? `${appName} · ${scopeLabel}` : appName;
-  return cleaned.length > 0 ? `${cleaned.join(' · ')} · ${suffix}` : suffix;
+  pushUniqueDocumentTitlePart(cleaned, scopeLabel);
+  return cleaned.join(' · ');
 }

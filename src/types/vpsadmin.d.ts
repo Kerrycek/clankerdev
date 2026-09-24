@@ -52,6 +52,8 @@ declare global {
         logoutUrl?: string;
         /** Optional password-recovery entry point supplied by the OAuth provider. */
         passwordRecoveryUrl?: string;
+        /** Same-origin hosted WebAuthn handoff, provided by the integrated BFF. */
+        passkeyRegistrationUrl?: string;
 
         /** Unix timestamp in milliseconds when the integrated BFF session expires. */
         sessionExpiresAt?: number | null;

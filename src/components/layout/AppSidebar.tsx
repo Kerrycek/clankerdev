@@ -125,6 +125,7 @@ export function buildSidebarNavItems(opts: {
   ];
 
   if (appMode === 'user') {
+    items.push({ id: 'nodes', to: `${basePath}/nodes`, label: t('nav.nodes'), icon: <Cpu size={18} /> });
     items.push({ id: 'payments', to: `${basePath}/payments`, label: t('nav.payments'), icon: <CreditCard size={18} /> });
     items.push({ id: 'requests', to: `${basePath}/requests`, label: t('nav.my_requests'), icon: <Inbox size={18} /> });
   }

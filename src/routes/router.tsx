@@ -55,6 +55,7 @@ const PaymentsPage = lazyRoute(() => import('../pages/app/payments/PaymentsPage'
 const DesignSandboxPage = lazyRoute(() => import('../pages/app/DesignSandboxPage'), 'DesignSandboxPage');
 const AdminInfoPage = lazyRoute(() => import('../pages/app/admin/AdminInfoPage'), 'AdminInfoPage');
 const AdminOutagesPage = lazyRoute(() => import('../pages/app/admin/AdminOutagesPage'), 'AdminOutagesPage');
+const NodeHistoryPage = lazyRoute(() => import('../pages/app/nodes/NodeHistoryPage'), 'NodeHistoryPage');
 const NodesPage = lazyRoute(() => import('../pages/app/admin/NodesPage'), 'NodesPage');
 const NodeDetailPageRoute = lazyRoute(() => import('../pages/app/admin/NodeDetailPageRoute'), 'NodeDetailPageRoute');
 const MigrationPlansPage = lazyRoute(() => import('../pages/app/admin/MigrationPlansPage'), 'MigrationPlansPage');
@@ -165,6 +166,9 @@ export const router = createBrowserRouter([
           errorElement: <ErrorPage />,
           children: [
             { index: true, element: <CoreRoutes.DashboardPage /> },
+            { path: 'nodes', element: <NodesPage /> },
+            { path: 'nodes/:nodeId', element: <ParamKeyedRoute param="nodeId"><NodeHistoryPage /></ParamKeyedRoute> },
+            { path: 'nodes/:nodeId/history', element: <ParamKeyedRoute param="nodeId"><NodeHistoryPage /></ParamKeyedRoute> },
             { path: 'vps', element: <CoreRoutes.VpsListPage /> },
             { path: 'vps/new', element: <CoreRoutes.VpsCreatePage /> },
             {
@@ -291,6 +295,7 @@ export const router = createBrowserRouter([
             ...securityAdvisoryAdminRoutes,
             { path: 'nodes', element: <NodesPage /> },
             { path: 'nodes/:nodeId', element: <NodeDetailPageRoute /> },
+            { path: 'nodes/:nodeId/history', element: <ParamKeyedRoute param="nodeId"><NodeHistoryPage /></ParamKeyedRoute> },
             { path: 'migration-plans', element: <MigrationPlansPage /> },
             { path: 'migration-plans/:planId', element: <MigrationPlanDetailPageRoute /> },
             { path: 'admin-info', element: <AdminInfoPage /> },
