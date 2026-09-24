@@ -37,7 +37,10 @@ outstanding. Excluded PRs #242, #435 and #433 are not included.
   tied timestamps, scope, invalid cursor errors and the terminal page.
 - [x] Audit dataset/snapshot cursor source contracts from #189; see
   [remaining mismatches](../contracts/dataset-snapshot-pagination.md).
-- [ ] Resolve those contracts and verify actual multi-page traversal.
+- [x] Reproduce all three #189 ordering failures against real Ruby API/MariaDB
+  and prepare a tested local tuple-cursor proposal (`ee81404ca`).
+- [ ] Agree and apply those contracts to API/UI and verify actual browser
+  multi-page traversal against the exact isolated API pin.
 - [x] Produce initial actual cs/en VPS list/detail screenshots and navigation
   with independent UI/API pins (prototype evidence, not publication assets).
 - [x] Verify corrected resource submission and persisted values on the pinned VM.
