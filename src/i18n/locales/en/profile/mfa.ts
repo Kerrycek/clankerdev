@@ -1,5 +1,9 @@
 // Profile locale chunk: mfa
 export const enProfile_mfa = {
+  'profile.mfa.webauthn.handoff.unavailable': 'Adding a security key requires signing in with the integrated sign-in service.',
+  'profile.mfa.webauthn.handoff.returned': 'Registration finished. Check that your security key appears in the list below.',
+  'profile.mfa.webauthn.handoff.failed': 'Registration was cancelled or could not be completed. You can try again.',
+
   "profile.mfa.subtitle": "Multi-factor authentication devices and passkeys.",
   "profile.mfa.totp.add": "Add device",
   "profile.mfa.totp.badge.active": "Active",

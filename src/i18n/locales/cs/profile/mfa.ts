@@ -1,5 +1,9 @@
 // Profile locale chunk: mfa
 export const csProfile_mfa = {
+  'profile.mfa.webauthn.handoff.unavailable': 'Přidání bezpečnostního klíče vyžaduje přihlášení přes integrovanou přihlašovací službu.',
+  'profile.mfa.webauthn.handoff.returned': 'Registrace byla dokončena. Zkontrolujte, že je bezpečnostní klíč v seznamu níže.',
+  'profile.mfa.webauthn.handoff.failed': 'Registrace byla zrušena nebo se ji nepodařilo dokončit. Můžete to zkusit znovu.',
+
   "profile.mfa.subtitle": "Vícefaktorové ověření (TOTP) a přístupové klíče.",
   "profile.mfa.totp.add": "Přidat zařízení",
   "profile.mfa.totp.badge.active": "Aktivní",

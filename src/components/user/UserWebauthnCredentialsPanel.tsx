@@ -1,18 +1,20 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
+import { useSearchParams } from 'react-router-dom';
+import { getRuntimeConfig } from '../../app/config';
+import { hardAssign } from '../../lib/browserNavigation';
 
 import { useI18n } from '../../app/i18n';
 
 import {
-  beginWebauthnRegistration,
   deleteUserWebauthnCredential,
   fetchUserWebauthnCredentials,
-  finishWebauthnRegistration,
   updateUserWebauthnCredential,
   type UserWebauthnCredential,
 } from '../../lib/api/userDossier';
 
-import { creationOptionsFromJson, credentialToJson, isWebauthnSupported } from '../../lib/webauthn';
+import { isWebauthnSupported } from '../../lib/webauthn';
 import { formatErrorMessage } from '../../lib/errors';
 
 import { Alert } from '../ui/Alert';
@@ -23,14 +25,10 @@ import { Spinner } from '../ui/Spinner';
 import {
   buildWebauthnUpdatePayload,
   canStartWebauthnRegistration,
-  isNamedDomError,
   isSecureWebauthnContext,
-  parseWebauthnRegistrationBegin,
   sortWebauthnCredentialsByIdDesc,
-  validateWebauthnLabel,
 } from './UserWebauthnCredentialsModel';
 import {
-  UserWebauthnCreateModal,
   UserWebauthnDeleteDialog,
   UserWebauthnEditModal,
 } from './UserWebauthnCredentialModals';
@@ -43,7 +41,17 @@ export function UserWebauthnCredentialsPanel(props: {
   /** Test id prefix, e.g. "profile.mfa" or "admin.user.mfa" */
   testIdPrefix: string;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
+  const cfg = getRuntimeConfig();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [registrationStatus] = useState(() => searchParams.get('registerStatus'));
+  useEffect(() => {
+    if (!props.allowRegistration || !searchParams.has('registerStatus')) return;
+    const clean = new URLSearchParams(searchParams);
+    clean.delete('registerStatus');
+    clean.delete('registerMessage');
+    setSearchParams(clean, { replace: true });
+  }, [props.allowRegistration, searchParams, setSearchParams]);
   const qc = useQueryClient();
 
   const [deleteId, setDeleteId] = useState<number | null>(null);
@@ -52,25 +60,18 @@ export function UserWebauthnCredentialsPanel(props: {
   const [editLabel, setEditLabel] = useState('');
   const [editEnabled, setEditEnabled] = useState(true);
 
-  const [createOpen, setCreateOpen] = useState(false);
-  const [createLabel, setCreateLabel] = useState('');
+  // Only the BFF's own OAuth session can be handed off. Token sessions (including
+  // impersonation) must never register a key for the underlying operator.
+  const handoffAvailable = cfg.auth.kind === 'oauth2' && cfg.passkeyRegistrationUrl === '/oauth/passkey';
 
   const canRegister = canStartWebauthnRegistration({
-    allowRegistration: props.allowRegistration,
+    allowRegistration: props.allowRegistration && handoffAvailable,
     supported: isWebauthnSupported(),
     secureContext: isSecureWebauthnContext(),
   });
 
-  const closeCreate = () => {
-    registerM.reset();
-    setCreateOpen(false);
-    setCreateLabel('');
-  };
-
   const openCreate = () => {
-    registerM.reset();
-    setCreateLabel('');
-    setCreateOpen(true);
+    if (canRegister) hardAssign(`/oauth/passkey?lang=${lang}`);
   };
 
   const openEdit = (credential: UserWebauthnCredential) => {
@@ -100,46 +101,6 @@ export function UserWebauthnCredentialsPanel(props: {
     await qc.invalidateQueries({ queryKey: ['users', props.userId] });
     await qc.invalidateQueries({ queryKey: ['user', 'current'] });
   };
-
-  const registerM = useMutation({
-    mutationFn: async () => {
-      if (!canRegister) throw new Error(t('profile.mfa.webauthn.validation.not_supported'));
-
-      const labelResult = validateWebauthnLabel(createLabel);
-      if (!labelResult.valid) throw new Error(t('profile.mfa.webauthn.validation.label_required'));
-
-      const beginRes = await beginWebauthnRegistration();
-      const begin = parseWebauthnRegistrationBegin(beginRes.data);
-      if (!begin) throw new Error(t('profile.mfa.webauthn.validation.bad_begin'));
-
-      const options = creationOptionsFromJson(begin.optionsJson);
-
-      let credential: PublicKeyCredential | null = null;
-      try {
-        credential = (await navigator.credentials.create({ publicKey: options })) as PublicKeyCredential | null;
-      } catch (error) {
-        // User cancellation typically rejects with NotAllowedError.
-        if (isNamedDomError(error, 'NotAllowedError')) {
-          throw new Error(t('profile.mfa.webauthn.validation.cancelled'));
-        }
-        throw error;
-      }
-
-      if (!credential) throw new Error(t('profile.mfa.webauthn.validation.cancelled'));
-
-      const credentialJson = await credentialToJson(credential);
-
-      await finishWebauthnRegistration({
-        challenge_token: begin.challengeToken,
-        label: labelResult.label,
-        public_key_credential: credentialJson,
-      });
-    },
-    onSuccess: async () => {
-      await invalidateWebauthnState();
-      closeCreate();
-    },
-  });
 
   const saveEditM = useMutation({
     mutationFn: async () => {
@@ -192,9 +153,14 @@ export function UserWebauthnCredentialsPanel(props: {
         />
 
         <CardBody>
+          {props.allowRegistration && registrationStatus !== null ? (
+            <Alert variant={registrationStatus === '1' ? 'info' : 'warn'} testId={`${prefix}.webauthn.return`}>
+              {t(registrationStatus === '1' ? 'profile.mfa.webauthn.handoff.returned' : 'profile.mfa.webauthn.handoff.failed')}
+            </Alert>
+          ) : null}
           {props.allowRegistration && !canRegister ? (
             <Alert variant="warn" title={t('profile.mfa.webauthn.unsupported.title')}>
-              {t('profile.mfa.webauthn.unsupported.body')}
+              {t(handoffAvailable ? 'profile.mfa.webauthn.unsupported.body' : 'profile.mfa.webauthn.handoff.unavailable')}
             </Alert>
           ) : null}
 
@@ -220,19 +186,6 @@ export function UserWebauthnCredentialsPanel(props: {
           )}
         </CardBody>
       </Card>
-
-      <UserWebauthnCreateModal
-        open={createOpen}
-        label={createLabel}
-        canRegister={canRegister}
-        pending={registerM.isPending}
-        isError={registerM.isError}
-        error={registerM.error}
-        testIdPrefix={prefix}
-        onLabelChange={setCreateLabel}
-        onClose={closeCreate}
-        onSubmit={() => registerM.mutate()}
-      />
 
       <UserWebauthnEditModal
         open={editing !== null}

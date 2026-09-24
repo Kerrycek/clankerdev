@@ -266,3 +266,52 @@ test('OAuth error page is bilingual, actionable, defensive and never reflects it
   assert.equal(englishResponse.headers.get('content-language'), 'en');
   assert.match(await englishResponse.text(), /Sign-in failed/);
 });
+
+async function passkeySession() {
+  const { cookie, state } = await startLogin('/app/profile/mfa');
+  const callback = await request(`/oauth/callback?code=passkey-test-code&state=${state}`, { cookie });
+  assert.equal(callback.status, 302);
+  await callback.arrayBuffer();
+  return responseCookie(callback);
+}
+
+test('passkey handoff requires same-origin navigation and an authenticated session', async () => {
+  const cookie = await passkeySession();
+  for (const site of ['cross-site', 'same-site']) {
+    const response = await fetch(`${bffOrigin}/oauth/passkey`, {
+      headers: { ...secureHeaders(cookie), 'sec-fetch-site': site }, redirect: 'manual',
+    });
+    assert.equal(response.status, 403);
+    assert.ok(!(await response.text()).includes('test-access-token'));
+    assert.match(response.headers.get('cache-control'), /no-store/);
+  }
+  const anonymous = await fetch(`${bffOrigin}/oauth/passkey`, {
+    headers: { ...secureHeaders(), 'sec-fetch-site': 'same-origin' }, redirect: 'manual',
+  });
+  assert.equal(anonymous.status, 303);
+  assert.equal(anonymous.headers.get('location'), '/oauth/login?next=%2Fapp%2Fprofile%2Fmfa');
+  assert.ok(!(await anonymous.text()).includes('test-access-token'));
+});
+
+test('passkey form uses only trusted destinations, localized copy and restrictive headers', async () => {
+  const cookie = await passkeySession();
+  for (const language of ['cs', 'en']) {
+    const response = await fetch(`${bffOrigin}/oauth/passkey?lang=${language}&access_token=evil-token&redirect_uri=https://evil.test&action=https://evil.test`, {
+      headers: { ...secureHeaders(cookie), 'sec-fetch-site': 'same-origin' }, redirect: 'manual',
+    });
+    assert.equal(response.status, 200);
+    const html = await response.text();
+    assert.match(html, new RegExp(`<html lang="${language}">`));
+    assert.match(html, /method="post" action="https:\/\/identity.test\/webauthn\/registration\/new"/);
+    assert.match(html, /name="redirect_uri" value="https:\/\/webui.test\/app\/profile\/mfa"/);
+    assert.match(html, /name="access_token" value="test-access-token"/);
+    assert.ok(!html.includes('test-refresh-token'));
+    assert.ok(!html.includes('evil'));
+    assert.equal(response.headers.get('location'), null);
+    assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
+    assert.equal(response.headers.get('x-frame-options'), 'DENY');
+    assert.equal(response.headers.get('cross-origin-resource-policy'), 'same-origin');
+    assert.match(response.headers.get('cache-control'), /no-store/);
+    assert.equal(response.headers.get('content-security-policy'), "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action https://identity.test; frame-ancestors 'none'");
+  }
+});
