@@ -1,8 +1,8 @@
 # Beta candidate — 24 September 2026
 
 This is a local integration candidate, not an approved release or a deployed
-build. The product remains the user/admin interface. Validation below must not
-be interpreted as live API certification.
+build. The product remains the user/admin interface. Fixture regression and
+the first isolated VM checks are reported separately below.
 
 ## Inputs
 
@@ -16,13 +16,14 @@ Initial four-PR integration: `141b92281a232c4c07a73a2c475ef93eba457b60`.
 | [495](https://github.com/Kerrycek/clankerdev/pull/495) | `236e1d2701968817ec79901007b9b05b8f31caf4` | vpsAdmin first in browser titles |
 | [496](https://github.com/Kerrycek/clankerdev/pull/496) | `67b0c2d3db9aa8e2f8c0b3e2091ecd1443f9c8aa` | Supported user-data filters, bounded search and cursor navigation |
 | [497](https://github.com/Kerrycek/clankerdev/pull/497) | `ff4529c3f6fea1d61d3a1d41502c0b028ce311e2` | Preserve backup tab/filter edits during overlapping navigation |
+| [498](https://github.com/Kerrycek/clankerdev/pull/498) | `4d9cb3f1f045379645dbc52d9b083f616e5a8f87` | Preserve resource choices when asynchronous VPS defaults arrive |
 
-PR493–496 have successful static/unit and smoke CI. PR497's new CI is pending;
+PR493–497 have successful static/unit and smoke CI. PR498 CI is pending;
 human review is still outstanding. Excluded PRs #242, #435 and #433 are not included.
 
 ## Beta gates
 
-- [x] Integrate the four initial heads and the subsequent backup fix locally.
+- [x] Integrate PR493–498 locally on the candidate branch.
 - [x] Lint, i18n/CSP audits and typecheck on the combined code.
 - [x] 128 script tests and 24 BFF tests pass on the combined code.
 - [x] All 1,452 unit tests and production build pass after including PR497.
@@ -35,8 +36,10 @@ human review is still outstanding. Excluded PRs #242, #435 and #433 are not incl
 - [ ] Agree and apply the IP history server/client cursor contract, including
   tied timestamps, scope, invalid cursor errors and the terminal page.
 - [ ] Audit remaining dataset/snapshot cursor contracts from #189.
-- [ ] Produce actual cs/en VPS KB screenshots and verified navigation with
-  independently recorded UI/API pins.
+- [x] Produce initial actual cs/en VPS list/detail screenshots and navigation
+  with independent UI/API pins (prototype evidence, not publication assets).
+- [ ] Expand KB navigation contracts/fixtures and verify the corrected resource
+  submission against a new pinned VM candidate.
 - [ ] Complete human review and obtain approval for a concrete deployment.
 
 ## Evidence and limits
@@ -72,10 +75,26 @@ against API `486350466`, passed 32 IP-history and 10 user-data Index specs using
 its own MariaDB. It is not part of this candidate, not pushed upstream, and not
 deployed. The proposed chronological cursor requires a corresponding UI change.
 
-KB preparation has built immutable UI/BFF packages for PR #496's head and
-started building a private VM baseline. The packages are not yet wired into
-that cluster, and the KB package pin is not this combined candidate. Existing
-legacy KB screenshots cannot serve as evidence for the new UI.
+The isolated KB cluster booted successfully on its own local/socket networks
+and private Nix store. Actual OAuth login as fixture member `test-user1`, sidebar
+navigation, VPS list and detail passed in cs/en on UI `93b600c2` / API `486350466`.
+The create operation produced a running fixture VPS (ID 1, documentation-range
+addresses), with transaction completion shown in the real UI. Four prototype
+PNGs and per-image SHA/UI/API provenance are in `live-vm/{cs,en}` in the evidence
+bundle. They do not replace the legacy KB inventory or authorize publication.
+KB branch `codex/clankerdev-kb` at `f956b54` contains the runner and guarded
+fixture preparation; pinned `bin/check` passes, retaining all 120 legacy PNGs.
+
+That real create exposed a resource-default race: entered 1 CPU / 1 GiB / 10 GiB
+became 8 CPU / 4 GiB / 120 GiB while defaults loaded. PR498 preserves manual and
+preset choices. Both new delayed-default regressions fail on main and pass with
+the fix; they also cover refetches and untouched network defaults. Standalone
+PR498 validation: 1,429 unit, 128 script and 24 BFF checks, lint/typecheck/i18n/CSP,
+production build and 34 desktop/mobile VPS-create fixture browser cases PASS.
+After integrating PR498, all 1,454 combined unit tests and typecheck pass.
+The previous combined 818 browser cases are not relabeled as tests of PR498.
+Actual VM verification of the corrected submission remains pending; the recorded
+VM images still identify the previous immutable UI revision truthfully.
 
 ## Deployment and rollback boundaries
 
