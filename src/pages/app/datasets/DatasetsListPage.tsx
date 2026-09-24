@@ -13,7 +13,6 @@ import { PageHeader } from '../../../components/layout/PageHeader';
 import { fetchDatasets, type Dataset } from '../../../lib/api/datasets';
 import { searchUsers } from '../../../lib/api/users';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
-import { cursorFromDescendingPage } from '../../../lib/lockIndex';
 import { objectStateBadge } from '../../../lib/taskStatus';
 import { dotVariantFromBadgeVariant, dotVariantFromRowVariant } from '../../../lib/variantMap';
 import { parsePositiveInt } from '../../../lib/parse';
@@ -158,6 +157,7 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
     setSearchParams,
     defaultLimit: 50,
     allowedLimits: [25, 50, 100],
+    restoreUrlCursorOnSignatureChange: true,
   });
 
   const datasetsQ = useQuery({
@@ -173,10 +173,11 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
         includes,
       },
     ],
-    queryFn: async () => (
+    queryFn: async ({ signal }) => (
       await fetchDatasets({
-        limit: pagination.limit,
+        limit: pagination.limit + 1,
         fromId: pagination.fromId,
+        signal,
         includes,
         user: mode === 'admin' ? userIdNum : scope.mineUserId,
         vps: showVpsFilter ? vpsIdNum || undefined : undefined,
@@ -185,7 +186,7 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
     ).data,
   });
 
-  const pageRows = datasetsQ.data ?? [];
+  const pageRows = useMemo(() => (datasetsQ.data ?? []).slice(0, pagination.limit), [datasetsQ.data, pagination.limit]);
   const rows = useMemo(() => filterDatasetPage(pageRows, qText), [pageRows, qText]);
   const showSnapshotColumn = rows.some((ds) => hasValue(ds.snapshots_count));
   const showMountColumn = rows.some((ds) => hasValue(ds.mount_count));
@@ -193,8 +194,17 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
   const showStateColumn = rows.some((ds) => hasValue((ds as any).object_state));
   const showRelatedMeta = showSnapshotColumn || showMountColumn || showExportColumn;
 
-  const pageCursor = useMemo(() => cursorFromDescendingPage(pageRows as any), [pageRows]);
-  const hasMore = pageRows.length >= pagination.limit;
+  // The API anchors in (full_name, id) order, not numeric ID order.
+  const pageCursor = pageRows.at(-1)?.id ?? null;
+  const hasMore = !datasetsQ.isFetching && !datasetsQ.isError
+    && (datasetsQ.data?.length ?? 0) > pagination.limit && Number.isSafeInteger(pageCursor) && Number(pageCursor) > 0;
+  const restart = () => pagination.goToPageWithStack(1, [null]);
+  const goNext = () => {
+    if (!hasMore || pageCursor == null) return;
+    pagination.goToPageWithStack(pagination.page + 1, [
+      ...pagination.stack.slice(0, pagination.index + 1), pageCursor,
+    ]);
+  };
 
   const filtersActive = Boolean(qText) || Boolean(userIdNum !== undefined) || Boolean(showVpsFilter && vpsIdNum !== undefined);
 
@@ -210,6 +220,8 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
       const v = String(value ?? '').trim();
       if (v) next.set(key, v);
       else next.delete(key);
+      next.delete('from_id');
+      next.set('page', '1');
       return next;
     });
   }
@@ -236,6 +248,8 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
       next.delete('q');
       next.delete('user');
       next.delete('vps');
+      next.delete('from_id');
+      next.set('page', '1');
       return next;
     });
     setSmart('');
@@ -626,7 +640,11 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
           testId="datasets.list.error"
           title={t(loadErrorTitleKey)}
           error={datasetsQ.error}
-          onRetry={() => void datasetsQ.refetch()}
+          actions={{
+            primary: { label: t('common.retry'), onClick: () => datasetsQ.refetch() },
+            secondary: pagination.cursor != null
+              ? { label: t('datasets.pagination.restart'), onClick: restart } : undefined,
+          }}
           showBack={false}
           detailsExtra={{ page: 'datasets.list', scope: scope.scope }}
         />
@@ -636,16 +654,22 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
           pageCursor={pageCursor}
           hasMore={hasMore}
           hasSourceRows={pageRows.length > 0}
+          onNext={goNext}
           onClear={clearFilters}
         />
       ) : rows.length === 0 ? (
-        <EmptyState
-          testId="datasets.list.empty"
-          title={filtersActive ? t('empty.list.no_matches.title') : t(emptyTitleKey)}
-          body={filtersActive ? t('empty.list.no_matches.body') : emptyBodyKey ? t(emptyBodyKey) : undefined}
-          actionLabel={filtersActive ? t('common.clear_filters') : undefined}
-          onAction={filtersActive ? clearFilters : undefined}
-        />
+        <>
+          <EmptyState
+            testId="datasets.list.empty"
+            title={filtersActive ? t('empty.list.no_matches.title') : t(emptyTitleKey)}
+            body={filtersActive ? t('empty.list.no_matches.body') : emptyBodyKey ? t(emptyBodyKey) : undefined}
+            actionLabel={filtersActive ? t('common.clear_filters') : undefined}
+            onAction={filtersActive ? clearFilters : undefined}
+          />
+          {pagination.canPrev ? <Button variant="secondary" testId="datasets.pagination.empty.restart" onClick={restart}>
+            {t('datasets.pagination.restart')}
+          </Button> : null}
+        </>
       ) : (
         <>
           {/* Mobile: cards */}
@@ -739,9 +763,9 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
               page={pagination.page}
               pageCount={pagination.stack.length}
               canPrev={pagination.canPrev}
-              canNext={pagination.hasForward || (hasMore && pageCursor !== null)}
+              canNext={hasMore}
               onPrev={pagination.goPrev}
-              onNext={() => pagination.goNext(pageCursor)}
+              onNext={goNext}
               onGoToPage={pagination.goToPage}
               limit={pagination.limit}
               allowedLimits={pagination.allowedLimits}
@@ -759,9 +783,9 @@ export function DatasetsListPage(props: DatasetsListPageProps = {}) {
                 page={pagination.page}
                 pageCount={pagination.stack.length}
                 canPrev={pagination.canPrev}
-                canNext={pagination.hasForward || (hasMore && pageCursor !== null)}
+                canNext={hasMore}
                 onPrev={pagination.goPrev}
-                onNext={() => pagination.goNext(pageCursor)}
+                onNext={goNext}
                 onGoToPage={pagination.goToPage}
                 limit={pagination.limit}
                 allowedLimits={pagination.allowedLimits}

@@ -32,7 +32,6 @@ import {
 import { formatErrorMessage } from '../../../lib/errors';
 import { formatDateTime } from '../../../lib/format';
 import { useKeysetPagination } from '../../../lib/hooks/useKeysetPagination';
-import { cursorFromAscendingPage } from '../../../lib/lockIndex';
 import { hasActiveChains } from '../../../lib/taskStatus';
 
 import { useDatasetContext } from './DatasetContext';
@@ -95,6 +94,7 @@ export function DatasetSnapshotsPage({ queryParamPrefix = '' }: DatasetSnapshots
     paramPrefix: queryParamPrefix,
     defaultLimit: 50,
     allowedLimits: [25, 50, 100],
+    restoreUrlCursorOnSignatureChange: true,
   });
   const [createOpen, setCreateOpen] = useState(false);
   const [createLabel, setCreateLabel] = useState('');
@@ -116,13 +116,14 @@ export function DatasetSnapshotsPage({ queryParamPrefix = '' }: DatasetSnapshots
 
   const snapsQ = useQuery({
     queryKey: ['datasets', dataset.id, 'snapshots', { limit: pagination.limit, fromId: pagination.fromId }],
-    queryFn: async () =>
+    queryFn: async ({ signal }) =>
       fetchDatasetSnapshots(dataset.id, {
         // HaveAPI's cursor does not expose an end marker. Fetch one extra row so
         // Next remains correct for exact-size pages, deep links and count churn.
         limit: pagination.limit + 1,
         fromId: pagination.fromId,
         count: true,
+        signal,
       }),
   });
 
@@ -295,8 +296,17 @@ export function DatasetSnapshotsPage({ queryParamPrefix = '' }: DatasetSnapshots
   const rows = pageData.slice(0, pagination.limit);
   const totalCount = reportedTotalCount ?? rows.length;
 
-  const pageCursor = useMemo(() => cursorFromAscendingPage(rows as any), [rows]);
-  const hasMore = pagination.hasForward || pageData.length > pagination.limit;
+  // The API anchors in (created_at, id) order, not numeric ID order.
+  const pageCursor = rows.at(-1)?.id ?? null;
+  const hasMore = !snapsQ.isFetching && !snapsQ.isError
+    && pageData.length > pagination.limit && Number.isSafeInteger(pageCursor) && Number(pageCursor) > 0;
+  const restart = () => pagination.goToPageWithStack(1, [null]);
+  const goNext = () => {
+    if (!hasMore || pageCursor == null) return;
+    pagination.goToPageWithStack(pagination.page + 1, [
+      ...pagination.stack.slice(0, pagination.index + 1), pageCursor,
+    ]);
+  };
 
   function requestSnapshotDownload(s: Snapshot) {
     createDl.mutate(s);
@@ -397,7 +407,11 @@ export function DatasetSnapshotsPage({ queryParamPrefix = '' }: DatasetSnapshots
           testId="dataset.snapshots.error"
           title={t('dataset.snapshots.load_error.title')}
           error={snapsQ.error}
-          onRetry={() => void snapsQ.refetch()}
+          actions={{
+            primary: { label: t('common.retry'), onClick: () => snapsQ.refetch() },
+            secondary: pagination.cursor != null
+              ? { label: t('datasets.pagination.restart'), onClick: restart } : undefined,
+          }}
           showBack={false}
           detailsExtra={{ page: 'dataset.snapshots', datasetId: dataset.id }}
         />
@@ -543,7 +557,7 @@ export function DatasetSnapshotsPage({ queryParamPrefix = '' }: DatasetSnapshots
               canPrev={pagination.canPrev}
               canNext={hasMore}
               onPrev={pagination.goPrev}
-              onNext={() => pagination.goNext(pageCursor)}
+              onNext={goNext}
               onGoToPage={pagination.goToPage}
               limit={pagination.limit}
               allowedLimits={pagination.allowedLimits}
@@ -561,7 +575,7 @@ export function DatasetSnapshotsPage({ queryParamPrefix = '' }: DatasetSnapshots
                 canPrev={pagination.canPrev}
                 canNext={hasMore}
                 onPrev={pagination.goPrev}
-                onNext={() => pagination.goNext(pageCursor)}
+                onNext={goNext}
                 onGoToPage={pagination.goToPage}
                 limit={pagination.limit}
                 allowedLimits={pagination.allowedLimits}

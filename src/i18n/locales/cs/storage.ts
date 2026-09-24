@@ -3,6 +3,7 @@ import { csStorageExports } from "./storage/exports";
 import { csDatasetExpansion } from './storage/dataset_expansion';
 import { csBackups } from './storage/backups';
 export const csStorage = {
+  "datasets.pagination.restart": "Zpět na první stránku",
   ...csBackups,
   "datasets.list.title": "Datasety",
   "datasets.list.description":

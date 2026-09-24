@@ -140,6 +140,7 @@ export async function fetchDatasets(opts?: {
   count?: boolean;
   reversed?: boolean;
   role?: 'primary' | 'hypervisor';
+  signal?: AbortSignal;
 }) {
   const params: Record<string, unknown> = {};
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
@@ -154,6 +155,7 @@ export async function fetchDatasets(opts?: {
   const res = await haveApiCall<Dataset[]>({
     method: 'GET',
     path: '/datasets',
+    signal: opts?.signal,
     namespace: 'dataset',
     params,
     meta:
@@ -233,6 +235,7 @@ export async function fetchDatasetSnapshots(datasetId: number, opts?: {
   fromId?: number;
   limit?: number;
   count?: boolean;
+  signal?: AbortSignal;
 }) {
   const params: Record<string, unknown> = {};
   if (opts?.fromId !== undefined) params['from_id'] = opts.fromId;
@@ -241,6 +244,7 @@ export async function fetchDatasetSnapshots(datasetId: number, opts?: {
   const res = await haveApiCall<Snapshot[]>({
     method: 'GET',
     path: `/datasets/${datasetId}/snapshots`,
+    signal: opts?.signal,
     namespace: 'snapshot',
     params,
     meta: opts?.count ? { count: true } : undefined,

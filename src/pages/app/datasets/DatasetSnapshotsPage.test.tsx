@@ -146,7 +146,7 @@ describe('DatasetSnapshotsPage', () => {
     await waitFor(() =>
       expect(api.fetchDatasetSnapshots).toHaveBeenCalledWith(
         10402,
-        { limit: 51, fromId: undefined, count: true }
+        { limit: 51, fromId: undefined, count: true, signal: expect.any(AbortSignal) }
       )
     );
     expect(screen.queryByTestId('dataset.snapshots.search.input')).not.toBeInTheDocument();
