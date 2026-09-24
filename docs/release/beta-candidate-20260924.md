@@ -77,6 +77,8 @@ outstanding. Excluded PRs #242, #435 and #433 are not included.
   actual cs/en desktop/mobile screenshots, preserving semantic control IDs.
 - [x] Verify prototype admin kernel-parameter, sysctl and software-version
   navigation contracts and cs/en desktop/mobile captures.
+- [x] Verify administrator profile edits, persisted reload, foreign-owner API
+  rejection and restoration in cs/en desktop/mobile on the actual isolated API.
 - [ ] Expand remaining KB navigation/page bindings and live workflow coverage.
 - [ ] Complete human review and obtain approval for a concrete deployment.
 
@@ -587,3 +589,38 @@ PNGs remain unchanged. Evidence: `clankerdev-beta-20260924/admin-navigation/`.
 This extends read-only administrator navigation coverage. It does not certify
 administrative mutations or complete wiki page bindings, translated article
 prose or publication. No product/runtime code or shared deployment changed.
+
+
+### Administrator profile mutations — 24 September
+
+KB commit `38cf81a` adds a real OAuth/Playwright administrator profile-edit
+scenario on the unchanged UI `eccbcc920` / API `486350466` pins. All four cs/en
+desktop/mobile variants passed: navigate from the user list, reject invalid
+login locally without a write, edit the dedicated synthetic member's full name,
+internal note and time zone, then read the API and reload the actual drawer.
+The submitted payload preserves login, email, access level, address and mailer
+setting. These are eight successful UI writes in the final matrix, including
+four restorations of the original profile.
+
+Four independent member sessions also attempted a valid time-zone write to that
+foreign account. Each was rejected by the API and left the profile unchanged.
+This explicit negative API probe is distinct from the UI-edit workflow. The
+pinned HaveAPI error contract is HTTP 200 with JSON `status: false` and a
+localized access-denied message. Initial test assumptions about HTTP status
+and error language were corrected; both failed attempts restored the fixture
+and logged out, and their evidence remains retained.
+
+Every final variant restored and reread the original profile and cleared both
+OAuth/BFF sessions. An independent read-only database check confirms that user
+3 has its original name, empty note and null time zone, with original identity,
+level and mailer setting. A completed-receipt rerun performed no new mutation.
+Pinned KB `bin/check` passed, including all 120 unchanged legacy PNGs; final
+dispatch syntax/argument tests also passed. Evidence is under
+`clankerdev-beta-20260924/admin-user-edit/`, including receipts, failure logs,
+summary, independent database proof and checksums.
+
+This is bounded administrator profile coverage. Registration resolution, user
+creation/deletion and suspension remain unverified against these live pins.
+The broader live-workflow gate stays open; API cursor agreement, KB bindings
+and human review remain outstanding. No product/runtime change, merge, shared
+deployment or upstream PR was made.
