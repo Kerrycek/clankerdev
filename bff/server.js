@@ -10,6 +10,7 @@
 
 const express = require('express');
 const session = require('express-session');
+const { createSessionQueue } = require('./session-queue');
 const FileStoreFactory = require('session-file-store');
 const {
   preferredLanguage,
@@ -242,6 +243,9 @@ app.disable('x-powered-by');
 
 // We're behind nginx, so trust X-Forwarded-* for secure cookies & redirect building if needed
 app.set('trust proxy', 1);
+
+// Serialize before loading session snapshots, through the final store write.
+app.use(createSessionQueue({ name: SESSION_COOKIE_NAME, secret: SESSION_SECRET }));
 
 // sessions
 app.use(
