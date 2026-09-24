@@ -40,7 +40,7 @@ outstanding. Excluded PRs #242, #435 and #433 are not included.
   with independent UI/API pins (prototype evidence, not publication assets).
 - [x] Verify corrected resource submission and persisted values on the pinned VM.
 - [x] Verify actual member/admin node-history access, foreign VPS denial and logout
-  in Czech and English on the pinned VM.
+  in Czech and English on desktop and mobile layouts on the pinned VM.
 - [ ] Expand KB navigation contracts/fixtures and remaining live workflow coverage.
 - [ ] Complete human review and obtain approval for a concrete deployment.
 
@@ -107,8 +107,9 @@ Real OAuth sessions for member, other member and admin passed in cs/en:
 member kernel-history navigation and API, private node configuration denied
 without fetching private resources, foreign VPS rejected by the actual API,
 admin kernel parameters/software API, and logout clearing the server session.
-`access-cs.json` and `access-en.json` record those results and both immutable
-pins. These desktop checks do not certify MFA, expiry/renewal, live mobile,
+`access-cs.json`, `access-en.json` and the two `access-mobile-*.json` files
+record those results and both immutable pins. Mobile runs use a 390×844 viewport
+and actual drawer navigation. These checks do not certify MFA, expiry/renewal,
 DNS mutations, storage/backup operations or the full admin workflow set.
 
 ## Deployment and rollback boundaries
