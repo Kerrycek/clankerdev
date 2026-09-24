@@ -4,7 +4,7 @@ import { Clock3, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useI18n } from '../../../app/i18n';
 import type { RegistrationRequest } from '../../../lib/api/requests';
 import { Badge } from '../../../components/ui/Badge';
-import { Card, CardBody } from '../../../components/ui/Card';
+import { Card, CardBody, CardHeader } from '../../../components/ui/Card';
 import { clsx } from '../../../components/ui/clsx';
 
 import { fraudCheckStatus, type FraudCheckStatus } from './RequestDetailModel';
@@ -137,24 +137,26 @@ function CheckCard(props: {
           ? 'border-warn-border'
           : 'border-ok-border')}
     >
-      <div className="space-y-2 border-b border-border p-4">
-        <h3 className="font-semibold">{props.title}</h3>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge
-            variant={resultVariant}
-            className="text-sm font-semibold"
-            testId={`admin.requests.detail.risk.${props.kind}.score`}
-          >
-            {t('requests.detail.risk.score', { score: props.score ?? '—' })}
-          </Badge>
-          <Badge
-            variant={statusVariant(props.status)}
-            testId={`admin.requests.detail.risk.${props.kind}.status`}
-          >
-            {t(`requests.detail.risk.status.${props.status}`)}
-          </Badge>
-        </div>
-      </div>
+      <CardHeader
+        title={props.title}
+        actions={(
+          <>
+            <Badge
+              variant={resultVariant}
+              className="text-sm font-semibold"
+              testId={`admin.requests.detail.risk.${props.kind}.score`}
+            >
+              {t('requests.detail.risk.score', { score: props.score ?? '—' })}
+            </Badge>
+            <Badge
+              variant={statusVariant(props.status)}
+              testId={`admin.requests.detail.risk.${props.kind}.status`}
+            >
+              {t(`requests.detail.risk.status.${props.status}`)}
+            </Badge>
+          </>
+        )}
+      />
       <CardBody className="space-y-3">
         {props.status === 'pending' ? (
           <div className="text-sm text-muted">{t('requests.detail.risk.pending_help')}</div>
@@ -167,9 +169,9 @@ function CheckCard(props: {
 
         <dl className="grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
           {props.summarySignals.map((signal) => (
-            <div key={signal.key} className="min-w-0">
+            <div key={signal.key}>
               <dt className="text-xs text-muted">{t(signal.labelKey)}</dt>
-              <dd className="break-words">{signalValue(props.request[signal.key], t('common.yes'), t('common.no'))}</dd>
+              <dd>{signalValue(props.request[signal.key], t('common.yes'), t('common.no'))}</dd>
             </div>
           ))}
         </dl>
@@ -191,8 +193,10 @@ function CheckCard(props: {
     </Card>
   );
 }
-export function RequestFraudSummary(props: { request: RegistrationRequest }) {
+export function RequestFraudChecks(props: { request: RegistrationRequest }) {
   const { t } = useI18n();
+  const ipStatus = fraudCheckStatus(props.request.ip_checked, props.request.ip_success);
+  const mailStatus = fraudCheckStatus(props.request.mail_checked, props.request.mail_success);
   const summary = requestFraudRiskSummary(props.request);
   const SummaryIcon = summary.state === 'clear'
     ? ShieldCheck
@@ -208,7 +212,7 @@ export function RequestFraudSummary(props: { request: RegistrationRequest }) {
       </div>
       <div
         className={clsx(
-          'flex flex-col items-start gap-3 rounded-lg border-2 px-4 py-3',
+          'flex flex-col gap-3 rounded-lg border-2 px-4 py-3 sm:flex-row sm:items-center',
           emphasisClasses(summary.variant),
         )}
         data-testid="admin.requests.detail.risk.summary"
@@ -236,18 +240,7 @@ export function RequestFraudSummary(props: { request: RegistrationRequest }) {
           </Badge>
         ) : null}
       </div>
-    </section>
-  );
-}
-
-export function RequestFraudChecks(props: { request: RegistrationRequest }) {
-  const { t } = useI18n();
-  const ipStatus = fraudCheckStatus(props.request.ip_checked, props.request.ip_success);
-  const mailStatus = fraudCheckStatus(props.request.mail_checked, props.request.mail_success);
-
-  return (
-    <section className="space-y-3" aria-label={t('requests.detail.risk.title')}>
-      <div className="grid grid-cols-1 gap-3">
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         <CheckCard
           request={props.request}
           kind="ip"

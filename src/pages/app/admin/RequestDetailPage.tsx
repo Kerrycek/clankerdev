@@ -37,7 +37,7 @@ import {
   requestResourceLabel,
   safeRequestsReturnTo,
 } from './RequestDetailModel';
-import { RequestFraudChecks, RequestFraudSummary } from './RequestFraudChecks';
+import { RequestFraudChecks } from './RequestFraudChecks';
 import {
   RequestOperationalLinks,
   RequestReviewActions,
@@ -384,7 +384,6 @@ export function RequestDetailPage() {
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <aside className="min-w-0 space-y-3 lg:col-start-3 lg:row-start-1" data-testid="admin.requests.detail.review">
-          {reqType === 'registration' ? <RequestFraudSummary request={request as RegistrationRequest} /> : null}
           <Card testId="admin.requests.detail.decision">
             <CardHeader title={t('requests.detail.decision.title')} subtitle={t('requests.detail.decision.subtitle')} />
             <CardBody className="space-y-4">
@@ -426,7 +425,6 @@ export function RequestDetailPage() {
               />
             </CardBody>
           </Card>
-          {reqType === 'registration' ? <RequestFraudChecks request={request as RegistrationRequest} /> : null}
         </aside>
 
         <section className="space-y-3 lg:col-span-2 lg:col-start-1 lg:row-start-1">
@@ -450,8 +448,10 @@ export function RequestDetailPage() {
             </CardBody>
           </Card>
 
+          {reqType === 'registration' ? <RequestFraudChecks request={request as RegistrationRequest} /> : null}
+
           <Card testId="admin.requests.detail.metadata">
-            <details className="group">
+            <details key={`${reqType}:${reqId}`} className="group" open>
               <summary
                 className="flex cursor-pointer list-none items-center gap-2 p-4 font-semibold"
                 data-testid="admin.requests.detail.metadata.toggle"

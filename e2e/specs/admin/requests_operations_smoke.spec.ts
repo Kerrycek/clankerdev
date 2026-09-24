@@ -112,16 +112,18 @@ test('@workflow-matrix @smoke admin requests: one list row opens the canonical d
   });
 
   await page.goto('/admin/requests');
-  await expect(page.getByTestId('admin.requests.table')).toBeVisible();
-  const desktopRow = page.getByTestId('admin.requests.row.registration.123');
-  await expect(desktopRow).not.toHaveAttribute('tabindex');
-  await expect(desktopRow.getByRole('link', { name: '#123' })).toBeVisible();
+  const mobile = page.viewportSize()!.width < 768;
+  const requestLink = mobile
+    ? page.getByTestId('admin.requests.mobile.row.registration.123').getByRole('link')
+    : page.getByTestId('admin.requests.row.registration.123').getByRole('link', { name: '#123' });
+  await expect(requestLink).toBeVisible();
+  if (!mobile) await expect(page.getByTestId('admin.requests.row.registration.123')).not.toHaveAttribute('tabindex');
 
   await expect.poll(() => states.includes('awaiting')).toBeTruthy();
   expect(new URL(page.url()).searchParams.get('state')).toBeNull();
   await expect(page.getByTestId('admin.requests.quick.awaiting')).toHaveAttribute('aria-pressed', 'true');
 
-  await desktopRow.getByRole('link', { name: '#123' }).press('Enter');
+  await requestLink.press('Enter');
   await expect(page).toHaveURL(/\/admin\/requests\/registration\/123\?returnTo=/);
   const returnTo = new URL(page.url()).searchParams.get('returnTo');
   expect(new URL(returnTo ?? '/', 'https://example.test').pathname).toBe('/admin/requests');
@@ -234,26 +236,28 @@ for (const language of ['en', 'cs'] as const) {
 
     await page.goto('/admin/requests/registration/124');
 
+    await expect(page.getByTestId('admin.requests.detail.metadata').locator('details')).toHaveAttribute('open', '');
     const review = page.getByTestId('admin.requests.detail.review');
-    const summary = review.getByTestId('admin.requests.detail.risk.summary');
-    await expect(summary).toBeInViewport();
+    const summary = page.getByTestId('admin.requests.detail.risk.summary');
+    await expect(summary).toBeVisible();
     const summaryBox = await summary.boundingBox();
-    const decisionBox = await review.getByTestId('admin.requests.detail.decision').boundingBox();
-    expect(summaryBox!.y + summaryBox!.height).toBeLessThan(decisionBox!.y);
-    await expect(review.getByTestId('admin.requests.detail.risk.ip')).toBeVisible();
-    await expect(review.getByTestId('admin.requests.detail.risk.mail')).toBeVisible();
-    if (page.viewportSize()!.width >= 1024) {
-      const detailsBox = await page.getByTestId('admin.requests.detail.registration.fields').boundingBox();
-      const reviewBox = await review.boundingBox();
-      expect(reviewBox!.x).toBeGreaterThan(detailsBox!.x + detailsBox!.width);
+    const detailsBox = await page.getByTestId('admin.requests.detail.registration.fields').boundingBox();
+    expect(summaryBox!.y).toBeGreaterThan(detailsBox!.y + detailsBox!.height);
+    await expect(review.getByTestId('admin.requests.detail.risk.ip')).toHaveCount(0);
+    await expect(review.getByTestId('admin.requests.detail.risk.mail')).toHaveCount(0);
+    for (const kind of ['ip', 'mail']) {
+      const check = page.getByTestId(`admin.requests.detail.risk.${kind}`);
+      await expect(check).toBeVisible();
+      const box = await check.boundingBox();
+      expect(box!.y).toBeGreaterThan(summaryBox!.y + summaryBox!.height);
     }
     for (const kind of ['ip', 'mail']) {
-      await review.getByTestId(`admin.requests.detail.risk.${kind}.details`).locator('summary').click();
+      await page.getByTestId(`admin.requests.detail.risk.${kind}.details`).locator('summary').click();
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width);
 
     await page.evaluate(() => window.scrollTo(0, 0));
-    await page.screenshot({ path: testInfo.outputPath('request-risk-sidebar.png'), fullPage: true });
+    await page.screenshot({ path: testInfo.outputPath('request-risk-below-details.png'), fullPage: true });
     const copyAddress = page.getByTestId('admin.requests.detail.registration.address.map.copy');
     await expect(copyAddress).toBeVisible();
     const addressBox = await page.getByTestId('admin.requests.detail.registration.address.map')
@@ -335,9 +339,11 @@ test('@workflow-matrix @pr-smoke @pr-smoke-mobile @smoke admin requests: success
   await expect.poll(osm.requestCount).toBe(1);
   const metadataChevron = page.getByTestId('admin.requests.detail.metadata.chevron');
   await expect(metadataChevron).toBeVisible();
-  await expect(metadataChevron).toHaveCSS('rotate', 'none');
-  await page.getByTestId('admin.requests.detail.metadata.toggle').click();
   await expect(page.getByTestId('admin.requests.detail.metadata').locator('details')).toHaveAttribute('open', '');
+  await expect(metadataChevron).toHaveCSS('rotate', '90deg');
+  await page.getByTestId('admin.requests.detail.metadata.toggle').click();
+  await expect(page.getByTestId('admin.requests.detail.metadata').locator('details')).not.toHaveAttribute('open');
+  await page.getByTestId('admin.requests.detail.metadata.toggle').click();
   await expect(metadataChevron).toHaveCSS('rotate', '90deg');
   await page.getByTestId('admin.requests.resolve.action.approve').click();
   await expect(page.getByTestId('admin.requests.resolve.modal')).toContainText(/approve request|schválit žádost/i);
