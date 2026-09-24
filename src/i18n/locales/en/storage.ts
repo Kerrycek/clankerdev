@@ -3,6 +3,7 @@ import { enStorageExports } from "./storage/exports";
 import { enDatasetExpansion } from './storage/dataset_expansion';
 import { enBackups } from './storage/backups';
 export const enStorage = {
+  "datasets.pagination.restart": "Back to first page",
   ...enBackups,
   "datasets.list.title": "Datasets",
   "datasets.list.description":

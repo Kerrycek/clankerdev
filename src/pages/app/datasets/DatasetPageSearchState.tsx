@@ -24,6 +24,7 @@ export function DatasetPageSearchEmpty(props: {
   hasMore: boolean;
   hasSourceRows: boolean;
   onClear: () => void;
+  onNext: () => void;
 }) {
   const { t } = useI18n();
   const { pagination } = props;
@@ -37,15 +38,15 @@ export function DatasetPageSearchEmpty(props: {
         actionLabel={t('common.clear_filters')}
         onAction={props.onClear}
       />
-      {props.hasSourceRows ? (
+      {props.hasSourceRows || pagination.canPrev ? (
         <Card>
           <KeysetPagination
             page={pagination.page}
             pageCount={pagination.stack.length}
             canPrev={pagination.canPrev}
-            canNext={pagination.hasForward || (props.hasMore && props.pageCursor !== null)}
+            canNext={props.hasMore && props.pageCursor !== null}
             onPrev={pagination.goPrev}
-            onNext={() => pagination.goNext(props.pageCursor)}
+            onNext={props.onNext}
             onGoToPage={pagination.goToPage}
             limit={pagination.limit}
             allowedLimits={pagination.allowedLimits}
