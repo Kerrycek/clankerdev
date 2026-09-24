@@ -120,7 +120,7 @@ export function OverviewStatusAccessCard(props: {
           <div className="rounded-lg border border-border bg-surface-2 p-3">
             <div className="text-xs text-faint">{t('common.location')}</div>
             <div className="mt-1 text-sm font-medium text-fg">{location}</div>
-            <div className="mt-0.5 text-xs text-muted">{node}</div>
+            <div className="mt-0.5 text-xs text-muted">{props.vps.node?.id ? <Link className="underline" to={`${props.basePath}/nodes/${props.vps.node.id}/history`} title={t('admin.node.history.section.kernel')}>{node}</Link> : node}</div>
           </div>
 
           <div className="rounded-lg border border-border bg-surface-2 p-3" data-testid="vps.overview.status_access.ssh">
