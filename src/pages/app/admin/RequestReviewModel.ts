@@ -92,13 +92,18 @@ export function requestReviewActions(
   if (!isAdmin || !request) return [];
   if (requestMissingRequiredUser(reqType, request)) return [];
   const state = String(request.state ?? '').trim();
-  if (state !== 'awaiting') return [];
+  const knownStates = ['awaiting', 'approved', 'denied', 'ignored', 'pending_correction'];
+  if (!knownStates.includes(state)) return [];
+  if (reqType === 'change' && state !== 'awaiting') return [];
 
   const actions: ResolveUserRequestAction[] = ['approve', 'deny', 'ignore'];
   if (reqType === 'registration') {
     actions.push('request_correction');
   }
-  return actions;
+  const targetStates: Record<ResolveUserRequestAction, string> = {
+    approve: 'approved', deny: 'denied', ignore: 'ignored', request_correction: 'pending_correction',
+  };
+  return actions.filter((action) => targetStates[action] !== state);
 }
 
 /** Bulk review is intentionally narrower: registrations still require detail review before approval. */
@@ -107,6 +112,7 @@ export function requestBulkReviewActions(
   request: ReviewableRequest | undefined,
   isAdmin: boolean,
 ): ResolveUserRequestAction[] {
+  if (request?.state !== 'awaiting') return [];
   return requestReviewActions(reqType, request, isAdmin).filter(
     (action) => !(reqType === 'registration' && action === 'approve'),
   );

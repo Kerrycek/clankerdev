@@ -22,7 +22,7 @@ export class RequestReviewPreconditionError extends Error {
       ? 'Request target mismatch'
       : reason === 'owner_missing'
         ? 'Request owner no longer exists'
-        : 'Request is no longer awaiting review');
+        : 'Request state changed since review');
     this.name = 'RequestReviewPreconditionError';
     this.reason = reason;
   }
@@ -146,7 +146,7 @@ export async function resolveReviewedRequest(
  * atomic backend precondition, but it prevents a cached detail/list from
  * blindly resolving a request that has already changed state.
  */
-export async function fetchAwaitingReviewTarget(reqType: RequestReviewType, reqId: number) {
+export async function fetchReviewTarget(reqType: RequestReviewType, reqId: number, expectedState: string) {
   const loaded = reqType === 'registration'
     ? (await fetchRegistrationRequest(reqId)).data
     : (await fetchChangeRequest(reqId)).data;
@@ -157,8 +157,13 @@ export async function fetchAwaitingReviewTarget(reqType: RequestReviewType, reqI
   if (requestMissingRequiredUser(reqType, loaded)) {
     throw new RequestReviewPreconditionError('owner_missing');
   }
-  if (!requestMatchesReviewTarget(loaded, reqType, reqId, 'awaiting')) {
+  if (!requestMatchesReviewTarget(loaded, reqType, reqId, expectedState)) {
     throw new RequestReviewPreconditionError('state_changed');
   }
   return loaded;
+}
+
+/** Queue and bulk review remain restricted to awaiting requests. */
+export async function fetchAwaitingReviewTarget(reqType: RequestReviewType, reqId: number) {
+  return fetchReviewTarget(reqType, reqId, 'awaiting');
 }

@@ -1548,3 +1548,77 @@ test('@workflow-matrix @smoke admin requests: filter segments stay contained at 
   }
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
 });
+
+for (const [state, action, target] of [
+  ['ignored', 'approve', 'approved'],
+  ['denied', 'ignore', 'ignored'],
+  ['pending_correction', 'approve', 'approved'],
+  ['approved', 'deny', 'denied'],
+] as const) {
+  test(`@pr-smoke @pr-smoke-mobile admin requests: reconsider ${state} registration as ${target}`, async ({ page }) => {
+    await bootstrapVpsAdminWindow(page);
+    await installOsmMapMock(page);
+    let current = registration(950, state);
+    let posted: unknown;
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 100 },
+      handlers: {
+        'GET user_request/registrations/950': () => ({ registration: current }),
+        'GET user_request/registrations': () => ({ registrations: [current] }),
+        'GET user_request/changes': () => ({ changes: [] }),
+        'GET nodes': () => ({ nodes: [] }),
+        'GET locations': () => ({ locations: [{ id: 7, label: 'Prague' }] }),
+        'GET os_templates': () => ({ os_templates: [{ id: 5, label: 'Debian 13', cgroup_version: 'cgroup_v2' }] }),
+        'POST user_request/registrations/950/resolve': ({ reqJson }) => {
+          posted = reqJson;
+          current = { ...current, state: target };
+          return { registration: current };
+        },
+      },
+    });
+    await page.goto('/admin/requests/registration/950');
+    const sameAction = { approved: 'approve', denied: 'deny', ignored: 'ignore', pending_correction: 'request_correction' }[state];
+    await expect(page.getByTestId(`admin.requests.resolve.action.${sameAction}`)).toHaveCount(0);
+    await page.getByTestId(`admin.requests.resolve.action.${action}`).click();
+    if (action === 'approve') {
+      await page.getByTestId('admin.requests.resolve.create_vps').uncheck();
+      await page.getByTestId('admin.requests.resolve.submit').click();
+    } else if (action === 'deny') {
+      await expect(page.getByTestId('admin.requests.resolve.submit')).toBeDisabled();
+      await page.getByTestId('admin.requests.resolve.reason').fill('Reviewed again');
+      await page.getByTestId('admin.requests.resolve.submit').click();
+    }
+    await expect.poll(() => posted).toEqual({ registration: {
+      action,
+      ...(action === 'approve' ? { create_vps: false, activate: true } : {}),
+      ...(action === 'deny' ? { reason: 'Reviewed again' } : {}),
+    } });
+    await page.goto('/admin/requests/registration/950');
+    await expect(page.getByTestId(`admin.requests.resolve.action.${action}`)).toHaveCount(0);
+    await expect(page.getByTestId('admin.requests.detail.metadata').locator('details')).toHaveAttribute('open', '');
+    await expect(page.getByTestId('admin.requests.detail.review').getByTestId('admin.requests.detail.risk.ip')).toHaveCount(0);
+    const details = await page.getByTestId('admin.requests.detail.registration.fields').boundingBox();
+    const ip = await page.getByTestId('admin.requests.detail.risk.ip').boundingBox();
+    const mail = await page.getByTestId('admin.requests.detail.risk.mail').boundingBox();
+    expect(ip!.y).toBeGreaterThan(details!.y + details!.height);
+    expect(mail!.y).toBeGreaterThan(details!.y + details!.height);
+  });
+}
+
+test('@pr-smoke @pr-smoke-mobile admin requests: reconsideration stops when a resolved state changes', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page);
+  await installOsmMapMock(page);
+  let reads = 0;
+  let posts = 0;
+  await installHaveApiMock(page, {
+    user: { id: 1, login: 'admin', level: 100 },
+    handlers: {
+      'GET user_request/registrations/951': () => ({ registration: registration(951, ++reads === 1 ? 'denied' : 'approved') }),
+      'POST user_request/registrations/951/resolve': () => { posts += 1; return {}; },
+    },
+  });
+  await page.goto('/admin/requests/registration/951');
+  await page.getByTestId('admin.requests.resolve.action.ignore').click();
+  await expect(page.getByRole('status')).toContainText(/changed before submission|před odesláním změnila/i);
+  expect(posts).toBe(0);
+});
