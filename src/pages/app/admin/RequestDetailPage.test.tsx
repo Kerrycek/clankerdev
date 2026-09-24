@@ -51,6 +51,7 @@ vi.mock('./RequestAddressMapLink', () => ({
 
 vi.mock('./RequestFraudChecks', () => ({
   RequestFraudChecks: () => null,
+  RequestFraudSummary: () => null,
 }));
 
 vi.mock('./RequestReviewActions', () => ({
