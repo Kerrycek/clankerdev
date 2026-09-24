@@ -20,12 +20,15 @@ Initial four-PR integration: `141b92281a232c4c07a73a2c475ef93eba457b60`.
 | [499](https://github.com/Kerrycek/clankerdev/pull/499) | `7c798b332a8edbaa8e5c017031c1e39edb3bb7d2` | Register passkeys on the authentication origin through the BFF |
 | [500](https://github.com/Kerrycek/clankerdev/pull/500) | `2fa71fe9bdd35781bb4c03acae2b445f28a1bad5` | Serialize BFF session refresh and logout through persistence |
 
-PR493–500 have successful static/unit and smoke CI; human review is still
+| [501](https://github.com/Kerrycek/clankerdev/pull/501) | `116737117996d72080659f34ef2d6809e92b86ba` | Preserve open tabs across OAuth rotation; reads retry once, writes require explicit resubmission |
+
+PR493–500 have successful static/unit and smoke CI. PR501 has successful
+static/unit CI and its updated smoke run is pending. Human review is still
 outstanding. Excluded PRs #242, #435 and #433 are not included.
 
 ## Beta gates
 
-- [x] Integrate PR493–498 locally on the candidate branch.
+- [x] Integrate PR493–501 locally on the candidate branch.
 - [x] Lint, i18n/CSP audits and typecheck on the combined code.
 - [x] 128 script tests and 24 BFF tests pass on the combined code.
 - [x] All 1,452 unit tests and production build pass after including PR497.
@@ -65,7 +68,10 @@ outstanding. Excluded PRs #242, #435 and #433 are not included.
   actual API token validation and deterministic failure/logout race regressions.
 - [x] Verify expired-refresh failure and real BFF cookie/store expiry in
   cs/en desktop/mobile with short isolated test lifetimes and full restoration.
-- [ ] Verify renewal in an already-open SPA, including later rotation by another tab.
+- [x] Verify request-triggered recovery in an already-open SPA after rotation
+  by another tab: read retry and preserved write forms with explicit resubmission.
+- [ ] Complete updated combined static/unit/build and desktop/mobile smoke
+  regression after the auth transport changes in PR499–501.
 - [ ] Verify DNS server publication, backup replication and remote restore.
 - [ ] Expand KB navigation contracts/fixtures and remaining live workflow coverage.
 - [ ] Complete human review and obtain approval for a concrete deployment.
@@ -390,3 +396,43 @@ never automatically replayed. Further work must preserve that safety property.
 Other remaining gates include authoritative DNS publication, remote backup
 replication/restore, KB navigation minimum, backend cursor agreement and human
 release review. No PR was merged, shared service deployed or upstream PR opened.
+
+
+## Mutation-first recovery — PR501 follow-up
+
+Integrated runtime `eccbcc9202301ca3fdd9b529818f5edfeee9c9f0` / API `486350466`
+adds form preservation for the first rejected write after rotation. The prior
+runtime `80956b440` reproduced one DNS POST 401 followed by document reload
+and lost fields. This baseline is retained separately, not counted as a pass.
+
+Four final actual Playwright variants pass (cs/en, desktop/mobile): the original
+tab still holds the old token at submission; one POST receives 401. The form,
+its values and document marker survive, and a localized message asks the user
+to submit again. No second POST occurs automatically. A second click sends one
+matching request, returns 200 and persists a zone with the expected name and
+fixture owner. Logout revokes the latest token. Zones 6, 7, 9 and 10 are deleted,
+absence checked, and the dedicated OAuth client restored in every variant.
+These DNS operations do not verify authoritative DNS publication.
+
+Evidence is `mutation-refresh/`. The initial desktop Czech harness compared a
+zone name without the API's canonical trailing dot; the same comparison made
+its first cleanup flag unreliable. The recorded zone 5 was subsequently checked
+by exact normalized name and owner 3, deleted, and confirmed inaccessible. Its
+failure and separate reconciliation proof remain preserved. The runner now
+normalizes the terminal dot for preflight, readback and cleanup.
+
+An initial mobile Czech attempt passed form/resubmission checks but failed
+during logout with a Playwright Error. Its exact cause is unconfirmed. Added
+waiting for the actual created-zone UI plus more precise failure stages; the
+fresh mobile retry passed. Zone 8 and client settings were cleaned in that
+initial attempt. Already-complete desktop receipts were preserved and skipped.
+No product defect is inferred from either harness failure.
+
+Local validation: full ci:pr with 1,450 unit, 128 script and 25 BFF tests;
+24 final focused transport tests additionally cover a mixed read/write case.
+Integrated targeted validation: 49 unit and 36 BFF tests, typecheck, and the
+Nix UI/BFF/services build. Final pinned KB check passes 60 concepts and 120
+existing PNGs. Older live receipts retain their own source pins. Broader
+combined regression is the next verification step; backend cursor agreement,
+DNS publication, remote backup/restore, KB minimum and human approval remain
+open. No shared service was deployed and no PR was merged.
