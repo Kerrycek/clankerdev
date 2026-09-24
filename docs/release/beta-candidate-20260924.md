@@ -51,7 +51,9 @@ outstanding. Excluded PRs #242, #435 and #433 are not included.
 - [x] Verify local snapshot data restoration through the UI in cs/en desktop/mobile.
 - [x] Verify server session revocation, protected-content removal and real
   reauthentication in cs/en desktop/mobile with two independent OAuth sessions.
-- [ ] Verify timed session expiry/token refresh and MFA against the isolated API.
+- [x] Verify TOTP enrollment, password-only challenge, invalid/valid codes and
+  fixture cleanup against real OAuth in cs/en desktop/mobile.
+- [ ] Verify timed session expiry/token refresh, WebAuthn and recovery codes.
 - [ ] Verify DNS server publication, backup replication and remote restore.
 - [ ] Expand KB navigation contracts/fixtures and remaining live workflow coverage.
 - [ ] Complete human review and obtain approval for a concrete deployment.
@@ -168,6 +170,24 @@ KB runner commit `e8c93d4a38e77ec7e454d3283036b4e3e96213dd` adds
 `bin/capture --ui clankerdev --scenario session` with optional `--mobile`.
 The pinned `bin/check` passed and the 120 legacy PNGs remain unchanged.
 UI/API pins remain `22cf9910` / `486350466`.
+
+The `live-mfa/` evidence covers TOTP enrollment and login in the same four
+locale/layout combinations, using `test-user2@example.test`. The UI creates and
+confirms a temporary device, a fresh browser requires a second factor after
+password entry, an invalid code is rejected, and a valid code completes OAuth.
+Each final receipt confirms device deletion and restoration of the original
+MFA master flag. No provisioning secret, QR, recovery code, screenshot or trace
+is saved. This does not certify WebAuthn or recovery-code behavior.
+
+The first harness attempt passed the authentication checks but failed during
+logout/cleanup. Its temporary device was already deleted; the master flag was
+restored through the isolated fixture admin UI. The harness now handles the
+MFA-disable confirmation dialog explicitly and defers logout until after
+cleanup. All four final runs completed with cleanup; initial failure and
+reconciliation logs remain in the bundle. Runner commit
+`9ea64f73e068f1330cdede72dda10689f19158bb` adds `--scenario mfa` and passes the
+pinned `bin/check`, including a public TOTP test vector. Legacy PNGs and tested
+UI/API revisions are unchanged.
 
 ## Deployment and rollback boundaries
 
