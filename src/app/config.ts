@@ -47,6 +47,8 @@ export interface RuntimeConfig {
   logoutUrl?: string;
   /** Optional absolute/relative password-recovery URL exposed by the OAuth provider. */
   passwordRecoveryUrl?: string;
+  /** Same-origin hosted WebAuthn handoff, provided by the integrated BFF. */
+  passkeyRegistrationUrl?: string;
   /** Unix timestamp in milliseconds when the integrated BFF session expires. */
   sessionExpiresAt?: number;
   /** React Router basename for sub-path deployments (e.g. '/ui-next'). Empty means root. */
@@ -328,6 +330,7 @@ export function getRuntimeConfig(): RuntimeConfig {
     loginUrl,
     logoutUrl,
     passwordRecoveryUrl,
+    passkeyRegistrationUrl: win?.vpsAdmin?.webuiNext?.passkeyRegistrationUrl,
     sessionExpiresAt,
     routerBasename,
     auth,

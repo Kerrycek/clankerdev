@@ -189,6 +189,16 @@ server {
     proxy_set_header X-Forwarded-Proto \$scheme;
   }
 
+  # BFF supplies the handoff CSP; local headers prevent default inheritance.
+  location = /oauth/passkey {
+    proxy_pass http://127.0.0.1:${BFF_PORT};
+    proxy_set_header Host \$host;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()" always;
+  }
+
   location ^~ /oauth/ {
     proxy_pass http://127.0.0.1:${BFF_PORT};
     proxy_hide_header Referrer-Policy;
@@ -299,6 +309,16 @@ server {
     proxy_pass http://127.0.0.1:${BFF_PORT}/healthz;
     proxy_set_header Host \$host;
     proxy_set_header X-Forwarded-Proto https;
+  }
+
+  # BFF supplies the handoff CSP; local headers prevent default inheritance.
+  location = /oauth/passkey {
+    proxy_pass http://127.0.0.1:${BFF_PORT};
+    proxy_set_header Host \$host;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()" always;
   }
 
   location ^~ /oauth/ {
