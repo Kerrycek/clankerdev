@@ -19,7 +19,7 @@ Initial four-PR integration: `141b92281a232c4c07a73a2c475ef93eba457b60`.
 | [498](https://github.com/Kerrycek/clankerdev/pull/498) | `4d9cb3f1f045379645dbc52d9b083f616e5a8f87` | Preserve resource choices when asynchronous VPS defaults arrive |
 | [499](https://github.com/Kerrycek/clankerdev/pull/499) | `7c798b332a8edbaa8e5c017031c1e39edb3bb7d2` | Register passkeys on the authentication origin through the BFF |
 
-PR493–498 have successful static/unit and smoke CI; human review is still
+PR493–499 have successful static/unit and smoke CI; human review is still
 outstanding. Excluded PRs #242, #435 and #433 are not included.
 
 ## Beta gates
@@ -56,7 +56,14 @@ outstanding. Excluded PRs #242, #435 and #433 are not included.
   fixture cleanup against real OAuth in cs/en desktop/mobile.
 - [x] Fix confirmed WebAuthn registration origin mismatch and verify enrollment
   and login with a browser virtual authenticator; see [actual reproduction and existing hosted contract](../contracts/webauthn-registration-origin.md).
-- [ ] Verify timed session expiry/token refresh and recovery codes.
+- [x] Verify real API auto-renewal, idle expiry and BFF bootstrap refresh in
+  cs/en desktop/mobile.
+- [x] Verify recovery-code login, disabled-factor replay rejection and remaining
+  TOTP-factor login in cs/en desktop/mobile.
+- [ ] Fix [confirmed concurrent BFF refresh](../contracts/bff-concurrent-refresh.md)
+  and verify failure/logout races.
+- [ ] Verify BFF cookie expiry and expired-refresh failure; bootstrap refresh
+  does not certify renewal in an already-open SPA.
 - [ ] Verify DNS server publication, backup replication and remote restore.
 - [ ] Expand KB navigation contracts/fixtures and remaining live workflow coverage.
 - [ ] Complete human review and obtain approval for a concrete deployment.
@@ -236,3 +243,46 @@ the existing 60 concepts and 120 legacy PNGs were unchanged.
 
 Earlier unrelated workflow receipts retain their original UI pins. This section
 does not re-label those checks as executions against the new runtime pin.
+
+## Timed expiry and recovery codes
+
+On runtime UI `e50b8e70` / API `486350466`, all four cs/en desktop/mobile
+variants pass each of the following real Playwright workflows:
+
+- A 20-second renewable API token remains valid during 30 seconds of actual
+  requests, expires after 25 seconds of genuine inactivity, and produces an
+  API 401, localized expiry notice and removal of protected UI content.
+- With the dedicated fixture OAuth client temporarily configured for fixed
+  75-second tokens, bootstrap refresh rotates the access token; the old token
+  returns 401 and the new token returns the same user successfully.
+- Two TOTP devices are enrolled. The first device's recovery code completes
+  actual OAuth login and disables that device while the other remains active.
+  Reusing the code in a fresh challenge is rejected, and the remaining TOTP
+  device still authenticates. Both temporary devices are deleted and the
+  original account MFA flag is restored.
+
+All runs restore and verify the dedicated OAuth client's original settings.
+Secrets stay in memory; no provisioning screenshots, traces or token dumps
+are recorded. Recovery replay is verified while its device remains disabled;
+this does not assert permanent invalidation after manually re-enabling it.
+BFF cookie expiry, expired-refresh failures, continuously open SPA renewal and
+concurrent refresh remain separate gates.
+
+Evidence: `session-gates/expiry-*.json`, `recovery-*.json` and matching logs.
+One mobile English expiry run completed all assertions and restoration, then
+hit a proxy socket reset during teardown. The harness now handles early socket
+errors with a regression test; rerunning its completed receipt exits cleanly
+without repeating mutations. An initial mobile Czech recovery attempt timed
+out before completing replay verification; cleanup succeeded. The retry with
+finer stage diagnostics and a longer MFA-challenge wait passed, as did mobile
+English. The initial failure remains in the evidence bundle; its cause is not
+asserted to be a product defect.
+
+KB runner commit `c6ffc2390c97157945a0b14762c470b35e26cf82` is present in both
+own checkouts. Pinned `bin/check` passes with 60 concepts and 120 legacy PNGs
+unchanged. No upstream KB push or publication was performed.
+
+A further actual-API concurrency probe found a new refresh-enabled defect:
+eight parallel BFF requests returned tokens, but seven immediately failed API
+validation with 401. The later stored token remained valid. This gate remains
+open; see the [reproduction and fix requirements](../contracts/bff-concurrent-refresh.md).
