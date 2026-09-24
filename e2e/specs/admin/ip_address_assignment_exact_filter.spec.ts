@@ -117,7 +117,7 @@ test('@pr-smoke legacy assignment q links are canonical before the first list re
     ipAddr: exactAddress,
     q: null,
     fromId: null,
-    limit: '25',
+    limit: '26',
   }]);
 
   await page.goBack();

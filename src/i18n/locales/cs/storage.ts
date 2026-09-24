@@ -3,6 +3,7 @@ import { csStorageExports } from "./storage/exports";
 import { csDatasetExpansion } from './storage/dataset_expansion';
 import { csBackups } from './storage/backups';
 export const csStorage = {
+  "datasets.pagination.restart": "Zpět na první stránku",
   ...csBackups,
   "datasets.list.title": "Datasety",
   "datasets.list.description":
@@ -170,7 +171,8 @@ export const csStorage = {
   "dataset.manage.field.atime": "Access time",
   "dataset.manage.field.relatime": "Relative access time",
   "dataset.manage.field.sharenfs": "NFS share",
-  "dataset.manage.field.admin_override": "Nastavit bez ohledu na volné prostředky",
+  "dataset.manage.field.admin_override": "Povolit překročení prostředků uživatele",
+  "dataset.manage.help.admin_override": "Povolí navýšení i při nedostatku přidělených prostředků uživatele. Ostatní kontroly zůstávají platné.",
   "dataset.manage.field.admin_lock_type": "Typ admin locku",
   "dataset.manage.sync.standard": "Standard",
   "dataset.manage.sync.always": "Vždy",

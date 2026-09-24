@@ -3,6 +3,7 @@ import { enStorageExports } from "./storage/exports";
 import { enDatasetExpansion } from './storage/dataset_expansion';
 import { enBackups } from './storage/backups';
 export const enStorage = {
+  "datasets.pagination.restart": "Back to first page",
   ...enBackups,
   "datasets.list.title": "Datasets",
   "datasets.list.description":
@@ -163,7 +164,8 @@ export const enStorage = {
   "dataset.manage.field.atime": "Access time",
   "dataset.manage.field.relatime": "Relative access time",
   "dataset.manage.field.sharenfs": "NFS share",
-  "dataset.manage.field.admin_override": "Set regardless of available resources",
+  "dataset.manage.field.admin_override": "Allow exceeding user resource allocation",
+  "dataset.manage.help.admin_override": "Allow increases even when the user has no allocated resources left. Other checks still apply.",
   "dataset.manage.field.admin_lock_type": "Admin lock type",
   "dataset.manage.sync.standard": "Standard",
   "dataset.manage.sync.always": "Always",

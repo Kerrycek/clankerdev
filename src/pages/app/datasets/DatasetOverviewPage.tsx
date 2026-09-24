@@ -146,9 +146,12 @@ function buildEditablePayload(
 
     if (isAdmin) {
       if (form.sharenfs !== undefined) payload.sharenfs = form.sharenfs.trim();
-      if (form.adminOverride !== undefined) payload.admin_override = form.adminOverride;
-      if (form.adminLockType !== undefined) payload.admin_lock_type = form.adminLockType;
     }
+  }
+
+  if (isAdmin) {
+    if (form.adminOverride !== undefined) payload.admin_override = form.adminOverride;
+    if (form.adminLockType !== undefined) payload.admin_lock_type = form.adminLockType;
   }
 
   return payload;
@@ -211,13 +214,9 @@ function DatasetManagementCard() {
       ? ((dataset as any).sync as DatasetEditablePayload['sync'])
       : undefined,
     sharenfs: typeof (dataset as any).sharenfs === 'string' ? (dataset as any).sharenfs : undefined,
-    adminOverride:
-      typeof (dataset as any).admin_override === 'boolean' ? (dataset as any).admin_override : undefined,
-    adminLockType: ['no_lock', 'absolute', 'not_less', 'not_more'].includes(
-      String((dataset as any).admin_lock_type)
-    )
-      ? ((dataset as any).admin_lock_type as DatasetEditForm['adminLockType'])
-      : undefined,
+    // Allocation exceptions are explicit per-save options, not dataset properties.
+    adminOverride: undefined,
+    adminLockType: undefined,
   }));
 
   const objectLabel = datasetLabel(dataset);
@@ -285,6 +284,7 @@ function DatasetManagementCard() {
     onSuccess: (res) => {
       track(res.meta, 'action.dataset.update.label');
       setEditAdvancedDirty(false);
+      setEdit((previous) => ({ ...previous, adminOverride: undefined, adminLockType: undefined }));
     },
     onError: (e: any) => {
       if (e?.code === 'BUSY') chrome.openTasks();
@@ -456,36 +456,6 @@ function DatasetManagementCard() {
                 testId="dataset.manage.sharenfs"
               />
             </label>
-            <label className="block">
-              <div className="text-xs font-medium text-muted">{t('dataset.manage.field.admin_lock_type')}</div>
-              <Select
-                value={edit.adminLockType ?? ''}
-                onChange={(event) => {
-                  setEdit((previous) => ({
-                    ...previous,
-                    adminLockType: event.target.value as DatasetEditForm['adminLockType'],
-                  }));
-                  setEditAdvancedDirty(true);
-                }}
-                testId="dataset.manage.admin_lock_type"
-                options={[
-                  { value: '', label: t('common.na'), disabled: true },
-                  { value: 'no_lock', label: t('dataset.manage.admin_lock.no_lock') },
-                  { value: 'absolute', label: t('dataset.manage.admin_lock.absolute') },
-                  { value: 'not_less', label: t('dataset.manage.admin_lock.not_less') },
-                  { value: 'not_more', label: t('dataset.manage.admin_lock.not_more') },
-                ]}
-              />
-            </label>
-            <Checkbox
-              checked={edit.adminOverride ?? false}
-              onChange={(value) => {
-                setEdit((previous) => ({ ...previous, adminOverride: value }));
-                setEditAdvancedDirty(true);
-              }}
-              label={t('dataset.manage.field.admin_override')}
-              testId="dataset.manage.admin_override"
-            />
           </div>
         ) : null}
       </div>
@@ -633,6 +603,42 @@ function DatasetManagementCard() {
           />
         </label>
       </div>
+
+      {showAdminControls ? (
+        <div className="grid gap-3 rounded-lg border border-border bg-surface-2 p-3 sm:grid-cols-2">
+          <label className="block">
+            <div className="text-xs font-medium text-muted">{t('dataset.manage.field.admin_lock_type')}</div>
+            <Select
+              value={edit.adminLockType ?? ''}
+              onChange={(event) => {
+                setEdit((previous) => ({
+                  ...previous,
+                  adminLockType: event.target.value as DatasetEditForm['adminLockType'],
+                }));
+              }}
+              disabled={updateM.isPending}
+              testId="dataset.manage.admin_lock_type"
+              options={[
+                { value: '', label: t('common.na'), disabled: true },
+                { value: 'no_lock', label: t('dataset.manage.admin_lock.no_lock') },
+                { value: 'absolute', label: t('dataset.manage.admin_lock.absolute') },
+                { value: 'not_less', label: t('dataset.manage.admin_lock.not_less') },
+                { value: 'not_more', label: t('dataset.manage.admin_lock.not_more') },
+              ]}
+            />
+          </label>
+          <Checkbox
+            checked={edit.adminOverride ?? false}
+            onChange={(value) => {
+              setEdit((previous) => ({ ...previous, adminOverride: value }));
+            }}
+            label={t('dataset.manage.field.admin_override')}
+            description={t('dataset.manage.help.admin_override')}
+            disabled={updateM.isPending}
+            testId="dataset.manage.admin_override"
+          />
+        </div>
+      ) : null}
 
       {advancedFields}
     </div>

@@ -15,6 +15,8 @@ module.exports = {
         'scroll-registry': '420px',
       },
       height: {
+        // Leave room for the heatmap title, description and persistent footer.
+        heatmap: 'clamp(16rem, calc(100dvh - 15rem), 48rem)',
         console: 'var(--console-h)',
         'console-focus': 'var(--console-focus-h)',
       },

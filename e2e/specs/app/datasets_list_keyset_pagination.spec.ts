@@ -29,7 +29,7 @@ test.describe('Datasets list keyset pagination', () => {
       handlers: {
         'GET datasets': ({ searchParams }) => {
           const fromId = searchParams.get('dataset[from_id]');
-          return { datasets: fromId ? page2 : page1, _meta: { total_count: 100 } };
+          return { datasets: fromId ? page2 : [...page1, page2[0]], _meta: { total_count: 100 } };
         },
       },
     });
@@ -99,7 +99,7 @@ test.describe('Datasets list text filter contract', () => {
           expect(searchParams.get('dataset[q]')).toBeNull();
           const fromId = searchParams.get('dataset[from_id]');
           return {
-            datasets: fromId ? secondPage : firstPage,
+            datasets: fromId ? secondPage : [...firstPage, secondPage[0]],
             _meta: { total_count: 51 },
           };
         },

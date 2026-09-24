@@ -129,7 +129,7 @@ test('@pr-smoke support account stays read-only inside the admin VPS shell', asy
   await expect(page.getByText('Autostart priority', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Change reason', { exact: true })).toHaveCount(0);
   await expect(page.getByText('Admin lock type', { exact: true })).toHaveCount(0);
-  await expect(page.getByText('Admin override', { exact: true })).toHaveCount(0);
+  await expect(page.getByTestId('vps.config.admin_override')).toHaveCount(0);
   await expect(page.getByText('You do not have permission to perform this action.')).toBeVisible();
   await expect(page.locator('fieldset:disabled')).toBeVisible();
 

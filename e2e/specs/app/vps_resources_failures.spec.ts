@@ -116,7 +116,7 @@ test.describe('@workflow-matrix VPS resource mutation regressions', () => {
     await resourceInput(page, 'CPU').fill('4');
     await reviewAndSubmit(page, 1);
 
-    await expect(page.getByText(/server did not return a task identifier/i)).toBeVisible();
+    await expect(page.getByTestId('vps.config.confirm.error').getByText(/server did not return a task identifier/i)).toBeVisible();
     await expect(resourceInput(page, 'CPU')).toHaveValue('4');
     await page.getByRole('button', { name: 'Cancel', exact: true }).click();
     await expect(page.getByTestId('vps.mutation.uncertain')).toBeVisible();

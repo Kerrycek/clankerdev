@@ -31,7 +31,7 @@ async function settleAnimationFrames(page: Page) {
   await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
 }
 
-test('@pr-smoke @pr-smoke-mobile @smoke @smoke-mobile keyboard users can skip chrome and keep route focus predictable', async ({ page }, testInfo) => {
+test('@pr-smoke @pr-smoke-mobile @smoke @smoke-mobile keyboard users can skip chrome and keep route focus predictable', async ({ page, browserName }, testInfo) => {
   await bootstrapVpsAdminWindow(page, { sessionToken: 'KEYBOARD_USER_SESSION' });
   await installHaveApiMock(page, {
     user: { id: 10, login: 'alice', level: 100 },
@@ -53,11 +53,14 @@ test('@pr-smoke @pr-smoke-mobile @smoke @smoke-mobile keyboard users can skip ch
   await expect(page.getByTestId('app.dashboard.page')).toBeVisible();
   await expect(main).not.toBeFocused();
 
-  await page.keyboard.press('Tab');
+  // WebKit on macOS uses Option+Tab to include links in keyboard traversal.
+  await page.keyboard.press(browserName === 'webkit' ? 'Alt+Tab' : 'Tab');
   await expect(skipLink).toBeFocused();
   await expect(skipLink).toBeVisible();
+  await expect(skipLink).not.toHaveCSS('box-shadow', 'none');
   await page.keyboard.press('Enter');
   await expect(main).toBeFocused();
+  await expect(main).toHaveCSS('outline-style', 'none');
   await page.evaluate(() => window.history.replaceState(window.history.state, '', '/app'));
   await expect(page).toHaveURL(/\/app$/);
 
@@ -94,6 +97,7 @@ test('@pr-smoke @pr-smoke-mobile @smoke @smoke-mobile keyboard users can skip ch
   await expect(page).toHaveURL(/\/app\/vps$/);
   await expect(page.getByTestId('vps.list')).toBeVisible();
   await expect(main).toBeFocused();
+  await expect(main).toHaveCSS('outline-style', 'none');
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   await settleAnimationFrames(page);
   expect(await scrollToCallCount(page)).toBe(1);
@@ -109,12 +113,14 @@ test('@pr-smoke @pr-smoke-mobile @smoke @smoke-mobile keyboard users can skip ch
     await expect(page).toHaveURL(/\/app$/);
     await expect(page.getByTestId('nav.drawer')).toBeHidden();
     await expect(main).toBeFocused();
+    await expect(main).toHaveCSS('outline-style', 'none');
     await settleAnimationFrames(page);
     expect(await scrollToCallCount(page)).toBe(0);
 
     await page.goForward();
     await expect(page).toHaveURL(/\/app\/vps(?:\?.*)?$/);
     await expect(main).toBeFocused();
+    await expect(main).toHaveCSS('outline-style', 'none');
     await settleAnimationFrames(page);
     expect(await scrollToCallCount(page)).toBe(0);
   }
@@ -125,6 +131,7 @@ test('@pr-smoke @pr-smoke-mobile @smoke @smoke-mobile keyboard users can skip ch
   await smartFilter.press('Enter');
   await expect(page).toHaveURL(/\/app\/vps\?.*q=alpha/);
   await expect(smartFilter).toBeFocused();
+  await expect(smartFilter).not.toHaveCSS('box-shadow', 'none');
   await settleAnimationFrames(page);
   expect(await scrollToCallCount(page)).toBe(0);
 

@@ -83,30 +83,51 @@ function RegistrationDetails(props: { request: RegistrationRequest }) {
   const request = props.request;
 
   return (
-    <dl className="grid grid-cols-1 gap-4 md:grid-cols-2" data-testid="admin.requests.detail.registration.fields">
-      <DetailField label={t('requests.field.login')} value={request.login} />
-      <DetailField label={t('requests.field.full_name')} value={request.full_name} />
-      <DetailField label={t('requests.field.org')} value={request.org_name} />
-      <DetailField label={t('requests.detail.org_id')} value={request.org_id} />
-      <DetailField label={t('requests.field.email')} value={request.email} />
-      <DetailField label={t('requests.field.year_of_birth')} value={request.year_of_birth} />
-      <div className="md:col-span-2">
-        <dt className="text-xs text-muted">{t('requests.field.address')}</dt>
-        <dd className="mt-1">
-          <RequestAddressMapLink
-            address={request.address}
-            testId="admin.requests.detail.registration.address.map"
-          />
-        </dd>
+    <div className="space-y-3" data-testid="admin.requests.detail.registration.fields">
+      <Card>
+        <CardHeader title={t('requests.detail.registration.title')} />
+        <CardBody className="space-y-4">
+          <dl className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <DetailField label={t('requests.field.login')} value={request.login} />
+            <DetailField label={t('requests.field.full_name')} value={request.full_name} />
+            <DetailField label={t('requests.field.email')} value={request.email} />
+            <DetailField label={t('requests.field.year_of_birth')} value={request.year_of_birth} />
+            <DetailField label={t('requests.field.org')} value={request.org_name} />
+            <DetailField label={t('requests.detail.org_id')} value={request.org_id} />
+          </dl>
+          <div className="border-t border-border pt-4">
+            <h2 className="mb-3 text-sm font-semibold">{t('requests.detail.registration.context')}</h2>
+            <dl className="space-y-3">
+              <DetailField label={t('requests.field.note')} value={request.note} />
+              <DetailField label={t('requests.field.how')} value={request.how} />
+            </dl>
+          </div>
+        </CardBody>
+      </Card>
+      <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-2">
+        <Card testId="admin.requests.detail.registration.preferences">
+          <CardHeader title={t('requests.detail.registration.preferences')} />
+          <CardBody>
+            <dl className="space-y-3">
+              <DetailField label={t('requests.field.os_template')} value={requestResourceLabel(request.os_template)} />
+              <DetailField label={t('requests.field.location')} value={requestResourceLabel(request.location)} />
+              <DetailField label={t('requests.field.currency')} value={request.currency?.toUpperCase()} />
+              <DetailField label={t('requests.field.language')} value={requestResourceLabel(request.language)} />
+              <DetailField label={t('requests.field.time_zone')} value={request.time_zone} />
+            </dl>
+          </CardBody>
+        </Card>
+        <Card>
+          <CardHeader title={t('requests.field.address')} />
+          <CardBody>
+            <RequestAddressMapLink
+              address={request.address}
+              testId="admin.requests.detail.registration.address.map"
+            />
+          </CardBody>
+        </Card>
       </div>
-      <DetailField label={t('requests.field.how')} value={request.how} />
-      <DetailField label={t('requests.field.note')} value={request.note} />
-      <DetailField label={t('requests.field.os_template')} value={requestResourceLabel(request.os_template)} />
-      <DetailField label={t('requests.field.location')} value={requestResourceLabel(request.location)} />
-      <DetailField label={t('requests.field.currency')} value={request.currency?.toUpperCase()} />
-      <DetailField label={t('requests.field.language')} value={requestResourceLabel(request.language)} />
-      <DetailField label={t('requests.field.time_zone')} value={request.time_zone} wide />
-    </dl>
+    </div>
   );
 }
 
@@ -429,16 +450,13 @@ export function RequestDetailPage() {
           {reqType === 'registration' ? <RequestFraudChecks request={request as RegistrationRequest} /> : null}
         </aside>
 
-        <section className="space-y-3 lg:col-span-2 lg:col-start-1 lg:row-start-1">
-          <Card>
-            <CardHeader
-              title={reqType === 'registration' ? t('requests.detail.registration.title') : t('requests.detail.change.title')}
-              subtitle={reqType === 'registration' ? t('requests.detail.registration.subtitle') : t('requests.detail.change.subtitle')}
-            />
-            <CardBody>
-              {reqType === 'registration' ? (
-                <RegistrationDetails request={request as RegistrationRequest} />
-              ) : (
+        <section className="min-w-0 space-y-3 lg:col-span-2 lg:col-start-1 lg:row-start-1">
+          {reqType === 'registration' ? (
+            <RegistrationDetails request={request as RegistrationRequest} />
+          ) : (
+            <Card>
+              <CardHeader title={t('requests.detail.change.title')} subtitle={t('requests.detail.change.subtitle')} />
+              <CardBody>
                 <ChangeDetails
                   request={request as ChangeRequest}
                   currentUser={currentUserQ.data}
@@ -446,12 +464,12 @@ export function RequestDetailPage() {
                   currentUnavailable={!changeUserId || currentUserQ.isError}
                   ownerMissing={requestMissingRequiredUser('change', request)}
                 />
-              )}
-            </CardBody>
-          </Card>
+              </CardBody>
+            </Card>
+          )}
 
           <Card testId="admin.requests.detail.metadata">
-            <details className="group">
+            <details key={`${reqType}:${reqId}`} className="group" open>
               <summary
                 className="flex cursor-pointer list-none items-center gap-2 p-4 font-semibold"
                 data-testid="admin.requests.detail.metadata.toggle"
@@ -485,13 +503,13 @@ export function RequestDetailPage() {
                   <DetailField label={t('common.updated')} value={formatDateTime(request.updated_at)} />
                   <div>
                     <dt className="text-xs text-muted">{t('requests.detail.api_ip')}</dt>
-                    <dd className="mt-0.5 text-sm">{stringValue(request.api_ip_addr)}</dd>
-                    {request.api_ip_ptr ? <dd className="text-xs text-muted">{request.api_ip_ptr}</dd> : null}
+                    <dd className="mt-0.5 break-words text-sm">{stringValue(request.api_ip_addr)}</dd>
+                    {request.api_ip_ptr ? <dd className="break-words text-xs text-muted">{request.api_ip_ptr}</dd> : null}
                   </div>
                   <div>
                     <dt className="text-xs text-muted">{t('requests.detail.client_ip')}</dt>
-                    <dd className="mt-0.5 text-sm">{stringValue(request.client_ip_addr)}</dd>
-                    {request.client_ip_ptr ? <dd className="text-xs text-muted">{request.client_ip_ptr}</dd> : null}
+                    <dd className="mt-0.5 break-words text-sm">{stringValue(request.client_ip_addr)}</dd>
+                    {request.client_ip_ptr ? <dd className="break-words text-xs text-muted">{request.client_ip_ptr}</dd> : null}
                   </div>
                 </dl>
                 {hasOperationalLinks ? (

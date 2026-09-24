@@ -156,6 +156,7 @@ export async function fetchIpAddressAssignments(opts?: {
   network?: number;
   order?: 'newest' | 'oldest';
   includes?: string;
+  signal?: AbortSignal;
 }) {
   const params: Record<string, unknown> = {};
   if (opts?.limit !== undefined) params['limit'] = opts.limit;
@@ -172,6 +173,7 @@ export async function fetchIpAddressAssignments(opts?: {
     method: 'GET',
     path: '/ip_address_assignments',
     namespace: 'ip_address_assignment',
+    signal: opts?.signal,
     params,
     meta: {
       includes: opts?.includes ?? 'user,vps,assigned_by_chain,unassigned_by_chain,ip_address',
