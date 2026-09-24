@@ -24,11 +24,11 @@ function stillCurrent(state: BffSession): boolean {
     && auth.kind === 'oauth2' && auth.accessToken === state.token;
 }
 
-/** One bounded recovery per failed read; concurrent callers share the lookup. */
+/** One bounded recovery per rejected request; concurrent callers share the lookup. */
 export async function recoverBffSession(failedToken: string): Promise<boolean> {
   const state = session;
   if (!state || !stillCurrent(state)) return false;
-  // A slower response may refer to the token another read already replaced.
+  // A slower response may refer to the token another request already replaced.
   if (failedToken !== state.token) return true;
   if (state.pending) return state.pending;
 
