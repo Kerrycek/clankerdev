@@ -71,7 +71,8 @@ outstanding. Excluded PRs #242, #435 and #433 are not included.
 - [x] Complete updated combined static/unit/build and desktop/mobile smoke
   regression after the auth transport changes in PR499–501.
 - [x] Verify DNS publication on both authoritative servers in cs/en desktop/mobile.
-- [ ] Verify backup replication and remote restore.
+- [x] Verify backup replication and remote restore in cs/en desktop/mobile,
+  including backup-only snapshot placement, restored content and fixture cleanup.
 - [x] Verify prototype member kernel/system-history navigation contracts and
   actual cs/en desktop/mobile screenshots, preserving semantic control IDs.
 - [ ] Expand remaining KB navigation/page bindings and live workflow coverage.
@@ -512,3 +513,47 @@ external delegation, DNSSEC, public resolvers, remote backup replication or
 restore. Human review, outstanding API cursor contracts and remaining KB/admin
 coverage retain their separate open gates. No shared service deployment or
 upstream PR was performed.
+
+
+### Actual remote backup restoration — 24 September
+
+All four cs/en desktop/mobile Playwright workflows passed on UI
+`eccbcc9202301ca3fdd9b529818f5edfeee9c9f0` / API
+`486350466e8fb6f966add1cde3fa2bc12b4d6b62`. KB branch implementation is
+`51fcab874cc701fe5941f97614d63abdf679daa7`, local and synced to the owned
+isolated runner; no upstream KB publication is implied.
+
+Each fixture member created two snapshots through the actual UI. Native
+replication transferred them to the separate backup node and retention removed
+the older primary copy. Both API-model placement and actual ZFS inventory
+confirmed that the selected snapshot existed only on the backup before the
+member invoked UI rollback. Every restore completed successful Send on node
+201 and Recv/PrepareRollback/ApplyRollback on node 101, then returned the
+synthetic file to its original content. These are actual remote transfers,
+independent of the earlier local-rollback evidence.
+
+| Variant | Dataset | UI snapshots | Native replication | UI restore | Native cleanup |
+| --- | --- | --- | --- | --- | --- |
+| desktop cs | 5 | 9, 10 | 276 | 277 | 278, 279 |
+| desktop en | 6 | 11, 12 | 283 | 284 | 285, 286 |
+| mobile cs | 7 | 13, 14 | 290 | 291 | 292, 293 |
+| mobile en | 8 | 15, 16 | 297 | 298 | 299, 300 |
+
+All sessions logged out. All four dedicated datasets, their snapshots and pool
+copies are absent from the database; their source/backup filesystems are absent
+from ZFS. The original fixture VPS and pools are preserved. The two new empty
+pools remain owned fixture infrastructure. Replication, retention and cleanup
+are native fixture operations; only snapshot creation and rollback are claimed
+as UI workflows.
+
+Evidence is in `clankerdev-beta-20260924/remote-backup/`: four final receipts,
+`summary.json`, native fixture receipts, final database verification and logs.
+The first desktop attempt exposed a test harness Fetch-response accessor error
+after snapshot acceptance. The harness was corrected and resumed that saved
+ID without creating a duplicate; the failure log is retained. Pinned KB
+`bin/check` passed, including all 120 existing legacy PNGs. No new product code
+was needed and the previously validated UI/API pins remain unchanged.
+
+This gate does not certify scheduled backup execution, every restore topology,
+or disaster recovery. API cursor agreement, remaining KB/admin coverage and
+human release review remain open.
