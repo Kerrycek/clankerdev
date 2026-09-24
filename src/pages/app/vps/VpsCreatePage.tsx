@@ -58,6 +58,7 @@ import {
   CreateTargetCard,
 } from './VpsCreateWizardPrimitives';
 import { useVpsCreateOutcomeState } from './useVpsCreateOutcomeState';
+import { useVpsCreateResourceDefaults } from './useVpsCreateResourceDefaults';
 export { buildVpsCreatePayload, defaultForm, validateForm, type FormState } from './VpsCreateModel';
 
 const VALIDATION_FIELD_TARGETS: ReadonlyArray<readonly [readonly string[], string]> = [
@@ -204,27 +205,7 @@ export function VpsCreatePage() {
     [t, templates]
   );
 
-  useEffect(() => {
-    const defaults = defaultResourcesQ.data;
-    if (!defaults) return;
-
-    const next: Partial<FormState> = {};
-    for (const item of defaults) {
-      const name = item.cluster_resource?.name;
-      const value = typeof item.value === 'number' ? String(item.value) : undefined;
-      if (value === undefined) continue;
-      if (name === 'cpu') next.cpu = value;
-      else if (name === 'memory') next.memory = value;
-      else if (name === 'swap') next.swap = value;
-      else if (name === 'diskspace') next.diskspace = value;
-      else if (name === 'ipv4') next.ipv4 = value;
-      else if (name === 'ipv4_private') next.ipv4Private = value;
-      else if (name === 'ipv6') next.ipv6 = value;
-    }
-
-    if (Object.keys(next).length === 0) return;
-    setForm((prev) => ({ ...prev, ...next }));
-  }, [defaultResourcesQ.data]);
+  const markResourceEdited = useVpsCreateResourceDefaults(defaultResourcesQ.data, setForm);
 
   const validationKeys = useMemo(() => {
     const keys = validateForm(form, isAdminMode, hiddenAdminTarget);
@@ -364,12 +345,14 @@ export function VpsCreatePage() {
   const loadError = locationQ.error || (needsAdminPayload ? nodesQ.error : null) || templatesQ.error;
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
+    markResourceEdited(key);
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
   function applyResourcePreset(presetId: string) {
     const preset = RESOURCE_PRESETS.find((item) => item.id === (presetId as ResourcePresetId));
     if (!preset) return;
+    for (const field of ['cpu', 'memory', 'diskspace', 'swap'] as const) markResourceEdited(field);
     setForm((prev) => ({
       ...prev,
       cpu: preset.cpu,

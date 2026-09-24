@@ -6,6 +6,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { LocalMutationGeneration } from '../../../lib/localLocks';
+import { fetchDefaultObjectClusterResources } from '../../../lib/api/clusterResources';
 import { VpsCreatePage } from './VpsCreatePage';
 
 const testState = vi.hoisted(() => ({
@@ -48,7 +49,7 @@ vi.mock('../../../components/layout/ChromeContext', () => ({
 }));
 
 vi.mock('../../../lib/api/infra', () => ({
-  fetchLocations: vi.fn().mockResolvedValue({ data: [{ id: 3, label: 'Test location' }], meta: {} }),
+  fetchLocations: vi.fn().mockResolvedValue({ data: [{ id: 3, label: 'Test location', environment: { id: 1 } }], meta: {} }),
 }));
 
 vi.mock('../../../lib/api/nodes', () => ({ fetchNodes: vi.fn() }));
@@ -82,6 +83,7 @@ vi.mock('../../../lib/vpsCreateOutcomeReconcile', () => ({
 describe('VpsCreatePage accepted action binding', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(fetchDefaultObjectClusterResources).mockResolvedValue({ data: [], meta: {}, envelope: { status: true } });
     testState.userId = 9;
     const pending = { id: 'receipt-1', createdAt: 1, phase: 'pending', identity: { hostname: 'accepted-vps' } };
     testState.readLatest.mockReturnValue(null);
@@ -89,6 +91,48 @@ describe('VpsCreatePage accepted action binding', () => {
     testState.markAccepted.mockResolvedValue({ ...pending, phase: 'accepted', candidateVpsId: 123, actionStateId: 456 });
     testState.clearOutcome.mockResolvedValue(true);
     testState.createVps.mockResolvedValue({ data: { id: 123 }, meta: { action_state_id: 456 } });
+  });
+
+  it.each(['manual', 'preset'] as const)('preserves %s resource choices when defaults arrive late', async (choice) => {
+    const user = userEvent.setup();
+    let resolveDefaults!: (response: Awaited<ReturnType<typeof fetchDefaultObjectClusterResources>>) => void;
+    vi.mocked(fetchDefaultObjectClusterResources).mockReturnValue(new Promise((resolve) => { resolveDefaults = resolve; }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const router = createMemoryRouter([{ path: '/app/vps/new', element: <VpsCreatePage /> }],
+      { initialEntries: ['/app/vps/new'] });
+    render(<QueryClientProvider client={client}><RouterProvider router={router} /></QueryClientProvider>);
+    await user.selectOptions(await screen.findByTestId('vps.create.location'), '3');
+    await waitFor(() => expect(fetchDefaultObjectClusterResources).toHaveBeenCalled());
+    if (choice === 'manual') {
+      await user.clear(screen.getByTestId('vps.create.cpu'));
+      await user.type(screen.getByTestId('vps.create.cpu'), '1');
+      await user.clear(screen.getByTestId('vps.create.ipv4'));
+      await user.type(screen.getByTestId('vps.create.ipv4'), '0');
+    } else {
+      await user.click(screen.getByTestId('vps.create.preset.compact'));
+    }
+    await act(async () => resolveDefaults({ data: [
+      { id: 1, cluster_resource: { id: 1, name: 'cpu' }, value: 8 },
+      { id: 2, cluster_resource: { id: 2, name: 'memory' }, value: 4096 },
+      { id: 3, cluster_resource: { id: 3, name: 'diskspace' }, value: 122880 },
+      { id: 4, cluster_resource: { id: 4, name: 'swap' }, value: 1024 },
+      { id: 5, cluster_resource: { id: 5, name: 'ipv4' }, value: 2 },
+      { id: 6, cluster_resource: { id: 6, name: 'ipv6' }, value: 2 },
+    ], meta: {}, envelope: { status: true } }));
+    await waitFor(() => expect(screen.getByTestId('vps.create.ipv6')).toHaveValue(2));
+    expect(screen.getByTestId('vps.create.cpu')).toHaveValue(choice === 'manual' ? 1 : 2);
+    expect(screen.getByTestId('vps.create.memory')).toHaveValue(choice === 'manual' ? 4096 : 2048);
+    expect(screen.getByTestId('vps.create.diskspace')).toHaveValue(choice === 'manual' ? 122880 : 20480);
+    expect(screen.getByTestId('vps.create.swap')).toHaveValue(choice === 'manual' ? 1024 : 0);
+    expect(screen.getByTestId('vps.create.ipv4')).toHaveValue(choice === 'manual' ? 0 : 2);
+    vi.mocked(fetchDefaultObjectClusterResources).mockResolvedValue({ data: [
+      { id: 1, cluster_resource: { id: 1, name: 'cpu' }, value: 16 },
+      { id: 6, cluster_resource: { id: 6, name: 'ipv6' }, value: 3 },
+    ], meta: {}, envelope: { status: true } });
+    await act(async () => { await client.invalidateQueries({ queryKey: ['default_object_cluster_resources'] }); });
+    await waitFor(() => expect(screen.getByTestId('vps.create.ipv6')).toHaveValue(3));
+    expect(screen.getByTestId('vps.create.cpu')).toHaveValue(choice === 'manual' ? 1 : 2);
+    client.clear();
   });
 
   it('retries a silent partial bind with the exact accepted VPS generation and action id', async () => {
