@@ -364,6 +364,62 @@ export function RequestDetailPage() {
     );
   }
 
+  const metadata = (
+    <div data-testid="admin.requests.detail.metadata">
+      <details key={`${reqType}:${reqId}`} className="group" open>
+        <summary
+          className={`flex cursor-pointer list-none items-center gap-2 font-semibold ${reqType === 'registration' ? 'py-2' : 'p-4'}`}
+          data-testid="admin.requests.detail.metadata.toggle"
+        >
+          <ChevronRight
+            className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90"
+            aria-hidden
+            data-testid="admin.requests.detail.metadata.chevron"
+          />
+          <span>
+            {t('requests.detail.metadata.title')}
+            <span className="ml-2 text-sm font-normal text-muted">{t('requests.detail.metadata.subtitle')}</span>
+          </span>
+        </summary>
+        <div className={reqType === 'registration' ? 'pt-2' : 'border-t border-border p-4'}>
+          <dl className={reqType === 'registration' ? 'grid min-w-0 grid-cols-1 gap-x-4 gap-y-3 break-words sm:grid-cols-2 lg:grid-cols-3' : 'grid grid-cols-1 gap-4 md:grid-cols-2'}>
+            <div>
+              <dt className="text-xs text-muted">{t('common.user')}</dt>
+              <dd className="mt-0.5 text-sm" data-testid="admin.requests.detail.metadata.user">
+                {requestUserId ? (
+                  <Link className="text-accent hover:underline" to={`${basePath}/users/${requestUserId}`}>
+                    {userLabel(request.user)}
+                  </Link>
+                ) : historicalUserId
+                  ? `${t('requests.resolve.owner_missing.label')} #${historicalUserId}`
+                  : userLabel(request.user)}
+              </dd>
+            </div>
+            <DetailField label={t('requests.detail.admin')} value={userLabel(request.admin)} />
+            <DetailField label={t('common.created')} value={formatDateTime(request.created_at)} />
+            <DetailField label={t('common.updated')} value={formatDateTime(request.updated_at)} />
+            <div>
+              <dt className="text-xs text-muted">{t('requests.detail.api_ip')}</dt>
+              <dd className="mt-0.5 text-sm">{stringValue(request.api_ip_addr)}</dd>
+              {request.api_ip_ptr ? <dd className="text-xs text-muted">{request.api_ip_ptr}</dd> : null}
+            </div>
+            <div>
+              <dt className="text-xs text-muted">{t('requests.detail.client_ip')}</dt>
+              <dd className="mt-0.5 text-sm">{stringValue(request.client_ip_addr)}</dd>
+              {request.client_ip_ptr ? <dd className="text-xs text-muted">{request.client_ip_ptr}</dd> : null}
+            </div>
+          </dl>
+          {hasOperationalLinks ? (
+            <div className="mt-4 border-t border-border pt-4">
+              <div className="mb-2 text-xs text-muted">{t('requests.detail.card.operations')}</div>
+              <RequestOperationalLinks request={request} basePath={basePath} compact testIdPrefix="admin.requests.detail" />
+            </div>
+          ) : null}
+        </div>
+      </details>
+    </div>
+  );
+
   return (
     <ListShell>
       <PageHeader
@@ -397,6 +453,7 @@ export function RequestDetailPage() {
               {reqType === 'registration' ? (
                 <div className="space-y-4">
                   <RegistrationDetails request={request as RegistrationRequest} />
+                  <div className="border-t border-border pt-3">{metadata}</div>
                   <div className="border-t border-border pt-4">
                     <RequestFraudChecks request={request as RegistrationRequest} />
                   </div>
@@ -417,7 +474,7 @@ export function RequestDetailPage() {
         <aside className={reqType === 'registration' ? 'min-w-0 lg:col-span-3' : 'min-w-0 lg:col-start-3 lg:row-start-1'} data-testid="admin.requests.detail.review">
           <Card testId="admin.requests.detail.decision">
             <CardHeader title={t('requests.detail.decision.title')} subtitle={t('requests.detail.decision.subtitle')} />
-            <CardBody className={reqType === 'registration' ? 'grid items-start gap-4 lg:grid-cols-2' : 'space-y-4'}>
+            <CardBody className="space-y-3">
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <StatusDot variant={dotVariant} />
@@ -430,10 +487,10 @@ export function RequestDetailPage() {
                   </div>
                 ) : null}
                 {reviewQueueActive ? (
-                  <div className="rounded-lg border border-border bg-surface-2 p-3" data-testid="admin.requests.review.queue">
-                    <label className="flex cursor-pointer items-start gap-2 text-sm font-medium">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1" data-testid="admin.requests.review.queue">
+                    <label className="inline-flex min-h-8 cursor-pointer items-center gap-2 text-sm">
                       <input
-                        className="mt-0.5 h-4 w-4 rounded border-border"
+                        className="h-4 w-4 rounded border-border"
                         type="checkbox"
                         checked={continueReviewQueue}
                         onChange={(event) => setContinueReviewQueue(event.target.checked)}
@@ -441,7 +498,7 @@ export function RequestDetailPage() {
                       />
                       <span>{t('requests.review.continue')}</span>
                     </label>
-                    <div className="mt-1 text-xs text-muted">
+                    <div className="text-xs text-muted">
                       {t('requests.review.remaining', { count: String(reviewQueue.length + 1) })}
                     </div>
                   </div>
@@ -460,61 +517,11 @@ export function RequestDetailPage() {
           </Card>
         </aside>
 
-        <section className={reqType === 'registration' ? 'min-w-0 space-y-3 lg:col-span-3' : 'min-w-0 space-y-3 lg:col-span-2'}>
-          <Card testId="admin.requests.detail.metadata">
-            <details key={`${reqType}:${reqId}`} className="group" open>
-              <summary
-                className="flex cursor-pointer list-none items-center gap-2 p-4 font-semibold"
-                data-testid="admin.requests.detail.metadata.toggle"
-              >
-                <ChevronRight
-                  className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90"
-                  aria-hidden
-                  data-testid="admin.requests.detail.metadata.chevron"
-                />
-                <span>
-                  {t('requests.detail.metadata.title')}
-                  <span className="ml-2 text-sm font-normal text-muted">{t('requests.detail.metadata.subtitle')}</span>
-                </span>
-              </summary>
-              <CardBody className="border-t border-border">
-                <dl className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div>
-                    <dt className="text-xs text-muted">{t('common.user')}</dt>
-                    <dd className="mt-0.5 text-sm" data-testid="admin.requests.detail.metadata.user">
-                      {requestUserId ? (
-                        <Link className="text-accent hover:underline" to={`${basePath}/users/${requestUserId}`}>
-                          {userLabel(request.user)}
-                        </Link>
-                      ) : historicalUserId
-                        ? `${t('requests.resolve.owner_missing.label')} #${historicalUserId}`
-                        : userLabel(request.user)}
-                    </dd>
-                  </div>
-                  <DetailField label={t('requests.detail.admin')} value={userLabel(request.admin)} />
-                  <DetailField label={t('common.created')} value={formatDateTime(request.created_at)} />
-                  <DetailField label={t('common.updated')} value={formatDateTime(request.updated_at)} />
-                  <div>
-                    <dt className="text-xs text-muted">{t('requests.detail.api_ip')}</dt>
-                    <dd className="mt-0.5 text-sm">{stringValue(request.api_ip_addr)}</dd>
-                    {request.api_ip_ptr ? <dd className="text-xs text-muted">{request.api_ip_ptr}</dd> : null}
-                  </div>
-                  <div>
-                    <dt className="text-xs text-muted">{t('requests.detail.client_ip')}</dt>
-                    <dd className="mt-0.5 text-sm">{stringValue(request.client_ip_addr)}</dd>
-                    {request.client_ip_ptr ? <dd className="text-xs text-muted">{request.client_ip_ptr}</dd> : null}
-                  </div>
-                </dl>
-                {hasOperationalLinks ? (
-                  <div className="mt-4 border-t border-border pt-4">
-                    <div className="mb-2 text-xs text-muted">{t('requests.detail.card.operations')}</div>
-                    <RequestOperationalLinks request={request} basePath={basePath} compact testIdPrefix="admin.requests.detail" />
-                  </div>
-                ) : null}
-              </CardBody>
-            </details>
-          </Card>
-        </section>
+        {reqType !== 'registration' ? (
+          <section className="min-w-0 space-y-3 lg:col-span-2">
+            <Card>{metadata}</Card>
+          </section>
+        ) : null}
       </div>
     </ListShell>
   );
