@@ -1,5 +1,7 @@
 import {
   defaultDeleteForm,
+  buildVpsDeleteOptions,
+  deleteExpirationValid,
   isVpsDeleteConfirmationSatisfied,
   vpsDeleteConfirmationTarget,
   vpsDeleteObjectLabel,
@@ -21,5 +23,28 @@ describe('VPS delete confirmation model', () => {
 
   it('keeps lazy delete enabled by default', () => {
     expect(defaultDeleteForm()).toEqual({ lazy: true });
+  });
+});
+
+
+describe('VPS delete options', () => {
+  it('never sends administrative options in member view', () => {
+    expect(buildVpsDeleteOptions({ lazy: false, customExpiration: true, expirationLocal: 'invalid' }, false)).toBeUndefined();
+  });
+
+  it('requires a future deadline only for custom soft delete', () => {
+    for (const expirationLocal of ['', 'invalid', '2000-01-01T12:00']) {
+      const form = { lazy: true, customExpiration: true, expirationLocal };
+      expect(deleteExpirationValid(form)).toBe(false);
+      expect(() => buildVpsDeleteOptions(form, true)).toThrow('invalid-date');
+    }
+    expect(buildVpsDeleteOptions({ lazy: false, customExpiration: true, expirationLocal: '' }, true)).toEqual({ lazy: false });
+    expect(buildVpsDeleteOptions({ lazy: true }, true)).toEqual({ lazy: true });
+  });
+
+  it('converts the local retention deadline to an API timestamp', () => {
+    expect(buildVpsDeleteOptions({ lazy: true, customExpiration: true, expirationLocal: '2099-01-02T12:30' }, true)).toEqual({
+      lazy: true, expiration_date: new Date(2099, 0, 2, 12, 30).toISOString(),
+    });
   });
 });

@@ -27,7 +27,7 @@ export function VpsListActionConfirmDialog(props: {
   onChange: Dispatch<SetStateAction<VpsListActionConfirm | null>>;
   onCancel: () => void;
   onConfirmPower: (vars: { vpsId: number; kind: 'stop' | 'restart'; force: boolean; objectLabel: string }) => void;
-  onConfirmDelete: (vars: { vpsId: number; lazy: boolean; objectLabel: string }) => void;
+  onConfirmDelete: (vars: { vpsId: number; lazy: boolean; objectLabel: string; expiration_date?: string }) => void;
 }) {
   const { t } = useI18n();
   const { confirm } = props;
@@ -40,14 +40,14 @@ export function VpsListActionConfirmDialog(props: {
         vps={props.vps}
         vpsId={confirm.vpsId}
         isAdminMode={props.isAdminMode}
-        form={{ lazy: confirm.lazy }}
+        form={confirm}
         onChange={(updater) => {
           props.onChange((prev) => {
             if (!prev || prev.kind !== 'delete') return prev;
             const nextForm = typeof updater === 'function'
-              ? updater({ lazy: prev.lazy })
+              ? updater(prev)
               : updater;
-            return { ...prev, lazy: nextForm.lazy };
+            return { ...prev, ...nextForm };
           });
         }}
         loading={props.deleteLoading}

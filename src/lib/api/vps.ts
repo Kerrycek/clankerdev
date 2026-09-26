@@ -359,7 +359,21 @@ export async function vpsMigrate(vpsId: number, params: VpsMigratePayload) {
   return requireActionStateResult(res, 'VPS migrate');
 }
 
-export async function vpsDelete(vpsId: number, params?: { lazy?: boolean }) {
+export type VpsDeleteOptions = { lazy?: boolean; expiration_date?: string };
+
+export async function vpsDelete(vpsId: number, params?: VpsDeleteOptions) {
+  // DELETE only accepts lazy; a custom retention deadline uses the existing
+  // admin lifetime transition as one operation, never delete-then-update.
+  if (params?.expiration_date !== undefined) {
+    if (params.lazy === false || !Number.isFinite(Date.parse(params.expiration_date))) {
+      throw new Error('invalid-date');
+    }
+    return updateVps(vpsId, {
+      object_state: 'soft_delete',
+      expiration_date: params.expiration_date,
+      change_reason: 'Deletion requested',
+    });
+  }
   const res = await haveApiCall<null>({
     method: 'DELETE',
     path: `/vpses/${vpsId}`,

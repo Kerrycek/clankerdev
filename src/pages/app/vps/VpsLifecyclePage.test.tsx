@@ -1,3 +1,4 @@
+import { ToastsProvider } from '../../../app/toasts';
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, render, screen, waitFor } from '@testing-library/react';
@@ -110,7 +111,7 @@ describe('VpsLifecyclePage durable mutation snapshots', () => {
 
     render(
       <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
+        <ToastsProvider><RouterProvider router={router} /></ToastsProvider>
       </QueryClientProvider>,
     );
 
@@ -145,7 +146,7 @@ describe('VpsLifecyclePage durable mutation snapshots', () => {
 
     render(
       <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
+        <ToastsProvider><RouterProvider router={router} /></ToastsProvider>
       </QueryClientProvider>,
     );
 

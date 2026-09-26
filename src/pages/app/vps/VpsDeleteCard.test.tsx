@@ -68,6 +68,18 @@ function renderDeleteDialog(onConfirm = vi.fn()) {
 }
 
 describe('VpsDeleteCard', () => {
+  it('blocks custom retention until a future deadline is entered', async () => {
+    const user = userEvent.setup();
+    renderDeleteCard();
+    await user.click(screen.getByTestId('vps.lifecycle.delete.lazy.custom_expiration'));
+    expect(screen.getByTestId('vps.lifecycle.delete.submit')).toBeDisabled();
+    await user.selectOptions(screen.getByTestId('vps.lifecycle.delete.lazy'), 'hard_delete');
+    expect(screen.queryByTestId('vps.lifecycle.delete.lazy.expiration')).not.toBeInTheDocument();
+    expect(screen.getByTestId('vps.lifecycle.delete.submit')).not.toBeDisabled();
+    await user.click(screen.getByTestId('vps.lifecycle.delete.submit'));
+    expect(screen.getByTestId('vps.lifecycle.delete.submit.confirm_dialog')).toHaveTextContent('vps.lifecycle.delete.mode_hard');
+  });
+
   it('confirms lifecycle delete without typed hostname confirmation', async () => {
     const user = userEvent.setup();
     const { onSubmit } = renderDeleteCard();

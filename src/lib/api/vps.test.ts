@@ -444,6 +444,38 @@ describe('vps API wrappers', () => {
     });
   });
 
+  test('custom soft-delete retention uses one state-transition PUT', async () => {
+    globalThis.fetch = mockFetchOk({ vps: { id: 12 }, _meta: { action_state_id: 4600 } }) as unknown as typeof fetch;
+    await vpsDelete(12, { lazy: true, expiration_date: '2099-01-02T12:30:00.000Z' });
+    const [url, init] = lastFetchCall();
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+    expect(new URL(url).pathname).toBe('/v7.0/vpses/12');
+    expect(init?.method).toBe('PUT');
+    expect(JSON.parse(String(init?.body))).toEqual({ vps: {
+      object_state: 'soft_delete', expiration_date: '2099-01-02T12:30:00.000Z', change_reason: 'Deletion requested',
+    } });
+  });
+
+  test('hard delete sends only the explicit lazy=false option', async () => {
+    globalThis.fetch = mockFetchOk({ _meta: { action_state_id: 4600 } }) as unknown as typeof fetch;
+    await vpsDelete(12, { lazy: false });
+    const [, init] = lastFetchCall();
+    expect(init?.method).toBe('DELETE');
+    expect(JSON.parse(String(init?.body))).toEqual({ vps: { lazy: false } });
+  });
+
+  test('rejects invalid retention and retention combined with hard delete before sending', async () => {
+    globalThis.fetch = vi.fn();
+    await expect(vpsDelete(12, { lazy: true, expiration_date: 'invalid' })).rejects.toThrow('invalid-date');
+    await expect(vpsDelete(12, { lazy: false, expiration_date: '2099-01-02T12:30:00.000Z' })).rejects.toThrow('invalid-date');
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  test('custom soft delete still requires an action-state receipt', async () => {
+    globalThis.fetch = mockFetchOk({ vps: { id: 12 }, _meta: {} }) as unknown as typeof fetch;
+    await expect(vpsDelete(12, { lazy: true, expiration_date: '2099-01-02T12:30:00.000Z' })).rejects.toThrow();
+  });
+
   test('console token lifecycle calls the legacy VPS console_token action', async () => {
     globalThis.fetch = mockFetchOk({ console_token: { token: 'T1', expiration: '2027-01-01T00:00:00Z' } }) as any;
 
