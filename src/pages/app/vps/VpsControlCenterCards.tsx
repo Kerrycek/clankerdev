@@ -162,7 +162,7 @@ export function VpsResourcesCard(props: {
   resourceSearch.set('section', 'resources');
 
   return (
-    <Card className={props.className ?? 'lg:col-span-7'} testId="vps.overview.resources_usage.card">
+    <Card className={props.className ?? 'lg:col-span-6'} testId="vps.overview.resources_usage.card">
       <CardHeader
         title={<SectionTitle icon={<Server className={iconClass} />}>{t('vps.control.resources.title')}</SectionTitle>}
         subtitle={t('vps.control.resources.subtitle')}
@@ -221,7 +221,7 @@ export function VpsAccessCard(props: { vps: Vps; basePath: string; contextSearch
   const consoleAvailable = isRemoteConsoleAvailable(props.vps);
 
   return (
-    <Card className="lg:col-span-5" testId="vps.overview.status_access.card">
+    <Card className="lg:col-span-6" testId="vps.overview.status_access.card">
       <CardHeader
         title={<SectionTitle icon={<KeyRound className={iconClass} />}>{t('vps.control.access.title')}</SectionTitle>}
         subtitle={t('vps.control.access.subtitle')}
