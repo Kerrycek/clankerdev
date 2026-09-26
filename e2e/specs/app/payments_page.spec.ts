@@ -330,7 +330,7 @@ test('@pr-smoke @pr-smoke-mobile user payments copy sanitized localized text wit
     return !(
       method === 'PUT'
       && target.origin === appOrigin
-      && target.pathname === '/api/v7.0/webui_user_settings'
+      && target.pathname === '/api/v7.0/webui_user_settings/ui/settings'
       && target.search === ''
       && target.hash === ''
     );

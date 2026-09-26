@@ -55,13 +55,13 @@ test('authenticated UI preferences load from and save to webui_user_settings', a
     user: { id: 10, login: 'alice', level: 1 },
     handlers: {
       'GET webui_user_settings': () => ({ webui_user_settings: [storedSetting] }),
-      'PUT webui_user_settings': ({ reqJson }) => {
+      'PUT webui_user_settings/ui/settings': ({ reqJson }) => {
         writes.push(reqJson);
         const payload = (reqJson as any).webui_user_setting;
         storedSetting = {
           id: storedSetting.id,
-          namespace: payload.namespace,
-          key: payload.key,
+          namespace: SETTINGS_NAMESPACE,
+          key: SETTINGS_KEY,
           value: payload.value,
         };
         return { webui_user_setting: storedSetting };
@@ -73,24 +73,25 @@ test('authenticated UI preferences load from and save to webui_user_settings', a
   await page.goto('/app/vps');
 
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await expect(page.getByRole('button', { name: /collapse sidebar|sbalit panel/i })).toBeVisible();
+  const desktopSidebar = (page.viewportSize()?.width ?? 1280) >= 768;
+  if (desktopSidebar) await expect(page.getByRole('button', { name: /collapse sidebar|sbalit panel/i })).toBeVisible();
 
   await page.getByTestId('shell.user-menu-button').click();
   await page.getByTestId('shell.user-menu.theme.light').click();
-  await page.getByRole('button', { name: /collapse sidebar|sbalit panel/i }).click();
+  if (desktopSidebar) await page.getByRole('button', { name: /collapse sidebar|sbalit panel/i }).click();
 
   await expect.poll(() => writes.length).toBeGreaterThanOrEqual(1);
 
   const savedPayload = JSON.parse(storedSetting.value);
   expect(savedPayload.theme).toBe('light');
-  expect(savedPayload.sidebarCollapsed).toBe(true);
+  expect(savedPayload.sidebarCollapsed).toBe(desktopSidebar);
   expect(storedSetting.namespace).toBe(SETTINGS_NAMESPACE);
   expect(storedSetting.key).toBe(SETTINGS_KEY);
 
   await page.reload();
 
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-  await expect(page.getByRole('button', { name: /expand sidebar|rozbalit panel/i })).toBeVisible();
+  if (desktopSidebar) await expect(page.getByRole('button', { name: /expand sidebar|rozbalit panel/i })).toBeVisible();
 });
 
 test('public pages do not call webui_user_settings', async ({ page }) => {
@@ -149,7 +150,7 @@ test('@pr-smoke @pr-smoke-mobile profile preferences: reset uses a retryable in-
       'GET users/current': () => ({ user }),
       'GET users/10': () => ({ user }),
       'GET webui_user_settings': () => ({ webui_user_settings: [storedSetting] }),
-      'PUT webui_user_settings': ({ reqJson }) => {
+      'PUT webui_user_settings/ui/settings': ({ reqJson }) => {
         resetAttempts += 1;
         if (resetAttempts === 1) return jsonFulfill(failEnvelope('Reset temporarily unavailable'), 503);
 
@@ -183,4 +184,54 @@ test('@pr-smoke @pr-smoke-mobile profile preferences: reset uses a retryable in-
   expect(saved.theme).toBe('system');
   expect(saved.sidebarCollapsed).toBe(false);
   expect(saved.tips.sidebarTimeZone).toBe('visible');
+});
+
+
+test('@pr-smoke @pr-smoke-mobile dark theme survives session expiry and a fresh login', async ({ page }) => {
+  await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST', webuiNext: serverUiSettingsConfig() });
+  await page.emulateMedia({ colorScheme: 'light' });
+  let authenticated = true;
+  let savedTheme = 'light';
+  const user = { id: 10, login: 'alice', level: 1 };
+  await installHaveApiMock(page, {
+    user,
+    handlers: {
+      'GET users/current': () => authenticated ? { user } : jsonFulfill(failEnvelope('Session expired'), 401),
+      'GET webui_user_settings': () => ({ webui_user_settings: [{
+        id: 1, namespace: 'ui', key: 'settings', value: encodeSettings({ theme: savedTheme }),
+      }] }),
+      'PUT webui_user_settings': () => jsonFulfill(failEnvelope('No such action'), 404),
+      'POST webui_user_settings': () => jsonFulfill(failEnvelope('No such action'), 404),
+      'PUT webui_user_settings/ui/settings': ({ reqJson }) => {
+        const payload = reqJson as { webui_user_setting: { value: string } };
+        expect(Object.keys(payload.webui_user_setting)).toEqual(['value']);
+        savedTheme = JSON.parse(payload.webui_user_setting.value).theme;
+        return { webui_user_setting: { namespace: 'ui', key: 'settings', value: payload.webui_user_setting.value } };
+      },
+      'GET vpses': () => ({ vpses: [] }),
+      'GET cluster/public_stats': () => ({ public_stats: {} }),
+      'GET nodes/public_status': () => ({ nodes: [] }),
+      'GET outages': () => ({ outages: [] }),
+      'GET news_logs': () => ({ news_logs: [] }),
+      'GET help_boxes': () => ({ help_boxes: [] }),
+    },
+  });
+  await page.goto('/app/vps');
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
+  await page.getByTestId('shell.user-menu-button').click();
+  await page.getByTestId('shell.user-menu.theme.dark').click();
+  await expect.poll(() => savedTheme).toBe('dark');
+  authenticated = false;
+  // A full navigation with an expired session recreates the public providers.
+  await page.goto('/');
+  await expect(page.getByTestId('public.overview.page')).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await page.reload();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  // A fresh browser cache must also recover the actual server preference.
+  await page.evaluate(() => localStorage.removeItem('vpsadmin.uiSettings.v1'));
+  authenticated = true;
+  await page.goto('/app/vps');
+  await expect(page.getByTestId('shell.user-menu-button')).toBeVisible();
+  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 });

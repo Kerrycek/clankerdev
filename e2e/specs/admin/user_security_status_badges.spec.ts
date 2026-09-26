@@ -62,7 +62,7 @@ test('@pr-smoke @pr-smoke-mobile admin user header shows lockout and password re
     if (!url.pathname.startsWith('/api/v7.0/') || ['GET', 'HEAD', 'OPTIONS'].includes(request.method())) return;
     // Opening a detail route persists UI navigation preferences. It must not be
     // confused with a mutation of the inspected user or another product object.
-    if (url.pathname.endsWith('/webui_user_settings')) return;
+    if (request.method() === 'PUT' && url.pathname === '/api/v7.0/webui_user_settings/ui/settings') return;
     mutations.push(`${request.method()} ${url.pathname}`);
   });
 

@@ -76,7 +76,8 @@ export interface UiSettingsServerConfig {
    * HaveAPI path used to fetch and update UI settings for the current user.
    *
    * Default upstream resource:
-   *   GET/PUT /v{apiVersion}/webui_user_settings
+   *   GET /v{apiVersion}/webui_user_settings
+   *   PUT /v{apiVersion}/webui_user_settings/{namespace}/{key}
    */
   path: string;
 

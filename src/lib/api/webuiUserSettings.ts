@@ -29,11 +29,6 @@ function parseStoredValue(value: unknown): unknown {
   }
 }
 
-function isNotFoundOrMethodError(error: unknown): boolean {
-  if (!(error instanceof HaveApiError)) return false;
-  return error.httpStatus === 404 || error.httpStatus === 405;
-}
-
 function pickSetting(data: unknown, namespace: string, key: string): WebuiUserSetting | undefined {
   if (Array.isArray(data)) {
     return data.find((row) => {
@@ -70,29 +65,12 @@ export async function fetchWebuiUserSetting(namespace: string, key: string): Pro
 }
 
 export async function saveWebuiUserSetting(namespace: string, key: string, value: unknown): Promise<void> {
-  const path = resourcePath();
-  const payload = {
-    namespace,
-    key,
-    value: JSON.stringify(value),
-  };
-
-  try {
-    await haveApiCall<unknown>({
-      method: 'PUT',
-      path,
-      namespace: RESOURCE_NAMESPACE,
-      params: payload,
-    });
-    return;
-  } catch (error) {
-    if (!isNotFoundOrMethodError(error)) throw error;
-  }
-
+  // Upstream Set is an upsert at /{namespace}/{key}; collection PUT/POST
+  // are not routes and cannot persist preferences across sessions.
   await haveApiCall<unknown>({
-    method: 'POST',
-    path,
+    method: 'PUT',
+    path: `${resourcePath().replace(/\/$/, '')}/${encodeURIComponent(namespace)}/${encodeURIComponent(key)}`,
     namespace: RESOURCE_NAMESPACE,
-    params: payload,
+    params: { value: JSON.stringify(value) },
   });
 }
