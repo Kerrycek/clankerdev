@@ -1,6 +1,7 @@
 import type { Locator, Page } from '@playwright/test';
 
 import { expect, test } from '../../fixtures/playwright';
+import { setUiSettingsLocalStorage } from '../../fixtures/uiSettings';
 import { bootstrapVpsAdminWindow } from '../../fixtures/bootstrap';
 import { installHaveApiMock } from '../../fixtures/haveapi';
 
@@ -184,7 +185,7 @@ test.describe('@workflow-matrix @smoke VPS list row navigation', () => {
 
     await expect(page).toHaveURL(/\/admin\/vps(?:\?|$)/);
     await expect(page.getByTestId('vps.list.delete_confirm')).toBeVisible();
-    await expect(page.getByTestId('vps.list.delete_confirm.lazy')).toBeChecked();
+    await expect(page.getByTestId('vps.list.delete_confirm.lazy')).toHaveValue('soft_delete');
 
     const reqPromise = page.waitForRequest(
       (r) => r.method() === 'DELETE' && r.url().includes('/api/v7.0/vpses/300')
@@ -228,7 +229,7 @@ test.describe('@workflow-matrix @smoke VPS list row navigation', () => {
     await page.goto('/admin/vps');
     const { actionPrefix } = await visibleVpsItem(page, 300);
     await page.getByTestId(`${actionPrefix}.action.delete`).click();
-    await expect(page.getByTestId('vps.list.delete_confirm.lazy')).toBeChecked();
+    await expect(page.getByTestId('vps.list.delete_confirm.lazy')).toHaveValue('soft_delete');
 
     const deleteRequest = page.waitForRequest(
       (request) => request.method() === 'DELETE' && request.url().includes('/api/v7.0/vpses/300')
@@ -243,6 +244,36 @@ test.describe('@workflow-matrix @smoke VPS list row navigation', () => {
     releaseGuard();
     const request = await deleteRequest;
     expect(request.postDataJSON()).toEqual({ vps: { lazy: true } });
+  });
+
+  test('admin list delete sends custom retention and shows a Czech receipt', async ({ page }) => {
+    const vps = makeVps(300);
+    await installHaveApiMock(page, {
+      user: { id: 1, login: 'admin', level: 99 },
+      handlers: {
+        'GET vpses': () => ({ vpses: [vps] }),
+        'GET transaction_chains': () => ({ transaction_chains: [] }),
+        'PUT vpses/300': () => ({ vps, _meta: { action_state_id: 902 } }),
+      },
+    });
+    await bootstrapVpsAdminWindow(page);
+    await setUiSettingsLocalStorage(page, { language: 'cs' });
+    await page.goto('/admin/vps');
+    const { actionPrefix } = await visibleVpsItem(page, 300);
+    await page.getByTestId(`${actionPrefix}.action.delete`).click();
+    await page.getByTestId('vps.list.delete_confirm.lazy.custom_expiration').check();
+    await expect(page.getByTestId('vps.list.delete_confirm.confirm')).toBeDisabled();
+    await page.getByTestId('vps.list.delete_confirm.lazy.expiration').fill('2099-01-02T12:30');
+    await page.screenshot({ path: test.info().outputPath('delete-options-cs.png'), fullPage: true });
+    const expectedExpiration = await page.evaluate(() => new Date(2099, 0, 2, 12, 30).toISOString());
+    const request = page.waitForRequest(r => r.method() === 'PUT' && r.url().includes('/api/v7.0/vpses/300'));
+    await page.getByTestId('vps.list.delete_confirm.confirm').click();
+    expect((await request).postDataJSON()).toEqual({ vps: {
+      object_state: 'soft_delete', expiration_date: expectedExpiration, change_reason: 'Deletion requested',
+    } });
+    await expect(page.getByTestId('vps.list.delete_confirm')).toBeHidden();
+    await expect(page.getByTestId('toast.viewport')).toContainText('vps300.example');
+    await expect(page.getByTestId('toast.viewport')).toContainText('Požadavek na smazání VPS byl přijat');
   });
 
   test('my VPS view hides redundant owner context while admin view keeps it', async ({ page }) => {

@@ -2,6 +2,8 @@ import type { Dispatch, SetStateAction } from 'react';
 
 import { useI18n } from '../../../app/i18n';
 import { Alert } from '../../../components/ui/Alert';
+import { Input } from '../../../components/ui/Input';
+import { Select } from '../../../components/ui/Select';
 import { Checkbox } from '../../../components/ui/Checkbox';
 import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import type { Vps } from '../../../lib/api/vps';
@@ -12,20 +14,23 @@ import {
   ImpactItem,
 } from './VpsLifecyclePrimitives';
 import {
+  buildVpsDeleteOptions,
+  deleteExpirationValid,
+  type DeleteForm,
   vpsDeleteConfirmationTarget,
   vpsDeleteObjectLabel,
   type VpsDeleteConfirmationSource,
 } from './VpsDeleteModel';
 
-export type VpsDeleteDangerForm = {
-  lazy: boolean;
-};
+export type VpsDeleteDangerForm = DeleteForm;
 
 export type VpsListDeleteConfirm = {
   vpsId: number;
   kind: 'delete';
   force: false;
   lazy: boolean;
+  customExpiration?: boolean;
+  expirationLocal?: string;
 };
 
 function vpsIdFallback(vpsId: number): VpsDeleteConfirmationSource {
@@ -70,6 +75,8 @@ export function VpsDeleteDangerContent(props: {
   isAdminMode: boolean;
   lazy: boolean;
   onLazyChange?: (lazy: boolean) => void;
+  form?: DeleteForm;
+  onFormChange?: (patch: Partial<DeleteForm>) => void;
   pending?: boolean;
   gate?: GateDecision;
   onOpenTasks?: () => void;
@@ -93,14 +100,45 @@ export function VpsDeleteDangerContent(props: {
       />
 
       {props.isAdminMode ? (
-        <Checkbox
-          checked={props.lazy}
-          onChange={(lazy) => props.onLazyChange?.(lazy)}
-          label={t('vps.lifecycle.delete.lazy')}
-          description={t('vps.lifecycle.delete.lazy_help')}
-          testId={props.lazyTestId}
-          disabled={props.pending}
-        />
+        <div className="space-y-3">
+          <Select
+            value={props.lazy ? 'soft_delete' : 'hard_delete'}
+            onChange={(event) => props.onLazyChange?.(event.target.value === 'soft_delete')}
+            label={t('vps.lifecycle.delete.impact.mode')}
+            testId={props.lazyTestId}
+            disabled={props.pending}
+            options={[
+              { value: 'soft_delete', label: t('vps.lifecycle.delete.mode_soft') },
+              { value: 'hard_delete', label: t('vps.lifecycle.delete.mode_hard') },
+            ]}
+          />
+          {props.lazy && props.form ? (
+            <>
+              <Checkbox
+                checked={Boolean(props.form.customExpiration)}
+                onChange={(customExpiration) => props.onFormChange?.({ customExpiration })}
+                label={t('vps.lifecycle.delete.custom_expiration')}
+                description={t('vps.lifecycle.delete.expiration_help')}
+                testId={`${props.lazyTestId}.custom_expiration`}
+                disabled={props.pending}
+              />
+              {props.form.customExpiration ? (
+                <Input
+                  type="datetime-local"
+                  label={t('vps.lifecycle.delete.expiration_label')}
+                  value={props.form.expirationLocal ?? ''}
+                  onChange={(event) => props.onFormChange?.({ expirationLocal: event.target.value })}
+                  testId={`${props.lazyTestId}.expiration`}
+                  disabled={props.pending}
+                  ariaInvalid={!deleteExpirationValid(props.form)}
+                />
+              ) : null}
+              {!deleteExpirationValid(props.form) ? (
+                <Alert variant="warn">{t('vps.lifecycle.delete.expiration_invalid')}</Alert>
+              ) : null}
+            </>
+          ) : null}
+        </div>
       ) : (
         <Alert variant="neutral">{t('vps.lifecycle.user_delete.summary')}</Alert>
       )}
@@ -120,7 +158,7 @@ export function VpsDeleteConfirmDialog(props: {
   loading?: boolean;
   error?: { title: string; body?: string } | null;
   onCancel: () => void;
-  onConfirm: (vars: { vpsId: number; lazy: boolean; objectLabel: string }) => void;
+  onConfirm: (vars: { vpsId: number; lazy: boolean; objectLabel: string; expiration_date?: string }) => void;
 }) {
   const { t } = useI18n();
   const vps = props.vps ?? vpsIdFallback(props.vpsId);
@@ -138,10 +176,12 @@ export function VpsDeleteConfirmDialog(props: {
       danger
       confirmLabel={t('action.vps.delete.label')}
       confirmLoading={props.loading}
+      confirmDisabled={props.isAdminMode && !deleteExpirationValid(props.form)}
       onCancel={props.onCancel}
       onConfirm={() => {
         props.onConfirm({
           vpsId: props.vpsId,
+          ...buildVpsDeleteOptions(props.form, props.isAdminMode),
           lazy: props.form.lazy,
           objectLabel: vpsDeleteObjectLabel(vps),
         });
@@ -153,6 +193,8 @@ export function VpsDeleteConfirmDialog(props: {
           isAdminMode={props.isAdminMode}
           lazy={props.form.lazy}
           onLazyChange={(lazy) => setForm({ lazy })}
+          form={props.form}
+          onFormChange={setForm}
           pending={props.loading}
           impactTestId="vps.list.delete_confirm.impact"
           lazyTestId="vps.list.delete_confirm.lazy"

@@ -1,3 +1,4 @@
+import { vpsDeleteReceipt } from './vps/vpsDeleteReceipt';
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
@@ -45,7 +46,7 @@ type DurableVpsLockContext = { lockRef: ObjectRef; mutationGeneration: LocalMuta
 type VpsDeleteMutationVariables = {
   vpsId: number;
   objectLabel?: string;
-  apiOptions?: { lazy?: boolean };
+  apiOptions?: { lazy?: boolean; expiration_date?: string };
 };
 
 interface BusyError extends Error {
@@ -220,8 +221,8 @@ export function VpsListPage() {
         object: context?.lockRef,
         mutationGeneration: context?.mutationGeneration,
       });
+      if (vars.kind === 'delete') toasts.pushToast(vpsDeleteReceipt(t, objectLabel, () => chrome.openTasks()));
     }
-
     void qc.invalidateQueries({ queryKey: ['vps', 'list'] });
     void qc.invalidateQueries({ queryKey: ['transaction_chain', 'active'] });
     void qc.invalidateQueries({ queryKey: ['transaction_chain', 'recent-failed'] });
@@ -487,7 +488,7 @@ export function VpsListPage() {
             deleteM.mutate({
               vpsId: vars.vpsId,
               objectLabel: vars.objectLabel,
-              apiOptions: mode === 'admin' ? { lazy: vars.lazy } : undefined,
+              apiOptions: mode === 'admin' ? { lazy: vars.lazy, ...(vars.expiration_date ? { expiration_date: vars.expiration_date } : {}) } : undefined,
             });
           }}
         />

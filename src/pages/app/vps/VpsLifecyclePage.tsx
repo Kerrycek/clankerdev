@@ -1,6 +1,8 @@
+import { vpsDeleteReceipt } from './vpsDeleteReceipt';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useToasts } from '../../../app/toasts';
 import { useAuth } from '../../../app/auth';
 import { useAppMode } from '../../../app/appMode';
 import { useI18n, type TranslationKey } from '../../../app/i18n';
@@ -38,7 +40,7 @@ import type { ObjectRef } from '../../../lib/objectRef';
 import { useVps } from './VpsContext';
 import { VpsCloneCard } from './VpsCloneCard';
 import { VpsDeleteCard, type DeleteForm } from './VpsDeleteCard';
-import { defaultDeleteForm } from './VpsDeleteModel';
+import { buildVpsDeleteOptions, defaultDeleteForm } from './VpsDeleteModel';
 import { buildVpsClonePayload, defaultCloneForm, isCloneTargetReady, type CloneForm } from './VpsCloneModel';
 import {
   resourceId,
@@ -125,6 +127,7 @@ function memberContextSearch(userId: number | undefined): string {
 export function VpsLifecyclePage() {
   const { t } = useI18n();
   const auth = useAuth();
+  const toasts = useToasts();
   const { mode, basePath } = useAppMode();
   const chrome = useChrome();
   const navigate = useNavigate();
@@ -425,10 +428,11 @@ export function VpsLifecyclePage() {
   });
 
   const deleteM = useMutation({
-    mutationFn: (variables: LifecycleMutationVariables<{ lazy: boolean } | undefined>) => executeLifecycleMutation(variables, vpsDelete),
+    mutationFn: (variables: LifecycleMutationVariables<ReturnType<typeof buildVpsDeleteOptions>>) => executeLifecycleMutation(variables, vpsDelete),
     onMutate: acquireMutationContext,
     onSuccess: (res, variables, context) => {
       track(res.meta, 'action.vps.delete.label', variables, context);
+      toasts.pushToast(vpsDeleteReceipt(t, variables.objectLabel, () => chrome.openTasks()));
       navigate(`${variables.basePath}/vps${memberContextSearch(variables.memberContextUserId)}`);
     },
     onError: (e: any) => {
@@ -581,17 +585,27 @@ export function VpsLifecyclePage() {
   );
 
   const deleteCard = (
-    <VpsDeleteCard
-      vps={vps}
-      isAdminMode={canAdministerVps}
-      form={deleteForm}
-      onChange={setDeleteForm}
-      gate={gate}
-      pending={deleteM.isPending}
-      errorMessage={deleteM.isError ? mutationErrorMessage(deleteM.error, t('vps.lifecycle.validation.delete'), t('vps.mutation.error.missing_action_state')) : undefined}
-      onOpenTasks={() => chrome.openTasks()}
-      onSubmit={() => deleteM.mutate(prepareMutation(() => canAdministerVps ? { lazy: deleteForm.lazy } : undefined))}
-    />
+    <div className="space-y-3">
+      {!isAdminView && auth.role === 'admin' ? (
+        <Alert variant="info" title={t('vps.lifecycle.delete.admin_options_title')}>
+          <p>{t('vps.lifecycle.delete.admin_options_body')}</p>
+          <Button to={`/admin/vps/${vps.id}/lifecycle/delete`} variant="secondary" className="mt-2" testId="vps.lifecycle.delete.admin_options">
+            {t('vps.lifecycle.delete.admin_options_link')}
+          </Button>
+        </Alert>
+      ) : null}
+      <VpsDeleteCard
+        vps={vps}
+        isAdminMode={canAdministerVps}
+        form={deleteForm}
+        onChange={setDeleteForm}
+        gate={gate}
+        pending={deleteM.isPending}
+        errorMessage={deleteM.isError ? mutationErrorMessage(deleteM.error, t('vps.lifecycle.validation.delete'), t('vps.mutation.error.missing_action_state')) : undefined}
+        onOpenTasks={() => chrome.openTasks()}
+        onSubmit={() => deleteM.mutate(prepareMutation(() => buildVpsDeleteOptions(deleteForm, canAdministerVps)))}
+      />
+    </div>
   );
 
   const templateCard = (

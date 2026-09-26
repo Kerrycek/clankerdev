@@ -913,7 +913,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.goto('/admin/vps/123/lifecycle/delete');
 
-    await page.getByTestId('vps.lifecycle.delete.lazy').check();
+    await page.getByTestId('vps.lifecycle.delete.lazy').selectOption('soft_delete');
     await expect(page.getByTestId('vps.lifecycle.delete.confirm')).toHaveCount(0);
 
     const reqPromise = page.waitForRequest(
@@ -930,6 +930,57 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
       },
     });
     await expect(page).toHaveURL(/\/admin\/vps\?user=7(?:&|$)/);
+  });
+
+  test('admin delete accepts a custom retention deadline and keeps a receipt after navigation', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installLifecycleMock(page);
+    await page.goto('/admin/vps/123/lifecycle/delete');
+    await page.getByTestId('vps.lifecycle.delete.lazy.custom_expiration').check();
+    await expect(page.getByTestId('vps.lifecycle.delete.submit')).toBeDisabled();
+    await page.getByTestId('vps.lifecycle.delete.lazy.expiration').fill('2099-01-02T12:30');
+    await page.screenshot({ path: test.info().outputPath('delete-options-en.png'), fullPage: true });
+    const expectedExpiration = await page.evaluate(() => new Date(2099, 0, 2, 12, 30).toISOString());
+    const request = page.waitForRequest(r => r.method() === 'PUT' && r.url().includes('/api/v7.0/vpses/123'));
+    await page.getByTestId('vps.lifecycle.delete.submit').click();
+    await expect(page.getByTestId('vps.lifecycle.delete.submit.confirm_dialog')).toContainText('2099-01-02 12:30');
+    await page.getByTestId('vps.lifecycle.delete.submit.confirm_dialog.confirm').click();
+    expect((await request).postDataJSON()).toEqual({ vps: {
+      object_state: 'soft_delete', expiration_date: expectedExpiration, change_reason: 'Deletion requested',
+    } });
+    await expect(page).toHaveURL(/\/admin\/vps\?user=7(?:&|$)/);
+    const receipt = page.getByTestId('toast.viewport');
+    await expect(receipt).toContainText('VPS deletion request accepted');
+    await expect(receipt).toContainText('vps123.example');
+    await page.clock.install();
+    await page.clock.fastForward(15000);
+    await expect(receipt).toContainText('VPS deletion request accepted');
+    await expect(receipt.getByRole('button', { name: 'Open tasks' })).toBeVisible();
+  });
+
+  test('admin hard delete ignores a previously entered soft-delete deadline', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installLifecycleMock(page);
+    await page.goto('/admin/vps/123/lifecycle/delete');
+    await page.getByTestId('vps.lifecycle.delete.lazy.custom_expiration').check();
+    await page.getByTestId('vps.lifecycle.delete.lazy.expiration').fill('2099-01-02T12:30');
+    await page.getByTestId('vps.lifecycle.delete.lazy').selectOption('hard_delete');
+    await expect(page.getByTestId('vps.lifecycle.delete.lazy.expiration')).toHaveCount(0);
+    const request = page.waitForRequest(r => r.method() === 'DELETE' && r.url().includes('/api/v7.0/vpses/123'));
+    await page.getByTestId('vps.lifecycle.delete.submit').click();
+    await expect(page.getByTestId('vps.lifecycle.delete.submit.confirm_dialog')).toContainText('Hard delete');
+    await page.getByTestId('vps.lifecycle.delete.submit.confirm_dialog.confirm').click();
+    expect((await request).postDataJSON()).toEqual({ vps: { lazy: false } });
+  });
+
+  test('admin in My view can find administrative delete options', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installLifecycleMock(page, { user: { id: 7, login: 'owner-admin', level: 99 } });
+    await page.goto('/app/vps/123/lifecycle/delete');
+    await expect(page.getByTestId('vps.lifecycle.delete.lazy')).toHaveCount(0);
+    await page.getByTestId('vps.lifecycle.delete.admin_options').click();
+    await expect(page).toHaveURL(/\/admin\/vps\/123\/lifecycle\/delete$/);
+    await expect(page.getByTestId('vps.lifecycle.delete.lazy')).toHaveValue('soft_delete');
   });
 
   test('delete without an action-state id stays on the VPS and fails closed', async ({ page }) => {
@@ -950,6 +1001,7 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await expect(page).toHaveURL(/\/admin\/vps\/123\/lifecycle\/delete$/);
     await expect(page.getByTestId('vps.lifecycle.delete')).toContainText(/server did not return a task identifier/i);
+    await expect(page.getByText('VPS deletion request accepted')).toHaveCount(0);
     await expect(page.getByTestId('modal.action_progress')).toBeHidden();
   });
 
