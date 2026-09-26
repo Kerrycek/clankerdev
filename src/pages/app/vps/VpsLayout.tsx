@@ -49,6 +49,7 @@ import {
   shouldDeferVpsDetailQuery,
 } from './VpsDetailVisibility';
 import { VpsActionsMenu, VpsTabsNav } from './VpsNavigation';
+import { VpsHeaderRuntime } from './VpsHeaderRuntime';
 import { VpsPowerConfirmTarget } from './VpsPowerConfirmation';
 export function VpsLayout() {
   const { basePath, mode } = useAppMode();
@@ -543,10 +544,16 @@ export function VpsLayout() {
               {t('common.node')} <span className="font-medium text-fg">{nodeLabel}</span>
               <span className="text-faint"> · </span>
               {t('common.location')} <span className="font-medium text-fg">{locationLabel}</span>
+              <span className="text-faint"> · </span>
+              <span data-testid="vps.header.distribution">
+                {t('vps.header.distribution')}{' '}
+                <span className="font-medium text-fg [overflow-wrap:anywhere]">{vps.os_template?.label?.trim() || t('common.na')}</span>
+              </span>
             </>
           }
           extra={
             <div className="space-y-2">
+              <VpsHeaderRuntime vps={vps} />
               <div
                 className="min-w-0 text-sm text-muted xl:flex xl:items-center xl:gap-1"
                 data-testid="vps.header.ssh"
