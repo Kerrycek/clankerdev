@@ -498,6 +498,7 @@ export function VpsLayout() {
         <ObjectHeader
           testId="vps.header"
           horizontalAt="xl"
+          fullWidthDetails
           kicker={
             <>
               <Link className="text-accent hover:underline" to={vpsListHref}>
@@ -508,6 +509,11 @@ export function VpsLayout() {
             </>
           }
           title={vps.hostname}
+          titleAfter={
+            <Badge testId="vps.header.distribution" title={t('vps.header.distribution')} className="max-w-full [overflow-wrap:anywhere]">
+              {vps.os_template?.label?.trim() || t('common.na')}
+            </Badge>
+          }
           badges={
             <>
               <Badge variant={rt.variant}>{rt.label}</Badge>
@@ -525,35 +531,29 @@ export function VpsLayout() {
             </>
           }
           meta={
-            <>
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
               {mode === 'admin' && ownerName ? (
-                <>
-                  <span className="min-w-0 [overflow-wrap:anywhere]" data-testid="vps.header.owner">
-                    {t('vps.control.admin.owner')}{' '}
-                    {ownerId ? (
-                      <Link className="font-medium text-link hover:underline [overflow-wrap:anywhere]" to={`${basePath}/users/${ownerId}`}>
-                        {ownerName} <span className="font-normal text-muted">#{ownerId}</span>
-                      </Link>
-                    ) : (
-                      <span className="font-medium text-fg">{ownerName}</span>
-                    )}
-                  </span>
-                  <span className="text-faint"> · </span>
-                </>
+                <span className="min-w-0 [overflow-wrap:anywhere]" data-testid="vps.header.owner">
+                  {t('vps.control.admin.owner')}{' '}
+                  {ownerId ? (
+                    <Link className="font-medium text-link hover:underline [overflow-wrap:anywhere]" to={`${basePath}/users/${ownerId}`}>
+                      {ownerName} <span className="font-normal text-muted">#{ownerId}</span>
+                    </Link>
+                  ) : (
+                    <span className="font-medium text-fg">{ownerName}</span>
+                  )}
+                </span>
               ) : null}
-              {t('common.node')} <span className="font-medium text-fg">{nodeLabel}</span>
-              <span className="text-faint"> · </span>
-              {t('common.location')} <span className="font-medium text-fg">{locationLabel}</span>
-              <span className="text-faint"> · </span>
-              <span data-testid="vps.header.distribution">
-                {t('vps.header.distribution')}{' '}
-                <span className="font-medium text-fg [overflow-wrap:anywhere]">{vps.os_template?.label?.trim() || t('common.na')}</span>
+              <span className="min-w-0 [overflow-wrap:anywhere]">
+                {t('common.node')} <span className="font-medium text-fg">{nodeLabel}</span>
               </span>
-            </>
+              <span className="min-w-0 [overflow-wrap:anywhere]">
+                {t('common.location')} <span className="font-medium text-fg">{locationLabel}</span>
+              </span>
+            </div>
           }
           extra={
             <div className="space-y-2">
-              <VpsHeaderRuntime vps={vps} />
               <div
                 className="min-w-0 text-sm text-muted xl:flex xl:items-center xl:gap-1"
                 data-testid="vps.header.ssh"
@@ -682,7 +682,12 @@ export function VpsLayout() {
               />
             </>
           }
-          tabs={<VpsTabsNav basePath={basePath} vpsId={vps.id} contextSearch={listContextSearch} />}
+          tabs={
+            <div className="space-y-3">
+              <VpsHeaderRuntime vps={vps} />
+              <VpsTabsNav basePath={basePath} vpsId={vps.id} contextSearch={listContextSearch} />
+            </div>
+          }
         />
 
         {chainsStale ? (
