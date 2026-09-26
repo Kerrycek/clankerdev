@@ -11,6 +11,8 @@ export interface Vps {
   remind_after_date?: string | null;
   is_running?: boolean;
   uptime?: number;
+  process_count?: number;
+  cpu_idle?: number;
   node?: Node;
   user?: User;
   os_template?: ResourceRef;

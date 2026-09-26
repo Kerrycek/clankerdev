@@ -1,5 +1,9 @@
 // VPS overview copy
 export const csVps_overview = {
+  'vps.header.distribution': 'Distribuce',
+  'vps.header.processes': 'Procesy',
+  'vps.header.cpu_usage': 'Využití CPU',
+  'vps.header.load': 'Zátěž (1 / 5 / 15 min)',
   'vps.overview.config.title': 'Konfigurace',
   'vps.overview.config.vps_id': 'ID VPS',
   'vps.overview.config.hostname': 'Název hostitele',

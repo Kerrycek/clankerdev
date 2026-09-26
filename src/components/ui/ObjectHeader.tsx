@@ -48,6 +48,8 @@ export function ObjectHeader(props: {
   className?: string;
   /** Keep dense headers stacked until the content has enough horizontal room. */
   horizontalAt?: 'sm' | 'xl';
+  /** Let metadata and extra content use the full width below the title/actions row. */
+  fullWidthDetails?: boolean;
 
   kicker?: HeaderKicker;
   title: React.ReactNode;
@@ -64,6 +66,14 @@ export function ObjectHeader(props: {
   const boxed = props.boxed ?? true;
   const kicker = renderKicker(props.kicker);
   const horizontalAt = props.horizontalAt ?? 'sm';
+
+  const details = (
+    <>
+      {props.meta ? <div className="mt-1 text-sm text-muted">{props.meta}</div> : null}
+
+      {props.extra ? <div className="mt-2">{props.extra}</div> : null}
+    </>
+  );
 
   const content = (
     <div
@@ -89,9 +99,7 @@ export function ObjectHeader(props: {
 
           {props.badges ? <div className="mt-2 flex flex-wrap items-center gap-2">{props.badges}</div> : null}
 
-          {props.meta ? <div className="mt-1 text-sm text-muted">{props.meta}</div> : null}
-
-          {props.extra ? <div className="mt-2">{props.extra}</div> : null}
+          {!props.fullWidthDetails ? details : null}
         </div>
 
         {props.right || props.actions ? (
@@ -117,6 +125,8 @@ export function ObjectHeader(props: {
           </div>
         ) : null}
       </div>
+
+      {props.fullWidthDetails ? <div className="mt-3">{details}</div> : null}
 
       {props.tabs ? (
         <div className={clsx('mt-4', boxed ? 'border-t border-border pt-3' : undefined)}>{props.tabs}</div>

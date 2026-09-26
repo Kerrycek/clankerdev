@@ -1,5 +1,9 @@
 // VPS overview copy
 export const enVps_overview = {
+  'vps.header.distribution': 'Distribution',
+  'vps.header.processes': 'Processes',
+  'vps.header.cpu_usage': 'CPU usage',
+  'vps.header.load': 'Load average (1 / 5 / 15 min)',
   'vps.overview.config.title': 'Configuration',
   'vps.overview.config.vps_id': 'VPS ID',
   'vps.overview.config.hostname': 'Hostname',
