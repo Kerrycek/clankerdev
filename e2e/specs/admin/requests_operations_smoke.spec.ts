@@ -243,6 +243,7 @@ for (const language of ['en', 'cs'] as const) {
     const applicant = page.getByTestId('admin.requests.detail.applicant');
     await expect(applicant.getByTestId('admin.requests.detail.risk.ip')).toBeVisible();
     await expect(applicant.getByTestId('admin.requests.detail.risk.mail')).toBeVisible();
+    await expect(applicant.getByTestId('admin.requests.detail.metadata')).toBeVisible();
     const applicantBox = await applicant.boundingBox();
     const decisionBox = await page.getByTestId('admin.requests.detail.decision').boundingBox();
     expect(decisionBox!.y).toBeGreaterThan(applicantBox!.y + applicantBox!.height);
@@ -802,7 +803,7 @@ test('@workflow-matrix @smoke admin requests: visible state and type segments ke
   await expect(page).toHaveURL(/type=registration/);
 });
 
-test('@workflow-matrix @smoke @smoke-mobile admin requests: sequential review opens the next request after each decision', async ({ page }) => {
+test('@workflow-matrix @smoke @smoke-mobile admin requests: sequential review opens the next request after each decision', async ({ page }, testInfo) => {
   await bootstrapVpsAdminWindow(page);
   let first = { ...registration(302), user: undefined, login: 'first-user', full_name: 'First Applicant' };
   let second = { ...registration(301), user: undefined, login: 'second-user', full_name: 'Second Applicant' };
@@ -844,6 +845,11 @@ test('@workflow-matrix @smoke @smoke-mobile admin requests: sequential review op
   await expect(page).toHaveURL(/\/admin\/requests\/registration\/302/);
   await expect(page.getByTestId('admin.requests.review.continue')).toBeChecked();
   await expect(page.getByTestId('admin.requests.review.queue')).toContainText(/3/);
+  const queueBox = await page.getByTestId('admin.requests.review.queue').boundingBox();
+  const actionsBox = await page.getByTestId('admin.requests.resolve.actions').boundingBox();
+  expect(actionsBox!.y).toBeGreaterThanOrEqual(queueBox!.y + queueBox!.height);
+  await page.getByTestId('admin.requests.detail.decision').screenshot({ path: testInfo.outputPath('decision-compact-queue.png') });
+
 
   await page.getByTestId('admin.requests.resolve.action.deny').click();
   await page.getByTestId('admin.requests.resolve.reason').fill('Does not meet the requirements');
