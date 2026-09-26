@@ -111,21 +111,26 @@ test('admin income forecast keeps the last successful calculation after a refres
 });
 
 test('admin income forecast surfaces an API 403 through the shared error state', async ({ page }) => {
+  let deniedRequests = 0;
   await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
   await installHaveApiMock(page, {
-    user: { id: 2, login: 'support', level: 50 },
+    user: { id: 1, login: 'admin', level: 100 },
     handlers: {
-      'GET payment_stat/estimate_income': () => ({
-        status: 403,
-        contentType: 'application/json',
-        body: JSON.stringify({ status: false, message: 'Access denied', response: null }),
-      }),
+      'GET payment_stat/estimate_income': () => {
+        deniedRequests += 1;
+        return {
+          status: 403,
+          contentType: 'application/json',
+          body: JSON.stringify({ status: false, message: 'Access denied', response: null }),
+        };
+      },
     },
   });
 
   await page.goto('/admin/payments/forecast');
 
   await expect(page.getByTestId('admin.finance.forecast.error')).toBeVisible();
+  expect(deniedRequests).toBeGreaterThan(0);
   await expect(page.getByTestId('admin.finance.forecast.error')).toContainText(/access|permission|oprávnění|přístup/i);
   await expect(page.getByTestId('admin.finance.forecast.summary.estimate')).toHaveCount(0);
 });
