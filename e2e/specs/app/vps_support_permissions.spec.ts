@@ -40,7 +40,7 @@ test('@pr-smoke support account stays read-only inside the admin VPS shell', asy
     const pathname = new URL(request.url()).pathname;
     // Route changes persist the last visited UI section for every authenticated
     // role. That request is unrelated to mutating the inspected VPS.
-    if (pathname.endsWith('/webui_user_settings')) return;
+    if (request.method() === 'PUT' && pathname === '/api/v7.0/webui_user_settings/ui/settings') return;
     mutatingApiRequests.push(`${request.method()} ${pathname}`);
   });
 

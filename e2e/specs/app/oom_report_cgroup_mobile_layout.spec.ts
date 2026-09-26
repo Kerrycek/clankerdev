@@ -47,7 +47,7 @@ test('@pr-smoke @pr-smoke-mobile keeps long OOM cgroup paths inside the detail v
   page.on('request', (request) => {
     const url = new URL(request.url());
     if (!url.pathname.startsWith('/api/v7.0/') || ['GET', 'HEAD', 'OPTIONS'].includes(request.method())) return;
-    if (url.pathname.endsWith('/webui_user_settings')) return;
+    if (request.method() === 'PUT' && url.pathname === '/api/v7.0/webui_user_settings/ui/settings') return;
     mutations.push(`${request.method()} ${url.pathname}`);
   });
 
