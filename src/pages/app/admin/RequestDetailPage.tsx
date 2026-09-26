@@ -83,30 +83,34 @@ function RegistrationDetails(props: { request: RegistrationRequest }) {
   const request = props.request;
 
   return (
-    <dl className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2" data-testid="admin.requests.detail.registration.fields">
-      <DetailField label={t('requests.field.login')} value={request.login} />
-      <DetailField label={t('requests.field.full_name')} value={request.full_name} />
-      <DetailField label={t('requests.field.org')} value={request.org_name} />
-      <DetailField label={t('requests.detail.org_id')} value={request.org_id} />
-      <DetailField label={t('requests.field.email')} value={request.email} />
-      <DetailField label={t('requests.field.year_of_birth')} value={request.year_of_birth} />
-      <div className="md:col-span-2">
-        <dt className="text-xs text-muted">{t('requests.field.address')}</dt>
-        <dd className="mt-1">
-          <RequestAddressMapLink
-            address={request.address}
-            testId="admin.requests.detail.registration.address.map"
-          />
-        </dd>
-      </div>
-      <DetailField label={t('requests.field.how')} value={request.how} />
-      <DetailField label={t('requests.field.note')} value={request.note} />
-      <DetailField label={t('requests.field.os_template')} value={requestResourceLabel(request.os_template)} />
-      <DetailField label={t('requests.field.location')} value={requestResourceLabel(request.location)} />
-      <DetailField label={t('requests.field.currency')} value={request.currency?.toUpperCase()} />
-      <DetailField label={t('requests.field.language')} value={requestResourceLabel(request.language)} />
-      <DetailField label={t('requests.field.time_zone')} value={request.time_zone} wide />
-    </dl>
+    <div className="grid min-w-0 gap-4 lg:grid-cols-2" data-testid="admin.requests.detail.registration.fields">
+      <dl className="grid grid-cols-1 gap-x-4 gap-y-3 md:grid-cols-2">
+        <DetailField label={t('requests.field.login')} value={request.login} />
+        <DetailField label={t('requests.field.full_name')} value={request.full_name} />
+        <DetailField label={t('requests.field.org')} value={request.org_name} />
+        <DetailField label={t('requests.detail.org_id')} value={request.org_id} />
+        <DetailField label={t('requests.field.email')} value={request.email} />
+        <DetailField label={t('requests.field.year_of_birth')} value={request.year_of_birth} />
+        <DetailField label={t('requests.field.how')} value={request.how} />
+        <DetailField label={t('requests.field.note')} value={request.note} />
+        <DetailField label={t('requests.field.os_template')} value={requestResourceLabel(request.os_template)} />
+        <DetailField label={t('requests.field.location')} value={requestResourceLabel(request.location)} />
+        <DetailField label={t('requests.field.currency')} value={request.currency?.toUpperCase()} />
+        <DetailField label={t('requests.field.language')} value={requestResourceLabel(request.language)} />
+        <DetailField label={t('requests.field.time_zone')} value={request.time_zone} wide />
+      </dl>
+      <dl className="min-w-0">
+        <div className="min-w-0">
+          <dt className="text-xs text-muted">{t('requests.field.address')}</dt>
+          <dd className="mt-1">
+            <RequestAddressMapLink
+              address={request.address}
+              testId="admin.requests.detail.registration.address.map"
+            />
+          </dd>
+        </div>
+      </dl>
+    </div>
   );
 }
 
@@ -383,37 +387,66 @@ export function RequestDetailPage() {
       />
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-        <aside className="min-w-0 space-y-3 lg:col-start-3 lg:row-start-1" data-testid="admin.requests.detail.review">
-          <Card testId="admin.requests.detail.decision">
-            <CardHeader title={t('requests.detail.decision.title')} subtitle={t('requests.detail.decision.subtitle')} />
-            <CardBody className="space-y-4">
-              <div className="flex items-center gap-2">
-                <StatusDot variant={dotVariant} />
-                <Badge variant={stateVariant}>{t(requestStateLabelKey(state))}</Badge>
-              </div>
-              {request.admin_response ? (
-                <div>
-                  <div className="text-xs text-muted">{t('requests.detail.admin_response')}</div>
-                  <div className="mt-1 whitespace-pre-line text-sm">{request.admin_response}</div>
-                </div>
-              ) : null}
-              {reviewQueueActive ? (
-                <div className="rounded-lg border border-border bg-surface-2 p-3" data-testid="admin.requests.review.queue">
-                  <label className="flex cursor-pointer items-start gap-2 text-sm font-medium">
-                    <input
-                      className="mt-0.5 h-4 w-4 rounded border-border"
-                      type="checkbox"
-                      checked={continueReviewQueue}
-                      onChange={(event) => setContinueReviewQueue(event.target.checked)}
-                      data-testid="admin.requests.review.continue"
-                    />
-                    <span>{t('requests.review.continue')}</span>
-                  </label>
-                  <div className="mt-1 text-xs text-muted">
-                    {t('requests.review.remaining', { count: String(reviewQueue.length + 1) })}
+        <section className={reqType === 'registration' ? 'min-w-0 lg:col-span-3' : 'min-w-0 lg:col-span-2 lg:col-start-1 lg:row-start-1'}>
+          <Card testId="admin.requests.detail.applicant">
+            <CardHeader
+              title={reqType === 'registration' ? t('requests.detail.registration.title') : t('requests.detail.change.title')}
+              subtitle={reqType === 'registration' ? t('requests.detail.registration.subtitle') : t('requests.detail.change.subtitle')}
+            />
+            <CardBody>
+              {reqType === 'registration' ? (
+                <div className="space-y-4">
+                  <RegistrationDetails request={request as RegistrationRequest} />
+                  <div className="border-t border-border pt-4">
+                    <RequestFraudChecks request={request as RegistrationRequest} />
                   </div>
                 </div>
-              ) : null}
+              ) : (
+                <ChangeDetails
+                  request={request as ChangeRequest}
+                  currentUser={currentUserQ.data}
+                  currentLoading={currentUserQ.isLoading}
+                  currentUnavailable={!changeUserId || currentUserQ.isError}
+                  ownerMissing={requestMissingRequiredUser('change', request)}
+                />
+              )}
+            </CardBody>
+          </Card>
+        </section>
+
+        <aside className={reqType === 'registration' ? 'min-w-0 lg:col-span-3' : 'min-w-0 lg:col-start-3 lg:row-start-1'} data-testid="admin.requests.detail.review">
+          <Card testId="admin.requests.detail.decision">
+            <CardHeader title={t('requests.detail.decision.title')} subtitle={t('requests.detail.decision.subtitle')} />
+            <CardBody className={reqType === 'registration' ? 'grid items-start gap-4 lg:grid-cols-2' : 'space-y-4'}>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <StatusDot variant={dotVariant} />
+                  <Badge variant={stateVariant}>{t(requestStateLabelKey(state))}</Badge>
+                </div>
+                {request.admin_response ? (
+                  <div>
+                    <div className="text-xs text-muted">{t('requests.detail.admin_response')}</div>
+                    <div className="mt-1 whitespace-pre-line text-sm">{request.admin_response}</div>
+                  </div>
+                ) : null}
+                {reviewQueueActive ? (
+                  <div className="rounded-lg border border-border bg-surface-2 p-3" data-testid="admin.requests.review.queue">
+                    <label className="flex cursor-pointer items-start gap-2 text-sm font-medium">
+                      <input
+                        className="mt-0.5 h-4 w-4 rounded border-border"
+                        type="checkbox"
+                        checked={continueReviewQueue}
+                        onChange={(event) => setContinueReviewQueue(event.target.checked)}
+                        data-testid="admin.requests.review.continue"
+                      />
+                      <span>{t('requests.review.continue')}</span>
+                    </label>
+                    <div className="mt-1 text-xs text-muted">
+                      {t('requests.review.remaining', { count: String(reviewQueue.length + 1) })}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
               <RequestReviewActions
                 request={request}
                 reqType={reqType}
@@ -427,32 +460,7 @@ export function RequestDetailPage() {
           </Card>
         </aside>
 
-        <section className="space-y-3 lg:col-span-2 lg:col-start-1 lg:row-start-1">
-          <Card>
-            <CardHeader
-              title={reqType === 'registration' ? t('requests.detail.registration.title') : t('requests.detail.change.title')}
-              subtitle={reqType === 'registration' ? t('requests.detail.registration.subtitle') : t('requests.detail.change.subtitle')}
-            />
-            <CardBody>
-              {reqType === 'registration' ? (
-                <RegistrationDetails request={request as RegistrationRequest} />
-              ) : (
-                <ChangeDetails
-                  request={request as ChangeRequest}
-                  currentUser={currentUserQ.data}
-                  currentLoading={currentUserQ.isLoading}
-                  currentUnavailable={!changeUserId || currentUserQ.isError}
-                  ownerMissing={requestMissingRequiredUser('change', request)}
-                />
-              )}
-            </CardBody>
-          </Card>
-
-        </section>
-
         <section className={reqType === 'registration' ? 'min-w-0 space-y-3 lg:col-span-3' : 'min-w-0 space-y-3 lg:col-span-2'}>
-          {reqType === 'registration' ? <RequestFraudChecks request={request as RegistrationRequest} /> : null}
-
           <Card testId="admin.requests.detail.metadata">
             <details key={`${reqType}:${reqId}`} className="group" open>
               <summary

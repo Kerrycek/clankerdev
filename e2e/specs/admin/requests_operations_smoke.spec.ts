@@ -240,6 +240,20 @@ for (const language of ['en', 'cs'] as const) {
     const review = page.getByTestId('admin.requests.detail.review');
     const summary = page.getByTestId('admin.requests.detail.risk.summary');
     await expect(summary).toBeVisible();
+    const applicant = page.getByTestId('admin.requests.detail.applicant');
+    await expect(applicant.getByTestId('admin.requests.detail.risk.ip')).toBeVisible();
+    await expect(applicant.getByTestId('admin.requests.detail.risk.mail')).toBeVisible();
+    const applicantBox = await applicant.boundingBox();
+    const decisionBox = await page.getByTestId('admin.requests.detail.decision').boundingBox();
+    expect(decisionBox!.y).toBeGreaterThan(applicantBox!.y + applicantBox!.height);
+    expect(Math.abs(applicantBox!.width - decisionBox!.width)).toBeLessThan(1);
+    if (page.viewportSize()!.width >= 1024) {
+      const fields = page.getByTestId('admin.requests.detail.registration.fields');
+      const valuesBox = await fields.locator(':scope > dl').first().boundingBox();
+      const addressBox = await fields.locator(':scope > dl').last().boundingBox();
+      expect(Math.abs(valuesBox!.y - addressBox!.y)).toBeLessThan(1);
+      expect(addressBox!.x).toBeGreaterThan(valuesBox!.x + valuesBox!.width);
+    }
     const summaryBox = await summary.boundingBox();
     const detailsBox = await page.getByTestId('admin.requests.detail.registration.fields').boundingBox();
     expect(summaryBox!.y).toBeGreaterThan(detailsBox!.y + detailsBox!.height);
@@ -1509,7 +1523,7 @@ test('@workflow-matrix @smoke admin requests: switching a bulk action cannot lea
   await expect.poll(() => resolveBody).toEqual({ registration: { action: 'ignore' } });
 });
 
-test('@workflow-matrix @smoke-mobile admin requests: responsive row opens the decision-first detail', async ({ page }) => {
+test('@workflow-matrix @smoke-mobile admin requests: responsive row opens the applicant-first detail', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 800 });
   await bootstrapVpsAdminWindow(page);
   await installOsmMapMock(page);
