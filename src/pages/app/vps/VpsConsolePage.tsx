@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ExternalLink, Maximize2, Minimize2, PlugZap, RotateCw, Trash2 } from 'lucide-react';
 
@@ -31,7 +31,7 @@ import { useVps } from './VpsContext';
 import { VpsConfirmTarget } from './VpsPowerConfirmation';
 
 export function VpsConsolePage() {
-  const { canMutateVps } = useVps();
+  const { vps, canMutateVps } = useVps();
   const { t } = useI18n();
 
   if (!canMutateVps) {
@@ -48,7 +48,7 @@ export function VpsConsolePage() {
     );
   }
 
-  return <MutableVpsConsolePage />;
+  return <MutableVpsConsolePage key={vps.id} />;
 }
 
 function MutableVpsConsolePage() {
@@ -80,13 +80,23 @@ function MutableVpsConsolePage() {
   const tokenQ = useQuery({
     queryKey: tokenQueryKey,
     queryFn: createFreshConsoleToken,
-    // A console token is a server-side session and its creation is a mutation.
-    // Keep route navigation and reload read-only; the user must explicitly ask
-    // for a session with the action below.
+    // Opening the console starts one session below. Keep background query
+    // refreshes disabled so focus/reconnect cannot create another session.
     enabled: false,
     retry: false,
     refetchOnWindowFocus: false,
   });
+
+  const autoStartAttempted = useRef(false);
+  const { data: cachedToken, refetch: startSession } = tokenQ;
+  useEffect(() => {
+    if (!canCreateSession || autoStartAttempted.current) return;
+    autoStartAttempted.current = true;
+    if (cachedToken?.token && !isConsoleTokenExpired(cachedToken.expiration)) return;
+    // Deduplicate StrictMode/in-flight requests and leave errors or a later
+    // explicit revoke to the user's retry/new-session controls.
+    void startSession({ cancelRefetch: false });
+  }, [canCreateSession, cachedToken, startSession]);
 
   const resetFrameState = () => {
     setFrameNonce((value) => value + 1);
@@ -316,12 +326,6 @@ function MutableVpsConsolePage() {
             {t('vps.console.server_missing.body')}
           </Alert>
         </div>
-      ) : null}
-
-      {server && !activeToken && !sessionSuspended && !tokenQ.isFetching && !tokenQ.isError ? (
-        <Alert variant="info" title={t('vps.console.not_started.title')} testId="vps.console.not_started">
-          {t('vps.console.not_started.body')}
-        </Alert>
       ) : null}
 
       {sessionSuspended ? (
