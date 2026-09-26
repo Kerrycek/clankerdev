@@ -192,11 +192,9 @@ describe('UiSettingsProvider', () => {
 
     expect(haveApiCallMock).toHaveBeenCalledWith({
       method: 'PUT',
-      path: '/webui_user_settings',
+      path: '/webui_user_settings/ui_setting/settings',
       namespace: 'webui_user_setting',
       params: {
-        namespace: 'ui_setting',
-        key: 'settings',
         value: toUiSettingsJson({
           ...DEFAULT_SETTINGS,
           tips: {

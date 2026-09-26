@@ -267,7 +267,7 @@ test('@pr-smoke @pr-smoke-mobile user requests: filtered empty state clears filt
   expect(writes.filter((write) => !(
     write.method === 'PUT'
     && write.origin === appOrigin
-    && write.pathname === '/api/v7.0/webui_user_settings'
+    && write.pathname === '/api/v7.0/webui_user_settings/ui/settings'
   ))).toEqual([]);
 
   if (!isMobile) {
