@@ -36,7 +36,7 @@ async function routeConsoleStub(page: Parameters<typeof installHaveApiMock>[0]) 
 }
 
 test.describe('@smoke VPS console page', () => {
-  test('@workflow-matrix keeps navigation read-only, then renders and recreates an explicitly requested session', async ({ page }) => {
+  test('@workflow-matrix @pr-smoke @pr-smoke-mobile opens immediately, reuses a session on navigation and confirms replacement', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
 
     await routeConsoleStub(page);
@@ -67,20 +67,6 @@ test.describe('@smoke VPS console page', () => {
     await page.goto('/app/vps/123/console');
 
     await expect(page.getByTestId('vps.console.page')).toBeVisible();
-    await expect(page.getByTestId('vps.console.connection_state')).toContainText('Disconnected');
-    await expect(page.getByTestId('vps.console.not_started')).toContainText('Select New session');
-    await expect(page.getByTestId('vps.console.new_session')).toBeVisible();
-    await expect(page.getByTestId('vps.console.iframe')).toHaveCount(0);
-    expect(createCalls).toBe(0);
-    expect(deleteCalls).toBe(0);
-
-    await page.reload();
-    await expect(page.getByTestId('vps.console.page')).toBeVisible();
-    await expect(page.getByTestId('vps.console.connection_state')).toContainText('Disconnected');
-    expect(createCalls).toBe(0);
-    expect(deleteCalls).toBe(0);
-
-    await page.getByTestId('vps.console.new_session').click();
     await expect.poll(() => createCalls).toBe(1);
     await expect(page.getByTestId('vps.console.connection_state')).toContainText(/Connecting|Connected/);
     await expect(page.getByTestId('vps.console.reconnect')).toBeVisible();
@@ -98,6 +84,15 @@ test.describe('@smoke VPS console page', () => {
 
     const src1 = await iframe.getAttribute('src');
     expect(src1).toContain('/_console/console/123?session=T1');
+
+    // Returning to the console reuses its valid cached session, without DELETE.
+    await page.getByRole('link', { name: /^Overview$/ }).click();
+    await expect(iframe).toHaveCount(0);
+    await page.getByRole('link', { name: /^Console$/ }).first().click();
+    await expect(iframe).toHaveAttribute('src', /session=T1/);
+    await expect(page.getByTestId('vps.console.frame_status')).toContainText('Connected');
+    expect(createCalls).toBe(1);
+    expect(deleteCalls).toBe(0);
 
     await page.getByTestId('vps.console.copy_ssh').click();
     await expect(page.getByTestId('vps.console.copy_ssh')).toContainText(/Copied|Copy failed/);
@@ -127,9 +122,23 @@ test.describe('@smoke VPS console page', () => {
 
     expect(deleteCalls).toBe(1);
     expect(createCalls).toBe(2);
+
+    await page.getByTestId('vps.console.revoke_session').click();
+    await page.getByTestId('vps.console.revoke_session_dialog.confirm').click();
+    await expect(page.getByTestId('vps.console.revoked')).toBeVisible();
+    await expect(iframe).toHaveCount(0);
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await expect(page.getByTestId('vps.console.connection_state')).toContainText('Revoked');
+    expect(createCalls).toBe(2);
+    expect(deleteCalls).toBe(2);
+
+    await page.getByTestId('vps.console.revoked.new_session').click();
+    await expect(iframe).toBeVisible();
+    expect(createCalls).toBe(3);
+    expect(deleteCalls).toBe(2);
   });
 
-  test('keeps direct admin console navigation and reload read-only until explicit session creation', async ({ page }) => {
+  test('@pr-smoke @pr-smoke-mobile opens directly for admins and reconnects after reload', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await routeConsoleStub(page);
 
@@ -153,16 +162,12 @@ test.describe('@smoke VPS console page', () => {
 
     await page.goto('/admin/vps/123/console');
     await expect(page.getByTestId('vps.console.page')).toBeVisible();
-    await expect(page.getByTestId('vps.console.connection_state')).toContainText('Disconnected');
-    expect(createCalls).toBe(0);
+    await expect(page.getByTestId('vps.console.frame_status')).toContainText('Connected');
+    expect(createCalls).toBe(1);
 
     await page.reload();
-    await expect(page.getByTestId('vps.console.page')).toBeVisible();
-    await expect(page.getByTestId('vps.console.not_started')).toBeVisible();
-    expect(createCalls).toBe(0);
-
-    await page.getByTestId('vps.console.new_session').click();
-    await expect.poll(() => createCalls).toBe(1);
+    await expect(page.getByTestId('vps.console.frame_status')).toContainText('Connected');
+    expect(createCalls).toBe(2);
     await expect(page.getByTestId('vps.console.open_new_tab')).toHaveAttribute(
       'href',
       /\/_console\/console\/123\?session=ADMIN/
@@ -193,15 +198,15 @@ test.describe('@smoke VPS console page', () => {
 
     await page.goto('/app/vps/123/console');
 
-    await expect(page.getByTestId('vps.console.not_started')).toBeVisible();
-    expect(createCalls).toBe(0);
-    await page.getByTestId('vps.console.new_session').click();
     await expect(page.getByTestId('vps.console.connection_state')).toContainText('Failed');
     await expect(page.getByTestId('vps.console.error')).toContainText('The console session could not be created');
     await expect(page.getByTestId('vps.console.retry')).toBeVisible();
 
+    expect(createCalls).toBe(1);
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    expect(createCalls).toBe(1);
     await page.getByTestId('vps.console.retry').click();
-    await expect.poll(() => createCalls).toBeGreaterThanOrEqual(2);
+    await expect.poll(() => createCalls).toBe(2);
   });
 
   test('fails closed when replacing a session cannot prove the old token stayed valid', async ({ page }) => {
@@ -228,7 +233,6 @@ test.describe('@smoke VPS console page', () => {
     });
 
     await page.goto('/app/vps/123/console');
-    await page.getByTestId('vps.console.new_session').click();
     await expect(page.getByTestId('vps.console.iframe')).toBeVisible();
 
     await page.getByTestId('vps.console.new_session').click();
@@ -269,7 +273,6 @@ test.describe('@smoke VPS console page', () => {
     });
 
     await page.goto('/app/vps/123/console');
-    await page.getByTestId('vps.console.new_session').click();
     await expect(page.getByTestId('vps.console.iframe')).toBeVisible();
 
     await page.getByTestId('vps.console.revoke_session').click();
