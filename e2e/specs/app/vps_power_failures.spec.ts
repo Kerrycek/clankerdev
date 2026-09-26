@@ -48,13 +48,17 @@ async function installPowerFailureMock(
   });
 }
 
+function powerActionButton(page: Page, action: PowerAction) {
+  return page.getByTestId(action === 'start' ? 'vps.action.start' : `vps.action.${action}.header`);
+}
+
 async function submitPowerAction(page: Page, action: PowerAction) {
   if (action === 'start') {
     await page.getByTestId('vps.action.start').click();
     return;
   }
 
-  await page.getByTestId('vps.actions.menu').selectOption(`action:${action}`);
+  await powerActionButton(page, action).click();
   await expect(page.getByTestId(`vps.action.${action}_confirm`)).toBeVisible();
   await page.getByTestId(`vps.action.${action}_confirm.confirm`).click();
 }
@@ -80,14 +84,19 @@ test.describe('@workflow-matrix VPS power failure regressions', () => {
       const request = await requestPromise;
       // start has no options; stop/restart must not silently force the operation.
       expect(request.postDataJSON()).toEqual({});
-      await expect(page.getByText('Action failed')).toBeVisible();
-      await expect(page.getByText(message)).toBeVisible();
-
       if (action === 'start') {
-        await expect(page.getByTestId('vps.action.start')).toHaveAttribute('aria-disabled', 'false');
+        await expect(page.getByText('Action failed')).toBeVisible();
+        await expect(page.getByText(message)).toBeVisible();
       } else {
-        await expect(page.getByTestId('vps.actions.menu').locator(`option[value="action:${action}"]`)).toBeEnabled();
+        // Failed stop/restart stays in its confirmation dialog for review.
+        await expect(page.getByTestId(`vps.action.${action}_confirm.error`)).toHaveText(message);
+        await expect(page.getByTestId(`vps.action.${action}_confirm.confirm`)).toBeEnabled();
+        await page.getByTestId(`vps.action.${action}_confirm.cancel`).click();
+        await expect(page.getByText('Action failed')).toBeVisible();
+        await expect(page.getByText(message)).toBeVisible();
       }
+
+      await expect(powerActionButton(page, action)).toHaveAttribute('aria-disabled', 'false');
     });
   }
 
@@ -268,7 +277,8 @@ test.describe('@workflow-matrix VPS power failure regressions', () => {
     await expect(page.getByTestId('modal.action_progress')).toBeVisible();
     await expect(page.getByTestId('modal.action_progress')).toBeHidden();
     await page.getByTestId('tasks.open-button').click();
-    await expect(page.getByTestId('tasks.row.790')).toContainText('Start VPS');
+    await expect(page.getByTestId('tasks.row.790').getByText('Start', { exact: true })).toBeVisible();
+    await expect(page.getByTestId('tasks.row.790')).toContainText('vps123.example');
     await expect(page.getByTestId('tasks.row.790')).toContainText('Failed');
   });
 
@@ -295,28 +305,15 @@ test.describe('@workflow-matrix VPS power failure regressions', () => {
       await expect(page.getByTestId('modal.action_progress')).toBeHidden();
       await expect(page.getByText(/server did not return a task identifier/i)).toBeVisible();
       await expect(page.getByTestId('vps.mutation.uncertain')).toBeVisible();
-      if (action === 'start') {
-        await expect(page.getByTestId('vps.action.start')).toHaveAttribute('aria-disabled', 'true');
-        await page.getByTestId('vps.action.start').evaluate((button) => (button as HTMLButtonElement).click());
-      } else {
-        await expect(page.getByTestId('vps.actions.menu').locator(`option[value="action:${action}"]`)).toBeDisabled();
-        await page.getByTestId('vps.actions.menu').evaluate((select, value) => {
-          const element = select as HTMLSelectElement;
-          element.value = String(value);
-          element.dispatchEvent(new Event('change', { bubbles: true }));
-        }, `action:${action}`);
-      }
+      await expect(powerActionButton(page, action)).toHaveAttribute('aria-disabled', 'true');
+      await powerActionButton(page, action).evaluate((button) => (button as HTMLButtonElement).click());
       await page.waitForTimeout(100);
       expect(postCount).toBe(1);
 
       await page.reload();
       await expect(page.getByTestId('vps.mutation.uncertain')).toBeVisible();
-      if (action === 'start') {
-        await expect(page.getByTestId('vps.action.start')).toHaveAttribute('aria-disabled', 'true');
-        await page.getByTestId('vps.action.start').evaluate((button) => (button as HTMLButtonElement).click());
-      } else {
-        await expect(page.getByTestId('vps.actions.menu').locator(`option[value="action:${action}"]`)).toBeDisabled();
-      }
+      await expect(powerActionButton(page, action)).toHaveAttribute('aria-disabled', 'true');
+      await powerActionButton(page, action).evaluate((button) => (button as HTMLButtonElement).click());
       await page.waitForTimeout(100);
       expect(postCount).toBe(1);
     });
