@@ -92,6 +92,7 @@ function HeaderHarness(props: { onOpenPalette?: () => void } = {}) {
         setUserMenuOpen={setUserMenuOpen}
         authLogin="KerryCZE"
         authRole="admin"
+        sessionExpiresAt={Date.now() + 40 * 60_000}
         theme="light"
         language="cs"
         onSetTheme={() => undefined}
@@ -135,6 +136,20 @@ describe('AppHeader', () => {
     expect(menu).toHaveClass('top-[calc(100%+0.5rem)]');
     expect(menu.className).not.toContain('top-full');
     expect(menu.className).not.toContain('mt-2');
+  });
+
+  it('does not briefly show 41 minutes when a 40-minute deadline renews between ticks', () => {
+    vi.useFakeTimers();
+    try {
+      const view = render(<HeaderHarness />);
+      expect(screen.getByTestId('shell.session-remaining')).toHaveTextContent('40 min');
+      act(() => vi.advanceTimersByTime(500));
+      view.rerender(<HeaderHarness />);
+      expect(screen.getByTestId('shell.session-remaining')).toHaveTextContent('40 min');
+      view.unmount();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('keeps session time informational and out of the user menu', () => {

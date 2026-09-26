@@ -69,11 +69,10 @@ export function AppUserMenu(props: Pick<AppHeaderProps,
     onGoToOtherMode, onGoToProfile, onGoToPublicStatus, loginLogoutHref,
   } = props;
   const sessionRemaining = useSessionRemainingLabel(t, sessionExpiresAt);
-  const sessionIdleLimit = formatSessionIdleLimit(t, sessionIdleLimitSeconds);
-  const sessionDisplay = sessionIdleLimit
-    ? { menuLabel: t('auth.session_idle.menu_label'), value: sessionIdleLimit }
-    : sessionRemaining
-      ? { menuLabel: t('auth.session_remaining.menu_label'), value: sessionRemaining }
+  const sessionDisplay = sessionRemaining
+    ? { menuLabel: t('auth.session_remaining.menu_label'), value: sessionRemaining }
+    : sessionIdleLimitSeconds === 0
+      ? { menuLabel: t('auth.session_idle.menu_label'), value: t('security.settings.session_length.preset.never') }
       : null;
 
   return (
@@ -267,31 +266,13 @@ function formatSessionRemaining(t: AppHeaderProps['t'], expiresAt: number, now: 
 }
 
 function useSessionRemainingLabel(t: AppHeaderProps['t'], expiresAt?: number): string | null {
-  const [now, setNow] = useState(() => Date.now());
+  const [, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!expiresAt) return undefined;
-    const id = window.setInterval(() => setNow(Date.now()), 30_000);
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, [expiresAt]);
   if (!expiresAt || !Number.isFinite(expiresAt)) return null;
-  return formatSessionRemaining(t, expiresAt, now);
-}
-
-export function readSessionIdleLimitSeconds(value: unknown): number | null {
-  const n = typeof value === 'number' ? value : typeof value === 'string' && value.trim() ? Number(value) : NaN;
-  if (!Number.isFinite(n) || n < 0) return null;
-  return Math.floor(n);
-}
-
-function formatSessionIdleLimit(t: AppHeaderProps['t'], seconds: number | null): string | null {
-  if (seconds === null) return null;
-  if (seconds === 0) return t('security.settings.session_length.preset.never');
-  if (seconds < 60) return t('auth.session_remaining.less_than_minute');
-  const minutesTotal = Math.ceil(seconds / 60);
-  if (minutesTotal < 60) return t('auth.session_remaining.minutes', { minutes: minutesTotal });
-  const hours = Math.floor(minutesTotal / 60);
-  const minutes = minutesTotal % 60;
-  return minutes === 0
-    ? t('auth.session_remaining.hours', { hours })
-    : t('auth.session_remaining.hours_minutes', { hours, minutes });
+  // A renewed deadline must use the current clock, not the previous timer tick.
+  return formatSessionRemaining(t, expiresAt, Date.now());
 }

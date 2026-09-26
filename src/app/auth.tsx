@@ -7,6 +7,9 @@ import { canUseAdminUi, roleFromLevel, type UserRole } from '../lib/roles';
 import { clearStoredOAuthToken } from '../lib/auth/tokenStore';
 import { HaveApiError, isExpiredSessionError, SESSION_EXPIRED_EVENT } from '../lib/api/haveapi';
 import { markSessionExpiredNotice } from '../lib/auth/sessionExpiredNotice';
+import { getBffSessionKey } from '../lib/auth/bffSession';
+import { readSessionIdleLimitSeconds } from '../lib/auth/idleSession';
+import { useIdleSession } from '../lib/auth/useIdleSession';
 import { hardReplace } from '../lib/browserNavigation';
 import { withRouterBasename } from '../lib/routerPaths';
 
@@ -20,6 +23,7 @@ export interface AuthContextValue {
   error?: unknown;
   loginUrl: string;
   logoutUrl: string;
+  /** Browser inactivity deadline, independent of the BFF cookie lifetime. */
   sessionExpiresAt?: number;
 }
 
@@ -139,6 +143,19 @@ export function AuthProvider(props: {
     logoutNextPath
   );
 
+  const idleDeadline = useIdleSession(
+    readSessionIdleLimitSeconds(q.data?.preferred_session_length),
+    enabled && q.data ? String(q.data.id) : undefined,
+    getBffSessionKey(),
+    () => {
+      clearStoredOAuthToken(cfg.oauth2.storage);
+      markSessionExpiredNotice();
+      // Use the real logout endpoint to destroy the BFF session/revoke tokens.
+      hardReplace(logoutUrl);
+    },
+  );
+  const sessionExpiresAt = idleDeadline;
+
   const value: AuthContextValue = useMemo(() => {
     if (sessionExpired) {
       return {
@@ -149,7 +166,7 @@ export function AuthProvider(props: {
         error: undefined,
         loginUrl,
         logoutUrl,
-        sessionExpiresAt: cfg.sessionExpiresAt,
+        sessionExpiresAt,
       };
     }
 
@@ -161,7 +178,7 @@ export function AuthProvider(props: {
         canUseAdminUi: false,
         loginUrl,
         logoutUrl,
-        sessionExpiresAt: cfg.sessionExpiresAt,
+        sessionExpiresAt,
       };
     }
 
@@ -173,7 +190,7 @@ export function AuthProvider(props: {
         canUseAdminUi: false,
         loginUrl,
         logoutUrl,
-        sessionExpiresAt: cfg.sessionExpiresAt,
+        sessionExpiresAt,
       };
     }
 
@@ -192,7 +209,7 @@ export function AuthProvider(props: {
               canUseAdminUi: false,
               loginUrl,
               logoutUrl,
-              sessionExpiresAt: cfg.sessionExpiresAt,
+              sessionExpiresAt,
             };
           }
 
@@ -204,7 +221,7 @@ export function AuthProvider(props: {
             error: undefined,
             loginUrl,
             logoutUrl,
-            sessionExpiresAt: cfg.sessionExpiresAt,
+            sessionExpiresAt,
           };
         }
 
@@ -217,7 +234,7 @@ export function AuthProvider(props: {
             error: err,
             loginUrl,
             logoutUrl,
-            sessionExpiresAt: cfg.sessionExpiresAt,
+            sessionExpiresAt,
           };
         }
       }
@@ -230,7 +247,7 @@ export function AuthProvider(props: {
         error: err,
         loginUrl,
         logoutUrl,
-        sessionExpiresAt: cfg.sessionExpiresAt,
+        sessionExpiresAt,
       };
     }
 
@@ -243,9 +260,9 @@ export function AuthProvider(props: {
       canUseAdminUi: canUseAdminUi(role),
       loginUrl,
       logoutUrl,
-      sessionExpiresAt: cfg.sessionExpiresAt,
+      sessionExpiresAt,
     };
-  }, [cfg.sessionExpiresAt, enabled, q.isLoading, q.isError, q.data, q.error, sessionExpired, loginUrl, logoutUrl, redirectExpiredSessions]);
+  }, [sessionExpiresAt, enabled, q.isLoading, q.isError, q.data, q.error, sessionExpired, loginUrl, logoutUrl, redirectExpiredSessions]);
 
   return <AuthContext.Provider value={value}>{props.children}</AuthContext.Provider>;
 }

@@ -24,6 +24,11 @@ function stillCurrent(state: BffSession): boolean {
     && auth.kind === 'oauth2' && auth.accessToken === state.token;
 }
 
+/** Non-credential identity for browser-local state; stable across token rotation. */
+export function getBffSessionKey(): string | undefined {
+  return session && stillCurrent(session) ? session.key : undefined;
+}
+
 /** One bounded recovery per rejected request; concurrent callers share the lookup. */
 export async function recoverBffSession(failedToken: string): Promise<boolean> {
   const state = session;
