@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Activity, Menu, Search } from 'lucide-react';
 
+import { readSessionIdleLimitSeconds } from '../../lib/auth/idleSession';
 import { useAuth } from '../../app/auth';
 import { useAppMode } from '../../app/appMode';
 import { useObjectScope } from '../../app/objectScope';
@@ -21,7 +22,7 @@ import {
 import { Badge } from '../ui/Badge';
 import { clsx } from '../ui/clsx';
 import { useDebouncedValue } from '../../lib/hooks/useDebouncedValue';
-import { AppSyncPopover, AppUserMenu, readSessionIdleLimitSeconds } from './AppHeaderMenus';
+import { AppSyncPopover, AppUserMenu } from './AppHeaderMenus';
 import type { AppHeaderProps } from './AppHeaderTypes';
 
 export type { AppHeaderProps } from './AppHeaderTypes';
