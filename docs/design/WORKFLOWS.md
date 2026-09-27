@@ -165,6 +165,23 @@ admins manage node/cluster/network/resource settings and migration plans.
 Heatmap availability follows legacy config/type/maintenance rules. Expose useful
 member visibility without granting infrastructure writes.
 
+**Per-VPS migration (REQ-028):** show active hypervisor destinations immediately,
+with hostname, location and environment. An optional text filter searches those
+labels; the source node is excluded. Read all ID-cursor pages rather than silently
+truncating the inventory; an inventory error blocks submission and offers retry.
+The API still decides compatibility and available capacity, so a listed destination
+is not a promise that migration will be accepted.
+
+Timing and the optional owner-facing reason sit together. IP options appear when
+the destination scope makes them applicable, following the legacy location/environment
+rules. Cleanup, email, startup and error options stay visible. There is no advanced
+options disclosure or repeated four-tile summary. Confirmation names the VPS and
+destination and resets when any submitted value changes. A successful request is
+queued/tracked, not proof of completed migration; errors preserve the form.
+This replaces the hostname-only lookup and hidden reason requested by the maintainer
+on 2026-09-28. See the [change record](../work-log/2026-09-28-vps-migration-ux.md)
+for verification and release status.
+
 **Failure contract:** edits/actions bind target, state and permission; mutations
 return tracked results and retain errors. A node route being present is not proof
 that every action is allowed for support/member roles. History cursors and status

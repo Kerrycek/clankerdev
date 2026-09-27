@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock } from '../../fixtures';
+import { bootstrapVpsAdminWindow, failEnvelope, installHaveApiMock, setUiSettingsLocalStorage } from '../../fixtures';
 
 const vps = {
   id: 123,
@@ -49,6 +49,8 @@ function runningActionState(id: number, label: string) {
 async function installLifecycleMock(page: Page, options?: {
   updateVps?: () => unknown;
   reinstallVps?: () => unknown;
+  nodes?: () => unknown;
+  migrateVps?: () => unknown;
   user?: { id: number; login: string; level: number };
 }) {
   let ipAddressRequests = 0;
@@ -91,12 +93,12 @@ async function installLifecycleMock(page: Page, options?: {
       'GET vpses/321/state_logs': () => ({ state_logs: [] }),
       'GET transaction_chains': () => ({ transaction_chains: [] }),
       'GET os_templates': () => ({ os_templates: osTemplates }),
-      'GET nodes': () => ({
+      'GET nodes': (ctx) => options?.nodes ? options.nodes() : ({
         nodes: [
           { id: 1, domain_name: 'node1.example', location: { id: 2, label: 'Praha-2', environment: { id: 1, label: 'prod' } } },
           { id: 2, domain_name: 'node2.example', location: { id: 2, label: 'Praha-2', environment: { id: 1, label: 'prod' } } },
           { id: 5, domain_name: 'node5.example', location: { id: 5, label: 'Brno', environment: { id: 2, label: 'staging' } } },
-        ],
+        ].filter((node) => node.id > Number(ctx.url.searchParams.get('node[from_id]') ?? ctx.url.searchParams.get('from_id') ?? 0)),
       }),
       'PUT vpses/123': options?.updateVps ?? (() => ({ vps, _meta: { action_state_id: 506 } })),
       'POST vpses/123/start': () => ({ _meta: { action_state_id: 503 } }),
@@ -110,7 +112,7 @@ async function installLifecycleMock(page: Page, options?: {
       'POST vpses/123/replace': () => ({ vps: { id: 789, hostname: 'replacement' }, _meta: { action_state_id: 509 } }),
       'POST vpses/123/boot': () => ({ _meta: { action_state_id: 501 } }),
       'POST vpses/123/reinstall': options?.reinstallVps ?? (() => ({ _meta: { action_state_id: 502 } })),
-      'POST vpses/123/migrate': () => ({ _meta: { action_state_id: 510 } }),
+      'POST vpses/123/migrate': options?.migrateVps ?? (() => ({ _meta: { action_state_id: 510 } })),
       'DELETE vpses/123': () => ({ _meta: { action_state_id: 511 } }),
     },
   });
@@ -821,6 +823,69 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await expect(page).toHaveURL(/\/admin\/vps\/789\?user=7$/);
   });
 
+  for (const language of ['cs', 'en'] as const) {
+    test(`admin migrate shows a browsable form without disclosures, ${language}`, async ({ page }, testInfo) => {
+      await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+      await setUiSettingsLocalStorage(page, { language, theme: language === 'cs' ? 'dark' : 'light' });
+      await installLifecycleMock(page);
+      await page.goto('/admin/vps/123/lifecycle/migrate');
+      const form = page.getByTestId('vps.lifecycle.migrate');
+      await expect(form.locator('details')).toHaveCount(0);
+      await expect(page.getByTestId('vps.lifecycle.migrate.reason')).toBeVisible();
+      await expect(page.getByTestId('vps.lifecycle.migrate.no_start')).toBeVisible();
+      await expect(page.getByTestId('vps.lifecycle.migrate.node.opt.2')).toBeVisible();
+      await expect(page.getByTestId('vps.lifecycle.migrate.node.opt.5')).toBeVisible();
+      await expect(page.getByTestId('vps.lifecycle.migrate.node.opt.1')).toHaveCount(0);
+      await expect(page.getByTestId('vps.lifecycle.migrate.submit')).toBeDisabled();
+      await page.getByTestId('vps.lifecycle.migrate.node').fill('Brno');
+      await expect(page.getByTestId('vps.lifecycle.migrate.node.opt.2')).toHaveCount(0);
+      await page.getByTestId('vps.lifecycle.migrate.node.opt.5').check();
+      await page.getByTestId('vps.lifecycle.migrate.replace_ip_addresses').check();
+      await page.getByTestId('vps.lifecycle.migrate.confirm').check();
+      await page.getByTestId('vps.lifecycle.migrate.node').fill('');
+      await page.getByTestId('vps.lifecycle.migrate.node.opt.2').check();
+      await expect(page.getByTestId('vps.lifecycle.migrate.confirm')).not.toBeChecked();
+      await expect(page.getByTestId('vps.lifecycle.migrate.replace_ip_addresses')).toHaveCount(0);
+      await expect(page.getByTestId('vps.lifecycle.migrate.schedule')).toHaveValue('maintenance');
+      await page.getByTestId('vps.lifecycle.migrate.confirm').check();
+      await page.getByTestId('vps.lifecycle.migrate.reason').fill('Hardware maintenance');
+      await expect(page.getByTestId('vps.lifecycle.migrate.confirm')).not.toBeChecked();
+      await page.getByTestId('vps.lifecycle.migrate.node').fill('missing-node');
+      await expect(page.getByTestId('vps.lifecycle.migrate.nodes').getByRole('status')).toBeVisible();
+      await expect(page.getByTestId('vps.lifecycle.migrate.selected')).toContainText('node2.example');
+      await page.getByTestId('vps.lifecycle.migrate.node').fill('');
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await page.getByTestId('vps.lifecycle.migrate.node').blur();
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.screenshot({ path: testInfo.outputPath(`migration-${language}.png`), fullPage: true });
+    });
+  }
+
+  test('admin migrate blocks missing node data and offers retry', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installLifecycleMock(page, { nodes: () => failEnvelope('Node inventory unavailable') });
+    await page.goto('/admin/vps/123/lifecycle/migrate');
+    await expect(page.getByTestId('vps.lifecycle.migrate.nodes_retry')).toBeEnabled();
+    await expect(page.getByTestId('vps.lifecycle.migrate.confirm')).toBeDisabled();
+    await expect(page.getByTestId('vps.lifecycle.migrate.submit')).toBeDisabled();
+    const retry = page.waitForRequest(r => r.method() === 'GET' && r.url().includes('/nodes'));
+    await page.getByTestId('vps.lifecycle.migrate.nodes_retry').click();
+    await retry;
+  });
+
+  test('admin migrate retains the form when the API rejects a destination', async ({ page }) => {
+    await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
+    await installLifecycleMock(page, { migrateVps: () => failEnvelope('Incompatible destination') });
+    await page.goto('/admin/vps/123/lifecycle/migrate');
+    await page.getByTestId('vps.lifecycle.migrate.node.opt.2').check();
+    await page.getByTestId('vps.lifecycle.migrate.reason').fill('Hardware maintenance');
+    await page.getByTestId('vps.lifecycle.migrate.confirm').check();
+    await page.getByTestId('vps.lifecycle.migrate.submit').click();
+    await expect(page.getByTestId('vps.lifecycle.migrate').getByText('Incompatible destination', { exact: true })).toBeVisible();
+    await expect(page.getByTestId('vps.lifecycle.migrate.reason')).toHaveValue('Hardware maintenance');
+    await expect(page.getByTestId('vps.lifecycle.migrate.node.opt.2')).toBeChecked();
+  });
+
   test('admin migrate posts migration options and schedule payload', async ({ page }) => {
     await bootstrapVpsAdminWindow(page, { sessionToken: 'TEST' });
     await installLifecycleMock(page);
@@ -828,9 +893,9 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await page.goto('/admin/vps/123/lifecycle/migrate');
 
     await expect(page.getByTestId('vps.lifecycle.summary').getByText('Migrate VPS')).toHaveCount(1);
-    await page.getByTestId('vps.lifecycle.migrate.node').fill('node5');
+    await expect(page.getByTestId('vps.lifecycle.migrate.node.opt.5')).toBeVisible();
     await page.getByTestId('vps.lifecycle.migrate.node.opt.5').click();
-    await expect(page.getByTestId('vps.lifecycle.migrate.node')).toHaveValue('node5.example (#5)');
+    await expect(page.getByTestId('vps.lifecycle.migrate.node.opt.5')).toBeChecked();
     await page.getByTestId('vps.lifecycle.migrate.replace_ip_addresses').check();
     await page.getByTestId('vps.lifecycle.migrate.transfer_ip_addresses').uncheck();
     await page.getByTestId('vps.lifecycle.migrate.schedule').selectOption('custom');
@@ -839,7 +904,6 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
     await page.getByTestId('vps.lifecycle.migrate.send_mail').check();
     await page.getByTestId('vps.lifecycle.migrate.finish_weekday').selectOption('2');
     await page.getByTestId('vps.lifecycle.migrate.finish_hour').selectOption('1');
-    await page.getByTestId('vps.lifecycle.migrate.advanced').locator('summary').click();
     await page.getByTestId('vps.lifecycle.migrate.no_start').check();
     await page.getByTestId('vps.lifecycle.migrate.reason').fill('rack maintenance');
     await page.getByTestId('vps.lifecycle.migrate.confirm').check();
@@ -875,9 +939,9 @@ test.describe('@pr-smoke VPS lifecycle tab', () => {
 
     await page.goto('/admin/vps/123/lifecycle/migrate');
 
-    await page.getByTestId('vps.lifecycle.migrate.node').fill('node2');
+    await expect(page.getByTestId('vps.lifecycle.migrate.node.opt.2')).toBeVisible();
     await page.getByTestId('vps.lifecycle.migrate.node.opt.2').click();
-    await expect(page.getByTestId('vps.lifecycle.migrate.node')).toHaveValue('node2.example (#2)');
+    await expect(page.getByTestId('vps.lifecycle.migrate.node.opt.2')).toBeChecked();
 
     await expect(page.getByTestId('vps.lifecycle.migrate.transfer_ip_addresses')).toHaveCount(0);
     await expect(page.getByTestId('vps.lifecycle.migrate.replace_ip_addresses')).toHaveCount(0);

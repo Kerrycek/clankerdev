@@ -5,6 +5,7 @@ import { Alert } from '../../../components/ui/Alert';
 import { Checkbox } from '../../../components/ui/Checkbox';
 import { Input } from '../../../components/ui/Input';
 import { NodeLookupInput } from '../../../components/ui/NodeLookupInput';
+import { VpsMigrationNodePicker } from './VpsMigrationNodePicker';
 import { Select } from '../../../components/ui/Select';
 import { Textarea } from '../../../components/ui/Textarea';
 import type { Node } from '../../../lib/api/nodes';
@@ -31,7 +32,7 @@ import {
   LifecycleActionShell,
   LifecycleSubmitButton,
 } from './VpsLifecyclePrimitives';
-import { nodeLabel, pickedNodeLabel, vpsLabel, vpsLocationLabel } from './VpsLifecycleModel';
+import { nodeLabel, pickedNodeLabel, vpsLabel } from './VpsLifecycleModel';
 
 export type { MigrateForm, ReplaceForm } from './VpsAdminLifecycleModel';
 
@@ -50,28 +51,11 @@ const migrateHourOptions = Array.from({ length: 24 }, (_, hour) => ({
   label: `${String(hour).padStart(2, '0')}:00`,
 }));
 
-function nodeLocationText(node: Node | undefined): string {
-  const location = node?.location;
-  if (!location) return '—';
-  return String(location.label ?? location.description ?? location.domain ?? `#${location.id}`);
-}
-
 function formatExpirationPreview(rawValue: string, emptyLabel: string): string {
   const trimmed = rawValue.trim();
   if (!trimmed) return emptyLabel;
   const date = new Date(trimmed);
   return Number.isFinite(date.getTime()) ? formatDateTime(date.toISOString()) : trimmed;
-}
-
-function scheduleText(t: ReturnType<typeof useI18n>['t'], form: MigrateForm): string {
-  if (form.scheduleMode === 'now') return t('vps.lifecycle.migrate.schedule.now');
-  if (form.scheduleMode === 'maintenance') return t('vps.lifecycle.migrate.schedule.maintenance');
-  const day = migrateWeekdayOptions.find((option) => option.value === form.finishWeekday);
-  const hour = migrateHourOptions.find((option) => option.value === form.finishHour);
-  return t('vps.lifecycle.migrate.review.timing_custom', {
-    day: day ? t(day.labelKey) : t('common.na'),
-    hour: hour?.label ?? t('common.na'),
-  });
 }
 
 export function VpsAdminReplaceCard(props: {
@@ -204,8 +188,7 @@ export function VpsAdminMigrateCard(props: {
   nodes: Node[];
   nodesLoading: boolean;
   nodesError: boolean;
-  selectedNodeLabel: string;
-  onSelectedNodeLabelChange: (label: string) => void;
+  onRetryNodes: () => void;
   targetContext: MigrateTargetContext;
   gate: GateDecision;
   pending: boolean;
@@ -217,18 +200,20 @@ export function VpsAdminMigrateCard(props: {
   const { t } = useI18n();
   const setForm = (patch: Partial<MigrateForm>) => props.onChange((prev) => ({ ...prev, ...patch }));
   const setNodeValue = (value: string) => {
-    props.onSelectedNodeLabelChange('');
     const nextNode = findMigrateTargetNode(value, props.nodes);
     const nextContext = buildMigrateTargetContext(props.vps, nextNode);
     props.onChange((prev) => nextMigrateFormForNodeChange(prev, value, nextContext));
   };
   const targetNode = migrateNodeDisplay(props.targetContext.targetNode, props.form.node);
-  const ipMode = props.targetContext.canTransferIpAddresses || props.targetContext.canReplaceIpAddresses
-    ? t('vps.lifecycle.migrate.review.ip_body', {
-        transfer: props.targetContext.canTransferIpAddresses ? (props.form.transferIpAddresses ? t('common.yes') : t('common.no')) : t('common.na'),
-        replace: props.targetContext.canReplaceIpAddresses ? (props.form.replaceIpAddresses ? t('common.yes') : t('common.no')) : t('common.na'),
-      })
-    : t('vps.lifecycle.migrate.review.ip_same_location');
+  const validTarget = props.targetContext.targetSelected
+    && props.targetContext.targetNodeId !== props.targetContext.sourceNodeId
+    && props.targetContext.targetNode?.active !== false
+    && (!props.targetContext.targetNode?.type || props.targetContext.targetNode.type === 'node')
+    && !props.nodesLoading && !props.nodesError;
+  const sameNetworkScope = props.targetContext.sourceLocationId !== null
+    && props.targetContext.sourceLocationId === props.targetContext.targetLocationId
+    && props.targetContext.sourceEnvironmentId !== undefined
+    && props.targetContext.sourceEnvironmentId === props.targetContext.targetEnvironmentId;
 
   return (
     <LifecycleActionShell
@@ -237,7 +222,7 @@ export function VpsAdminMigrateCard(props: {
         <LifecycleSubmitButton
           variant="danger"
           testId="vps.lifecycle.migrate.submit"
-          disabled={!isMigrateReady(props.form)}
+          disabled={!validTarget || !isMigrateReady(props.form)}
           gate={props.gate}
           loading={props.pending}
           onClick={props.onSubmit}
@@ -246,135 +231,114 @@ export function VpsAdminMigrateCard(props: {
         </LifecycleSubmitButton>
       }
     >
-      <Alert variant="neutral">{t('vps.lifecycle.migrate.review.help')}</Alert>
       <ActionGateAlert gate={props.gate} onOpenTasks={props.onOpenTasks} />
+      <VpsMigrationNodePicker
+        nodes={props.nodes}
+        sourceId={props.targetContext.sourceNodeId}
+        sourceLabel={nodeLabel(props.vps)}
+        value={props.form.node}
+        onChange={setNodeValue}
+        loading={props.nodesLoading}
+        error={props.nodesError}
+        onRetry={props.onRetryNodes}
+        disabled={props.pending}
+      />
 
-      <Field label={t('vps.lifecycle.field.node')} help={t('vps.lifecycle.migrate.node_help')}>
-        <NodeLookupInput
-          value={props.form.node}
-          selectedLabel={props.selectedNodeLabel}
-          onChange={setNodeValue}
-          onPick={(node) => props.onSelectedNodeLabelChange(pickedNodeLabel(node))}
-          placeholder={t('vps.lifecycle.placeholder.node')}
-          loadingLabel={t('common.loading')}
-          noResultsLabel={t('vps.lifecycle.migrate.no_nodes')}
-          testId="vps.lifecycle.migrate.node"
-          disabled={props.pending || props.nodesError || props.nodesLoading}
-        />
-        {props.nodesError ? <div className="mt-1 text-xs text-danger">{t('vps.lifecycle.migrate.nodes_load_error')}</div> : null}
-      </Field>
-
-      <div className="rounded-md border border-border bg-surface p-3" data-testid="vps.lifecycle.migrate.schedule_panel">
-        <div className="mb-3">
-          <div className="text-sm font-semibold text-fg">{t('vps.lifecycle.migrate.schedule.title')}</div>
-          <div className="text-xs text-muted">{t('vps.lifecycle.migrate.schedule.subtitle')}</div>
-        </div>
-        <div className="space-y-3">
-          <Field label={t('vps.lifecycle.migrate.schedule.label')} help={t('vps.lifecycle.migrate.schedule.help')}>
-            <Select
-              value={props.form.scheduleMode}
-              onChange={(e) => setForm({ scheduleMode: e.target.value as MigrateForm['scheduleMode'], confirm: false })}
-              testId="vps.lifecycle.migrate.schedule"
-              disabled={props.pending}
-            >
-              <option value="maintenance">{t('vps.lifecycle.migrate.schedule.maintenance')}</option>
-              <option value="now">{t('vps.lifecycle.migrate.schedule.now')}</option>
-              <option value="custom">{t('vps.lifecycle.migrate.schedule.custom')}</option>
-            </Select>
-          </Field>
-
-          {props.form.scheduleMode === 'custom' ? (
-            <div className="grid gap-3 md:grid-cols-2">
-              <Field label={t('vps.lifecycle.migrate.finish_weekday')} help={t('vps.lifecycle.migrate.finish_weekday_help')}>
-                <Select
-                  value={props.form.finishWeekday}
-                  onChange={(e) => setForm({ finishWeekday: e.target.value, confirm: false })}
-                  testId="vps.lifecycle.migrate.finish_weekday"
-                  disabled={props.pending}
-                >
-                  <option value="">{t('vps.lifecycle.migrate.schedule.choose_day')}</option>
-                  {migrateWeekdayOptions.map((day) => (
-                    <option key={day.value} value={day.value}>{t(day.labelKey)}</option>
-                  ))}
-                </Select>
-              </Field>
-              <Field label={t('vps.lifecycle.migrate.finish_hour')} help={t('vps.lifecycle.migrate.finish_hour_help')}>
-                <Select
-                  value={props.form.finishHour}
-                  onChange={(e) => setForm({ finishHour: e.target.value, confirm: false })}
-                  testId="vps.lifecycle.migrate.finish_hour"
-                  disabled={props.pending}
-                >
-                  <option value="">{t('vps.lifecycle.migrate.schedule.choose_hour')}</option>
-                  {migrateHourOptions.map((hour) => (
-                    <option key={hour.value} value={hour.value}>{hour.label}</option>
-                  ))}
-                </Select>
-              </Field>
-            </div>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {props.targetContext.targetSelected && props.targetContext.canTransferIpAddresses ? (
-          <Checkbox checked={props.form.transferIpAddresses} onChange={(v) => setForm({ transferIpAddresses: v, confirm: false })} label={t('vps.lifecycle.migrate.option.transfer_ip_addresses')} testId="vps.lifecycle.migrate.transfer_ip_addresses" />
-        ) : null}
-        {props.targetContext.targetSelected && props.targetContext.canReplaceIpAddresses ? (
-          <Checkbox checked={props.form.replaceIpAddresses} onChange={(v) => setForm({ replaceIpAddresses: v, confirm: false })} label={t('vps.lifecycle.migrate.option.replace_ip_addresses')} testId="vps.lifecycle.migrate.replace_ip_addresses" />
-        ) : null}
-        <Checkbox checked={props.form.stopOnError} onChange={(v) => setForm({ stopOnError: v, confirm: false })} label={t('vps.lifecycle.migrate.option.stop_on_error')} testId="vps.lifecycle.migrate.stop_on_error" />
-        <Checkbox checked={props.form.cleanupData} onChange={(v) => setForm({ cleanupData: v, confirm: false })} label={t('vps.lifecycle.migrate.option.cleanup_data')} testId="vps.lifecycle.migrate.cleanup_data" />
-        <Checkbox checked={props.form.sendMail} onChange={(v) => setForm({ sendMail: v, confirm: false })} label={t('vps.lifecycle.migrate.option.send_mail')} testId="vps.lifecycle.migrate.send_mail" />
-      </div>
-
-      <details className="rounded-md border border-border bg-surface p-3" data-testid="vps.lifecycle.migrate.advanced">
-        <summary className="cursor-pointer text-sm font-semibold text-fg">{t('vps.lifecycle.migrate.advanced.title')}</summary>
-        <div className="mt-3 space-y-3">
-          <div className="grid gap-2 sm:grid-cols-2">
-            <Checkbox checked={props.form.noStart} onChange={(v) => setForm({ noStart: v, confirm: false })} label={t('vps.lifecycle.migrate.option.no_start')} testId="vps.lifecycle.migrate.no_start" />
-            <Checkbox checked={props.form.skipStart} onChange={(v) => setForm({ skipStart: v, confirm: false })} label={t('vps.lifecycle.migrate.option.skip_start')} testId="vps.lifecycle.migrate.skip_start" />
+      <div className="grid items-start gap-4 md:grid-cols-2">
+        <div className="rounded-md border border-border bg-surface p-3" data-testid="vps.lifecycle.migrate.schedule_panel">
+          <div className="mb-3">
+            <div className="text-sm font-semibold text-fg">{t('vps.lifecycle.migrate.schedule.title')}</div>
           </div>
-          <Field label={t('vps.lifecycle.migrate.reason')} help={t('vps.lifecycle.migrate.reason_help')}>
-            <Textarea
-              value={props.form.reason}
-              onChange={(e) => setForm({ reason: e.target.value, confirm: false })}
-              testId="vps.lifecycle.migrate.reason"
-              disabled={props.pending}
-            />
-          </Field>
-        </div>
-      </details>
+          <div className="space-y-3">
+            <Field label={t('vps.lifecycle.migrate.schedule.label')} help={t(props.form.scheduleMode === 'custom' ? 'vps.lifecycle.migrate.schedule.custom_help' : props.form.scheduleMode === 'now' ? 'vps.lifecycle.migrate.schedule.now_help' : 'vps.lifecycle.migrate.schedule.maintenance_help')}>
+              <Select
+                value={props.form.scheduleMode}
+                onChange={(e) => setForm({ scheduleMode: e.target.value as MigrateForm['scheduleMode'], confirm: false })}
+                testId="vps.lifecycle.migrate.schedule"
+                disabled={props.pending}
+              >
+                <option value="maintenance">{t('vps.lifecycle.migrate.schedule.maintenance')}</option>
+                <option value="now">{t('vps.lifecycle.migrate.schedule.now')}</option>
+                <option value="custom">{t('vps.lifecycle.migrate.schedule.custom')}</option>
+              </Select>
+            </Field>
 
-      <ActionImpactSummary className="grid gap-3 md:grid-cols-2" testId="vps.lifecycle.migrate.review">
-        <ImpactItem label={t('vps.lifecycle.migrate.review.route')} testId="vps.lifecycle.migrate.review.route">
-          {t('vps.lifecycle.migrate.review.route_body', {
-            sourceNode: nodeLabel(props.vps),
-            targetNode,
-            sourceLocation: vpsLocationLabel(props.vps),
-            targetLocation: nodeLocationText(props.targetContext.targetNode),
-          })}
-        </ImpactItem>
-        <ImpactItem label={t('vps.lifecycle.migrate.review.timing')} testId="vps.lifecycle.migrate.review.timing">
-          {scheduleText(t, props.form)}
-        </ImpactItem>
-        <ImpactItem label={t('vps.lifecycle.migrate.review.ip')} testId="vps.lifecycle.migrate.review.ip">
-          {ipMode}
-        </ImpactItem>
-        <ImpactItem label={t('vps.lifecycle.migrate.review.cleanup')} testId="vps.lifecycle.migrate.review.cleanup">
-          {t('vps.lifecycle.migrate.review.cleanup_body', {
-            cleanup: props.form.cleanupData ? t('common.yes') : t('common.no'),
-            mail: props.form.sendMail ? t('common.yes') : t('common.no'),
-            noStart: props.form.noStart ? t('common.yes') : t('common.no'),
-            skipStart: props.form.skipStart ? t('common.yes') : t('common.no'),
-          })}
-        </ImpactItem>
-      </ActionImpactSummary>
+            {props.form.scheduleMode === 'custom' ? (
+              <div className="grid gap-3 md:grid-cols-2">
+                <Field label={t('vps.lifecycle.migrate.finish_weekday')} help={t('vps.lifecycle.migrate.finish_weekday_help')}>
+                  <Select
+                    value={props.form.finishWeekday}
+                    onChange={(e) => setForm({ finishWeekday: e.target.value, confirm: false })}
+                    testId="vps.lifecycle.migrate.finish_weekday"
+                    disabled={props.pending}
+                  >
+                    <option value="">{t('vps.lifecycle.migrate.schedule.choose_day')}</option>
+                    {migrateWeekdayOptions.map((day) => (
+                      <option key={day.value} value={day.value}>{t(day.labelKey)}</option>
+                    ))}
+                  </Select>
+                </Field>
+                <Field label={t('vps.lifecycle.migrate.finish_hour')} help={t('vps.lifecycle.migrate.finish_hour_help')}>
+                  <Select
+                    value={props.form.finishHour}
+                    onChange={(e) => setForm({ finishHour: e.target.value, confirm: false })}
+                    testId="vps.lifecycle.migrate.finish_hour"
+                    disabled={props.pending}
+                  >
+                    <option value="">{t('vps.lifecycle.migrate.schedule.choose_hour')}</option>
+                    {migrateHourOptions.map((hour) => (
+                      <option key={hour.value} value={hour.value}>{hour.label}</option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        <Field label={t('vps.lifecycle.migrate.reason')} help={t('vps.lifecycle.migrate.reason_help')}>
+          <Textarea
+            value={props.form.reason}
+            onChange={(e) => setForm({ reason: e.target.value, confirm: false })}
+            testId="vps.lifecycle.migrate.reason"
+            rows={3}
+            disabled={props.pending}
+          />
+        </Field>
+      </div>
+
+      <fieldset className="rounded-md border border-border p-3" disabled={props.pending}>
+        <legend className="px-1 text-sm font-semibold">{t('vps.lifecycle.migrate.review.ip')}</legend>
+        {!validTarget ? <p className="text-xs text-muted">{t('vps.lifecycle.migrate.ip_choose_target')}</p> : (
+          props.targetContext.canTransferIpAddresses || props.targetContext.canReplaceIpAddresses ? (
+            <div className="grid gap-2 md:grid-cols-2">
+              {props.targetContext.canTransferIpAddresses ? (
+                <Checkbox checked={props.form.transferIpAddresses} onChange={(v) => setForm({ transferIpAddresses: v, confirm: false })} label={t('vps.lifecycle.migrate.option.transfer_ip_addresses')} description={t('vps.lifecycle.migrate.transfer_help')} testId="vps.lifecycle.migrate.transfer_ip_addresses" />
+              ) : null}
+              {props.targetContext.canReplaceIpAddresses ? (
+                <Checkbox checked={props.form.replaceIpAddresses} onChange={(v) => setForm({ replaceIpAddresses: v, confirm: false })} label={t('vps.lifecycle.migrate.option.replace_ip_addresses')} description={t('vps.lifecycle.migrate.replace_help')} testId="vps.lifecycle.migrate.replace_ip_addresses" />
+              ) : null}
+            </div>
+          ) : <p className="text-xs text-muted">{t(sameNetworkScope ? 'vps.lifecycle.migrate.review.ip_same_location' : 'vps.lifecycle.migrate.ip_unknown')}</p>
+        )}
+      </fieldset>
+
+      <fieldset className="rounded-md border border-border p-3" disabled={props.pending}>
+        <legend className="px-1 text-sm font-semibold">{t('vps.lifecycle.migrate.execution')}</legend>
+        <div className="grid gap-2 md:grid-cols-2">
+          <Checkbox checked={props.form.cleanupData} onChange={(v) => setForm({ cleanupData: v, confirm: false })} label={t('vps.lifecycle.migrate.option.cleanup_data')} description={t('vps.lifecycle.migrate.cleanup_help')} testId="vps.lifecycle.migrate.cleanup_data" />
+          <Checkbox checked={props.form.sendMail} onChange={(v) => setForm({ sendMail: v, confirm: false })} label={t('vps.lifecycle.migrate.option.send_mail')} description={t('vps.lifecycle.migrate.mail_help')} testId="vps.lifecycle.migrate.send_mail" />
+          <Checkbox checked={props.form.noStart} onChange={(v) => setForm({ noStart: v, confirm: false })} label={t('vps.lifecycle.migrate.option.no_start')} testId="vps.lifecycle.migrate.no_start" />
+          <Checkbox checked={props.form.skipStart} onChange={(v) => setForm({ skipStart: v, confirm: false })} label={t('vps.lifecycle.migrate.option.skip_start')} testId="vps.lifecycle.migrate.skip_start" />
+          <Checkbox checked={props.form.stopOnError} onChange={(v) => setForm({ stopOnError: v, confirm: false })} label={t('vps.lifecycle.migrate.option.stop_on_error')} testId="vps.lifecycle.migrate.stop_on_error" />
+        </div>
+      </fieldset>
 
       <Checkbox
         checked={props.form.confirm}
         onChange={(confirm) => setForm({ confirm })}
-        label={t('vps.lifecycle.confirm.migrate')}
+        label={t('vps.lifecycle.migrate.confirm_target', { vps: vpsLabel(props.vps), node: targetNode })}
+        disabled={props.pending || !validTarget}
         testId="vps.lifecycle.migrate.confirm"
       />
 
