@@ -23,9 +23,9 @@ export interface VpsUserData {
 export async function fetchVpsUserDataList(opts?: {
   user?: number;
   format?: string;
-  q?: string;
   limit?: number;
   fromId?: number | null;
+  signal?: AbortSignal;
 }): Promise<{ data: VpsUserData[]; meta?: Record<string, unknown> }> {
   const res = await haveApiCall<unknown>({
     method: 'GET',
@@ -34,10 +34,10 @@ export async function fetchVpsUserDataList(opts?: {
     params: {
       user: opts?.user,
       format: opts?.format,
-      q: opts?.q,
       limit: opts?.limit,
       from_id: opts?.fromId ?? undefined,
     },
+    signal: opts?.signal,
   });
 
   return {

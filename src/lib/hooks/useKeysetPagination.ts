@@ -205,8 +205,25 @@ export function useKeysetPagination(opts: {
   );
 
   const isActiveSig = state.sig === sig;
-  const viewStack = isActiveSig ? state.stack : ([null] as KeysetCursorStack);
-  const viewIndex = isActiveSig ? state.index : 0;
+  let viewStack = isActiveSig ? state.stack : ([null] as KeysetCursorStack);
+  let viewIndex = isActiveSig ? state.index : 0;
+
+  if (restoreUrlCursorOnSignatureChange) {
+    // History navigation may overlap a local paging update. For URL-restoring
+    // lists, use the committed router URL during render, not an optimistic
+    // index that is repaired only by a later layout effect. Queries must never
+    // observe the preceding page while the URL already names the next one.
+    if (!isActiveSig) {
+      const restored = initialStateFor({ sig, storageKey, urlCursor, cursorMin, cursorInteger });
+      viewStack = restored.stack;
+    }
+    const found = viewStack.findIndex((entry) => entry === urlCursor);
+    if (found >= 0) viewIndex = found;
+    else {
+      viewStack = [null, urlCursor];
+      viewIndex = 1;
+    }
+  }
 
   const page = viewIndex + 1;
   const cursor = viewStack[viewIndex] === null ? undefined : viewStack[viewIndex] ?? undefined;

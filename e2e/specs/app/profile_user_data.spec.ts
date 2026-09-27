@@ -34,20 +34,18 @@ test.describe('Profile: user data templates', () => {
       },
       handlers: {
         'GET vps_user_data': async ({ params }) => {
-          const q = (params['vps_user_data[q]'] ?? '').toString().trim().toLowerCase();
+          expect(params['vps_user_data[q]']).toBeUndefined();
           const format = (params['vps_user_data[format]'] ?? '').toString().trim();
 
-          let out = [...templates].sort((a, b) => b.id - a.id);
-
-          if (q) {
-            out = out.filter((x) => x.label.toLowerCase().includes(q) || `#${x.id}`.includes(q));
-          }
+          let out = [...templates].sort((a, b) => a.id - b.id);
 
           if (format) {
             out = out.filter((x) => x.format === format);
           }
 
-          return out;
+          const from = Number(params['vps_user_data[from_id]'] ?? 0);
+          const limit = Number(params['vps_user_data[limit]'] ?? 100);
+          return out.filter((row) => row.id > from).slice(0, limit);
         },
 
         'POST vps_user_data': async ({ reqJson }) => {

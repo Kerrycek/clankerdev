@@ -2,6 +2,7 @@ import React from 'react';
 
 import { useI18n } from '../../app/i18n';
 import type { VpsUserData } from '../../lib/api/vpsUserData';
+import { UserDataPageError } from '../../lib/api/vpsUserDataPaging';
 import { formatErrorMessage } from '../../lib/errors';
 import { formatDateTime } from '../../lib/format';
 
@@ -20,8 +21,10 @@ export function UserDataTemplatesList(props: {
   isLoading: boolean;
   isError: boolean;
   error: unknown;
+  onRetry: () => void;
   filtersActive: boolean;
   limit: number;
+  page: number;
   canPrev: boolean;
   canNext: boolean;
   onPrev: () => void;
@@ -44,8 +47,11 @@ export function UserDataTemplatesList(props: {
 
   if (props.isError) {
     return (
-      <Alert variant="danger" title={t('user_data.error.load_failed')}>
-        {formatErrorMessage(props.error)}
+      <Alert variant="danger" title={t('user_data.error.load_failed')} testId={`${props.prefix}.error`}>
+        <div>{props.error instanceof UserDataPageError
+          ? t(props.error.reason === 'scan_limit' ? 'user_data.error.scan_limit' : 'user_data.error.invalid_page')
+          : formatErrorMessage(props.error)}</div>
+        <Button variant="secondary" size="sm" onClick={props.onRetry} testId={`${props.prefix}.retry`}>{t('common.retry')}</Button>
       </Alert>
     );
   }
@@ -81,6 +87,8 @@ export function UserDataTemplatesList(props: {
         <KeysetPagination
           testId={`${props.prefix}.pagination`}
           limit={props.limit}
+          page={props.page}
+          allowedLimits={[25, 50, 100, 200]}
           canPrev={props.canPrev}
           canNext={props.canNext}
           onPrev={props.onPrev}
