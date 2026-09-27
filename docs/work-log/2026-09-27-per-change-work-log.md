@@ -32,3 +32,26 @@ passed. No runtime behavior is changed.
 to that feature's file. Existing open branches must move their new log entries to
 an appropriate change file when rebasing. General autonomous development remains
 paused; this migration does not authorize merging or deployment.
+
+## 2026-09-27 — Approved merge and deployment
+
+The maintainer explicitly approved merging, testing and deploying
+[PR527](https://github.com/Kerrycek/clankerdev/pull/527). Both CI workflows passed
+on `4fbeb51e`: [static checks](https://github.com/Kerrycek/clankerdev/actions/runs/36342559547)
+(150 script, 36 BFF and 1,514 unit tests) and
+[browser checks](https://github.com/Kerrycek/clankerdev/actions/runs/36342559546)
+(378 desktop + 303 mobile fixture cases).
+
+Merged as `156a7c043e543b5f4a51fc962d16e31bd6eaa00f`; the tree matches the tested
+head. Although no UI behavior changed, the maintainer requested deployment, so
+both dev.crucio.cz and clankerdev.vpsfree.cz now serve this release with matching
+frontend/BFF provenance. The dev-built frontend was promoted unchanged.
+Post-deploy health, auth and anonymous-session checks passed; eight real anonymous
+browser cases passed across both hosts, cs/en and desktop/mobile, with matching
+favicon bytes and no page errors. These checks did not mutate real user data.
+
+The previous `e7ce3d73` release and private rollback backups are retained on both
+hosts. No API/database changes; foreign checkout files were preserved. General
+autonomous development remains paused. Detailed deployment logs and receipts are
+operator-held. This follow-up is retained locally for the next documentation
+update; it does not require another runtime deployment.
