@@ -48,3 +48,29 @@ development remains paused.
 **Next / limitations:** review the PR and synthetic cs/en screenshots. Actual migration
 completion depends on the existing backend/transaction workers. No backend or shared
 service configuration is changed.
+
+## 2026-09-28 — Compact destination dropdown after screenshot review
+
+**Request / reason:** the maintainer rejected the always-visible node cards as
+impractical for dozens of hypervisors and requested a click-to-open node list.
+That feedback supersedes the initial radio-card decision above.
+
+**Change / decision:** the destination is now a compact button showing the chosen
+hostname, location and environment. It opens a searchable, scrollable list capped
+at 256px; the overlay does not push the remaining form down. Selection closes the
+list and restores focus. Arrow keys/Enter select, Escape cancels, and outside clicks
+close the list without losing the current destination. All timing, reason, IP and
+execution options remain visible. Inventory pagination and API compatibility checks
+are unchanged.
+
+**References:** [PR528](https://github.com/Kerrycek/clankerdev/pull/528), REQ-028.
+**Verification:** 14 targeted desktop/mobile fixture migration checks passed,
+including 60 synthetic destinations spread across server-capped pages, bounded list
+height, search, Enter/Escape, outside close, retained selection, payloads and errors.
+Twelve relevant model/inventory/page unit tests passed, as did typecheck, lint,
+overlay/lookup/design/i18n audits and build (existing chunk-size warning). Synthetic
+cs/en desktop/mobile screenshots were inspected. Initial new-test selectors counted
+options from unrelated form selects and tried to click a field covered by the open
+list; scoped list assertions and a visible outside target corrected those tests.
+No application check was weakened and no real migration was performed.
+**Status:** updating the existing PR; not merged or deployed.

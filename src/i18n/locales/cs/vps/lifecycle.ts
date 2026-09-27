@@ -269,6 +269,7 @@ export const csVps_lifecycle = {
   'vps.lifecycle.replace.reason_help': 'Volitelná admin poznámka k operaci.',
   'vps.lifecycle.replace.submit': 'Replace VPS',
   'vps.lifecycle.replace.error': 'Replace VPS selhal',
+  'vps.lifecycle.migrate.choose_node': 'Vyber cílový node…',
   'vps.lifecycle.migrate.target_title': 'Cílový node',
   'vps.lifecycle.migrate.source': 'Přesun z {node}',
   'vps.lifecycle.migrate.selected': 'Vybráno: {node}',

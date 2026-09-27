@@ -165,9 +165,13 @@ admins manage node/cluster/network/resource settings and migration plans.
 Heatmap availability follows legacy config/type/maintenance rules. Expose useful
 member visibility without granting infrastructure writes.
 
-**Per-VPS migration (REQ-028):** show active hypervisor destinations immediately,
-with hostname, location and environment. An optional text filter searches those
-labels; the source node is excluded. Read all ID-cursor pages rather than silently
+**Per-VPS migration (REQ-028):** show a compact destination selector. Clicking it
+opens a height-bounded, scrollable list of active hypervisors with hostname, location
+and environment, plus a text filter for those labels. Selecting a destination closes
+the list; the selected name and metadata stay visible. Support keyboard selection,
+Escape cancellation and retained selection when searching. This supersedes the
+initial always-visible radio-card layout after the maintainer highlighted clusters
+with dozens of nodes. The source node is excluded. Read all ID-cursor pages rather than silently
 truncating the inventory; an inventory error blocks submission and offers retry.
 The API still decides compatibility and available capacity, so a listed destination
 is not a promise that migration will be accepted.

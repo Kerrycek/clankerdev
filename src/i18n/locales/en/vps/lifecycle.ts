@@ -269,6 +269,7 @@ export const enVps_lifecycle = {
   'vps.lifecycle.replace.reason_help': 'Optional admin note for the operation.',
   'vps.lifecycle.replace.submit': 'Replace VPS',
   'vps.lifecycle.replace.error': 'Replace VPS failed',
+  'vps.lifecycle.migrate.choose_node': 'Choose a destination node…',
   'vps.lifecycle.migrate.target_title': 'Destination node',
   'vps.lifecycle.migrate.source': 'Moving from {node}',
   'vps.lifecycle.migrate.selected': 'Selected: {node}',
