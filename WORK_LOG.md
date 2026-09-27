@@ -46,7 +46,14 @@ Add a read-only dry run, install/rollback instructions and policy/shell regressi
 **Verification:** 11 focused policy/shell cases passed locally and on the dev
 Linux host. All 146 script tests, lint and design/active-doc audits passed locally.
 A real read-only queue check passed on the host with no queued issues, no model
-call and no GitHub writes. Installed policy receipt follows after activation.
+call and no GitHub writes.
+
+**Installed outcome:** the requested restriction is installed on the idle dev
+runner from commit `bb77a618`, under its existing lock. Private backups retain the
+old script/environment; the timer remains enabled and active. Post-install dry
+run passed, and real API checks confirmed organization visibility and approval
+permission. No live model invocation or end-to-end PR creation was triggered.
+The repository change is prepared for review; it has not been merged.
 
 ## 2026-09-27 - Keep normal sidebar width; revise PR522 to icons only
 
