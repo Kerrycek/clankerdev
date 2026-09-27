@@ -7,7 +7,7 @@ Modern responsive web UI replacing the legacy PHP webui.
 Start with the [design handbook](docs/design/README.md) for requirements, UX,
 architecture, API contracts, decision history, verification and handover.
 The [requirements register](docs/design/REQUIREMENTS.md) tracks current intent,
-status and acceptance. The [work log](WORK_LOG.md) records what changed and why.
+status and acceptance. The [work log](docs/work-log/README.md) records what changed and why.
 
 ## Development
 
@@ -35,7 +35,7 @@ The default Playwright suite uses deterministic HaveAPI mocks and does not requi
 
 ## Docs map
 
-- [WORK_LOG.md](WORK_LOG.md) – ongoing work, decisions, verification and release record
+- [Work log](docs/work-log/README.md) – ongoing work, decisions, verification and release record
 
 - [SPEC.md](SPEC.md) – specification entry point
 - [docs/CANONICAL_DOCS.md](docs/CANONICAL_DOCS.md) – current and historical documentation map

@@ -24,7 +24,7 @@ references do not establish that every former requirement has been reconstructed
 - [Decisions and superseded proposals](docs/design/DECISIONS.md)
 - [Verification](docs/design/VERIFICATION.md) and [operations/handover](docs/design/OPERATIONS.md)
 - [Source provenance and missing evidence](docs/design/SOURCES.md)
-- [Work log](WORK_LOG.md)
+- [Work log](docs/work-log/README.md)
 
 Update those documents directly. Do not introduce a second specification here or
 make new links to files outside the repository. Historical route-audit section
