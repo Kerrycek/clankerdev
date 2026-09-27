@@ -16,6 +16,7 @@ import { Alert } from '../../../components/ui/Alert';
 import { LinkButton } from '../../../components/ui/LinkButton';
 import { Modal } from '../../../components/ui/Modal';
 import { Textarea } from '../../../components/ui/Textarea';
+import { RegistrationReasonEditor } from './RegistrationReasonEditor';
 import { RequestApproveOptions } from './RequestApproveOptions';
 import { RequestResolveReview } from './RequestResolveReview';
 import { RequestResolveOverridesForm } from './RequestResolveOverridesForm';
@@ -392,16 +393,31 @@ export function RequestReviewActions(props: {
         </div>
 
         <div className="mt-4">
-          <Textarea
-            value={resolveReason}
-            onChange={(e) => setResolveReason(e.target.value)}
-            rows={3}
-            maxLength={500}
-            label={requiresReason ? t('requests.resolve.reason.required') : t('requests.resolve.reason.optional')}
-            ariaInvalid={reasonMissing}
-            ariaDescribedBy={reasonMissing ? `${props.testIdPrefix}.reason.error` : undefined}
-            testId={`${props.testIdPrefix}.reason`}
-          />
+          {props.reqType === 'registration' && (resolveAction === 'deny' || resolveAction === 'request_correction') ? (
+            <RegistrationReasonEditor
+              key={`${props.reqId}:${resolveAction}:${resolveOpen}`}
+              action={resolveAction}
+              language={touchedOverrides.has('language')
+                ? resources.languages.find(item => String(item.id) === overrides.language) ?? { id: overrides.language }
+                : props.request.language}
+              value={resolveReason}
+              onChange={setResolveReason}
+              invalid={reasonMissing}
+              disabled={submitting}
+              testIdPrefix={props.testIdPrefix}
+            />
+          ) : (
+            <Textarea
+              value={resolveReason}
+              onChange={(e) => setResolveReason(e.target.value)}
+              rows={3}
+              maxLength={500}
+              label={requiresReason ? t('requests.resolve.reason.required') : t('requests.resolve.reason.optional')}
+              ariaInvalid={reasonMissing}
+              ariaDescribedBy={reasonMissing ? `${props.testIdPrefix}.reason.error` : undefined}
+              testId={`${props.testIdPrefix}.reason`}
+            />
+          )}
           {reasonMissing ? (
             <div id={`${props.testIdPrefix}.reason.error`} className="mt-1 text-xs text-danger">
               {t('requests.resolve.reason_required')}
