@@ -6,14 +6,14 @@ Its previous contents were removed from active guidance because they conflicted 
 
 ## Canonical source of truth
 
-- `../UI_REDESIGN.md`
+- [Design and requirements handbook](docs/design/README.md)
 
 ## Why this file is quarantined
 
-Top-level status / planning file superseded by the redesign spec and execution plan.
+Top-level status / planning file superseded by the design handbook and work log.
 
 ## Rule
 
 - Do not add new requirements here.
-- If this topic needs an active document again, regenerate it from the canonical redesign spec.
+- If this topic needs an active document again, regenerate it from the current design handbook.
 - If the old wording is needed for archaeology, use git history rather than restoring it as active guidance.

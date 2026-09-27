@@ -5,7 +5,7 @@ import { execFileSync } from 'node:child_process';
 const root = process.cwd();
 const directory = path.join(root, 'docs/design');
 const files = fs.readdirSync(directory).filter(f => f.endsWith('.md')).map(f => path.join(directory, f));
-files.push(...['README.md', 'SPEC.md', 'docs/README.md', 'docs/CANONICAL_DOCS.md', 'WORK_LOG.md'].map(f => path.join(root, f)));
+files.push(...['README.md', 'UI_REDESIGN.md', 'SPEC.md', 'docs/README.md', 'docs/CANONICAL_DOCS.md', 'WORK_LOG.md'].map(f => path.join(root, f)));
 const errors = [];
 for (const file of files) {
   const text = fs.readFileSync(file, 'utf8').replace(/```[\s\S]*?```/g, '');
@@ -15,6 +15,18 @@ for (const file of files) {
     const destination = path.resolve(path.dirname(file), decodeURIComponent(target));
     if (!destination.startsWith(root + path.sep) || !fs.existsSync(destination)) {
       errors.push(`${path.relative(root, file)}: missing or external local link ${target}`);
+    }
+  }
+}
+// Historical mentions may remain, but no tracked document/source may direct
+// readers to the missing specification outside this repository.
+const tracked = execFileSync('git', ['ls-files', '-z'], { encoding: 'utf8' }).split('\0');
+for (const relative of tracked.filter(f => /\.(md|tsx?|css)$/.test(f))) {
+  const content = fs.readFileSync(path.join(root, relative), 'utf8');
+  for (const match of content.matchAll(/(?:\.\.\/)+UI_REDESIGN\.md/g)) {
+    const destination = path.resolve(path.dirname(path.join(root, relative)), match[0]);
+    if (destination !== path.join(root, 'UI_REDESIGN.md')) {
+      errors.push(`${relative}: obsolete external redesign reference ${match[0]}`);
     }
   }
 }

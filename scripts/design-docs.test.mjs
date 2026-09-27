@@ -18,11 +18,16 @@ function fixture(t) {
   fs.writeFileSync(path.join(cwd, 'src/routes/securityAdvisoryAdminRoutes.tsx'), 'export const securityAdvisoryAdminRoutes = [];');
   fs.writeFileSync(path.join(cwd, 'src/lib/api/vps.ts'), 'export {};');
   fs.writeFileSync(path.join(cwd, 'src/lib/api/vps.test.ts'), 'test fixture');
-  for (const name of ['README.md','SPEC.md','docs/README.md','docs/CANONICAL_DOCS.md','WORK_LOG.md']) fs.writeFileSync(path.join(cwd,name),'# Fixture\n');
+  for (const name of ['README.md','UI_REDESIGN.md','SPEC.md','docs/README.md','docs/CANONICAL_DOCS.md','WORK_LOG.md']) fs.writeFileSync(path.join(cwd,name),'# Fixture\n');
   fs.writeFileSync(path.join(cwd,'docs/design/API_CONTRACTS.md'),'# API\n');
   fs.writeFileSync(path.join(cwd,'docs/design/REQUIREMENTS.md'),'| REQ-001 | Requirement |\n');
   const run = (...args) => spawnSync(process.execPath, args, { cwd, encoding: 'utf8' });
   assert.equal(run('scripts/design-inventory.mjs','--write').status,0);
+  // The audit checks tracked documentation/source paths, just like a checkout.
+  for (const args of [['init', '--quiet'], ['add', '.']]) {
+    const result = spawnSync('git', args, { cwd, encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+  }
   return {cwd, run};
 }
 
@@ -34,7 +39,8 @@ test('inventory includes nested/index routes, imported gates and API modules', t
   assert.match(content,/`\/app\/payments`/);
   assert.match(content,/<Shell \/> → <Member \/> → <Gate \/>/);
   assert.match(content,/API adapter modules \(1\)/);
-  assert.equal(run('scripts/audit-design-docs.mjs').status,0);
+  const result = run('scripts/audit-design-docs.mjs');
+  assert.equal(result.status, 0, result.stderr);
 });
 
 test('audit rejects stale inventory after a route or adapter is added',t=>{
@@ -61,4 +67,31 @@ test('inventory fails rather than silently omit an unresolved route spread',t=>{
   const result=run('scripts/design-inventory.mjs','--write');
   assert.notEqual(result.status,0);
   assert.match(result.stderr,/Unresolved route spread/);
+});
+
+test('audit accepts the in-repository redesign bridge and historical mentions', t => {
+  const {cwd, run} = fixture(t);
+  fs.writeFileSync(path.join(cwd, 'docs/design/API_CONTRACTS.md'),
+    '[Redesign index](../../UI_REDESIGN.md)\nThe old UI_REDESIGN.md is unavailable.\n');
+  const result = run('scripts/audit-design-docs.mjs');
+  assert.equal(result.status, 0, result.stderr);
+});
+
+test('audit rejects external redesign references in tracked docs and source', t => {
+  const {cwd, run} = fixture(t);
+  fs.writeFileSync(path.join(cwd, 'README.md'), '`../UI_REDESIGN.md`\n');
+  fs.writeFileSync(path.join(cwd, 'src/lib/api/vps.ts'),
+    '// Spec: ../../../../UI_REDESIGN.md\nexport {};\n');
+  const result = run('scripts/audit-design-docs.mjs');
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /README\.md: obsolete external redesign reference/);
+  assert.match(result.stderr, /src\/lib\/api\/vps\.ts: obsolete external redesign reference/);
+});
+
+test('audit checks links inside the redesign bridge', t => {
+  const {cwd, run} = fixture(t);
+  fs.writeFileSync(path.join(cwd, 'UI_REDESIGN.md'), '[Missing](missing.md)\n');
+  const result = run('scripts/audit-design-docs.mjs');
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /UI_REDESIGN\.md: missing or external local link missing\.md/);
 });

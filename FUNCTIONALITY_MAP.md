@@ -44,11 +44,10 @@ does not mean that its workflow has reached parity or is finished.
   behavior against its fixture contract; it does not by itself prove that the
   deployed API accepts the same inputs.
 
-The repository's older canonical-document pointers currently reference an
-external `UI_REDESIGN.md` that is not part of this repository checkout. Several
-derived route documents also still point at quarantined spec stubs. Until those
-links are repaired, this map must cite concrete code/API/test evidence and must
-not silently restore historical documents as current requirements.
+The current [design handbook](docs/design/README.md) replaces the unavailable
+external redesign document. The [requirements register](docs/design/REQUIREMENTS.md)
+records intent and acceptance; this map supplies concrete code/API/test evidence.
+Historical route audits and quarantined stubs are not current requirements.
 
 ---
 

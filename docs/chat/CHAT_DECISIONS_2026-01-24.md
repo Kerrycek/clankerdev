@@ -6,7 +6,7 @@ Its previous contents were removed from active guidance because they conflicted 
 
 ## Canonical source of truth
 
-- `../../../UI_REDESIGN.md`
+- [Design and requirements handbook](../design/README.md)
 
 ## Why this file is quarantined
 
@@ -15,5 +15,5 @@ Chat-history capture retained only as a link-compatible historical stub.
 ## Rule
 
 - Do not add new requirements here.
-- If this topic needs an active document again, regenerate it from the canonical redesign spec.
+- If this topic needs an active document again, regenerate it from the current design handbook.
 - If the old wording is needed for archaeology, use git history rather than restoring it as active guidance.

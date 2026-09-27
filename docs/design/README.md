@@ -22,6 +22,9 @@ current API/source contract, reproducible test evidence. Code describes implemen
 behavior; it does not by itself approve new requirements. Conflicts and missing
 history must be recorded rather than silently resolved in favor of existing code.
 
+The root [UI_REDESIGN.md](../../UI_REDESIGN.md) is a compatibility navigation page;
+it does not contain a recovered original or a competing specification.
+
 ## Reading order
 
 1. [Requirements register](REQUIREMENTS.md): stable IDs, source, acceptance,

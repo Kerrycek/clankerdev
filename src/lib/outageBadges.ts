@@ -65,7 +65,8 @@ export function outageTypeBadge(outageType: unknown, t: (k: any) => string): Bad
 /**
  * Severity axis: derived from outage_type + impact_type.
  *
- * Spec: UI_REDESIGN.md §3.2.3.8 + §3.2.9.5.
+ * Workflow context: docs/design/WORKFLOWS.md
+ * (Tasks, transactions, monitoring, incidents and OOM).
  */
 export function outageSeverityVariant(outageType: unknown, impact: unknown): BadgeVariant {
   const ot = norm(outageType);

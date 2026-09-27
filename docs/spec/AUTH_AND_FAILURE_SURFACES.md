@@ -256,4 +256,4 @@ Test id:
 
 - `docs/spec/TEST_IDS.md`
 - `docs/spec/E2E_TEST_PLAN.md`
-- `../../UI_REDESIGN.md` (canonical auth / shell behavior)
+- [Authentication workflow](../design/WORKFLOWS.md#public-entry-and-authentication) and [shell design](../design/PRODUCT_DESIGN.md#audiences-and-information-architecture)

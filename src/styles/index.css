@@ -8,10 +8,9 @@
     - Colors are stored as RGB triplets to support Tailwind alpha modifiers:
       `bg-surface/80`, `text-fg/70`, ...
 
-    - Canonical spec (single source of truth):
-      vpsadmin/UI_REDESIGN.md
-        - §3.2.10 vpsFree brand palette + theme palettes (dark canonical)
-        - §4.6.8 Chart style system (locked)
+    - Current visual guidance:
+      docs/design/PRODUCT_DESIGN.md (Visual language)
+      These token definitions are the implemented palette values.
 
     Overlay rule:
     - Modal and drawer panels stay opaque for readability.
