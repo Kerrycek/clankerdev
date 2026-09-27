@@ -1,5 +1,21 @@
 // Admin request review safety and bulk actions
 export const enRequestReviewSafety = {
+  'requests.resolve.preset.label': 'Preset reason',
+  'requests.resolve.preset.custom': 'Custom text / choose a preset',
+  'requests.resolve.preset.address_nonexistent': 'Non-existent address',
+  'requests.resolve.preset.application_incorrect': 'Incorrectly completed application',
+  'requests.resolve.preset.duplicate_application': 'Duplicate application',
+  'requests.resolve.preset.existing_membership': 'Existing membership',
+  'requests.resolve.preset.address_incomplete': 'Incomplete address',
+  'requests.resolve.preset.address_unverified': 'Address cannot be verified',
+  'requests.resolve.preset.name_incomplete': 'Missing or incomplete name',
+  'requests.resolve.preset.language': 'Message language: {language}.',
+  'requests.resolve.preset.language_cs': 'Czech',
+  'requests.resolve.preset.language_en': 'English',
+  'requests.resolve.preset.language_unknown': 'Application language is unknown — choose the preset language',
+  'requests.resolve.preset.choose_language': 'Choose the message language',
+  'requests.resolve.preset.editable': 'You can edit the text or write your own. It will be sent as shown below; custom text is not translated automatically.',
+
   'requests.resolve.toast.uncertain.title': 'The request outcome is uncertain',
   'requests.resolve.toast.uncertain.body': 'Do not submit the action again. Open Tasks and reconcile the request from its detail.',
   'requests.resolve.toast.blocked.title': 'The request was not sent',

@@ -1,5 +1,21 @@
 // Bezpečnost revize administrátorských žádostí a hromadné akce
 export const csRequestReviewSafety = {
+  'requests.resolve.preset.label': 'Předvolený důvod',
+  'requests.resolve.preset.custom': 'Vlastní text / vyber předvolbu',
+  'requests.resolve.preset.address_nonexistent': 'Neexistující adresa',
+  'requests.resolve.preset.application_incorrect': 'Nekorektně vyplněná přihláška',
+  'requests.resolve.preset.duplicate_application': 'Duplicitní přihláška',
+  'requests.resolve.preset.existing_membership': 'Existující členství',
+  'requests.resolve.preset.address_incomplete': 'Neúplná adresa',
+  'requests.resolve.preset.address_unverified': 'Adresu nelze ověřit',
+  'requests.resolve.preset.name_incomplete': 'Chybějící nebo neúplné jméno',
+  'requests.resolve.preset.language': 'Jazyk zprávy: {language}.',
+  'requests.resolve.preset.language_cs': 'Čeština',
+  'requests.resolve.preset.language_en': 'Angličtina',
+  'requests.resolve.preset.language_unknown': 'Jazyk přihlášky není známý — vyber jazyk předvolby',
+  'requests.resolve.preset.choose_language': 'Vyber jazyk zprávy',
+  'requests.resolve.preset.editable': 'Text můžeš upravit nebo napsat vlastní. Odešle se tak, jak je uvedený níže; vlastní text se automaticky nepřekládá.',
+
   'requests.resolve.toast.uncertain.title': 'Výsledek akce je nejasný',
   'requests.resolve.toast.uncertain.body': 'Akci neposílej znovu. Otevři Úlohy a ověř výsledek v detailu žádosti.',
   'requests.resolve.toast.blocked.title': 'Žádost nebyla odeslána',
