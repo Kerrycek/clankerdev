@@ -14,7 +14,7 @@ import { LifecyclePanel } from '../../../components/lifetimes/LifecyclePanel';
 import { getMetaActionStateId, isMissingActionStateError } from '../../../lib/api/haveapi';
 import { fetchLocations } from '../../../lib/api/infra';
 import { fetchIpAddressesForVps } from '../../../lib/api/ipAddresses';
-import { fetchNodes } from '../../../lib/api/nodes';
+import { fetchMigrationNodes } from './VpsMigrationNodes';
 import { fetchOsTemplates } from '../../../lib/api/osTemplates';
 import {
   fetchVps,
@@ -184,8 +184,8 @@ export function VpsLifecyclePage() {
   });
 
   const nodesQ = useQuery({
-    queryKey: ['nodes', 'vps-lifecycle-migrate', { limit: 500, includes: 'location__environment' }],
-    queryFn: async () => (await fetchNodes({ limit: 500, includes: 'location__environment' })).data,
+    queryKey: ['nodes', 'vps-lifecycle-migrate', { type: 'node', state: 'active', includes: 'location__environment' }],
+    queryFn: fetchMigrationNodes,
     enabled: canAdministerVps && requestedAction === 'migrate',
     staleTime: 60_000,
   });
@@ -194,7 +194,6 @@ export function VpsLifecyclePage() {
   const [swap, setSwap] = useState<SwapForm>(() => defaultSwapForm());
   const [replace, setReplace] = useState<ReplaceForm>(() => defaultReplaceForm(nodeId));
   const [replaceNodeLabel, setReplaceNodeLabel] = useState('');
-  const [migrateNodeLabel, setMigrateNodeLabel] = useState('');
   const [templateForm, setTemplateForm] = useState<TemplateForm>(() =>
     defaultTemplateForm(osTemplateId, Boolean((vps as any).enable_os_template_auto_update))
   );
@@ -663,8 +662,7 @@ export function VpsLifecyclePage() {
       nodes={nodesQ.data ?? []}
       nodesLoading={nodesQ.isLoading}
       nodesError={nodesQ.isError}
-      selectedNodeLabel={migrateNodeLabel}
-      onSelectedNodeLabelChange={setMigrateNodeLabel}
+      onRetryNodes={() => { void nodesQ.refetch(); }}
       targetContext={migrateTargetContext}
       gate={gate}
       pending={migrateM.isPending}
@@ -835,16 +833,18 @@ export function VpsLifecyclePage() {
             </Button>
           }
         />
-        <CardBody>
-          <div className="mt-3 text-xs text-faint">
-            {t('vps.lifecycle.current_target', {
-              vps: `#${vpsId}`,
-              node: nodeId ? `#${nodeId}` : '—',
-              owner: ownerId ? `#${ownerId}` : '—',
-              expiration: formatDateTime((vps as any).expiration_date),
-            })}
-          </div>
-        </CardBody>
+        {requestedAction !== 'migrate' ? (
+          <CardBody>
+            <div className="mt-3 text-xs text-faint">
+              {t('vps.lifecycle.current_target', {
+                vps: `#${vpsId}`,
+                node: nodeId ? `#${nodeId}` : '—',
+                owner: ownerId ? `#${ownerId}` : '—',
+                expiration: formatDateTime((vps as any).expiration_date),
+              })}
+            </div>
+          </CardBody>
+        ) : null}
       </Card>
 
       {requestedAction === 'start' ? renderPowerCard('start') : null}
