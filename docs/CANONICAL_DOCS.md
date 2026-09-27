@@ -13,7 +13,7 @@ than silently treating existing code or an old document as new approval.
 
 ## Active supporting sources
 
-- [Work log](../WORK_LOG.md): chronology, not a competing requirements list.
+- [Work log](work-log/README.md): per-change history, not a competing requirements list.
 - All chapters linked by the handbook: current design, workflow, architecture,
   contracts, verification, operations, sources and generated inventory.
 - [BFF README](../bff/README.md) and [deployment docs](../deploy/README.md): technical

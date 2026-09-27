@@ -51,8 +51,12 @@ This repository is maintained through human-reviewed AI pull requests.
 
 ## Work Log
 
-- Read `WORK_LOG.md` before starting work and maintain it with meaningful changes,
-  investigations, decisions, verification results, blockers, and releases.
+- Read `docs/work-log/README.md` and the relevant change/release records before
+  starting work. Keep one `docs/work-log/YYYY-MM-DD-descriptive-change.md` file
+  per feature/change and append dated follow-ups there across all related PRs.
+- Unrelated changes must use separate files. Do not append to `WORK_LOG.md` or
+  update a shared index/README for each PR. Multi-feature releases may use a
+  separate release file linking the affected change records.
 - Update the log in the same PR as the work when practical. Link the PR/commit
   and evidence; distinguish prepared, merged, and deployed states explicitly.
 - Record later merge/deployment outcomes as dated follow-ups. Distinguish fixture

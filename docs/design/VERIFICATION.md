@@ -46,7 +46,7 @@ consistency checks, not a substitute for semantic review or backend tests.
 
 ## Recorded release evidence (2026-09-27)
 
-The [work log](../../WORK_LOG.md) records release `fd290b5e` (PR517–520), including
+The [work log](../work-log/2026-09-27-preferences-console-deletion-release.md) records release `fd290b5e` (PR517–520), including
 exact counts and limitations. Its integrated tree passed unit/script/BFF/static
 checks, 681 full PR fixture cases and targeted Chromium/WebKit checks. Post-deploy
 browser cases still used synthetic API fixtures; actual anonymous provenance,

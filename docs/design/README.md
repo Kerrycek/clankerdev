@@ -44,14 +44,15 @@ it does not contain a recovered original or a competing specification.
 10. [Generated inventory](IMPLEMENTATION_INVENTORY.md): every declared route and
     API adapter in the current checkout, with source links.
 
-The [work log](../../WORK_LOG.md) records chronology. Requirements record current
-intent; decisions explain transitions; test results prove only their stated scope.
+The [work log](../work-log/README.md) keeps per-change history. Requirements record
+current intent; decisions explain transitions; test results prove only their stated scope.
 
 ## Maintenance contract
 
 Every behavior change must update the affected requirement and workflow in the
-same PR, plus the work log. Record the requirement ID in the PR. If no requirement
-applies, add one with its actual source; mark proposals as proposed. Preserve IDs
+same PR, plus the relevant file in `docs/work-log/` (one file per change,
+continued across its PRs). Do not append to a shared log or entry list. Record the
+requirement ID in the PR. If no requirement applies, add one with its actual source; mark proposals as proposed. Preserve IDs
 and supersession history. New instructions override older conflicting decisions,
 but must be written down with their consequences and migration needs.
 

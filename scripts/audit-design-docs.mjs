@@ -5,6 +5,8 @@ import { execFileSync } from 'node:child_process';
 const root = process.cwd();
 const directory = path.join(root, 'docs/design');
 const files = fs.readdirSync(directory).filter(f => f.endsWith('.md')).map(f => path.join(directory, f));
+const workLog = path.join(root, 'docs/work-log');
+files.push(...fs.readdirSync(workLog).filter(f => f.endsWith('.md')).map(f => path.join(workLog, f)));
 files.push(...['README.md', 'UI_REDESIGN.md', 'SPEC.md', 'docs/README.md', 'docs/CANONICAL_DOCS.md', 'WORK_LOG.md'].map(f => path.join(root, f)));
 const errors = [];
 for (const file of files) {

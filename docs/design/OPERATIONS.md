@@ -50,7 +50,8 @@ own [environment/setup requirements](../../bff/README.md).
    [auth smoke](../../deploy/smoke-auth-endpoints.sh). Check SPA deep links and assets.
 9. Run appropriate post-deploy browser checks, clearly labeling fixture versus
    actual API checks. Record result, exact revision, previous rollback revision
-   and limitations in WORK_LOG.md; update requirement status.
+   and limitations in the relevant `docs/work-log/` feature or release file;
+   update requirement status.
 
 ## Rollback
 
