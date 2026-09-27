@@ -88,3 +88,14 @@ The following cannot be solved by publishing credentials in a repository:
 See the [beta gates](VERIFICATION.md) for outstanding certification. This handbook
 provides a source-contained design handover; it does not claim private operational
 access transfer, a full audit, or public-beta approval has happened.
+
+## Issue-to-PR automation trust policy
+
+REQ-067 is separate from the paused development heartbeat. The dev host's issue
+runner polls the `ai-fix` queue. Its explicit author/membership/approval policy,
+read-only eligibility check and rollback procedure are documented in the
+[runner runbook](../../deploy/ai-issue-runner/README.md). Approval is bound to the
+current external issue content; filtered external feedback cannot independently
+trigger another model invocation. The runner proposes PRs and does not merge or
+deploy them. Read-only polling/authentication health does not prove a fresh
+end-to-end Codex invocation; do not spend tokens just to claim that proof.
