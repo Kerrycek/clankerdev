@@ -55,6 +55,11 @@ runs one process per file store. Browser expiry/activity logic must not interpre
 background resource polling as human activity. Logout/expiry must not be undone
 by a later stale response. Auth storage and UI preference persistence are separate.
 
+The [impersonation workflow](ACTION_CONTRACTS.md#impersonation) is distinct from
+changing user/admin view: it creates a target-user token and overrides authentication
+in the current tab. The BFF operator session is not exchanged for that identity.
+Token storage and best-effort close must be included in security review.
+
 ## Permissions and object scope
 
 The API exposes numeric user levels. [roles.ts](../../src/lib/roles.ts) maps user

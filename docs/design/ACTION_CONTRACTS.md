@@ -241,6 +241,100 @@ Dataset admin controls can be hidden for admin My view while the explicitly
 privileged root-disk workspace remains available. Do not replace action-specific
 gates with one generic “admin sees everything” rule.
 
+## Account and user administration
+
+REQ-029/039/040/041/052/053. Source-derived behavior at the reviewed baseline;
+API authorization still decides what the caller can do. These details complement
+request review, not a new approval to change accounts or send messages.
+
+### Account lifecycle and environment limits
+
+[Overview](../../src/pages/app/admin/user/AdminUserOverviewPage.tsx) offers active,
+suspended, soft_delete and hard_delete; deleted is displayed but disabled.
+Only changed object_state, expiration_date and remind_after_date are sent in
+PUT /users/{id}, plus trimmed change_reason when provided. Date inputs convert
+local time to ISO; clearing a date sends null. Selecting soft deletion fills an
+empty expiry with one calendar month from now; that UI suggestion is not a
+backend retention guarantee. Clearing expiry also clears the reminder input.
+A transition away from active opens a target/state confirmation. Returned action
+state is tracked when present; a saved/queued receipt is not proof that all VPS
+and account side effects finished. State history uses /users/{id}/state_logs;
+VPS state history uses /vpses/{id}/state_logs, separate from current-state editing.
+[Fixture assertions](../../e2e/specs/admin/user_detail_page.spec.ts) cover state
+payload, confirmation, receipt and reminder behavior; full live lifecycle remains
+REQ-039, not certified by these assertions.
+
+[Environment configuration](../../src/components/user/UserEnvironmentConfigsPanel.tsx)
+edits the particular /users/{id}/environment_configs/{configId} record. Inherited
+mode sends only default=true. Custom mode sends default=false, can_create_vps,
+can_destroy_vps, vps_lifetime and max_vps_count. UI lifetime is days, serialized as
+rounded seconds (days * 86400); zero means unlimited. Maximum VPS count must be
+finite/nonnegative, is floored on submission, and zero means unlimited. Keep these
+units separate from a VPS's absolute expiration date. Draft/error belongs to the
+specific configuration row. [Fixture](../../e2e/specs/admin/user_environment_configs_smoke.spec.ts).
+
+Billing is separate: [user_accounts](../../src/lib/api/userAccounts.ts) changes
+monthly_payment/paid_until. A financial paid-until date is not object expiration;
+changing one does not prove the other changed. User/global finance has its own
+role gate. Resource package definitions/items and per-user assignments are separate
+objects; deleting an assignment is not deleting the shared package definition.
+[Package adapter](../../src/lib/api/clusterResourcePackages.ts).
+
+### Security, credentials and mail preferences
+
+[Security panel](../../src/components/user/UserSecurityPanel.tsx) exposes password
+and settings plus administrative lockout/password-reset flags. Failed flag updates
+restore the previous displayed value. User-session close uses POST /user_sessions/{id},
+not an invented DELETE. SSH public keys, remembered devices, metrics access tokens,
+TOTP devices and WebAuthn credentials are different resources in the
+[dossier adapter](../../src/lib/api/userDossier.ts); deleting one is not a blanket
+credential reset. TOTP creation returns a secret/provisioning URI; confirmation
+returns a recovery code. These and full session/metrics tokens are credentials,
+not screenshot/log material. Passkey enrollment on behalf of a different user
+must not accidentally enroll a key on the operator's authentication origin.
+[Passkey scope](../../src/components/user/UserWebauthnCredentialsPanel.tsx),
+[MFA fixture](../../e2e/specs/app/profile_mfa_recovery.spec.ts).
+
+[Mail model](../../src/components/user/UserMailPreferencesModel.ts) previews effective
+recipients in order: disabled template, explicit template recipients, recipients
+from listed roles, primary email fallback. Input separators normalize to a
+comma-separated list. Role IDs and template names are encoded path keys for their
+user-scoped PUTs; global mail-template administration is a separate workflow.
+Global mailer-enabled/language settings also differ from a template override.
+This preview and a successful settings response do not prove delivery.
+[Model tests](../../src/components/user/UserMailPreferencesModel.test.ts).
+
+### Impersonation
+
+Available from the administrative user security surface, subject to API permissions.
+The panel requires OAuth2 auth, no existing impersonation and a nonblank reason.
+It POSTs /user_sessions for the target user with scope=all,
+token_lifetime=renewable_auto, token_interval=1200 seconds, and a label beginning
+“Impersonation: ” truncated to 180 characters. A parsed full token/session identity
+is required before switching. **This is renewable, not a fixed 20-minute cap.**
+
+The [session record](../../src/lib/auth/impersonation.ts) stores the full token,
+target/session IDs, reason, start time and return context in sessionStorage.
+[Auth selection](../../src/app/config.ts) prefers it over normal runtime/stored
+auth; navigation reloads into user view. This differs from ordinary My view, which
+retains the administrator's identity. Treat tab storage as secret-bearing; browser
+session restoration, closing a tab or clearing local state does not prove that
+the server token was revoked.
+
+The [banner](../../src/components/layout/ImpersonationBanner.tsx) shows target,
+start and reason. Return attempts POST /user_sessions/{id}, but tolerates failure,
+clears local impersonation and reloads the return path so original auth is selected
+again. Returning to admin therefore does not certify successful remote close; the
+operator OAuth session must still be valid. Its BFF refresh/logout is a separate
+credential lifecycle.
+
+Existing [model tests](../../src/components/user/UserSecurityModel.test.ts) exercise
+token parsing and label truncation, not the full impersonation lifecycle.
+**Missing proof:** isolated API/browser start, target identity, forbidden caller,
+reload, renewable expiry, close failure, successful close and return with expired
+operator auth. Security review must include this boundary; no such certification
+is claimed by the general login/session test results.
+
 ## Remaining domain action inventory
 
 These are preservation requirements grounded in current routes/adapters and linked
@@ -258,9 +352,26 @@ of intentionally missing actions before declaring parity.
 | Tasks/transactions, REQ-012/051 | Action state vs chain vs item; pending/running/failed/finished, scope-isolated persisted local locks, manual reconciliation after unknown outcome | [task isolation](../../e2e/specs/app/task_storage_scope_isolation.spec.ts), [chain](../../e2e/specs/app/transaction_chain_detail_page.spec.ts) |
 | Monitoring/incidents/OOM, REQ-051 | Event decisions, incident creation permissions, report detail, cgroups, rules, tasks, statistics and filters; long identifiers on mobile | [event feedback](../../e2e/specs/app/monitoring_event_action_feedback.spec.ts), [incident gates](../../e2e/specs/app/incident_create_permissions.spec.ts), [OOM](../../e2e/specs/app/oom_report_tasks_mobile_layout.spec.ts) |
 | Nodes/cluster, REQ-025–028 | Node status/kernel/history, pool maintenance, environments/locations, templates/packages/resources, resolvers/networks/system configuration; support/member visibility separate from writes | [node control](../../e2e/specs/admin/node_detail_control_center.spec.ts), [cluster](../../e2e/specs/admin/cluster_resource_maintenance.spec.ts) |
-| Mail/content, REQ-053 | Template and translation CRUD, safe HTML preview, recipients, mailboxes, handler ordering, mail log, news/help boxes. Reorder partial outcomes cannot be retried blindly. | [template safety](../../e2e/specs/admin/mailer_template_crud_safety.spec.ts), [handlers](../../e2e/specs/admin/mailer_mailbox_handler_feedback.spec.ts), [content](../../e2e/specs/admin/admin_content_delete_feedback.spec.ts) |
+| Mail/content, REQ-053 | Template create/read/update; translation CRUD; recipient create/read/update and template membership; mailboxes/handlers/logs, safe HTML preview, news/help boxes. Template and standalone-recipient deletion is deliberately blocked; reorder partial outcomes require reconciliation. | [template safety](../../e2e/specs/admin/mailer_template_crud_safety.spec.ts), [handlers](../../e2e/specs/admin/mailer_mailbox_handler_feedback.spec.ts), [content](../../e2e/specs/admin/admin_content_delete_feedback.spec.ts) |
 | Advisories/audit/public, REQ-054/055 | Anonymous status/news/outages/advisories, privileged advisory/update/node/outage relations, rebuilds and audit history. Failed public API is not all-healthy. | [public overview](../../e2e/specs/public/overview.spec.ts), [advisories](../../e2e/specs/app/security_advisories_admin.spec.ts), [audit](../../e2e/specs/admin/audit_smoke.spec.ts) |
 | KB, REQ-057 | Page bindings/articles/captures with independent UI/API pins and synthetic accounts; preserve legacy evidence; publication separate | [open handover items](HANDOVER.md#acceptance-and-ownership) |
+
+### Deliberately blocked mail deletion
+
+Do not describe mail administration as unrestricted CRUD. The
+[template detail](../../src/pages/app/admin/mailer/MailTemplateDetailPage.tsx) and
+[recipient list](../../src/pages/app/admin/mailer/MailRecipientsPage.tsx) disable
+whole-template and standalone-recipient deletion. The recorded product rationale
+is potential orphaned user notification settings/template relations until the
+backend has a safe cascade or restrict rule. This is the UI's documented boundary,
+not a fresh certification of the currently deployed backend schema.
+
+Removing a recipient from one template deletes that **relationship**, not the
+shared recipient. Translation deletion, mailbox deletion and handler deletion
+are separate supported adapter actions with their own guards. Preserve this
+contrast in future redesigns; a blocked control is not an omitted feature to
+silently re-enable. [Recipient safety fixture](../../e2e/specs/admin/mailer_recipients_smoke.spec.ts),
+[translation safety](../../e2e/specs/admin/mailer_template_crud_safety.spec.ts).
 
 ## Legacy and acceptance boundary
 

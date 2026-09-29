@@ -96,3 +96,29 @@ acceptance, private-evidence transfer, operator rehearsal, legacy parity review,
 independent security and known product/KB gates remain explicit. Full test output
 is retained privately by the current operator; public results and reproducible
 commands are here and in the handbook. No general automation was resumed.
+
+
+## 2026-09-29 — Reverse coverage and semantic corrections
+
+**Request:** recheck completeness critically before PR approval.
+**Findings/fixes:** reconciled stale source provenance; mapped all 63 API modules
+once to behavioral docs, including helpers/types and non-adapter boundaries;
+added account lifecycle, environment limit units/inheritance, credential/mail
+rules and impersonation behavior/storage/return limits. Corrected the misleading
+mail-template CRUD claim: whole-template and standalone-recipient deletion is
+intentionally blocked, unlike translation/relationship deletion. Full
+impersonation lifecycle proof is explicitly missing, not inferred from model tests.
+
+**Verification:** 12 documentation cases and all 154 script tests passed, including
+missing/duplicate/nonexistent domain-map negatives. Initial broad script command
+lacked Node on PATH; two runner-shell cases failed prerequisite detection. Correct
+runtime PATH resolved them, without test changes or skipped gates. Design audit:
+51 documents, 67 IDs, 256 route declarations, 63 modules. Active-doc audit and
+whitespace passed. Prior d660b019 static CI passed; its browser run was still
+active while reviewing. New checks must validate the new commit separately.
+
+**Status:** updated the existing PR530; source/examples/docs audit only, no runtime
+behavior changes, shared mutations, merge or deploy. Prior clean-export full-suite
+and build evidence is retained with its original scope, not relabeled as a new run.
+**Next:** receiving review and explicit assurance gaps in HANDOVER.md. A complete
+module index is not exhaustive legacy parity or an independent security audit.

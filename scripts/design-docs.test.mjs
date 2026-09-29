@@ -20,6 +20,7 @@ function fixture(t) {
   fs.writeFileSync(path.join(cwd, 'src/lib/api/vps.test.ts'), 'test fixture');
   for (const name of ['README.md','UI_REDESIGN.md','SPEC.md','docs/README.md','docs/CANONICAL_DOCS.md','WORK_LOG.md','bff/README.md']) fs.writeFileSync(path.join(cwd,name),'# Fixture\n');
   fs.writeFileSync(path.join(cwd,'docs/design/API_CONTRACTS.md'),'# API\n');
+  fs.writeFileSync(path.join(cwd,'docs/design/DOMAIN_COVERAGE.md'),'## Module coverage\n\n[vps](../../src/lib/api/vps.ts)\n');
   fs.writeFileSync(path.join(cwd,'docs/work-log/README.md'),'# Work log\n');
   fs.writeFileSync(path.join(cwd,'docs/design/REQUIREMENTS.md'),'| REQ-001 | Requirement |\n');
   fs.writeFileSync(path.join(cwd,'docs/design/EVIDENCE_MATRIX.md'),'## Requirement coverage\n\n| REQ-001 | Manual review | Not executed |\n');
@@ -50,7 +51,9 @@ test('audit rejects stale inventory after a route or adapter is added',t=>{
   fs.writeFileSync(path.join(cwd,'src/lib/api/dns.ts'),'export {};');
   const result=run('scripts/audit-design-docs.mjs');
   assert.notEqual(result.status,0);
-  assert.match(result.stderr,/inventory is stale/);
+  assert.match(result.stderr,/Domain coverage must assign exactly once: dns.ts/);
+  const inventoryResult = run('scripts/design-inventory.mjs');
+  assert.match(inventoryResult.stderr, /inventory is stale/);
 });
 
 test('audit rejects broken links and duplicate or undefined requirement IDs',t=>{
@@ -143,4 +146,16 @@ test('audit checks deployment runbook links, without requiring a shared index', 
   const result = run('scripts/audit-design-docs.mjs');
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /deploy\/host\/release.md: missing local anchor/);
+});
+
+
+test('domain coverage rejects missing, duplicate and nonexistent modules', t => {
+  const {cwd, run} = fixture(t);
+  const file = path.join(cwd, 'docs/design/DOMAIN_COVERAGE.md');
+  for (const content of ['', '[vps](../../src/lib/api/vps.ts) [again](../../src/lib/api/vps.ts)', '[vps](../../src/lib/api/vps.ts) [unknown](../../src/lib/api/removed.ts)']) {
+    fs.writeFileSync(file, '## Module coverage\n\n' + content);
+    const result = run('scripts/audit-design-docs.mjs');
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /Domain coverage/);
+  }
 });

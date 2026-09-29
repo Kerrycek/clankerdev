@@ -78,6 +78,20 @@ for (const file of files.filter(f => f.startsWith(directory))) {
     if (!ids.includes(match[0])) errors.push(`${path.basename(file)}: unknown ${match[0]}`);
   }
 }
+// Reverse traceability catches a new adapter being inventoried but never assigned
+// to behavioral documentation. Helper/type modules still need an explicit home.
+const domainFile = path.join(directory, 'DOMAIN_COVERAGE.md');
+const domainText = fs.existsSync(domainFile) ? fs.readFileSync(domainFile, 'utf8') : '';
+const moduleCoverage = (domainText.split('## Module coverage\n')[1] ?? '').split(/^## /m)[0];
+const assignedModules = [...moduleCoverage.matchAll(/\]\(\.\.\/\.\.\/src\/lib\/api\/([^/()]+\.ts)\)/g)].map(m => m[1]);
+const actualModules = fs.readdirSync(path.join(root, 'src/lib/api'))
+  .filter(f => f.endsWith('.ts') && !f.endsWith('.test.ts'));
+for (const file of actualModules) {
+  if (assignedModules.filter(value => value === file).length !== 1) errors.push(`Domain coverage must assign exactly once: ${file}`);
+}
+for (const file of assignedModules) {
+  if (!actualModules.includes(file)) errors.push(`Domain coverage has unknown module: ${file}`);
+}
 if (errors.length) throw new Error(errors.join('\n'));
 execFileSync(process.execPath, ['scripts/design-inventory.mjs'], { stdio: 'inherit' });
 console.log(`Design docs: ${files.length} documents checked, ${ids.length} unique requirements`);

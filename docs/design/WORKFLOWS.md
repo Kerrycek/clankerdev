@@ -117,6 +117,10 @@ explain that. [Users](../../src/lib/api/users.ts),
 [user accounts](../../src/lib/api/userAccounts.ts), [namespaces](../../src/lib/api/userNamespaces.ts),
 [user-data](../../src/lib/api/vpsUserData.ts).
 
+The [detailed account contracts](ACTION_CONTRACTS.md#account-and-user-administration)
+cover lifecycle dates, environment inheritance, mail recipient precedence and
+impersonation. A view switch preserves the operator identity; impersonation does not.
+
 ## Applications, profile changes and review queues
 
 **Intent:** inspect a request's applicant data, technical metadata and risk checks,
@@ -182,7 +186,10 @@ sampling intervals need their real API semantics.
 updates, relations and associated outages/rebuilds. Audit history supports
 operational investigation. Mail administration covers templates/translations,
 mailboxes/handlers, recipients and delivery logs. Content includes news and
-contextual help boxes.
+contextual help boxes. Whole-template and standalone-recipient deletion are
+intentionally blocked pending safe backend relation handling; translations and
+template-recipient membership have separate supported delete operations. See
+[the deletion boundary](ACTION_CONTRACTS.md#deliberately-blocked-mail-deletion).
 
 **Failure contract:** privileged routes/actions remain independently gated; template
 HTML preview must retain sandbox/remote-load defenses. Handler reorder partial

@@ -21,6 +21,11 @@ SPA OAuth and embedded legacy runtime tokens are alternative code paths, not
 interchangeable recipes for the confidential-client deployment. Browser-held
 access tokens remain credentials even though refresh/client secrets stay server-side.
 
+Authentication selection is a separate precedence rule: an active impersonation
+token in sessionStorage takes priority over runtime OAuth accessToken, then runtime
+legacy sessionToken, then stored standalone OAuth, then anonymous. This is not a
+BFF account switch; see [impersonation](ACTION_CONTRACTS.md#impersonation).
+
 ## Frontend controls
 
 Paths below are relative to window.vpsAdmin unless explicitly VITE-only.
@@ -90,6 +95,7 @@ not only a VITE variable change.
 | --- | --- | --- |
 | BFF OAuth session | Private file store, access/refresh tokens and signed cookie identity; single process per store | Preserve on routine code rollback. Losing store or changing signing secret can log users out; restoring old sessions can restore stale/revoked tokens. Never copy a production store into tests. |
 | Browser access token | Runtime memory in BFF mode; optional vpsadmin_ui_next.oauth2 in session/local storage for standalone | Valid BFF session response clears standalone residue. Do not export storage or raw session.json in bug reports. |
+| Impersonation | vpsadmin.ui.impersonation in sessionStorage: full borrowed token, target/session IDs, reason and return path | Sensitive credential; overrides normal auth in that tab. Return attempts server close before clearing/reload, but close failure is tolerated. Browser tab/session restoration is not a revocation guarantee. |
 | Idle activity | vpsadmin.idle.{sessionKey} in localStorage, non-credential fingerprint; tab-local without stable key | Trusted pointer/key/wheel/touch activity, not polling/focus, extends the deadline. API preferred_session_length supplies seconds; zero disables this timer. BFF cookie age and token expiry remain separate. |
 | UI preferences | vpsadmin.uiSettings.v1 localStorage plus keyed API setting when authenticated/server enabled | Local settings are origin-level, not a secure per-user vault. Account settings load on authentication; anonymous layout uses local bootstrap. A new hostname does not carry old origin storage. |
 | Pending/uncertain operations | User-scoped browser-local lock records and Web Locks where available | Clearing storage is not evidence an operation failed. Reconcile server receipt/object state first; preserve safe record of target/intent before recovery. |

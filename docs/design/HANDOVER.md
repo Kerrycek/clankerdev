@@ -92,3 +92,14 @@ rules are not falsely attributed to a past user request.
 After merge/release, append the sanitized outcome with revision and scope in a
 follow-up; do not leave only a local receipt. Tests named “live contract” may still
 be fixtures. Never upgrade their evidence category by renaming documentation.
+
+
+## Additional credential verification gap
+
+The reverse coverage review identified an undocumented impersonation boundary;
+its exact behavior is now in [account contracts](ACTION_CONTRACTS.md#impersonation).
+Existing model coverage is not a complete live start/return/revocation check.
+Include target identity, denied callers, reload, renewable expiration, close failure
+and expired operator auth in the receiving security/live verification scope.
+Returning to the operator UI tolerates token-close errors and must not be recorded
+as confirmed revocation. This gap was found by source review, not a live incident.

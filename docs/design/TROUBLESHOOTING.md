@@ -49,6 +49,7 @@ not an independent penetration-test result. Follow the linked implementation/tes
 | --- | --- |
 | OAuth callback | State age/consumption, session regeneration, next-path sanitization, bounded provider responses: [security](../../bff/security.js), [tests](../../bff/security.test.js) |
 | Session token exposure | JSON-only same-origin endpoint, no credentials in config.js, stale-token cleanup: [bootstrap tests](../../src/app/runtimeBootstrap.test.ts), [BFF server](../../bff/server.js) |
+| Impersonation | Borrowed full token in sessionStorage, renewable interval versus absolute expiry, return/close failure and underlying operator auth: [exact flow and missing proof](ACTION_CONTRACTS.md#impersonation) |
 | Privilege/ownership | Numeric role plus selected view and direct route/action gates; API authoritative: [role fixture](../../e2e/specs/app/vps_support_permissions.spec.ts) |
 | Embedded HTML/external origins | Mail template preview sandbox and fetch defenses; map/heatmap/console URL checks; CSP kept narrow: [template fixture](../../e2e/specs/admin/mailer_template_crud_safety.spec.ts), [CSP audit](../../scripts/audit-csp.mjs) |
 | Destructive ambiguity | Fresh target check, required receipt, persisted uncertainty and no automatic replay: [lock tests](../../src/components/layout/useLocalMutationLocks.storageIntegrity.test.tsx) |

@@ -57,6 +57,7 @@ current intent; decisions explain transitions; test results prove only their sta
 
 ## Detailed review and handover
 
+- [Domain coverage](DOMAIN_COVERAGE.md): every API module mapped back to behavior, including helpers and non-adapter boundaries.
 - [Action contracts](ACTION_CONTRACTS.md): role/state/action tables and concrete validation rules.
 - [Requirement evidence matrix](EVIDENCE_MATRIX.md): each requirement mapped to verification, with missing proof explicit.
 - [Handover checklist](HANDOVER.md): acceptance, owners to assign, evidence access and remaining decisions.
@@ -76,7 +77,7 @@ For each row distinguish code status, verification scope and deployment status.
 Do not upgrade an open PR to delivered based on a screenshot or local pass. Update
 release outcomes separately with exact UI/API revisions. Regenerate the inventory
 when routes or adapters change. `npm run audit:design-docs` checks local links/heading anchors,
-requirement IDs, one evidence coverage row per ID and generated inventory drift; it cannot validate prose accuracy.
+requirement IDs, one evidence coverage row per ID, module-to-domain coverage and generated inventory drift; it cannot validate prose accuracy.
 
 Reviewers check: source of the requirement; old/new behavior; all roles and scopes;
 API reality; error/uncertain outcomes; cs/en; mobile/desktop; test evidence; migration

@@ -88,3 +88,31 @@ checks, and the recorded product/KB blockers. Full historical conversations and
 the original missing external specification cannot be reconstructed as fact.
 Receiver approval is still needed; there is no defensible unconditional “100%
 complete” claim before those decisions and proofs.
+
+
+## Reverse coverage pass — 2026-09-29
+
+This pass started from the route/API inventory and account/security/content source,
+rather than treating a complete requirements table as semantic completeness.
+
+| Finding | Correction / remaining limit |
+| --- | --- |
+| Source register still named the initial fd290b5e baseline and left hostname choice informal | Reconciled historical versus current source, PR525–530 and later explicit maintainer decisions. No new deployment is inferred. |
+| Inventory did not connect every module to behavioral documentation | Added [domain coverage](DOMAIN_COVERAGE.md): all 63 modules assigned once, including types/helpers; route and non-adapter boundaries stated. Audit rejects missing, duplicate or nonexistent module assignments. This is not exhaustive action/test coverage. |
+| Account details omitted credential switching and storage precedence | Documented impersonation request fields, renewable interval, full token in sessionStorage, auth precedence, banner and best-effort close/return. Full isolated lifecycle proof is now an explicit gap in evidence/handover. |
+| Account/environment/mail rules were too generic | Added exact lifecycle/date/reminder fields, inherited versus custom environment limits and units, billing separation, credential resource differences and effective mail recipient order. |
+| Mail action catalog incorrectly implied whole-template CRUD | Corrected intentionally disabled template/standalone-recipient deletion, its recorded rationale and distinction from translation/relationship deletion. |
+
+Validation: 12 focused documentation tests, all 154 script tests, design audit
+(51 documents / 67 IDs / 256 route declarations / 63 modules), active-doc audit
+and whitespace check. An initial broad-script invocation omitted Node from PATH;
+two shell-runner cases failed prerequisite detection. Rerunning with the documented
+runtime on PATH passed all 154; no tests or gates were removed. Runtime source
+remains unchanged, so the previous clean-install/full-suite/build/fixture evidence
+retains its stated snapshot scope. New remote CI is required for the final PR head.
+
+No known documentation omission from this bounded pass is hidden as complete.
+The map is an index to reviewed contracts, not proof of every backend field or
+inaccessible historical requirement. Impersonation lifecycle proof joins the
+existing explicit live/security/legacy/receiver acceptance gaps; documentation
+approval cannot close those product assurance items.

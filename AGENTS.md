@@ -74,6 +74,8 @@ This repository is maintained through human-reviewed AI pull requests.
 - Recover actual user intent and record superseded choices; do not invent missing
   historical rationale or turn observed source behavior into an approved request.
 - Regenerate `npm run docs:inventory` when routes or API adapter modules change.
+  Assign new/renamed modules in `docs/design/DOMAIN_COVERAGE.md`; explicitly
+  identify helpers/types instead of inventing new product features.
   Run `npm run audit:design-docs`; review semantic accuracy separately.
 - Preserve evidence scope and distinguish implementation, test results, merge and
   deployment. The handbook replaces the unavailable external spec dependency;
