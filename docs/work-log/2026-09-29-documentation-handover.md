@@ -122,3 +122,23 @@ behavior changes, shared mutations, merge or deploy. Prior clean-export full-sui
 and build evidence is retained with its original scope, not relabeled as a new run.
 **Next:** receiving review and explicit assurance gaps in HANDOVER.md. A complete
 module index is not exhaustive legacy parity or an independent security audit.
+
+
+## 2026-09-29 — Operator walkthrough corrections
+
+**Request:** another completeness check, focusing on a receiving maintainer's
+ability to use the instructions rather than merely follow links.
+**Changes:** clarified that deploy-dev pulls main, documented the pinned input
+checkout/direct-helper procedure and mutable-checkout coordination; locked manual
+dev rollback and validated snapshot metadata before restoring/removing anything;
+added public unit/environment change detection at preparation/activation/rollback.
+Corrected shell-versus-path example labels and fixture-wrapper wording.
+
+**Verification:** all 15 executable Bash/sh blocks in the dev/public runbooks
+passed bash -n (not executed). The first syntax sweep exposed a bare path with
+an angle-bracket placeholder incorrectly tagged as shell; path blocks now use
+text. Design audit, 12 focused documentation tests and whitespace passed.
+Prior deb30765 static CI succeeded; its browser run was ongoing during review.
+No runtime source changes, host mutations, merge/deploy or resumed automation.
+**Status:** same PR530, awaiting receiving review. The source-checked runbooks still
+require the recorded owned-environment operator rehearsal, not a claim of live proof.

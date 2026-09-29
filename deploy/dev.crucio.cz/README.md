@@ -2,7 +2,7 @@
 
 `dev.crucio.cz` serves the static web UI from:
 
-```sh
+```text
 /var/www/dev.crucio.cz/current
 ```
 
@@ -17,7 +17,13 @@ traffic on the test stack. nginx proxies `/v7.0`, `/_auth`, and the
 `/oauth2/password-reset` recovery flow directly to the same local API process
 used by `admin.crucio.cz`, on `127.0.0.1:9292`.
 
-Deploy the source checkout to `dev.crucio.cz` with:
+The convenience command below **fetches and fast-forwards to origin/main**.
+Use it only when that complete main revision is approved for this host and other
+operators have paused changes to the mutable input checkout. It does not accept
+an approved SHA argument, and it must not be used to deploy an arbitrary older
+approved candidate while main contains additional unapproved work.
+
+For an approved current main release:
 
 ```sh
 deploy-dev
@@ -29,13 +35,38 @@ checkout. The helper serializes deployments with the root-owned nonblocking
 lock `/run/lock/clankerdev-dev-deploy.lock`. A second invocation exits before
 staging or publication.
 
+For an exact approved revision that differs from the mutable checkout, coordinate
+exclusive use of that checkout with the receiving operator first. Record its
+original branch/SHA and confirm it has no tracked changes. Fetch the approved
+revision, check it out detached in `/srv/clankerdev-deploy/repo`, verify the full
+SHA against approval, then invoke the helper directly from that checkout:
+
+```bash
+# Root Bash on the verified dev host, after coordinated checkout preparation.
+set -euo pipefail
+approved=REPLACE_WITH_APPROVED_40_CHARACTER_SHA
+repo=/srv/clankerdev-deploy/repo
+[[ "$approved" =~ ^[0-9a-f]{40}$ ]]
+test "$(git -C "$repo" rev-parse HEAD)" = "$approved"
+test -z "$(git -C "$repo" status --porcelain --untracked-files=no)"
+bash "$repo/deploy/dev.crucio.cz/deploy-dev-crucio-clankerdev.sh" "$repo"
+```
+
+Do not invoke `deploy-dev` in this path: its pull can change the selected revision.
+The helper accepts only the canonical input path, captures its HEAD and stages a
+fresh clone; its deploy lock does not lock out unrelated Git commands in that
+checkout. Keep the checkout frozen until the helper and verification finish.
+Restore the recorded input branch only after confirming no operation uses it;
+changing this input checkout is not itself a release rollback. Do not reset or
+clean another operator's work to follow this procedure.
+
 The mutable checkout must have no tracked changes. Untracked operational audit
 artifacts are allowed because they are never used as build input. For every new
 commit, the helper makes a fresh local clone on the release filesystem, checks
 out the exact full SHA, and builds both the SPA and BFF dependencies there. A
 fully verified stage is atomically renamed to:
 
-```sh
+```text
 /srv/clankerdev-release/releases/<full-commit-sha>
 ```
 
@@ -104,16 +135,41 @@ node /srv/clankerdev-deploy/repo/scripts/dev-deploy-provenance.mjs \
   --release-repo "$release"
 ```
 
-Normally rollback is automatic. If it reports failed rollback steps, use only
+Normally rollback is automatic. Manual recovery must wait until the failed helper
+has exited and released its lock. Confirm no later successful release or unrelated
+unit/nginx edit would be overwritten; otherwise agree a new recovery plan instead
+of restoring this older snapshot. Keep the same root Bash session and lock through
+restoration **and** the validation block below. If it reports failed rollback steps, use only
 the retained `dev-crucio-deploy.*` directory printed by the helper. Replace the
 placeholder below with that exact directory and restore the captured state:
 
-```sh
+```bash
 set -euo pipefail
+lock_file=/run/lock/clankerdev-dev-deploy.lock
+test ! -L "$lock_file"
+test -f "$lock_file"
+test "$(stat -c %u "$lock_file")" = 0
+exec 9>>"$lock_file"
+flock -n 9
 backup=/tmp/dev-crucio-deploy.REPORTED-BY-THE-HELPER
+test -d "$backup"
+test ! -L "$backup"
 repo=/srv/clankerdev-deploy/repo
 release_root=/srv/clankerdev-release
 current="$release_root/current"
+
+# Validate the complete snapshot before any restore/remove step. Missing flags
+# must never be interpreted as “there was no previous unit/config”.
+test -d "$backup/webroot"
+for marker in previous-current-had-link bff-unit-had-previous nginx-conf-had-previous nginx-link-had-previous; do
+  test -f "$backup/$marker"
+  flag=$(cat "$backup/$marker")
+  [[ "$flag" == 0 || "$flag" == 1 ]]
+done
+if [[ "$(<"$backup/previous-current-had-link")" == 1 ]]; then test -s "$backup/previous-current-target"; fi
+if [[ "$(<"$backup/bff-unit-had-previous")" == 1 ]]; then test -f "$backup/webui-next-bff.service"; fi
+if [[ "$(<"$backup/nginx-conf-had-previous")" == 1 ]]; then test -f "$backup/nginx-dev.crucio.cz.conf"; fi
+if [[ "$(<"$backup/nginx-link-had-previous")" == 1 ]]; then test -s "$backup/previous-nginx-link-target"; fi
 
 if [[ "$(<"$backup/previous-current-had-link")" == 1 ]]; then
   node "$repo/scripts/dev-deploy-release-link.mjs" switch \
@@ -148,7 +204,7 @@ else
 fi
 ```
 
-Then validate the restored service in this order:
+Then, in that same locked root Bash session, validate the restored service in this order:
 
 ```sh
 systemctl daemon-reload
@@ -174,7 +230,7 @@ remain hash-pinned. Keep the nonce injection and CSP declaration together;
 
 The BFF environment lives on the server in:
 
-```sh
+```text
 /etc/webui-next/oauth.env
 ```
 
@@ -183,7 +239,7 @@ client secret or session secret.
 
 The BFF code is served from the active immutable release:
 
-```sh
+```text
 /srv/clankerdev-release/current/bff
 ```
 

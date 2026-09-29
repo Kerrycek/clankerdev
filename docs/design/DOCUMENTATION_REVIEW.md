@@ -116,3 +116,32 @@ The map is an index to reviewed contracts, not proof of every backend field or
 inaccessible historical requirement. Impersonation lifecycle proof joins the
 existing explicit live/security/legacy/receiver acceptance gaps; documentation
 approval cannot close those product assurance items.
+
+
+## Operator walkthrough review — 2026-09-29
+
+Compared the contributor/handover commands with their actual wrappers and deployment
+helper before treating the runbooks as usable handover material.
+
+- The dev convenience wrapper pulls main; it does not deploy a supplied SHA.
+  Documented that limitation and the coordinated pinned-checkout/direct-helper
+  path, preserving the helper's canonical source restriction. A deploy lock does
+  not prevent unrelated Git changes in the mutable input checkout.
+- Manual dev rollback now acquires the same deployment lock and holds it through
+  validation. It verifies required snapshot flags/files before a missing flag
+  could be interpreted as permission to remove an old unit/configuration.
+- Public promotion/rollback now compares observed unit content and private OAuth
+  environment hash as well as nginx configuration. Rechecks run immediately before
+  activation; config changes require a separate recovery decision. Participating
+  deploy-shell locking does not prevent unrelated operator edits, so coordination
+  remains explicit.
+- Marked standalone path examples as text, not executable shell snippets. Clarified
+  that the Playwright wrapper does not mock arbitrary selected tests; the fixture
+  scenario installs its own synthetic responses.
+
+All 15 executable shell blocks in the two reviewed runbooks passed bash -n after
+correction; this is syntax/source validation, not a real promotion or rollback.
+Documentation audit, focused documentation tests and whitespace checks were run.
+The previous deb30765 static CI passed; its browser check was still running when
+these documentation-only corrections were prepared. The final head needs its own CI.
+No new claim of receiver acceptance, legacy parity or live verification is made.

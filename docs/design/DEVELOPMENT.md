@@ -40,8 +40,10 @@ npm run e2e:install
 npm run e2e -- e2e/specs/public/theme_language_bootstrap.spec.ts --project=chromium
 ```
 
-The npm e2e wrapper starts Vite and uses synthetic fixtures. For the normal PR
-selection use `npm run e2e:pr`; it includes desktop and mobile. Current checked-in
+For the named fixture above, the npm wrapper starts Vite and the test installs
+synthetic responses. The wrapper itself does **not** turn arbitrary tests or
+external requests into mocks. Read a selected scenario's setup before execution.
+For the normal PR selection use `npm run e2e:pr`; it includes desktop and mobile. Current checked-in
 projects are `chromium` and `mobile-chrome` (Pixel 5). Historical WebKit evidence
 was a separate configured run, not a project available in this default config.
 The runner reads `e2e/PLAYWRIGHT_VERSION`; inspect wrapper/config changes together.

@@ -41,6 +41,9 @@ own [environment/setup requirements](../../bff/README.md).
    state; no migration is implied by a frontend release.
 6. Follow the [dev runbook](../../deploy/dev.crucio.cz/README.md) and
    [immutable deployment script](../../deploy/dev.crucio.cz/deploy-dev-crucio-clankerdev.sh).
+   The convenience deploy-dev wrapper pulls main; approval of one SHA is not
+   approval of later main commits. For a pinned candidate follow the dev runbook's
+   direct-helper procedure and coordinate exclusive mutable-checkout access.
    The historical [public bootstrap guide](../../deploy/README.md) describes host
    provisioning; do not rerun provisioning blindly for a routine update.
 7. Promote the exact verified frontend artifact and matching BFF revision to the

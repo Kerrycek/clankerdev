@@ -40,7 +40,11 @@ Inspect target configuration privately. Historical layout:
 Stop if the host/unit/layout, previous release, config checksum, artifact hashes,
 build SHA or permissions differ from preflight. Do not “repair” shared config
 during a routine release. Check available space for stage plus full rollback copy.
-Check for healthy running deployment work; never interrupt it.
+Check for healthy running deployment work; never interrupt it. Coordinate a
+configuration freeze with the service owner for the operation: the deploy lock
+serializes participating release shells, not unrelated systemctl/config edits.
+Private unit snapshots and environment hashes are comparison evidence only; do
+not publish them. This procedure never restores OAuth secrets automatically.
 
 ## Prepare in one root shell on the verified target
 
@@ -60,7 +64,13 @@ base=/opt/webui-next
 current="$base/current-release"
 webroot=/var/www/clankerdev.vpsfree.cz/current
 nginx_conf=/etc/nginx/sites-available/clankerdev.vpsfree.cz.conf
-exec 9>/run/lock/clankerdev-reviewed-deploy.lock
+oauth_env=/etc/webui-next/oauth.env
+lock_file=/run/lock/clankerdev-reviewed-deploy.lock
+test ! -L "$lock_file"
+if test -e "$lock_file"; then test -f "$lock_file"; test "$(stat -c %u "$lock_file")" = 0; fi
+(umask 077; touch "$lock_file")
+chmod 0600 "$lock_file"
+exec 9>>"$lock_file"
 flock -n 9
 previous=$(readlink -f "$current")
 test "$previous" = "$expected_previous"
@@ -80,6 +90,8 @@ rsync -a "$webroot/" "$backup/webroot/"
 printf '%s\n' "$previous" > "$backup/previous-release"
 cp -a "$nginx_conf" "$backup/nginx.conf"
 systemctl cat webui-next-bff.service > "$backup/bff-unit-observed.txt"
+test -f "$oauth_env"
+sha256sum "$oauth_env" > "$backup/bff-env.sha256"
 tar -xzf "$input_dir/source.tar.gz" -C "$stage"
 frontend="$stage/vpsadmin/webui-next"
 test -f "$frontend/bff/server.js"
@@ -94,6 +106,8 @@ chmod 0755 "$stage"
 runuser -u webui-bff -- node -e 'require.resolve("express",{paths:[process.argv[1]]})' "$frontend/bff"
 mv "$stage" "$release"
 cmp -s "$nginx_conf" "$backup/nginx.conf"
+systemctl cat webui-next-bff.service | cmp -s "$backup/bff-unit-observed.txt" -
+sha256sum --status -c "$backup/bff-env.sha256"
 test "$(readlink -f "$current")" = "$previous"
 ```
 
@@ -112,6 +126,11 @@ a claim of atomic cross-component activation. Failed/mixed deployment requires
 rollback, not an opportunistic partial retry.
 
 ```bash
+# Recheck immediately before publication, including changes during preparation.
+cmp -s "$nginx_conf" "$backup/nginx.conf"
+systemctl cat webui-next-bff.service | cmp -s "$backup/bff-unit-observed.txt" -
+sha256sum --status -c "$backup/bff-env.sha256"
+test "$(readlink -f "$current")" = "$previous"
 rsync -a --delete-delay --delay-updates "$release/vpsadmin/webui-next/dist/" "$webroot/"
 chown -R root:www-data "$webroot"
 find "$webroot" -type d -exec chmod 0755 {} +
@@ -156,21 +175,33 @@ base=/opt/webui-next
 current="$base/current-release"
 webroot=/var/www/clankerdev.vpsfree.cz/current
 nginx_conf=/etc/nginx/sites-available/clankerdev.vpsfree.cz.conf
+oauth_env=/etc/webui-next/oauth.env
 backup=REPLACE_WITH_THIS_OPERATIONS_VERIFIED_BACKUP_DIRECTORY
-exec 9>/run/lock/clankerdev-reviewed-deploy.lock
+lock_file=/run/lock/clankerdev-reviewed-deploy.lock
+test ! -L "$lock_file"
+if test -e "$lock_file"; then test -f "$lock_file"; test "$(stat -c %u "$lock_file")" = 0; fi
+(umask 077; touch "$lock_file")
+chmod 0600 "$lock_file"
+exec 9>>"$lock_file"
 flock -n 9
 previous=$(cat "$backup/previous-release")
 test -f "$previous/vpsadmin/webui-next/bff/server.js"
 test -d "$backup/webroot"
 test -f "$backup/nginx.conf"
+test -f "$backup/bff-unit-observed.txt"
+test -f "$backup/bff-env.sha256"
 # A changed unit/config needs its own restoration decision before rollback.
 cmp -s "$nginx_conf" "$backup/nginx.conf"
+systemctl cat webui-next-bff.service | cmp -s "$backup/bff-unit-observed.txt" -
+sha256sum --status -c "$backup/bff-env.sha256"
 nginx -t
 ln -s "$previous" "$base/rollback-link-$$"
 mv -Tf "$base/rollback-link-$$" "$current"
 rsync -a --delete "$backup/webroot/" "$webroot/"
 # Do not overwrite a concurrent authorized nginx edit. This release did not edit it.
 cmp -s "$nginx_conf" "$backup/nginx.conf"
+systemctl cat webui-next-bff.service | cmp -s "$backup/bff-unit-observed.txt" -
+sha256sum --status -c "$backup/bff-env.sha256"
 nginx -t
 systemctl restart webui-next-bff.service
 bash "$previous/vpsadmin/webui-next/deploy/smoke-auth-endpoints.sh" https://clankerdev.vpsfree.cz
