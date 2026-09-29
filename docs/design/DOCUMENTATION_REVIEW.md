@@ -182,3 +182,21 @@ harness exercised the exact release-pointer guard for candidate, previous,
 unrelated newer and missing pointers: only the two expected states passed.
 Documentation audits and whitespace checks passed. This validates the guard, not
 a host rollback or the outstanding receiving-operator rehearsal.
+
+
+## Historical refresh reconciliation — 2026-09-29
+
+Read retained historical specifications and checked the original imported versions
+of quarantined chat/checklist/command-palette files. Those sampled files were
+already stubs in the import, so their missing contents cannot be recovered from
+that commit. The retained refresh specification did expose a current documentation
+gap: cache defaults, polling tiers and stale chain-lock behavior were too implicit.
+
+Added the [current refresh contract](ARCHITECTURE.md#refresh-cache-and-stale-lock-information)
+from main.tsx, refreshTiers, AppLayout and lockState. It distinguishes scheduling
+from a freshness guarantee, limited shell samples from full operation history,
+and a stale derived busy flag from persisted local uncertainty. The old suggestion
+of refreshing on focus is not copied over the current global false default.
+Updated REQ-051 evidence links. Documentation audits and whitespace checks passed;
+no runtime changes or new live latency/operation claim. The preceding deceb6c7
+head passed both static and browser CI; the new head needs separate CI.

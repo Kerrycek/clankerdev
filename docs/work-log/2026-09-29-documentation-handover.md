@@ -178,3 +178,18 @@ whitespace checks passed. No shared host commands executed.
 **Status:** same PR530; receiving review and operator rehearsal still pending.
 Preceding baf47380 static CI passed; browser smoke was running during the review.
 The new documentation commit needs its own CI; no merge/deploy performed.
+
+
+## 2026-09-29 — Recover refresh details from historical material
+
+**Request:** compare documentation completeness with the colleague's requirements.
+**Finding/change:** historical refresh material contained useful detail absent from
+the new architecture overview. Reconciled it with current source: cache defaults,
+visible/hidden polling tiers, limited shell samples, sync errors, stale lock TTL,
+local uncertainty and best-effort completion invalidation. Did not restore old
+focus-refetch assumptions or invent missing quarantined chat contents.
+**Verification:** read current helpers, shell queries and tier/lock-state tests;
+design and active-doc audits plus whitespace checks passed. Source inspection,
+not a new live polling/latency test. Preceding deceb6c7 static/browser CI both passed.
+**Status:** updated PR530 only; no runtime change, merge, deployment or resumed
+automation. Receiving/legacy/security/live acceptance limits remain explicit.
