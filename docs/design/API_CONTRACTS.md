@@ -30,6 +30,39 @@ claims. Local adapter tests verify serialization, not deployed backend capabilit
 | Node heatmap | Use configured legacy base URL, validated node FQDN/type/maintenance eligibility. | [URL model](../../src/lib/nodeHeatmap.ts); missing config omits unavailable actions. |
 | Async mutations | Require an appropriate action-state receipt, then track completion. | [action states](../../src/lib/api/actionStates.ts); success without required identity is uncertain. |
 
+## Intentional capability and filter limits
+
+These are the checked frontend contracts at the handbook baseline, not a new
+certification of every deployed API version. A field displayed on an object is
+not automatically a supported list filter. Pagination and includes metadata are
+separate from filtering; filtering only the loaded page must not be presented as
+a search of the whole collection.
+
+| Collection | Supported filter boundary | Source / regression entry point |
+| --- | --- | --- |
+| Exports | Owner (`user`); no global text, dataset, snapshot, host or state filter in this adapter. Detail-by-ID is a separate request. | [adapter](../../src/lib/api/exports.ts), [fixture contract](../../e2e/specs/app/exports_filter_contract.spec.ts) |
+| Networks | `location` and `purpose`; do not forward text, IP-version, role or managed-state filters merely because those attributes exist on a network. | [adapter](../../src/lib/api/networks.ts), [URL/filter fixture](../../e2e/specs/admin/cluster_networks_filter_contract.spec.ts) |
+| Migration plans | `state` and `user`; no free-text query. This does not limit the separate destination-node picker for a VPS migration. | [adapter](../../src/lib/api/migrations.ts), [fixture contract](../../e2e/specs/admin/migration_plans_filter_contract.spec.ts) |
+| Transaction items | `transaction_chain`, `node`, `type`, `success`, `done`; no item-name/text search. Transaction **chains** have a different contract which does accept `name`, as well as state, object and user/session filters. | [both adapters](../../src/lib/api/transactions.ts), [item-filter fixture](../../e2e/specs/app/transaction_items_filter_accessibility.spec.ts) |
+| User namespaces / maps | No text or label search. Namespaces support `size`; maps support `user_namespace`. Owner filtering, and namespace `block_count`, are exposed only in admin scope with admin fields enabled and no fixed owner. Removing an invalid/disallowed URL filter resets cursor/page. | [scope/URL rules](../../src/components/userNamespaces/userNamespaceFilterSemantics.ts), [fixture contract](../../e2e/specs/app/user_namespace_filter_contract.spec.ts) |
+| Resource packages | Adapter filters are `environment` and `user`, not package-label text. Global/personal/all scope normalization is handled by the list model. | [adapter](../../src/lib/api/clusterResourcePackages.ts), [model](../../src/pages/app/admin/cluster/ResourcePackagesListModel.ts), [model tests](../../src/pages/app/admin/cluster/ResourcePackagesListModel.test.ts) |
+
+These test links are verification entry points, not a claim of a fresh live run.
+Any extension needs a verified endpoint contract and scope/pagination regression
+coverage; adding a search input alone does not establish server support.
+
+### Node creation versus editing
+
+The [node lifecycle model](../../src/pages/app/admin/nodes/NodeLifecycleModel.ts)
+keeps role, location and bootstrap CPU/memory/swap capacity out of the edit payload,
+although they participate in creation. Updates contain only changed `active`,
+`name`, `ip_addr`, `max_tx`, `max_rx` and `max_vps` fields. Blank optional limits
+must not become zero: clearing a populated limit sends null only when its API
+metadata permits null; otherwise validation rejects the edit. An already-unset
+limit is omitted. See [model cases](../../src/pages/app/admin/nodes/NodeLifecycleModel.test.ts).
+Do not infer editability from the create form or silently add unsupported update
+fields when reorganizing the node page.
+
 ## Pagination: known blockers
 
 The common UI uses `from_id`/visited cursor history, but that alone does not define

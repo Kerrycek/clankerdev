@@ -145,3 +145,22 @@ Documentation audit, focused documentation tests and whitespace checks were run.
 The previous deb30765 static CI passed; its browser check was still running when
 these documentation-only corrections were prepared. The final head needs its own CI.
 No new claim of receiver acceptance, legacy parity or live verification is made.
+
+
+## Capability-boundary review — 2026-09-29
+
+Cross-checked list adapters, URL normalization and node edit serialization against
+the handbook. The generic filter guidance omitted concrete intentional limits.
+Added [capability boundaries](API_CONTRACTS.md#intentional-capability-and-filter-limits)
+for exports, networks, migration plans, transaction items versus chains, namespaces
+and resource packages. Documented node create/edit differences and metadata-gated
+null clearing. Each boundary links to implementation and existing regression cases;
+this pass changes documentation only and does not claim new backend validation.
+
+Both remote checks for preceding documentation head adcd8256 passed:
+[static/unit CI](https://github.com/Kerrycek/clankerdev/actions/runs/36563544786)
+and [browser smoke](https://github.com/Kerrycek/clankerdev/actions/runs/36563544589).
+The prose follow-up requires its own final-head CI. Local design/active-doc audits
+and whitespace checks passed. The explicit handover acceptance and product-evidence
+gaps remain; this review did not find another undocumented boundary in the inspected
+adapters, but it is not an exhaustive field-by-field legacy parity certification.

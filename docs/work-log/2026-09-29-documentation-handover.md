@@ -142,3 +142,20 @@ Prior deb30765 static CI succeeded; its browser run was ongoing during review.
 No runtime source changes, host mutations, merge/deploy or resumed automation.
 **Status:** same PR530, awaiting receiving review. The source-checked runbooks still
 require the recorded owned-environment operator rehearsal, not a claim of live proof.
+
+
+## 2026-09-29 — Explicit capability boundaries
+
+**Request:** critically recheck completeness before approval.
+**Finding/change:** generic API guidance did not identify intentional search/filter
+limits or node create/edit differences. Added a source-linked table for six list
+areas, distinguished transaction-item and chain filters, recorded namespace scope
+normalization and node metadata-gated limit clearing. No runtime behavior changed.
+**Verification:** design/active-doc audits and whitespace checks passed. Both remote
+checks of preceding head adcd8256 passed (runs 36563544786 and 36563544589); the new
+prose commit must receive its own checks. Linked regression cases were inspected,
+not represented as new live tests. Existing full-suite evidence keeps its original
+scope.
+**Status:** same PR530, prepared for review, no merge/deployment. Remaining receiving
+acceptance, operator rehearsal, independent security review and missing live/legacy
+proof are still explicit in HANDOVER.md; they are not closed by documentation edits.
