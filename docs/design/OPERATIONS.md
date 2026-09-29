@@ -17,6 +17,8 @@ actual service configuration before executing deployment commands.
 
 ## Local development
 
+Follow the [clean-checkout walkthrough](DEVELOPMENT.md),
+[configuration reference](CONFIGURATION.md) and [diagnostic guide](TROUBLESHOOTING.md).
 Use a clean isolated worktree; preserve unrelated main-checkout changes. Install
 supported Node/npm dependencies, run `npm ci`, `npm run dev`, and follow the
 [verification commands](VERIFICATION.md). Use the local runtime config example in

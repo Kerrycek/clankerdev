@@ -10,7 +10,8 @@ checklist is for the **receiving maintainer**, not an authorization to deploy.
    [architecture](ARCHITECTURE.md) and [decisions](DECISIONS.md).
 2. Follow one registration reconsideration, one DNS TTL update and one soft/hard
    delete from contract to source and test using [evidence](EVIDENCE_MATRIX.md).
-3. In a clean checkout at the selected revision, install the supported Node/npm
+3. Follow [DEVELOPMENT.md](DEVELOPMENT.md) and [CONFIGURATION.md](CONFIGURATION.md).
+   In a clean checkout at the selected revision, install the supported Node/npm
    and locked dependencies; run `npm ci`, `npm run audit:design-docs`,
    `node --test scripts/design-docs.test.mjs`, then the relevant product suites.
    BFF tests require `npm ci --prefix bff`. Read scripts before host operations.

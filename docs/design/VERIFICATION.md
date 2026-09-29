@@ -26,6 +26,7 @@ npm dependencies. The current baseline supports Node ^20.19, ^22.12 or >=24.
 
 ```sh
 npm ci
+npm ci --prefix bff
 npm run ci:pr
 npm run build
 npm run e2e:pr

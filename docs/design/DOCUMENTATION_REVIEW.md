@@ -17,7 +17,7 @@ No deployment or API mutation was performed for this review.
 | D05 Medium: accepted pending intent and selected hostname were missing | Records PR528 dropdown and PR529 localized reasons with exact heads; newadmin.vpsfree.cz decision and [cutover gates](HANDOVER.md#newadmin-cutover) added. | Both product PRs remain pending; target access/DNS/TLS/OAuth/cutover not verified. |
 | D06 Medium: PR527 outcome existed only locally | Incorporates the existing completion receipt in the [per-change log](../work-log/2026-09-27-per-change-work-log.md); describes publishing follow-ups before handover. | Restricted deployment artifacts still need custodian-to-recipient transfer. |
 | D07 Medium: docs CI could pass absent semantic coverage | Adds evidence-row coverage, local heading anchors and deploy-runbook links to audit, with negative tests. Adds the reviewer procedure below. | Automated link/ID checks cannot validate prose, intent, permissions or test adequacy. |
-| D08 Improvement: visual reference depended on private attachments | [Versioned synthetic images](VISUAL_REFERENCES.md) retain capture date, exact branch pins, locale/theme, pixel dimensions, checksums and pending status. | Three focused pending-feature references, not an exhaustive current UI gallery or live KB capture. |
+| D08 Improvement: visual reference depended on private attachments | [Versioned synthetic images](VISUAL_REFERENCES.md) retain capture date, exact branch pins, locale/theme, pixel dimensions, checksums and pending status. | Pending-feature and reviewed-main references; not an exhaustive current UI gallery or live KB capture. |
 
 ## Requirements from the receiving colleague
 
@@ -60,3 +60,31 @@ No mandatory edit to a global requirements file is needed for every unrelated PR
 update the relevant contract/evidence only when affected, plus its own work-log
 file. New requirement IDs still need coordination. Do not merge unrelated feature
 histories merely to avoid that coordination.
+
+## Second completeness pass — 2026-09-29
+
+A second review approached the repository as a new maintainer, not only as a
+link checker. It found and corrected these additional gaps in the same PR:
+
+| Finding | Correction / evidence |
+| --- | --- |
+| Clean setup omitted the separate BFF install | DEVELOPMENT.md and repeatable checks include npm ci --prefix bff; verified in a fresh staged-source export with no reused node_modules. |
+| Settings example still recommended an obsolete resource/namespace | .env.example now uses /webui_user_settings and ui; checked against the actual keyed adapter. |
+| Local auth instructions could suggest plain HTTP/two ports worked | BFF README and development guide now require same-origin HTTPS, exact callback, private writable store and one proxy hop; no Secure-cookie bypass. |
+| Runtime precedence and persistence were undocumented | CONFIGURATION.md distinguishes runtime/VITE/defaults, standalone/BFF modes, all 27 BFF environment variables, cookie/token/idle clocks and storage/rollback boundaries. |
+| Operators lacked symptom-driven diagnosis and security review entry points | TROUBLESHOOTING.md maps failures to their first boundary, safe evidence and escalation; it does not invent monitoring/SLOs or authorize destructive recovery. |
+| Gallery showed only pending features | Added two inspected synthetic current-runtime references for registration/sidebar and VPS header, with exact source provenance and reproduction command. |
+| BFF guide links were outside the docs audit | Included bff/README.md in link/anchor checks and fixture setup for audit tests. |
+
+The clean walkthrough passed the full ci:pr command (1,514 unit, 153 script and
+36 BFF tests), plus two targeted Chromium fixtures. The work log records build
+and final checks. This validates the documented local setup at the reviewed
+snapshot; it does not execute live OAuth integration or a host promotion.
+
+Remaining gaps are **acceptance/evidence**, not silently omitted documents:
+legacy maintainer validation of exhaustive parity, transfer of restricted receipts,
+receiving-operator rehearsal, independent security review, exact-candidate live
+checks, and the recorded product/KB blockers. Full historical conversations and
+the original missing external specification cannot be reconstructed as fact.
+Receiver approval is still needed; there is no defensible unconditional “100%
+complete” claim before those decisions and proofs.

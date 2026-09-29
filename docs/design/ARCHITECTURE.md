@@ -105,3 +105,18 @@ The product is Kerrycek/clankerdev. `vpsfreecz/vpsadmin` is the API/legacy refer
 KB contracts have a separate repository and independent UI/API revisions. Frontend
 release approval is not backend migration, shared API configuration or KB
 publication approval. See [operations](OPERATIONS.md).
+
+## Domain vocabulary
+
+| Term | Meaning in this UI |
+| --- | --- |
+| VPS | Managed container instance; its configured resources and reported runtime usage are different facts |
+| Node / location / environment | Host, placement locality and service environment; different identities used by migration/IP rules |
+| Dataset / pool | Storage dataset versus the pool holding it; a VPS root dataset is not its own independent NAS workflow |
+| Snapshot / backup / restore | Captured dataset state, retained/replicated recovery material, and operation recovering content; a listed snapshot is not proof of successful restore |
+| Action state / transaction chain / item | API operation progress/receipt, backend sequence and individual step; accepted/running/finished are not interchangeable |
+| Request / correction | Application or account-change review record; correction asks for more information rather than directly approving membership |
+| Scope / role / view | Owned-object query boundary, backend capability and user/admin presentation; switching view cannot grant authority |
+| Cursor | Backend continuation input with an ordering contract; not a guaranteed arbitrary page number |
+| BFF | OAuth service alongside static frontend; not a general HaveAPI proxy |
+| Fixture / live / deployed anonymous | Intercepted synthetic API, actual pinned isolated API, or public host observation; distinct evidence categories |

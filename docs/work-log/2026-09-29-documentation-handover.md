@@ -53,3 +53,46 @@ remains paused. No product PR was merged by this documentation change.
 transfer/reconciliation of restricted live receipts; legacy parity review; pending
 product PRs and backend cursor decision; beta/security/KB gates. These are explicit
 in HANDOVER.md and the audit disposition, not falsely closed by documentation CI.
+
+
+## 2026-09-29 — Second completeness review and clean setup rehearsal
+
+**Request:** critically check completeness again and fill remaining documentation
+holes before acceptance. Continued [PR530](https://github.com/Kerrycek/clankerdev/pull/530).
+
+**Findings/fixes:** first-run instructions omitted the separate BFF installation;
+.env.example still offered an obsolete settings resource/namespace; local BFF
+setup did not explain Secure-cookie/same-origin HTTPS requirements. Added the
+clean-checkout walkthrough, configuration/defaults/precedence reference (all 27
+BFF environment inputs checked against source), persistent-data boundaries,
+symptom-driven diagnosis, security review map and domain glossary. Corrected
+examples and BFF guide, included that guide in link/anchor auditing. Added two
+new reviewed-main synthetic visual references alongside pending-feature images.
+
+**Fresh verification:** exported staged source tree `8818bc6d2a49019ae13673419aba26ec8466e6a4` into
+an independent temporary directory, initialized its Git index for inventory checks
+and installed dependencies from both lockfiles without reusing node_modules.
+Node 24.19.0 / npm 9.9.4. No API credentials, shared configuration or service
+mutations. Product runtime and fixture source unchanged from main156a7c04.
+
+- Both npm ci commands passed; install audits reported zero vulnerabilities.
+- npm run ci:pr passed: typecheck, lint/i18n/CSP/design checks, 153 script,
+  36 BFF and 1,514 unit tests (270 unit suites).
+- npm run build passed; existing >500 kB locale chunk warning remains. Build
+  from this index-only export is setup validation, not a release artifact or
+  source-provenance certification; it was not deployed.
+- Two targeted Chromium fixtures passed: Czech registration layout/risk position
+  and admin VPS header. Captures inspected for synthetic data and copied unchanged
+  with hashes/source provenance. This is not live API or map service proof.
+- Final design audit: 50 documents, 67 IDs, unchanged 256 routes/63 adapters;
+  active-doc audit: 1,340 files. Eleven focused docs tests passed.
+
+The original PR530 head5e2ab2d3 static CI passed while its browser job was still
+running during this follow-up. New remote checks apply to the updated head;
+prior results must not be relabeled as that final head's CI.
+
+**Status:** documentation/examples/checks only; no merge/deploy. Remaining receiver
+acceptance, private-evidence transfer, operator rehearsal, legacy parity review,
+independent security and known product/KB gates remain explicit. Full test output
+is retained privately by the current operator; public results and reproducible
+commands are here and in the handbook. No general automation was resumed.

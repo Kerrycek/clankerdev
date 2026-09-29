@@ -49,6 +49,12 @@ it does not contain a recovered original or a competing specification.
 The [work log](../work-log/README.md) keeps per-change history. Requirements record
 current intent; decisions explain transitions; test results prove only their stated scope.
 
+## Contributor and operator entry points
+
+- [Clean checkout](DEVELOPMENT.md): dependencies, fixture tests and local authentication setup.
+- [Configuration and data](CONFIGURATION.md): precedence, all BFF settings, browser/server state and recovery limits.
+- [Failure diagnosis](TROUBLESHOOTING.md): symptoms, evidence boundaries and security-review map.
+
 ## Detailed review and handover
 
 - [Action contracts](ACTION_CONTRACTS.md): role/state/action tables and concrete validation rules.

@@ -7,7 +7,7 @@ const directory = path.join(root, 'docs/design');
 const files = fs.readdirSync(directory).filter(f => f.endsWith('.md')).map(f => path.join(directory, f));
 const workLog = path.join(root, 'docs/work-log');
 files.push(...fs.readdirSync(workLog).filter(f => f.endsWith('.md')).map(f => path.join(workLog, f)));
-files.push(...['README.md', 'UI_REDESIGN.md', 'SPEC.md', 'docs/README.md', 'docs/CANONICAL_DOCS.md', 'WORK_LOG.md'].map(f => path.join(root, f)));
+files.push(...['README.md', 'UI_REDESIGN.md', 'SPEC.md', 'docs/README.md', 'docs/CANONICAL_DOCS.md', 'WORK_LOG.md', 'bff/README.md'].map(f => path.join(root, f)));
 // Include operational guides: handover links must work beyond the handbook.
 function markdownFiles(dir) {
   if (!fs.existsSync(dir)) return [];

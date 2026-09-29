@@ -1,6 +1,7 @@
 # Visual references and provenance
 
-These durable references show **pending PR528/529**, not the deployed main UI.
+The first section retains **pending PR528/529** references. The baseline section
+below adds fresh captures of the reviewed main runtime; their status is separate.
 They were captured on 2026-09-28 with synthetic browser fixtures and inspected
 before copying unchanged into this repository on 2026-09-29. No real applicant,
 VPS, account, credential or production response is included. They are design
@@ -46,3 +47,32 @@ registration uses `e2e/specs/admin/registration_reason_presets.spec.ts` at their
 respective PR revisions, with screenshot capture enabled. Consult each PR work
 log for the exact retained capture command and CI run; branch code is required
 for pending controls.
+
+## Reviewed main runtime references
+
+Captured 2026-09-29 from the clean staged documentation snapshot. Runtime and
+fixture source are unchanged from `156a7c043e543b5f4a51fc962d16e31bd6eaa00f`;
+no claim of a fresh deployed-host check. Both Chromium fixtures passed, with
+synthetic Alice/example records and documentation-range IPs. Czech UI, light theme.
+
+Reproduce from the repository root after the [development setup](DEVELOPMENT.md):
+
+```sh
+npm run e2e -- e2e/specs/app/vps_header_system_summary.spec.ts e2e/specs/admin/requests_operations_smoke.spec.ts --grep 'system summary in cs for admin|address copy and risk emphasis work across breakpoints in cs' --project=chromium --workers=1
+```
+
+### Baseline registration and labeled sidebar
+
+CSS viewport 1024 × 900; full-page image. Metadata is inside applicant data, checks below it, decision below. Map is mocked, including a blank tile area; this is not a geocoding/map-rendering proof.
+
+Image: 1024 × 1557 pixels; SHA-256 `64186e3b015b8acb5a30c1ed5433caca107aaa0ed6357869108e6a6ed0ebf831`.
+
+![Baseline registration and labeled sidebar — synthetic fixture](images/registration-baseline.png)
+
+### Baseline VPS identity and runtime summary
+
+Desktop Chrome project; cropped header. Distribution, source node/location, SSH, uptime, load, processes and CPU use shown with synthetic values.
+
+Image: 992 × 321 pixels; SHA-256 `977dcdc7879470968f89ec1edbfed0a555aa7d030affe1847cba51469d3a43cb`.
+
+![Baseline VPS identity and runtime summary — synthetic fixture](images/vps-header-baseline.png)

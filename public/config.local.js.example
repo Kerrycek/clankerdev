@@ -2,9 +2,10 @@
 //
 // How to use:
 //   1) Copy this file to `public/config.local.js`.
-//   2) Fill in the values you need (API URL, version, and an auth token).
+//   2) Choose an owned API URL/version and public runtime options; never add secrets.
 //
 // The SPA bootstrap loads `/config.js` first and, on localhost/dev, `config.local.js` after it.
+// Vite copies public files to dist: exclude local/private overrides before release.
 // This file should therefore only fill gaps and must not overwrite integrated runtime values.
 // It should never override values that are already provided by the integrated webui.
 
@@ -25,7 +26,8 @@
 
   // Authentication
   //
-  // WebUI Next uses built-in OAuth2 login in the browser.
+  // Deployed BFF mode reads the access token from same-origin session.json.
+  // Standalone SPA OAuth is a separate integration mode.
   // You do NOT need to inject any token here.
   //
   // If the SPA is embedded into the legacy vpsAdmin webui,
