@@ -105,6 +105,7 @@ npm ci --prefix "$frontend/bff" --omit=dev --no-audit --no-fund
 chmod 0755 "$stage"
 runuser -u webui-bff -- node -e 'require.resolve("express",{paths:[process.argv[1]]})' "$frontend/bff"
 mv "$stage" "$release"
+readlink -f "$release" > "$backup/candidate-release"
 cmp -s "$nginx_conf" "$backup/nginx.conf"
 systemctl cat webui-next-bff.service | cmp -s "$backup/bff-unit-observed.txt" -
 sha256sum --status -c "$backup/bff-env.sha256"
@@ -166,7 +167,12 @@ Use the exact private backup captured by this operation. Start a new verified
 root Bash session after confirming the failed deploy shell/process has exited and
 released its lock; do not race a healthy deployment. Record the backup path outside
 the failed shell before activation. The block reacquires the same lock and checks
-configuration before changing either release component.
+configuration and the active release before changing either component. Confirm
+from the operation record that no later promotion has intervened, including a
+redeployment of the same revision; the pointer check cannot distinguish those.
+A different active release is a stop condition, not permission to restore a stale
+backup. A partial failure may leave either this candidate or the previous pointer
+active because frontend copying and BFF switching are separate steps.
 
 ```bash
 set -euo pipefail
@@ -185,6 +191,13 @@ chmod 0600 "$lock_file"
 exec 9>>"$lock_file"
 flock -n 9
 previous=$(cat "$backup/previous-release")
+candidate=$(cat "$backup/candidate-release")
+test -f "$candidate/vpsadmin/webui-next/bff/server.js"
+active=$(readlink -f "$current")
+if [[ "$active" != "$candidate" && "$active" != "$previous" ]]; then
+  printf '%s\n' 'Stop: active release is outside this rollback operation.' >&2
+  exit 1
+fi
 test -f "$previous/vpsadmin/webui-next/bff/server.js"
 test -d "$backup/webroot"
 test -f "$backup/nginx.conf"

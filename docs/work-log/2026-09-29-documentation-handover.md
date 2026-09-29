@@ -159,3 +159,22 @@ scope.
 **Status:** same PR530, prepared for review, no merge/deployment. Remaining receiving
 acceptance, operator rehearsal, independent security review and missing live/legacy
 proof are still explicit in HANDOVER.md; they are not closed by documentation edits.
+
+
+## 2026-09-29 — Prevent stale public rollback instructions
+
+**Request:** another completeness check from the receiving operator's perspective.
+**Finding/change:** public rollback lacked a guard against restoring an old backup
+after another release became active. Preparation now retains the candidate path;
+rollback accepts only that candidate or its previous release before any mutation.
+The instructions also require ruling out intervening same-revision promotions.
+**Verification:** executable runbook blocks passed bash -n. The exact pointer guard
+passed an isolated local harness for candidate/previous pointers and rejected an
+unrelated newer pointer and a missing pointer. The initial harness used macOS
+/var paths while readlink returned /private/var; using canonical fixture paths
+resolved that harness mismatch. The recorded candidate also uses a canonical path.
+Both documentation audits and
+whitespace checks passed. No shared host commands executed.
+**Status:** same PR530; receiving review and operator rehearsal still pending.
+Preceding baf47380 static CI passed; browser smoke was running during the review.
+The new documentation commit needs its own CI; no merge/deploy performed.

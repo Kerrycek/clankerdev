@@ -164,3 +164,21 @@ The prose follow-up requires its own final-head CI. Local design/active-doc audi
 and whitespace checks passed. The explicit handover acceptance and product-evidence
 gaps remain; this review did not find another undocumented boundary in the inspected
 adapters, but it is not an exhaustive field-by-field legacy parity certification.
+
+
+## Stale rollback review — 2026-09-29
+
+A further operator review found that the public manual rollback acquired the lock
+and checked configuration drift but did not reject an unrelated active release.
+The promotion now records its candidate path in the private backup. Rollback checks
+that the active pointer belongs to that candidate or the previous release before
+restoring anything; another active release stops recovery. Both pointers are valid
+partial-failure states because frontend and BFF publication are separate. Operators
+must still rule out intervening promotions of the same revision from the operation
+record; a pathname alone cannot identify a deployment attempt.
+
+All executable runbook blocks passed Bash syntax validation. An isolated local
+harness exercised the exact release-pointer guard for candidate, previous,
+unrelated newer and missing pointers: only the two expected states passed.
+Documentation audits and whitespace checks passed. This validates the guard, not
+a host rollback or the outstanding receiving-operator rehearsal.
