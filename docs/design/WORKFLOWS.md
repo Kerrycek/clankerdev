@@ -10,6 +10,10 @@ results. Every endpoint field remains governed by [API contracts](API_CONTRACTS.
 The [generated inventory](IMPLEMENTATION_INVENTORY.md) covers exact route variants,
 layouts, aliases and imported finance/advisory gates.
 
+For detailed actions, role/state restrictions and validation examples use
+[ACTION_CONTRACTS.md](ACTION_CONTRACTS.md). For test coverage and remaining proof
+use [EVIDENCE_MATRIX.md](EVIDENCE_MATRIX.md).
+
 ## Public entry and authentication
 
 **Intent:** inspect service availability, sign in, recover access or correct a

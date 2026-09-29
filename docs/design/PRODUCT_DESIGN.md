@@ -47,8 +47,8 @@ than clipping long addresses, SSH commands, errors or translated labels.
 
 Public chrome, application chrome and privileged controls have different context,
 but share labels, status semantics, overlays, focus treatment and error behavior.
-Browser titles start with vpsAdmin. Favicon reuse is pending PR524. Heatmap rows
-become icon-only in pending PR521; that action still has a tooltip and accessible
+Browser titles start with vpsAdmin. Favicon reuse was delivered by PR524. Heatmap rows
+are icon-only following PR521; that action still has a tooltip and accessible
 name, and does not imply removing labels from primary navigation.
 
 ## VPS detail and resource editing

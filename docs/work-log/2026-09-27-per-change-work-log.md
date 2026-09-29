@@ -53,5 +53,6 @@ favicon bytes and no page errors. These checks did not mutate real user data.
 The previous `e7ce3d73` release and private rollback backups are retained on both
 hosts. No API/database changes; foreign checkout files were preserved. General
 autonomous development remains paused. Detailed deployment logs and receipts are
-operator-held. This follow-up is retained locally for the next documentation
-update; it does not require another runtime deployment.
+operator-held. This follow-up was retained locally after the release and is incorporated by
+the 2026-09-29 documentation handover update; it does not require another runtime
+deployment.

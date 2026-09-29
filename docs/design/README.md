@@ -1,6 +1,8 @@
 # WebUI Next design and requirements handbook
 
-Reviewed baseline: product `fd290b5ec1b22900e704e8cb990c5ba050af2394`, 2026-09-27.
+Reviewed source baseline: `156a7c043e543b5f4a51fc962d16e31bd6eaa00f`, 2026-09-29.
+Last recorded two-host deployment: that revision, 2026-09-27; see the
+[dated receipt](../work-log/2026-09-27-per-change-work-log.md). This is not a fresh host check.
 Pending PRs are identified explicitly and are not part of that deployed baseline.
 Documentation language: English. Product languages: Czech and English.
 
@@ -47,6 +49,14 @@ it does not contain a recovered original or a competing specification.
 The [work log](../work-log/README.md) keeps per-change history. Requirements record
 current intent; decisions explain transitions; test results prove only their stated scope.
 
+## Detailed review and handover
+
+- [Action contracts](ACTION_CONTRACTS.md): role/state/action tables and concrete validation rules.
+- [Requirement evidence matrix](EVIDENCE_MATRIX.md): each requirement mapped to verification, with missing proof explicit.
+- [Handover checklist](HANDOVER.md): acceptance, owners to assign, evidence access and remaining decisions.
+- [Visual references](VISUAL_REFERENCES.md): synthetic captures with revision and status.
+- [Audit disposition](DOCUMENTATION_REVIEW.md): findings, corrections and limits.
+
 ## Maintenance contract
 
 Every behavior change must update the affected requirement and workflow in the
@@ -59,8 +69,8 @@ but must be written down with their consequences and migration needs.
 For each row distinguish code status, verification scope and deployment status.
 Do not upgrade an open PR to delivered based on a screenshot or local pass. Update
 release outcomes separately with exact UI/API revisions. Regenerate the inventory
-when routes or adapters change. `npm run audit:design-docs` checks local links,
-requirement IDs and generated inventory drift; it cannot validate prose accuracy.
+when routes or adapters change. `npm run audit:design-docs` checks local links/heading anchors,
+requirement IDs, one evidence coverage row per ID and generated inventory drift; it cannot validate prose accuracy.
 
 Reviewers check: source of the requirement; old/new behavior; all roles and scopes;
 API reality; error/uncertain outcomes; cs/en; mobile/desktop; test evidence; migration
@@ -69,7 +79,7 @@ weaken tests to satisfy an outdated document.
 
 ## Coverage limit
 
-The register includes all concrete maintainer requests recoverable from the
+The register records the concrete maintainer requests recovered during the documented review of the
 available task history, recent PR history, and a domain inventory of current code.
 It is a reviewable baseline, not a claim that every earlier conversation has been
 recovered or every legacy feature has been certified. Unknown rationale, missing

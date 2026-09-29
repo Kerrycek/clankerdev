@@ -53,7 +53,8 @@ No requirement is inferred from irrelevant personal text in attached conversatio
   [519](https://github.com/Kerrycek/clankerdev/pull/519): session/console/deletion/preferences.
 - [PR521](https://github.com/Kerrycek/clankerdev/pull/521),
   [522](https://github.com/Kerrycek/clankerdev/pull/522),
-  [524](https://github.com/Kerrycek/clankerdev/pull/524): pending compact visual fixes.
+  [524](https://github.com/Kerrycek/clankerdev/pull/524): merged visual fixes;
+  PR522 retained the normal full-width labeled sidebar.
 - [PR523](https://github.com/Kerrycek/clankerdev/pull/523): work-log setup, expanded by
   this follow-up into the self-contained design/requirements handover.
 

@@ -74,3 +74,12 @@ expected supported behavior, owner/role boundary, ordering assumptions and tests
 Prepare a scoped proposal separately. Do not modify upstream repositories, shared
 schemas or services without explicit matching authorization. Local references and
 previous PR approval do not confer blanket permission.
+
+## Concrete client contracts
+
+The [action contracts](ACTION_CONTRACTS.md) specify request state transitions,
+reason/placement rules, migration timing/IP serialization, deletion modes, resource
+overrides and DNS validation. They are the reviewed frontend contract at the stated
+revision; deployed backend permission/capacity remains authoritative. Contract
+changes must identify the matching backend resource/action/version and have
+adversarial tests, not just update an adapter type.

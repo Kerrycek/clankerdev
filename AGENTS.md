@@ -78,3 +78,9 @@ This repository is maintained through human-reviewed AI pull requests.
 - Preserve evidence scope and distinguish implementation, test results, merge and
   deployment. The handbook replaces the unavailable external spec dependency;
   old docs/spec fragments are historical, not conflicting active requirements.
+
+- Review role/state/action and payload changes against
+  `docs/design/ACTION_CONTRACTS.md`, and keep the affected evidence row in
+  `docs/design/EVIDENCE_MATRIX.md` current. Identify missing proof explicitly.
+  Do not require unrelated shared-document edits for a change with no contract
+  impact. Follow `docs/design/DOCUMENTATION_REVIEW.md` for the semantic review.

@@ -22,6 +22,7 @@ function fixture(t) {
   fs.writeFileSync(path.join(cwd,'docs/design/API_CONTRACTS.md'),'# API\n');
   fs.writeFileSync(path.join(cwd,'docs/work-log/README.md'),'# Work log\n');
   fs.writeFileSync(path.join(cwd,'docs/design/REQUIREMENTS.md'),'| REQ-001 | Requirement |\n');
+  fs.writeFileSync(path.join(cwd,'docs/design/EVIDENCE_MATRIX.md'),'## Requirement coverage\n\n| REQ-001 | Manual review | Not executed |\n');
   const run = (...args) => spawnSync(process.execPath, args, { cwd, encoding: 'utf8' });
   assert.equal(run('scripts/design-inventory.mjs','--write').status,0);
   // The audit checks tracked documentation/source paths, just like a checkout.
@@ -109,4 +110,37 @@ test('audit discovers independent work-log entries without a shared index update
   result = run('scripts/audit-design-docs.mjs');
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /second-feature\.md: missing or external local link missing-evidence\.md/);
+});
+
+
+test('audit rejects missing, duplicate and unknown evidence rows', t => {
+  const {cwd, run} = fixture(t);
+  const file = path.join(cwd, 'docs/design/EVIDENCE_MATRIX.md');
+  for (const content of ['', '| REQ-001 | A |\n| REQ-001 | B |', '| REQ-001 | A |\n| REQ-999 | B |']) {
+    fs.writeFileSync(file, '## Requirement coverage\n\n' + content);
+    const result = run('scripts/audit-design-docs.mjs');
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /Evidence matrix/);
+  }
+});
+
+test('audit validates local headings, duplicate suffixes and explicit anchors', t => {
+  const {cwd, run} = fixture(t);
+  const file = path.join(cwd, 'docs/design/API_CONTRACTS.md');
+  fs.writeFileSync(file, '# API\n## A `contract` (cs/en)\n## Same\n## Same\n<a id="special"></a>\n[One](#a-contract-csen) [Two](#same-1) [Three](#special)\n');
+  let result = run('scripts/audit-design-docs.mjs');
+  assert.equal(result.status, 0, result.stderr);
+  fs.appendFileSync(file, '[Stale](REQUIREMENTS.md#deleted-heading)\n');
+  result = run('scripts/audit-design-docs.mjs');
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /missing local anchor/);
+});
+
+test('audit checks deployment runbook links, without requiring a shared index', t => {
+  const {cwd, run} = fixture(t);
+  fs.mkdirSync(path.join(cwd, 'deploy/host'), {recursive: true});
+  fs.writeFileSync(path.join(cwd, 'deploy/host/release.md'), '[Bad](../../README.md#absent)\n');
+  const result = run('scripts/audit-design-docs.mjs');
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /deploy\/host\/release.md: missing local anchor/);
 });

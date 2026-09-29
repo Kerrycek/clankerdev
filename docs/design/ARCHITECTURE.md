@@ -1,6 +1,6 @@
 # Architecture and runtime boundaries
 
-Baseline: `fd290b5e`; [requirements](REQUIREMENTS.md) REQ-001, 005–013, 056–063.
+Source reviewed at `156a7c04` (2026-09-29); [requirements](REQUIREMENTS.md) REQ-001, 005–013, 056–063.
 This describes observed implementation, not a proposed backend rewrite.
 
 ```mermaid

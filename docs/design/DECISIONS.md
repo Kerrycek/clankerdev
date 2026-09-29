@@ -20,12 +20,14 @@ this is not a reconstruction of unavailable conversation text.
 | DEC-012 | Backend cursor proposal is not authorized for release now. Current constraint. | It was initially approved for preparation, then backend44 was explicitly rejected. Frontend dependent PRs remain open. | Keep #496/#507/#509 out of release until a new contract/decision; PR43 payment fix does not resolve them. |
 | DEC-013 | Evidence comes from isolated owned systems and synthetic identities. Current. | Maintainer prohibited production personal data and interference with shared VMs/services. | Preserve UI/API pins, real-vs-fixture distinction, mutation receipts and cleanup; no replay just to inflate evidence. |
 | DEC-014 | Autonomous work was stopped; later direct tasks are bounded. Current constraint. | Latest explicit stop overrides earlier recurring-work approval. | Do not resume the 10-minute schedule or general development from a docs/UI request. |
-| DEC-015 | Repo-contained documentation replaces the unavailable external spec dependency. Proposed in this PR at maintainer request. | Existing entrypoints reference a missing sibling file; a recipient cannot reconstruct design from code alone. | Requirements, rationale, coverage, operations and work log live here. Preserve archaeology but do not make missing external files normative. |
+| DEC-015 | Repo-contained documentation replaces the unavailable external spec dependency. Accepted and merged in PR523; entry-point repair merged in PR525. | Existing entrypoints reference a missing sibling file; a recipient cannot reconstruct design from code alone. | Requirements, rationale, coverage, operations and work log live here. Preserve archaeology but do not make missing external files normative. |
 
 ## Open decisions, not hidden assumptions
 
-- Beta hostname (informal suggestions included newui/nextui) is not a DNS change
-  instruction. Retain current targets until explicitly chosen.
+- The maintainer selected **newadmin.vpsfree.cz** on 2026-09-29. Earlier
+  newui/nextui/webui suggestions are superseded. Hostname selection and dedicated
+  SSH public-key preparation do not establish completed DNS/TLS/OAuth setup or
+  authorize a cutover. See the [cutover checklist](HANDOVER.md#newadmin-cutover).
 - Default dev soft-delete retention needs a policy choice; frontend controls do
   not choose the duration for the service.
 - Backend cursor compatibility/release path after rejection of PR44 is unresolved.

@@ -46,6 +46,11 @@ consistency checks, not a substitute for semantic review or backend tests.
 
 ## Recorded release evidence (2026-09-27)
 
+Latest recorded deployment: [PR527 receipt](../work-log/2026-09-27-per-change-work-log.md),
+UI/BFF `156a7c04`, previous `e7ce3d73`, both hosts. The older release below is
+retained as historical evidence. The [requirement matrix](EVIDENCE_MATRIX.md)
+identifies concrete verification entry points and unverified conditions.
+
 The [work log](../work-log/2026-09-27-preferences-console-deletion-release.md) records release `fd290b5e` (PR517–520), including
 exact counts and limitations. Its integrated tree passed unit/script/BFF/static
 checks, 681 full PR fixture cases and targeted Chromium/WebKit checks. Post-deploy

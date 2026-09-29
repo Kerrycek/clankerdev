@@ -102,5 +102,21 @@ The Acceptance column describes what must be checked, not a claim it all passed.
 | REQ-063 | Honor scoped merge/deploy authorization and stopped automation. | New implementation does not imply deployment; do not resume paused schedule or create agents/tasks without instruction. | U; [operations](OPERATIONS.md) | Ongoing constraint |
 | REQ-064 | Keep a durable per-change work log and complete English design/requirements docs in repo. | Each feature/change has its own file, continued across its PRs without shared-index edits. Reasons, history, requirements, evidence and limitations remain repository-contained. | U; [work log](../work-log/README.md), this handbook | Handbook merged in PR523; operational/audit gaps remain explicit |
 | REQ-065 | Perform an independent audit before claiming public-beta assurance. | Reviewed findings, security/behavior scope and remediation decisions recorded; documentation is not audit completion. | Context from shared review discussion; [handover](OPERATIONS.md) | Proposed audit gate; owner/scope unassigned |
-| REQ-066 | Choose beta naming/publication approach explicitly. | Final hostname and KB transition policy selected by maintainer; no inferred DNS/domain change from informal suggestions. | Available conversation; [decisions](DECISIONS.md) | Open decision |
+| REQ-066 | Choose beta naming/publication approach explicitly. | Final hostname and KB transition policy selected by maintainer; no inferred DNS/domain change from informal suggestions. | Maintainer selected newadmin.vpsfree.cz, 2026-09-29; [handover](HANDOVER.md#newadmin-cutover) | Hostname chosen; infrastructure cutover and KB publication still pending |
 | REQ-067 | Restrict issue-runner token use to trusted or explicitly approved work. | Only Kerrycek/configured trusted users and active vpsfreecz members may run queued issues automatically; other authors need a repository writer's approval of the current snapshot. Untrusted feedback cannot trigger revisions; unknown membership fails closed. | U, 2026-09-27; [runner policy](../../deploy/ai-issue-runner/README.md) | Installed on dev runner; 11 policy/shell cases and real read-only checks passed; PR526 merged as `cc0d2748`; installed files verified against that release |
+
+## Accepted pending intent (reviewed 2026-09-29)
+
+These are requirements, not deployed behavior. They extend existing stable IDs.
+
+- **REQ-028:** [PR528](https://github.com/Kerrycek/clankerdev/pull/528) replaces the
+  initial node cards with a click-to-open, searchable, bounded dropdown suitable
+  for dozens of nodes; reason and applicable options remain visible. See
+  [migration contract](ACTION_CONTRACTS.md#migration).
+- **REQ-038:** [PR529](https://github.com/Kerrycek/clankerdev/pull/529) adds four
+  rejection and three correction presets, editable/custom reasons, and applicant
+  cs/en language selection independent of the administrator's locale. See
+  [pending messages](ACTION_CONTRACTS.md#pending-registration-messages).
+
+Both heads have green CI; neither is merged or deployed at this review. The
+[evidence matrix](EVIDENCE_MATRIX.md) separates implementation from verification.
