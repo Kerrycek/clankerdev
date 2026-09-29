@@ -74,7 +74,15 @@ This repository is maintained through human-reviewed AI pull requests.
 - Recover actual user intent and record superseded choices; do not invent missing
   historical rationale or turn observed source behavior into an approved request.
 - Regenerate `npm run docs:inventory` when routes or API adapter modules change.
+  Assign new/renamed modules in `docs/design/DOMAIN_COVERAGE.md`; explicitly
+  identify helpers/types instead of inventing new product features.
   Run `npm run audit:design-docs`; review semantic accuracy separately.
 - Preserve evidence scope and distinguish implementation, test results, merge and
   deployment. The handbook replaces the unavailable external spec dependency;
   old docs/spec fragments are historical, not conflicting active requirements.
+
+- Review role/state/action and payload changes against
+  `docs/design/ACTION_CONTRACTS.md`, and keep the affected evidence row in
+  `docs/design/EVIDENCE_MATRIX.md` current. Identify missing proof explicitly.
+  Do not require unrelated shared-document edits for a change with no contract
+  impact. Follow `docs/design/DOCUMENTATION_REVIEW.md` for the semantic review.

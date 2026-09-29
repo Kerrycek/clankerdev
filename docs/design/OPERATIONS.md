@@ -17,6 +17,8 @@ actual service configuration before executing deployment commands.
 
 ## Local development
 
+Follow the [clean-checkout walkthrough](DEVELOPMENT.md),
+[configuration reference](CONFIGURATION.md) and [diagnostic guide](TROUBLESHOOTING.md).
 Use a clean isolated worktree; preserve unrelated main-checkout changes. Install
 supported Node/npm dependencies, run `npm ci`, `npm run dev`, and follow the
 [verification commands](VERIFICATION.md). Use the local runtime config example in
@@ -39,12 +41,17 @@ own [environment/setup requirements](../../bff/README.md).
    state; no migration is implied by a frontend release.
 6. Follow the [dev runbook](../../deploy/dev.crucio.cz/README.md) and
    [immutable deployment script](../../deploy/dev.crucio.cz/deploy-dev-crucio-clankerdev.sh).
+   The convenience deploy-dev wrapper pulls main; approval of one SHA is not
+   approval of later main commits. For a pinned candidate follow the dev runbook's
+   direct-helper procedure and coordinate exclusive mutable-checkout access.
    The historical [public bootstrap guide](../../deploy/README.md) describes host
    provisioning; do not rerun provisioning blindly for a routine update.
 7. Promote the exact verified frontend artifact and matching BFF revision to the
    other approved target. The last release used dev-built dist on both sites.
-   The one-off public promotion/rollback wrapper remains operator-held, not a
-   complete checked-in repeatable release tool: transfer/review it before handover.
+   Use the [versioned public promotion and rollback runbook](../../deploy/clankerdev.vpsfree.cz/release.md),
+   transcribed from the recorded release procedure with explicit inputs and
+   gates. Its documentation revision has not itself been exercised on the host;
+   perform the receiving-operator rehearsal before calling the handover accepted.
 8. Verify `/build-info.json` and BFF process path separately, public health,
    anonymous `/session.json` and OAuth routing. Use
    [auth smoke](../../deploy/smoke-auth-endpoints.sh). Check SPA deep links and assets.
@@ -65,9 +72,11 @@ was changed, then recheck provenance, health, auth and deep routes. Restore conf
 only when needed; do not overwrite unrelated changes or secrets. Frontend rollback
 does not undo API mutations or database migrations. A migration needs its own plan.
 
-The prior recorded release is `2eef5193403258c88ec4fca79138898aaf4273cc`; last
-recorded deployed release is `fd290b5ec1b22900e704e8cb990c5ba050af2394`. These are
-historical receipts, not permanent “current” pointers. Check actual state before use.
+The latest recorded two-host release is `156a7c043e543b5f4a51fc962d16e31bd6eaa00f`
+(PR527), with previous release `e7ce3d73e799fc60e5933fe23bdb3a979eb4d6b9`.
+See the [dated receipt](../work-log/2026-09-27-per-change-work-log.md). This is a
+record of prior verification, not a fresh claim about current host state. Read
+both hosts before deployment; do not blindly use a historical rollback SHA.
 
 ## Ownership and secure handover checklist
 
@@ -81,7 +90,8 @@ The following cannot be solved by publishing credentials in a repository:
 - Transfer private evidence/receipt locations and review sanitized summaries for
   durable CI/repo storage. Never publish production screenshots or personal data.
 - Confirm API version/capabilities and unresolved cursor/deletion policies.
-- Agree KB publication path and beta hostname; do not infer these from suggestions.
+- Complete the chosen newadmin.vpsfree.cz cutover prerequisites and agree the KB
+  publication path; see the [handover checklist](HANDOVER.md).
 - Arrange independent audit scope and track findings, severity, ownership and closure.
 - Keep the scheduled autonomous-development automation paused until explicitly
   resumed. A direct UI/docs task does not resume it.

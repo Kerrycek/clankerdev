@@ -63,3 +63,13 @@ append a dated section to that same file rather than replacing its history.
 
 Before committing, run `npm run audit:design-docs` to check local links in every
 work-log file as well as the design documentation. Review factual accuracy too.
+
+## Publishing outcomes
+
+A merged feature's initial record is historical, not its permanent status. Add a
+dated merge/release follow-up in the next relevant documentation PR before marking
+the handover ready. Link that follow-up from the feature or release record; do not
+redeploy to publish a receipt. If it is temporarily local, record the branch and
+publication task in the private handoff and keep the repository status explicitly
+pending an outcome update. Release closure includes publishing the sanitized
+receipt; a private chat alone does not close the documentation work.
